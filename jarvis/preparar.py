@@ -1,9 +1,9 @@
-"""O que o Zé precisa baixar na primeira vez (docs/plano-distribuicao.md, 09/10/2026).
+"""O que o Zé precisa baixar na primeira vez: os modelos de som e a voz.
 
-Os modelos de som ficam fora do repositório. Na instalação nova, o Zé baixa o que falta das
-fontes oficiais e confere a impressão digital (SHA-256) de cada arquivo antes de usar: o mesmo
-arquivo que roda na máquina do usuário desde 06/10/2026, sem surpresa. Arquivo que não bate é
-apagado e o Zé avisa, sem subir com um modelo errado.
+Os modelos ficam fora do repositório (a voz sozinha tem 63 MB). Na instalação nova, o Zé baixa
+o que falta das fontes oficiais e confere a impressão digital (SHA-256) de cada arquivo antes de
+usar: o mesmo arquivo testado pelo projeto, sem surpresa. Arquivo que não bate é apagado e o Zé
+avisa, sem subir com um modelo errado.
 
     python -m jarvis.preparar        # baixa o que falta e mostra o que há
 """
@@ -19,6 +19,11 @@ from jarvis import lugares
 
 log = logging.getLogger(__name__)
 OWW = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1"
+# Revisão fixa do repositório oficial de vozes do Piper (rhasspy/piper-voices).
+VOZES = (
+    "https://huggingface.co/rhasspy/piper-voices/resolve/"
+    "39ab474be869e9181350af6a65e4953eef67aaa0/pt/pt_BR/cadu/medium"
+)
 
 
 @dataclass(frozen=True)
@@ -47,6 +52,18 @@ MODELOS = (
         f"{OWW}/embedding_model.onnx",
         "70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f",
         "palavra de ativação, parte 2 (openWakeWord, Apache-2.0)",
+    ),
+    Modelo(
+        "pt_BR-cadu-medium.onnx",
+        f"{VOZES}/pt_BR-cadu-medium.onnx",
+        "765f0809a6ea9035d4a6d0d008dbf8876e68b2dd32029312672fa8f405bdb535",
+        "a voz do Zé, Cadu (Piper, CC0)",
+    ),
+    Modelo(
+        "pt_BR-cadu-medium.onnx.json",
+        f"{VOZES}/pt_BR-cadu-medium.onnx.json",
+        "5fe03aa3d4901880554905b12075713cd552598c8a350455a1ec73f8b4e6be19",
+        "a voz do Zé, configuração",
     ),
     Modelo(
         "smart-turn-v3.2-cpu.onnx",

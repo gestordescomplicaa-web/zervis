@@ -1,12 +1,7 @@
-"""Saída de voz com streaming e interrupção: Cadu pelo Piper (padrão) ou pelo Pocket TTS.
+"""Saída de voz com streaming e interrupção: Cadu pelo Piper, dentro do processo (ADR 0013).
 
-Piper (ADR 0012): o servidor HTTP do próprio Piper devolve o WAV de uma frase em ~0,2 s; o
-adaptador converte para float32 e entrega no mesmo formato de fluxo do Pocket, então a fila, a
-interrupção e o anel não mudam. O Pocket (1,7 GB de RAM, ~1 s até o primeiro som) fica como
-alternativa na config.
-
-Portado de VIBE-CODING/jarvis/voice.py (06/10/2026), mantendo as lições já pagas:
-- o Cadu manda float32 cru (`X-Sample-Format: f32le`), não PCM16;
+O motor entrega float32 cru frase a frase (`jarvis/voz/piper.py`); a fila, a interrupção e o anel
+só conhecem esse formato de fluxo, então outro motor pode entrar sem mexer aqui. Lições já pagas:
 - a primeira frase sai sozinha para a voz começar enquanto o resto ainda é sintetizado;
 - só começa a tocar com folga suficiente para a geração não ficar para trás (engasgo).
 Uma fala por vez; `parar()` corta a atual e descarta a fila em menos de um quadro.
@@ -14,18 +9,14 @@ Uma fala por vez; `parar()` corta a atual e descarta a fila em menos de um quadr
 
 import contextlib
 import io
-import json
 import logging
 import queue
 import re
 import subprocess
 import threading
 import time
-import urllib.request
-import wave
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from http.client import HTTPResponse
 from typing import Protocol
 
 import numpy as np
@@ -34,8 +25,6 @@ from numpy.typing import NDArray
 from jarvis.transporte.local import comando_reprodutor
 
 log = logging.getLogger(__name__)
-URL_CADU = "http://127.0.0.1:17863/speak-stream"
-URL_PIPER = "http://127.0.0.1:17871/"
 CARACTERES_POR_SEGUNDO_FALADO = 1 / 0.065  # ~65 ms de fala por caractere
 Amostras = NDArray[np.float32]
 
@@ -69,41 +58,6 @@ class Fluxo(Protocol):
 
 class FluxoPronto(io.BytesIO):
     """O áudio inteiro de uma frase já sintetizada, lido como se fosse um fluxo."""
-
-
-def float32_do_wav(wav: bytes) -> tuple[int, bytes]:
-    with wave.open(io.BytesIO(wav)) as w:
-        if w.getsampwidth() != 2 or w.getnchannels() != 1:
-            raise RuntimeError("Formato de áudio inesperado do Piper.")
-        taxa, pcm = w.getframerate(), w.readframes(w.getnframes())
-    amostras = np.frombuffer(pcm, "<i2").astype(np.float32) / 32768.0
-    return taxa, amostras.astype("<f4").tobytes()
-
-
-def abrir_fluxo_piper(texto: str, url: str = URL_PIPER) -> tuple[int, Fluxo]:
-    pedido = urllib.request.Request(  # noqa: S310 (URL do serviço local)
-        url,
-        data=json.dumps({"text": texto}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with abridor.open(pedido, timeout=30) as resposta:
-        taxa, dados = float32_do_wav(resposta.read())
-    return taxa, FluxoPronto(dados)
-
-
-def abrir_fluxo_cadu(texto: str) -> tuple[int, Fluxo]:
-    pedido = urllib.request.Request(
-        URL_CADU,
-        data=json.dumps({"text": texto}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    resposta: HTTPResponse = abridor.open(pedido, timeout=30)
-    if resposta.headers.get("X-Sample-Format") != "f32le":
-        resposta.close()
-        raise RuntimeError("Formato de áudio inesperado do Cadu.")
-    return int(resposta.headers["X-Sample-Rate"]), resposta
 
 
 class Onda(Protocol):
@@ -146,12 +100,16 @@ class Voz:
     def __init__(
         self,
         onda: Onda | None = None,
-        abrir_fluxo: Callable[[str], tuple[int, Fluxo]] = abrir_fluxo_piper,
+        abrir_fluxo: Callable[[str], tuple[int, Fluxo]] | None = None,
         folga_s: float = 1.0,
         reprodutor: Callable[[int], list[str]] = comando_reprodutor,
     ) -> None:
         self.comando_reprodutor = reprodutor
         self.onda = onda
+        if abrir_fluxo is None:
+            from jarvis.voz import piper
+
+            abrir_fluxo = piper.PADRAO.abrir_fluxo
         self.abrir_fluxo = abrir_fluxo
         self.folga_s = folga_s
         self.trabalhos: queue.Queue[tuple[int, str, float, int, Callable[[float], None] | None]] = (
@@ -193,7 +151,7 @@ class Voz:
         if reprodutor and reprodutor.poll() is None:
             reprodutor.kill()
         if resposta:
-            # Desligar a conexão faz o Cadu parar de gerar; fecha de qualquer jeito.
+            # Fechar o fluxo faz o motor parar de gerar as frases que faltam.
             with contextlib.suppress(Exception):
                 resposta.close()
 
@@ -243,7 +201,7 @@ class Voz:
             saida.put(None)
 
     def _esperar_folga(self, pedaco: Pedaco, epoca: int) -> None:
-        # Só começa quando o resto vai chegar a tempo. A velocidade do Cadu varia com a CPU
+        # Só começa quando o resto vai chegar a tempo. A velocidade da síntese varia com a CPU
         # (0,9x parado, até 1,4x medido sob carga): mede neste fluxo e exige uma vantagem de
         # D·(1 - velocidade) + margem, D ≈ 65 ms de fala por caractere.
         esperado = len(pedaco.texto) / CARACTERES_POR_SEGUNDO_FALADO

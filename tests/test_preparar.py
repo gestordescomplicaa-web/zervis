@@ -32,7 +32,7 @@ def test_baixa_confere_e_recusa_arquivo_trocado(tmp_path: Path) -> None:
 
 
 def test_as_fontes_sao_oficiais_e_fixas() -> None:
-    assert len(preparar.MODELOS) == 4
+    assert len(preparar.MODELOS) == 6
     for m in preparar.MODELOS:
         assert m.url.startswith(("https://github.com/", "https://huggingface.co/"))
         assert len(m.sha256) == 64

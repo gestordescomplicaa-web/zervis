@@ -13,9 +13,10 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
   persona recebe isso no começo de cada conversa. Nenhum nome fixo no código.
 - **Fuso** do sistema (`jarvis/fuso.py`), ou `JARVIS_FUSO`.
 - **Voz só pelo Deepgram.** Sem a chave, o Zé não escuta (painel e teclado funcionam).
-- **Piper** como programa separado (GPL-3), falando por HTTP; voz Cadu (CC0).
-- **Imersivo** (Barehands, AGPL) como componente separado, baixado pela instalação, sem dados de
-  ninguém; nunca copiado para dentro deste repositório.
+- **Licença AGPL-3** (ADR 0013).
+- **Piper dentro do Zé** (dependência Python, GPL-3) e a voz Cadu (CC0) baixada e conferida na
+  primeira subida: primeiro som em ~150 ms, sem serviço à parte.
+- **Imersivo** (Barehands, AGPL) pode vir embutido, sem dados de ninguém.
 - **Memória longa pelo ai-memory** (MIT), opcional: sem ele, o Zé funciona sem memória longa.
 - **Registros de funcionamento em SQLite** (`ze.db`): sessões, Foco, automações e tempos. O que o
   usuário edita (memória curta, skills no padrão `SKILL.md`) continua em arquivo.
@@ -28,10 +29,10 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
 2. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx`, integração com o Orca
    (oficina) e com o OmniRoute (baterias) como opcionais que se desligam sozinhos quando não
    existem; Omarchy detectado em vez de suposto.
-3. **Instalação de um comando** (Linux): o Zé e o painel como serviços do usuário, o Piper e a
-   voz, o ai-memory e o imersivo como componentes separados; README de quem chega.
+3. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
+   junto), o ai-memory e o imersivo; README de quem chega.
 4. **SQLite** para os registros, com migração automática dos arquivos.
-5. **Licença** do projeto e revisão final antes do primeiro envio público.
+5. **Revisão final** antes do primeiro envio público.
 6. **VPS** sem tela e sem microfone; depois o celular.
 
 ## Em aberto

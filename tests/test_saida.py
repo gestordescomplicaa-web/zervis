@@ -4,7 +4,7 @@ import io
 import sys
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import numpy as np
@@ -78,24 +78,21 @@ def test_parar_corta_a_fala_e_descarta_a_fila() -> None:
     assert voz.faladas == 0
 
 
-def test_wav_do_piper_vira_float32_no_formato_do_fluxo() -> None:
-    import io
-    import wave
+def test_fluxo_do_piper_entrega_frase_a_frase_e_para_ao_fechar() -> None:
+    from jarvis.voz.piper import FluxoGerado
 
-    from jarvis.voz.saida import FluxoPronto, float32_do_wav
+    geradas: list[int] = []
 
-    pcm = (np.array([0, 16384, -32768], dtype="<i2")).tobytes()
-    bruto = io.BytesIO()
-    with wave.open(bruto, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(22050)
-        w.writeframes(pcm)
-    taxa, dados = float32_do_wav(bruto.getvalue())
-    assert taxa == 22050
-    assert np.frombuffer(dados, "<f4").tolist() == [0.0, 0.5, -1.0]
-    fluxo = FluxoPronto(dados)
-    assert fluxo.read1(8) == dados[:8] and fluxo.read1() == dados[8:]
+    def frases() -> Iterator[bytes]:
+        for i in range(3):
+            geradas.append(i)
+            yield np.full(2, i, "<f4").tobytes()
+
+    fluxo = FluxoGerado(frases())
+    assert np.frombuffer(fluxo.read1(), "<f4").tolist() == [0.0, 0.0]
+    assert geradas == [0]  # a segunda frase só é sintetizada quando pedida
+    fluxo.close()
+    assert fluxo.read1() == b"" and geradas == [0]
 
 
 def test_primeiro_som_e_medido_antes_de_bloquear_no_resto_do_pcm(tmp_path: Path) -> None:

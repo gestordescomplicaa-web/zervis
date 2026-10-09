@@ -19,7 +19,6 @@ import queue
 import subprocess
 import sys
 import time
-import urllib.request
 import wave
 from pathlib import Path
 from typing import Any
@@ -28,8 +27,8 @@ import numpy as np
 
 from jarvis import lugares
 from jarvis.transporte.local import Captura, comando_reprodutor
+from jarvis.voz import piper
 from jarvis.voz.ativacao import QUADRO, Detector, Features, ModeloAtivacao
-from jarvis.voz.saida import URL_PIPER, float32_do_wav
 
 TAXA = 16000
 CLIP = int(2.0 * TAXA)
@@ -66,15 +65,8 @@ def _tocar(taxa: int, dados: bytes) -> None:
 
 
 def _falar(texto: str) -> None:
-    pedido = urllib.request.Request(  # noqa: S310 (Piper local)
-        URL_PIPER,
-        data=json.dumps({"text": texto}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with abridor.open(pedido, timeout=30) as resposta:
-        taxa, dados = float32_do_wav(resposta.read())
-    _tocar(taxa, dados)
+    taxa, x = piper.PADRAO.sintetizar(texto)
+    _tocar(taxa, x.astype("<f4").tobytes())
 
 
 def _bip() -> None:
@@ -164,15 +156,7 @@ def _janelas(x: Audio, passo: int) -> list[Audio]:
 
 
 def _sintetizar(texto: str) -> Audio:
-    pedido = urllib.request.Request(  # noqa: S310 (Piper local)
-        URL_PIPER,
-        data=json.dumps({"text": texto}).encode(),
-        headers={"Content-Type": "application/json"},
-    )
-    abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with abridor.open(pedido, timeout=30) as resposta:
-        taxa, dados = float32_do_wav(resposta.read())
-    x = np.frombuffer(dados, "<f4")
+    taxa, x = piper.PADRAO.sintetizar(texto)
     reamostrado: Audio = (
         np.interp(np.arange(0, len(x), taxa / TAXA), np.arange(len(x)), x).astype(np.float32)
         * 32767

@@ -25,5 +25,4 @@ instalar:
 	uv sync --inexact
 	install -d $(HOME)/.config/systemd/user
 	sed 's#@REPO@#$(CURDIR)#' systemd/zervis.service > $(HOME)/.config/systemd/user/zervis.service
-	install -m 644 systemd/zervis-piper.service $(HOME)/.config/systemd/user/zervis-piper.service
 	systemctl --user daemon-reload

@@ -1,5 +1,5 @@
-"""JARVIS ORCA: assistente pessoal local desta máquina (ver docs/04-arquitetura.md)."""
+"""Zérvis (o Zé): assistente pessoal local por voz (ver docs/04-arquitetura.md)."""
 
 from importlib.metadata import version
 
-__version__ = version("jarvis-orca")
+__version__ = version("zervis")

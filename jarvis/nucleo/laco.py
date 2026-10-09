@@ -72,13 +72,14 @@ from jarvis.sistema import catalogo as catalogo_sistema
 from jarvis.sistema.politica import Sistema
 from jarvis.sistema.vigia import Eventos, Vigia
 from jarvis.transporte.local import SERVIDOR, Captura
+from jarvis.voz import piper
 from jarvis.voz.ativacao import VAD, Detector, Features, SemAtivacao, carregar_modelo
 from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro
 from jarvis.voz.escuta import DURACAO_QUADRO_S, Segmentador
 from jarvis.voz.fala import falavel, para_fala, separar_fontes
 from jarvis.voz.fim_de_turno import FimDeTurno
 from jarvis.voz.latencia import Latencias
-from jarvis.voz.saida import Voz, abrir_fluxo_cadu, abrir_fluxo_piper
+from jarvis.voz.saida import Voz
 
 log = logging.getLogger(__name__)
 ESTADO = lugares.ESTADO
@@ -257,8 +258,9 @@ class Nucleo:
 
         self.captura = Captura(cfg["audio"]["microfone"])
         self.anel = Anel(cfg.caminho("barehands", "pasta_estado"))
-        motor = abrir_fluxo_cadu if cfg["voz"]["motor"] == "pocket" else abrir_fluxo_piper
-        self.voz = Voz(onda=self.anel, abrir_fluxo=motor)
+        self.voz = Voz(onda=self.anel, abrir_fluxo=piper.PADRAO.abrir_fluxo)
+        # A voz carrega em segundo plano: a primeira fala já a encontra pronta.
+        threading.Thread(target=self._carregar_voz, name="carregar-voz", daemon=True).start()
         self._ultima_fala = 0
         self.voz.ao_ficar_ociosa = self._voz_ociosa
         self.fila = Fila(ESTADO / "avisos.json")  # durável: reinício não perde aviso
@@ -925,6 +927,12 @@ class Nucleo:
 
         threading.Thread(target=abrir_e_mostrar, daemon=True).start()
         return "Abrindo a minha janela."
+
+    def _carregar_voz(self) -> None:
+        try:
+            piper.PADRAO.carregar()
+        except Exception as erro:
+            log.warning("voz indisponível: %s", erro)
 
     def _tocar_bip(self) -> None:
         try:

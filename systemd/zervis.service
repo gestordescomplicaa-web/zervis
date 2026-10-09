@@ -1,7 +1,6 @@
 [Unit]
 Description=Zé (Zérvis): assistente pessoal local por voz
-After=pipewire-pulse.service zervis-piper.service
-Wants=zervis-piper.service
+After=pipewire-pulse.service
 # Sem PartOf=graphical-session.target: um reinício da sessão gráfica não pode derrubar o Zé;
 # a presença reconecta sozinha ao socket novo.
 

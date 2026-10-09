@@ -1,7 +1,8 @@
 # 0012 — Voz pelo Piper e escuta pelo Deepgram em streaming (tecnologia do LIGATIA)
 
 - Data: 06/10/2026
-- Status: **Aceito** (pedido do usuário: "explorar para uma real substituição")
+- Status: **Aceito** (pedido do usuário: "explorar para uma real substituição"). O Piper como
+  serviço à parte foi substituído pelo Piper dentro do Zé ([ADR 0013](0013-agpl-e-piper-dentro-do-ze.md)).
 
 ## Contexto
 A voz era o gargalo: o pedido só ia ao Whisper depois de o usuário terminar (~2 s de transcrição

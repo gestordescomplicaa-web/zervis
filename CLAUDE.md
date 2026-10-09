@@ -7,8 +7,8 @@ Regras de engenharia: `docs/06-qualidade.md` (obrigatórias). Decisões: `docs/a
   alguém fixo no código. O que é de quem usa vem da configuração (`jarvis/lugares.py`,
   `jarvis/usuario.py`, `jarvis/fuso.py`). `tests/test_usuario.py` vigia isso.
 - Dados do usuário nunca no repositório: ficam nas pastas XDG `zervis`.
-- Não copiar código AGPL (Barehands, backtalk, ai-visualizer) nem GPL (Piper) para este
-  repositório: rodam como programas separados. Código MIT (Hermes) só com aviso em `THIRD_PARTY.md`.
+- Licença AGPL-3.0-or-later (ADR 0013): código GPL-3/AGPL-3 (Piper, Barehands) pode ser
+  combinado; todo código de terceiros entra com aviso de autoria em `THIRD_PARTY.md`.
 - `make check` passa antes de todo commit.
 - Pedidos que começam com `[JARVIS · modo manutenção · pedido <id>]` vêm do usuário por voz,
   pelo próprio Zé: respeite a zona protegida escrita no pedido e, ao terminar, grave no arquivo

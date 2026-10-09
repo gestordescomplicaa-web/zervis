@@ -47,7 +47,7 @@ PADRAO: dict[str, dict[str, Any]] = {
         "pasta_estado": str(lugares.DADOS / "imersivo/state"),
         "pasta_jarvis": str(lugares.DADOS / "pasta"),
     },
-    # motor: "piper" (serviço zervis-piper, ADR 0012) ou "pocket" (o Cadu antigo, 1,7 GB).
+    # motor: "piper" (Cadu pelo Piper, dentro do processo; ADR 0013). Outros motores entram aqui.
     "voz": {"motor": "piper"},
     # Ações do Omarchy forçadas a um nível (docs/07): "update" pede senha num terminal e, por voz,
     # travaria; vai para proibido (faz-se pelo menu do Omarchy).
@@ -169,8 +169,8 @@ def validar(dados: dict[str, Any], origem: str) -> Config:
         )
     if secoes["via_rapida"]["motor"] == "ponte" and not secoes["via_rapida"]["endereco"]:
         raise ConfigInvalida(f"{origem}: via_rapida.endereco é obrigatório na ponte")
-    if secoes["voz"]["motor"] not in ("piper", "pocket"):
-        raise ConfigInvalida(f"{origem}: voz.motor deve ser piper ou pocket")
+    if secoes["voz"]["motor"] != "piper":
+        raise ConfigInvalida(f"{origem}: voz.motor deve ser piper")
     if cerebro["reserva"] not in RESERVAS:
         raise ConfigInvalida(f"{origem}: cerebro.reserva deve ser um de {sorted(RESERVAS)}")
     if cerebro["tempo_limite_s"] <= 0:

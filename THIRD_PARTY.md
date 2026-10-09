@@ -14,9 +14,9 @@ arquivo copiado leva um cabeçalho citando a origem.
 | `~/.local/share/zervis/modelos/melspectrogram.onnx`, `embedding_model.onnx` (fora do repositório) | openWakeWord 0.6.0 (conversão do `speech_embedding` do Google) | Apache-2.0 | David Scripka; Google |
 | `jarvis/habilidades/revisao.py` (critérios do prompt de revisão, adaptados e traduzidos) | Hermes Agent, `agent/background_review.py` (`_MEMORY_ROUTING_BLOCK`, `_LESSON_LAYER_BLOCK`, `_DO_NOT_CAPTURE_BLOCK`, `_SKILL_REVIEW_PROMPT`) | MIT | Nous Research |
 | `jarvis/memoria/curta.py` (ideia da varredura; padrões reescritos, sem cópia de código) | Hermes Agent, `tools/memory_tool_store.py` (`_scan_memory_content`) | MIT | Nous Research |
-| `~/.local/share/zervis/vozes/pt_BR-cadu-medium.onnx` (fora do repositório; rhasspy/piper-voices `39ab474b`, sha256 `765f0809…bdb535`) | Voz Cadu do Piper (dataset Cadu 1.0, OHF-Voice/voice-datasets) | CC0-1.0 | Open Home Foundation |
+| `~/.local/share/zervis/modelos/pt_BR-cadu-medium.onnx` (fora do repositório, baixado por `jarvis/preparar.py`; rhasspy/piper-voices `39ab474b`, sha256 `765f0809…bdb535`) | Voz Cadu do Piper (dataset Cadu 1.0, OHF-Voice/voice-datasets) | CC0-1.0 | Open Home Foundation |
 | O navegador do Zé (`~/.config/zervis/mcp.toml`) executa o `@playwright/mcp` 0.0.83, instalado em `~/.local/share/zervis/navegador-mcp`, como programa separado (nenhum código copiado; a ideia de navegador em segundo plano lido pela árvore de acessibilidade vem do `browser` do Hermes Agent) | Playwright MCP (Microsoft) | Apache-2.0 | Microsoft |
-| `zervis-piper.service` executa o `piper-tts` 1.4.2 como programa separado (nenhum código copiado) | Piper (OHF-Voice/piper1-gpl) | GPL-3.0-or-later | Open Home Foundation / Michael Hansen |
+| `jarvis/voz/piper.py` usa o `piper-tts` 1.4.2 como dependência Python, dentro do processo (nenhum código copiado; o Zé é AGPL-3, compatível; ADR 0013) | Piper (OHF-Voice/piper1-gpl) | GPL-3.0-or-later | Open Home Foundation / Michael Hansen |
 
 ## Licenças de referência
 

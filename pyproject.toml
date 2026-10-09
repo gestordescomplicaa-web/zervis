@@ -3,12 +3,16 @@ name = "zervis"
 version = "0.0.1"
 description = "Zé (Zérvis): assistente pessoal local por voz, com memória, skills, automações e agentes de código."
 readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.15"
 # Dependências de execução entram fase a fase, sempre com versão exata (docs/06-qualidade.md).
 dependencies = [
     "claude-agent-sdk==0.2.163",
     "numpy==2.4.3",
     "onnxruntime==1.27.0",
+    # A voz (Cadu) roda dentro do Zé: GPL-3, compatível com a AGPL do projeto (ADR 0013).
+    "piper-tts==1.4.2",
     "websockets==17.2",
 ]
 
