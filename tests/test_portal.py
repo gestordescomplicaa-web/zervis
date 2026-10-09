@@ -172,7 +172,7 @@ def test_a_chave_do_deepgram_liga_a_escuta_na_hora_e_nunca_volta(
 
     def conferir(chave: str) -> tuple[bool, str]:
         conferidas.append(chave)
-        return chave.endswith("9876"), "O Deepgram recusou a chave."
+        return chave.endswith("9876"), "Chave inválida."
 
     monkeypatch.setattr(deepgram, "conferir", conferir)
     assert a.escuta()["deepgram"] == {"tem": False, "fim": ""}
@@ -185,7 +185,7 @@ def test_a_chave_do_deepgram_liga_a_escuta_na_hora_e_nunca_volta(
     assert arquivo.read_text() == "dg-segredo-9876\n"
     assert stat.S_IMODE(arquivo.stat().st_mode) == 0o600
     assert not a.guardar_chave_escuta({"chave": "errada-0000"})["valida"]
-    assert a.testar_chave_escuta({}) == {"ok": False, "mensagem": "O Deepgram recusou a chave."}
+    assert a.testar_chave_escuta({}) == {"ok": False, "mensagem": "Chave inválida."}
     assert conferidas[-1] == "errada-0000"  # sem chave colada, confere a guardada
     with pytest.raises(PedidoInvalido):
         a.guardar_chave_escuta({"chave": "com espaço"})
@@ -202,7 +202,7 @@ def test_conferir_a_chave_do_deepgram_distingue_recusa_de_rede() -> None:
     def sem_rede(pedido: Any, timeout: float) -> Any:
         raise OSError("sem rede")
 
-    assert deepgram.conferir("x", recusa) == (False, "O Deepgram recusou a chave.")
+    assert deepgram.conferir("x", recusa) == (False, "Chave inválida.")
     assert deepgram.conferir("x", sem_rede)[0] is False
 
 

@@ -125,6 +125,7 @@ button:disabled { opacity: .5; cursor: progress; }
 .resultado { min-height: 24px; color: var(--suave); }
 .resultado.ok { color: var(--bom); }
 .resultado.erro { color: var(--erro); }
+p.resultado:empty { display: none; }
 .aviso { padding: 10px 14px; border-radius: 10px; background: rgb(239 190 124 / .08); border: 1px solid rgb(239 190 124 / .35); color: var(--alerta); }
 
 /* --- Sessões: os agentes de código, cada um com a sua pasta (como os bots do Hermes) --- */
@@ -266,6 +267,9 @@ textarea.mono { font-family: var(--mono); }
 .cabeca h1 + .liga, .cabeca h2 + .liga { margin-left: 12px; }
 .conector .cabeca .liga { margin-left: auto; }
 .cabeca + .sub { margin-top: -8px; }
+.cabeca .externo { margin-left: auto; font-size: .875rem; }
+main a { color: var(--acento); text-decoration: none; }
+main a:hover { text-decoration: underline; }
 .linha-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px;
   background: rgb(255 255 255 / .03); border: 1px solid var(--borda); }
 .linha-item .texto { flex: 1 1 auto; min-width: 0; }

@@ -72,10 +72,10 @@ def conferir(chave: str, abrir: Callable[..., Any] = urllib.request.urlopen) -> 
             return True, "Chave válida."
     except urllib.error.HTTPError as erro:
         if erro.code in (401, 403):
-            return False, "O Deepgram recusou a chave."
-        return False, f"O Deepgram respondeu com erro {erro.code}."
+            return False, "Chave inválida."
+        return False, f"Erro do Deepgram ({erro.code})."
     except OSError:
-        return False, "Não consegui falar com o Deepgram (sem internet?)."
+        return False, "Sem conexão com o Deepgram."
 
 
 def _conectar_websocket(url: str, chave: str) -> Any:

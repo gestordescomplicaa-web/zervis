@@ -296,19 +296,19 @@ class Acoes:
             raise PedidoInvalido(str(erro)) from None
         self.n.deepgram.recarregar()
         ok, mensagem = deepgram.conferir(chave)
-        aviso = "Chave guardada; a escuta já está ligada." if ok else f"Chave guardada. {mensagem}"
+        aviso = "Chave salva." if ok else f"Chave salva. {mensagem}"
         return {**self.escuta(), "aviso": aviso, "valida": ok}
 
     def apagar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
         self.n.deepgram.arquivo_chave.unlink(missing_ok=True)
         self.n.deepgram.recarregar()
-        return {**self.escuta(), "aviso": "Chave apagada; a voz ficou desligada."}
+        return {**self.escuta(), "aviso": "Chave removida."}
 
     def testar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Confere a chave colada (ou, sem ela, a guardada) direto no Deepgram."""
         chave = str(dados.get("chave", "")).strip() or (self.n.deepgram.chave or "")
         if not chave:
-            return {"ok": False, "mensagem": "Cole uma chave primeiro."}
+            return {"ok": False, "mensagem": "Informe a chave."}
         ok, mensagem = deepgram.conferir(chave)
         return {"ok": ok, "mensagem": mensagem}
 
