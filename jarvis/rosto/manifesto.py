@@ -1,0 +1,78 @@
+"""O manifesto do Núcleo: os orbes que alimentam o JARVIS, numa fonte só.
+
+Mora no `barehands.json` (a página monta os orbes dele). Cada orbe tem um id estável, o nome
+mostrado, o tipo (brain = Mapa, notes, media = Acervo, orca), apelidos falados e o que guarda.
+Daqui saem os nomes que a voz entende e o trecho do Núcleo que entra na persona; para mudar
+ou entregar o JARVIS a outra pessoa, edita-se o manifesto, não o código.
+"""
+
+import json
+import unicodedata
+from dataclasses import dataclass, field
+from pathlib import Path
+
+TIPOS = {
+    "brain": "mapa de conexões, com as vistas Geral, Trabalho e Foco",
+    "notes": "notas",
+    "media": "arquivos (modelos 3D, imagens, efeitos)",
+    "orca": "projetos, agentes de código e tarefas do Orca",
+}
+
+
+@dataclass(frozen=True)
+class Orbe:
+    id: str
+    titulo: str
+    tipo: str
+    apelidos: tuple[str, ...] = field(default=())
+    descricao: str = ""
+
+
+PADRAO = (
+    Orbe("mapa", "Mapa", "brain", ("cérebro", "seu cérebro"), TIPOS["brain"]),
+    Orbe("guia", "Guia", "notes", ("manual",), "Como usar o JARVIS."),
+    Orbe("acervo", "Acervo", "media", ("arquivos",), TIPOS["media"]),
+)
+
+
+def _sem_acento(texto: str) -> str:
+    t = unicodedata.normalize("NFKD", texto.casefold())
+    return " ".join("".join(c for c in t if not unicodedata.combining(c)).split())
+
+
+def ler(arquivo: Path) -> tuple[Orbe, ...]:
+    """Os orbes do manifesto; sem arquivo ou ilegível, os do padrão (o JARVIS nunca fica sem)."""
+    try:
+        dados = json.loads(arquivo.read_text())
+        orbes = tuple(
+            Orbe(
+                id=str(o.get("id") or o.get("title", "")).casefold(),
+                titulo=str(o.get("title", "")),
+                tipo=str(o.get("kind", "notes")),
+                apelidos=tuple(str(a) for a in o.get("apelidos", [])),
+                descricao=str(o.get("descricao", "")),
+            )
+            for o in dados["orbs"]
+            if o.get("title")
+        )
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return PADRAO
+    return orbes or PADRAO
+
+
+def falados(orbes: tuple[Orbe, ...]) -> dict[str, str]:
+    """Nome falado (sem acento, minúsculo) -> título: o título, o id e cada apelido."""
+    nomes: dict[str, str] = {}
+    for o in orbes:
+        for nome in (o.titulo, o.id, *o.apelidos):
+            nomes.setdefault(_sem_acento(nome), o.titulo)
+    return nomes
+
+
+def para_persona(orbes: tuple[Orbe, ...]) -> str:
+    """O trecho do Núcleo que entra na persona, gerado do manifesto."""
+    linhas = ["## Os orbes do Núcleo (do manifesto)"]
+    for o in orbes:
+        apelidos = f" (também: {', '.join(o.apelidos)})" if o.apelidos else ""
+        linhas.append(f"- **{o.titulo}**{apelidos}: {o.descricao or TIPOS.get(o.tipo, o.tipo)}")
+    return "\n".join(linhas)

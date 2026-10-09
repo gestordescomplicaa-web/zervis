@@ -1,0 +1,20 @@
+[Unit]
+Description=Zé (Zérvis): assistente pessoal local por voz
+After=pipewire-pulse.service zervis-piper.service
+Wants=zervis-piper.service
+# Sem PartOf=graphical-session.target: um reinício da sessão gráfica não pode derrubar o Zé;
+# a presença reconecta sozinha ao socket novo.
+
+[Service]
+Type=simple
+# @REPO@ é trocado pela pasta do repositório no `make instalar`.
+ExecStart="@REPO@/.venv/bin/python" -m jarvis
+Restart=on-failure
+RestartSec=5
+# 75: outra instância ativa; 78: config inválida. Reiniciar não resolve.
+RestartPreventExitStatus=75 78
+TimeoutStopSec=10
+UMask=0077
+
+[Install]
+WantedBy=default.target

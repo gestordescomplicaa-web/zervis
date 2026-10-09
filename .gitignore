@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+# estado e segredos nunca no repositório
+*.db
+*.db-wal
+*.db-shm
+.env
+KEY_*/
+*.key
+key.txt

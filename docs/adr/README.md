@@ -1,0 +1,19 @@
+# Decisões de arquitetura (ADRs)
+
+Uma decisão por arquivo, numerada, nunca apagada. Mudou de ideia? Novo ADR que **substitui** o antigo
+e o antigo ganha "Substituído por NNNN" no status.
+
+| Nº | Decisão | Status |
+|---|---|---|
+| [0001](0001-nucleo-proprio-com-mecanismos-do-hermes.md) | Núcleo próprio, copiando mecanismos do Hermes | Aceito |
+| [0002](0002-cerebro-por-sdk-de-agente.md) | Cérebro pelos SDKs oficiais de agente, ferramentas por MCP | Aceito (Provas 1 e 2 ok) |
+| [0003](0003-front-como-interruptor.md) | Janela do Barehands como liga/desliga | Aceito |
+| [0004](0004-ponte-de-audio-livekit-adiada.md) | Ponte de áudio LiveKit fora do núcleo por enquanto | Substituído por 0005 |
+| [0005](0005-celular-por-livekit-e-tailscale.md) | Celular como rosto remoto: LiveKit local + Tailscale | Proposto, última fase |
+| [0006](0006-orca-continua-como-oficina.md) | O Orca continua como oficina; alternativas avaliadas | Aceito |
+| [0007](0007-cerebro-base-rapido-e-codificacao-no-orca.md) | Cérebro base rápido; codificação com os agentes do Orca | Aceito |
+| [0008](0008-omniroute-como-provedor-do-cerebro.md) | OmniRoute local como provedor do cérebro | Aceito |
+| [0009](0009-conversa-continua-com-ok.md) | Conversa contínua: "ok" encerra, sem repetir "Hey Orca" | Aceito |
+| [0010](0010-troca-de-cerebro-e-baterias.md) | Troca de cérebro pelo JARVIS e baterias no Barehands | Aceito |
+| [0011](0011-orcamento-de-tokens.md) | Orçamento de tokens: medir, sessão nova após pausa, regras para skills/MCP | Aceito |
+| [0012](0012-voz-piper-e-escuta-deepgram.md) | Voz pelo Piper (Cadu, CC0) e escuta pelo Deepgram em streaming | Aceito |

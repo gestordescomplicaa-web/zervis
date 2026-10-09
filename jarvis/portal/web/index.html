@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ze-token" content="__TOKEN__">
+<title>Zé</title>
+<link rel="stylesheet" href="/painel.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%2346d9de' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2346d9de'/%3E%3C/svg%3E">
+<script src="/painel.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <aside class="lateral">
+    <header class="marca">
+      <span class="anel" aria-hidden="true"></span>
+      <div><strong>Zé</strong><small id="estado-ze">conectando…</small></div>
+    </header>
+    <nav aria-label="Seções">
+      <a href="#inicio" data-secao="inicio"><i>◉</i>Início</a>
+      <a href="#imersao" data-secao="imersao"><i>◐</i>Imersão <span class="ponto" id="ponto-imersao" hidden></span></a>
+      <p class="grupo">Trabalho</p>
+      <a href="#foco" data-secao="foco"><i>◇</i>Foco</a>
+      <a href="#sessoes" data-secao="sessoes"><i>▤</i>Sessões <span class="ponto" id="ponto-sessoes" hidden></span></a>
+      <a href="#automacoes" data-secao="automacoes"><i>↻</i>Automações</a>
+      <p class="grupo">O Zé</p>
+      <a href="#memoria" data-secao="memoria"><i>❖</i>Memória</a>
+      <a href="#skills" data-secao="skills"><i>✦</i>Skills</a>
+      <a href="#conectores" data-secao="conectores"><i>⇄</i>Conectores</a>
+      <p class="grupo">Ajustes</p>
+      <a href="#modelos" data-secao="modelos"><i>◎</i>Modelos</a>
+      <a href="#voz" data-secao="voz"><i>♪</i>Voz</a>
+    </nav>
+  </aside>
+  <main id="conteudo" tabindex="-1" aria-live="polite"></main>
+  <section id="imersao" class="imersao" hidden aria-label="Imersão">
+    <div class="barra-imersao">
+      <strong>Imersão</strong>
+      <span class="sub-imersao"></span>
+      <button type="button" class="acao" data-acao="imersao-cheia">Tela cheia</button>
+      <button type="button" class="acao discreta" data-acao="imersao-desligar">Desligar</button>
+    </div>
+    <div class="moldura" id="moldura"></div>
+  </section>
+</div>
+</body>
+</html>
