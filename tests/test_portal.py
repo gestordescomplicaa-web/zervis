@@ -14,6 +14,7 @@ from jarvis import config
 from jarvis.cerebro import rapido
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import PedidoInvalido, Portal
+from jarvis.voz import deepgram
 
 
 def pedir(
@@ -85,6 +86,8 @@ class NucleoFalso:
         self.cerebro = SimpleNamespace(modelo="claude-sonnet-5-5")
         self.provedor = "claude"
         self.aplicadas = 0
+        self.deepgram: deepgram.Deepgram
+        self.detector = SimpleNamespace(modelo=SimpleNamespace(treinada=False))
 
     def aplicar_via_rapida(self) -> str:
         self.aplicadas += 1
@@ -101,6 +104,7 @@ def acoes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Acoes, Nucle
     for variavel in rapido.VARIAVEIS.values():
         monkeypatch.delenv(variavel, raising=False)
     n = NucleoFalso()
+    n.deepgram = deepgram.Deepgram(tmp_path / "config" / "deepgram.key")
     return Acoes(n, tmp_path / "latencias", tmp_path / "teste"), n
 
 
@@ -158,6 +162,48 @@ def test_testar_sem_chave_avisa_sem_chamar_ninguem(acoes: tuple[Acoes, NucleoFal
         "ok": False,
         "erro": "falta a chave deste motor",
     }
+
+
+def test_a_chave_do_deepgram_liga_a_escuta_na_hora_e_nunca_volta(
+    acoes: tuple[Acoes, NucleoFalso], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    a, n = acoes
+    conferidas: list[str] = []
+
+    def conferir(chave: str) -> tuple[bool, str]:
+        conferidas.append(chave)
+        return chave.endswith("9876"), "O Deepgram recusou a chave."
+
+    monkeypatch.setattr(deepgram, "conferir", conferir)
+    assert a.escuta()["deepgram"] == {"tem": False, "fim": ""}
+    assert a.escuta()["ativacao"] is False
+    resposta = a.guardar_chave_escuta({"chave": "dg-segredo-9876"})
+    assert "dg-segredo" not in json.dumps(resposta)
+    assert resposta["deepgram"] == {"tem": True, "fim": "9876"} and resposta["valida"]
+    assert n.deepgram.disponivel  # sem reiniciar
+    arquivo = tmp_path / "config" / "deepgram.key"
+    assert arquivo.read_text() == "dg-segredo-9876\n"
+    assert stat.S_IMODE(arquivo.stat().st_mode) == 0o600
+    assert not a.guardar_chave_escuta({"chave": "errada-0000"})["valida"]
+    assert a.testar_chave_escuta({}) == {"ok": False, "mensagem": "O Deepgram recusou a chave."}
+    assert conferidas[-1] == "errada-0000"  # sem chave colada, confere a guardada
+    with pytest.raises(PedidoInvalido):
+        a.guardar_chave_escuta({"chave": "com espaço"})
+    a.apagar_chave_escuta({})
+    assert not arquivo.exists() and not n.deepgram.disponivel
+
+
+def test_conferir_a_chave_do_deepgram_distingue_recusa_de_rede() -> None:
+    import urllib.error
+
+    def recusa(pedido: Any, timeout: float) -> Any:
+        raise urllib.error.HTTPError(pedido.full_url, 401, "Unauthorized", {}, None)  # type: ignore[arg-type]
+
+    def sem_rede(pedido: Any, timeout: float) -> Any:
+        raise OSError("sem rede")
+
+    assert deepgram.conferir("x", recusa) == (False, "O Deepgram recusou a chave.")
+    assert deepgram.conferir("x", sem_rede)[0] is False
 
 
 def test_os_arquivos_da_pagina_sao_leves() -> None:

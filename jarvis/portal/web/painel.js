@@ -150,9 +150,11 @@ const PAGINAS = {
   },
 
   async modelos() {
-    const c = await api("cerebro");
+    const [c, esc_] = await Promise.all([api("cerebro"), api("escuta")]);
     modelo = { ...c.via, chaves: c.chaves };
+    escuta = esc_;
     return `${cabeca("Modelos")}
+      <section class="cartao" id="cartao-escuta"></section>
       ${cartao("", `<div class="cabeca"><h2>Respostas rápidas</h2>${liga(c.via.ligada, "via-ligada", "", "Ligadas")}</div>
         ${sub("Conversa simples vai a um modelo rápido; o resto, ao cérebro principal.")}
         <div class="segmentos" role="group" aria-label="Provedor">${c.motores.map((m) => `<button type="button" data-acao="motor" data-motor="${m.id}" data-modelo="${esc(m.modelo)}" aria-pressed="${m.id === c.via.motor}">${esc(NOME_MOTOR[m.id] || m.nome)}</button>`).join("")}</div>
@@ -164,9 +166,17 @@ const PAGINAS = {
   },
 
   async voz() {
-    const e = await api("estado");
+    const [e, o] = await Promise.all([api("estado"), api("escuta")]);
+    const chamado = o.ativacao
+      ? `<span class="etiqueta bom">em uso</span></div>${sub("Diga “Ei Zé” para ativar. Agora ele está: " + esc(ESTADOS[e.ze] || e.ze) + ".")}`
+      : `<span class="etiqueta alerta">não treinado</span></div>${sub("O Zé ainda não conhece a sua voz; até lá, fale com ele pelo painel.")}`;
+    const ouvir = o.deepgram.tem
+      ? `<span class="etiqueta bom">Deepgram · …${esc(o.deepgram.fim)}</span></div>${sub("O que você diz depois do “Ei Zé” vira texto pelo Deepgram.")}`
+      : `<span class="etiqueta alerta">sem chave</span></div>${sub('Para o Zé ouvir você, guarde a chave do Deepgram em <a href="#modelos">Modelos</a>.')}`;
     return `${cabeca("Voz")}
-      ${cartao("", `<div class="cabeca"><h2>Chamado</h2><span class="etiqueta bom">em uso</span></div>${sub("Diga “Ei Zé” para ativar. Agora ele está: " + esc(ESTADOS[e.ze] || e.ze) + ".")}`)}
+      ${cartao("", `<div class="cabeca"><h2>Chamado</h2>${chamado}`)}
+      ${cartao("", `<div class="cabeca"><h2>Ouvir</h2>${ouvir}`)}
+      ${cartao("", `<div class="cabeca"><h2>Falar</h2><span class="etiqueta bom">Cadu</span></div>${sub("A voz do Zé roda no seu computador, sem internet.")}`)}
       ${cartao("", `<div class="cabeca"><h2>Tempo real</h2><span class="etiqueta alerta">em breve</span></div>${sub("Como uma ligação: ele escuta o tempo todo e para quando você fala.")}`)}`;
   },
 };
@@ -184,6 +194,22 @@ function desenharChave() {
   const estado = k.tem ? `<span class="etiqueta bom">chave guardada · …${esc(k.fim)}</span>` : '<span class="etiqueta alerta">sem chave</span>';
   area.innerHTML = `<div class="linha">${estado}<input id="chave" type="password" class="mono" placeholder="colar chave" autocomplete="off" spellcheck="false">
     ${botao("Guardar chave", "chave-guardar")}${k.tem && k.origem === "painel" ? xis("chave-apagar", "", "Apagar chave") : ""}</div>`;
+}
+
+// --- Escuta: a chave do Deepgram -------------------------------------------------------------------
+
+let escuta = {};
+
+function desenharEscuta() {
+  const area = $("cartao-escuta");
+  if (!area) return;
+  const k = escuta.deepgram;
+  const estado = k.tem ? `<span class="etiqueta bom">chave guardada · …${esc(k.fim)}</span>` : '<span class="etiqueta alerta">sem chave: o Zé não ouve</span>';
+  area.innerHTML = `<div class="cabeca"><h2>Ouvir a sua voz · Deepgram</h2>${estado}</div>
+    ${sub(`Transforma o que você fala em texto, em tempo real. Só é usado depois do “Ei Zé”; custa menos de um centavo de dólar por minuto. ${k.tem ? "" : `Ainda não tem conta? <a href="${esc(escuta.cadastro)}" target="_blank" rel="noopener">Criar no Deepgram</a> e copie a chave de API.`}`)}
+    <div class="linha"><input id="chave-escuta" type="password" class="mono" placeholder="${k.tem ? "colar outra chave" : "colar a chave do Deepgram"}" autocomplete="off" spellcheck="false">
+      ${botao("Guardar chave", "escuta-guardar", "", k.tem ? "" : "principal")}${botao("Testar", "escuta-testar")}${k.tem ? xis("escuta-apagar", "", "Apagar chave") : ""}
+      <span class="resultado" id="resultado-escuta"></span></div>`;
 }
 
 const lerModelo = () => ({ ligada: document.querySelector('[data-mudar="via-ligada"]').checked, motor: modelo.motor, modelo: $("modelo").value.trim(), endereco: $("endereco").value.trim() });
@@ -597,6 +623,19 @@ const ACOES = {
     const c = await ocupado(b, () => api("chave", { motor: modelo.motor, chave: $("chave").value }));
     modelo.chaves = c.chaves; desenharChave(); toast(c.aviso || "Chave guardada.");
   },
+  "escuta-guardar": async (b) => {
+    const r = await ocupado(b, () => api("escuta/chave", { chave: $("chave-escuta").value }));
+    escuta = r; desenharEscuta();
+    const res = $("resultado-escuta");
+    res.className = "resultado " + (r.valida ? "ok" : "erro"); res.textContent = r.aviso;
+  },
+  "escuta-testar": async (b) => {
+    const res = $("resultado-escuta");
+    res.className = "resultado"; res.textContent = "Conferindo…";
+    const t = await ocupado(b, () => api("escuta/testar", { chave: $("chave-escuta").value }));
+    res.className = "resultado " + (t.ok ? "ok" : "erro"); res.textContent = t.mensagem;
+  },
+  "escuta-apagar": (b) => confirmar(b, "Apagar a chave? O Zé deixa de ouvir.", async () => { escuta = await api("escuta/apagar", {}); desenharEscuta(); toast(escuta.aviso); }),
   "chave-apagar": (b) => confirmar(b, "Apagar a chave?", async () => { const c = await api("chave/apagar", { motor: modelo.motor }); modelo.chaves = c.chaves; desenharChave(); }),
   // sessões
   "sessao-nova": async () => { sessaoAberta = null; document.querySelectorAll(".item-sessao").forEach((x) => x.setAttribute("aria-current", "false")); await formSessao(); },
@@ -731,7 +770,7 @@ async function abrir() {
   try {
     const html = await PAGINAS[secao]();
     conteudo.innerHTML = secao === "sessoes" ? html : `<div class="secao">${html}</div>`;
-    if (secao === "modelos") desenharChave();
+    if (secao === "modelos") { desenharChave(); desenharEscuta(); }
     encher();
     if (secao === "sessoes") await prepararSessoes();
   } catch (erro) {

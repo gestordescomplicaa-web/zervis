@@ -19,6 +19,7 @@ from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
 from jarvis.oficina.sessoes import Sessao, SessaoErro
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
+from jarvis.voz import deepgram
 
 MOTORES = [
     {
@@ -90,6 +91,7 @@ class Acoes:
             "estado": self.estado,
             "inicio": self.inicio,
             "cerebro": self.cerebro,
+            "escuta": self.escuta,
             "skills": self.skills,
             "memoria": self.memoria,
             "automacoes": self.automacoes,
@@ -105,6 +107,9 @@ class Acoes:
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
             "testar": self.testar,
+            "escuta/chave": self.guardar_chave_escuta,
+            "escuta/apagar": self.apagar_chave_escuta,
+            "escuta/testar": self.testar_chave_escuta,
             "sessao/criar": self.criar_sessao,
             "sessao/ler": self.ler_sessao,
             "sessao/enviar": self.enviar_a_sessao,
@@ -275,6 +280,37 @@ class Acoes:
             return {"ok": False, "erro": "falta a chave deste motor"}
         persona = self.n.persona_rapida()
         return asyncio.run(rapido.medir(motor, persona))
+
+    # --- escuta (Deepgram) ---------------------------------------------------------------------
+
+    def escuta(self) -> dict[str, Any]:
+        dg = self.n.deepgram
+        ativacao = getattr(self.n.detector.modelo, "treinada", True)
+        return {"deepgram": dg.situacao(), "cadastro": deepgram.CADASTRO, "ativacao": ativacao}
+
+    def guardar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        chave = str(dados.get("chave", "")).strip()
+        try:
+            deepgram.gravar_chave(self.n.deepgram.arquivo_chave, chave)
+        except ValueError as erro:
+            raise PedidoInvalido(str(erro)) from None
+        self.n.deepgram.recarregar()
+        ok, mensagem = deepgram.conferir(chave)
+        aviso = "Chave guardada; a escuta já está ligada." if ok else f"Chave guardada. {mensagem}"
+        return {**self.escuta(), "aviso": aviso, "valida": ok}
+
+    def apagar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self.n.deepgram.arquivo_chave.unlink(missing_ok=True)
+        self.n.deepgram.recarregar()
+        return {**self.escuta(), "aviso": "Chave apagada; a voz ficou desligada."}
+
+    def testar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Confere a chave colada (ou, sem ela, a guardada) direto no Deepgram."""
+        chave = str(dados.get("chave", "")).strip() or (self.n.deepgram.chave or "")
+        if not chave:
+            return {"ok": False, "mensagem": "Cole uma chave primeiro."}
+        ok, mensagem = deepgram.conferir(chave)
+        return {"ok": ok, "mensagem": mensagem}
 
     # --- sessões da oficina (docs/plano-oficina.md) -------------------------------------------
 

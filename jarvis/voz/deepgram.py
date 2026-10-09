@@ -5,7 +5,8 @@ O áudio vai sendo transcrito enquanto o usuário fala; quando o segmentador fec
 
 Privacidade: uma conexão por pedido, aberta só depois do "Hey Orca" (ou na conversa contínua e na
 resposta de uma confirmação) e fechada no fim do pedido; o "Hey Orca" nunca sai da máquina. A
-chave vem só do arquivo `~/.config/zervis/deepgram.key` (600) e não vai para log.
+chave vem só do arquivo `~/.config/zervis/deepgram.key` (600), que o painel grava, e não vai para
+log. Conta nova: https://console.deepgram.com/signup
 """
 
 import json
@@ -13,6 +14,8 @@ import logging
 import queue
 import threading
 import time
+import urllib.error
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -20,6 +23,8 @@ from urllib.parse import urlencode
 
 log = logging.getLogger(__name__)
 ENDERECO = "wss://api.deepgram.com/v1/listen"
+PROJETOS = "https://api.deepgram.com/v1/projects"  # só para conferir se a chave vale
+CADASTRO = "https://console.deepgram.com/signup"
 PARAMETROS = {
     "model": "nova-3",
     "language": "pt-BR",
@@ -44,6 +49,33 @@ def ler_chave(arquivo: Path) -> str | None:
     except OSError:
         return None
     return chave or None
+
+
+def gravar_chave(arquivo: Path, chave: str) -> None:
+    """A chave colada no painel: arquivo 0600 numa pasta 0700, escrita atômica."""
+    chave = chave.strip()
+    if not chave or len(chave) > 400 or any(c.isspace() for c in chave):
+        raise ValueError("chave vazia ou com espaços")
+    arquivo.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporario = arquivo.with_suffix(".next")
+    temporario.touch(mode=0o600)
+    temporario.chmod(0o600)
+    temporario.write_text(chave + "\n")
+    temporario.replace(arquivo)
+
+
+def conferir(chave: str, abrir: Callable[..., Any] = urllib.request.urlopen) -> tuple[bool, str]:
+    """Pergunta ao Deepgram se a chave vale, sem gastar crédito (lista os projetos da conta)."""
+    pedido = urllib.request.Request(PROJETOS, headers={"Authorization": f"Token {chave}"})
+    try:
+        with abrir(pedido, timeout=10):
+            return True, "Chave válida."
+    except urllib.error.HTTPError as erro:
+        if erro.code in (401, 403):
+            return False, "O Deepgram recusou a chave."
+        return False, f"O Deepgram respondeu com erro {erro.code}."
+    except OSError:
+        return False, "Não consegui falar com o Deepgram (sem internet?)."
 
 
 def _conectar_websocket(url: str, chave: str) -> Any:
@@ -145,10 +177,22 @@ class Deepgram:
     """Fábrica de escutas; sem chave, `disponivel` é falso e a voz fica desligada."""
 
     def __init__(self, arquivo_chave: Path) -> None:
+        self.arquivo_chave = arquivo_chave
         self.chave = ler_chave(arquivo_chave)
         self.segundos_hoje = (time.strftime("%Y-%m-%d"), 0.0)
         if self.chave is None:
             log.warning("Deepgram sem chave em %s: voz desligada", arquivo_chave)
+
+    def recarregar(self) -> None:
+        """O painel guardou ou apagou a chave: vale no próximo pedido, sem reiniciar o Zé."""
+        self.chave = ler_chave(self.arquivo_chave)
+        log.info(
+            "Deepgram %s", "com chave: escuta ligada" if self.chave else "sem chave: voz desligada"
+        )
+
+    def situacao(self) -> dict[str, Any]:
+        """O que a tela pode saber: se há chave e os quatro últimos caracteres."""
+        return {"tem": self.chave is not None, "fim": (self.chave or "")[-4:]}
 
     @property
     def disponivel(self) -> bool:
