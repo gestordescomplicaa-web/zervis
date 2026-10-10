@@ -3,12 +3,15 @@
 Mesmo contrato do anel e do painel: o JARVIS escreve JSONs pequenos em `state/` e a página lê.
 - `decisao.json`: a pergunta que espera o "sim" agora (com o prazo) e as sugestões pendentes.
 - `eficiencia.json`: tokens lidos por resposta nos últimos dias e o que saiu sem o cérebro.
-- `mapa.json`: o mapa do cérebro (memória, skills, conexões, automações) com as ligações de
-  cada correção do usuário ao que ela virou.
+- `mapa.json`: o Mapa (perfil, memória, skills e automações) com as ligações de cada correção
+  do usuário ao que ela virou.
+- `trabalho.json`: as sessões de agentes de código do Zé (a vista Trabalho e o orbe Trabalho).
+- `orbes.json`: quais orbes aparecem (só os que têm conteúdo) e se o modo desenvolvedor está
+  ligado (medidores de CPU, GPU, baterias dos modelos e tokens).
 - `mapa-abrir.json`: o pedido por voz "mostra o seu cérebro".
 - `maos-pedido.json`: o pedido por voz "calibrar as mãos" ou "volta as mãos ao padrão".
 
-O desenho fica no Barehands (AGPL, repositório dele); aqui só os dados. Arquivo velho (JARVIS
+O desenho fica em `jarvis/imersivo/web/` (ADR 0014); aqui só os dados. Arquivo velho (JARVIS
 parado) some da tela: por isso a reescrita periódica mesmo sem mudança.
 """
 
@@ -27,7 +30,8 @@ from jarvis.habilidades.diario import EVENTOS, Diario
 from jarvis.habilidades.revisao import Pendencias
 from jarvis.habilidades.skills import Skills
 from jarvis.memoria.curta import Memoria
-from jarvis.rosto.pasta import GRUPOS, Conexoes
+from jarvis.rosto.pasta import Conexoes
+from jarvis.usuario import Perfil
 
 RENOVAR_S = 30.0
 NOVO_S = 48 * 3600.0  # aprendido há menos que isso brilha no mapa
@@ -95,9 +99,11 @@ def mapa(
     skills: Skills,
     jobs: Jobs,
     diario: Diario,
-    uso_ferramentas: dict[str, dict[str, int]],
     agora: float,
+    perfil: Perfil | None = None,
 ) -> dict[str, Any]:
+    """O que o Zé sabe e faz, para o Mapa do modo imersivo: quem você é, memória, skills e
+    automações. As ferramentas (conexões) ficam no painel: são configuração, não visualização."""
     # O diário diz de onde veio cada coisa aprendida: memória pelo texto, skill pelo nome.
     origens: dict[tuple[str, str], dict[str, Any]] = {}
     for ev in reversed(diario.ultimos(500)):  # do mais velho ao mais novo: o último vence
@@ -119,6 +125,9 @@ def mapa(
             {"id": id_memoria(alvo, e), "rotulo": rotulo(e), "texto": e, **aprendido((alvo, e))}
             for e in memoria.entradas(alvo)
         ]
+        if alvo == "usuario" and perfil is not None and (perfil.nome or perfil.sobre):
+            texto = ". ".join(t for t in (perfil.nome, perfil.sobre) if t)
+            itens.insert(0, {"id": "perfil", "rotulo": perfil.nome or "Perfil", "texto": texto})
         grupos.append({"id": alvo, "rotulo": titulo, "itens": itens})
 
     uso_skills = skills.uso()
@@ -139,45 +148,6 @@ def mapa(
         }
     )
 
-    por_grupo: dict[str, dict[str, Any]] = {}
-    for nome, _ in conexoes.proprias:
-        grupo = next((g for p, g in GRUPOS.items() if nome.startswith(p)), "Outras")
-        item = por_grupo.setdefault(grupo, {"rotulo": grupo, "nomes": [], "usos": 0, "ultimo": 0})
-        uso = uso_ferramentas.get(f"mcp__jarvis__{nome}", {})
-        item["nomes"].append(nome)
-        item["usos"] += uso.get("usos", 0)
-        item["ultimo"] = max(item["ultimo"], uso.get("ultimo", 0))
-    if conexoes.embutidas:
-        usos = [uso_ferramentas.get(n, {}) for n in conexoes.embutidas]
-        por_grupo["Internet"] = {
-            "rotulo": "Internet",
-            "nomes": list(conexoes.embutidas),
-            "usos": sum(u.get("usos", 0) for u in usos),
-            "ultimo": max((u.get("ultimo", 0) for u in usos), default=0),
-        }
-    for servidor in conexoes.externos:
-        usos = [u for n, u in uso_ferramentas.items() if n.startswith(f"mcp__{servidor}__")]
-        por_grupo[servidor] = {
-            "rotulo": f"MCP {servidor}",
-            "nomes": [servidor],
-            "usos": sum(u.get("usos", 0) for u in usos),
-            "ultimo": max((u.get("ultimo", 0) for u in usos), default=0),
-        }
-    grupos.append(
-        {
-            "id": "conexoes",
-            "rotulo": "Conexões",
-            "itens": [
-                {
-                    "id": f"conexao:{g['rotulo']}",
-                    "texto": ", ".join(g["nomes"]),
-                    **g,
-                    "novo": False,
-                }
-                for g in por_grupo.values()
-            ],
-        }
-    )
     grupos.append(
         {
             "id": "automacoes",
@@ -197,7 +167,7 @@ def mapa(
     eventos = diario.ultimos(500)
     ids = {it["id"] for g in grupos for it in g["itens"]}
     return {
-        "centro": {"rotulo": "JARVIS", "sub": conexoes.cerebro},
+        "centro": {"rotulo": "Zé", "sub": conexoes.cerebro},
         "grupos": grupos,
         "linha_do_tempo": [_evento(ev, ids) for ev in eventos[:EVENTOS_NA_LINHA]],
         "por_dia": _por_dia(eventos, agora),
@@ -270,3 +240,34 @@ class Hud:
     def pedir_maos(self, acao: str) -> None:
         """`maos-pedido.json`: calibrar as mãos ou voltar ao padrão, pedido por voz."""
         self.gravar("maos-pedido", {"pedido": time.time(), "acao": acao}, time.time())
+
+
+def trabalho(sessoes: list[Any]) -> dict[str, Any]:
+    """As sessões de agentes de código do Zé, no formato da vista Trabalho."""
+    return {
+        "disponivel": True,
+        "sessoes": [
+            {
+                "id": s.id,
+                "rotulo": s.nome,
+                "estado": s.estado,
+                "pasta": Path(s.pasta).name,
+                "texto": s.resumo,
+                "atualizada": s.atualizada,
+            }
+            for s in sessoes
+        ],
+    }
+
+
+def orbes(
+    foco: dict[str, Any], sessoes: int, desenvolvedor: bool, tem_automacao: bool
+) -> dict[str, Any]:
+    """Os orbes que aparecem: Mapa, Acervo e Guia sempre; Hoje e Trabalho só com conteúdo."""
+    visiveis = ["mapa"]
+    if foco.get("atual") or foco.get("ativas") or foco.get("ideias") or tem_automacao:
+        visiveis.append("hoje")
+    if sessoes:
+        visiveis.append("trabalho")
+    visiveis += ["acervo", "guia"]
+    return {"visiveis": visiveis, "desenvolvedor": desenvolvedor}

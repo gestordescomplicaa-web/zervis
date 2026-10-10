@@ -505,9 +505,10 @@ def test_brilho_sem_camera_nao_e_comando_local(fala: str) -> None:
         ("Volta para o anel.", "visual_anel"),
         ("Fecha o teclado.", "teclado_fechar"),
         ("Fecha seu cérebro.", "mapa_fechar"),
-        ("Me mostra os projetos.", "mostrar_projetos"),
+        ("Me mostra as sessões.", "mostrar_sessoes"),
+        ("Mostra os lembretes.", "mostrar_automacoes"),
         ("Mostra suas memórias.", "mostrar_memoria"),
-        ("Abre as conexões.", "mostrar_conexoes"),
+        ("Abre as conexões.", None),
     ],
 )
 def test_comandos_do_nucleo_nao_vao_ao_cerebro(fala: str, nome: str | None) -> None:

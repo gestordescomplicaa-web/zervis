@@ -67,7 +67,6 @@ from jarvis.rosto import hud, manifesto, pasta, tela
 from jarvis.rosto.anel import Anel, separar_emocao
 from jarvis.rosto.painel import Painel
 from jarvis.rosto.quadro import Quadro
-from jarvis.rosto.rotina import retrato
 from jarvis.rosto.teclado import Teclado
 from jarvis.sistema import catalogo as catalogo_sistema
 from jarvis.sistema.politica import Sistema
@@ -105,7 +104,6 @@ AJUSTES_DA_TELA = {
     "tema_original": ("tema:original", "Pronto, cores originais de volta."),
     "configuracoes": ("config", "Configurações na tela."),
 }
-ORCA_AREAS = ("projetos", "agentes", "tarefas")
 # O jeito do Zé (08/10/2026): o que ele diz quando dá uma voltinha e quando o usuário o roda
 # demais com a mão. Frases variadas, sem gastar o cérebro.
 FALAS_DA_VOLTINHA = (
@@ -132,13 +130,11 @@ MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
     "visual_avatar": ([{"acao": "visual", "valor": "avatar"}], "Pronto, este sou eu."),
     "visual_anel": ([{"acao": "visual", "valor": "anel"}], "Pronto, o anel de volta."),
     "abrir_orbe": ([{"acao": "abrir", "alvo": "{}"}], "{} na tela."),
-    # Projetos, agentes e tarefas moram no orbe Orca; conexões e memória, no Mapa.
+    # Memória, sessões e automações são áreas do Mapa.
     **{
         f"mostrar_{area}": (
-            [{"acao": "abrir", "alvo": area.capitalize(), "orbe": "Orca"}]
-            if area in ORCA_AREAS
-            else [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": area}],
-            "Está no Núcleo.",
+            [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": area}],
+            "Está no Mapa.",
         )
         for area in e.FALAS_DAS_AREAS
     },
@@ -620,11 +616,6 @@ class Nucleo:
             acoes, pronto = MOSTRAR_NA_TELA[base]
             if base == "foco_mostrar":
                 pronto = self.foco.fala_do_quadro()
-            if (
-                base.removeprefix("mostrar_") in ORCA_AREAS
-                and "Orca" not in self.maquina.orbes.values()
-            ):
-                acoes = [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": base[8:]}]
             resposta = self._no_nucleo(com_argumento(acoes, argumento), pronto.format(argumento))
         elif base in FECHAR_NA_TELA:
             acoes, pronto = FECHAR_NA_TELA[base]
@@ -1491,20 +1482,25 @@ class Nucleo:
                     self.skills,
                     self.jobs,
                     self.diario,
-                    self.uso_ferramentas.ler(),
                     agora,
+                    usuario.PERFIL,
+                ),
+                agora,
+            )
+            sessoes = self.sessoes.listar()
+            self.hud.gravar("trabalho", hud.trabalho(sessoes), agora)
+            self.hud.gravar(
+                "orbes",
+                hud.orbes(
+                    self.foco.quadro(),
+                    len(sessoes),
+                    bool(self.cfg["barehands"]["desenvolvedor"]),
+                    any(j.ativo for j in self.jobs.listar()),
                 ),
                 agora,
             )
         except Exception:
             log.exception("pasta do JARVIS falhou")
-        # Consulta somente leitura, limitada e fora do áudio. Falha do Orca não
-        # esconde a memória nem transforma um estado antigo em agente online.
-        try:
-            rotina = retrato(self.oficina.tarefas.copy())
-        except Exception:
-            rotina = {"disponivel": False, "projetos": [], "agentes": [], "tarefas": []}
-        self.hud.gravar("rotina", rotina, time.time())
 
     def _gravar_status(self, agora: float) -> None:
         self.hud.gravar(

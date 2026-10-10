@@ -30,3 +30,4 @@ gravava o estado numa pasta que o holograma não lia (a boca não mexia).
 - O repositório `~/Work/barehands` deixa de ser a fonte; o serviço `barehands` à parte sai.
 - Ficaram de fora: modelos 3D pessoais do Acervo, as variações do chimpanzé ainda em teste e o
   `.blend` de origem do avatar (entram quando o autor decidir publicá-los).
+- As esferas e o contrato de dados de cada uma estão em `docs/imersivo/ESFERAS.md`.

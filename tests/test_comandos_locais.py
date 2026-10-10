@@ -144,9 +144,12 @@ NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
         ("fechar_alvo:Guia", "Fechado.", [("tela", [{"acao": "fechar", "alvo": "Guia"}])]),
         ("mapa_fechar", "Fechado.", [("tela", [{"acao": "fechar_mapa"}])]),
         (
-            "mostrar_projetos",
-            "Está no Núcleo.",
-            [("tela", [{"acao": "abrir", "alvo": "Projetos", "orbe": "Orca"}]), ("trazer", None)],
+            "mostrar_sessoes",
+            "Está no Mapa.",
+            [
+                ("tela", [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": "sessoes"}]),
+                ("trazer", None),
+            ],
         ),
         (
             "visual_anel",
@@ -154,10 +157,10 @@ NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
             [("tela", [{"acao": "visual", "valor": "anel"}]), ("trazer", None)],
         ),
         (
-            "mostrar_conexoes",
-            "Está no Núcleo.",
+            "mostrar_automacoes",
+            "Está no Mapa.",
             [
-                ("tela", [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": "conexoes"}]),
+                ("tela", [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": "automacoes"}]),
                 ("trazer", None),
             ],
         ),
@@ -220,13 +223,3 @@ def test_item_do_nucleo_espera_a_busca_e_diz_se_achou(
     nome: str, fala: str, acao: dict[str, Any]
 ) -> None:
     assert rodar(nome) == (fala, [("agir", [acao])])
-
-
-def test_sem_orbe_orca_projetos_voltam_ao_mapa() -> None:
-    r = Registro()
-    n = Nucleo.__new__(Nucleo)
-    n.hud = n.tela = n.eventos = n.consumo = r  # type: ignore[assignment]
-    n.marca = 0
-    n.maquina = e.Maquina()  # manifesto sem Orca
-    n._comando("mostrar_agentes")
-    assert ("tela", [{"acao": "abrir_mapa"}, {"acao": "focar", "alvo": "agentes"}]) in r.feito

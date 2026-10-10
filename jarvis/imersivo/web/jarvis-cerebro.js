@@ -117,7 +117,7 @@
       const h = e.hoje, t = e.tendencia;
       const seta = t == null ? "" : t <= 0 ? `<span class="down">↓ ${-t}%</span>` : `<span class="up">↑ ${t}%</span>`;
       const dica = (e.dias || []).map(d => `${d.dia}: ${d.media == null ? "—" : mil(d.media)} por resposta (${d.respostas} respostas, ${d.locais} sem o cérebro)`).join("\n");
-      html += `<span class="jv" title="${esc("Tokens lidos por resposta do cérebro\n" + dica)}">TOKENS/RESPOSTA ${sparkline(e.dias || [])}` +
+      html += `<span class="jv dev" title="${esc("Tokens lidos por resposta do cérebro\n" + dica)}">TOKENS/RESPOSTA ${sparkline(e.dias || [])}` +
         `${mil(h.media)} ${seta}<small>· ${h.locais} sem cérebro hoje</small></span>`;
     }
     const sug = (decisao.sugestoes || []);
@@ -133,20 +133,16 @@
   mapaEl.id = 'jv-mapa';
   mapaEl.setAttribute('role', 'dialog');
   mapaEl.setAttribute('aria-modal', 'false');
-  mapaEl.setAttribute('aria-label', 'JARVIS — Mapa: Geral, Trabalho e Foco');
+  mapaEl.setAttribute('aria-label', 'Zé — Mapa: Geral, Trabalho e Foco');
   const areas = {
-    pessoas: {title:'Pessoas',icon:'♙',x:310,y:435,desc:'Pessoas e relações da sua rotina. Ainda não há uma fonte de contatos conectada.'},
-    memoria: {title:'Memória',icon:'◇',x:420,y:190,desc:'O que o JARVIS sabe sobre você, seu ambiente e as habilidades que aprendeu.'},
-    projetos: {title:'Projetos',icon:'▱',x:1070,y:190,desc:'Projetos e frentes de trabalho registrados no Orca.'},
-    conexoes: {title:'Conexões',icon:'⌘',x:1220,y:435,desc:'Ferramentas e serviços que o JARVIS pode usar durante a conversa.'},
-    agentes: {title:'Agentes',icon:'◎',x:1070,y:670,desc:'Agentes nas frentes do Orca, com o estado informado pela oficina.'},
-    tarefas: {title:'Tarefas',icon:'✓',x:420,y:670,desc:'Delegações do JARVIS e automações da sua rotina.'},
-    oportunidades: {title:'Oportunidades',icon:'♧',desc:'Ainda não há uma fonte de oportunidades conectada.'},
+    memoria: {title:'Memória',icon:'◇',x:420,y:250,desc:'O que o Zé sabe sobre você e o ambiente, e as skills que aprendeu.'},
+    sessoes: {title:'Sessões',icon:'◎',x:1120,y:440,desc:'Agentes de código trabalhando nos seus projetos.'},
+    automacoes: {title:'Automações',icon:'✓',x:420,y:640,desc:'Lembretes e tarefas agendadas.'},
   };
   mapaEl.innerHTML = '<div class="grip"><span class="titulo">◉ MAPA <span class="online">Conectando</span></span><span class="voz">Verificando voz</span><button data-action="window-fit" title="Expandir ou reduzir janela" aria-label="Ajustar janela">↔</button><button data-action="close" aria-label="Recolher mapa">×</button></div>' +
     '<nav class="modos" aria-label="Vistas do mapa"><button data-action="mode:brain"><span class="icone">◉</span><span class="nome">GERAL</span></button><button data-action="mode:work"><span class="icone">◎</span><span class="nome">TRABALHO</span></button><button data-action="mode:focus"><span class="icone">◇</span><span class="nome">FOCO</span></button></nav>' +
-    '<main class="principal"><div class="palco"><svg role="group" aria-label="Conexões neurais do JARVIS"><g class="mundo"></g></svg>' +
-    '<div class="contexto"><h1>Conexões do JARVIS</h1><p class="sub">Aponte para conhecer. Pinça para explorar.</p></div>' +
+    '<main class="principal"><div class="palco"><svg role="group" aria-label="O que o Zé sabe e faz"><g class="mundo"></g></svg>' +
+    '<div class="contexto"><h1>O que o Zé sabe e faz</h1><p class="sub">Aponte para conhecer. Pinça para explorar.</p></div>' +
     '</div><section class="vista work" hidden aria-label="Trabalho"></section><section class="vista focus" hidden aria-label="Foco"></section></main>' +
     '<div class="ferramentas" aria-label="Tamanho da vista"><button data-action="motion">Pausar</button><button data-action="zoom-out" aria-label="Reduzir vista">−</button><span class="zoom"></span><button data-action="zoom-in" aria-label="Ampliar vista">+</button><button data-action="fit">Ajustar</button></div>' +
     '<div class="ajuda">Aponte para ler · pinça para puxar · duas mãos ampliam</div><div class="previa" aria-hidden="true"></div>';
@@ -157,7 +153,7 @@
   const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
   const camera = {x:0,y:0,s:1}, pontos = new Map(), maos = new Map();
   let foco={}, focoGrupo=null, focoMarcados=new Set();  // the Foco board (state/foco.json)
-  let mapa={}, rotina={}, presenca={}, aberto=false, fecharEm=0, focoAnterior=null, modo='brain', filtro='projetos';
+  let mapa={}, trabalho={}, presenca={}, aberto=false, fecharEm=0, focoAnterior=null, modo='brain', filtro='sessoes';
   let objetos=new Map(), grupos={}, escolhido=null, hoverEl=null, gesto=null, desenhado='', expandido=null;
   let ultimaVista='brain', peloJarvis=false;
   const leitura={work:1,focus:1};
@@ -172,14 +168,10 @@
     objetos=new Map(); grupos=Object.fromEntries(Object.keys(areas).map(k=>[k,[]]));
     const add=(area,it)=>{const n={...it,area}; objetos.set(n.id,n);grupos[area].push(n);};
     for(const g of mapa.grupos || []) for(const [i,it] of (g.itens||[]).entries()) {
-      const area=g.id==='conexoes'?'conexoes':g.id==='automacoes'?'tarefas':'memoria';
+      const area=g.id==='automacoes'?'automacoes':'memoria';
       add(area,{...it,id:it.id||g.id+':'+i,categoria:g.rotulo,meta:it.ativo!=null?(it.ativo?'Automação ativa':'Automação pausada'):it.usos!=null?it.usos+' usos registrados':it.novo?'Aprendido recentemente':g.rotulo});
     }
-    if(rotina.disponivel) {
-      for(const it of rotina.projetos || []) add('projetos',{...it,id:'projeto:'+it.id,origId:it.id,categoria:'Projeto no Orca',meta:estadoTexto(it.estado),texto:'Frente de trabalho registrada no Orca. Os agentes associados aparecem nas relações deste projeto.'});
-      for(const it of rotina.agentes || []) add('agentes',{...it,id:'agente:'+it.id,relacao:'projeto:'+it.projeto,categoria:'Agente no Orca',meta:estadoTexto(it.estado),texto:it.rotulo+' está associado ao projeto '+it.projeto_nome+'. Estado informado pelo Orca: '+estadoTexto(it.estado)+'.'});
-      for(const it of rotina.tarefas || []) add('tarefas',{...it,id:'tarefa:'+it.id,categoria:'Delegação do JARVIS',meta:'Delegada a '+it.agente,texto:it.rotulo});
-    }
+    for(const it of trabalho.sessoes || []) add('sessoes',{...it,id:'sessao:'+it.id,categoria:'Sessão'+(it.pasta?' · '+it.pasta:''),meta:estadoTexto(it.estado),texto:it.texto||it.rotulo});
   }
   function status() {
     const vivo=presenca.batimento && Date.now()/1000-presenca.batimento<10;
@@ -188,12 +180,10 @@
     mapaEl.querySelector('.voz').textContent=vivo?(!presenca.microfone_aberto?'Microfone fechado':labels[presenca.estado]||'Estado indisponível'):'Voz indisponível';
   }
   function subtitulo(id) {
-    if(id==='pessoas'||id==='oportunidades') return 'Ainda sem fonte';
-    if(['projetos','agentes'].includes(id)&&!rotina.disponivel) return 'Orca indisponível';
-    return grupos[id].length+' '+({memoria:'registros',projetos:'projetos',conexoes:'conexões',agentes:'agentes',tarefas:'itens'}[id]||'itens');
+    return grupos[id].length+' '+({memoria:'registros',sessoes:'sessões',automacoes:'itens'}[id]||'itens');
   }
   function desenharGrafo(reset=false) {
-    const specs=[{id:'center',title:'JARVIS',kind:'root',radius:45,color:'root',x:770,y:440,subtitle:'Memória · relações · aprendizado',icon:'root'}],links=[];
+    const specs=[{id:'center',title:'Zé',kind:'root',radius:45,color:'root',x:770,y:440,subtitle:'Memória · relações · aprendizado',icon:'root'}],links=[];
     for(const [id,a] of Object.entries(areas)) {
       if(!a.x) continue;
       specs.push({id:'area:'+id,title:a.title,kind:'group',radius:28,color:id,x:a.x,y:a.y,subtitle:subtitulo(id),icon:id});
@@ -205,13 +195,12 @@
       for(let i=0;i<count;i++) {
         const it=list[i],left=a.x<770, side=left?-1:1, offset=(i-(count-1)/2)*52;
         const x=clamp(a.x+side*(155+(i%2)*20),80,1520),y=clamp(a.y+offset,70,820);
-        specs.push({id:it.id,title:it.rotulo,kind:'item',radius:7+Math.min(5,Math.log2(1+(it.usos||0))),color:id,x,y,labelSide:side,subtitle:id==='agentes'?it.meta:''});
+        specs.push({id:it.id,title:it.rotulo,kind:'item',radius:7+Math.min(5,Math.log2(1+(it.usos||0))),color:id,x,y,labelSide:side,subtitle:id==='sessoes'?it.meta:''});
         links.push({from:'area:'+id,to:it.id,color:id,length:Math.hypot(x-a.x,y-a.y)});
       }
     }
     // Exact agent → project relationships, only when both endpoints are visible.
     const visible=new Set(specs.map(n=>n.id));
-    for(const it of grupos.agentes) if(visible.has(it.id)&&visible.has(it.relacao)) links.push({from:it.id,to:it.relacao,color:'agentes',length:360,origin:true});
     graph.setData(specs,links,reset);
     graph.setHighlight(null,escolhido);
     aplicarCamera();
@@ -255,13 +244,11 @@
   function ajustarVista(){if(modo==='brain')enquadrar();else ampliarLeitura(1/leitura[modo]);}
   function listaWork() {
     const a=areas[filtro],list=grupos[filtro]||[];
-    let info=a.desc;
-    if(rotina.limitado&&['agentes','projetos'].includes(filtro))info+=' Exibindo o recorte retornado pelo Orca.';
-    if(['agentes','projetos'].includes(filtro)&&!rotina.disponivel) info='O Orca não respondeu à última atualização. Os estados voltam quando a conexão for retomada.';
+    const info=a.desc;
     workEl.innerHTML='<h1>'+esc(a.title)+'</h1><p class="intro">'+esc(info)+'</p><div class="filtros">'+
       Object.keys(areas).map(id=>'<button data-action="area:'+id+'" class="'+(id===filtro?'ativo':'')+'">'+areas[id].title+' <small>'+grupos[id].length+'</small></button>').join('')+'</div><div class="lista">'+
-      (list.length?list.map(it=>'<button class="objeto" data-object="'+esc(it.id)+'"><span class="objeto-icon">'+a.icon+'</span><span><strong>'+esc(it.rotulo)+'</strong><small>'+esc(it.projeto_nome||it.categoria||'')+'</small></span><span class="badge">'+esc(it.meta)+'</span><span>›</span></button>').join(''):
-      '<div class="vazio">'+(filtro==='pessoas'?'Os contatos aparecerão aqui quando uma fonte de pessoas estiver conectada.':filtro==='oportunidades'?'Conecte uma fonte de oportunidades para acompanhar negócios e suas relações.':'Nenhum item disponível nesta área.')+'</div>')+'</div>';
+      (list.length?list.map(it=>'<button class="objeto" data-object="'+esc(it.id)+'"><span class="objeto-icon">'+a.icon+'</span><span><strong>'+esc(it.rotulo)+'</strong><small>'+esc(it.categoria||'')+'</small></span><span class="badge">'+esc(it.meta)+'</span><span>›</span></button>').join(''):
+      '<div class="vazio">'+({sessoes:'Nenhuma sessão. Crie uma no painel, em Sessões.',automacoes:'Nada agendado. Peça ao Zé: “me lembra amanhã às nove de…”.'}[filtro]||'Nada aqui ainda.')+'</div>')+'</div>';
   }
   function historiaHtml(id=null) {
     const eventos=(mapa.linha_do_tempo||[]).filter(e=>!id||e.item===id);
@@ -280,7 +267,7 @@
       '<div class="focus-acoes"><button data-action="locate">Ver nas conexões</button><button data-action="node-smaller">Esfera −</button><button data-action="node-larger">Esfera +</button></div>'+
       (it.area==='memoria'?historiaHtml(it.id):'')+'</article><aside class="focus-relacoes"><h3>Relações</h3><button data-action="area:'+it.area+'">'+a.icon+' '+a.title+'</button>'+
       relacionados.map(n=>'<button data-object="'+esc(n.id)+'">'+esc(n.rotulo)+'<small> · '+esc(n.meta)+'</small></button>').join('')+
-      (it.nomes?'<h3>Ferramentas disponíveis</h3>'+it.nomes.map(n=>'<p class="focus-corpo">'+esc(n)+'</p>').join(''):'')+'</aside></div>';
+      '</aside></div>';
   }
   function trocarModo(m) {
     pontos.clear();gesto=null;graph.releaseAll();
@@ -414,7 +401,7 @@
     if(!aberto||!alvo?.dataset.node||pontos.size)return;
     atividade();const id=alvo.dataset.node,it=objetos.get(id),area=id.startsWith('area:')?areas[id.slice(5)]:null;
     graph.setHighlight(id,escolhido);
-    const html='<small>'+esc(it?.categoria||(area?'Área da sua rotina':'Seu assistente'))+'</small><strong>'+esc(it?.rotulo||area?.title||'JARVIS')+'</strong><p>'+esc((it?.texto||area?.desc||mapa.centro?.sub||'').slice(0,600))+'</p>'+
+    const html='<small>'+esc(it?.categoria||(area?'Área da sua rotina':'Seu assistente'))+'</small><strong>'+esc(it?.rotulo||area?.title||'Zé')+'</strong><p>'+esc((it?.texto||area?.desc||mapa.centro?.sub||'').slice(0,600))+'</p>'+
       (it?.origem?'<blockquote>'+esc(it.origem)+'</blockquote>':'')+'<small>'+(area?'Pinça curta expande · segure para puxar':'Pinça curta abre no Focus · segure para puxar')+'</small>';
     // Keep the same DOM while pointing; refreshed data still updates its content.
     if(html!==previaHTML){previa.innerHTML=html;previaHTML=html;previaW=previaH=0;}
@@ -542,7 +529,7 @@
   function acharAlvo(alvo) {
     const q = sem(alvo);
     if (!q) return null;
-    if (['center', 'centro', 'cerebro', 'jarvis'].includes(q)) return { tipo: 'centro', id: 'center', nome: 'JARVIS' };
+    if (['center', 'centro', 'cerebro', 'ze', 'jarvis'].includes(q)) return { tipo: 'centro', id: 'center', nome: 'Zé' };
     for (const [id, a] of Object.entries(areas)) if (q === id || q === 'area:' + id || q === sem(a.title)) return { tipo: 'area', id, nome: a.title };
     if (objetos.has(alvo)) return { tipo: 'item', id: alvo, nome: objetos.get(alvo).rotulo };
     let parecido = null;
@@ -621,7 +608,7 @@
   window.addEventListener('jv-tema',()=>{desenhado='';desenhar();});
   function desenhar(){
     if(!aberto||pontos.size)return;
-    const key=JSON.stringify([mapa,rotina,decisao.sugestoes],(k,v)=>k==='ts'?undefined:v);
+    const key=JSON.stringify([mapa,trabalho,decisao.sugestoes],(k,v)=>k==='ts'?undefined:v);
     if(key===desenhado)return;desenhado=key;montarDados();desenharGrafo();
     if(modo==='work'){const y=workEl.scrollTop;listaWork();workEl.scrollTop=y;}
     else if(modo==='focus'){const y=focusEl.scrollTop;focus();focusEl.scrollTop=y;}
@@ -652,8 +639,8 @@
   }
   async function lento() {
     mostrarEficiencia(await get("eficiencia"));
-    const dados=await Promise.all([get("mapa"),get("rotina"),get("foco")]);
-    [mapa,rotina]=dados;receberFoco(dados[2]);
+    const dados=await Promise.all([get("mapa"),get("trabalho"),get("foco")]);
+    [mapa,trabalho]=dados;receberFoco(dados[2]);
     desenhar();
   }
   rapido(); setInterval(rapido, 700);

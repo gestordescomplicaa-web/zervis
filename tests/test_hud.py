@@ -3,15 +3,17 @@
 import json
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 from jarvis.automacoes.jobs import Jobs
-from jarvis.cerebro.consumo import Consumo, UsoDeFerramentas
+from jarvis.cerebro.consumo import Consumo
 from jarvis.habilidades import revisao
 from jarvis.habilidades.diario import Diario
 from jarvis.habilidades.skills import Skills
 from jarvis.memoria.curta import Memoria, Mudanca
 from jarvis.rosto import hud
 from jarvis.rosto.pasta import Conexoes
+from jarvis.usuario import Perfil
 
 
 def test_decisao_com_pergunta_prazo_e_sugestoes(tmp_path: Path) -> None:
@@ -55,18 +57,17 @@ def test_mapa_liga_a_correcao_ao_que_ela_virou(tmp_path: Path) -> None:
         texto="Prefere seletor visual na tela.",
     )
     skills = Skills(tmp_path / "s")
-    uso = UsoDeFerramentas(tmp_path / "uso.json")
-    uso.somar(["mcp__jarvis__sistema_executar", "mcp__jarvis__sistema_estado", "WebSearch"], 50)
     conexoes = Conexoes(
         cerebro="Claude, com o Sonnet 5.5",
         proprias=[("sistema_estado", True), ("sistema_executar", False), ("memoria", False)],
         embutidas=["WebSearch", "WebFetch"],
     )
     agora = time.time()
-    m = hud.mapa(conexoes, memoria, skills, Jobs(tmp_path / "j.json"), diario, uso.ler(), agora)
-    assert m["centro"] == {"rotulo": "JARVIS", "sub": "Claude, com o Sonnet 5.5"}
+    m = hud.mapa(conexoes, memoria, skills, Jobs(tmp_path / "j.json"), diario, agora)
+    assert m["centro"] == {"rotulo": "Zé", "sub": "Claude, com o Sonnet 5.5"}
     grupos = {g["id"]: g for g in m["grupos"]}
-    assert list(grupos) == ["usuario", "jarvis", "skills", "conexoes", "automacoes"]
+    # As ferramentas ficam no painel (Conectores): o Mapa mostra o que o Zé sabe e faz.
+    assert list(grupos) == ["usuario", "jarvis", "skills", "automacoes"]
     importada, aprendida = grupos["usuario"]["itens"]
     assert importada == {
         "id": hud.id_memoria("usuario", "Se chama Ana."),
@@ -76,16 +77,12 @@ def test_mapa_liga_a_correcao_ao_que_ela_virou(tmp_path: Path) -> None:
     }
     assert aprendida["origem"] == "não, prefiro o seletor" and aprendida["novo"]
     assert aprendida["rotulo"] == "Prefere seletor visual na tela."
-    conexoes_por_nome = {i["rotulo"]: i for i in grupos["conexoes"]["itens"]}
-    assert conexoes_por_nome["Máquina (Omarchy)"]["usos"] == 2
-    assert conexoes_por_nome["Internet"]["usos"] == 1
-    assert conexoes_por_nome["Memória"]["usos"] == 0
     assert m["aprendizado"] == {"aprovadas": 1, "recentes": 1}
     (evento,) = m["linha_do_tempo"]
     assert evento["rotulo"] == "Sugestão aprovada" and evento["item"] == aprendida["id"]
     assert evento["origem"] == "não, prefiro o seletor"
     assert len(m["por_dia"]) == 14 and m["por_dia"][-1]["n"] == 1
-    velho = hud.mapa(conexoes, memoria, skills, Jobs(tmp_path / "j.json"), diario, {}, agora + 3e5)
+    velho = hud.mapa(conexoes, memoria, skills, Jobs(tmp_path / "j.json"), diario, agora + 3e5)
     assert not velho["grupos"][0]["itens"][1]["novo"]  # depois de 48 h para de brilhar
 
 
@@ -108,3 +105,47 @@ def test_hud_so_regrava_quando_muda_ou_vai_envelhecer(tmp_path: Path) -> None:
     assert sorted(p.name for p in tmp_path.iterdir()) == ["decisao.json", "mapa-abrir.json"]
     h.pedir_maos("padrao")
     assert json.loads((tmp_path / "maos-pedido.json").read_text())["acao"] == "padrao"
+
+
+def test_o_perfil_abre_o_sobre_voce_do_mapa(tmp_path: Path) -> None:
+    conexoes = Conexoes(cerebro="Claude", proprias=[], embutidas=[])
+    vazio = Memoria(tmp_path / "m", {"usuario": 900, "jarvis": 900})
+    jobs, diario = Jobs(tmp_path / "j.json"), Diario(tmp_path / "d.jsonl")
+    m = hud.mapa(
+        conexoes, vazio, Skills(tmp_path / "s"), jobs, diario, 0, Perfil("Ana", "Designer.")
+    )
+    assert m["grupos"][0]["itens"][0] == {
+        "id": "perfil",
+        "rotulo": "Ana",
+        "texto": "Ana. Designer.",
+    }
+    sem = hud.mapa(conexoes, vazio, Skills(tmp_path / "s"), jobs, diario, 0, Perfil())
+    assert sem["grupos"][0]["itens"] == []
+
+
+def test_so_aparecem_os_orbes_com_conteudo() -> None:
+    dia_zero = hud.orbes({"atual": None, "ativas": [], "ideias": []}, 0, False, False)
+    assert dia_zero == {"visiveis": ["mapa", "acervo", "guia"], "desenvolvedor": False}
+    em_uso = hud.orbes({"atual": {"titulo": "Site"}}, 2, True, False)
+    assert em_uso["visiveis"] == ["mapa", "hoje", "trabalho", "acervo", "guia"]
+    assert hud.orbes({}, 0, False, True)["visiveis"][1] == "hoje"  # um lembrete ativo basta
+
+
+def test_o_trabalho_vem_das_sessoes_do_ze_sem_prompt_nem_caminho() -> None:
+    s = SimpleNamespace(
+        id="a1",
+        nome="Loja",
+        estado="trabalhando",
+        pasta="/x/loja",
+        resumo="Testes ok.",
+        atualizada="t",
+    )
+    (item,) = hud.trabalho([s])["sessoes"]
+    assert item == {
+        "id": "a1",
+        "rotulo": "Loja",
+        "estado": "trabalhando",
+        "pasta": "loja",
+        "texto": "Testes ok.",
+        "atualizada": "t",
+    }

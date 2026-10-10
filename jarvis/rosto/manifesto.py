@@ -12,10 +12,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 TIPOS = {
-    "brain": "mapa de conexões, com as vistas Geral, Trabalho e Foco",
+    "brain": "o que o Zé sabe e faz, com as vistas Geral, Trabalho e Foco",
+    "hoje": "a frente atual, o próximo passo e os lembretes",
+    "trabalho": "as sessões de agentes de código",
     "notes": "notas",
     "media": "arquivos (modelos 3D, imagens, efeitos)",
-    "orca": "projetos, agentes de código e tarefas do Orca",
 }
 
 

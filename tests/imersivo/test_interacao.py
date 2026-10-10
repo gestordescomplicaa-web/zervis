@@ -149,7 +149,7 @@ async def main():
                 await asyncio.sleep(.2)
                 await ev("""const p=rect('.panel .bar h3'),cur={...p,history:[]};testGrab(it,91,cur);testRelease(it,91,cur);""")
                 await check('a short hand pinch on the title does not close the panel', "it.anim?.k!=='out'")
-                await ev("""document.querySelector('[data-orb="2"]').click()""")
+                await ev("""document.querySelector('[data-orb="1"]').click()""")
                 for _ in range(40):
                     if await ev("document.querySelectorAll('.panel').length===2"):
                         break

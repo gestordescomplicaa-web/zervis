@@ -42,5 +42,5 @@ def test_o_trecho_da_persona_sai_do_manifesto(tmp_path: Path) -> None:
     arquivo.write_text(json.dumps(ORBES))
     texto = manifesto.para_persona(manifesto.ler(arquivo))
     assert texto.splitlines()[0] == "## Os orbes do Núcleo (do manifesto)"
-    assert "- **Mapa** (também: cérebro, seu cérebro): mapa de conexões" in texto
+    assert "- **Mapa** (também: cérebro, seu cérebro): o que o Zé sabe e faz" in texto
     assert "- **Identidade**: Quem o JARVIS é." in texto

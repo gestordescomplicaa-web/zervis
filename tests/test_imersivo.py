@@ -56,7 +56,7 @@ def test_sobe_com_a_pagina_e_le_o_estado_da_pasta_do_ze(imersivo: Imersivo) -> N
 def test_sem_manifesto_os_orbes_do_padrao_iguais_aos_do_ze(imersivo: Imersivo) -> None:
     titulos = [o["title"] for o in pegar(imersivo.porta, "/config")["orbs"]]
     assert titulos == [o.titulo for o in manifesto.ler(imersivo.pasta_estado.parent / "nada")]
-    assert titulos == ["Mapa", "Guia", "Acervo"]
+    assert titulos == ["Mapa", "Hoje", "Trabalho", "Acervo", "Guia"]
 
 
 def test_se_o_servidor_cair_o_ze_sobe_de_novo(imersivo: Imersivo) -> None:

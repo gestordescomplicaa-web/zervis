@@ -16,3 +16,6 @@
 - O modo imersivo agora é parte do Zé (ADR 0014): o holograma com as expressões e a boca que
   acompanha a voz, o Núcleo com os orbes e a tela movida pelas mãos vêm no repositório, e o Zé
   sobe o servidor junto com ele. Os testes da página rodam em `make check-imersivo`.
+- Modo imersivo limpo para quem começa do zero: as esferas são Mapa, Hoje, Trabalho, Acervo e
+  Guia, cada uma alimentada pelo próprio Zé e visível só quando tem conteúdo. Sem Orca nem lista
+  de ferramentas no Mapa; medidores técnicos só no modo desenvolvedor (docs/imersivo/ESFERAS.md).

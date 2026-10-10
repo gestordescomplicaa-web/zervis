@@ -9,20 +9,15 @@
     for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
     return element;
   };
-  const COLORS = { root: '#8ff0e4', memoria: '#b5efdf', pessoas: '#a6e9da',
-    projetos: '#8ff0e4', agentes: '#bee9dc', conexoes: '#8ff0e4',
-    tarefas: '#a7eddc', oportunidades: '#efbe7c', novo: '#efbe7c' };
+  const COLORS = { root: '#8ff0e4', memoria: '#b5efdf', sessoes: '#bee9dc',
+    automacoes: '#a7eddc', novo: '#efbe7c' };
   // barehands-jarvis: not node colours; jarvis-tema.js swaps all of these.
   const TONS = { meta: '#a8d8cf', fundo: '#0c1c2b', base: '#071115' };
   const ICONS = {
     root: 'M12 4c-3-3-7 0-6 3-4 0-4 6-1 7-1 4 3 7 7 5V4m0 0c3-3 7 0 6 3 4 0 4 6 1 7 1 4-3 7-7 5M8 8l4 2m4-2-4 2m-5 5 5-2m5 2-5-2',
     memoria: 'M4 4h6c2 0 2 2 2 2s0-2 2-2h6v15h-6c-2 0-2 2-2 2s0-2-2-2H4ZM12 6v15',
-    projetos: 'M3 6h7l2 2h9v12H3ZM3 6V4h7l2 2h9v2',
-    pessoas: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21v-3c0-6 16-6 16 0v3Z',
-    agentes: 'M4 8h16v12H4ZM12 8V4m-2 0h4M8 12v3m8-3v3m-8 2h8M1 12v5m22-5v5',
-    conexoes: 'M8 8H3v12h18V8h-5M8 4h8v8H8ZM12 12v5m-4 0h8',
-    tarefas: 'M5 12l5 5L20 6',
-    oportunidades: 'M12 2c2 6 8 7 8 13a8 8 0 1 1-16 0c0-3 2-5 4-7-1 5 2 6 3 5 3-3 1-8 1-11Z',
+    sessoes: 'M4 8h16v12H4ZM12 8V4m-2 0h4M8 12v3m8-3v3m-8 2h8M1 12v5m22-5v5',
+    automacoes: 'M5 12l5 5L20 6',
   };
 
 
@@ -58,14 +53,14 @@
       this.world.append(defs);
       const lines = el('g', { class: 'ligacoes', 'pointer-events': 'none' });
       for (const link of this.edges) {
-        link.el = el('path', { fill: 'none', class: 'ligacao', stroke: COLORS[link.color] || COLORS.conexoes,
+        link.el = el('path', { fill: 'none', class: 'ligacao', stroke: COLORS[link.color] || COLORS.root,
           'stroke-width': link.origin ? .8 : 1.1, 'stroke-opacity': link.origin ? .18 : .38,
           ...(link.origin ? { 'stroke-dasharray': '3 5' } : {}) });
         lines.append(link.el);
       }
       this.world.append(lines);
       for (const n of this.nodes.values()) {
-        const color = COLORS[n.color] || COLORS.conexoes;
+        const color = COLORS[n.color] || COLORS.root;
         n.el = el('g', { class: `no esfera ${n.kind || 'item'}`, 'data-node': n.id,
           style: 'color:' + color, role: 'button', tabindex: '0', 'aria-label': n.ariaLabel || n.title, 'aria-pressed': 'false' });
         n.halo = el('circle', { class: 'halo', fill: color, opacity: '.06', 'pointer-events': 'none' });

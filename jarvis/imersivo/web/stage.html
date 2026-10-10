@@ -1411,9 +1411,13 @@ function ringToggle(ring) {
       const n = treeCounts(PROPSTREE, true).leaves;
       return { title, body: `${n} ${n === 1 ? "arquivo" : "arquivos"}`, orb: "props" };
     }
-    if (o.kind === "orca") {
-      const p = ORCA?.projetos?.length || 0, a = ORCA?.agentes?.length || 0;
-      return { title, body: ORCA?.disponivel ? `${p} projetos · ${a} agentes` : "Agentes de código", orb: "orca", kind: "orca" };
+    if (o.kind === "hoje") {
+      const atual = FOCO?.atual?.titulo;
+      return { title, body: atual ? atual : "Foco e lembretes", orb: "hoje", kind: "hoje" };
+    }
+    if (o.kind === "trabalho") {
+      const n = (TRABALHO?.sessoes || []).length;
+      return { title, body: `${n} ${n === 1 ? "sessão" : "sessões"}`, orb: "trabalho", kind: "trabalho" };
     }
     const n = treeCounts(TREES[i], false).leaves;
     return { title, body: `${n} ${n === 1 ? "nota" : "notas"}`, orb: i };
@@ -1555,7 +1559,15 @@ function pontos(nome, alvo, arquivo) {
   const raiz = w => w.slice(0, 5);
   return a.split(/\s+/).some(w => w.length >= 5 && n.split(/\s+/).some(v => raiz(v) === raiz(w))) ? 1 : 0;
 }
-function chaveDe(o, k) { return o.kind === "brain" ? "brain" : o.kind === "media" ? "props" : o.kind === "orca" ? "orca" : k; }
+function chaveDe(o, k) {
+  return o.kind === "brain" ? "brain" : o.kind === "media" ? "props" : ["hoje", "trabalho"].includes(o.kind) ? o.kind : k;
+}
+// Hoje and Trabalho are doors into the Mapa (the Foco board, the Work view), not panes of their own.
+function abrirVista(chave) {
+  if (chave === "hoje") { window.jarvisCerebro?.mostrarFoco(); return true; }
+  if (chave === "trabalho") { window.jarvisCerebro?.modo("trabalho"); return true; }
+  return false;
+}
 function orbes() {
   return (CFG.orbs || []).map((o, k) => ({ title: o.title || "Orbe", id: o.id || normaliza(o.title), kind: o.kind,
     apelidos: o.apelidos || [], chave: chaveDe(o, k) }));
@@ -1563,8 +1575,10 @@ function orbes() {
 function titulos() { return orbes().map(o => o.title).join(", "); }
 function orbeDe(chave) { return orbes().find(o => o.chave === chave) || null; }
 function acharOrbe(nome) {
-  const a = normaliza(nome).replace(/^(o|a|seu|sua|meu|minha) /, "").replace(/^(orbe|aba|painel) (do |da |de )?/, "");
-  return orbes().find(o => [o.title, o.id, ...o.apelidos].some(x => normaliza(x) === a)) || null;
+  const inteiro = normaliza(nome);
+  const a = inteiro.replace(/^(o|a|seu|sua|meu|minha) /, "").replace(/^(orbe|aba|painel) (do |da |de )?/, "");
+  // "meu dia" is an alias as said; "o Mapa" is the title with an article
+  return orbes().find(o => [o.title, o.id, ...o.apelidos].some(x => [a, inteiro].includes(normaliza(x)))) || null;
 }
 // "Acervo/burrinho", or the orb given apart: [what to find, the orb (null = all;
 // undefined = no such orb)].
@@ -1578,6 +1592,7 @@ function alvoEOrbe(nome, orbe) {
 function abrirOrbe(o) {
   window.jarvisStage.ensureMenu();
   if (o.chave === "brain") { window.jarvisCerebro?.abrir(); return null; }
+  if (abrirVista(o.chave)) return null;
   let b = items.find(i => i.type === "browser" && i.bkind === o.chave && i.el.isConnected && i.anim?.k !== "out");
   if (!b) {
     const orb = items.find(i => i.type === "orb" && i.def.orb === o.chave);
@@ -1601,10 +1616,6 @@ function abrirArquivo(f, titulo) {
   it.anim = { k: "in", t: 0 }; it.el.style.opacity = "0.05";
   items.push(it);
 }
-function orcaSecoes() {
-  if (!ORCA?.disponivel) return [];
-  return [["Projetos", ORCA.projetos || [], "projeto:"], ["Agentes", ORCA.agentes || [], "agente:"], ["Tarefas", ORCA.tarefas || [], "tarefa:"]];
-}
 // Everything the Núcleo holds, one entry per item with how to open it.
 function catalogo(soDe) {
   const out = [];
@@ -1627,12 +1638,6 @@ function catalogo(soDe) {
             || openPanel({ def: { file: n.file, title: n.title } }) }));
       };
       walk(arvore, "");
-    } else if (o.chave === "orca") {
-      for (const [nome, lista, prefixo] of orcaSecoes()) {
-        out.push({ ...base, nome, tipo: "pasta", endereco: o.id + "/" + normaliza(nome), abrir: () => abrirPasta(o, "/" + nome) });
-        lista.forEach(x => out.push({ ...base, nome: x.rotulo, tipo: nome === "Projetos" ? "projeto" : nome === "Agentes" ? "agente" : "tarefa",
-          endereco: o.id + "/" + normaliza(nome) + "/" + x.rotulo, abrir: () => window.jarvisCerebro?.focar(prefixo + x.id) }));
-      }
     }
   }
   return out;
@@ -1684,12 +1689,20 @@ function drawStageConnections() {
 }
 
 let CFG = { name: "Assistant", orbs: [] };
-let TREES = [], PROPSTREE = null, ORCA = null;
+let TREES = [], PROPSTREE = null, FOCO = null, TRABALHO = null;
 async function loadTree() {
   // barehands.json drives everything: the ring's name and one orb per
   // configured folder (kind "notes" = a markdown tree, "media" = props)
   try { const r = await fetch("/config"); if (r.ok) CFG = await r.json(); }
   catch (e) {}
+  // The Zé says which orbs have something to show (state/orbes.json) and whether the developer
+  // meters are on. Stale or missing (the Zé stopped): every orb of the manifest, no meters.
+  try {
+    const r = await fetch("/jarvis/orbes", { cache: "no-store" });
+    const v = r.ok ? await r.json() : {};
+    if (Array.isArray(v.visiveis) && v.visiveis.length) CFG.orbs = CFG.orbs.filter(o => v.visiveis.includes(o.id));
+    document.body.classList.toggle("jv-dev", !!v.desenvolvedor);
+  } catch (e) {}
   if (!CFG.orbs.some(o => o.kind === "brain")) CFG.orbs.unshift({ id: "mapa", title: "Mapa", kind: "brain", apelidos: ["cérebro"] });
   TREES = [];
   for (let i = 0; i < (CFG.orbs || []).length; i++) {
@@ -1701,11 +1714,11 @@ async function loadTree() {
   }
   try { const r = await fetch("/props"); if (r.ok) PROPSTREE = await r.json(); }
   catch (e) {}
-  // the Orca orb: projects, coding agents and delegated tasks (written by the JARVIS)
-  if (CFG.orbs.some(o => o.kind === "orca")) {
-    try { const r = await fetch("/jarvis/rotina", { cache: "no-store" }); if (r.ok) ORCA = await r.json(); }
-    catch (e) {}
-  }
+  // what the Hoje and Trabalho orbs say under their names
+  try { const r = await fetch("/jarvis/foco", { cache: "no-store" }); if (r.ok) FOCO = await r.json(); }
+  catch (e) {}
+  try { const r = await fetch("/jarvis/trabalho", { cache: "no-store" }); if (r.ok) TRABALHO = await r.json(); }
+  catch (e) {}
 }
 
 function treeCounts(d, isProps) {
@@ -1752,14 +1765,6 @@ function browserRows(b) {
       else out.push({ d: depth, t: x.title, k: "note", f: x.file });
     });
   };
-  if (b.bkind === "orca") {
-    for (const [nome, lista, prefixo] of orcaSecoes()) {
-      const key = "/" + nome, open = b.expanded.has(key);
-      out.push({ d: 0, t: `${nome} (${lista.length})`, k: "dir", o: open ? 1 : 0, key });
-      if (open) lista.forEach(x => out.push({ d: 1, t: x.rotulo, k: "orca", f: prefixo + x.id }));
-    }
-    return out;
-  }
   if (b.bkind === "props" && PROPSTREE) walk(PROPSTREE, "", 0, true);
   else if (typeof b.bkind === "number" && TREES[b.bkind])
     walk(TREES[b.bkind], "", 0, false);
@@ -1767,7 +1772,7 @@ function browserRows(b) {
 }
 
 function browserRowsHTML(tuples) {
-  const ICO = { dir0: "▸", dir1: "▾", note: "▤", prop: "▦", widget: "▣", orca: "◎" };
+  const ICO = { dir0: "▸", dir1: "▾", note: "▤", prop: "▦", widget: "▣" };
   return tuples.map(([d, t, k, o], i) =>
     `<div class="brow ${k}" role="button" tabindex="0" data-i="${i}" style="padding-left:${18 + d * 26}px">` +
     `<span class="bico">${k === "dir" ? ICO["dir" + o] : ICO[k]}</span>` +
@@ -1829,6 +1834,7 @@ function browserY(oy) {
 
 function openBrowser(kind, ox, oy) {
   if (kind === "brain") { window.jarvisWorkspace?.toggle({ x: ox, y: oy }); return; }
+  if (abrirVista(kind)) return;
   // TOGGLE: tap the orb (or summon) again = the pane recedes. Phase 2:
   // an orb tap passes its position so the pane GROWS FROM the orb's
   // spot (clamped fully onscreen) — the circle language never breaks.
@@ -1886,9 +1892,6 @@ function browserTap(b, cur) {
         openPanel({ def: { file: row.f, title: row.t } });
         killItem(b);   // v3.3 (his broadened rule): selecting ANYTHING
                        // closes the whole pane — only dir taps keep it
-      } else if (row.k === "orca") {
-        window.jarvisCerebro?.focar(row.f);
-        killItem(b);
       } else if (row.k === "prop") {
         const src = "/media/" + row.f;
         const it = isModelSrc(src) ? makeModel(src, row.t)
@@ -3712,6 +3715,8 @@ if (ROLE === "render") {
   cerebros(); setInterval(cerebros, 1500);
 })();
 </script>
+<!-- Developer meters (CPU, GPU, brain batteries, tokens) only with the developer mode on. -->
+<style>body:not(.jv-dev) :is(#hud-med, #hud-c, .jv.dev):not(#jv-config *) { display: none !important; }</style>
 <!-- barehands-jarvis: decision card, brain map and efficiency meter -->
 <link rel="stylesheet" href="jarvis-workspace.css">
 <link rel="stylesheet" href="jarvis-tema.css">

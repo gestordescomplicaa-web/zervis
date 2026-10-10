@@ -43,9 +43,11 @@ PADRAO: dict[str, dict[str, Any]] = {
     },
     # pasta_jarvis: as notas que o JARVIS escreve sobre si (memória, skills, automações,
     # aprendizado, consumo) para a bolha "JARVIS" do Barehands; só leitura para o usuário.
+    # desenvolvedor: o modo imersivo mostra medidores de CPU, GPU, baterias dos modelos e tokens.
     "barehands": {
         "pasta_estado": str(lugares.DADOS / "imersivo/state"),
         "pasta_jarvis": str(lugares.DADOS / "pasta"),
+        "desenvolvedor": False,
     },
     # motor: "piper" (Cadu pelo Piper, dentro do processo; ADR 0013). Outros motores entram aqui.
     "voz": {"motor": "piper"},

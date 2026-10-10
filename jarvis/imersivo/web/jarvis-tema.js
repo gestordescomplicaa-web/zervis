@@ -8,8 +8,8 @@
   if (new URLSearchParams(location.search).get("role") === "render") return;
   // Each theme: ring colours per state (canvas) and graph colours (SVG). The CSS
   // palettes live in jarvis-tema.css; "original" leaves everything untouched.
-  const grafo = (c, meta, fundo, base) => ({ cores: { root: c[0], memoria: c[1], pessoas: c[2], projetos: c[0],
-    agentes: c[3], conexoes: c[0], tarefas: c[4] }, tons: { meta, fundo, base } });
+  const grafo = (c, meta, fundo, base) => ({ cores: { root: c[0], memoria: c[1],
+    sessoes: c[3], automacoes: c[4] }, tons: { meta, fundo, base } });
   const TEMAS = {
     original: { rotulo: "ORIGINAL", nome: "Original", ring: null, grafo: null },
     roxo: { rotulo: "ROXO", nome: "Roxo",

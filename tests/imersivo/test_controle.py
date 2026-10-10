@@ -114,11 +114,11 @@ async def main():
                 assert CANAL['respostas'] and 'estado' in CANAL['respostas'][-1], 'the page does not publish its state'
                 e = CANAL['respostas'][-1]['estado']
                 assert e['cerebro']['aberto'] is False and e['tema']['opcoes'][0] == 'original'
-                assert any(i['nome'] == 'Projeto Alfa' for i in e['cerebro']['areas']['projetos']['itens']), e['cerebro']['areas']
+                assert any(i['nome'] == 'Loja' for i in e['cerebro']['areas']['sessoes']['itens']), e['cerebro']['areas']
                 passed.append('the page publishes what is on screen, with areas and items by name and id')
 
-                # A guided tour, like "abre seu cérebro e me mostra os projetos".
-                p = mandar([{'acao': 'abrir_cerebro'}, {'acao': 'focar', 'alvo': 'projetos'},
+                # A guided tour, like "abre seu cérebro e me mostra as sessões".
+                p = mandar([{'acao': 'abrir_cerebro'}, {'acao': 'focar', 'alvo': 'sessoes'},
                             {'acao': 'aguardar', 'valor': 300}, {'acao': 'zoom', 'valor': 1.5}])
                 for _ in range(20):
                     if await ev('jarvisBrainGestures.active'):
@@ -127,15 +127,15 @@ async def main():
                 await check('the brain opens with its animation running', 'jarvisBrainGestures.active && document.getElementById("jv-mapa").classList.contains("on")')
                 r = await resposta(p)
                 assert all(x['ok'] for x in r['resultados']), r['resultados']
-                assert r['resultados'][1]['tipo'] == 'area' and r['estado']['cerebro']['area_expandida'] == 'projetos'
+                assert r['resultados'][1]['tipo'] == 'area' and r['estado']['cerebro']['area_expandida'] == 'sessoes'
                 assert r['estado']['cerebro']['zoom'] > 0
-                passed.append('open, expand Projetos, wait and zoom, each confirmed back')
+                passed.append('open, expand Sessões, wait and zoom, each confirmed back')
 
-                p = mandar([{'acao': 'focar', 'alvo': 'projeto alfa'}])
+                p = mandar([{'acao': 'focar', 'alvo': 'LOJA'}])
                 r = await resposta(p)
                 await check('a name without accents or case finds the item and opens it in Focus',
-                            'document.querySelector("#jv-mapa .focus h1")?.textContent==="Projeto Alfa"')
-                assert r['estado']['cerebro']['modo'] == 'foco' and r['estado']['cerebro']['foco']['nome'] == 'Projeto Alfa'
+                            'document.querySelector("#jv-mapa .focus h1")?.textContent==="Loja"')
+                assert r['estado']['cerebro']['modo'] == 'foco' and r['estado']['cerebro']['foco']['nome'] == 'Loja'
 
                 p = mandar([{'acao': 'modo', 'valor': 'trabalho'}, {'acao': 'rolar', 'valor': 200},
                             {'acao': 'voltar'}, {'acao': 'enquadrar'}, {'acao': 'mover', 'valor': '40,-20'}])
@@ -199,7 +199,7 @@ async def main():
                                                 'endereco': 'acervo/misc/porto_pe_final.png'}, res[1]
                 assert res[2]['ok'] and res[2]['abriu'] == 'porto pe', res[2]
                 assert not res[3]['ok'] and 'no Guia' in res[3]['erro'], res[3]
-                assert not res[4]['ok'] and 'Pokédex' in res[4]['erro'] and 'Orca' in res[4]['erro'], res[4]
+                assert not res[4]['ok'] and 'Pokédex' in res[4]['erro'] and 'Trabalho' in res[4]['erro'], res[4]
                 assert sorted(r['estado']['nucleo']['arquivos_abertos']) == ['burrinho', 'porto pe'], r['estado']['nucleo']
                 await check('"abre o burrinho" finds the Acervo file and shows it on the board',
                             '[...document.querySelectorAll(".imgcard img")].some(i => i.src.endsWith("/media/misc/burrinho_refeito_final.png"))')
@@ -208,20 +208,21 @@ async def main():
                 assert r['resultados'][0]['ok'] and r['estado']['nucleo']['arquivos_abertos'] == ['porto pe'], r
                 passed.append('an orb narrows the search, buscar lists addresses, and an open file closes by name')
 
-                # The Orca orb: the coding agents, apart from the Mapa and from the memory.
-                p = mandar([{'acao': 'abrir', 'alvo': 'agentes', 'orbe': 'Orca'}])
+                # Hoje and Trabalho are doors into the Mapa: the Foco board and the Work view.
+                p = mandar([{'acao': 'abrir', 'alvo': 'Trabalho'}])
                 r = await resposta(p)
-                assert r['resultados'][0]['ok'] and r['resultados'][0]['tipo'] == 'pasta', r['resultados']
-                await asyncio.sleep(.6)
-                await check('the Orca pane opens with its Agentes section expanded', '''(() => {
-                    const b = [...document.querySelectorAll(".panel.browser")].find(p => p.querySelector("h3").textContent === "ORCA");
-                    return b && /Agentes \\(1\\)/.test(b.textContent) && /Codex/.test(b.textContent) && /Projetos \\(2\\)/.test(b.textContent); })()''')
-                p = mandar([{'acao': 'abrir', 'alvo': 'codex'}, {'acao': 'modo', 'valor': 'geral'}, {'acao': 'abrir', 'alvo': 'seu cérebro'}])
+                assert r['resultados'][0]['ok'], r['resultados']
+                await check('the Trabalho orb opens the Mapa on the sessions', 'document.querySelector("#jv-mapa").dataset.mode==="work" && document.querySelector(".work").textContent.includes("Loja")')
+                p = mandar([{'acao': 'abrir', 'alvo': 'meu dia'}])
                 r = await resposta(p)
-                assert [x['ok'] for x in r['resultados']] == [True, True, True], r['resultados']
-                assert r['resultados'][0]['tipo'] == 'agente' and r['resultados'][2] == {'acao': 'abrir', 'ok': True, 'abriu': 'Mapa', 'tipo': 'orbe'}
+                assert r['resultados'][0]['ok'], r['resultados']
+                await check('the Hoje orb (by its alias) opens the Foco board', 'document.querySelector("#jv-mapa").dataset.mode==="focus" && document.querySelector(".focus").textContent.includes("Lançar o Ligatia")')
+                p = mandar([{'acao': 'modo', 'valor': 'geral'}, {'acao': 'abrir', 'alvo': 'seu cérebro'}])
+                r = await resposta(p)
+                assert [x['ok'] for x in r['resultados']] == [True, True], r['resultados']
+                assert r['resultados'][1] == {'acao': 'abrir', 'ok': True, 'abriu': 'Mapa', 'tipo': 'orbe'}
                 assert r['estado']['cerebro']['aberto'] and 'Mapa' in r['estado']['nucleo']['orbes_abertos']
-                passed.append('an agent opens in the Mapa, "geral" is the overview, and "seu cérebro" is the Mapa')
+                passed.append('Hoje and Trabalho open their views, "geral" is the overview, and "seu cérebro" is the Mapa')
 
                 p = mandar([{'acao': 'fechar', 'alvo': 'tudo'}])
                 r = await resposta(p)

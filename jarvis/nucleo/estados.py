@@ -269,13 +269,18 @@ def encerra(texto: str) -> bool:
     )
 
 
-# As áreas do cérebro no Núcleo e como o usuário as chama: "mostra os projetos" é mostrar_projetos.
+# As áreas do Mapa e como o usuário as chama: "mostra as sessões" é mostrar_sessoes.
 FALAS_DAS_AREAS = {
-    "projetos": (("os", "projetos"), ("seus", "projetos"), ("meus", "projetos")),
-    "agentes": (("os", "agentes"), ("seus", "agentes"), ("os", "agentes", "do", "orca")),
-    "tarefas": (("as", "tarefas"), ("suas", "tarefas"), ("minhas", "tarefas")),
-    "conexoes": (("as", "conexoes"), ("suas", "conexoes"), ("as", "ferramentas")),
     "memoria": (("a", "memoria"), ("sua", "memoria"), ("as", "memorias"), ("suas", "memorias")),
+    "sessoes": (("as", "sessoes"), ("minhas", "sessoes"), ("os", "agentes"), ("meus", "agentes")),
+    "automacoes": (
+        ("as", "automacoes"),
+        ("minhas", "automacoes"),
+        ("os", "lembretes"),
+        ("meus", "lembretes"),
+        ("as", "tarefas"),
+        ("minhas", "tarefas"),
+    ),
 }
 
 COMANDOS = {

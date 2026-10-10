@@ -21,7 +21,7 @@ EVENTS = [
     {'em': 1791330000 - i * 3600, 'evento': 'aprovada', 'rotulo': 'Sugestão aprovada',
      'resumo': f'guardar a lição {i}', 'origem': f'correção {i}', 'item': None} for i in range(1, 25)]
 MAP = {
-    'centro': {'rotulo': 'JARVIS', 'sub': 'Claude, com o Sonnet 5.5'},
+    'centro': {'rotulo': 'Zé', 'sub': 'Claude, com o Sonnet 5.5'},
     'grupos': [
         {'id': 'usuario', 'rotulo': 'Sobre você', 'itens': [
             {'id': 'usuario:a', 'rotulo': 'Prefere escolher…', 'texto': 'Prefere escolher na tela',
@@ -31,12 +31,6 @@ MAP = {
         ]},
         {'id': 'jarvis', 'rotulo': 'Ambiente', 'itens': []},
         {'id': 'skills', 'rotulo': 'Skills', 'itens': []},
-        {'id': 'conexoes', 'rotulo': 'Conexões', 'itens': [
-            {'id': 'conexao:Oficina', 'rotulo': 'Oficina', 'texto': 'oficina_projetos, oficina_delegar',
-             'nomes': ['oficina_projetos', 'oficina_delegar'], 'usos': 12, 'novo': False},
-            {'id': 'conexao:Sistema', 'rotulo': 'Sistema', 'texto': 'sistema_estado',
-             'nomes': ['sistema_estado'], 'usos': 0, 'novo': False},
-        ]},
         {'id': 'automacoes', 'rotulo': 'Automações', 'itens': []},
     ],
     'linha_do_tempo': [{'em': 1791330000, 'evento': 'aprovada', 'rotulo': 'Sugestão aprovada',
@@ -85,14 +79,13 @@ HARNESS = HARNESS[:a] + test_boot + HARNESS[b:]
 CONFIG = {'name': 'ZÉ', 'orbs': [
     {'id': 'mapa', 'title': 'Mapa', 'kind': 'brain', 'apelidos': ['cérebro', 'seu cérebro']},
     {'id': 'guia', 'title': 'Guia', 'kind': 'notes', 'apelidos': ['manual']},
-    {'id': 'identidade', 'title': 'Identidade', 'kind': 'notes', 'apelidos': []},
-    {'id': 'acervo', 'title': 'Acervo', 'kind': 'media', 'apelidos': ['arquivos']},
-    {'id': 'orca', 'title': 'Orca', 'kind': 'orca', 'apelidos': ['oficina']}]}
-ROUTINE = {'disponivel': True, 'projetos': [
-    {'id': 'project:a', 'rotulo': 'Projeto Alfa', 'estado': 'in-progress'},
-    {'id': 'project:b', 'rotulo': 'Projeto Beta', 'estado': 'todo'}],
-    'agentes': [{'id': 'agent:a', 'rotulo': 'Codex', 'estado': 'working',
-                 'projeto': 'project:a', 'projeto_nome': 'Projeto Alfa'}], 'tarefas': []}
+    {'id': 'hoje', 'title': 'Hoje', 'kind': 'hoje', 'apelidos': ['meu dia']},
+    {'id': 'trabalho', 'title': 'Trabalho', 'kind': 'trabalho', 'apelidos': ['sessões']},
+    {'id': 'acervo', 'title': 'Acervo', 'kind': 'media', 'apelidos': ['arquivos']}]}
+# The coding sessions of the Zé (state/trabalho.json).
+TRABALHO = {'disponivel': True, 'sessoes': [
+    {'id': 'a', 'rotulo': 'Loja', 'estado': 'trabalhando', 'pasta': 'loja', 'texto': 'Testes passando.'},
+    {'id': 'b', 'rotulo': 'Site', 'estado': 'parada', 'pasta': 'site', 'texto': ''}]}
 
 
 
@@ -120,7 +113,7 @@ class Handler(BaseHTTPRequestHandler):
             name = self.path.removeprefix('/jarvis/')
             data = {'mapa': MAP, 'decisao': {'pergunta': None, 'sugestoes': SUGGESTIONS},
                     'eficiencia': {'hoje': {'media': 4200, 'locais': 3}, 'dias': []},
-                    'rotina': ROUTINE, 'foco': FOCO, 'presenca': {'batimento': __import__('time').time(), 'estado': 'ativo', 'microfone_aberto': True}}.get(name, {})
+                    'trabalho': TRABALHO, 'foco': FOCO, 'presenca': {'batimento': __import__('time').time(), 'estado': 'ativo', 'microfone_aberto': True}}.get(name, {})
             body, kind = json.dumps(data).encode(), 'application/json'
         elif self.path in ['/config', '/props', '/stats', '/cerebros', '/orb'] or self.path.startswith('/tree'):
             data = CONFIG if self.path == '/config' else (
@@ -222,7 +215,7 @@ async def main():
                 await ev('document.querySelector(".ringcard").click()')
                 await asyncio.sleep(.7)
                 await check('ring blooms the orbs of the Núcleo manifest',
-                            '[...document.querySelectorAll(".card.orb h3")].map(e=>e.textContent).join(",")==="Mapa,Guia,Identidade,Acervo,Orca"')
+                            '[...document.querySelectorAll(".card.orb h3")].map(e=>e.textContent).join(",")==="Mapa,Guia,Hoje,Trabalho,Acervo"')
                 await check('orbital circles remain connected to the original ring',
                             'document.querySelectorAll("#jv-cabos path").length===5')
                 await ev('window.savedCable=document.querySelector("#jv-cabos path");window.savedCableD=savedCable.getAttribute("d");jarvisItemDe(document.querySelector(".ringcard")).x+=30')
@@ -239,8 +232,8 @@ async def main():
                             'document.querySelectorAll("#jv-mapa .modos button").length===3 && getComputedStyle(document.querySelector(".modos button")).borderRadius==="50%" && !document.querySelector("#jv-mapa .marca")')
                 await check('brain circle connects to the neural board',
                             '!!document.querySelector(\'#jv-cabos [data-connection="workspace"]\')')
-                await check('agent project relationship has a visible path',
-                            '[...document.querySelectorAll(".ligacao[stroke-dasharray]")].some(e=>e.getAttribute("d")?.startsWith("M"))')
+                await check('the Mapa has three areas around the Zé: Memória, Sessões, Automações',
+                            '[...document.querySelectorAll(\'[data-node^="area:"]\')].map(e=>e.dataset.node).sort().join()==="area:automacoes,area:memoria,area:sessoes"')
                 screenshot = await call('Page.captureScreenshot', {'format': 'png'})
                 Path('/tmp/jarvis-original-brain.png').write_bytes(base64.b64decode(screenshot['data']))
                 await ev('document.querySelector(\'[data-action="motion"]\').click()')
@@ -281,10 +274,10 @@ async def main():
                             'document.querySelector("#jv-mapa").dataset.mode==="focus" && document.querySelector(".focus-origem").textContent.includes("Mostre as opções")')
                 await pinch_at('[data-action="mode:work"]')
                 await check('Trabalho lists actual objects from the data contract',
-                            'document.querySelectorAll(".work .objeto").length===2 && document.querySelector(".work").textContent.includes("Projeto Alfa")')
-                await pinch_at('[data-object="projeto:project:a"]')
-                await check('Foco connects the project to its agent',
-                            'document.querySelector(".focus").textContent.includes("Codex") && document.querySelector(".focus h1").textContent==="Projeto Alfa"')
+                            'document.querySelectorAll(".work .objeto").length===2 && document.querySelector(".work").textContent.includes("Loja")')
+                await pinch_at('[data-object="sessao:a"]')
+                await check('a session opens in Foco with its last message',
+                            'document.querySelector(".focus").textContent.includes("Testes passando") && document.querySelector(".focus h1").textContent==="Loja"')
                 await pinch_at('[data-action="mode:work"]')
                 await pinch_at('[data-action="area:memoria"]')
                 await pinch_at('[data-object="usuario:b"]')
