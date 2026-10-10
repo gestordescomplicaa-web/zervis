@@ -13,7 +13,7 @@
       "id": "guia",
       "title": "Guia",
       "kind": "notes",
-      "path": "sample-notes",
+      "path": "guia",
       "apelidos": ["manual"],
       "descricao": "Como usar o assistente."
     },

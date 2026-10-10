@@ -40,7 +40,7 @@ Endpoints:
 
 Config lives in barehands.json next to the state folder:
   { "name": "Assistant", "port": 8794,
-    "orbs": [ { "title": "Notes", "path": "sample-notes", "kind": "notes" },
+    "orbs": [ { "title": "Guia", "path": "guia", "kind": "notes" },
               { "title": "Props", "path": "media",        "kind": "media" } ] }
 
 "notes" orbs may point at ANY folder of markdown (an Obsidian vault is
@@ -104,8 +104,8 @@ def load_config() -> dict[str, Any]:
         pass
     if not cfg.get("orbs"):
         cfg["orbs"] = [
-            {"title": "Notes", "path": "sample-notes", "kind": "notes"},
-            {"title": "Props", "path": "media", "kind": "media"},
+            {"id": "guia", "title": "Guia", "path": "guia", "kind": "notes"},
+            {"id": "acervo", "title": "Acervo", "kind": "media"},
         ]
     for orb in cfg["orbs"]:
         # Sem caminho fica sem caminho: Path("") vira "." e serviria a pasta da página.

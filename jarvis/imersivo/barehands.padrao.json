@@ -51,12 +51,12 @@
       "id": "guia",
       "title": "Guia",
       "kind": "notes",
-      "path": "sample-notes",
+      "path": "guia",
       "apelidos": [
         "manual",
         "ajuda"
       ],
-      "descricao": "Como usar o modo imersivo: gestos, mídia e como ligar um assistente."
+      "descricao": "Como usar o modo imersivo: primeiros passos, gestos, atalhos, as esferas e os comandos de voz."
     }
   ]
 }

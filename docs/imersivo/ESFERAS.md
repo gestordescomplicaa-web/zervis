@@ -27,7 +27,7 @@ relance (e, adiante, em óculos). Configurar e decidir fica no painel; comandar,
 | Hoje | `hoje` | Abre o Mapa no quadro do Foco | `foco.json` | com frente, ideia ou automação ativa |
 | Trabalho | `trabalho` | Abre o Mapa na vista Trabalho (sessões de código) | `trabalho.json` | com sessão |
 | Acervo | `media` | Imagens e modelos 3D que o Zé mostra | `<dados>/acervo/imagens` e `<dados>/acervo/3d` (png, jpg, webp, gif; glb, gltf) | com algum arquivo |
-| Guia | `notes` | Gestos e primeiros passos | `web/sample-notes` | sempre |
+| Guia | `notes` | Primeiros passos, gestos, atalhos, esferas e comandos de voz | `web/guia` | sempre |
 
 Quais aparecem e o modo desenvolvedor vêm de `orbes.json`, escrito pelo Zé
 (`jarvis/rosto/hud.py`, `orbes()`). Sem esse arquivo (Zé parado), a página mostra todas as esferas

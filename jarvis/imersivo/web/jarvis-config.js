@@ -6,11 +6,17 @@
 (() => {
   if (new URLSearchParams(location.search).get("role") === "render") return;
   const BRILHOS = ["Desligado", "Suave", "Médio", "Forte"];
+  // The keys of the page (stage.html, jarvis-maos.js, jarvis-teclado.js); the Guia has the same list.
+  const ATALHOS = [
+    ["D", "Configurações"], ["K", "Calibrar as mãos"], ["Shift + K", "Mãos no padrão"],
+    ["B", "Brilho da câmera (Shift + B diminui)"], ["T", "Trocar as cores"], ["/", "Escrever para o Zé"],
+    ["R", "Recarregar a tela"], ["C", "Trocar a câmera"], ["Esc", "Fechar"],
+  ];
   const menu = document.createElement("div");
   menu.id = "jv-config"; menu.hidden = true;
-  menu.setAttribute("role", "dialog"); menu.setAttribute("aria-label", "Configurações do JARVIS");
+  menu.setAttribute("role", "dialog"); menu.setAttribute("aria-label", "Configurações do Zé");
   menu.innerHTML = `
-    <header><div><b>CONFIGURAÇÕES</b><small>JARVIS · gdautomacao.ia</small></div>
+    <header><div><b>CONFIGURAÇÕES</b><small>Zé · modo imersivo</small></div>
       <button data-config="fechar" aria-label="Fechar configurações">×</button></header>
     <section><h3>Mãos</h3><div class="slot" data-slot="maos"></div>
       <div class="linha-cfg"><button data-config="calibrar">Calibrar as mãos</button>
@@ -23,7 +29,8 @@
       <button data-config="visual:avatar">Avatar</button><button data-config="visual:anel">Anel</button></div></section>
     <section><h3>Cérebro</h3><div class="slot" data-slot="cerebros"></div></section>
     <section><h3>Consumo</h3><div class="slot" data-slot="consumo"></div></section>
-    <footer>D abre e fecha · K calibra · B brilho · T cores · Esc fecha</footer>`;
+    <section><h3>Atalhos</h3><dl class="atalhos">
+      ${ATALHOS.map(([tecla, faz]) => `<dt>${tecla.split(" + ").map(t => `<kbd>${t}</kbd>`).join("+")}</dt><dd>${faz}</dd>`).join("")}</dl></section>`;
   const css = document.createElement("style");
   css.textContent = `
   /* A side menu where the D readout used to sit (top-left), on the same glass as
@@ -52,6 +59,11 @@
   #jv-config header button { width:56px; min-height:56px; padding:0; border-radius:50%; font-size:16px; }
   #jv-config .linha-cfg { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
   #jv-config .seg { display:grid; grid-template-columns:repeat(auto-fit,minmax(88px,1fr)); gap:10px; }
+  #jv-config .atalhos { display:grid; grid-template-columns:auto 1fr; gap:8px 12px; margin:0; align-items:center; }
+  #jv-config .atalhos dt { white-space:nowrap; color:var(--jv-suave); font:600 11px 'SF Mono', Menlo, monospace; }
+  #jv-config .atalhos dd { margin:0; font-size:13px; }
+  #jv-config kbd { display:inline-block; min-width:22px; padding:2px 6px; text-align:center; border-radius:6px; color:var(--jv-texto);
+    font:600 11.5px 'SF Mono', Menlo, monospace; background:rgb(var(--jv-borda-rgb) / .10); border:1px solid rgb(var(--jv-borda-rgb) / .35); }
   #jv-config .seg button.ativo { background:rgb(var(--jv-borda-rgb) / .24); border-color:var(--jv-acento); }
   /* The hosted HUD rows: stacked, left-aligned, same chips as the bar. */
   #jv-config .slot .linha { justify-content:flex-start; flex-wrap:wrap; gap:6px; font:600 12px 'SF Mono', Menlo, monospace; letter-spacing:.04em; }
@@ -62,7 +74,6 @@
   #jv-config #hud-jv .jv, #jv-config #hud-maos .jv { min-height:56px; flex-wrap:wrap; }
   #jv-config #hud-maos [data-acao=brilho], #jv-config #hud-maos [data-acao=tema] { display:none; }
   #jv-config .slot:empty::after, #jv-config .slot:has(> .linha:empty)::after { content:"Sem dados no momento."; color:var(--jv-suave); font-size:12px; }
-  #jv-config footer { margin-top:14px; padding-top:10px; border-top:1px solid rgb(var(--jv-borda-rgb) / .2);
     color:var(--jv-suave); font-size:11px; line-height:1.6; }`;
   document.head.appendChild(css);
   const casa = () => document.getElementById("hint") || document.body;

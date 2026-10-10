@@ -21,3 +21,6 @@
   de ferramentas no Mapa; medidores técnicos só no modo desenvolvedor (docs/imersivo/ESFERAS.md).
 - O Acervo é a pasta do Zé nos dados de quem usa (`acervo/imagens` e `acervo/3d`), sem arquivos de
   exemplo; o orbe só aparece quando há imagem ou modelo 3D nela.
+- Guia do modo imersivo em português, sobre o Zé: primeiros passos, gestos, atalhos, as esferas e
+  os comandos de voz. Os atalhos de teclado também ficam no menu de configurações (tecla D), e o
+  anel mostra o estado em português.

@@ -673,9 +673,9 @@ function drawRing(sc) {
   x.globalAlpha = 0.85;
   x.fillStyle = col(0.98);
   x.font = "600 14px 'SF Mono', Menlo, monospace";
-  const status = { idle: "ACTIVE", listening: "LISTENING",
-                   thinking: "THINKING", speaking: "SPEAKING" }[st];
-  x.fillText((status || "ACTIVE").split("").join(" "), 0, 28);
+  const status = { idle: "PRONTO", listening: "OUVINDO",
+                   thinking: "PENSANDO", speaking: "FALANDO" }[st];
+  x.fillText((status || "PRONTO").split("").join(" "), 0, 28);
   x.shadowBlur = 0; x.globalAlpha = 1;
   x.restore();
 }
