@@ -39,3 +39,7 @@
 - O ai-memory vem embutido (ADR 0016): o Zé usa o da máquina ou baixa o binário oficial (versão
   e SHA-256 fixos) e o roda junto. As sessões de código do Zé alimentam a memória pelos hooks dele
   e, ao começar, recebem a passagem do que a sessão anterior fez no mesmo projeto.
+- Contas dos agentes (ADR 0016): em Modelos, cada agente (Claude, Codex) lista as contas desta
+  máquina com o login, o e-mail mascarado e o plano; dá para adicionar outra conta (uma pasta de
+  login própria), entrar nela pelo próprio agente (o Zé abre o terminal), escolher a conta em uso
+  e remover. O cérebro e as sessões usam a conta escolhida.

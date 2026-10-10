@@ -13,7 +13,7 @@ from typing import Any
 
 from jarvis import fuso, usuario
 from jarvis.automacoes.jobs import JobErro
-from jarvis.cerebro import acesso, conectores, rapido
+from jarvis.cerebro import acesso, conectores, contas, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
@@ -97,6 +97,7 @@ class Acoes:
         return {
             "estado": self.estado,
             "configuracao": self.configuracao,
+            "contas": self.contas,
             "inicio": self.inicio,
             "cerebro": self.cerebro,
             "escuta": self.escuta,
@@ -122,6 +123,10 @@ class Acoes:
             "acesso/chave": self.guardar_chave_claude,
             "acesso/remover": self.remover_acesso,
             "acesso/testar": self.testar_acesso,
+            "conta/adicionar": self.adicionar_conta,
+            "conta/remover": self.remover_conta,
+            "conta/usar": self.usar_conta,
+            "conta/entrar": self.entrar_conta,
             "sessao/criar": self.criar_sessao,
             "sessao/ler": self.ler_sessao,
             "sessao/enviar": self.enviar_a_sessao,
@@ -385,6 +390,69 @@ class Acoes:
         self.pasta_teste.mkdir(parents=True, exist_ok=True, mode=0o700)
         ok, mensagem = asyncio.run(acesso.testar(modelo, self.pasta_teste))
         return {"ok": ok, "mensagem": mensagem}
+
+    # --- contas dos agentes (ADR 0016) ---------------------------------------------------------
+
+    def contas(self) -> dict[str, Any]:
+        cs = contas.Contas()
+        instalados = {a["id"]: a["instalado"] for a in acesso.agentes()}
+        return {
+            "agentes": [
+                {
+                    "id": agente,
+                    "nome": nome,
+                    "instalado": instalados.get(agente, False),
+                    "em_uso": cs.em_uso(agente).id,
+                    "contas": [
+                        {
+                            "id": c.id,
+                            "nome": c.nome,
+                            "padrao": not c.pasta,
+                            "comando": " ".join(c.comando_login()[1:]),
+                            **contas.quem(c),
+                        }
+                        for c in cs.listar(agente)
+                    ],
+                }
+                for agente, nome in contas.NOMES.items()
+            ]
+        }
+
+    def adicionar_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            c = contas.Contas().adicionar(str(dados.get("agente", "")), str(dados.get("nome", "")))
+        except (contas.ContaErro, OSError) as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {**self.contas(), "aviso": f"Conta {c.nome} criada. Entre nela para usar."}
+
+    def remover_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        cs = contas.Contas()
+        try:
+            conta = cs.achar(str(dados.get("id", "")))
+            em_uso = cs.em_uso(conta.agente).id == conta.id
+            cs.remover(conta.id)
+        except contas.ContaErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        if em_uso and conta.agente == "claude":
+            self.n.aplicar_acesso()
+        return {**self.contas(), "aviso": "Conta removida."}
+
+    def usar_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            conta = contas.Contas().usar(str(dados.get("id", "")))
+        except contas.ContaErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        aviso = self.n.aplicar_acesso() if conta.agente == "claude" else ""
+        return {**self.contas(), "aviso": aviso or f"Usando a conta {conta.nome}."}
+
+    def entrar_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            conta = contas.Contas().achar(str(dados.get("id", "")))
+        except contas.ContaErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        if contas.abrir_login(conta):
+            return {"aberto": True, "aviso": "Terminal aberto. Faça o login e volte aqui."}
+        return {"aberto": False, "aviso": "Sem terminal: rode o comando mostrado."}
 
     # --- sessões da oficina (docs/plano-oficina.md) -------------------------------------------
 

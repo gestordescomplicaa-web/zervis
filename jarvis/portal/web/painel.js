@@ -150,7 +150,8 @@ const PAGINAS = {
   },
 
   async modelos() {
-    const [c, esc_, cfg] = await Promise.all([api("cerebro"), api("escuta"), api("configuracao")]);
+    const [c, esc_, cfg, ct] = await Promise.all([api("cerebro"), api("escuta"), api("configuracao"), api("contas")]);
+    contasTela = ct;
     modelo = { ...c.via, chaves: c.chaves };
     escuta = esc_;
     prepararAcesso(cfg);
@@ -166,6 +167,7 @@ const PAGINAS = {
         <div id="area-chave"></div>
         <div class="linha">${botao("Salvar", "modelo-salvar", "", "principal")}${botao("Testar", "modelo-testar")}<span class="resultado" id="resultado"></span></div>`)}
       <section class="cartao" id="cartao-acesso" data-contexto="cerebro"></section>
+      <section class="cartao" id="cartao-contas"></section>
       ${cartao("", `<div class="cabeca"><h2>Sessões de código</h2><span class="etiqueta">${sessoes} ${sessoes === 1 ? "sessão" : "sessões"}</span><a class="externo" href="#sessoes">Abrir sessões</a></div>
         ${sub("Agentes que trabalham nos seus projetos e continuam de onde pararam.")}
         ${seletorAgente(c.sessoes.motor)}
@@ -180,15 +182,16 @@ const PAGINAS = {
   },
 
   async configurar() {
-    const [cfg, esc_] = await Promise.all([api("configuracao"), api("escuta")]);
+    const [cfg, esc_, ct] = await Promise.all([api("configuracao"), api("escuta"), api("contas")]);
     escuta = esc_;
+    contasTela = ct;
     prepararAcesso(cfg);
     const passos = ["Perfil", "Agente", "Reconhecimento de fala"];
     const trilha = `<ol class="passos">${passos.map((t, i) => `<li ${i + 1 === passo ? 'aria-current="step"' : i + 1 < passo ? 'class="feito"' : ""}><span>${i + 1}</span>${t}</li>`).join("")}</ol>`;
     const voltar = passo > 1 ? botao("Voltar", "passo", `data-passo="${passo - 1}"`, "discreta") : "";
     const corpo = {
       1: cartao("Perfil", `${sub("Como o Zé chama você e o que deve saber sobre o seu trabalho.")}${camposPerfil(cfg)}<p class="resultado" id="resultado-perfil"></p>`),
-      2: '<section class="cartao" id="cartao-acesso"></section>',
+      2: '<section class="cartao" id="cartao-acesso"></section><section class="cartao" id="cartao-contas"></section>',
       3: '<section class="cartao" id="cartao-escuta"></section>',
     }[passo];
     const seguir = passo === 1 ? botao("Continuar", "perfil-salvar", 'data-seguir="2"', "principal")
@@ -249,15 +252,6 @@ function prepararAcesso(cfg) {
   acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
 }
 
-// Os agentes desta máquina, como o Orca: o Zé só lê o login que a pessoa fez em cada um.
-function linhaAgente(a) {
-  const estado = a.logado ? '<span class="etiqueta bom">Conectado</span>'
-    : a.instalado ? '<span class="etiqueta alerta">Sem login</span>' : '<span class="etiqueta">Não instalado</span>';
-  const dica = a.logado ? "Login desta máquina."
-    : a.instalado ? `Entre com <code>${esc(a.entrar)}</code> no terminal.` : `Instale e entre com <code>${esc(a.entrar)}</code>.`;
-  return item(esc(a.nome), dica, estado);
-}
-
 function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
@@ -273,8 +267,7 @@ function desenharAcesso() {
     : `<div class="cabeca"><h2>Agente</h2>${estado}</div>
       ${sub("O Zé usa o agente instalado nesta máquina, com o login feito nele.")}`;
   area.innerHTML = `${topo}
-    <h3 class="subtitulo">Nesta máquina</h3>
-    <div class="itens">${(a.agentes || []).map(linhaAgente).join("")}</div>
+    ${contaEmUso("claude")}
     <details class="alternativa" ${temChave ? "open" : ""}><summary>Usar chave de API da Anthropic</summary>
       <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${temChave ? "•••• " + esc(a.fim) : "Chave de API"}" autocomplete="off" spellcheck="false" aria-label="Chave de API da Anthropic">
         ${botao("Salvar", "acesso-salvar", "", "principal")}${temChave ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>
@@ -291,6 +284,57 @@ function mostrar(id, ok, texto) {
   if (!r) return;
   r.className = "resultado " + (ok === null ? "" : ok ? "ok" : "erro");
   r.textContent = texto;
+}
+
+// --- Contas dos agentes (ADR 0016): cada conta é uma pasta de login do próprio agente ---------------
+
+let contasTela = { agentes: [] };
+let vigiaContas = null;
+
+function contaEmUso(agente) {
+  const ag = contasTela.agentes.find((x) => x.id === agente);
+  const c = ag?.contas.find((x) => x.id === ag.em_uso);
+  if (!c) return "";
+  return `<p class="nota">Conta: <strong>${esc(c.nome)}</strong>${c.email ? ` · ${esc(c.email)}` : ""}${c.logado ? "" : " · sem login"}</p>`;
+}
+
+function linhaConta(ag, c) {
+  const emUso = ag.em_uso === c.id;
+  const estado = emUso && c.logado ? '<span class="etiqueta bom">Em uso</span>'
+    : c.logado ? '<span class="etiqueta">Conectada</span>' : '<span class="etiqueta alerta">Sem login</span>';
+  const detalhe = c.logado ? [c.email, c.plano && c.plano[0].toUpperCase() + c.plano.slice(1)].filter(Boolean).map(esc).join(" · ")
+    : `Entre pelo ${esc(ag.nome)}: <code>${esc(c.comando)}</code>`;
+  const dados = `data-id="${esc(c.id)}"`;
+  const acoes = (c.logado && !emUso ? botao("Usar", "conta-usar", dados) : "")
+    + botao(c.logado ? "Trocar login" : "Entrar", "conta-entrar", dados, c.logado ? "discreta" : "principal")
+    + (c.padrao ? "" : xis("conta-remover", dados, "Remover conta"));
+  return item(esc(c.nome), detalhe, estado + acoes);
+}
+
+function desenharContas() {
+  const area = $("cartao-contas");
+  if (!area) return;
+  area.innerHTML = `<div class="cabeca"><h2>Contas</h2></div>
+    ${sub("Contas dos agentes nesta máquina. O login é feito no próprio agente; o Zé só usa.")}
+    ${contasTela.agentes.map((ag) => `<h3 class="subtitulo">${esc(ag.nome)}${ag.instalado ? "" : ' <span class="etiqueta">Não instalado</span>'}</h3>
+      <div class="itens">${ag.contas.map((c) => linhaConta(ag, c)).join("")}</div>
+      <div class="add"><input data-nova-conta="${esc(ag.id)}" placeholder="Nome de outra conta do ${esc(ag.nome)}" maxlength="40" autocomplete="off">${botao("Adicionar", "conta-adicionar", `data-agente="${esc(ag.id)}"`)}</div>`).join("")}
+    <p class="resultado" id="resultado-contas"></p>`;
+}
+
+async function recarregarContas() {
+  contasTela = await api("contas");
+  desenharContas(); desenharAcesso();
+}
+
+// Depois de "Entrar", a tela confere sozinha por alguns minutos até o login aparecer.
+function vigiarContas() {
+  clearInterval(vigiaContas);
+  let voltas = 0;
+  vigiaContas = setInterval(async () => {
+    if (++voltas > 60 || !$("cartao-contas")) { clearInterval(vigiaContas); return; }
+    try { await recarregarContas(); } catch { /* o batimento mostra se o Zé caiu */ }
+  }, 3000);
 }
 
 // --- Escuta: a chave do Deepgram -------------------------------------------------------------------
@@ -727,6 +771,24 @@ const ACOES = {
   },
   passo: async (b) => { passo = Number(b.dataset.passo); await abrir(); },
   "configuracao-concluir": () => { passo = 1; location.hash = "#inicio"; toast("Configuração concluída."); },
+  "conta-adicionar": async (b) => {
+    const campo = document.querySelector(`[data-nova-conta="${b.dataset.agente}"]`);
+    const r = await ocupado(b, () => api("conta/adicionar", { agente: b.dataset.agente, nome: campo.value }));
+    contasTela = r; desenharContas(); desenharAcesso(); mostrar("resultado-contas", true, r.aviso);
+  },
+  "conta-usar": async (b) => {
+    const r = await ocupado(b, () => api("conta/usar", { id: b.dataset.id }));
+    contasTela = r; desenharContas(); desenharAcesso(); toast(r.aviso);
+  },
+  "conta-entrar": async (b) => {
+    const r = await ocupado(b, () => api("conta/entrar", { id: b.dataset.id }));
+    mostrar("resultado-contas", r.aberto, r.aviso);
+    vigiarContas();
+  },
+  "conta-remover": (b) => confirmar(b, "Remover a conta e o login dela?", async () => {
+    const r = await api("conta/remover", { id: b.dataset.id });
+    contasTela = r; desenharContas(); desenharAcesso(); toast(r.aviso);
+  }),
   "acesso-salvar": async (b) => {
     const r = await ocupado(b, () => api("acesso/chave", { chave: $("segredo-acesso").value }));
     acessoTela = { ...acessoTela, ...r.acesso, agentes: r.agentes }; desenharAcesso();
@@ -851,7 +913,7 @@ conteudo.addEventListener("submit", async (ev) => {
 
 conteudo.addEventListener("keydown", (ev) => {
   if (ev.target.id === "texto-sessao" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("compor").requestSubmit(); }
-  else if (ev.key === "Enter" && (ev.target.dataset.nova || ev.target.id === "passo-novo")) { ev.preventDefault(); ev.target.closest(".add").querySelector("button").click(); }
+  else if (ev.key === "Enter" && (ev.target.dataset.nova || ev.target.dataset.novaConta || ev.target.id === "passo-novo")) { ev.preventDefault(); ev.target.closest(".add").querySelector("button").click(); }
 });
 
 conteudo.addEventListener("input", (ev) => {
@@ -888,8 +950,8 @@ async function abrir() {
   try {
     const html = await PAGINAS[secao]();
     conteudo.innerHTML = secao === "sessoes" ? html : `<div class="secao">${html}</div>`;
-    if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); }
-    if (secao === "configurar") { desenharAcesso(); desenharEscuta(); }
+    if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); desenharContas(); }
+    if (secao === "configurar") { desenharAcesso(); desenharEscuta(); desenharContas(); }
     encher();
     if (secao === "sessoes") await prepararSessoes();
   } catch (erro) {

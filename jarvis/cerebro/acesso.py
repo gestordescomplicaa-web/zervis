@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from jarvis.cerebro import rapido
+from jarvis.cerebro import contas, rapido
 
 TOKEN = "CLAUDE_CODE_OAUTH_TOKEN"  # noqa: S105 (nome da variável, não o segredo)
 CHAVE = "ANTHROPIC_API_KEY"
@@ -89,7 +89,8 @@ def escolha(
         return {"metodo": "chave", "origem": "painel", "valor": chave}
     if ambiente.get(CHAVE):
         return {"metodo": "chave", "origem": "ambiente", "valor": ambiente[CHAVE]}
-    if ambiente.get(TOKEN) or (login or LOGIN).is_file():
+    login = login or contas.Contas().em_uso("claude").login  # a conta escolhida no painel
+    if ambiente.get(TOKEN) or login.is_file():
         return {"metodo": "login", "origem": "agente", "valor": ""}
     return {"metodo": "", "origem": "", "valor": ""}
 
@@ -103,11 +104,13 @@ def situacao(pasta: Path | None = None, login: Path | None = None) -> dict[str, 
 def aplicar(pasta: Path | None = None, login: Path | None = None) -> str:
     """Põe a chave colada no painel no ambiente do processo; devolve o método ("" sem acesso)."""
     e = escolha(pasta, login)
-    for variavel, original in ORIGINAL.items():
+    originais = {**ORIGINAL, contas.VARIAVEIS["claude"]: contas.ORIGINAL["CLAUDE_CONFIG_DIR"]}
+    for variavel, original in originais.items():
         if original:
             os.environ[variavel] = original
         else:
             os.environ.pop(variavel, None)
+    os.environ.update(contas.Contas().em_uso("claude").ambiente())  # a conta escolhida
     if e["origem"] == "painel":
         os.environ[CHAVE] = e["valor"]
     return e["metodo"]

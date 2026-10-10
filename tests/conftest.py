@@ -10,6 +10,9 @@ import tempfile
 os.environ["JARVIS_RAIZ"] = tempfile.mkdtemp(prefix="ze-testes-")
 os.environ.pop("JARVIS_PERFIL", None)
 os.environ["JARVIS_FUSO"] = "America/Recife"  # as datas dos testes foram escritas nesse fuso
+# Nem as contas dos agentes desta máquina: pastas de login vazias, sem ninguém logado.
+for _variavel in ("CLAUDE_CONFIG_DIR", "CODEX_HOME"):
+    os.environ[_variavel] = os.path.join(os.environ["JARVIS_RAIZ"], "contas-vazias", _variavel)
 
 # Os testes do modo imersivo abrem a página num Chromium de verdade (sem tela) e levam minutos:
 # rodam à parte, em `make check-imersivo`.

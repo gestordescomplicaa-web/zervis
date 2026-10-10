@@ -15,6 +15,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -27,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import fuso
+from jarvis.cerebro import contas
 from jarvis.memoria import aimemory
 
 log = logging.getLogger(__name__)
@@ -82,6 +84,7 @@ class Sessao:
     nome: str
     pasta: str
     motor: str = "claude"
+    conta: str = ""  # a conta do agente (jarvis.cerebro.contas); vazio: a que o Zé usa agora
     modelo: str = ""
     isolada: bool = False
     worktree: str = ""
@@ -415,6 +418,21 @@ def _descrever_ferramenta(nome: str, entrada: dict[str, Any]) -> str:
     return f"{nome} {alvo}".strip()[:200]
 
 
+def ambiente_da_conta(s: Sessao) -> dict[str, str]:
+    """A pasta de login da conta desta sessão; sem conta, a que o processo já usa."""
+    if not s.conta:
+        return {}
+    try:
+        conta = contas.Contas().achar(s.conta)
+    except contas.ContaErro:
+        return {}
+    variavel = contas.VARIAVEIS[conta.agente]
+    if conta.pasta:
+        return {variavel: conta.pasta}
+    # A conta padrão quando o processo aponta para outra: de volta para a padrão.
+    return {variavel: str(conta.onde)} if os.environ.get(variavel) else {}
+
+
 async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
     """Uma rodada do Claude Code na pasta da sessão; devolve o resumo falável."""
     from claude_agent_sdk import (
@@ -463,6 +481,7 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
         disallowed_tools=["Task", "Agent", "WebSearch"],
         # O ai-memory recebe o que a sessão faz (ADR 0016): os hooks dele só nesta sessão.
         settings=json.dumps(hooks) if (hooks := aimemory.hooks_claude()) else None,
+        env=ambiente_da_conta(s),
     )
     ultimo = ""
     async with ClaudeSDKClient(options=opcoes) as cliente:
