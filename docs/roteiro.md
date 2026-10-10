@@ -30,19 +30,23 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
 1. **Configuração da primeira vez no painel.** Feito: sem perfil, o painel abre nela (perfil com
    nome, sobre e fuso; acesso ao Claude por assinatura ou chave; chave do Deepgram). Falta:
    **"Ei Zé" genérico** que vem junto e funciona ao instalar, com "Personalizar a ativação" opcional
-   (gravação de ~4 min com a voz de quem usa); o detector fica mudo enquanto o Zé fala. Depois:
+   (gravação de ~4 min com a voz de quem usa), proposto como passo da configuração inicial. O "Ei
+   Zé" segue interrompendo a fala do Zé; a voz do Cadu entra no treino só como exemplo negativo. Depois:
    ai-memory e pasta dos projetos.
-2. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx`, integração com o Orca
-   (oficina) e com o OmniRoute (baterias) como opcionais que se desligam sozinhos quando não
+2. **Cérebro como agente, sem o Orca (ADR 0015):** modo manutenção sobre as sessões próprias;
+   saída do Orca (ferramentas `oficina_*`, persona, monitor); motor Codex no cérebro e nas
+   sessões; a conversa continua na troca de cérebro, com o ai-memory comum aos dois.
+3. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx` e o OmniRoute (baterias) como
+   opcionais que se desligam sozinhos quando não
    existem; Omarchy detectado em vez de suposto. **Escuta sem depender de janela:** hoje o
    microfone só abre com a janela do painel (modo aplicativo) aberta, e a classe da janela é a
    mesma de qualquer Zé na máquina; vira um interruptor "Escuta" no painel e um atalho. O painel
    segue como página web, instalável como aplicativo (manifesto).
-3. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
+4. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
    junto), o ai-memory e o imersivo; README de quem chega.
-4. **SQLite** para os registros, com migração automática dos arquivos.
-5. **Revisão final** antes do primeiro envio público.
-6. **VPS** sem tela e sem microfone; depois o celular.
+5. **SQLite** para os registros, com migração automática dos arquivos.
+6. **Revisão final** antes do primeiro envio público.
+7. **VPS** sem tela e sem microfone; depois o celular.
 
 ## Em aberto
 

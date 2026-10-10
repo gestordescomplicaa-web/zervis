@@ -19,3 +19,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0012](0012-voz-piper-e-escuta-deepgram.md) | Voz pelo Piper (Cadu, CC0) e escuta pelo Deepgram em streaming | Aceito (o Piper à parte foi substituído pela 0013) |
 | [0013](0013-agpl-e-piper-dentro-do-ze.md) | Licença AGPL-3 e o Piper dentro do Zé | Aceito |
 | [0014](0014-imersivo-dentro-do-ze.md) | O modo imersivo (holograma, Núcleo, mãos) dentro do Zé | Aceito |
+| [0015](0015-cerebro-agente-sem-orca.md) | O cérebro é um agente (Claude Code ou Codex), sem o Orca; ai-memory comum | Aceito |
