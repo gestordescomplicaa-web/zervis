@@ -45,7 +45,8 @@ Na primeira subida, o Zé baixa os modelos de som e a voz (Cadu, 63 MB) e confer
 cada um, e o painel abre na configuração inicial: perfil, acesso ao Claude (assinatura ou chave de
 API) e a chave do Deepgram para a voz. Sem a palavra de ativação treinada, ele atende pelo painel e
 pelo teclado. A fala sai pelo Piper, que vem junto e roda dentro do Zé (primeiro som em ~150 ms).
-`make instalar` instala o serviço do systemd do usuário.
+`make instalar` instala o serviço do systemd do usuário e o atalho "Zérvis" no menu de aplicativos
+(`PORTA=8796 make instalar` para outra porta).
 
 Plataformas: Linux primeiro. O controle completo da máquina é no Omarchy; outros Linux têm o
 controle reduzido.

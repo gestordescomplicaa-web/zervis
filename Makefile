@@ -20,9 +20,15 @@ testes:
 # Instala o serviço (sem iniciar no login). Os modelos de som são baixados e conferidos pelo
 # próprio Zé na primeira subida (jarvis/preparar.py).
 
+PORTA ?= 8795
+
 .PHONY: instalar
 instalar:
 	uv sync --inexact
 	install -d $(HOME)/.config/systemd/user
 	sed 's#@REPO@#$(CURDIR)#' systemd/zervis.service > $(HOME)/.config/systemd/user/zervis.service
+	install -Dm644 deploy/zervis.svg $(HOME)/.local/share/icons/hicolor/scalable/apps/zervis.svg
+	install -d $(HOME)/.local/share/applications
+	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' -e 's#@ICONE@#zervis#' \
+		deploy/zervis.desktop > $(HOME)/.local/share/applications/zervis.desktop
 	systemctl --user daemon-reload
