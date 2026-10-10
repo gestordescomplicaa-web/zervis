@@ -259,7 +259,7 @@ function desenharAcesso() {
   const desta = a.metodo === a.aba && a.origem === "painel";
   const placeholder = desta ? "•••• " + esc(a.fim) : assinatura ? "Token da assinatura" : "Chave de API";
   const nota = !assinatura ? "" : a.metodo === "assinatura" && a.origem === "login"
-    ? "Login do Claude Code encontrado nesta máquina." : "Gere o token com <code>claude setup-token</code> no terminal.";
+    ? "Login do Claude encontrado nesta máquina." : "Gere o token com <code>claude setup-token</code> no terminal.";
   const link = assinatura ? "" : `<a class="externo" href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a>`;
   const cerebro = area.dataset.contexto === "cerebro";
   const topo = cerebro

@@ -57,7 +57,7 @@ MOTORES = [
 
 
 AGENTES = [
-    {"id": "claude", "nome": "Claude Code", "disponivel": True},
+    {"id": "claude", "nome": "Claude", "disponivel": True},  # marca: "Claude", nunca "Claude Code"
     {"id": "codex", "nome": "Codex", "disponivel": False},
 ]
 
