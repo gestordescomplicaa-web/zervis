@@ -1,4 +1,4 @@
-"""O Foco: frentes com próximo passo, limite de três ativas, falas curtas e captura pela oficina."""
+"""O Foco: frentes com próximo passo, limite de três ativas e falas curtas."""
 
 import json
 from pathlib import Path
@@ -8,7 +8,6 @@ import pytest
 from jarvis.foco import ferramentas
 from jarvis.foco.frentes import LIMITE, Foco, FocoErro, Frente
 from jarvis.nucleo import estados
-from jarvis.oficina.oficina import Oficina
 
 
 def atual(foco: Foco) -> Frente:
@@ -91,22 +90,6 @@ def test_o_projeto_avanca_quando_o_agente_termina(tmp_path: Path) -> None:
     assert f is not None and f.proximo_passo == "revisar a entrega"
     assert f.notas[-1].endswith("o Claude terminou: testes")
     assert foco.anotar_projeto("Outro", "x") is None
-
-
-def test_a_oficina_avisa_o_que_mudou(tmp_path: Path) -> None:
-    oficina = Oficina(tmp_path / "oficina.json")
-    vistos: list[tuple[str, dict[str, str]]] = []
-    oficina.ao_mudar = lambda o_que, d: vistos.append((o_que, d))
-    oficina.tarefas["d1"] = {"agente": "claude", "projeto": "Loja", "tarefa": "testes"}
-    oficina.concluir("d1")
-    assert vistos == [("concluido", {"agente": "claude", "projeto": "Loja", "tarefa": "testes"})]
-
-    def quebra(o_que: str, d: dict[str, str]) -> None:
-        raise RuntimeError("quem escuta nunca derruba a oficina")
-
-    oficina.ao_mudar = quebra
-    oficina.tarefas["d2"] = {"projeto": "Loja"}
-    assert oficina.concluir("d2") == {"projeto": "Loja"}
 
 
 @pytest.mark.parametrize(

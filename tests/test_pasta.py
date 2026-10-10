@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -14,8 +13,6 @@ from jarvis.habilidades import revisao
 from jarvis.habilidades.diario import Diario
 from jarvis.habilidades.skills import Skills
 from jarvis.memoria.curta import Memoria, Mudanca
-from jarvis.oficina.monitor import Monitor
-from jarvis.oficina.oficina import Oficina
 from jarvis.rosto import pasta
 
 SKILL = "---\nname: {nome}\ndescription: Faz {nome}.\n---\n# {nome}\n"
@@ -66,11 +63,8 @@ def test_origem_da_sugestao_e_a_fala_com_correcao() -> None:
 
 
 def _ferramentas(tmp_path: Path, memoria: Memoria, skills: Skills) -> dict[str, Any]:
-    oficina = Oficina(tmp_path / "o.json", None)
-    monitor = Monitor(oficina, lambda _: None, threading.Event())
     lista = ferramentas.montar(
-        oficina,
-        monitor,
+        None,
         memoria,
         skills,
         revisao.Pendencias(tmp_path / "p.json"),
@@ -113,7 +107,7 @@ def test_notas_e_regravacao_so_quando_muda(tmp_path: Path) -> None:
     consumo.somar({"input_tokens": 10, "cache_read_input_tokens": 1990}, "claude")
     conexoes = pasta.Conexoes(
         cerebro="Claude, com o Sonnet 5.5",
-        proprias=[("oficina_projetos", True), ("sistema_executar", False)],
+        proprias=[("sessoes_listar", True), ("sistema_executar", False)],
         embutidas=["WebSearch"],
         externos={"tempo": ["get_current_time"]},
     )
@@ -135,7 +129,7 @@ def test_notas_e_regravacao_so_quando_muda(tmp_path: Path) -> None:
         "5 Aprendizado.md",
         "6 Consumo.md",
     ]
-    assert "**Oficina (Orca):** `oficina_projetos` (livre)" in notas["1 Quem sou.md"]
+    assert "**Sessões de código:** `sessoes_listar` (livre)" in notas["1 Quem sou.md"]
     assert "**Máquina (Omarchy):** `sistema_executar`\n" in notas["1 Quem sou.md"]
     assert "**tempo** (livres: get_current_time)" in notas["1 Quem sou.md"]
     assert "- Se chama Ana." in notas["2 Memória.md"]

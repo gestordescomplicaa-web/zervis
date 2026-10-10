@@ -55,7 +55,17 @@ VERBOS_DE_ACAO = {
 }
 ASSUNTOS_DE_FERRAMENTA = {
     *("foco", "frente", "frentes", "projeto", "projetos", "lembrete", "lembretes", "agenda"),
-    *("oficina", "orca", "codex", "agente", "agentes", "tarefa", "tarefas", "automacao"),
+    *(
+        "sessao",
+        "sessoes",
+        "codex",
+        "claude",
+        "agente",
+        "agentes",
+        "tarefa",
+        "tarefas",
+        "automacao",
+    ),
     *("ontem", "anteontem", "semana", "conversamos", "falamos", "memoria", "tela", "mapa"),
     *("site", "navegador", "internet", "noticia", "noticias", "preco", "dolar", "clima"),
     *("tempo", "previsao", "volume", "computador", "janela", "arquivo", "pasta"),

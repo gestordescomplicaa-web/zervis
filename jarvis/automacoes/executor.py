@@ -1,5 +1,5 @@
 """Roda uma automação do tipo `pergunta`: uma consulta separada, sem conversa e sem o servidor MCP
-do JARVIS (uma automação não cria automação nem mexe em memória, skills ou Orca).
+do JARVIS (uma automação não cria automação nem mexe em memória, skills ou sessões).
 
 Ninguém está ali para aprovar por voz, então só ferramentas de leitura da internet ficam liberadas
 (pesquisa e leitura de páginas); o resultado é só texto falado. O que vier da internet é dado,

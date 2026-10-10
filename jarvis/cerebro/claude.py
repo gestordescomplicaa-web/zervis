@@ -70,12 +70,16 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
     if nome == "WebFetch":
         endereco = urlsplit(str(entrada.get("url", ""))).hostname or "um endereço"
         return f"Vou abrir a página {endereco.removeprefix('www.')}."
-    if nome == "mcp__jarvis__oficina_delegar":
-        agente = {"claude": "Claude", "codex": "Codex"}.get(str(entrada.get("agente")), "agente")
-        return (
-            f"Vou pedir para um {agente}, no projeto {entrada.get('projeto', '')}: "
-            f"{entrada.get('tarefa', '')}"
+    if nome == "mcp__jarvis__sessao_criar":
+        onde = entrada.get("projeto_novo") or entrada.get("pasta", "")
+        tarefa = entrada.get("tarefa", "")
+        return f"Vou criar a sessão {entrada.get('nome', '')} em {onde}" + (
+            f", com a tarefa: {tarefa}" if tarefa else "."
         )
+    if nome == "mcp__jarvis__sessao_enviar":
+        return f"Vou mandar para a sessão: {entrada.get('texto', '')}"
+    if nome == "mcp__jarvis__sessao_parar":
+        return "Vou parar a sessão."
     if nome == "mcp__jarvis__skill_criar":
         return f"Vou criar a skill {entrada.get('nome', '')}. O texto está no Barehands."
     if nome == "mcp__jarvis__skill_corrigir":
@@ -88,9 +92,6 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
         if entrada.get("acao") == "remover":
             return f"Vou tirar da memória {dono}: {antigo}"
         return f"Vou guardar na memória {dono}: {texto}"
-    if nome == "mcp__jarvis__oficina_responder":
-        return f"Vou responder ao agente: {entrada.get('resposta', '')}"
-    projeto = entrada.get("projeto", "")
     if nome == "mcp__jarvis__automacao_pergunta":
         return f"Vou agendar ({entrada.get('quando', '')}) a pergunta: {entrada.get('texto', '')}"
     if nome == "mcp__jarvis__automacao_mudar":
@@ -98,18 +99,8 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
             str(entrada.get("acao")), "mudar"
         )
         return f"Vou {acao} a automação {entrada.get('id', '')}."
-    if nome == "mcp__jarvis__oficina_mandar_texto":
-        return f"Vou escrever na sessão aberta do projeto {projeto}: {entrada.get('texto', '')}"
     if nome == "mcp__jarvis__janela_abrir":
         return "Vou abrir a minha janela; a câmera acende."
-    if nome == "mcp__jarvis__oficina_criar_projeto":
-        return f"Vou criar o projeto {entrada.get('nome', '')} na pasta de projetos."
-    if nome == "mcp__jarvis__oficina_nova_frente":
-        return f"Vou abrir a frente {entrada.get('nome', '')} no projeto {projeto}."
-    if nome == "mcp__jarvis__oficina_marcar":
-        return f"Vou marcar o projeto {projeto} como {entrada.get('status', '')}."
-    if nome == "mcp__jarvis__oficina_renomear":
-        return f"Vou renomear o projeto {projeto} para {entrada.get('novo_nome', '')}."
     if nome == "mcp__jarvis__sistema_executar":
         argumentos = " ".join(str(a) for a in entrada.get("argumentos") or [])
         return (

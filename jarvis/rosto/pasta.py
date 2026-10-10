@@ -25,7 +25,7 @@ DIAS_NA_PASTA = 14
 
 # Rótulo de cada grupo de ferramentas próprias, pelo começo do nome.
 GRUPOS = {
-    "oficina": "Oficina (Orca)",
+    "sess": "Sessões de código",
     "sistema": "Máquina (Omarchy)",
     "automac": "Automações",
     "sugest": "Aprendizado",

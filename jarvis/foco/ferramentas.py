@@ -77,7 +77,7 @@ def ferramentas(foco: Foco) -> list[SdkMcpTool[Any]]:
         "foco_criar",
         "Anota uma frente que o usuário começou ou aprovou ('comecei X', 'vou fazer Y'), com o "
         f"próximo passo concreto se ele disse. Se já houver {LIMITE} ativas, ela entra pausada: "
-        "diga isso e pergunte qual pausar. Projeto: o do Orca, se houver.",
+        "diga isso e pergunte qual pausar. Projeto: o da sessão de código, se houver.",
         {
             "type": "object",
             "properties": {

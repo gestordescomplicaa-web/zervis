@@ -33,3 +33,6 @@
 - Acesso como no Orca: o Zé mostra os agentes instalados nesta máquina (Claude, Codex) e o login
   feito em cada um, sem fazer login de assinatura. Sai o campo de token da assinatura; a chave de
   API da Anthropic fica como alternativa.
+- O Orca saiu do núcleo: o cérebro delega trabalho de código às sessões próprias do Zé pelas
+  ferramentas `sessoes_listar`, `sessao_criar`, `sessao_enviar`, `sessao_ler` e `sessao_parar`
+  (ler é livre; criar, mandar e parar pedem aprovação). Persona e arquitetura acompanham.

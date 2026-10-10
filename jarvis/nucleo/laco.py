@@ -43,7 +43,7 @@ from jarvis.cerebro.eco import Eco
 from jarvis.config import Config
 from jarvis.foco import ferramentas as foco_ferramentas
 from jarvis.foco import tela as foco_tela
-from jarvis.foco.frentes import Foco, FocoErro, Frente
+from jarvis.foco.frentes import Foco, Frente
 from jarvis.habilidades import evidencias, revisao
 from jarvis.habilidades.diario import Diario
 from jarvis.habilidades.skills import Skills
@@ -57,8 +57,6 @@ from jarvis.memoria.linha import LinhaDoTempo
 from jarvis.nucleo import estados as e
 from jarvis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from jarvis.oficina.manutencao import Manutencao
-from jarvis.oficina.monitor import Monitor
-from jarvis.oficina.oficina import Oficina
 from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import Portal
@@ -120,7 +118,7 @@ FALAS_DE_TONTO = (
     "Para, para! Já vi o mundo dar três voltas.",
     "Socorro, eu sou um holograma, não um pião!",
 )
-# Comandos que falam com o Orca ou rodam os testes: respondem quando terminarem.
+# Comandos que falam com a sessão de manutenção ou rodam os testes: respondem quando terminarem.
 EM_SEGUNDO_PLANO = ("manutencao_entrar", "manutencao_pedido", "rodada_melhoria", "reiniciar")
 # Os que mostram algo no Núcleo (abrem a janela se ela estiver fechada): nome -> (ações, fala).
 MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
@@ -284,13 +282,8 @@ class Nucleo:
         self._proxima_nota = 0.0
         self._notas_em_curso = False
         self._conversa_suja = False  # houve pedido ao cérebro desde a última conversa nova
-        self.oficina = Oficina(
-            ESTADO / "oficina.json", raiz=cfg.caminho("oficina", "raiz_projetos")
-        )
-        self.monitor = Monitor(self.oficina, self._aviso_da_oficina, parar)
-        # O Foco (08/10/2026): as frentes do usuário; a oficina avisa o que ele aprovou.
+        # O Foco (08/10/2026): as frentes do usuário.
         self.foco = Foco(DADOS / "foco/frentes.json", self._foco_mudou)
-        self.oficina.ao_mudar = self._oficina_mudou
         # As marcações do "V" na tela: só as novas (o que já estava no arquivo não se repete).
         self._foco_acoes = cfg.caminho("barehands", "pasta_estado") / "foco-acoes.jsonl"
         try:
@@ -339,8 +332,7 @@ class Nucleo:
         )
         self.maquina.orbes = manifesto.falados(self.orbes)
         self.proprias = ferramentas.montar(
-            self.oficina,
-            self.monitor,
+            self.sessoes,
             self.memoria,
             self.skills,
             self.pendencias,
@@ -624,7 +616,7 @@ class Nucleo:
             acoes, pronto = FECHAR_NA_TELA[base]
             resposta = self._se_aberto(com_argumento(acoes, argumento), pronto)
         elif base in EM_SEGUNDO_PLANO:
-            # Falam com o Orca ou rodam os testes: a resposta sai quando terminar.
+            # Falam com a sessão de manutenção ou rodam os testes: a resposta sai quando terminar.
             threading.Thread(
                 target=self._responder_depois, args=(base, argumento), daemon=True
             ).start()
@@ -742,28 +734,6 @@ class Nucleo:
                 [{"acao": "expressao", "valor": "alegria", "segundos": 5}, {"acao": "girar"}]
             )
 
-    def _oficina_mudou(self, o_que: str, d: dict[str, str]) -> None:
-        """O que ele aprova na oficina vira frente sozinho; o fim de um agente avança a frente."""
-        try:
-            projeto = d.get("projeto", "")
-            if o_que == "projeto":
-                self.foco.criar(projeto, "definir a primeira tarefa", projeto, origem="orca")
-            elif o_que == "delegado":
-                self.foco.criar(
-                    projeto,
-                    f"acompanhar o {d.get('agente', 'agente')}: {d.get('tarefa', '')[:100]}",
-                    projeto,
-                    origem="orca",
-                )
-            elif o_que == "concluido":
-                self.foco.anotar_projeto(
-                    projeto,
-                    f"o {d.get('agente', 'agente')} terminou: {d.get('tarefa', '')[:80]}",
-                    "revisar o que o agente entregou",
-                )
-        except (FocoErro, OSError) as erro:
-            log.warning("foco: %s", erro)
-
     def _bom_dia(self) -> None:
         """Na primeira abertura do dia (depois das 5h): onde ele parou e o que tem hoje."""
         agora = datetime.now(FUSO)
@@ -797,7 +767,7 @@ class Nucleo:
             self._aviso_da_oficina(f"A sessão {sessao.nome} terminou: {resumo}")
 
     def _aviso_da_oficina(self, texto: str) -> None:
-        """O que os agentes do Orca avisam também entra na linha do tempo."""
+        """O que as sessões de código avisam também entra na linha do tempo."""
         self._na_linha("aviso", texto)
         self.eventos.put(e.Aviso(texto))
 
@@ -1551,7 +1521,6 @@ class Nucleo:
     def rodar(self) -> None:
         self.imersivo.iniciar()
         self.presenca.start()
-        self.monitor.start()
         proximo_status = 0.0
         try:
             while not self.parar.is_set():

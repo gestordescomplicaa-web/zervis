@@ -1,7 +1,8 @@
 # 04 — Arquitetura
 
-Data: 06/10/2026. Status: **proposta**, aprovada em linhas gerais pelo usuário; detalhes serão
-confirmados fase a fase (ver [roteiro.md](roteiro.md)).
+Data: 06/10/2026, revisada em 10/10/2026 (ADR 0014 e 0015: o imersivo dentro do Zé, três camadas de
+modelos e as sessões de código próprias no lugar do Orca). Detalhes seguem o
+[roteiro.md](roteiro.md).
 
 ## Visão geral
 
@@ -21,17 +22,14 @@ confirmados fase a fase (ver [roteiro.md](roteiro.md)).
 │                          │            ▲ ferramentas via MCP                                    │
 │                          │   ┌────────┴──────────────────────────────────────────────┐        │
 │                          │   │ servidor MCP "jarvis": memória · histórico · skills ·  │        │
-│                          │   │ automações · avisos · oficina (Orca) · sistema         │        │
+│                          │   │ automações · avisos · sessões de código · sistema      │        │
 │                          │   └───────────────────────────────────────────────────────┘        │
 │                          ├──► Avisos (fila durável)  ◄── Automações (agendador)               │
-│                          │                           ◄── Oficina (monitor do Orca, Run)        │
+│                          │                           ◄── Sessões de código (Claude, Codex)     │
 │                          └──► Revisão em segundo plano ──► Pendências (memória/skills)        │
 │                                                                                               │
 │   Estado: ~/.local/state/zervis/jarvis.db (SQLite WAL) + ~/.local/share/zervis/ (Markdown)    │
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
-                                    │ CLI do Orca / orquestração
-                                    ▼
-                          Orca (oficina): sessões Claude/Codex que codam
 ```
 
 ## Componentes
@@ -41,15 +39,16 @@ confirmados fase a fase (ver [roteiro.md](roteiro.md)).
 | `jarvis/nucleo` | Máquina de estados, laço principal, lock de instância única, desligamento limpo | Lógica de domínio |
 | `jarvis/presenca` | Decide ATIVO/INATIVO e **qual rosto** está conectado (mesa = Barehands, remoto = celular) | Ligar a janela |
 | `jarvis/transporte` | Entrada e saída de áudio trocáveis: `TransporteLocal` (PipeWire) e `TransporteLiveKit` (sala WebRTC local, celular via Tailscale) | Transcrever ou sintetizar |
-| `jarvis/voz` | Ativação "Hey Orca", captura, transcrição, normalizador de fala, saída Cadu com streaming | Decidir o que dizer |
+| `jarvis/voz` | Ativação "Ei Zé", captura, transcrição, normalizador de fala, saída Cadu com streaming | Decidir o que dizer |
 | `jarvis/rosto` | Anel (estado, cor, onda), painel de cérebros (ADR 0010) e quadro (cards, pendências) | — |
 | `jarvis/cerebro` | Interface `Brain` e implementações Claude/Codex; persona; sessão contínua; catálogo e baterias (ADR 0010) | Guardar estado próprio |
 | `jarvis/ferramentas` | Servidor MCP com as ferramentas do JARVIS para o cérebro | Falar com o usuário |
 | `jarvis/memoria` | `USUARIO.md` e `JARVIS.md` curtos com limite, varredura, histórico (ai-memory) | — |
 | `jarvis/skills` | Catálogo progressivo, escrita com pendência e diff, uso e curadoria | — |
-| `jarvis/automacoes` | Jobs (`jobs.json` atômico), agendador, fontes (agenda, Orca) | Falar diretamente: entrega para os avisos |
+| `jarvis/automacoes` | Jobs (`jobs.json` atômico), agendador | Falar diretamente: entrega para os avisos |
 | `jarvis/avisos` | Fila durável com prioridade, expiração e retenção enquanto inativo | — |
-| `jarvis/oficina` | CLI do Orca, monitor de sessões, orquestração (Run/worker), aprovação por voz | Codar |
+| `jarvis/oficina` | Sessões de código próprias (agentes Claude/Codex por pasta de projeto, com conversa que continua), explorador de arquivos e o modo manutenção | Codar ele mesmo |
+| `jarvis/imersivo` | O modo imersivo (ADR 0014): servidor, página, avatar, mãos | — |
 | `jarvis/sistema` | Omarchy e Hyprland: catálogo de ações dos metadados `omarchy-*`, leitura de estado, eventos (hooks e socket do Hyprland), política de risco | Simular teclado |
 | `jarvis/revisao` | Revisão em segundo plano a cada N turnos → pendências | Aplicar mudanças sem aprovação |
 

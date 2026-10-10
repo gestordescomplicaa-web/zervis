@@ -1,12 +1,12 @@
-"""Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): oficina, memória e histórico.
+"""Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
-Cada grupo de ferramentas mora no seu módulo (oficina, aprendizado, automacoes, sistema, tela,
+Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
 manutencao, navegador);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
 projeto, abrir frente, mudar status e renomear passam pela aprovação falada do `can_use_tool`.
-Apagar não existe aqui de propósito: fica na tela do Orca (decisão de 06/10/2026).
+Apagar não existe aqui de propósito: excluir uma sessão é no painel (decisão de 06/10/2026).
 """
 
 from typing import Any
@@ -18,7 +18,7 @@ from jarvis.cerebro.ferramentas import aprendizado as g_aprendizado
 from jarvis.cerebro.ferramentas import automacoes as g_automacoes
 from jarvis.cerebro.ferramentas import manutencao as g_manutencao
 from jarvis.cerebro.ferramentas import navegador as g_navegador
-from jarvis.cerebro.ferramentas import oficina as g_oficina
+from jarvis.cerebro.ferramentas import sessoes as g_sessoes
 from jarvis.cerebro.ferramentas import sistema as g_sistema
 from jarvis.cerebro.ferramentas import tela as g_tela
 from jarvis.cerebro.ferramentas.comum import _mudanca, _skill_nova
@@ -27,16 +27,14 @@ from jarvis.habilidades.diario import Diario
 from jarvis.habilidades.skills import SkillErro, Skills
 from jarvis.memoria.curta import Memoria, MemoriaErro
 from jarvis.oficina.manutencao import Manutencao
-from jarvis.oficina.monitor import Monitor
-from jarvis.oficina.oficina import Oficina
+from jarvis.oficina.sessoes import Sessoes
 from jarvis.rosto.tela import Tela
 from jarvis.sistema.politica import Sistema
 
 SERVIDOR = "jarvis"
 LEITURA = [
-    "oficina_projetos",
-    "oficina_situacao",
-    "oficina_saida",
+    "sessoes_listar",
+    "sessao_ler",
     "historico_buscar",
     "historico_ler",
     "skills_ver",
@@ -114,8 +112,7 @@ def servidor(ferramentas: list[SdkMcpTool[Any]]) -> McpSdkServerConfig:
 
 
 def montar(
-    oficina: Oficina,
-    monitor: Monitor,
+    sessoes: Sessoes | None,
     memoria: Memoria,
     skills: Skills,
     pendencias: revisao.Pendencias | None = None,
@@ -127,7 +124,7 @@ def montar(
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do JARVIS lista os nomes como conexões)."""
     return [
-        *g_oficina.ferramentas(oficina, monitor),
+        *g_sessoes.ferramentas(sessoes),
         *g_tela.ferramentas(tela),
         *g_sistema.ferramentas(sistema),
         *g_automacoes.ferramentas(jobs),

@@ -2,7 +2,7 @@
 
 Pedido do usuário, que tem TDAH: o Zé é o funcionário que nunca cansa e o traz de volta para o
 que ele começou, aprovou ou deixou pendente. Cada **frente** tem um próximo passo concreto, o
-bloqueio (se houver), o projeto do Orca e o estado:
+bloqueio (se houver), o projeto (o da sessão de código) e o estado:
 
 - `ativa`: em andamento (no máximo LIMITE ao mesmo tempo; passou disso, pausar uma antes);
 - `pausada`: parada de propósito, volta quando ele quiser;
