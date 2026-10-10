@@ -1,0 +1,29 @@
+{
+  "name": "ZÉ",
+  "port": 8794,
+  "orbs": [
+    {
+      "id": "mapa",
+      "title": "Mapa",
+      "kind": "brain",
+      "apelidos": ["cérebro", "seu cérebro", "mapa do cérebro", "conexões"],
+      "descricao": "As conexões entre tudo o que o Zé conhece, com as vistas Geral, Trabalho e Foco."
+    },
+    {
+      "id": "guia",
+      "title": "Guia",
+      "kind": "notes",
+      "path": "sample-notes",
+      "apelidos": ["manual", "ajuda"],
+      "descricao": "Como usar o modo imersivo: gestos, mídia e como ligar um assistente."
+    },
+    {
+      "id": "acervo",
+      "title": "Acervo",
+      "kind": "media",
+      "path": "media",
+      "apelidos": ["arquivos", "modelos", "imagens"],
+      "descricao": "Arquivos para mostrar na tela: modelos 3D, imagens e efeitos."
+    }
+  ]
+}

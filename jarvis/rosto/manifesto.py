@@ -28,11 +28,12 @@ class Orbe:
     descricao: str = ""
 
 
-PADRAO = (
+RESERVA = (
     Orbe("mapa", "Mapa", "brain", ("cérebro", "seu cérebro"), TIPOS["brain"]),
-    Orbe("guia", "Guia", "notes", ("manual",), "Como usar o JARVIS."),
+    Orbe("guia", "Guia", "notes", ("manual",), "Como usar o modo imersivo."),
     Orbe("acervo", "Acervo", "media", ("arquivos",), TIPOS["media"]),
 )
+PADRAO_ARQUIVO = Path(__file__).resolve().parents[1] / "imersivo" / "barehands.padrao.json"
 
 
 def _sem_acento(texto: str) -> str:
@@ -40,11 +41,10 @@ def _sem_acento(texto: str) -> str:
     return " ".join("".join(c for c in t if not unicodedata.combining(c)).split())
 
 
-def ler(arquivo: Path) -> tuple[Orbe, ...]:
-    """Os orbes do manifesto; sem arquivo ou ilegível, os do padrão (o JARVIS nunca fica sem)."""
+def _do_arquivo(arquivo: Path) -> tuple[Orbe, ...]:
     try:
         dados = json.loads(arquivo.read_text())
-        orbes = tuple(
+        return tuple(
             Orbe(
                 id=str(o.get("id") or o.get("title", "")).casefold(),
                 titulo=str(o.get("title", "")),
@@ -56,8 +56,16 @@ def ler(arquivo: Path) -> tuple[Orbe, ...]:
             if o.get("title")
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        return PADRAO
-    return orbes or PADRAO
+        return ()
+
+
+# O manifesto que vem com o Zé (o mesmo que a página do modo imersivo usa sem um próprio).
+PADRAO = _do_arquivo(PADRAO_ARQUIVO) or RESERVA
+
+
+def ler(arquivo: Path) -> tuple[Orbe, ...]:
+    """Os orbes do manifesto de quem usa; sem ele ou ilegível, os do padrão (nunca fica sem)."""
+    return _do_arquivo(arquivo) or PADRAO
 
 
 def falados(orbes: tuple[Orbe, ...]) -> dict[str, str]:

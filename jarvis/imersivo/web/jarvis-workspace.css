@@ -1,0 +1,207 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* The existing ring, orbital bloom and glass board define the visual language. */
+#jv-cabos { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible }
+#jv-cabos path { fill:none; stroke:var(--jv-acento); stroke-width:1.2; stroke-opacity:.34 }
+.card.orb .orb-icone { font-size:25px; color:var(--jv-acento); text-shadow:0 0 14px rgb(var(--jv-acento-rgb) / 0.40) }
+.card.orb p { max-width:126px }
+.card.ringcard[role=button],.card.orb[role=button] { cursor:pointer }
+.card.orb:focus-visible { outline:2px solid var(--jv-claro); outline-offset:6px }
+.card.ringcard:focus-visible { outline:1px solid var(--jv-acento); outline-offset:-40px; border-radius:50% }
+#jv-mapa {
+  --texto:var(--jv-texto); --suave:var(--jv-suave); --apagado:var(--jv-suave); --ciano:var(--jv-acento); --ambar:#efbe7c;
+  --linha:rgb(var(--jv-borda-rgb) / .2); --sans:-apple-system,'SF Pro Display',system-ui,sans-serif;
+  --mono:'SF Mono',Menlo,monospace;
+  position:fixed; z-index:20; display:none; opacity:0; transform:scale(.94);
+  transform-origin:top left; transition:opacity .25s,transform .25s;
+  background:linear-gradient(172deg,var(--jv-vidro-a),var(--jv-vidro-b));
+  backdrop-filter:blur(8px); border:1.5px solid rgb(var(--jv-borda-rgb) / .55); border-radius:18px;
+  box-shadow:0 16px 70px #0005,0 0 35px rgb(var(--jv-borda-rgb) / 0.13),inset 0 1px 0 rgb(var(--jv-claro-rgb) / 0.40);
+  color:var(--texto); font:14px/1.5 var(--sans); user-select:none; touch-action:none;
+  grid-template-rows:40px 120px minmax(0,1fr) 30px; color-scheme:dark;
+  text-shadow:0 1px 3px var(--jv-sombra);
+}
+#jv-mapa.on { opacity:1; transform:scale(1) }
+body.jv-brain-open .cursor { z-index:1005 }
+#jv-mapa * { box-sizing:border-box }
+#jv-mapa [hidden] { display:none!important }
+#jv-mapa button { font:inherit; color:inherit; background:rgb(var(--jv-borda-rgb) / .05); border:1px solid rgb(var(--jv-borda-rgb) / .2);
+  border-radius:10px; min-height:44px; padding:10px 14px; cursor:pointer; transition:background .15s,border-color .15s }
+#jv-mapa button:hover,#jv-mapa button.apontado,#jv-mapa button:focus-visible { background:rgb(var(--jv-borda-rgb) / .15); border-color:var(--ciano) }
+#jv-mapa :focus-visible { outline:2px solid var(--jv-claro); outline-offset:4px }
+#jv-mapa .grip { display:flex; align-items:center; gap:12px; padding:0 12px 0 20px; cursor:grab;
+  color:var(--jv-acento); font:12px var(--mono); letter-spacing:.06em }
+#jv-mapa .grip:active { cursor:grabbing }
+#jv-mapa .grip .titulo { margin-right:auto; display:flex; gap:8px; align-items:center }
+#jv-mapa .grip .online { font:10px var(--sans); letter-spacing:0; color:var(--suave) }
+#jv-mapa .online::before { content:''; width:5px; height:5px; display:inline-block; border-radius:50%; margin-right:5px; background:var(--jv-suave) }
+#jv-mapa .online.vivo::before { background:var(--jv-acento); box-shadow:0 0 8px rgb(var(--jv-acento-rgb) / 0.67) }
+#jv-mapa .voz { font:10px var(--sans); letter-spacing:0; color:var(--suave) }
+#jv-mapa .grip button { min-height:32px; width:32px; padding:0; border-radius:50%; color:var(--jv-acento) }
+#jv-mapa .modos { position:relative; display:flex; justify-content:center; align-items:center; gap:50px; padding:8px 20px 14px }
+#jv-mapa .modos::before { content:''; position:absolute; left:27%; right:27%; top:55px; height:1px; background:rgb(var(--jv-acento-rgb) / 0.27) }
+#jv-mapa .modos button { position:relative; width:92px; height:92px; min-height:0; padding:0; flex:none; border-radius:50%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+  background:linear-gradient(168deg,var(--jv-vidro-a),var(--jv-vidro-b));
+  border:1.5px solid rgb(var(--jv-borda-rgb) / 0.50); box-shadow:0 0 20px rgb(var(--jv-borda-rgb) / 0.10),inset 0 1px 0 rgb(var(--jv-claro-rgb) / 0.27) }
+#jv-mapa .modos .icone { font-size:24px; color:var(--jv-acento); line-height:1 }
+#jv-mapa .modos .nome { font:12px var(--mono); letter-spacing:.05em; color:var(--jv-acento) }
+#jv-mapa .modos button.ativo { border-color:var(--jv-claro); background:rgb(var(--jv-borda-rgb) / .23); box-shadow:0 0 26px rgb(var(--jv-acento-rgb) / 0.20),inset 0 0 20px rgb(var(--jv-acento-rgb) / 0.05) }
+#jv-mapa .principal { position:relative; overflow:hidden; min-height:0; min-width:0; border-top:1px solid var(--linha) }
+#jv-mapa .palco { position:absolute; inset:0; overflow:hidden }
+#jv-mapa .palco>svg { position:absolute; inset:0; height:100%; width:100%; cursor:grab }
+#jv-mapa .palco>svg:active { cursor:grabbing }
+#jv-mapa .contexto { position:absolute; top:14px; left:20px; pointer-events:none }
+#jv-mapa .contexto h1 { margin:0 0 3px; font:14px var(--mono); color:var(--jv-acento) }
+#jv-mapa .contexto p { margin:0; color:var(--suave); font-size:11px }
+#jv-mapa .ferramentas { position:absolute; bottom:12px; right:14px; display:flex; gap:4px; border-radius:12px; padding:3px; background:var(--jv-escuro) }
+#jv-mapa .ferramentas button { padding:8px 10px; font-size:11px; min-width:40px }
+#jv-mapa .zoom { padding:14px 2px; color:var(--suave); font-size:10px; min-width:35px; text-align:center }
+#jv-mapa .ajuda { text-align:center; padding:6px 12px; font-size:10px; color:var(--suave); border-top:1px solid var(--linha) }
+#jv-mapa .esfera { cursor:pointer; transition:opacity .2s }
+#jv-mapa .esfera .bola { stroke-width:1.6; fill:var(--jv-bola); filter:drop-shadow(0 0 7px rgb(var(--jv-acento-rgb) / 0.13)) }
+#jv-mapa .esfera.root .bola { stroke-width:2; filter:drop-shadow(0 0 10px rgb(var(--jv-acento-rgb) / 0.20)) }
+#jv-mapa .esfera .halo { opacity:.025 }
+#jv-mapa .esfera .anel { stroke-opacity:.2 }
+#jv-mapa .esfera.apontado .bola,#jv-mapa .esfera.selecionado .bola,#jv-mapa .esfera:focus-visible .bola { stroke-width:3; fill:rgb(var(--jv-borda-rgb) / .2); filter:drop-shadow(0 0 12px rgb(var(--jv-acento-rgb) / 0.33)) }
+#jv-mapa .esfera.apontado .halo,#jv-mapa .esfera.selecionado .halo { opacity:.13 }
+#jv-mapa .esfera.afastado { opacity:.4 }
+#jv-mapa .esfera.item .bola { fill:currentColor }
+#jv-mapa .rotulo { font-family:var(--sans); paint-order:stroke; stroke:var(--jv-sombra); stroke-width:2px }
+#jv-mapa .previa { display:none; position:fixed; z-index:1003; width:300px; max-width:calc(100vw - 24px); max-height:310px;
+  overflow:hidden; pointer-events:none; padding:18px; background:var(--jv-painel); border:1px solid rgb(var(--jv-acento-rgb) / 0.40); border-radius:14px; box-shadow:0 12px 45px #0006 }
+#jv-mapa .previa small { color:var(--suave); display:block; font-size:11px }
+#jv-mapa .previa strong { display:block; font-size:16px; margin:6px 0 9px; color:var(--jv-claro) }
+#jv-mapa .previa p { font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; margin:0 0 12px }
+#jv-mapa .previa blockquote { color:var(--ambar); border-left:2px solid; margin:10px 0; padding-left:12px; font-size:12px }
+#jv-mapa .vista { position:absolute; inset:0; padding:22px 24px; overflow:auto; overscroll-behavior:contain }
+#jv-mapa .vista h1 { font-size:22px; font-weight:500; margin:0 0 6px; color:var(--jv-claro) }
+#jv-mapa .intro { color:var(--suave); margin:0 0 20px; max-width:65ch }
+#jv-mapa .filtros { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap }
+#jv-mapa .filtros button { font-size:12px; padding:8px 12px; border-radius:22px }
+#jv-mapa .filtros .ativo { border-color:var(--jv-acento); background:rgb(var(--jv-acento-rgb) / 0.13) }
+#jv-mapa .objeto { width:100%; display:grid; grid-template-columns:32px minmax(0,1fr) auto 15px; align-items:center; gap:12px;
+  text-align:left; padding:16px 8px; border-radius:0; border:0; border-bottom:1px solid var(--linha); min-height:78px; background:transparent }
+#jv-mapa .objeto strong { display:block; font-size:14px; font-weight:500; overflow-wrap:anywhere }
+#jv-mapa .objeto small { display:block; color:var(--suave); margin-top:5px; overflow-wrap:anywhere; font-size:11px }
+#jv-mapa .badge { font-size:11px; color:var(--jv-suave); white-space:nowrap }
+#jv-mapa .objeto-icon { width:30px; height:30px; border:1px solid rgb(var(--jv-acento-rgb) / 0.27); display:grid; place-items:center; border-radius:50%; color:var(--jv-acento) }
+#jv-mapa .vazio { padding:25px 0; max-width:55ch; color:var(--suave) }
+#jv-mapa .focus-layout { display:grid; grid-template-columns:minmax(0,1fr) 200px; gap:24px; padding-top:20px }
+#jv-mapa .focus-icone { width:54px; height:54px; display:grid; place-items:center; border:1px solid rgb(var(--jv-acento-rgb) / 0.47); border-radius:50%; color:var(--jv-acento); font-size:23px; margin-bottom:18px }
+#jv-mapa .focus-corpo { white-space:pre-wrap; line-height:1.8; overflow-wrap:anywhere; max-width:70ch }
+#jv-mapa .focus-origem { border-left:2px solid var(--ambar); color:var(--ambar); padding:10px 18px; margin:22px 0; white-space:pre-wrap }
+#jv-mapa .focus-relacoes { border-left:1px solid var(--linha); padding-left:20px }
+#jv-mapa .focus-relacoes h3 { font-size:14px; font-weight:500; margin-top:0; color:var(--jv-acento) }
+#jv-mapa .focus-relacoes button { display:block; width:100%; text-align:left; margin-bottom:8px; overflow-wrap:anywhere; font-size:12px }
+#jv-mapa .focus-meta { color:var(--suave); font-size:12px; margin:16px 0 }
+#jv-mapa .focus-acoes { display:flex; gap:8px; flex-wrap:wrap; margin-top:22px }
+#jv-mapa .history { margin-top:24px; max-width:700px }
+#jv-mapa .evento { padding:14px 0; border-bottom:1px solid var(--linha); color:var(--suave); font-size:12px }
+#jv-mapa .evento strong { color:var(--texto); font-weight:500 }
+#jv-mapa .evento q { display:block; color:var(--ambar); margin-top:6px }
+@media(max-width:1250px) {
+  #jv-mapa .focus-layout { grid-template-columns:1fr; gap:20px }
+  #jv-mapa .focus-relacoes { border-left:0; padding-left:0 }
+  #jv-mapa .modos { gap:24px }
+  #jv-mapa .modos button { width:82px; height:82px }
+  #jv-mapa .grip .voz { display:none }
+  #jv-mapa .objeto .badge { display:none }
+  #jv-mapa .objeto { grid-template-columns:30px minmax(0,1fr) 15px }
+}
+@media(max-width:700px) {
+  #jv-mapa { grid-template-rows:38px 92px minmax(0,1fr) 38px }
+  #jv-mapa .modos { gap:14px; padding:0 8px }
+  #jv-mapa .modos button { width:72px; height:72px }
+  #jv-mapa .modos .nome { font-size:10px }
+  #jv-mapa .modos::before { top:44px }
+  #jv-mapa .grip { padding-left:12px }
+  #jv-mapa .contexto { left:12px; top:10px }
+  #jv-mapa .contexto p { max-width:220px }
+  #jv-mapa .vista { padding:18px 14px }
+  #jv-mapa .ferramentas { right:8px; bottom:8px; gap:2px }
+  #jv-mapa .ferramentas button { padding:6px }
+  #jv-mapa .zoom { display:none }
+}
+@media(prefers-reduced-motion:reduce) { #jv-mapa,#jv-mapa * { transition:none!important; animation:none!important } }
+
+/* gdautomacao.ia (08/10/2026): the Foco board — one big card, the V to mark the step done.
+   Large type and hit areas: it is read from a distance and pinched in the air. */
+/* The Foco board is read, not glanced at: a dark, frosted ground so it stays legible over a bright
+   room behind the camera (08/10/2026: white wall, the text vanished). */
+#jv-mapa[data-mode="focus"] { background:linear-gradient(172deg,rgb(3 10 16 / .88),rgb(2 7 12 / .92));
+  backdrop-filter:blur(18px) saturate(.8) }
+#jv-mapa .foco-quadro { max-width:860px; margin:0 auto; padding:8px 0 24px }
+#jv-mapa .foco-topo { display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:18px }
+#jv-mapa .foco-topo h1 { margin:0; font-size:26px; letter-spacing:.28em; color:var(--jv-acento) }
+#jv-mapa .foco-topo p { margin:0; color:var(--suave); font-size:13px }
+#jv-mapa .foco-cartao { border:1px solid rgb(var(--jv-borda-rgb) / .35); border-radius:18px; padding:18px 20px;
+  background:rgb(var(--jv-borda-rgb) / .05) }
+#jv-mapa .foco-cartao.atual { border-color:rgb(var(--jv-acento-rgb) / .75); padding:26px 28px;
+  background:rgb(var(--jv-acento-rgb) / .08); box-shadow:0 0 28px rgb(var(--jv-acento-rgb) / .14) }
+#jv-mapa .foco-rotulo { margin:0 0 6px; font-size:12px; letter-spacing:.3em; color:var(--jv-acento) }
+#jv-mapa .foco-cartao h2 { margin:0 0 8px; font-size:20px; line-height:1.25; overflow-wrap:anywhere }
+#jv-mapa .foco-cartao.atual h2 { font-size:30px }
+#jv-mapa .foco-meta { margin:0 0 12px; color:var(--suave); font-size:13px }
+#jv-mapa .foco-v { display:flex; align-items:center; gap:18px; width:100%; text-align:left; padding:14px 16px;
+  margin:10px 0 4px; border-radius:14px; font-size:17px; line-height:1.4 }
+#jv-mapa .foco-cartao.atual .foco-v { font-size:22px; padding:18px 20px }
+#jv-mapa .foco-v .caixa { flex:none; width:44px; height:44px; display:grid; place-items:center; border-radius:12px;
+  border:2px solid var(--jv-acento); color:transparent; font-size:26px; font-weight:700; transition:all .25s }
+#jv-mapa .foco-cartao.atual .foco-v .caixa { width:58px; height:58px; font-size:34px }
+#jv-mapa .foco-v .passo { display:flex; flex-direction:column; gap:4px; overflow-wrap:anywhere }
+#jv-mapa .foco-v .passo small { font-size:11px; letter-spacing:.24em; color:var(--suave) }
+#jv-mapa .foco-v:hover .caixa, #jv-mapa .foco-v.apontado .caixa { color:rgb(var(--jv-acento-rgb) / .45) }
+#jv-mapa .foco-v.marcado .caixa { background:var(--jv-acento); color:#04141a; transform:scale(1.08) }
+#jv-mapa .foco-v.marcado .passo { text-decoration:line-through; opacity:.65 }
+#jv-mapa .foco-sem-passo { color:var(--suave); font-style:italic; margin:12px 0 }
+#jv-mapa .foco-trava { color:var(--ambar); margin:12px 0; font-size:16px }
+#jv-mapa .foco-acoes { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px }
+#jv-mapa .foco-outras { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:16px }
+#jv-mapa .foco-vazio { border:1px dashed rgb(var(--jv-borda-rgb) / .45); border-radius:18px; padding:34px; text-align:center;
+  font-size:20px; color:var(--suave) }
+#jv-mapa .foco-vazio small { font-size:14px }
+#jv-mapa .foco-grupos { display:flex; gap:8px; flex-wrap:wrap; margin-top:22px }
+#jv-mapa .foco-grupos button[aria-expanded="true"] { border-color:var(--jv-acento); color:var(--jv-acento) }
+#jv-mapa .foco-lista { margin-top:10px; display:grid; gap:8px }
+#jv-mapa .foco-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 14px;
+  border:1px solid var(--linha); border-radius:12px; overflow-wrap:anywhere }
+@media (prefers-reduced-motion: reduce) { #jv-mapa .foco-v .caixa { transition:none } }
+
+/* Hand-first controls: shared by the map, Work and Foco. */
+#jv-mapa { grid-template-rows:64px 108px minmax(0,1fr) 72px 40px }
+#jv-mapa button { min-height:56px; min-width:56px }
+#jv-mapa .grip button { width:56px; height:56px; min-height:56px; flex:none; font-size:24px }
+#jv-mapa .grip .titulo { min-width:0; flex-wrap:wrap; gap:4px }
+#jv-mapa .grip { padding:4px 8px 4px 16px; gap:10px }
+#jv-mapa .ferramentas { position:static; justify-content:center; align-items:center; gap:10px;
+  margin:4px 8px; padding:2px; min-width:0 }
+#jv-mapa .ferramentas button { font-size:14px; padding:8px 12px; flex:none; min-width:56px; min-height:56px }
+#jv-mapa .zoom { display:block; padding:0; font-size:13px; min-width:44px }
+#jv-mapa .ajuda { font-size:11px; padding:5px 8px }
+#jv-mapa .filtros { gap:10px }
+#jv-mapa .foco-acoes,#jv-mapa .foco-grupos { gap:12px }
+#jv-mapa .foco-outras { grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr)) }
+#jv-mapa .foco-item { flex-wrap:wrap }
+#jv-mapa .focus-layout { grid-template-columns:1fr }
+#jv-mapa .focus-relacoes { border-left:0; padding-left:0 }
+#jv-mapa .esfera .rotulo { pointer-events:bounding-box; cursor:pointer }
+@media(max-width:900px) {
+  #jv-mapa .modos { gap:12px; padding:4px }
+  #jv-mapa .modos button { width:72px; height:72px }
+  #jv-mapa .grip .online { display:none }
+  #jv-mapa .ferramentas { gap:6px; margin:4px }
+  #jv-mapa .ferramentas button { padding:8px }
+  #jv-mapa .ferramentas [data-action="motion"] { font-size:12px; min-width:56px }
+}
+/* Lists and notes share the same visible handles and controls. */
+.panel .bar { padding:12px; gap:10px; flex-wrap:wrap; cursor:grab; touch-action:none; flex-shrink:0 }
+.panel .bar h3 { flex:1 1 100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:17px; min-height:28px }
+.panel .panel-tools { display:flex; align-items:center; gap:12px; flex-wrap:wrap; max-width:100% }
+.panel .panel-tools button { min-width:64px; min-height:64px; padding:8px 12px; border-radius:12px;
+  border:1px solid rgb(var(--jv-borda-rgb) / .5); background:var(--jv-escuro); color:var(--jv-claro); font:500 18px system-ui; cursor:pointer }
+.panel .panel-tools button:hover,.panel .panel-tools button.apontado,.panel .brow:hover,.panel .brow:focus-visible {
+  background:rgb(var(--jv-acento-rgb) / .2); outline:2px solid var(--jv-acento); outline-offset:-2px }
+.panel .panel-hint { font:12px system-ui; color:var(--jv-suave) }
+.panel .body { min-height:0 }
+.panel .scroll { font-size:18px }
+.panel .brow { cursor:pointer; min-height:72px }

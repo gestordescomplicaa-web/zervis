@@ -1,5 +1,5 @@
 # Porta única de qualidade (docs/06-qualidade.md): formatação, lint, tipos e testes.
-.PHONY: check fmt lint tipos testes
+.PHONY: check fmt lint tipos testes check-imersivo
 
 check: lint tipos testes
 
@@ -16,6 +16,10 @@ tipos:
 
 testes:
 	uv run pytest
+
+# O modo imersivo num Chromium de verdade, sem tela (uns minutos): antes de mexer na página.
+check-imersivo:
+	ZE_TESTES_IMERSIVO=1 uv run --with websockets --with pytest-xdist pytest -q -n 2 tests/imersivo
 
 # Instala o serviço (sem iniciar no login). Os modelos de som são baixados e conferidos pelo
 # próprio Zé na primeira subida (jarvis/preparar.py).

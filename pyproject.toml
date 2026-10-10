@@ -29,6 +29,9 @@ packages = ["jarvis"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Scripts do Blender (rodam dentro dele, com o bpy), a página do modo imersivo e os testes dela
+# no Chromium (JavaScript dentro de strings; rodam à parte, em make check-imersivo).
+extend-exclude = ["jarvis/imersivo/web", "tests/imersivo"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
@@ -39,11 +42,15 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
 # Normalizador de fala: "×", "–" e afins são justamente o que ele reconhece na tela.
 "jarvis/voz/fala.py" = ["RUF001"]
 "tests/test_fala.py" = ["RUF001", "E501"]
+# Modo imersivo: cada leitura de estado falha em silêncio de propósito (sem arquivo, o anel só
+# respira); o servidor nunca derruba a página por um arquivo ausente.
+"jarvis/imersivo/servidor.py" = ["S110"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 packages = ["jarvis", "tests"]
+exclude = ["jarvis/imersivo/web/", "tests/imersivo/"]
 
 [[tool.mypy.overrides]]
 # onnxruntime não publica tipos.

@@ -47,6 +47,7 @@ from jarvis.foco.frentes import Foco, FocoErro, Frente
 from jarvis.habilidades import evidencias, revisao
 from jarvis.habilidades.diario import Diario
 from jarvis.habilidades.skills import Skills
+from jarvis.imersivo import Imersivo
 from jarvis.memoria import tempo
 from jarvis.memoria.conversas import Conversas, publicar_dia
 from jarvis.memoria.curta import Memoria
@@ -322,6 +323,7 @@ class Nucleo:
         forcados |= {n: 1 for n in s["livres"]}
         self.sistema = Sistema(catalogo_sistema.carregar(forcados=forcados))
         self.tela = tela.Tela(cfg.caminho("barehands", "pasta_estado"))
+        self.imersivo = Imersivo(cfg.caminho("barehands", "pasta_estado"))
         self.maquina.nucleo_em_foco = self.tela.em_foco
         self.manutencao = Manutencao(self.oficina, ESTADO / "manutencao")
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
@@ -1541,6 +1543,7 @@ class Nucleo:
         )
 
     def rodar(self) -> None:
+        self.imersivo.iniciar()
         self.presenca.start()
         self.monitor.start()
         proximo_status = 0.0
@@ -1604,6 +1607,7 @@ class Nucleo:
         self._fechar_escuta()
         self.voz.parar()
         self.captura.fechar()
+        self.imersivo.parar()
         self.transcricoes.shutdown(wait=False, cancel_futures=True)
         self._pasta_exec.shutdown(wait=False, cancel_futures=True)
         with contextlib.suppress(Exception):

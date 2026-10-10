@@ -1,0 +1,29 @@
+{
+  "name": "Assistant",
+  "port": 8794,
+  "orbs": [
+    {
+      "id": "mapa",
+      "title": "Mapa",
+      "kind": "brain",
+      "apelidos": ["cérebro"],
+      "descricao": "As conexões entre tudo o que o assistente conhece."
+    },
+    {
+      "id": "guia",
+      "title": "Guia",
+      "kind": "notes",
+      "path": "sample-notes",
+      "apelidos": ["manual"],
+      "descricao": "Como usar o assistente."
+    },
+    {
+      "id": "acervo",
+      "title": "Acervo",
+      "kind": "media",
+      "path": "media",
+      "apelidos": ["arquivos"],
+      "descricao": "Modelos 3D, imagens e efeitos para mostrar na tela."
+    }
+  ]
+}

@@ -19,7 +19,8 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
 - **Licença AGPL-3** (ADR 0013).
 - **Piper dentro do Zé** (dependência Python, GPL-3) e a voz Cadu (CC0) baixada e conferida na
   primeira subida: primeiro som em ~150 ms, sem serviço à parte.
-- **Imersivo** (Barehands, AGPL) pode vir embutido, sem dados de ninguém.
+- **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `jarvis/imersivo/`, subido
+  pelo próprio Zé, com estado e manifesto nas pastas de dados.
 - **Memória longa pelo ai-memory** (MIT), opcional: sem ele, o Zé funciona sem memória longa.
 - **Registros de funcionamento em SQLite** (`ze.db`): sessões, Foco, automações e tempos. O que o
   usuário edita (memória curta, skills no padrão `SKILL.md`) continua em arquivo.
@@ -36,9 +37,7 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    existem; Omarchy detectado em vez de suposto. **Escuta sem depender de janela:** hoje o
    microfone só abre com a janela do painel (modo aplicativo) aberta, e a classe da janela é a
    mesma de qualquer Zé na máquina; vira um interruptor "Escuta" no painel e um atalho. O painel
-   segue como página web, instalável como aplicativo (manifesto). **Imersivo embutido:** o
-   holograma ainda é o Barehands de fora, lendo a própria pasta de estado; vem para dentro do Zé
-   com uma configuração limpa.
+   segue como página web, instalável como aplicativo (manifesto).
 3. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
    junto), o ai-memory e o imersivo; README de quem chega.
 4. **SQLite** para os registros, com migração automática dos arquivos.

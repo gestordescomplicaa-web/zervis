@@ -8,7 +8,7 @@ Data: 06/10/2026. O que entra no projeto novo, de onde vem, em que estado está 
 |---|---|---|
 | JARVIS atual (`VIBE-CODING/jarvis`) | nosso | Copiar e adaptar livremente. |
 | Hermes Agent (`~/.hermes/hermes-agent`) | **MIT** | Copiar trechos com aviso de autoria (cabeçalho citando Nous Research + MIT) em `THIRD_PARTY.md`. |
-| Barehands (componente separado) | **AGPL-3.0** | Compatível com a licença do Zé (AGPL-3, ADR 0013): pode vir embutido, mantendo os avisos de autoria. |
+| Barehands | **AGPL-3.0** | Embutido em `jarvis/imersivo/` (ADR 0014), com os avisos de autoria. |
 | backtalk, ai-visualizer (jaredrhod) | **AGPL-3.0** | Compatíveis com a licença do Zé; código copiado mantém o aviso de autoria e entra em `THIRD_PARTY.md`. |
 | Piper (`piper-tts`) | **GPL-3.0** | Dependência Python, dentro do processo (ADR 0013). |
 | ai-memory-vault (jaredrhod) | CC BY-SA 4.0 | Só ideias (estrutura de notas); se copiar texto de template, citar e manter a licença. |

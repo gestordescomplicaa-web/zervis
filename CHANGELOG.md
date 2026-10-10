@@ -13,3 +13,6 @@
   acesso ao Claude (assinatura ou chave de API, com teste de conexão) e reconhecimento de fala.
   Perfil e acesso também ficam em Ajustes; mudanças valem sem reiniciar (o fuso, no próximo início).
 - A chave do Deepgram colada no painel agora liga também a palavra de ativação, sem reiniciar.
+- O modo imersivo agora é parte do Zé (ADR 0014): o holograma com as expressões e a boca que
+  acompanha a voz, o Núcleo com os orbes e a tela movida pelas mãos vêm no repositório, e o Zé
+  sobe o servidor junto com ele. Os testes da página rodam em `make check-imersivo`.

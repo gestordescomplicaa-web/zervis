@@ -60,6 +60,7 @@ controle reduzido.
 | [docs/01-visao-e-requisitos.md](docs/01-visao-e-requisitos.md) | O que o Zé deve fazer e o que fica de fora |
 | [docs/04-arquitetura.md](docs/04-arquitetura.md) | Componentes, estado, fluxos e contratos |
 | [docs/06-qualidade.md](docs/06-qualidade.md) | Regras de engenharia (obrigatórias) |
+| [docs/imersivo/](docs/imersivo/) | O modo imersivo: holograma, Núcleo, mãos e desempenho |
 | [docs/07-sistema-omarchy.md](docs/07-sistema-omarchy.md) | O Omarchy como parte do núcleo: ações, eventos e risco |
 | [docs/03-reaproveitamento.md](docs/03-reaproveitamento.md) | O que vem de outros projetos, e com que licença |
 | [docs/adr/](docs/adr/) | Decisões de arquitetura |
