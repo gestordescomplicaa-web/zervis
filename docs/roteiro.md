@@ -33,7 +33,12 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    ai-memory e pasta dos projetos.
 2. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx`, integração com o Orca
    (oficina) e com o OmniRoute (baterias) como opcionais que se desligam sozinhos quando não
-   existem; Omarchy detectado em vez de suposto.
+   existem; Omarchy detectado em vez de suposto. **Escuta sem depender de janela:** hoje o
+   microfone só abre com a janela do painel (modo aplicativo) aberta, e a classe da janela é a
+   mesma de qualquer Zé na máquina; vira um interruptor "Escuta" no painel e um atalho. O painel
+   segue como página web, instalável como aplicativo (manifesto). **Imersivo embutido:** o
+   holograma ainda é o Barehands de fora, lendo a própria pasta de estado; vem para dentro do Zé
+   com uma configuração limpa.
 3. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
    junto), o ai-memory e o imersivo; README de quem chega.
 4. **SQLite** para os registros, com migração automática dos arquivos.
