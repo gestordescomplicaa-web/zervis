@@ -1,18 +1,21 @@
-"""Como o Zé entra no Claude: assinatura ou chave de API (configuração da primeira vez, 09/10/2026).
+"""Como o Zé usa os agentes: o login que a pessoa fez em cada um, como o Orca (ADR 0015).
 
-Cérebro principal, via rápida pelo plano, automações, sessões e revisão usam o CLI do Claude Code
-pelo Agent SDK, e o CLI herda o ambiente do processo. Por isso o acesso se aplica uma vez, no
-ambiente, e vale para todos. Ordem:
+O Zé não faz login de assinatura nenhuma (a Anthropic proíbe produto de terceiros oferecer o login
+do claude.ai). Ele procura os agentes instalados nesta máquina, o Claude Code e o Codex, e o login
+de cada um; quem não tem instala e entra pelo próprio agente (`claude`, `codex login`). A chave de
+API fica como alternativa, paga por uso.
 
-1. token da assinatura colado no painel (`claude setup-token`): `CLAUDE_CODE_OAUTH_TOKEN`;
-2. chave de API da Anthropic colada no painel (a mesma da via rápida): `ANTHROPIC_API_KEY`;
-3. o que a máquina já tem: essas variáveis no ambiente ou o login do Claude Code.
+Para o Claude, cérebro, voz rápida pelo plano, automações, sessões e revisão rodam o Claude Code
+pelo Agent SDK, que herda o ambiente do processo. Ordem:
 
-O que foi colado no painel vence: foi escolhido de propósito. Com o token, uma `ANTHROPIC_API_KEY`
-do ambiente sai do processo, porque o CLI daria preferência a ela.
+1. a chave de API da Anthropic colada no painel (a mesma da voz rápida): `ANTHROPIC_API_KEY`;
+2. o que a máquina já tem: `ANTHROPIC_API_KEY` ou `CLAUDE_CODE_OAUTH_TOKEN` no ambiente, ou o
+   login do Claude Code.
 """
 
 import os
+import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,12 +24,35 @@ from jarvis.cerebro import rapido
 TOKEN = "CLAUDE_CODE_OAUTH_TOKEN"  # noqa: S105 (nome da variável, não o segredo)
 CHAVE = "ANTHROPIC_API_KEY"
 ORIGINAL = {v: os.environ.get(v, "").strip() for v in (TOKEN, CHAVE)}
-LOGIN = Path(os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude").expanduser() / ".credentials.json"
 TESTE = "Responda apenas: ok"
 
 
-def arquivo_do_token(pasta: Path | None = None) -> Path:
-    return (pasta or rapido.CHAVES) / "claude.token"
+@dataclass(frozen=True)
+class Agente:
+    id: str
+    nome: str
+    programa: str  # o comando instalado
+    login: Path  # o arquivo que o próprio agente grava ao entrar
+    entrar: str  # o que a pessoa roda para entrar
+
+
+AGENTES = (
+    Agente(
+        "claude",
+        "Claude",
+        "claude",
+        Path(os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude").expanduser() / ".credentials.json",
+        "claude",
+    ),
+    Agente(
+        "codex",
+        "Codex",
+        "codex",
+        Path(os.environ.get("CODEX_HOME") or "~/.codex").expanduser() / "auth.json",
+        "codex login",
+    ),
+)
+LOGIN = AGENTES[0].login
 
 
 def _ler(arquivo: Path) -> str:
@@ -36,61 +62,55 @@ def _ler(arquivo: Path) -> str:
         return ""
 
 
+def agentes(ambiente: dict[str, str] | None = None) -> list[dict[str, Any]]:
+    """Os agentes desta máquina: instalado e com login (o Zé só lê; quem entra é a pessoa)."""
+    ambiente = ORIGINAL if ambiente is None else ambiente
+    saida = []
+    for a in AGENTES:
+        logado = a.login.is_file() or (a.id == "claude" and bool(ambiente.get(TOKEN)))
+        saida.append(
+            {
+                "id": a.id,
+                "nome": a.nome,
+                "instalado": shutil.which(a.programa) is not None,
+                "logado": logado,
+                "entrar": a.entrar,
+            }
+        )
+    return saida
+
+
 def escolha(
     pasta: Path | None = None, login: Path | None = None, ambiente: dict[str, str] | None = None
 ) -> dict[str, str]:
-    """O acesso em uso: `metodo` (assinatura, chave ou vazio), `origem` e o segredo (`valor`)."""
+    """O acesso do Claude em uso: `metodo` (chave, login ou vazio), `origem` e o segredo."""
     ambiente = ORIGINAL if ambiente is None else ambiente
-    if token := _ler(arquivo_do_token(pasta)):
-        return {"metodo": "assinatura", "origem": "painel", "valor": token}
     if chave := _ler(rapido.arquivo_da_chave("anthropic", pasta)):
         return {"metodo": "chave", "origem": "painel", "valor": chave}
-    if ambiente.get(TOKEN):
-        return {"metodo": "assinatura", "origem": "ambiente", "valor": ambiente[TOKEN]}
     if ambiente.get(CHAVE):
         return {"metodo": "chave", "origem": "ambiente", "valor": ambiente[CHAVE]}
-    if (login or LOGIN).is_file():
-        return {"metodo": "assinatura", "origem": "login", "valor": ""}
+    if ambiente.get(TOKEN) or (login or LOGIN).is_file():
+        return {"metodo": "login", "origem": "agente", "valor": ""}
     return {"metodo": "", "origem": "", "valor": ""}
 
 
 def situacao(pasta: Path | None = None, login: Path | None = None) -> dict[str, Any]:
-    """O que a tela pode saber: método, origem e os quatro últimos caracteres do segredo."""
+    """O que a tela pode saber: método, origem e os quatro últimos caracteres da chave."""
     e = escolha(pasta, login)
     return {"metodo": e["metodo"], "origem": e["origem"], "fim": e["valor"][-4:]}
 
 
 def aplicar(pasta: Path | None = None, login: Path | None = None) -> str:
-    """Põe o acesso escolhido no ambiente do processo; devolve o método ("" sem acesso)."""
+    """Põe a chave colada no painel no ambiente do processo; devolve o método ("" sem acesso)."""
     e = escolha(pasta, login)
     for variavel, original in ORIGINAL.items():
         if original:
             os.environ[variavel] = original
         else:
             os.environ.pop(variavel, None)
-    if e["origem"] == "painel" and e["metodo"] == "assinatura":
-        os.environ[TOKEN] = e["valor"]
-        os.environ.pop(CHAVE, None)
-    elif e["origem"] == "painel":
+    if e["origem"] == "painel":
         os.environ[CHAVE] = e["valor"]
     return e["metodo"]
-
-
-def gravar_token(token: str, pasta: Path | None = None) -> None:
-    token = token.strip()
-    if not token or len(token) > 400 or any(c.isspace() for c in token):
-        raise ValueError("token vazio ou com espaços")
-    destino = arquivo_do_token(pasta)
-    destino.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    temporario = destino.with_suffix(".next")
-    temporario.touch(mode=0o600)
-    temporario.chmod(0o600)
-    temporario.write_text(token + "\n")
-    temporario.replace(destino)
-
-
-def apagar_token(pasta: Path | None = None) -> None:
-    arquivo_do_token(pasta).unlink(missing_ok=True)
 
 
 async def testar(modelo: str, pasta: Path) -> tuple[bool, str]:

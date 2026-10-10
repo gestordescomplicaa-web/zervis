@@ -29,7 +29,13 @@ O Zé usa modelos em **três camadas**, cada uma escolhida pelo que pede:
    não quebra a conversa.
 3. **O ai-memory é a memória longa comum:** indexa as sessões dos dois agentes, e o Zé busca nele
    qualquer que seja o modelo do momento (opcional; sem ele, o Zé funciona sem memória longa).
-4. **O Orca sai do núcleo.** A delegação de código passa para as sessões próprias; o modo
+4. **Acesso como no Orca: o Zé não faz login de assinatura.** Ele procura os agentes instalados
+   (Claude Code, Codex) e o login que a pessoa fez em cada um; quem não tem instala e entra pelo
+   próprio agente (`claude`, `codex login`). A Anthropic não permite que produto de terceiros
+   ofereça o login do claude.ai; rodar o CLI oficial com o login da pessoa é o caminho aceito.
+   A chave de API fica como alternativa, paga por uso. Na interface, o agente é "Claude", nunca
+   "Claude Code" (regra de marca do Agent SDK).
+5. **O Orca sai do núcleo.** A delegação de código passa para as sessões próprias; o modo
    manutenção (o Zé se aperfeiçoando a pedido de quem usa) vira uma sessão própria aberta no
    repositório do Zé, com o motor escolhido.
 

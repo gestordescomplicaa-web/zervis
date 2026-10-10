@@ -30,3 +30,6 @@
 - O modo manutenção não depende mais do Orca: o Zé abre uma sessão própria de código no próprio
   repositório ("Zé · manutenção"), a reaproveita nas próximas vezes e fala o resumo do agente. A
   zona protegida, os testes e o reinício seguro continuam iguais.
+- Acesso como no Orca: o Zé mostra os agentes instalados nesta máquina (Claude, Codex) e o login
+  feito em cada um, sem fazer login de assinatura. Sai o campo de token da assinatura; a chave de
+  API da Anthropic fica como alternativa.

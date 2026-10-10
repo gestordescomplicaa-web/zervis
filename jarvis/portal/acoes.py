@@ -119,7 +119,6 @@ class Acoes:
             "escuta/apagar": self.apagar_chave_escuta,
             "escuta/testar": self.testar_chave_escuta,
             "perfil": self.salvar_perfil,
-            "acesso/token": self.guardar_token,
             "acesso/chave": self.guardar_chave_claude,
             "acesso/remover": self.remover_acesso,
             "acesso/testar": self.testar_acesso,
@@ -338,6 +337,7 @@ class Acoes:
             "fuso_sistema": fuso.do_sistema().key,
             "fusos": fuso.nomes(),
             "acesso": acesso.situacao(),
+            "agentes": acesso.agentes(),
             "chave_anthropic": "https://console.anthropic.com/settings/keys",
         }
 
@@ -360,14 +360,11 @@ class Acoes:
         return {**self.configuracao(), "aviso": aviso}
 
     def _acesso(self, aviso: str) -> dict[str, Any]:
-        return {"acesso": acesso.situacao(), "aviso": self.n.aplicar_acesso() or aviso}
-
-    def guardar_token(self, dados: dict[str, Any]) -> dict[str, Any]:
-        try:
-            acesso.gravar_token(str(dados.get("token", "")))
-        except ValueError:
-            raise PedidoInvalido("Informe o token.") from None
-        return self._acesso("Token salvo.")
+        return {
+            "acesso": acesso.situacao(),
+            "agentes": acesso.agentes(),
+            "aviso": self.n.aplicar_acesso() or aviso,
+        }
 
     def guardar_chave_claude(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -377,9 +374,6 @@ class Acoes:
         return self._acesso("Chave salva.")
 
     def remover_acesso(self, dados: dict[str, Any]) -> dict[str, Any]:
-        if dados.get("metodo") == "assinatura":
-            acesso.apagar_token()
-            return self._acesso("Token removido.")
         rapido.apagar_chave("anthropic")
         return self._acesso("Chave removida.")
 

@@ -264,18 +264,13 @@ def test_o_acesso_ao_claude_pelo_painel_nunca_devolve_o_segredo(
     acoes: tuple[Acoes, NucleoFalso], tmp_path: Path
 ) -> None:
     a, n = acoes
-    assert a.configuracao()["acesso"]["metodo"] == ""
+    c = a.configuracao()
+    assert c["acesso"]["metodo"] == "" and [x["id"] for x in c["agentes"]] == ["claude", "codex"]
     assert a.testar_acesso({}) == {"ok": False, "mensagem": "Acesso não configurado."}
-    r = a.guardar_token({"token": "oat-segredo-1234"})
-    assert "oat-segredo" not in json.dumps(r) and r["aviso"] == "Token salvo."
-    assert r["acesso"] == {"metodo": "assinatura", "origem": "painel", "fim": "1234"}
-    assert stat.S_IMODE((tmp_path / "chaves" / "claude.token").stat().st_mode) == 0o600
     r = a.guardar_chave_claude({"chave": "sk-ant-5678"})
-    assert r["acesso"]["metodo"] == "assinatura"  # o token vence a chave
-    assert a.remover_acesso({"metodo": "assinatura"})["acesso"]["metodo"] == "chave"
-    assert a.remover_acesso({"metodo": "chave"})["acesso"]["metodo"] == ""
-    assert n.acessos == 4
-    with pytest.raises(PedidoInvalido):
-        a.guardar_token({"token": ""})
+    assert "sk-ant" not in json.dumps(r) and r["aviso"] == "Chave salva."
+    assert r["acesso"] == {"metodo": "chave", "origem": "painel", "fim": "5678"}
+    assert a.remover_acesso({})["acesso"]["metodo"] == ""
+    assert n.acessos == 2
     with pytest.raises(PedidoInvalido):
         a.guardar_chave_claude({"chave": "com espaço"})

@@ -11,7 +11,7 @@ const ESTADOS = { inativo: "inativo", ativo: "pronto", ouvindo: "ouvindo", pensa
 const ESTADO_SESSAO = { parada: "pronta", trabalhando: "trabalhando", erro: "erro" };
 const TIPO_AUTOMACAO = { lembrete: "Lembrete", pergunta: "Pergunta ao Zé" };
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };
-const NOME_MOTOR = { plano: "Claude (assinatura)", openai: "OpenAI", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
+const NOME_MOTOR = { plano: "Claude", openai: "OpenAI", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
 const NOME_CEREBRO = { claude: "Claude", gpt: "GPT", gemini: "Gemini", auto: "Automático" };
 
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -183,7 +183,7 @@ const PAGINAS = {
     const [cfg, esc_] = await Promise.all([api("configuracao"), api("escuta")]);
     escuta = esc_;
     prepararAcesso(cfg);
-    const passos = ["Perfil", "Acesso ao Claude", "Reconhecimento de fala"];
+    const passos = ["Perfil", "Agente", "Reconhecimento de fala"];
     const trilha = `<ol class="passos">${passos.map((t, i) => `<li ${i + 1 === passo ? 'aria-current="step"' : i + 1 < passo ? 'class="feito"' : ""}><span>${i + 1}</span>${t}</li>`).join("")}</ol>`;
     const voltar = passo > 1 ? botao("Voltar", "passo", `data-passo="${passo - 1}"`, "discreta") : "";
     const corpo = {
@@ -246,35 +246,41 @@ function camposPerfil(cfg) {
 }
 
 function prepararAcesso(cfg) {
-  const s = cfg.acesso;
-  acessoTela = { ...s, link: cfg.chave_anthropic, aba: s.metodo || "assinatura" };
+  acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
+}
+
+// Os agentes desta máquina, como o Orca: o Zé só lê o login que a pessoa fez em cada um.
+function linhaAgente(a) {
+  const estado = a.logado ? '<span class="etiqueta bom">Conectado</span>'
+    : a.instalado ? '<span class="etiqueta alerta">Sem login</span>' : '<span class="etiqueta">Não instalado</span>';
+  const dica = a.logado ? "Login desta máquina."
+    : a.instalado ? `Entre com <code>${esc(a.entrar)}</code> no terminal.` : `Instale e entre com <code>${esc(a.entrar)}</code>.`;
+  return item(esc(a.nome), dica, estado);
 }
 
 function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
-  const a = acessoTela, assinatura = a.aba === "assinatura";
-  const configurado = Boolean(a.metodo);
-  const estado = configurado ? '<span class="etiqueta bom">Configurado</span>' : '<span class="etiqueta alerta">Não configurado</span>';
-  const desta = a.metodo === a.aba && a.origem === "painel";
-  const placeholder = desta ? "•••• " + esc(a.fim) : assinatura ? "Token da assinatura" : "Chave de API";
-  const nota = !assinatura ? "" : a.metodo === "assinatura" && a.origem === "login"
-    ? "Login do Claude encontrado nesta máquina." : "Gere o token com <code>claude setup-token</code> no terminal.";
-  const link = assinatura ? "" : `<a class="externo" href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a>`;
-  const cerebro = area.dataset.contexto === "cerebro";
+  const a = acessoTela, cerebro = area.dataset.contexto === "cerebro";
+  const pronto = Boolean(a.metodo);
+  const estado = pronto ? '<span class="etiqueta bom">Configurado</span>' : '<span class="etiqueta alerta">Não configurado</span>';
+  const temChave = a.metodo === "chave" && a.origem === "painel";
   const topo = cerebro
-    ? `<div class="cabeca"><h2>Cérebro</h2>${estado}${link}</div>
+    ? `<div class="cabeca"><h2>Cérebro</h2>${estado}</div>
       ${sub("Entende os pedidos com ação e usa as ferramentas do Zé.")}
       ${seletorAgente("claude")}
-      <p class="nota">Modelo <span class="mono">${esc(a.modelo || "")}</span></p>
-      <h3 class="subtitulo">Acesso</h3>`
-    : `<div class="cabeca"><h2>Acesso ao Claude</h2>${estado}${link}</div>
-      ${sub("Modelo de linguagem do Zé. Use a sua assinatura do Claude ou uma chave de API da Anthropic.")}`;
+      <p class="nota">Modelo <span class="mono">${esc(a.modelo || "")}</span></p>`
+    : `<div class="cabeca"><h2>Agente</h2>${estado}</div>
+      ${sub("O Zé usa o agente instalado nesta máquina, com o login feito nele.")}`;
   area.innerHTML = `${topo}
-    <div class="segmentos" role="group" aria-label="Forma de acesso">${botao("Assinatura do Claude", "acesso-aba", `data-aba="assinatura" aria-pressed="${assinatura}"`)}${botao("Chave de API", "acesso-aba", `data-aba="chave" aria-pressed="${!assinatura}"`)}</div>
-    <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${placeholder}" autocomplete="off" spellcheck="false" aria-label="${assinatura ? "Token da assinatura" : "Chave de API da Anthropic"}">
-      ${botao("Salvar", "acesso-salvar", "", "principal")}${botao("Testar conexão", "acesso-testar")}${desta ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>
-    ${nota ? `<p class="nota">${nota}</p>` : ""}
+    <h3 class="subtitulo">Nesta máquina</h3>
+    <div class="itens">${(a.agentes || []).map(linhaAgente).join("")}</div>
+    <details class="alternativa" ${temChave ? "open" : ""}><summary>Usar chave de API da Anthropic</summary>
+      <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${temChave ? "•••• " + esc(a.fim) : "Chave de API"}" autocomplete="off" spellcheck="false" aria-label="Chave de API da Anthropic">
+        ${botao("Salvar", "acesso-salvar", "", "principal")}${temChave ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>
+      <p class="nota"><a href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a> Pago por uso; vence o login quando preenchida.</p>
+    </details>
+    <div class="linha">${botao("Testar conexão", "acesso-testar")}</div>
     <p class="resultado" id="resultado-acesso"></p>`;
 }
 
@@ -721,11 +727,9 @@ const ACOES = {
   },
   passo: async (b) => { passo = Number(b.dataset.passo); await abrir(); },
   "configuracao-concluir": () => { passo = 1; location.hash = "#inicio"; toast("Configuração concluída."); },
-  "acesso-aba": (b) => { acessoTela.aba = b.dataset.aba; desenharAcesso(); },
   "acesso-salvar": async (b) => {
-    const valor = $("segredo-acesso").value;
-    const r = await ocupado(b, () => (acessoTela.aba === "assinatura" ? api("acesso/token", { token: valor }) : api("acesso/chave", { chave: valor })));
-    acessoTela = { ...acessoTela, ...r.acesso }; desenharAcesso();
+    const r = await ocupado(b, () => api("acesso/chave", { chave: $("segredo-acesso").value }));
+    acessoTela = { ...acessoTela, ...r.acesso, agentes: r.agentes }; desenharAcesso();
     mostrar("resultado-acesso", true, r.aviso);
   },
   "acesso-testar": async (b) => {
@@ -733,9 +737,9 @@ const ACOES = {
     const t = await ocupado(b, () => api("acesso/testar", {}));
     mostrar("resultado-acesso", t.ok, t.mensagem);
   },
-  "acesso-remover": (b) => confirmar(b, acessoTela.aba === "assinatura" ? "Remover o token?" : "Remover a chave?", async () => {
-    const r = await api("acesso/remover", { metodo: acessoTela.aba });
-    acessoTela = { ...acessoTela, ...r.acesso }; desenharAcesso(); toast(r.aviso);
+  "acesso-remover": (b) => confirmar(b, "Remover a chave?", async () => {
+    const r = await api("acesso/remover", {});
+    acessoTela = { ...acessoTela, ...r.acesso, agentes: r.agentes }; desenharAcesso(); toast(r.aviso);
   }),
   "escuta-guardar": async (b) => {
     const r = await ocupado(b, () => api("escuta/chave", { chave: $("chave-escuta").value }));

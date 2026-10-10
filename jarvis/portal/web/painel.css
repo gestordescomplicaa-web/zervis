@@ -354,3 +354,7 @@ p.nota { color: var(--suave); font-size: 13px; }
 .segmentos button:disabled { opacity:.55; cursor:not-allowed; }
 .segmentos button small { margin-left:4px; font-size:11px; opacity:.8; }
 .cartao h3.subtitulo { margin:4px 0 0; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--suave); }
+details.alternativa { border-top:1px solid var(--borda); padding-top:12px; }
+details.alternativa summary { cursor:pointer; color:var(--suave); font-size:14px; }
+details.alternativa[open] summary { margin-bottom:12px; }
+details.alternativa .nota a { margin-right:6px; }
