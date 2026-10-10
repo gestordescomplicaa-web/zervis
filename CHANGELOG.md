@@ -24,3 +24,6 @@
 - Guia do modo imersivo em português, sobre o Zé: primeiros passos, gestos, atalhos, as esferas e
   os comandos de voz. Os atalhos de teclado também ficam no menu de configurações (tecla D), e o
   anel mostra o estado em português.
+- Modelos em três camadas (ADR 0015): Voz rápida (conversa simples, em menos de um segundo),
+  Cérebro (pedidos com ação; agente, com o acesso) e Sessões de código (agentes que continuam
+  depois). O Codex aparece como próxima opção do cérebro e das sessões.

@@ -88,6 +88,7 @@ class NucleoFalso:
         self.aplicadas = 0
         self.deepgram: deepgram.Deepgram
         self.modelo_ativacao = SimpleNamespace(treinada=False)
+        self.sessoes = SimpleNamespace(listar=lambda: [])
         self.perfis: list[usuario.Perfil] = []
         self.acessos = 0
 

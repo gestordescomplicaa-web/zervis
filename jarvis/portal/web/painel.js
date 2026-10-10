@@ -154,17 +154,23 @@ const PAGINAS = {
     modelo = { ...c.via, chaves: c.chaves };
     escuta = esc_;
     prepararAcesso(cfg);
-    return `${cabeca("Modelos")}
-      <section class="cartao" id="cartao-acesso"></section>
-      <section class="cartao" id="cartao-escuta"></section>
-      ${cartao("", `<div class="cabeca"><h2>Respostas rápidas</h2>${liga(c.via.ligada, "via-ligada", "", "Ligadas")}</div>
-        ${sub("Conversa simples vai a um modelo rápido; o resto, ao cérebro principal.")}
+    acessoTela.modelo = c.completo.modelo;
+    agentes = c.agentes;
+    const sessoes = c.sessoes.total;
+    return `${cabeca("Modelos")}${sub("Um modelo para cada tipo de tarefa.")}
+      ${cartao("", `<div class="cabeca"><h2>Voz rápida</h2>${liga(c.via.ligada, "via-ligada", "", "Ligada")}</div>
+        ${sub("Conversa simples, em menos de um segundo. Pedidos com ação vão ao cérebro.")}
         <div class="segmentos" role="group" aria-label="Provedor">${c.motores.map((m) => `<button type="button" data-acao="motor" data-motor="${m.id}" data-modelo="${esc(m.modelo)}" aria-pressed="${m.id === c.via.motor}">${esc(NOME_MOTOR[m.id] || m.nome)}</button>`).join("")}</div>
         <div class="linha"><label>Modelo<input id="modelo" class="mono" value="${esc(c.via.modelo)}" autocomplete="off" spellcheck="false"></label>
           <label id="campo-endereco">Endereço<input id="endereco" class="mono" value="${esc(c.via.endereco)}" placeholder="http://127.0.0.1:20128/v1" autocomplete="off" spellcheck="false"></label></div>
         <div id="area-chave"></div>
         <div class="linha">${botao("Salvar", "modelo-salvar", "", "principal")}${botao("Testar", "modelo-testar")}<span class="resultado" id="resultado"></span></div>`)}
-      ${cartao("Cérebro principal", `<p><strong>${esc(NOME_CEREBRO[c.completo.provedor] || c.completo.provedor)}</strong> <span class="mono">${esc(c.completo.modelo)}</span></p>${sub("Usado quando o pedido precisa de ferramentas.")}`)}`;
+      <section class="cartao" id="cartao-acesso" data-contexto="cerebro"></section>
+      ${cartao("", `<div class="cabeca"><h2>Sessões de código</h2><span class="etiqueta">${sessoes} ${sessoes === 1 ? "sessão" : "sessões"}</span><a class="externo" href="#sessoes">Abrir sessões</a></div>
+        ${sub("Agentes que trabalham nos seus projetos e continuam de onde pararam.")}
+        ${seletorAgente(c.sessoes.motor)}
+        <p class="nota">Usa o mesmo acesso do cérebro.</p>`)}
+      <section class="cartao" id="cartao-escuta"></section>`;
   },
 
   async perfil() {
@@ -223,6 +229,11 @@ function desenharChave() {
 
 let passo = 1;
 let acessoTela = {};
+let agentes = [];
+
+const seletorAgente = (atual) => `<div class="segmentos" role="group" aria-label="Agente">${agentes.map((a) => a.disponivel
+  ? `<button type="button" aria-pressed="${a.id === atual}">${esc(a.nome)}</button>`
+  : `<button type="button" disabled>${esc(a.nome)} <small>Em breve</small></button>`).join("")}</div>`;
 
 function camposPerfil(cfg) {
   const p = cfg.perfil;
@@ -250,8 +261,16 @@ function desenharAcesso() {
   const nota = !assinatura ? "" : a.metodo === "assinatura" && a.origem === "login"
     ? "Login do Claude Code encontrado nesta máquina." : "Gere o token com <code>claude setup-token</code> no terminal.";
   const link = assinatura ? "" : `<a class="externo" href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a>`;
-  area.innerHTML = `<div class="cabeca"><h2>Acesso ao Claude</h2>${estado}${link}</div>
-    ${sub("Modelo de linguagem do Zé. Use a sua assinatura do Claude ou uma chave de API da Anthropic.")}
+  const cerebro = area.dataset.contexto === "cerebro";
+  const topo = cerebro
+    ? `<div class="cabeca"><h2>Cérebro</h2>${estado}${link}</div>
+      ${sub("Entende os pedidos com ação e usa as ferramentas do Zé.")}
+      ${seletorAgente("claude")}
+      <p class="nota">Modelo <span class="mono">${esc(a.modelo || "")}</span></p>
+      <h3 class="subtitulo">Acesso</h3>`
+    : `<div class="cabeca"><h2>Acesso ao Claude</h2>${estado}${link}</div>
+      ${sub("Modelo de linguagem do Zé. Use a sua assinatura do Claude ou uma chave de API da Anthropic.")}`;
+  area.innerHTML = `${topo}
     <div class="segmentos" role="group" aria-label="Forma de acesso">${botao("Assinatura do Claude", "acesso-aba", `data-aba="assinatura" aria-pressed="${assinatura}"`)}${botao("Chave de API", "acesso-aba", `data-aba="chave" aria-pressed="${!assinatura}"`)}</div>
     <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${placeholder}" autocomplete="off" spellcheck="false" aria-label="${assinatura ? "Token da assinatura" : "Chave de API da Anthropic"}">
       ${botao("Salvar", "acesso-salvar", "", "principal")}${botao("Testar conexão", "acesso-testar")}${desta ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>

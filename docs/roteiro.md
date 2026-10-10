@@ -33,7 +33,8 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    (gravação de ~4 min com a voz de quem usa), proposto como passo da configuração inicial. O "Ei
    Zé" segue interrompendo a fala do Zé; a voz do Cadu entra no treino só como exemplo negativo. Depois:
    ai-memory e pasta dos projetos.
-2. **Cérebro como agente, sem o Orca (ADR 0015):** modo manutenção sobre as sessões próprias;
+2. **Três camadas de modelos, sem o Orca (ADR 0015):** feito: a página Modelos com um cartão
+   por camada (voz rápida, cérebro, sessões de código). Falta: modo manutenção sobre as sessões próprias;
    saída do Orca (ferramentas `oficina_*`, persona, monitor); motor Codex no cérebro e nas
    sessões; a conversa continua na troca de cérebro, com o ai-memory comum aos dois.
 3. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx` e o OmniRoute (baterias) como

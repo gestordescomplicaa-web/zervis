@@ -351,3 +351,6 @@ details.detalhes p { margin: 8px 0 0; }
 .rodape-passos .espaco { flex: 1; }
 .cartao label textarea#perfil-sobre { font: inherit; }
 p.nota { color: var(--suave); font-size: 13px; }
+.segmentos button:disabled { opacity:.55; cursor:not-allowed; }
+.segmentos button small { margin-left:4px; font-size:11px; opacity:.8; }
+.cartao h3.subtitulo { margin:4px 0 0; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--suave); }

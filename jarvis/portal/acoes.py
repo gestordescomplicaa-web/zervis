@@ -26,19 +26,19 @@ MOTORES = [
     {
         "id": "plano",
         "nome": "Claude pelo plano",
-        "detalhe": "A sua assinatura do Claude. Sem chave; ~1 s até a primeira palavra.",
+        "detalhe": "Assinatura do Claude, sem chave.",
         "modelo": "claude-sonnet-5-5",
     },
     {
         "id": "openai",
         "nome": "OpenAI",
-        "detalhe": "Chave de API. O mais rápido, como no Ligatia.",
+        "detalhe": "Chave de API da OpenAI.",
         "modelo": "gpt-5.4-mini",
     },
     {
         "id": "anthropic",
         "nome": "Anthropic",
-        "detalhe": "Chave de API do Claude, direto, sem o programa intermediário.",
+        "detalhe": "Chave de API da Anthropic.",
         "modelo": "claude-haiku-4-5",
     },
     {
@@ -50,9 +50,15 @@ MOTORES = [
     {
         "id": "ponte",
         "nome": "Ponte",
-        "detalhe": "Qualquer proxy no formato OpenAI (OmniRoute, LiteLLM...).",
+        "detalhe": "Qualquer serviço no formato OpenAI.",
         "modelo": "",
     },
+]
+
+
+AGENTES = [
+    {"id": "claude", "nome": "Claude Code", "disponivel": True},
+    {"id": "codex", "nome": "Codex", "disponivel": False},
 ]
 
 
@@ -191,8 +197,11 @@ class Acoes:
             },
             "completo": {
                 "provedor": self.n.provedor,
-                "modelo": getattr(self.n.cerebro, "modelo", ""),
+                "modelo": self.n.cfg["cerebro"]["modelo"],
             },
+            # Cérebro e sessões de código são agentes (ADR 0015); o Codex entra a seguir.
+            "agentes": AGENTES,
+            "sessoes": {"motor": "claude", "total": len(self.n.sessoes.listar())},
         }
 
     def skills(self) -> list[dict[str, Any]]:
