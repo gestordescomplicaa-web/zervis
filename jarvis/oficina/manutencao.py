@@ -1,11 +1,12 @@
-"""O modo manutenção: o JARVIS encaminha os pedidos do usuário à sessão de código dele mesmo.
+"""O modo manutenção: o Zé encaminha os pedidos do usuário a uma sessão de código nele mesmo.
 
 "Entra no modo manutenção" liga; daí em diante, o que não for comando local vai como texto para
-a sessão de agente (Claude ou Codex) aberta no projeto do JARVIS no Orca, com o contexto do
-momento. O agente trabalha como sempre (testes, janela real, commit) e, ao terminar, grava o
-Resumo falado num arquivo combinado; se precisar perguntar, grava a pergunta em outro. O JARVIS
-olha esses arquivos e fala o que chegar. Aperto de mão por arquivo: funciona igual com qualquer
-agente e não depende de ler a tela.
+uma sessão própria do Zé (`jarvis/oficina/sessoes.py`, ADR 0015) aberta no repositório dele, com o
+contexto do momento. O Zé cria essa sessão na primeira vez e a reaproveita depois (a conversa do
+agente continua). O agente trabalha como sempre (testes, janela real, commit) e, ao terminar,
+grava o Resumo falado num arquivo combinado; se precisar perguntar, grava a pergunta em outro e
+encerra a vez. O Zé olha esses arquivos e fala o que chegar. Aperto de mão por arquivo: funciona
+igual com qualquer agente.
 
 Supervisionado de propósito (docs/05-roadmap.md, fase de manutenção):
 - a zona protegida (regras de aprovação, política do sistema, configuração, este módulo, o
@@ -25,12 +26,14 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import lugares
-from jarvis.oficina.oficina import PROJETO_JARVIS, Oficina
-from jarvis.oficina.orca import OrcaErro
+from jarvis.oficina.sessoes import MOTORES, SessaoErro, Sessoes
 
 log = logging.getLogger(__name__)
 
+REPO = Path(__file__).resolve().parents[2]  # o repositório do próprio Zé
 AGENTES = {"claude": "Claude", "codex": "Codex"}
+NOME_DA_SESSAO = "Zé · manutenção"
+ORIGEM = "manutencao"
 # Mudam só com o usuário aprovando: o que decide o que o JARVIS faz sem perguntar.
 PROTEGIDOS = (
     "jarvis/cerebro/ferramentas/__init__.py",  # LEITURA: o que passa sem aprovação
@@ -63,6 +66,7 @@ class Pedido:
 class Estado:
     ligado: bool = False
     agente: str = "claude"
+    sessao: str = ""  # a sessão de código do Zé (id), criada na primeira entrada
     pendentes: list[Pedido] = field(default_factory=list)
 
 
@@ -75,7 +79,7 @@ class Chegada:
     protegidos: tuple[str, ...] = ()
 
 
-def _git(*args: str, repo: Path = PROJETO_JARVIS) -> str:
+def _git(*args: str, repo: Path = REPO) -> str:
     try:
         return subprocess.run(  # noqa: S603 (git com argumentos em lista)
             ["/usr/bin/git", "-C", str(repo), *args],
@@ -89,17 +93,10 @@ def _git(*args: str, repo: Path = PROJETO_JARVIS) -> str:
 
 
 class Manutencao:
-    def __init__(
-        self,
-        oficina: Oficina,
-        pasta: Path,
-        repo: Path = PROJETO_JARVIS,
-        projeto: str = str(PROJETO_JARVIS),
-    ) -> None:
-        self.oficina = oficina
+    def __init__(self, sessoes: Sessoes, pasta: Path, repo: Path = REPO) -> None:
+        self.sessoes = sessoes
         self.pasta = pasta
         self.repo = repo
-        self.projeto = projeto
         self.pasta.mkdir(parents=True, exist_ok=True)
         self.estado = self._carregar()
         self._config_mtime = self._mtime_config()
@@ -115,6 +112,7 @@ class Manutencao:
             return Estado(
                 ligado=bool(d.get("ligado")),
                 agente=str(d.get("agente") or "claude"),
+                sessao=str(d.get("sessao") or ""),
                 pendentes=[Pedido(**p) for p in d.get("pendentes", [])],
             )
         except (OSError, ValueError, TypeError):
@@ -139,15 +137,15 @@ class Manutencao:
     def entrar(self, agente: str = "") -> str:
         agente = agente if agente in AGENTES else self.estado.agente
         try:
-            self._sessao(agente)
-        except OrcaErro as erro:
+            self.estado.sessao = self._sessao(agente)
+        except SessaoErro as erro:
             return f"Não entrei no modo manutenção: {erro}."
         self.estado.ligado, self.estado.agente = True, agente
         self._gravar()
-        log.info("manutenção ligada com %s", agente)
+        log.info("manutenção ligada com %s (sessão %s)", agente, self.estado.sessao)
         return (
             f"Modo manutenção ligado, com o {AGENTES[agente]}. O que você pedir vai para a "
-            "sessão do JARVIS no Orca. Para voltar, diga: sai do modo manutenção."
+            "sessão de manutenção. Para voltar, diga: sai do modo manutenção."
         )
 
     def sair(self) -> str:
@@ -176,14 +174,22 @@ class Manutencao:
             partes.append("Nenhum pedido em andamento.")
         return " ".join(partes)
 
-    def _sessao(self, agente: str) -> None:
-        """Confere que há uma sessão daquele agente aberta no projeto do JARVIS."""
-        projeto = self.oficina.achar_projeto(self.projeto)
-        if not any(s["agente"] == agente for s in self.oficina.sessoes(projeto)):
-            raise OrcaErro(
-                f"não há sessão do {AGENTES.get(agente, agente)} aberta no projeto do JARVIS no "
-                "Orca; abra uma e peça de novo"
+    def _sessao(self, agente: str) -> str:
+        """A sessão de manutenção daquele agente no repositório do Zé: a mesma de antes, ou nova."""
+        if agente not in MOTORES:
+            raise SessaoErro(
+                f"o {AGENTES.get(agente, agente)} ainda não está disponível nas sessões"
             )
+        minhas = [
+            s
+            for s in self.sessoes.listar()
+            if s.origem == ORIGEM and s.motor == agente and Path(s.pasta) == self.repo.resolve()
+        ]
+        escolhida = next((s for s in minhas if s.id == self.estado.sessao), None)
+        if escolhida or minhas:
+            return (escolhida or minhas[0]).id
+        nova = self.sessoes.criar(NOME_DA_SESSAO, str(self.repo), motor=agente, origem=ORIGEM)
+        return nova.id
 
     def encaminhar(self, texto: str, contexto: str, agora: float, rodada: str = "") -> str:
         """Manda o pedido à sessão e devolve a frase para falar já. Com uma pergunta do agente
@@ -204,11 +210,13 @@ class Manutencao:
             f"sessão: {', '.join(PROTEGIDOS)} e {CONFIG_DO_USUARIO}. Ao terminar, grave só o seu "
             f"Resumo falado (um parágrafo, sem símbolos nem caminhos, números por extenso) em "
             f"{resposta}. Se precisar perguntar algo ao usuário antes, grave só a pergunta em "
-            f"{pergunta} e espere: a resposta chega nesta sessão."
+            f"{pergunta} e encerre a sua vez: a resposta chega como nova mensagem nesta sessão."
         )
         try:
-            self.oficina.mandar_texto(self.projeto, mensagem, agente=self.estado.agente)
-        except OrcaErro as erro:
+            if not self.estado.sessao:
+                self.estado.sessao = self._sessao(self.estado.agente)
+            self.sessoes.enviar(self.estado.sessao, mensagem, quem="usuario")
+        except SessaoErro as erro:
             return f"Não consegui mandar para o {self.nome_do_agente}: {erro}."
         if not novo:
             (self.pasta / f".perguntou-{pedido.id}").unlink(missing_ok=True)
@@ -276,8 +284,8 @@ class Manutencao:
         if protegidos and not revisado:
             return False, (
                 "Não reiniciei: a mudança mexeu na zona protegida, nas regras do que eu faço sem "
-                "perguntar. Revise no Orca; para valer mesmo assim, diga: reinicia o JARVIS, eu "
-                "revisei."
+                "perguntar. Revise na sessão de manutenção, no painel; para valer mesmo assim, "
+                "diga: reinicia o Zé, eu revisei."
             )
         testes = subprocess.run(
             ["/usr/bin/make", "-s", "check"],

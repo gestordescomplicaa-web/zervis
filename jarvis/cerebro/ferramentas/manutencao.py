@@ -19,7 +19,8 @@ def ferramentas(manutencao: Manutencao | None) -> list[SdkMcpTool[Any]]:
     @tool(
         "modo_manutencao",
         "Liga ou desliga o modo manutenção, ou diz como está. Ligado, os pedidos do usuário vão "
-        "para a sua sessão de código no Orca (Claude ou Codex) e você só fala o resumo do agente. "
+        "para a sua sessão de manutenção (um agente de código no seu próprio repositório) e "
+        "você só fala o resumo do agente. "
         "Use quando ele pedir para entrar, ativar, colocar, sair ou desligar a manutenção, com "
         "qualquer palavra. Não é o menu de configurações.",
         {

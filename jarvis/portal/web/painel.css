@@ -163,7 +163,7 @@ main.cheio { padding: 0; overflow: hidden; }
 .conversa-topo .etiqueta { margin-right: auto; }
 .mensagens { overflow-y: auto; padding: 20px clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 10px; }
 .msg { max-width: 760px; padding: 10px 14px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.msg.gabriel { align-self: flex-end; background: rgb(70 217 222 / .14); border: 1px solid var(--borda-forte); }
+.msg.usuario { align-self: flex-end; background: rgb(70 217 222 / .14); border: 1px solid var(--borda-forte); }
 .msg.agente { background: var(--vidro); border: 1px solid var(--borda); }
 .msg code { font-family: var(--mono); font-size: 13px; padding: 1px 5px; border-radius: 5px; background: rgb(70 217 222 / .10); }
 .msg.ferramenta { padding: 2px 14px; color: var(--suave); font: 12px/1.5 var(--mono); }

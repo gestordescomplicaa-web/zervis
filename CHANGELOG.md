@@ -27,3 +27,6 @@
 - Modelos em três camadas (ADR 0015): Voz rápida (conversa simples, em menos de um segundo),
   Cérebro (pedidos com ação; agente, com o acesso) e Sessões de código (agentes que continuam
   depois). O Codex aparece como próxima opção do cérebro e das sessões.
+- O modo manutenção não depende mais do Orca: o Zé abre uma sessão própria de código no próprio
+  repositório ("Zé · manutenção"), a reaproveita nas próximas vezes e fala o resumo do agente. A
+  zona protegida, os testes e o reinício seguro continuam iguais.

@@ -306,7 +306,7 @@ class Sessoes:
         return [id_ for id_, (_, t) in self.tarefas.items() if not t.done()]
 
     def enviar(
-        self, id_: str, texto: str, quem: str = "gabriel", anexos: list[str] | None = None
+        self, id_: str, texto: str, quem: str = "usuario", anexos: list[str] | None = None
     ) -> Sessao:
         texto = texto.strip()
         anexos = list(anexos or [])

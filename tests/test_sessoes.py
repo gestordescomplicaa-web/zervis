@@ -49,7 +49,7 @@ def test_conversa_em_segundo_plano_e_aviso_no_fim(tmp_path: Path, raiz: Path) ->
     esperar(lambda: fim)
     assert fim == [("parada", "Fiz o pedido.")]
     quem = [m["quem"] for m in sessoes.mensagens(s.id)]
-    assert quem == ["sistema", "gabriel", "ferramenta", "agente"]
+    assert quem == ["sistema", "usuario", "ferramenta", "agente"]
     assert sessoes.mensagens(s.id, desde=3)[0]["texto"].startswith("Fiz: rode os testes")
     assert sessoes.ler(s.id).resumo == "Fiz o pedido." and sessoes.listar()[0].id == s.id
 

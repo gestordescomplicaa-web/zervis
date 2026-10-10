@@ -55,11 +55,11 @@ from jarvis.memoria.dias import SISTEMA as SISTEMA_DA_NOTA
 from jarvis.memoria.dias import Dias
 from jarvis.memoria.linha import LinhaDoTempo
 from jarvis.nucleo import estados as e
+from jarvis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from jarvis.oficina.manutencao import Manutencao
 from jarvis.oficina.monitor import Monitor
 from jarvis.oficina.oficina import Oficina
-from jarvis.oficina.orca import OrcaErro
-from jarvis.oficina.sessoes import Sessao, Sessoes
+from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import Portal
 from jarvis.presenca.hyprland import MonitorPresenca
@@ -324,7 +324,14 @@ class Nucleo:
             acervo=cfg.caminho("barehands", "pasta_acervo"),
         )
         self.maquina.nucleo_em_foco = self.tela.em_foco
-        self.manutencao = Manutencao(self.oficina, ESTADO / "manutencao")
+        self.sessoes = Sessoes(
+            DADOS / "sessoes",
+            (Path.home(),),
+            self._sessao_terminou,
+            projetos_novos=cfg.caminho("oficina", "raiz_projetos"),
+            skills=self.skills,
+        )
+        self.manutencao = Manutencao(self.sessoes, ESTADO / "manutencao")
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
         self.maquina.manutencao = lambda: self.manutencao.ligado
         self.orbes = manifesto.ler(
@@ -399,13 +406,6 @@ class Nucleo:
             self._fim_do_cerebro,
             self._pedido_de_aprovacao,
             self._primeiro_texto_do_cerebro,
-        )
-        self.sessoes = Sessoes(
-            DADOS / "sessoes",
-            (Path.home(),),
-            self._sessao_terminou,
-            projetos_novos=cfg.caminho("oficina", "raiz_projetos"),
-            skills=self.skills,
         )
         self.portal: Portal | None = None
         try:
@@ -650,9 +650,9 @@ class Nucleo:
                 resposta = self._rodada_de_melhoria()
             else:  # reiniciar
                 _, resposta = m.reiniciar(revisado=argumento == "revisado")
-        except (OrcaErro, OSError, subprocess.SubprocessError) as erro:
+        except (SessaoErro, OSError, subprocess.SubprocessError) as erro:
             log.warning("manutenção: %s", erro)
-            resposta = "Não consegui falar com o Orca agora."
+            resposta = "Não consegui falar com a sessão de manutenção agora."
         self.eventos.put(e.Frase(resposta))
         self.eventos.put(e.RespostaFim())
 
@@ -711,13 +711,16 @@ class Nucleo:
                 if not self.manutencao.ligado:
                     texto += " Entre no modo manutenção para responder."
             elif c.tipo == "demora":
-                texto = "O pedido de manutenção passou de quarenta e cinco minutos; veja no Orca."
+                texto = (
+                    "O pedido de manutenção passou de quarenta e cinco minutos; veja a sessão "
+                    "no painel."
+                )
             else:
                 texto = f"O {agente} terminou. {c.texto}"
                 if c.protegidos:
                     texto += (
                         " Atenção: a mudança mexeu na zona protegida, nas regras do que eu faço "
-                        "sem perguntar. Revise no Orca antes de valer."
+                        "sem perguntar. Revise a sessão no painel antes de valer."
                     )
                 if c.mudou_codigo:
                     texto += " Para valer, diga: reinicia o JARVIS."
@@ -784,7 +787,10 @@ class Nucleo:
         self.eventos.put(e.Aviso(usuario.PERFIL.vocativo("Bom dia") + ". " + " ".join(partes)))
 
     def _sessao_terminou(self, sessao: Sessao, resumo: str) -> None:
-        """Uma sessão da oficina própria acabou de trabalhar: o Zé conta em uma frase."""
+        """Uma sessão da oficina própria acabou de trabalhar: o Zé conta em uma frase. A de
+        manutenção fala pelo próprio aperto de mão (o Resumo falado), salvo se falhar."""
+        if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
+            return
         if sessao.estado == "erro":
             self._aviso_da_oficina(f"A sessão {sessao.nome} falhou; veja no painel.")
         else:

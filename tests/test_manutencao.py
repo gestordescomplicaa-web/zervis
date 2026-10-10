@@ -10,28 +10,32 @@ import pytest
 from jarvis.nucleo import estados as e
 from jarvis.oficina import manutencao as mod
 from jarvis.oficina.manutencao import Manutencao
-from jarvis.oficina.oficina import Projeto
-from jarvis.oficina.orca import OrcaErro
+from jarvis.oficina.sessoes import Sessao, SessaoErro
 
 
 @dataclass
-class OficinaFalsa:
-    sessoes_abertas: list[str] = field(default_factory=lambda: ["claude"])
+class SessoesFalsas:
+    """As sessões próprias do Zé, sem agente de verdade: guardam o que foi criado e enviado."""
+
+    criadas: list[Sessao] = field(default_factory=list)
     enviados: list[tuple[str, str]] = field(default_factory=list)
+    ocupada: bool = False
 
-    def achar_projeto(self, nome: str) -> Projeto:
-        return Projeto("JARVIS", nome, ())
+    def listar(self) -> list[Sessao]:
+        return list(self.criadas)
 
-    def sessoes(self, projeto: Projeto) -> list[dict[str, str]]:
-        return [{"handle": "t", "titulo": "sessão", "agente": a} for a in self.sessoes_abertas]
+    def criar(self, nome: str, pasta: str, motor: str = "claude", origem: str = "") -> Sessao:
+        s = Sessao(
+            id=f"{len(self.criadas):08x}", nome=nome, pasta=pasta, motor=motor, origem=origem
+        )
+        self.criadas.append(s)
+        return s
 
-    def mandar_texto(
-        self, projeto: str, texto: str, sessao: str = "", agente: str = ""
-    ) -> dict[str, str]:
-        if sessao or agente not in self.sessoes_abertas:  # a manutenção escolhe pelo agente
-            raise OrcaErro("não há sessão")
-        self.enviados.append((agente, texto))
-        return {}
+    def enviar(self, id_: str, texto: str, quem: str = "usuario") -> Sessao:
+        if self.ocupada:
+            raise SessaoErro("essa sessão ainda está trabalhando; espere ou pare")
+        self.enviados.append((id_, texto))
+        return next(s for s in self.criadas if s.id == id_)
 
 
 def git(repo: Path, *args: str) -> None:
@@ -55,31 +59,40 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return r
 
 
-def nova(repo: Path, oficina: OficinaFalsa) -> Manutencao:
-    return Manutencao(oficina, repo.parent / "manutencao", repo=repo, projeto=str(repo))  # type: ignore[arg-type]
+def nova(repo: Path, sessoes: SessoesFalsas) -> Manutencao:
+    return Manutencao(sessoes, repo.parent / "manutencao", repo=repo)  # type: ignore[arg-type]
 
 
-def test_entrar_exige_a_sessao_aberta_e_sobrevive_ao_reinicio(repo: Path) -> None:
-    oficina = OficinaFalsa(sessoes_abertas=["claude"])
-    m = nova(repo, oficina)
-    assert m.entrar("codex").startswith("Não entrei no modo manutenção: não há sessão do Codex")
-    assert not m.ligado
+def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) -> None:
+    sessoes = SessoesFalsas()
+    m = nova(repo, sessoes)
+    assert m.entrar("codex").startswith("Não entrei no modo manutenção: o Codex ainda não")
+    assert not m.ligado and not sessoes.criadas
     assert m.entrar("claude").startswith("Modo manutenção ligado, com o Claude.")
-    assert nova(repo, oficina).ligado  # o estado fica gravado: o reinício faz parte
+    (sessao,) = sessoes.criadas
+    assert (sessao.nome, sessao.pasta, sessao.origem) == (
+        "Zé · manutenção",
+        str(repo),
+        "manutencao",
+    )
+    assert nova(repo, sessoes).ligado  # o estado fica gravado: o reinício faz parte
     assert m.sair() == "Saí do modo manutenção."
-    assert not nova(repo, oficina).ligado
+    m.entrar("claude")
+    assert len(sessoes.criadas) == 1  # a mesma sessão: a conversa do agente continua
+    m.sair()
+    assert not nova(repo, sessoes).ligado
 
 
 def test_pedido_vai_com_contexto_e_o_combinado_dos_arquivos(repo: Path) -> None:
-    oficina = OficinaFalsa()
+    oficina = SessoesFalsas()
     m = nova(repo, oficina)
     m.entrar("claude")
     assert m.encaminhar("melhora o teclado", "Janela aberta.", 100.0) == (
         "Mandei para o Claude. Aviso quando terminar."
     )
-    agente, texto = oficina.enviados[0]
+    sessao, texto = oficina.enviados[0]
     pedido = m.estado.pendentes[0].id
-    assert agente == "claude"
+    assert sessao == m.estado.sessao
     assert f"pedido {pedido}]" in texto and '"melhora o teclado"' in texto
     assert "Contexto agora: Janela aberta." in texto
     assert str(m.pasta / f"resposta-{pedido}.md") in texto
@@ -87,10 +100,19 @@ def test_pedido_vai_com_contexto_e_o_combinado_dos_arquivos(repo: Path) -> None:
     assert "jarvis/cerebro/claude.py" in texto  # a zona protegida vai escrita no pedido
 
 
+def test_sessao_ocupada_nao_perde_o_pedido_em_silencio(repo: Path) -> None:
+    sessoes = SessoesFalsas()
+    m = nova(repo, sessoes)
+    m.entrar("claude")
+    sessoes.ocupada = True
+    assert m.encaminhar("x", "", 1.0).startswith("Não consegui mandar para o Claude: essa sessão")
+    assert not m.estado.pendentes
+
+
 def test_pergunta_e_resposta_chegam_uma_vez_e_a_resposta_fica_no_mesmo_pedido(
     repo: Path,
 ) -> None:
-    oficina = OficinaFalsa()
+    oficina = SessoesFalsas()
     m = nova(repo, oficina)
     m.entrar()
     m.encaminhar("muda a cor do anel", "", 100.0)
@@ -112,7 +134,7 @@ def test_pergunta_e_resposta_chegam_uma_vez_e_a_resposta_fica_no_mesmo_pedido(
 
 
 def test_a_guarda_ve_codigo_novo_e_a_zona_protegida(repo: Path) -> None:
-    m = nova(repo, OficinaFalsa())
+    m = nova(repo, SessoesFalsas())
     m.entrar()
     m.encaminhar("x", "", 1.0)
     inicio = m.estado.pendentes[0].inicio
@@ -138,7 +160,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
         rodou.append(a)
         return subprocess.CompletedProcess(a, 0)
 
-    m = nova(repo, OficinaFalsa())
+    m = nova(repo, SessoesFalsas())
     m.rodando = "abc"
     monkeypatch.setattr(subprocess, "run", rodar)
     monkeypatch.setattr(m, "guarda", lambda inicio: (True, ("jarvis/cerebro/claude.py",)))
@@ -151,7 +173,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
 
 
 def test_resultado_do_reinicio_e_dito_uma_vez(repo: Path) -> None:
-    m = nova(repo, OficinaFalsa())
+    m = nova(repo, SessoesFalsas())
     (m.pasta / "reinicio.json").write_text('{"resultado": "voltou"}')
     assert "voltei sozinho para a anterior" in (m.resultado_do_reinicio() or "")
     assert m.resultado_do_reinicio() is None
@@ -207,7 +229,7 @@ def test_no_modo_manutencao_o_pedido_vai_para_a_sessao_e_comandos_seguem_locais(
 
 
 def test_a_guarda_do_reinicio_ve_commits_feitos_fora_de_um_pedido(repo: Path) -> None:
-    m = nova(repo, OficinaFalsa())  # o processo subiu nesta versão
+    m = nova(repo, SessoesFalsas())  # o processo subiu nesta versão
     (repo / "jarvis/cerebro/ferramentas/__init__.py").write_text("LEITURA = ['tudo']\n")
     git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "direto, sem pedido")
     assert m.guarda(m.rodando) == (True, ("jarvis/cerebro/ferramentas/__init__.py",))
@@ -217,7 +239,7 @@ def test_o_cerebro_tem_a_ferramenta_e_ela_pede_aprovacao(repo: Path) -> None:
     from jarvis.cerebro import ferramentas
     from jarvis.nucleo.laco import Nucleo
 
-    m = nova(repo, OficinaFalsa())
+    m = nova(repo, SessoesFalsas())
     nomes = [t.name for t in ferramentas.g_manutencao.ferramentas(m)]
     assert nomes == ["modo_manutencao"] and "modo_manutencao" not in ferramentas.LEITURA
     descrever = Nucleo._descrever_manutencao
