@@ -320,8 +320,9 @@ async def calibrar_no_navegador():
                     const r=document.querySelector("#jv-config [data-config='brilho:0']").getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;
                     jarvisBrainGestures.hand({id:0,x,y,pinched:false});jarvisBrainGestures.hand({id:0,x,y,pinched:true});jarvisBrainGestures.hand({id:0,x,y,pinched:false});''')
                 await check('menu: a hand pinch works too', 'jarvisMaos.brilho==="DESLIGADO"')
-                await check('the menu is a side bar where the D readout was (top-left)', '''(()=>{const r=document.getElementById("jv-config").getBoundingClientRect();
-                    return r.left<30 && r.top<30 && r.width<=380 && r.height>innerHeight*0.6;})()''')
+                await check('the menu is a side bar under the gear (top-left), shortcuts first', '''(()=>{const r=document.getElementById("jv-config").getBoundingClientRect(),g=document.getElementById("jv-engrenagem").getBoundingClientRect();
+                    return g.left<30 && g.top<30 && r.left<30 && r.top>=g.bottom && r.width<=380 && r.height>innerHeight*0.6
+                      && document.querySelector("#jv-config .corpo section h3").textContent==="Atalhos";})()''')
                 await check('brain batteries keep their HUD look inside the menu', '''(()=>{const c=document.querySelector("#jv-config #hud-c .cer");
                     return !!c && getComputedStyle(c).borderRadius==="12px" && getComputedStyle(c).display==="flex" && !!c.querySelector(".b i")
                     && document.querySelectorAll("#jv-config #hud-c .cer").length===3 && document.querySelector("#jv-config #hud-c .cer.ativo").dataset.id==="gemini";})()''')

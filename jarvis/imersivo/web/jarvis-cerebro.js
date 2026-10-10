@@ -379,7 +379,7 @@
       graph.setHighlight(null,escolhido);enquadrar();
     }
   }
-  const targets='#jv-mapa [data-action], #jv-mapa [data-node], #jv-mapa [data-object], #hud-jv .btn, #hud-maos .btn, #jv-config [data-config], #jv-config .cer, #jv-teclado-btn, #jv-teclado button, .panel [data-panel-action]';
+  const targets='#jv-mapa [data-action], #jv-mapa [data-node], #jv-mapa [data-object], #hud-jv .btn, #hud-maos .btn, #jv-config [data-config], #jv-config .cer, #jv-teclado-btn, #jv-teclado button, #jv-engrenagem, .panel [data-panel-action]';
   function alvoEm(x,y){return document.elementFromPoint(x,y)?.closest(targets)||null;}
   function ativar(alvo){
     if(!alvo?.isConnected)return;
@@ -387,7 +387,7 @@
     if(alvo.matches('[data-panel-action]'))window.jarvisPanels?.action(alvo);
     else if(alvo.closest('#jv-config')){if(alvo.dataset.config)window.jarvisConfig?.acionar(alvo.dataset.config);else if(alvo.matches('#hud-maos .btn'))window.jarvisMaos?.acionar(alvo.dataset.acao);else alvo.click();}
     else if(alvo.matches('#hud-maos .btn'))window.jarvisMaos?.acionar(alvo.dataset.acao);
-    else if(alvo.closest('#jv-teclado-btn, #jv-teclado'))alvo.click();
+    else if(alvo.closest('#jv-teclado-btn, #jv-teclado, #jv-engrenagem'))alvo.click();
     else if(alvo.matches('#hud-jv .btn'))abrirMapa(false);
     else if(alvo.dataset.action)acao(alvo.dataset.action);
     else escolher(alvo.dataset.node||alvo.dataset.object);
@@ -431,7 +431,7 @@
     }
   }
   function pressionar(id,x,y,mao=false){
-    atividade();limparHover();const alvo=alvoEm(x,y),el=document.elementFromPoint(x,y),scroll=el?.closest('.vista, #jv-config');
+    atividade();limparHover();const alvo=alvoEm(x,y),el=document.elementFromPoint(x,y),scroll=el?.closest('.vista, #jv-config .corpo');
     const area=scroll?'scroll':el?.closest('.grip')&&!alvo?'window':el?.closest('.palco')&&!el.closest('.ferramentas')?'map':'control';
     const node=area==='map'?alvo?.dataset.node:null;if(node)graph.hold(node);
     pontos.set(id,{id,x,y,sx:x,sy:y,lx:x,ly:y,alvo,node,area,scroll,mao,movido:false,multi:false,t:performance.now()});reancorar();

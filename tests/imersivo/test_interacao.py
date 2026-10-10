@@ -201,7 +201,7 @@ async def main():
                 await check('settings choices and close have generous hit areas', "[...document.querySelectorAll('#jv-config button')].every(e=>{const r=e.getBoundingClientRect();return r.width>=54&&r.height>=54;})")
                 await ev("""jarvisBrainGestures.finishFrame([]);const r=document.querySelector('#jv-config').getBoundingClientRect();
                   h(0,r.left+80,r.top+240,true);h(0,r.left+80,r.top+120,true);h(0,r.left+80,r.top+120,false);""")
-                await check('a hand can scroll the larger settings choices', "document.querySelector('#jv-config').scrollTop>0")
+                await check('a hand can scroll the larger settings choices', "document.querySelector('#jv-config .corpo').scrollTop>0")
                 await ev('jarvisConfig.fechar();jarvisCerebro.zoom(2)')
                 await asyncio.sleep(.3)
                 await check('Foco zoom keeps its close and zoom toolbar accessible on a smaller screen', "[...document.querySelectorAll('#jv-mapa .grip button,#jv-mapa .ferramentas button:not([hidden])')].every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})")

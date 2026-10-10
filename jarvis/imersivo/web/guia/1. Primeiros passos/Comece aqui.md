@@ -8,7 +8,7 @@ ao redor mostram o que importa agora. Tudo se move com as mãos, pela câmera, o
 1. **Faça uma pinça no anel** (encoste o polegar no indicador sobre ele). As esferas se abrem.
 2. **Diga "Ei Zé"** e peça algo: "me lembra amanhã às nove de ligar para o contador". A esfera
    **Hoje** aparece.
-3. **Aperte D** para abrir as configurações. Se a pinça falhar, aperte **K** para calibrar as mãos.
+3. **Toque na engrenagem** (canto superior esquerdo) ou aperte **D** para abrir as configurações. Se a pinça falhar, aperte **K** para calibrar as mãos.
 
 ## Como ele cresce
 
