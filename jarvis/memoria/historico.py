@@ -6,14 +6,15 @@ sessão). A memória curta carrega o essencial; isto recupera o resto sob demand
 """
 
 import json
-import os
 import re
 import sqlite3
 import subprocess
 from pathlib import Path
 from typing import Any
 
-PASTA = Path(os.environ.get("AI_MEMORY_DATA_DIR") or Path.home() / ".local/share/ai-memory")
+from jarvis.memoria import aimemory
+
+PASTA = aimemory.DADOS
 PROJETO_DO_ZE = "Zé"  # jarvis.memoria.conversas.PROJETO
 BANCO = PASTA / "db/memory.sqlite"
 
@@ -25,7 +26,7 @@ class HistoricoErro(RuntimeError):
 def _ai_memory(*args: str, limite_s: float = 30) -> str:
     try:
         feito = subprocess.run(  # noqa: S603 (binário fixo, argumentos em lista)
-            ["ai-memory", "--data-dir", str(PASTA), *args],  # noqa: S607
+            [str(aimemory.binario() or "ai-memory"), "--data-dir", str(PASTA), *args],
             capture_output=True,
             text=True,
             timeout=limite_s,

@@ -20,6 +20,7 @@ arquivo copiado leva um cabeçalho citando a origem.
 | `jarvis/imersivo/` (servidor, `maos.py`, a página e o Guia em `web/`, `bin/`) e `tests/imersivo/` | Barehands (github.com/jaredrhod/barehands), na versão modificada por gdautomacao.ia (fork `jarvis-ze-front`, commit `19debe6`, 09/10/2026) | AGPL-3.0-or-later | Jared Rhodenizer (obra original); gdautomacao.ia (modificações) |
 | `jarvis/imersivo/web/avatar/jarvis-chimpanze.*` e projeções `.png` (o holograma do Zé) | Criado no Blender para o Zé | AGPL-3.0-or-later, como o Zé | gdautomacao.ia |
 | `jarvis/imersivo/web/avatar/cabeca.glb` | Exemplos do three.js (r160), `LeePerrySmith` ("Infinite, 3D Head Scan"); ver `LICENSE-cabeca.txt` | CC BY 3.0 | Lee Perry-Smith |
+| `~/.local/share/zervis/ai-memory/<versão>/` (fora do repositório; baixado por `jarvis/memoria/aimemory.py` quando a máquina não tem o ai-memory; v2.6.3, sha256 `933be9bb…` x86_64 e `e4e01409…` aarch64), rodado como programa separado e ligado às sessões pelos hooks dele | ai-memory (github.com/akitaonrails/ai-memory) | MIT | Fabio Akita |
 
 ## Licenças de referência
 

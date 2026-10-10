@@ -40,6 +40,13 @@ def rodar() -> int:
     except PrepararErro as erro:
         log.error("%s (rode `python -m jarvis.preparar` com internet)", erro)
         return 69  # EX_UNAVAILABLE
+    from jarvis.memoria import aimemory
+
+    try:  # opcional: sem ele, o Zé segue sem memória longa
+        if aimemory.garantir():
+            log.info("primeira vez: baixei o ai-memory %s", aimemory.VERSAO)
+    except (PrepararErro, OSError) as erro:
+        log.warning("ai-memory não baixou (%s): o Zé segue sem memória longa", erro)
     try:
         trava = travar(ESTADO / "jarvisd.lock")
     except JaRodando as erro:

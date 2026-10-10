@@ -21,7 +21,8 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
   primeira subida: primeiro som em ~150 ms, sem serviço à parte.
 - **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `jarvis/imersivo/`, subido
   pelo próprio Zé, com estado e manifesto nas pastas de dados.
-- **Memória longa pelo ai-memory** (MIT), opcional: sem ele, o Zé funciona sem memória longa.
+- **Memória longa pelo ai-memory embutido** (MIT, ADR 0016): o da máquina, ou o binário oficial
+  baixado e conferido pelo Zé; as sessões de código alimentam e recebem a passagem dele.
 - **Registros de funcionamento em SQLite** (`ze.db`): sessões, Foco, automações e tempos. O que o
   usuário edita (memória curta, skills no padrão `SKILL.md`) continua em arquivo.
 

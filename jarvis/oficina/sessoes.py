@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import fuso
+from jarvis.memoria import aimemory
 
 log = logging.getLogger(__name__)
 FUSO = fuso.local()
@@ -460,6 +461,8 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
         resume=s.sdk_sessao or None,
         model=s.modelo or None,
         disallowed_tools=["Task", "Agent", "WebSearch"],
+        # O ai-memory recebe o que a sessão faz (ADR 0016): os hooks dele só nesta sessão.
+        settings=json.dumps(hooks) if (hooks := aimemory.hooks_claude()) else None,
     )
     ultimo = ""
     async with ClaudeSDKClient(options=opcoes) as cliente:

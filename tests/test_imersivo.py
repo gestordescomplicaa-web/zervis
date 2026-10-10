@@ -9,7 +9,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.imersivo import Imersivo, porta_ocupada, tem_acervo
+from jarvis.filho import porta_ocupada
+from jarvis.imersivo import Imersivo, tem_acervo
 from jarvis.rosto import manifesto
 
 

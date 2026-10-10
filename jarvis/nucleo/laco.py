@@ -49,6 +49,7 @@ from jarvis.habilidades.diario import Diario
 from jarvis.habilidades.skills import Skills
 from jarvis.imersivo import Imersivo, tem_acervo
 from jarvis.memoria import tempo
+from jarvis.memoria.aimemory import AiMemory
 from jarvis.memoria.conversas import Conversas, publicar_dia
 from jarvis.memoria.curta import Memoria
 from jarvis.memoria.dias import SISTEMA as SISTEMA_DA_NOTA
@@ -312,6 +313,7 @@ class Nucleo:
         forcados |= {n: 1 for n in s["livres"]}
         self.sistema = Sistema(catalogo_sistema.carregar(forcados=forcados))
         self.tela = tela.Tela(cfg.caminho("barehands", "pasta_estado"))
+        self.memoria_longa = AiMemory()  # o ai-memory: o da máquina ou um filho do Zé
         self.imersivo = Imersivo(
             cfg.caminho("barehands", "pasta_estado"),
             acervo=cfg.caminho("barehands", "pasta_acervo"),
@@ -1519,6 +1521,7 @@ class Nucleo:
         )
 
     def rodar(self) -> None:
+        self.memoria_longa.iniciar()
         self.imersivo.iniciar()
         self.presenca.start()
         proximo_status = 0.0
@@ -1583,6 +1586,7 @@ class Nucleo:
         self.voz.parar()
         self.captura.fechar()
         self.imersivo.parar()
+        self.memoria_longa.parar()
         self.transcricoes.shutdown(wait=False, cancel_futures=True)
         self._pasta_exec.shutdown(wait=False, cancel_futures=True)
         with contextlib.suppress(Exception):

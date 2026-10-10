@@ -36,3 +36,6 @@
 - O Orca saiu do núcleo: o cérebro delega trabalho de código às sessões próprias do Zé pelas
   ferramentas `sessoes_listar`, `sessao_criar`, `sessao_enviar`, `sessao_ler` e `sessao_parar`
   (ler é livre; criar, mandar e parar pedem aprovação). Persona e arquitetura acompanham.
+- O ai-memory vem embutido (ADR 0016): o Zé usa o da máquina ou baixa o binário oficial (versão
+  e SHA-256 fixos) e o roda junto. As sessões de código do Zé alimentam a memória pelos hooks dele
+  e, ao começar, recebem a passagem do que a sessão anterior fez no mesmo projeto.
