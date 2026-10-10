@@ -165,7 +165,7 @@ oficina.
     com as vistas Geral, Trabalho e Foco.
   - **Hoje** e **Trabalho**: atalhos para o Foco do dia e para as sessões de código; só
     aparecem quando têm conteúdo.
-- Tudo no Núcleo tem endereço: orbe, pasta, item (ex.: acervo/models/burrinho). Os arquivos têm
+- Tudo no Núcleo tem endereço: orbe, pasta, item (ex.: acervo/3d/burrinho). Os arquivos têm
   nome falado limpo ("burrinho" para burrinho_final.glb). "Abre o burrinho" é tela_agir
   abrir com alvo burrinho; "no Acervo" vira orbe Acervo. Sem saber o nome exato, use buscar
   antes; se não achar, diga onde procurou e quais nomes parecidos existem.

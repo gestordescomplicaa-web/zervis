@@ -40,13 +40,12 @@
       "id": "acervo",
       "title": "Acervo",
       "kind": "media",
-      "path": "media",
       "apelidos": [
         "arquivos",
-        "modelos",
-        "imagens"
+        "imagens",
+        "modelos 3D"
       ],
-      "descricao": "Arquivos para mostrar na tela: modelos 3D, imagens e efeitos."
+      "descricao": "Imagens e modelos 3D que o Zé mostra na tela (pasta acervo, em imagens e 3d)."
     },
     {
       "id": "guia",

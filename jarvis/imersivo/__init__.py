@@ -14,7 +14,18 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 PORTA = 8794
+# O Acervo: a pasta do Zé com o que ele mostra na tela. Imagens e modelos 3D por enquanto.
+PASTAS_ACERVO = ("imagens", "3d")
+TIPOS_ACERVO = frozenset({".png", ".jpg", ".jpeg", ".webp", ".gif", ".glb", ".gltf"})
 ESPERA_S = (1.0, 2.0, 5.0, 15.0, 30.0)  # entre uma queda e a próxima tentativa
+
+
+def tem_acervo(pasta: Path) -> bool:
+    """Há ao menos um arquivo aceito no Acervo (sem isso, o orbe não aparece)."""
+    try:
+        return any(p.suffix.lower() in TIPOS_ACERVO for p in pasta.rglob("*") if p.is_file())
+    except OSError:
+        return False
 
 
 def porta_ocupada(porta: int = PORTA) -> bool:
@@ -26,9 +37,10 @@ def porta_ocupada(porta: int = PORTA) -> bool:
 class Imersivo:
     """O servidor do modo imersivo como processo filho do Zé, com o estado em `pasta_estado`."""
 
-    def __init__(self, pasta_estado: Path, porta: int = PORTA) -> None:
+    def __init__(self, pasta_estado: Path, porta: int = PORTA, acervo: Path | None = None) -> None:
         self.pasta_estado = pasta_estado
         self.porta = porta
+        self.acervo = acervo or pasta_estado.parent / "acervo"
         self.processo: subprocess.Popen[bytes] | None = None
         self._parar = threading.Event()
         self._fio: threading.Thread | None = None
@@ -47,6 +59,7 @@ class Imersivo:
                 **os.environ,
                 "ZE_IMERSIVO_ESTADO": str(self.pasta_estado),
                 "ZE_IMERSIVO_PORTA": str(self.porta),
+                "ZE_ACERVO": str(self.acervo),
             }
             self.processo = subprocess.Popen(
                 [sys.executable, "-m", "jarvis.imersivo.servidor"],

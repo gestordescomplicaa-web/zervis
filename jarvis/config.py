@@ -48,6 +48,8 @@ PADRAO: dict[str, dict[str, Any]] = {
         "pasta_estado": str(lugares.DADOS / "imersivo/state"),
         "pasta_jarvis": str(lugares.DADOS / "pasta"),
         "desenvolvedor": False,
+        # O que o Zé mostra no modo imersivo (orbe Acervo): imagens/ e 3d/.
+        "pasta_acervo": str(lugares.DADOS / "acervo"),
     },
     # motor: "piper" (Cadu pelo Piper, dentro do processo; ADR 0013). Outros motores entram aqui.
     "voz": {"motor": "piper"},

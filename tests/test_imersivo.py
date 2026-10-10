@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.imersivo import Imersivo, porta_ocupada
+from jarvis.imersivo import Imersivo, porta_ocupada, tem_acervo
 from jarvis.rosto import manifesto
 
 
@@ -36,7 +36,7 @@ def esperar(condicao: Any, prazo: float = 15.0) -> None:
 
 @pytest.fixture
 def imersivo(tmp_path: Path) -> Any:
-    i = Imersivo(tmp_path / "imersivo" / "state", porta_livre())
+    i = Imersivo(tmp_path / "imersivo" / "state", porta_livre(), tmp_path / "acervo")
     i.iniciar()
     esperar(lambda: porta_ocupada(i.porta))
     yield i
@@ -77,3 +77,17 @@ def test_pedido_invalido_e_recusado_mesmo_com_python_otimizado(imersivo: Imersiv
         urllib.request.urlopen(pedido, timeout=3)  # noqa: S310 (http local)
     assert erro.value.code == 400
     assert not (imersivo.pasta_estado / "foco-acoes.jsonl").exists()
+
+
+def test_o_acervo_e_uma_pasta_do_ze_com_imagens_e_3d(imersivo: Imersivo) -> None:
+    acervo = imersivo.acervo
+    esperar(lambda: (acervo / "imagens").is_dir() and (acervo / "3d").is_dir())
+    # Pastas vazias somem da lista (e o orbe não aparece): nada da página vaza para o Acervo.
+    assert pegar(imersivo.porta, "/props") == {"name": "Props", "items": [], "dirs": []}
+    assert not tem_acervo(acervo)  # pastas vazias: o orbe não aparece
+    (acervo / "imagens" / "capa.png").write_bytes(b"png")
+    (acervo / "imagens" / "roteiro.txt").write_text("não é imagem")
+    (acervo / "3d" / "cabeca.glb").write_bytes(b"glb")
+    itens = json.dumps(pegar(imersivo.porta, "/props"))
+    assert "imagens/capa.png" in itens and "3d/cabeca.glb" in itens and "roteiro" not in itens
+    assert tem_acervo(acervo)

@@ -125,8 +125,8 @@ def test_o_perfil_abre_o_sobre_voce_do_mapa(tmp_path: Path) -> None:
 
 def test_so_aparecem_os_orbes_com_conteudo() -> None:
     dia_zero = hud.orbes({"atual": None, "ativas": [], "ideias": []}, 0, False, False)
-    assert dia_zero == {"visiveis": ["mapa", "acervo", "guia"], "desenvolvedor": False}
-    em_uso = hud.orbes({"atual": {"titulo": "Site"}}, 2, True, False)
+    assert dia_zero == {"visiveis": ["mapa", "guia"], "desenvolvedor": False}
+    em_uso = hud.orbes({"atual": {"titulo": "Site"}}, 2, True, False, tem_acervo=True)
     assert em_uso["visiveis"] == ["mapa", "hoje", "trabalho", "acervo", "guia"]
     assert hud.orbes({}, 0, False, True)["visiveis"][1] == "hoje"  # um lembrete ativo basta
 

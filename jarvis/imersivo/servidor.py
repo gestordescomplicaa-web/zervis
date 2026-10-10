@@ -69,9 +69,12 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import lugares
+from jarvis.imersivo import PASTAS_ACERVO, TIPOS_ACERVO
 
-HERE = Path(__file__).resolve().parent / "web"  # a página, o avatar e a mídia de exemplo
+HERE = Path(__file__).resolve().parent / "web"  # a página, o avatar e o Guia
 ESTADO = Path(os.environ.get("ZE_IMERSIVO_ESTADO") or lugares.DADOS / "imersivo" / "state")
+# O Acervo do Zé: imagens/ e 3d/ nos dados de quem usa, nunca no repositório.
+ACERVO = Path(os.environ.get("ZE_ACERVO") or lugares.DADOS / "acervo")
 
 
 def _exigir(condicao: object) -> None:
@@ -105,8 +108,9 @@ def load_config() -> dict[str, Any]:
             {"title": "Props", "path": "media", "kind": "media"},
         ]
     for orb in cfg["orbs"]:
-        if orb.get("kind", "notes") in ("notes", "media"):
-            orb["path"] = str(Path(str(orb.get("path", ""))).expanduser())
+        # Sem caminho fica sem caminho: Path("") vira "." e serviria a pasta da página.
+        if orb.get("kind", "notes") in ("notes", "media") and orb.get("path"):
+            orb["path"] = str(Path(str(orb["path"])).expanduser())
     return cfg
 
 
@@ -118,7 +122,7 @@ except (TypeError, ValueError):
 
 
 def media_root() -> Path:
-    """The Props orb's folder, resolved. Defaults to the repo's own ./media.
+    """The Acervo's folder, resolved: the manifest's path, or the Zé's own (ZE_ACERVO).
 
     A notes orb could always point at any folder on disk while the media orb
     was pinned to ./media, and that asymmetry cost real users something: with
@@ -132,10 +136,10 @@ def media_root() -> Path:
     shipped default is unchanged and an existing config keeps working.
     """
     for orb in CONFIG.get("orbs", []):
-        if orb.get("kind") == "media":
-            q = Path(str(orb.get("path") or "media")).expanduser()
+        if orb.get("kind") == "media" and orb.get("path"):
+            q = Path(str(orb["path"])).expanduser()
             return (q if q.is_absolute() else HERE / q).resolve()
-    return (HERE / "media").resolve()
+    return ACERVO.resolve()  # sem caminho no manifesto: a pasta do Zé
 
 
 def orb_root(i: str) -> Path | None:
@@ -484,7 +488,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/props":
             # the media airlock as a browsable tree — live filesystem
             # read: drop a file in media/, reopen the orb, it's there
-            EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".webm", ".glb", ".gltf"}
+            EXTS = TIPOS_ACERVO
             mroot = media_root()
 
             def walkm(d: Path) -> dict[str, Any]:
@@ -671,6 +675,8 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     ESTADO.mkdir(parents=True, exist_ok=True, mode=0o700)  # the ring's runtime files land here
+    for pasta in PASTAS_ACERVO:  # onde quem usa põe o que o Zé mostra
+        (ACERVO / pasta).mkdir(parents=True, exist_ok=True, mode=0o700)
     CAMERA.vigiar()
     import atexit
     import signal

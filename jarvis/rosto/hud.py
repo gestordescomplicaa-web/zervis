@@ -261,13 +261,19 @@ def trabalho(sessoes: list[Any]) -> dict[str, Any]:
 
 
 def orbes(
-    foco: dict[str, Any], sessoes: int, desenvolvedor: bool, tem_automacao: bool
+    foco: dict[str, Any],
+    sessoes: int,
+    desenvolvedor: bool,
+    tem_automacao: bool,
+    tem_acervo: bool = False,
 ) -> dict[str, Any]:
-    """Os orbes que aparecem: Mapa, Acervo e Guia sempre; Hoje e Trabalho só com conteúdo."""
+    """Os orbes que aparecem: Mapa e Guia sempre; Hoje, Trabalho e Acervo só com conteúdo."""
     visiveis = ["mapa"]
     if foco.get("atual") or foco.get("ativas") or foco.get("ideias") or tem_automacao:
         visiveis.append("hoje")
     if sessoes:
         visiveis.append("trabalho")
-    visiveis += ["acervo", "guia"]
+    if tem_acervo:
+        visiveis.append("acervo")
+    visiveis.append("guia")
     return {"visiveis": visiveis, "desenvolvedor": desenvolvedor}

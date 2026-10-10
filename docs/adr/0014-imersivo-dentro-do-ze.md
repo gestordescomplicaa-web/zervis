@@ -12,7 +12,7 @@ gravava o estado numa pasta que o holograma não lia (a boca não mexia).
 
 ## Decisão
 1. **O imersivo é código do Zé**, em `jarvis/imersivo/`: o servidor (`servidor.py`), a calibração
-   das mãos e a luz da câmera (`maos.py`), a página, o avatar e a mídia de exemplo (`web/`), as
+   das mãos e a luz da câmera (`maos.py`), a página, o avatar e o Guia (`web/`), as
    ferramentas de linha de comando (`bin/`) e os testes da página no Chromium (`tests/imersivo/`,
    `make check-imersivo`). AGPL-3.0 como o Zé (ADR 0013), com os avisos de autoria do original
    (Jared Rhodenizer) e das modificações (gdautomacao.ia) em cada arquivo e em `THIRD_PARTY.md`.
@@ -28,6 +28,7 @@ gravava o estado numa pasta que o holograma não lia (a boca não mexia).
 ## Consequências
 - Melhorar o holograma é mexer em `jarvis/imersivo/web/` e rodar `make check-imersivo`.
 - O repositório `~/Work/barehands` deixa de ser a fonte; o serviço `barehands` à parte sai.
-- Ficaram de fora: modelos 3D pessoais do Acervo, as variações do chimpanzé ainda em teste e o
+- Ficaram de fora: a mídia de exemplo e os modelos 3D pessoais do Acervo (o Acervo é a pasta
+  `<dados>/acervo`, com `imagens/` e `3d/`), as variações do chimpanzé ainda em teste e o
   `.blend` de origem do avatar (entram quando o autor decidir publicá-los).
 - As esferas e o contrato de dados de cada uma estão em `docs/imersivo/ESFERAS.md`.

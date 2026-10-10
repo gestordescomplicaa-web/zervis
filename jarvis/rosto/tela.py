@@ -1,6 +1,6 @@
 """A tela do JARVIS (Barehands) e o Núcleo nela. Ver, agir, abrir e fechar.
 
-O Núcleo é o anel do JARVIS com os orbes que nascem dele (Cérebro, Guia, Memória, Acervo).
+O Núcleo é o anel do Zé com os orbes que nascem dele (Mapa, Hoje, Trabalho, Acervo, Guia).
 A janela do JARVIS é onde ele vive: com ela fechada, a câmera fica apagada e não há Núcleo.
 
 Contrato pela pasta de estado do Barehands, como o resto do rosto:
@@ -25,7 +25,7 @@ from typing import Any
 ACOES = {
     "nucleo": "valor: abrir (mostra os orbes ao redor do anel) ou fechar (recolhe)",
     "abrir": "alvo: um orbe (pelo nome ou apelido) ou qualquer item do Núcleo pelo nome falado: "
-    "nota, arquivo do Acervo, pasta, projeto ou agente do Orca; orbe (opcional) restringe a "
+    "nota, arquivo do Acervo ou pasta; orbe (opcional) restringe a "
     "busca a um orbe. Abre exatamente aquilo, abrindo o Núcleo antes se precisar",
     "buscar": "alvo: um nome; orbe (opcional). Lista o que existe com esse nome: nome, orbe, "
     "tipo e endereço (orbe/pasta/item). Use antes de abrir quando não souber o nome exato",
