@@ -34,7 +34,7 @@ from jarvis.automacoes.agenda import FUSO
 from jarvis.automacoes.calendario import Calendario
 from jarvis.automacoes.jobs import Job, Jobs
 from jarvis.avisos.fila import Fila
-from jarvis.cerebro import catalogo, ferramentas, mcp_externo, navegador, rapido
+from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, rapido
 from jarvis.cerebro.base import Brain, Ponte
 from jarvis.cerebro.baterias import Bateria, da_assinatura, do_omniroute
 from jarvis.cerebro.claude import ClaudeBrain, carimbo
@@ -213,6 +213,7 @@ class Nucleo:
     def __init__(self, cfg: Config, parar: threading.Event) -> None:
         self.cfg = cfg
         self.parar = parar
+        acesso.aplicar()  # assinatura ou chave do Claude, antes de qualquer cérebro subir
         self.maquina = e.Maquina(prazo_conversa_s=cfg["escuta"]["conversa_s"])
         self.eventos: queue.Queue[e.Evento] = queue.Queue()
         self.status = Status()
@@ -228,6 +229,7 @@ class Nucleo:
         modelos = cfg.caminho("ativacao", "modelos_onnx")
         self.vad = VAD(modelos / "silero_vad.onnx")
         modelo_ativacao = carregar_modelo(cfg.caminho("ativacao", "modelo"))
+        self.modelo_ativacao = modelo_ativacao  # volta ao detector quando a escuta liga
         if not modelo_ativacao.treinada:
             log.warning(
                 "sem a palavra de ativação treinada: o Zé atende pelo teclado e pelo painel"
@@ -251,8 +253,7 @@ class Nucleo:
         self.meio_transcricao = "deepgram"
         if not self.deepgram.disponivel:
             log.warning("sem a chave do Deepgram: voz desligada (painel e teclado funcionam)")
-            self.detector.modelo = SemAtivacao()
-            self.detector.limiar = SemAtivacao.limiar
+        self._ligar_ativacao()
         self.escuta: EscutaDeepgram | None = None  # o pedido atual em streaming
         self.transcrevendo: concurrent.futures.Future[str] | None = None
 
@@ -392,11 +393,7 @@ class Nucleo:
         self._baterias_em = 0.0
         self.ponte = Ponte(
             self.cerebro,
-            PERSONA.read_text()
-            + "\n\n"
-            + usuario.PERFIL.para_persona()
-            + "\n\n"
-            + manifesto.para_persona(self.orbes),
+            self.persona(),
             self._frase_do_cerebro,
             self._fim_do_cerebro,
             self._pedido_de_aprovacao,
@@ -1123,6 +1120,50 @@ class Nucleo:
         ligados = ", ".join(novos.servidores) or "nenhum"
         log.info("conectores MCP recarregados: %s", ligados)
         return f"Pronto: o Zé agora usa os conectores {ligados}."
+
+    def _ligar_ativacao(self) -> None:
+        """Sem a chave do Deepgram o chamado não dispara: não haveria quem transcrevesse."""
+        modelo = self.modelo_ativacao if self.deepgram.disponivel else SemAtivacao()
+        self.detector.modelo = modelo
+        self.detector.limiar = modelo.limiar
+
+    def aplicar_escuta(self) -> None:
+        """O painel guardou ou apagou a chave do Deepgram: vale na hora."""
+        self.deepgram.recarregar()
+        self._ligar_ativacao()
+
+    def persona(self) -> str:
+        return (
+            PERSONA.read_text()
+            + "\n\n"
+            + usuario.PERFIL.para_persona()
+            + "\n\n"
+            + manifesto.para_persona(self.orbes)
+        )
+
+    def aplicar_perfil(self, perfil: usuario.Perfil) -> str:
+        """O painel salvou o perfil: a persona muda e o cérebro recomeça com ela."""
+        usuario.PERFIL = perfil
+        self.ponte.persona = self.persona()
+        return self._remontar()
+
+    def aplicar_acesso(self) -> str:
+        """O painel mudou o acesso ao Claude: põe no ambiente e remonta o cérebro com ele."""
+        acesso.aplicar()
+        return self._remontar()
+
+    def _remontar(self) -> str:
+        """Cérebro novo do mesmo provedor (a conversa recomeça); devolve um aviso ou ""."""
+        if self.provedor not in catalogo.OPCOES:
+            return ""
+        try:
+            novo = catalogo.criar(self.provedor, self.cfg, DADOS / "cerebro", self.extras)
+        except catalogo.Indisponivel as motivo:
+            return f"Cérebro indisponível: {motivo}."
+        cerebro = self._com_via_rapida(novo)
+        self.ponte.trocar(cerebro)
+        self.cerebro = cerebro
+        return ""
 
     def persona_rapida(self) -> str:
         return PERSONA_RAPIDA.read_text() + "\n\n" + usuario.PERFIL.para_persona()

@@ -42,9 +42,10 @@ uv run python -m jarvis    # sobe o Zé; o painel abre em http://127.0.0.1:8795/
 ```
 
 Na primeira subida, o Zé baixa os modelos de som e a voz (Cadu, 63 MB) e confere o SHA-256 de
-cada um. Sem a palavra de ativação treinada, ele atende pelo painel e pelo teclado. Para a voz, ponha a chave do Deepgram em
-`~/.config/zervis/deepgram.key` (chmod 600). A fala sai pelo Piper, que vem junto e roda dentro do
-Zé (primeiro som em ~150 ms). `make instalar` instala o serviço do systemd do usuário.
+cada um, e o painel abre na configuração inicial: perfil, acesso ao Claude (assinatura ou chave de
+API) e a chave do Deepgram para a voz. Sem a palavra de ativação treinada, ele atende pelo painel e
+pelo teclado. A fala sai pelo Piper, que vem junto e roda dentro do Zé (primeiro som em ~150 ms).
+`make instalar` instala o serviço do systemd do usuário.
 
 Plataformas: Linux primeiro. O controle completo da máquina é no Omarchy; outros Linux têm o
 controle reduzido.

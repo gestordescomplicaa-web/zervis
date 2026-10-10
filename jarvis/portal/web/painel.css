@@ -340,3 +340,14 @@ details.detalhes p { margin: 8px 0 0; }
   .rodape { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .anel.ativo { animation: none; } .toast { transition: none; } }
+
+/* --- configuração inicial e perfil --- */
+.passos { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; flex-wrap: wrap; }
+.passos li { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 999px; color: var(--suave); border: 1px solid var(--borda); font-size: 14px; }
+.passos li span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 600; background: rgb(255 255 255 / .05); }
+.passos li[aria-current="step"] { color: var(--texto); border-color: var(--acento); }
+.passos li[aria-current="step"] span { background: var(--acento); color: #041417; }
+.passos li.feito span { background: rgb(95 214 160 / .18); color: var(--bom); }
+.rodape-passos .espaco { flex: 1; }
+.cartao label textarea#perfil-sobre { font: inherit; }
+p.nota { color: var(--suave); font-size: 13px; }

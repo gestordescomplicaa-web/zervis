@@ -150,10 +150,12 @@ const PAGINAS = {
   },
 
   async modelos() {
-    const [c, esc_] = await Promise.all([api("cerebro"), api("escuta")]);
+    const [c, esc_, cfg] = await Promise.all([api("cerebro"), api("escuta"), api("configuracao")]);
     modelo = { ...c.via, chaves: c.chaves };
     escuta = esc_;
+    prepararAcesso(cfg);
     return `${cabeca("Modelos")}
+      <section class="cartao" id="cartao-acesso"></section>
       <section class="cartao" id="cartao-escuta"></section>
       ${cartao("", `<div class="cabeca"><h2>Respostas rápidas</h2>${liga(c.via.ligada, "via-ligada", "", "Ligadas")}</div>
         ${sub("Conversa simples vai a um modelo rápido; o resto, ao cérebro principal.")}
@@ -163,6 +165,31 @@ const PAGINAS = {
         <div id="area-chave"></div>
         <div class="linha">${botao("Salvar", "modelo-salvar", "", "principal")}${botao("Testar", "modelo-testar")}<span class="resultado" id="resultado"></span></div>`)}
       ${cartao("Cérebro principal", `<p><strong>${esc(NOME_CEREBRO[c.completo.provedor] || c.completo.provedor)}</strong> <span class="mono">${esc(c.completo.modelo)}</span></p>${sub("Usado quando o pedido precisa de ferramentas.")}`)}`;
+  },
+
+  async perfil() {
+    const cfg = await api("configuracao");
+    return `${cabeca("Perfil")}${sub("Usado pelo Zé em todas as conversas.")}
+      ${cartao("", `${camposPerfil(cfg)}<div class="linha">${botao("Salvar", "perfil-salvar", "", "principal")}</div><p class="resultado" id="resultado-perfil"></p>`)}`;
+  },
+
+  async configurar() {
+    const [cfg, esc_] = await Promise.all([api("configuracao"), api("escuta")]);
+    escuta = esc_;
+    prepararAcesso(cfg);
+    const passos = ["Perfil", "Acesso ao Claude", "Reconhecimento de fala"];
+    const trilha = `<ol class="passos">${passos.map((t, i) => `<li ${i + 1 === passo ? 'aria-current="step"' : i + 1 < passo ? 'class="feito"' : ""}><span>${i + 1}</span>${t}</li>`).join("")}</ol>`;
+    const voltar = passo > 1 ? botao("Voltar", "passo", `data-passo="${passo - 1}"`, "discreta") : "";
+    const corpo = {
+      1: cartao("Perfil", `${sub("Como o Zé chama você e o que deve saber sobre o seu trabalho.")}${camposPerfil(cfg)}<p class="resultado" id="resultado-perfil"></p>`),
+      2: '<section class="cartao" id="cartao-acesso"></section>',
+      3: '<section class="cartao" id="cartao-escuta"></section>',
+    }[passo];
+    const seguir = passo === 1 ? botao("Continuar", "perfil-salvar", 'data-seguir="2"', "principal")
+      : passo === 2 ? botao("Continuar", "passo", 'data-passo="3"', "principal")
+      : botao("Concluir", "configuracao-concluir", "", "principal");
+    return `${cabeca("Configuração inicial")}${sub("Tudo pode ser alterado depois em Ajustes.")}${trilha}${corpo}
+      <div class="linha rodape-passos">${voltar}<span class="espaco"></span>${seguir}</div>`;
   },
 
   async voz() {
@@ -190,6 +217,55 @@ function desenharChave() {
   const estado = k.tem ? `<span class="etiqueta bom">chave guardada · …${esc(k.fim)}</span>` : '<span class="etiqueta alerta">sem chave</span>';
   area.innerHTML = `<div class="linha">${estado}<input id="chave" type="password" class="mono" placeholder="colar chave" autocomplete="off" spellcheck="false">
     ${botao("Guardar chave", "chave-guardar")}${k.tem && k.origem === "painel" ? xis("chave-apagar", "", "Apagar chave") : ""}</div>`;
+}
+
+// --- Perfil e acesso ao Claude (também na configuração inicial) ------------------------------------
+
+let passo = 1;
+let acessoTela = {};
+
+function camposPerfil(cfg) {
+  const p = cfg.perfil;
+  const opcoes = cfg.fusos.map((f) => `<option value="${esc(f)}" ${f === p.fuso ? "selected" : ""}>${esc(f.replaceAll("_", " "))}</option>`).join("");
+  return `<div class="campos">
+    <label>Nome<input id="perfil-nome" value="${esc(p.nome)}" maxlength="60" placeholder="Como o Zé deve chamar você" autocomplete="given-name"></label>
+    <label>Sobre você<textarea id="perfil-sobre" rows="4" maxlength="2000" placeholder="Profissão, projetos e preferências de trabalho.">${esc(p.sobre)}</textarea></label>
+    <label>Fuso horário<select id="perfil-fuso"><option value="" ${p.fuso ? "" : "selected"}>Do sistema (${esc(cfg.fuso_sistema.replaceAll("_", " "))})</option>${opcoes}</select></label>
+  </div>`;
+}
+
+function prepararAcesso(cfg) {
+  const s = cfg.acesso;
+  acessoTela = { ...s, link: cfg.chave_anthropic, aba: s.metodo || "assinatura" };
+}
+
+function desenharAcesso() {
+  const area = $("cartao-acesso");
+  if (!area) return;
+  const a = acessoTela, assinatura = a.aba === "assinatura";
+  const configurado = Boolean(a.metodo);
+  const estado = configurado ? '<span class="etiqueta bom">Configurado</span>' : '<span class="etiqueta alerta">Não configurado</span>';
+  const desta = a.metodo === a.aba && a.origem === "painel";
+  const placeholder = desta ? "•••• " + esc(a.fim) : assinatura ? "Token da assinatura" : "Chave de API";
+  const nota = !assinatura ? "" : a.metodo === "assinatura" && a.origem === "login"
+    ? "Login do Claude Code encontrado nesta máquina." : "Gere o token com <code>claude setup-token</code> no terminal.";
+  const link = assinatura ? "" : `<a class="externo" href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a>`;
+  area.innerHTML = `<div class="cabeca"><h2>Acesso ao Claude</h2>${estado}${link}</div>
+    ${sub("Modelo de linguagem do Zé. Use a sua assinatura do Claude ou uma chave de API da Anthropic.")}
+    <div class="segmentos" role="group" aria-label="Forma de acesso">${botao("Assinatura do Claude", "acesso-aba", `data-aba="assinatura" aria-pressed="${assinatura}"`)}${botao("Chave de API", "acesso-aba", `data-aba="chave" aria-pressed="${!assinatura}"`)}</div>
+    <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${placeholder}" autocomplete="off" spellcheck="false" aria-label="${assinatura ? "Token da assinatura" : "Chave de API da Anthropic"}">
+      ${botao("Salvar", "acesso-salvar", "", "principal")}${botao("Testar conexão", "acesso-testar")}${desta ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>
+    ${nota ? `<p class="nota">${nota}</p>` : ""}
+    <p class="resultado" id="resultado-acesso"></p>`;
+}
+
+const lerPerfil = () => ({ nome: $("perfil-nome").value, sobre: $("perfil-sobre").value, fuso: $("perfil-fuso").value });
+
+function mostrar(id, ok, texto) {
+  const r = $(id);
+  if (!r) return;
+  r.className = "resultado " + (ok === null ? "" : ok ? "ok" : "erro");
+  r.textContent = texto;
 }
 
 // --- Escuta: a chave do Deepgram -------------------------------------------------------------------
@@ -619,6 +695,29 @@ const ACOES = {
     const c = await ocupado(b, () => api("chave", { motor: modelo.motor, chave: $("chave").value }));
     modelo.chaves = c.chaves; desenharChave(); toast(c.aviso || "Chave guardada.");
   },
+  "perfil-salvar": async (b) => {
+    const r = await ocupado(b, () => api("perfil", lerPerfil()));
+    if (b.dataset.seguir) { passo = Number(b.dataset.seguir); await abrir(); toast(r.aviso); return; }
+    mostrar("resultado-perfil", true, r.aviso);
+  },
+  passo: async (b) => { passo = Number(b.dataset.passo); await abrir(); },
+  "configuracao-concluir": () => { passo = 1; location.hash = "#inicio"; toast("Configuração concluída."); },
+  "acesso-aba": (b) => { acessoTela.aba = b.dataset.aba; desenharAcesso(); },
+  "acesso-salvar": async (b) => {
+    const valor = $("segredo-acesso").value;
+    const r = await ocupado(b, () => (acessoTela.aba === "assinatura" ? api("acesso/token", { token: valor }) : api("acesso/chave", { chave: valor })));
+    acessoTela = { ...acessoTela, ...r.acesso }; desenharAcesso();
+    mostrar("resultado-acesso", true, r.aviso);
+  },
+  "acesso-testar": async (b) => {
+    mostrar("resultado-acesso", null, "Testando…");
+    const t = await ocupado(b, () => api("acesso/testar", {}));
+    mostrar("resultado-acesso", t.ok, t.mensagem);
+  },
+  "acesso-remover": (b) => confirmar(b, acessoTela.aba === "assinatura" ? "Remover o token?" : "Remover a chave?", async () => {
+    const r = await api("acesso/remover", { metodo: acessoTela.aba });
+    acessoTela = { ...acessoTela, ...r.acesso }; desenharAcesso(); toast(r.aviso);
+  }),
   "escuta-guardar": async (b) => {
     const r = await ocupado(b, () => api("escuta/chave", { chave: $("chave-escuta").value }));
     escuta = r; desenharEscuta();
@@ -766,7 +865,8 @@ async function abrir() {
   try {
     const html = await PAGINAS[secao]();
     conteudo.innerHTML = secao === "sessoes" ? html : `<div class="secao">${html}</div>`;
-    if (secao === "modelos") { desenharChave(); desenharEscuta(); }
+    if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); }
+    if (secao === "configurar") { desenharAcesso(); desenharEscuta(); }
     encher();
     if (secao === "sessoes") await prepararSessoes();
   } catch (erro) {
@@ -785,7 +885,13 @@ async function batimento() {
   } catch { $("estado-ze").textContent = "desconectado"; }
 }
 
+// Sem perfil, o painel abre na configuração inicial.
+async function comecar() {
+  try { if (!location.hash && !(await api("configuracao")).feita) location.hash = "#configurar"; } catch { /* o batimento mostra */ }
+  abrir();
+}
+
 window.addEventListener("hashchange", abrir);
-abrir();
+comecar();
 batimento();
 setInterval(batimento, 2000);

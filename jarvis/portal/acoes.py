@@ -11,8 +11,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from jarvis import fuso, usuario
 from jarvis.automacoes.jobs import JobErro
-from jarvis.cerebro import conectores, rapido
+from jarvis.cerebro import acesso, conectores, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
@@ -89,6 +90,7 @@ class Acoes:
     def leituras(self) -> dict[str, Leitura]:
         return {
             "estado": self.estado,
+            "configuracao": self.configuracao,
             "inicio": self.inicio,
             "cerebro": self.cerebro,
             "escuta": self.escuta,
@@ -110,6 +112,11 @@ class Acoes:
             "escuta/chave": self.guardar_chave_escuta,
             "escuta/apagar": self.apagar_chave_escuta,
             "escuta/testar": self.testar_chave_escuta,
+            "perfil": self.salvar_perfil,
+            "acesso/token": self.guardar_token,
+            "acesso/chave": self.guardar_chave_claude,
+            "acesso/remover": self.remover_acesso,
+            "acesso/testar": self.testar_acesso,
             "sessao/criar": self.criar_sessao,
             "sessao/ler": self.ler_sessao,
             "sessao/enviar": self.enviar_a_sessao,
@@ -285,7 +292,7 @@ class Acoes:
 
     def escuta(self) -> dict[str, Any]:
         dg = self.n.deepgram
-        ativacao = getattr(self.n.detector.modelo, "treinada", True)
+        ativacao = getattr(self.n.modelo_ativacao, "treinada", True)
         return {"deepgram": dg.situacao(), "cadastro": deepgram.CADASTRO, "ativacao": ativacao}
 
     def guardar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -294,14 +301,14 @@ class Acoes:
             deepgram.gravar_chave(self.n.deepgram.arquivo_chave, chave)
         except ValueError as erro:
             raise PedidoInvalido(str(erro)) from None
-        self.n.deepgram.recarregar()
+        self.n.aplicar_escuta()
         ok, mensagem = deepgram.conferir(chave)
         aviso = "Chave salva." if ok else f"Chave salva. {mensagem}"
         return {**self.escuta(), "aviso": aviso, "valida": ok}
 
     def apagar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
         self.n.deepgram.arquivo_chave.unlink(missing_ok=True)
-        self.n.deepgram.recarregar()
+        self.n.aplicar_escuta()
         return {**self.escuta(), "aviso": "Chave removida."}
 
     def testar_chave_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -310,6 +317,70 @@ class Acoes:
         if not chave:
             return {"ok": False, "mensagem": "Informe a chave."}
         ok, mensagem = deepgram.conferir(chave)
+        return {"ok": ok, "mensagem": mensagem}
+
+    # --- configuração da primeira vez: perfil e acesso ao Claude ----------------------------------
+
+    def configuracao(self) -> dict[str, Any]:
+        p = usuario.ler()
+        return {
+            "feita": usuario.existe(),
+            "perfil": {"nome": p.nome, "sobre": p.sobre, "fuso": p.fuso},
+            "fuso_sistema": fuso.do_sistema().key,
+            "fusos": fuso.nomes(),
+            "acesso": acesso.situacao(),
+            "chave_anthropic": "https://console.anthropic.com/settings/keys",
+        }
+
+    def salvar_perfil(self, dados: dict[str, Any]) -> dict[str, Any]:
+        nome = str(dados.get("nome", "")).strip()
+        sobre = str(dados.get("sobre", "")).strip()
+        zona = str(dados.get("fuso", "")).strip()
+        if len(nome) > 60:
+            raise PedidoInvalido("Nome com mais de 60 caracteres.")
+        if len(sobre) > 2000:
+            raise PedidoInvalido("Texto com mais de 2.000 caracteres.")
+        if zona and not fuso.valido(zona):
+            raise PedidoInvalido("Fuso horário inválido.")
+        antes = fuso.local().key
+        perfil = usuario.Perfil(nome, sobre, zona)
+        usuario.gravar(perfil)
+        aviso = self.n.aplicar_perfil(perfil) or "Perfil salvo."
+        if fuso.local().key != antes:
+            aviso += " O fuso horário vale a partir do próximo início."
+        return {**self.configuracao(), "aviso": aviso}
+
+    def _acesso(self, aviso: str) -> dict[str, Any]:
+        return {"acesso": acesso.situacao(), "aviso": self.n.aplicar_acesso() or aviso}
+
+    def guardar_token(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            acesso.gravar_token(str(dados.get("token", "")))
+        except ValueError:
+            raise PedidoInvalido("Informe o token.") from None
+        return self._acesso("Token salvo.")
+
+    def guardar_chave_claude(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            rapido.gravar_chave("anthropic", str(dados.get("chave", "")))
+        except rapido.MotorErro:
+            raise PedidoInvalido("Informe a chave.") from None
+        return self._acesso("Chave salva.")
+
+    def remover_acesso(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if dados.get("metodo") == "assinatura":
+            acesso.apagar_token()
+            return self._acesso("Token removido.")
+        rapido.apagar_chave("anthropic")
+        return self._acesso("Chave removida.")
+
+    def testar_acesso(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Uma pergunta mínima ao Claude com o acesso salvo."""
+        if not acesso.situacao()["metodo"]:
+            return {"ok": False, "mensagem": "Acesso não configurado."}
+        modelo = self.n.cfg["cerebro"]["modelo"]
+        self.pasta_teste.mkdir(parents=True, exist_ok=True, mode=0o700)
+        ok, mensagem = asyncio.run(acesso.testar(modelo, self.pasta_teste))
         return {"ok": ok, "mensagem": mensagem}
 
     # --- sessões da oficina (docs/plano-oficina.md) -------------------------------------------

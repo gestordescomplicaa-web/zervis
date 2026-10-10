@@ -1,8 +1,9 @@
-"""Quem usa o Zé (docs/plano-distribuicao.md, 09/10/2026): o "Quem sou eu" da primeira configuração.
+"""Quem usa o Zé (09/10/2026): o perfil da configuração da primeira vez.
 
-Fica em `<config>/perfil.json`: `nome` (como o Zé chama a pessoa) e `sobre` (algumas linhas que a
-pessoa escreve sobre si, o jeito de trabalhar). Nada de nome fixo no código: a persona recebe isso
-no começo de cada conversa e as falas usam o nome daqui. Sem perfil, o Zé fala sem nome.
+Fica em `<config>/perfil.json`: `nome` (como o Zé chama a pessoa), `sobre` (algumas linhas que a
+pessoa escreve sobre si, o jeito de trabalhar) e `fuso` (vazio: o do sistema). Nada de nome fixo no
+código: a persona recebe isso no começo de cada conversa e as falas usam o nome daqui. Sem perfil,
+o Zé fala sem nome e o painel abre na configuração.
 """
 
 import json
@@ -18,6 +19,7 @@ ARQUIVO = lugares.CONFIG / "perfil.json"
 class Perfil:
     nome: str = ""
     sobre: str = ""
+    fuso: str = ""
 
     @property
     def rotulo(self) -> str:
@@ -45,7 +47,9 @@ def ler(arquivo: Path | None = None) -> Perfil:
     if not isinstance(dados, dict):
         return Perfil()
     return Perfil(
-        str(dados.get("nome", "")).strip()[:60], str(dados.get("sobre", "")).strip()[:2000]
+        str(dados.get("nome", "")).strip()[:60],
+        str(dados.get("sobre", "")).strip()[:2000],
+        str(dados.get("fuso", "")).strip()[:60],
     )
 
 
@@ -54,9 +58,17 @@ def gravar(perfil: Perfil, arquivo: Path | None = None) -> None:
     destino.parent.mkdir(parents=True, exist_ok=True)
     temporario = destino.with_suffix(".next")
     temporario.write_text(
-        json.dumps({"nome": perfil.nome, "sobre": perfil.sobre}, ensure_ascii=False, indent=1)
+        json.dumps(
+            {"nome": perfil.nome, "sobre": perfil.sobre, "fuso": perfil.fuso},
+            ensure_ascii=False,
+            indent=1,
+        )
     )
     temporario.replace(destino)
+
+
+def existe(arquivo: Path | None = None) -> bool:
+    return (arquivo or ARQUIVO).is_file()
 
 
 PERFIL = ler()

@@ -9,3 +9,7 @@
   serviço de alguém fixo no código (um teste vigia isso).
 - Licença AGPL-3. A voz vem junto: o Piper roda dentro do Zé e a voz Cadu é baixada e conferida
   na primeira subida. Primeiro som em ~150 ms (antes ~320 ms pelo serviço à parte).
+- Configuração inicial no painel: sem perfil, o painel abre nela. Perfil (nome, sobre e fuso),
+  acesso ao Claude (assinatura ou chave de API, com teste de conexão) e reconhecimento de fala.
+  Perfil e acesso também ficam em Ajustes; mudanças valem sem reiniciar (o fuso, no próximo início).
+- A chave do Deepgram colada no painel agora liga também a palavra de ativação, sem reiniciar.

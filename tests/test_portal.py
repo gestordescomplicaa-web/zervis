@@ -10,8 +10,8 @@ from typing import Any
 
 import pytest
 
-from jarvis import config
-from jarvis.cerebro import rapido
+from jarvis import config, usuario
+from jarvis.cerebro import acesso, rapido
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import PedidoInvalido, Portal
 from jarvis.voz import deepgram
@@ -87,7 +87,20 @@ class NucleoFalso:
         self.provedor = "claude"
         self.aplicadas = 0
         self.deepgram: deepgram.Deepgram
-        self.detector = SimpleNamespace(modelo=SimpleNamespace(treinada=False))
+        self.modelo_ativacao = SimpleNamespace(treinada=False)
+        self.perfis: list[usuario.Perfil] = []
+        self.acessos = 0
+
+    def aplicar_escuta(self) -> None:
+        self.deepgram.recarregar()
+
+    def aplicar_perfil(self, perfil: usuario.Perfil) -> str:
+        self.perfis.append(perfil)
+        return ""
+
+    def aplicar_acesso(self) -> str:
+        self.acessos += 1
+        return ""
 
     def aplicar_via_rapida(self) -> str:
         self.aplicadas += 1
@@ -101,6 +114,9 @@ class NucleoFalso:
 def acoes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Acoes, NucleoFalso]:
     monkeypatch.setattr(rapido, "CHAVES", tmp_path / "chaves")
     monkeypatch.setattr(rapido, "ESCOLHA", tmp_path / "via-rapida.json")
+    monkeypatch.setattr(usuario, "ARQUIVO", tmp_path / "config" / "perfil.json")
+    monkeypatch.setattr(acesso, "ORIGINAL", {acesso.TOKEN: "", acesso.CHAVE: ""})
+    monkeypatch.setattr(acesso, "LOGIN", tmp_path / "sem-login.json")
     for variavel in rapido.VARIAVEIS.values():
         monkeypatch.delenv(variavel, raising=False)
     n = NucleoFalso()
@@ -223,3 +239,42 @@ def test_envio_de_arquivo_cru_com_token(portal: Portal) -> None:
     assert json.loads(resp.read()) == {"bytes": 40, "id": "ab12cd34", "nome": "foto.png"}
     conn.request("POST", "/api/anexo?id=x", body=b"x", headers={"Host": cab["Host"]})
     assert conn.getresponse().status == 403
+
+
+# --- configuração da primeira vez ---------------------------------------------------------------
+
+
+def test_sem_perfil_a_configuracao_nao_esta_feita_e_o_perfil_salva_validado(
+    acoes: tuple[Acoes, NucleoFalso],
+) -> None:
+    a, n = acoes
+    c = a.configuracao()
+    assert not c["feita"] and c["perfil"] == {"nome": "", "sobre": "", "fuso": ""}
+    assert c["fuso_sistema"] and "America/Sao_Paulo" in c["fusos"]
+    r = a.salvar_perfil({"nome": " Ana ", "sobre": "Designer.", "fuso": "America/Sao_Paulo"})
+    assert r["feita"] and r["perfil"]["nome"] == "Ana" and r["aviso"].startswith("Perfil salvo.")
+    assert n.perfis == [usuario.Perfil("Ana", "Designer.", "America/Sao_Paulo")]
+    for errado in ({"fuso": "Lua/Base"}, {"nome": "x" * 61}, {"sobre": "x" * 2001}):
+        with pytest.raises(PedidoInvalido):
+            a.salvar_perfil(errado)
+
+
+def test_o_acesso_ao_claude_pelo_painel_nunca_devolve_o_segredo(
+    acoes: tuple[Acoes, NucleoFalso], tmp_path: Path
+) -> None:
+    a, n = acoes
+    assert a.configuracao()["acesso"]["metodo"] == ""
+    assert a.testar_acesso({}) == {"ok": False, "mensagem": "Acesso não configurado."}
+    r = a.guardar_token({"token": "oat-segredo-1234"})
+    assert "oat-segredo" not in json.dumps(r) and r["aviso"] == "Token salvo."
+    assert r["acesso"] == {"metodo": "assinatura", "origem": "painel", "fim": "1234"}
+    assert stat.S_IMODE((tmp_path / "chaves" / "claude.token").stat().st_mode) == 0o600
+    r = a.guardar_chave_claude({"chave": "sk-ant-5678"})
+    assert r["acesso"]["metodo"] == "assinatura"  # o token vence a chave
+    assert a.remover_acesso({"metodo": "assinatura"})["acesso"]["metodo"] == "chave"
+    assert a.remover_acesso({"metodo": "chave"})["acesso"]["metodo"] == ""
+    assert n.acessos == 4
+    with pytest.raises(PedidoInvalido):
+        a.guardar_token({"token": ""})
+    with pytest.raises(PedidoInvalido):
+        a.guardar_chave_claude({"chave": "com espaço"})

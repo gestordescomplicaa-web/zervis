@@ -13,6 +13,9 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
   persona recebe isso no começo de cada conversa. Nenhum nome fixo no código.
 - **Fuso** do sistema (`jarvis/fuso.py`), ou `JARVIS_FUSO`.
 - **Voz só pelo Deepgram.** Sem a chave, o Zé não escuta (painel e teclado funcionam).
+- **Acesso ao Claude** (`jarvis/cerebro/acesso.py`): token da assinatura (`claude setup-token`) ou
+  chave de API colados no painel, senão o que a máquina já tem (variáveis ou login do Claude Code).
+  Aplicado no ambiente do processo, vale para cérebro, via rápida, automações, sessões e revisão.
 - **Licença AGPL-3** (ADR 0013).
 - **Piper dentro do Zé** (dependência Python, GPL-3) e a voz Cadu (CC0) baixada e conferida na
   primeira subida: primeiro som em ~150 ms, sem serviço à parte.
@@ -23,9 +26,11 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
 
 ## Próximos passos, em ordem
 
-1. **Configuração da primeira vez no painel.** Sem perfil, o painel abre direto nela: quem sou eu
-   (nome e sobre), fuso, idioma, como entrar no modelo (assinatura ou chave), chave do Deepgram,
-   treinar o "Ei Zé", ai-memory e pasta dos projetos.
+1. **Configuração da primeira vez no painel.** Feito: sem perfil, o painel abre nela (perfil com
+   nome, sobre e fuso; acesso ao Claude por assinatura ou chave; chave do Deepgram). Falta:
+   **"Ei Zé" genérico** que vem junto e funciona ao instalar, com "Personalizar a ativação" opcional
+   (gravação de ~4 min com a voz de quem usa); o detector fica mudo enquanto o Zé fala. Depois:
+   ai-memory e pasta dos projetos.
 2. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx`, integração com o Orca
    (oficina) e com o OmniRoute (baterias) como opcionais que se desligam sozinhos quando não
    existem; Omarchy detectado em vez de suposto.
