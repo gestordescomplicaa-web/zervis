@@ -145,42 +145,17 @@ main.cheio { padding: 0; overflow: hidden; }
 .lado { display: grid; min-height: 0; min-width: 0; }
 .sessoes > *, .sessao-aberta > *, .conversa, .conversa > * { min-width: 0; }
 .lado > * { min-height: 0; }
-/* --- a sessão: cabeçalho, conversa, ações agrupadas e o campo com agente, conta e modelo --- */
+/* --- a sessão: cabeçalho com agente e conta, e o terminal --- */
 .conversa { display: flex; flex-direction: column; min-height: 0; }
 .conversa-topo { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--borda); }
-.titulo-sessao { display: grid; min-width: 0; margin-right: auto; }
+.titulo-sessao { display: grid; min-width: 0; flex: 1; }
+.conversa-topo > .avatar, .conversa-topo > .etiqueta, .conversa-topo .botoes { flex: none; }
 .titulo-sessao h2 { margin: 0; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .titulo-sessao small { color: var(--suave); font: 12px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conversa-topo .botoes { display: flex; gap: 6px; align-items: center; }
 .conversa-topo .botoes .acao { padding: 6px 12px; font-size: 13px; }
-.mensagens { flex: 1; min-height: 0; overflow-y: auto; padding: 22px clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 12px; }
-.msg { max-width: 760px; padding: 10px 14px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
-.msg.usuario { align-self: flex-end; background: rgb(70 217 222 / .14); border: 1px solid var(--borda-forte); border-bottom-right-radius: 4px; }
-.msg.agente { align-self: flex-start; background: var(--vidro); border: 1px solid var(--borda); border-bottom-left-radius: 4px; }
-.msg code { font-family: var(--mono); font-size: 13px; padding: 1px 5px; border-radius: 5px; background: rgb(70 217 222 / .10); }
-.msg.sistema { align-self: center; max-width: 640px; padding: 4px 12px; border-radius: 999px; font-size: 12px; color: var(--suave);
-  background: rgb(255 255 255 / .03); border: 1px solid var(--borda); text-align: center; }
-.msg.sistema.aviso { color: var(--alerta); border-color: rgb(239 190 124 / .4); }
-.msg.continuacao { display: none; }
-details.acoes { align-self: flex-start; max-width: 760px; font: 12px/1.5 var(--mono); color: var(--suave); }
-details.acoes summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; list-style: none; padding: 4px 10px;
-  border-radius: 8px; border: 1px dashed var(--borda); }
-details.acoes summary::-webkit-details-marker { display: none; }
-details.acoes summary::before { content: "▸"; color: var(--acento); }
-details.acoes[open] summary::before { content: "▾"; }
-details.acoes summary span { color: var(--texto); white-space: nowrap; }
-details.acoes summary small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52ch; }
-details.acoes .lista-acoes { display: grid; gap: 2px; padding: 8px 10px 4px 26px; }
-details.acoes .lista-acoes div { white-space: pre-wrap; overflow-wrap: anywhere; }
-.vazio-sessao { margin: auto; display: grid; gap: 6px; text-align: center; max-width: 420px; color: var(--suave); }
-.vazio-sessao strong { color: var(--texto); font-size: 16px; }
-.indicador { display: flex; align-items: center; gap: 10px; padding: 0 clamp(16px, 4vw, 48px) 10px; color: var(--suave); font-size: 13px; }
-.indicador .pontos { display: inline-flex; gap: 4px; }
-.indicador .pontos i { width: 6px; height: 6px; border-radius: 50%; background: var(--bom); animation: ponto 1.2s ease-in-out infinite; }
-.indicador .pontos i:nth-child(2) { animation-delay: .15s; } .indicador .pontos i:nth-child(3) { animation-delay: .3s; }
-@keyframes ponto { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
-.ajustes-sessao { display: flex; flex-wrap: wrap; gap: 6px; margin-right: auto; min-width: 0; flex: 1; }
-/* Menu de escolha do painel: pílula + lista em vidro escuro que abre para cima. */
+.ajustes-sessao { display: flex; gap: 6px; min-width: 0; flex: 0 1 auto; }
+/* Menu de escolha do painel: pílula + lista em vidro escuro. */
 .escolha { position: relative; }
 .escolha-botao { display: inline-flex; align-items: center; gap: 8px; max-width: 220px; padding: 5px 12px; border-radius: 999px;
   font: 500 12.5px var(--sans); color: var(--texto); background: rgb(70 217 222 / .07); border: 1px solid var(--borda);
@@ -189,7 +164,7 @@ details.acoes .lista-acoes div { white-space: pre-wrap; overflow-wrap: anywhere;
 .escolha-botao:disabled { opacity: .5; cursor: default; }
 .escolha-botao .seta { color: var(--acento); font-size: 10px; transition: transform .15s; }
 .escolha-botao[aria-expanded="true"] .seta { transform: rotate(180deg); }
-.escolha-menu { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; min-width: 240px; max-width: 320px; max-height: 320px;
+.escolha-menu { position: absolute; left: 0; top: calc(100% + 8px); z-index: 30; min-width: 240px; max-width: 320px; max-height: 320px;
   overflow-y: auto; padding: 6px; border-radius: 14px; background: #0c161e; border: 1px solid var(--borda-forte);
   box-shadow: 0 18px 50px rgb(0 0 0 / .55), 0 0 0 1px rgb(70 217 222 / .06); scrollbar-width: thin; }
 .escolha-grupo { padding: 8px 10px 4px; color: var(--suave); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
@@ -201,24 +176,20 @@ details.acoes .lista-acoes div { white-space: pre-wrap; overflow-wrap: anywhere;
 .texto-escolha { display: grid; min-width: 0; }
 .texto-escolha strong { font-weight: 500; font-size: 13.5px; }
 .texto-escolha small { color: var(--suave); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.compor { margin: 0 clamp(16px, 4vw, 48px) 16px; border: 1px solid var(--borda-forte); border-radius: 12px; background: var(--fundo-2); }
-.compor textarea { display: block; width: 100%; min-height: 52px; max-height: 200px; resize: vertical; border: 0;
-  background: transparent; color: var(--texto); font: inherit; padding: 12px 14px; outline: none; }
-.compor-rodape { display: flex; align-items: center; gap: 10px; padding: 6px 10px 8px 14px; border-top: 1px solid var(--borda); }
 
-.compor-rodape .acao { padding: 6px 14px; }
-.conversa.soltando .mensagens { outline: 2px dashed var(--acento); outline-offset: -10px; background: rgb(70 217 222 / .04); }
-.pendentes { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 0; }
-.pendente { display: inline-flex; align-items: center; gap: 8px; max-width: 260px; padding: 4px 6px 4px 8px;
-  border-radius: 8px; border: 1px solid var(--borda-forte); font-size: 13px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.pendente img { width: 34px; height: 34px; object-fit: cover; border-radius: 5px; flex: none; }
-.pendente button { border: 0; background: transparent; color: var(--suave); cursor: pointer; font: 16px/1 var(--sans); }
-.anexos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.anexo { font-size: 12px; color: var(--suave); padding: 1px 8px; border-radius: 999px; border: 1px solid var(--borda); }
+/* O terminal da sessão (xterm.js) ocupa o resto da tela. */
+.terminal-sessao { flex: 1; min-height: 0; overflow: hidden; background: #070c11; }
+.terminal-sessao[hidden] { display: none; }
+.terminal-sessao .xterm { height: 100%; padding: 10px 6px 6px 14px; }
+.terminal-sessao .xterm-viewport { scrollbar-width: thin; }
+.conversa.soltando .terminal-sessao { outline: 2px dashed var(--acento); outline-offset: -6px; }
+.terminal-fechado { display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--borda); font-size: 13px; }
+.terminal-fechado[hidden] { display: none; }
+.terminal-fechado span { margin-right: auto; color: var(--suave); }
+.conversa-topo .mais { width: 30px; height: 30px; font-size: 18px; flex: none; }
 .editor-md { display: grid; gap: 10px; padding: 12px; border-bottom: 1px solid var(--borda); }
 .editor-md textarea { width: 100%; resize: vertical; border: 1px solid var(--borda-forte); border-radius: 10px;
   background: rgb(0 0 0 / .25); color: var(--texto); padding: 10px 12px; font-size: 13px; }
-.compor-rodape .mais { width: 28px; height: 28px; font-size: 18px; flex: none; }
 .sessao-aberta { display: grid; grid-template-columns: minmax(0, 1fr) 290px; min-height: 0; height: 100%; }
 .sessao-aberta.sem-explorador { grid-template-columns: minmax(0, 1fr); }
 .sessao-aberta.sem-explorador .explorador { display: none; }
@@ -253,7 +224,6 @@ details.acoes .lista-acoes div { white-space: pre-wrap; overflow-wrap: anywhere;
 .previa-arquivo header .mono { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .previa-arquivo .codigo { margin: 0; padding: 16px 20px; overflow: auto; font: 13px/1.55 var(--mono); color: var(--texto); }
 .imagem-previa { max-width: 100%; max-height: 100%; object-fit: contain; margin: 16px auto; display: block; }
-.conversa > .previa-arquivo:not([hidden]) ~ .compor { margin-top: 0; }
 .nova-sessao { padding: 28px clamp(16px, 4vw, 48px); overflow-y: auto; }
 .nova-sessao .cartao { max-width: 640px; }
 

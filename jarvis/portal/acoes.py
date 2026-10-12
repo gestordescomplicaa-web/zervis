@@ -6,6 +6,7 @@ aqui só se traduz para a tela.
 """
 
 import asyncio
+import base64
 import contextlib
 import json
 from pathlib import Path
@@ -13,7 +14,7 @@ from typing import Any
 
 from jarvis import fuso, usuario
 from jarvis.automacoes.jobs import JobErro
-from jarvis.cerebro import acesso, conectores, contas, modelos, rapido
+from jarvis.cerebro import acesso, conectores, contas, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
@@ -134,11 +135,12 @@ class Acoes:
             "conta/entrar": self.entrar_conta,
             "sessao/criar": self.criar_sessao,
             "sessao/ler": self.ler_sessao,
-            "sessao/enviar": self.enviar_a_sessao,
-            "sessao/parar": self.parar_sessao,
             "sessao/trocar": self.trocar_sessao,
-            "sessao/modelos": self.modelos_da_sessao,
-            "sessao/modelo": self.modelo_da_sessao,
+            "terminal/abrir": self.abrir_terminal,
+            "terminal/ler": self.ler_terminal,
+            "terminal/escrever": self.escrever_terminal,
+            "terminal/tamanho": self.tamanho_terminal,
+            "terminal/fechar": self.fechar_terminal,
             "sessao/arquivo": self.criar_arquivo,
             "sessao/arquivos": self.arquivos,
             "sessao/ver": self.ver_arquivo,
@@ -560,24 +562,14 @@ class Acoes:
         s = self._chamar(lambda: self.n.sessoes.ler(id_))
         return {"sessao": self._sessao(s), "mensagens": self.n.sessoes.mensagens(id_, desde)}
 
-    def enviar_a_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
-        anexos = dados.get("anexos") or []
-        if not isinstance(anexos, list) or len(anexos) > 10:
-            raise PedidoInvalido("no máximo dez anexos por mensagem")
-        s = self._chamar(
-            lambda: self.n.sessoes.enviar(
-                str(dados.get("id", "")),
-                str(dados.get("texto", "")),
-                anexos=[str(a) for a in anexos],
-            )
-        )
-        return self._sessao(s)
-
     def anexar(self, corpo: bytes, consulta: dict[str, str]) -> dict[str, Any]:
         nome = self._chamar(
             lambda: self.n.sessoes.anexar(consulta.get("id", ""), consulta.get("nome", ""), corpo)
         )
-        return {"anexo": nome}
+        return {
+            "anexo": nome,
+            "caminho": str(self.n.sessoes.pasta_de_anexos(consulta.get("id", "")) / nome),
+        }
 
     def criar_arquivo(self, dados: dict[str, Any]) -> dict[str, Any]:
         relativo = self._chamar(
@@ -603,33 +595,45 @@ class Acoes:
             aviso += " Continuando o pedido."
         return {**self._sessao(s), "aviso": aviso}
 
-    def modelos_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
-        """Os modelos que a conta da sessão oferece, e os nomes dos esforços."""
-        s = self._chamar(lambda: self.n.sessoes.ler(str(dados.get("id", ""))))
-        cs = contas.Contas()
-        try:
-            conta = cs.achar(s.conta) if s.conta else cs.em_uso(s.motor)
-        except contas.ContaErro:
-            conta = cs.em_uso(s.motor)
-        return {
-            "modelos": modelos.da_conta(conta),
-            "esforcos": modelos.ESFORCOS,
-            "modelo": s.modelo,
-            "esforco": s.esforco,
-        }
+    # --- o terminal real de cada sessão (ADR 0017) -------------------------------------------
 
-    def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
-        s = self._chamar(
-            lambda: self.n.sessoes.ajustar_modelo(
-                str(dados.get("id", "")),
-                str(dados.get("modelo", "")),
-                str(dados.get("esforco", "")),
+    def abrir_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
+        id_ = str(dados.get("id", ""))
+        t = self._chamar(
+            lambda: self.n.sessoes.abrir_terminal(
+                id_, colunas=int(dados.get("colunas", 120)), linhas=int(dados.get("linhas", 32))
             )
         )
-        return self._sessao(s)
+        t.redimensionar(int(dados.get("colunas", 120)), int(dados.get("linhas", 32)))
+        return {"posicao": t.inicio, "vivo": t.vivo}
 
-    def parar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
-        return self._sessao(self._chamar(lambda: self.n.sessoes.parar(str(dados.get("id", "")))))
+    def ler_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Long-poll: espera até 20 s por saída nova a partir de `desde`."""
+        t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
+        desde = int(dados.get("desde", 0))
+        if t is None:
+            return {"posicao": desde, "dados": "", "vivo": False}
+        posicao, saida, vivo = t.ler(desde, float(dados.get("espera", 20)))
+        return {"posicao": posicao, "dados": base64.b64encode(saida).decode(), "vivo": vivo}
+
+    def escrever_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
+        t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
+        if t is None or not t.vivo:
+            raise PedidoInvalido("o terminal desta sessão está fechado")
+        t.escrever(str(dados.get("dados", "")).encode())
+        return {}
+
+    def tamanho_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
+        t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
+        if t is not None:
+            t.redimensionar(int(dados.get("colunas", 120)), int(dados.get("linhas", 32)))
+        return {}
+
+    def fechar_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
+        t = self.n.sessoes.terminais.pop(str(dados.get("id", "")), None)
+        if t is not None:
+            t.encerrar()
+        return {"aviso": "Terminal fechado. A conversa continua ao reabrir."}
 
     # --- skills do jeito do usuário ----------------------------------------------------------
 

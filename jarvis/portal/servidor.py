@@ -37,6 +37,10 @@ ARQUIVOS = {
     "/painel.css": "painel.css",
     "/painel.js": "painel.js",
     "/ze.webp": "ze.webp",  # o ícone do Zé (menu lateral e aba)
+    # O terminal das sessões (xterm.js, MIT; ver THIRD_PARTY.md), servido daqui, sem CDN.
+    "/vendor/xterm/xterm.js": "vendor/xterm/xterm.js",
+    "/vendor/xterm/xterm.css": "vendor/xterm/xterm.css",
+    "/vendor/xterm/addon-fit.js": "vendor/xterm/addon-fit.js",
 }
 
 Leitura = Callable[[], Any]
@@ -97,10 +101,13 @@ class Portal:
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("X-Content-Type-Options", "nosniff")
                 self.send_header("Referrer-Policy", "no-referrer")
+                # Estilo inline: o terminal (xterm.js) gera o CSS de fonte e cores; scripts seguem
+                # só do próprio painel.
                 self.send_header(
                     "Content-Security-Policy",
-                    "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; "
-                    "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
+                    "default-src 'self'; img-src 'self' data: blob:; "
+                    "style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; "
+                    "frame-ancestors 'none'; "
                     f"frame-src {IMERSIVO}",
                 )
                 self.end_headers()

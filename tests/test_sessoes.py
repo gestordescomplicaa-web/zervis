@@ -9,7 +9,14 @@ from typing import Any
 
 import pytest
 
-from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes, _git, comando_proibido
+from jarvis.oficina.sessoes import (
+    Sessao,
+    SessaoErro,
+    Sessoes,
+    _git,
+    comando_proibido,
+    rodar_agente,
+)
 
 
 def esperar(condicao: Any, limite_s: float = 5.0) -> None:
@@ -215,7 +222,9 @@ def test_o_motor_codex_anota_guarda_o_fio_e_continua_com_resume(
     (bin_ / "codex").chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_}:{os.environ['PATH']}")
     fim: list[tuple[str, str]] = []
-    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: fim.append((s.estado, r)))
+    sessoes = Sessoes(
+        tmp_path / "sessoes", (raiz,), lambda s, r: fim.append((s.estado, r)), rodar_agente
+    )
     s = sessoes.criar("Loja", str(raiz / "projetos" / "loja"), motor="codex")
     sessoes.enviar(s.id, "rode os testes")
     esperar(lambda: bool(fim))
@@ -346,3 +355,48 @@ def test_o_modelo_e_o_esforco_vem_da_lista_da_conta(
     for modelo, esforco in (("interno", ""), ("gpt-x", "ultra"), ("nao-existe", "")):
         with pytest.raises(SessaoErro):
             sessoes.ajustar_modelo(s.id, modelo, esforco)
+
+
+def test_no_terminal_os_pedidos_e_respostas_vem_dos_eventos_do_agente(
+    tmp_path: Path, raiz: Path
+) -> None:
+    fim: list[str] = []
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: fim.append(r))
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "codex")
+    eventos = [
+        {"hook_event_name": "UserPromptSubmit", "prompt": "liste as frutas"},
+        {"hook_event_name": "Stop", "session_id": "c1", "last_assistant_message": "Caju."},
+        {
+            "type": "agent-turn-complete",
+            "thread-id": "t1",
+            "input-messages": [
+                "liste as frutas",
+                "[Passagem do Zé] contexto…\n\nPedido agora:\nagora o bacuri",
+            ],
+            "last-assistant-message": "Bacuri.",
+        },
+        {"type": "agent-turn-complete", "input-messages": ["[Passagem do Zé] só contexto"]},
+    ]
+    sessoes.eventos(s.id).write_text("".join(json.dumps(e) + "\n" for e in eventos))
+    sessoes._ler_eventos(s.id)
+    conversa = [(m["quem"], m["texto"]) for m in sessoes.mensagens(s.id)]
+    assert conversa[-4:] == [
+        ("usuario", "liste as frutas"),
+        ("agente", "Caju."),
+        ("usuario", "agora o bacuri"),  # da passagem colada, só o pedido
+        ("agente", "Bacuri."),
+    ]
+    assert fim[:2] == ["Caju.", "Bacuri."]
+    passagem = sessoes.passagem(sessoes.ler(s.id), "claude")
+    assert "o primeiro pedido): liste as frutas" in passagem
+    assert "Terminal" not in passagem
+
+
+def test_terminal_sem_o_agente_instalado_avisa(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PATH", str(tmp_path / "vazio"))
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "codex")
+    with pytest.raises(SessaoErro, match="Codex não está instalado"):
+        sessoes.abrir_terminal(s.id)

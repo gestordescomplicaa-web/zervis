@@ -17,9 +17,12 @@ import json
 import logging
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import threading
+import time
+import tomllib
 import uuid
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -30,11 +33,15 @@ from typing import Any
 from jarvis import fuso
 from jarvis.cerebro import contas, modelos
 from jarvis.memoria import aimemory
+from jarvis.oficina.terminal import Terminal
 
 log = logging.getLogger(__name__)
 FUSO = fuso.local()
 MAXIMO_TRABALHANDO = 3
 MOTORES = ("claude", "codex")
+PASSAGEM = "[Passagem do Zé]"  # abre o texto que o agente novo recebe numa troca
+PEDIDO_AGORA = "\n\nPedido agora:\n"
+SAIDAS_NORMAIS = (0, 130, 143, -2, -15)  # saiu, Ctrl+C, ou o Zé fechou o terminal (SIGTERM)
 ESTADOS = ("parada", "trabalhando", "erro")
 LIMITE_MENSAGEM = 8000
 LIMITE_ANEXO = 20 * 1024 * 1024
@@ -143,10 +150,21 @@ class Sessoes:
         self.projetos_novos = projetos_novos  # onde nasce um projeto criado com a sessão
         self.raizes = tuple(r.expanduser().resolve() for r in raizes)
         self.ao_terminar = ao_terminar
+        self.ao_avisar: Callable[[Sessao, str], None] | None = None  # aprovação pedida no terminal
+        # Sem `rodar`, cada sessão é um terminal real (o agente com todos os comandos dele);
+        # com `rodar` (testes, ou trabalho sem tela), roda sem terminal.
+        self.legado = rodar is not None
         self.rodar = rodar or rodar_agente
+        self.terminais: dict[str, Terminal] = {}
+        self._lidos: dict[str, int] = {}  # quanto do arquivo de eventos de cada sessão já foi lido
+        self._limite_visto: set[str] = set()
         self.trava = threading.Lock()
         self.tarefas: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Task[None]]] = {}
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if not self.legado:
+            threading.Thread(
+                target=self._vigiar_eventos, name="sessoes-eventos", daemon=True
+            ).start()
         # Uma sessão que estava trabalhando quando o Zé caiu não está mais.
         for s in self.listar():
             if s.estado == "trabalhando":
@@ -322,7 +340,13 @@ class Sessoes:
         return destino
 
     def trabalhando(self) -> list[str]:
-        return [id_ for id_, (_, t) in self.tarefas.items() if not t.done()]
+        ids = [id_ for id_, (_, t) in self.tarefas.items() if not t.done()]
+        for id_, terminal in list(self.terminais.items()):
+            if terminal.vivo and id_ not in ids:
+                with contextlib.suppress(SessaoErro):
+                    if self.ler(id_).estado == "trabalhando":
+                        ids.append(id_)
+        return ids
 
     def enviar(
         self, id_: str, texto: str, quem: str = "usuario", anexos: list[str] | None = None
@@ -339,12 +363,14 @@ class Sessoes:
             if Path(nome).name != nome or not caminho.is_file():
                 raise SessaoErro(f"anexo não encontrado: {nome}")
             caminhos.append(str(caminho))
-        if id_ in self.trabalhando():
+        if self.legado and id_ in self.trabalhando():
             raise SessaoErro("essa sessão ainda está trabalhando; espere ou pare")
-        if len(self.trabalhando()) >= MAXIMO_TRABALHANDO:
+        if id_ not in self.trabalhando() and len(self.trabalhando()) >= MAXIMO_TRABALHANDO:
             raise SessaoErro(f"já há {MAXIMO_TRABALHANDO} sessões trabalhando")
         if quem == "continuacao":  # o mesmo pedido de novo, noutra conta: anotado como do Zé
             self.anotar(id_, "sistema", f"Continuando o pedido: {texto[:300]}")
+        elif quem == "usuario" and not self.legado:
+            pass  # no terminal, o pedido entra na conversa pelo próprio agente (_evento)
         else:
             self.anotar(id_, quem, texto or "(anexos)", anexos)
         if quem == "usuario":
@@ -352,8 +378,16 @@ class Sessoes:
         if caminhos:  # o agente recebe os caminhos; imagens e PDFs ele lê com o Read
             lista = "\n".join(f"- {c}" for c in caminhos)
             texto = f"{texto}\n\nAnexos do usuário (leia antes de responder):\n{lista}".strip()
+        if not self.legado:  # o terminal da sessão: cola o pedido no agente (abre se preciso)
+            self._limite_visto.discard(id_)
+            terminal = self.terminais.get(id_)
+            if terminal is not None and terminal.vivo:
+                terminal.colar(texto)
+            else:
+                self.abrir_terminal(id_, pedido=texto)
+            return self._mudar(id_, estado="trabalhando", limite=False)
         if s.passagem:  # depois de uma troca: o agente novo recebe o que perdeu
-            texto = f"{s.passagem}\n\nPedido agora:\n{texto}"
+            texto = f"{s.passagem}{PEDIDO_AGORA}{texto}"
         s = self._mudar(id_, estado="trabalhando", passagem="", limite=False)
         laco = asyncio.new_event_loop()
         pronto = threading.Event()
@@ -427,6 +461,8 @@ class Sessoes:
             raise SessaoErro(str(erro)) from None
         if nova.agente != motor:
             raise SessaoErro("essa conta é de outro agente")
+        if (terminal := self.terminais.pop(id_, None)) is not None:
+            terminal.encerrar()  # reabre na conta (ou no agente) novo, com resume
         fios = {**s.fios, **({s.motor: s.sdk_sessao} if s.sdk_sessao else {})}
         fio = fios.get(motor, "")
         if fio and not copiar_conversa(motor, fio, cs.listar(motor), nova):
@@ -511,17 +547,179 @@ class Sessoes:
         )
         anterior = NOMES_MOTORES.get(s.motor, s.motor)
         return (
-            f"[Passagem do Zé] Você assume esta sessão de código, que estava com o {anterior}. "
+            f"{PASSAGEM} Você assume esta sessão de código, que estava com o {anterior}. "
             f"Objetivo da sessão (o primeiro pedido): {objetivo}\n"
             f"O que aconteceu desde a sua última vez aqui:\n{chr(10).join(recente) or '- nada'}\n"
             f"Estado do git agora:\n{git or 'sem git ou sem mudanças'}\n"
             "Use isso para continuar sem refazer o que já foi feito."
         )
 
+    # --- o terminal real (ADR 0017) ---------------------------------------------------------
+
+    def eventos(self, id_: str) -> Path:
+        return self._dir(id_) / "eventos.jsonl"
+
+    def abrir_terminal(
+        self, id_: str, pedido: str = "", colunas: int = 120, linhas: int = 32
+    ) -> Terminal:
+        """O agente da sessão num terminal: o mesmo se já estiver aberto; senão, abre retomando a
+        conversa nativa (com a passagem, depois de uma troca de agente)."""
+        terminal = self.terminais.get(id_)
+        if terminal is not None and terminal.vivo:
+            return terminal
+        s = self.ler(id_)
+        if s.passagem:
+            pedido = f"{s.passagem}{PEDIDO_AGORA}{pedido}" if pedido else s.passagem
+        if s.motor == "claude":
+            confiar_pasta_claude(s)
+        else:
+            confiar_pasta_codex(s)
+        self.eventos(id_).touch(mode=0o600)
+        self._lidos[id_] = self.eventos(id_).stat().st_size
+        try:
+            terminal = Terminal(
+                comando_terminal(s, pedido, self.eventos(id_)),
+                s.onde,
+                ambiente_da_conta(s),
+                ao_sair=lambda codigo: self._terminal_saiu(id_, codigo),
+                ao_ler=lambda dados: self._olhar_saida(id_, dados),
+                colunas=colunas,
+                linhas=linhas,
+            )
+        except FileNotFoundError:
+            raise SessaoErro(
+                f"{NOMES_MOTORES[s.motor]} não está instalado nesta máquina."
+            ) from None
+        self.terminais[id_] = terminal
+        if s.passagem:  # entregue: o agente novo já recebeu
+            self._mudar(id_, passagem="")
+        return terminal
+
+    def _terminal_saiu(self, id_: str, codigo: int) -> None:
+        with contextlib.suppress(SessaoErro):
+            if codigo not in SAIDAS_NORMAIS:  # fechar o terminal é normal; erro fica na conversa
+                self.anotar(id_, "sistema", f"O agente saiu ({codigo}).")
+            if self.ler(id_).estado == "trabalhando":
+                self._mudar(id_, estado="parada")
+
+    def _olhar_saida(self, id_: str, dados: bytes) -> None:
+        """Créditos esgotados aparecem na tela do agente: a sessão avisa e oferece outra conta."""
+        if id_ in self._limite_visto:
+            return
+        texto = ANSI.sub("", dados.decode(errors="replace"))
+        if not LIMITE_TERMINAL.search(texto):
+            return
+        self._limite_visto.add(id_)
+        s = self.ler(id_)
+        conta, agente = _nome_da_conta(s), NOMES_MOTORES[s.motor]
+        final = self._mudar(
+            id_, estado="erro", limite=True, resumo=f"a conta {conta} do {agente} bateu o limite"
+        )
+        self.anotar(
+            id_,
+            "sistema",
+            f"A conta {conta} atingiu o limite de uso. Troque de conta para continuar: "
+            "a conversa segue.",
+        )
+        if self.ao_terminar is not None:
+            self.ao_terminar(final, final.resumo)
+
+    def _vigiar_eventos(self) -> None:
+        while True:
+            time.sleep(0.7)
+            for id_ in list(self.terminais):
+                try:
+                    self._ler_eventos(id_)
+                except Exception:
+                    log.exception("eventos da sessão %s", id_)
+
+    def _ler_eventos(self, id_: str) -> None:
+        arquivo = self.eventos(id_)
+        try:
+            tamanho = arquivo.stat().st_size
+        except OSError:
+            return
+        inicio = self._lidos.get(id_, 0)
+        if tamanho <= inicio:
+            return
+        with arquivo.open("rb") as f:
+            f.seek(inicio)
+            novo = f.read(tamanho - inicio)
+        corte = novo.rfind(b"\n") + 1  # só linhas completas
+        self._lidos[id_] = inicio + corte
+        for linha in novo[:corte].splitlines():
+            with contextlib.suppress(ValueError):
+                if isinstance(evento := json.loads(linha), dict):
+                    self._evento(id_, evento)
+
+    def _evento(self, id_: str, e: dict[str, Any]) -> None:
+        """O que os agentes contam pelos hooks (Claude) e pelo notify (Codex)."""
+        nome = str(e.get("hook_event_name") or e.get("type") or "")
+        if nome == "SessionStart" and e.get("session_id"):
+            self._mudar(id_, sdk_sessao=str(e["session_id"]))
+        elif nome == "UserPromptSubmit":
+            self._pedido(id_, str(e.get("prompt", "")))
+            self._limite_visto.discard(id_)
+            self._mudar(
+                id_,
+                estado="trabalhando",
+                limite=False,
+                ultimo_pedido=str(e.get("prompt", ""))[:8000],
+            )
+        elif nome == "Notification" and "permission" in str(e.get("message", "")).lower():
+            if self.ao_avisar is not None:
+                self.ao_avisar(self.ler(id_), str(e.get("message", "")))
+        elif nome == "Stop":
+            if e.get("session_id"):
+                self._mudar(id_, sdk_sessao=str(e["session_id"]))
+            resposta = str(e.get("last_assistant_message") or "")  # o hook já traz a resposta
+            if not resposta:
+                resposta = _ultima_resposta_claude(str(e.get("transcript_path", "")))
+            self._fim_do_turno(id_, resposta)
+        elif nome == "agent-turn-complete":
+            if _turno_auxiliar_do_codex(e):
+                return  # o Codex gerando o título da conversa, noutro fio: não é o turno
+            if e.get("thread-id"):
+                self._mudar(id_, sdk_sessao=str(e["thread-id"]))
+            entrada = e.get("input-messages")  # todos os pedidos da conversa; o do turno é o último
+            if isinstance(entrada, list) and entrada:
+                self._pedido(id_, str(entrada[-1]))
+            self._fim_do_turno(id_, str(e.get("last-assistant-message") or ""))
+
+    def _pedido(self, id_: str, texto: str) -> None:
+        """O que a pessoa digitou no terminal entra na conversa do Zé (é dela que sai a passagem
+        e a memória). Da passagem que o Zé colou, fica só o pedido que veio junto."""
+        if texto.startswith(PASSAGEM):
+            texto = texto.partition(PEDIDO_AGORA)[2]
+        if texto.strip():
+            self.anotar(id_, "usuario", texto.strip()[:8000])
+
+    def _fim_do_turno(self, id_: str, resposta: str) -> None:
+        if resposta.strip():
+            self.anotar(id_, "agente", resposta)
+        atual = self.ler(id_)
+        if atual.limite:
+            return
+        resumo = _resumo_de(resposta) if resposta.strip() else "terminou"
+        final = self._mudar(
+            id_,
+            estado="parada",
+            resumo=resumo[:300],
+            fios={**atual.fios, atual.motor: atual.sdk_sessao} if atual.sdk_sessao else atual.fios,
+            vistos={**atual.vistos, atual.motor: len(self.mensagens(id_))},
+        )
+        if self.ao_terminar is not None:
+            try:
+                self.ao_terminar(final, resumo)
+            except Exception:
+                log.exception("aviso do fim da sessão falhou")
+
     def excluir(self, id_: str) -> str:
         """Apaga a sessão (conversa e anexos). A pasta do projeto fica; a cópia isolada sai,
         mas a branch dela fica no projeto, para nada do trabalho se perder."""
         s = self.ler(id_)
+        if (terminal := self.terminais.pop(id_, None)) is not None:
+            terminal.encerrar()
         if id_ in self.trabalhando():
             raise SessaoErro("pare a sessão antes de excluir")
         aviso = ""
@@ -534,6 +732,10 @@ class Sessoes:
         return aviso
 
     def parar(self, id_: str) -> Sessao:
+        terminal = self.terminais.get(id_)
+        if terminal is not None and terminal.vivo:
+            terminal.escrever(b"\x1b")  # Esc: os dois agentes interrompem o turno
+            return self._mudar(id_, estado="parada")
         laco_tarefa = self.tarefas.get(id_)
         if laco_tarefa is None or laco_tarefa[1].done():
             raise SessaoErro("essa sessão não está trabalhando")
@@ -771,3 +973,118 @@ def copiar_conversa(motor: str, fio: str, todas: list[contas.Conta], nova: conta
         shutil.copy2(origem, destino)
         return True
     return False
+
+
+# --- terminal real (ADR 0017) ---------------------------------------------------------------
+
+ANSI = re.compile(r"\x1b(\[[0-?]*[ -/]*[@-~]|\][^\x07]*(\x07|\x1b\\)|[@-Z\\-_])")
+# Como os dois agentes dizem na tela que a conta acabou (mais estrito que LIMITE: o texto do
+# próprio trabalho também passa por aqui).
+LIMITE_TERMINAL = re.compile(
+    r"usage limit reached|hit your usage limit|credit balance is too low|out of extra usage"
+    r"|limit will reset|upgrade to pro|purchase more credits",
+    re.IGNORECASE,
+)
+HOOKS_DO_ZE = ("SessionStart", "UserPromptSubmit", "Stop", "Notification")
+
+
+def _turno_auxiliar_do_codex(e: dict[str, Any]) -> bool:
+    """O Codex avisa também os turnos auxiliares dele (o título da conversa, num fio à parte)."""
+    entradas = e.get("input-messages") or []
+    primeira = str(entradas[0]) if isinstance(entradas, list) and entradas else ""
+    resposta = str(e.get("last-assistant-message") or "")
+    return primeira.startswith("Generate a concise") or resposta.startswith('{"title"')
+
+
+def _ultima_resposta_claude(transcricao: str) -> str:
+    """O texto da última resposta do Claude, lido da transcrição que o próprio agente grava."""
+    try:
+        linhas = Path(transcricao).read_text().splitlines()[-200:]
+    except OSError:
+        return ""
+    for linha in reversed(linhas):
+        with contextlib.suppress(ValueError, AttributeError, TypeError):
+            d = json.loads(linha)
+            if d.get("type") != "assistant":
+                continue
+            textos = [b.get("text", "") for b in d["message"]["content"] if b.get("type") == "text"]
+            if texto := "\n".join(t for t in textos if t).strip():
+                return texto
+    return ""
+
+
+def confiar_pasta_claude(s: Sessao) -> None:
+    """Marca a pasta da sessão como confiável no perfil da conta do Claude (o mesmo registro que o
+    "Sim, confio nesta pasta" do próprio Claude grava): a pessoa escolheu essa pasta ao criar a
+    sessão, e um pedido feito por voz não pode ficar parado na pergunta."""
+    try:
+        conta = contas.Contas().achar(s.conta) if s.conta else contas.Contas().em_uso("claude")
+    except contas.ContaErro:
+        return
+    perfil = conta.onde / ".claude.json" if conta.pasta else conta.onde.parent / ".claude.json"
+    try:
+        dados = json.loads(perfil.read_text()) if perfil.is_file() else {}
+    except (OSError, ValueError):
+        return  # perfil ilegível: melhor a pergunta na tela que estragar o arquivo
+    projeto = dados.setdefault("projects", {}).setdefault(str(s.onde), {})
+    if projeto.get("hasTrustDialogAccepted"):
+        return
+    projeto["hasTrustDialogAccepted"] = True
+    temporario = perfil.with_name(perfil.name + ".ze")
+    temporario.write_text(json.dumps(dados, ensure_ascii=False, indent=2))
+    temporario.replace(perfil)
+
+
+def confiar_pasta_codex(s: Sessao) -> None:
+    """O mesmo para o Codex: `[projects."<pasta>"] trust_level = "trusted"` no config.toml da conta
+    (o que o "Trust and continue" dele grava; pela linha de comando ele não aceita)."""
+    try:
+        conta = contas.Contas().achar(s.conta) if s.conta else contas.Contas().em_uso("codex")
+    except contas.ContaErro:
+        return
+    arquivo = conta.onde / "config.toml"
+    try:
+        texto = arquivo.read_text() if arquivo.is_file() else ""
+        projetos = tomllib.loads(texto).get("projects", {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return
+    if projetos.get(str(s.onde), {}).get("trust_level") == "trusted":
+        return
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    with arquivo.open("a") as f:
+        f.write(f'\n[projects.{json.dumps(str(s.onde))}]\ntrust_level = "trusted"\n')
+
+
+def comando_terminal(s: Sessao, pedido: str, eventos: Path) -> list[str]:
+    """O agente interativo da sessão: retoma a conversa nativa e conta ao Zé o que acontece."""
+    if s.motor == "codex":
+        avisar = ["sh", "-c", 'printf "%s\\n" "$1" >> "$0"', str(eventos)]  # + o JSON do Codex
+        cmd = ["codex", "-c", f"notify={json.dumps(avisar)}", "--sandbox", "workspace-write"]
+        if s.modelo:
+            cmd += ["-m", s.modelo]
+        if s.esforco:
+            cmd += ["-c", f'model_reasoning_effort="{s.esforco}"']
+        if s.sdk_sessao:
+            cmd += ["resume", s.sdk_sessao]
+        return [*cmd, *([pedido] if pedido else [])]
+    gravar = f"cat >> {shlex.quote(str(eventos))}; echo >> {shlex.quote(str(eventos))}"
+    hooks: dict[str, list[dict[str, Any]]] = dict(aimemory.hooks_claude().get("hooks", {}))
+    for evento in HOOKS_DO_ZE:
+        hooks[evento] = [
+            *hooks.get(evento, []),
+            {"matcher": "", "hooks": [{"type": "command", "command": gravar}]},
+        ]
+    cmd = [
+        "claude",
+        "--permission-mode",
+        "acceptEdits",
+        "--append-system-prompt",
+        REGRAS.strip(),
+        "--settings",
+        json.dumps({"hooks": hooks}),
+    ]
+    if s.sdk_sessao:
+        cmd += ["--resume", s.sdk_sessao]
+    if s.modelo:
+        cmd += ["--model", s.modelo]
+    return [*cmd, *([pedido] if pedido else [])]

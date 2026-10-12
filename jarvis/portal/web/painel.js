@@ -426,12 +426,10 @@ function editorSkill(nome, texto, nova) {
   ed.scrollIntoView({ block: "nearest" });
 }
 
-// --- Sessões: agentes de código com pasta, conversa, anexos e explorador ------------------------
+// --- Sessões: o terminal do agente, com pasta, anexos e explorador -----------------------------
 
 let sessaoAberta = null;
-let vistas = 0;
 let relogioSessoes = null;
-let anexos = [];
 let explorador = innerWidth > 1100;
 let abertas = new Set();
 let modoBusca = "nomes";
@@ -461,28 +459,6 @@ async function listaSessoes() {
   $("ponto-sessoes").hidden = !sessoes.some((s) => s.estado === "trabalhando");
 }
 
-function linhaMensagem(m) {
-  const chips = (m.anexos || []).map((a) => `<span class="anexo">📎 ${esc(a.replace(/^\d{6}-[0-9a-f]{4}-/, ""))}</span>`).join("");
-  const aviso = m.quem === "sistema" && /limite|falhou|recusei/i.test(m.texto) ? " aviso" : "";
-  return `<div class="msg ${esc(m.quem)}${aviso}">${m.quem === "agente" ? leve(m.texto) : esc(m.texto)}${chips ? `<div class="anexos">${chips}</div>` : ""}</div>`;
-}
-
-// As ações do agente (comandos, arquivos editados) seguidas viram um grupo recolhível: "4 ações".
-function adicionarMensagens(caixa, lista) {
-  for (const m of lista) {
-    if (m.quem === "usuario") $("vazio-sessao")?.remove();
-    if (m.quem !== "ferramenta") { caixa.insertAdjacentHTML("beforeend", linhaMensagem(m)); continue; }
-    let grupo = caixa.lastElementChild;
-    if (!grupo?.classList.contains("acoes")) {
-      caixa.insertAdjacentHTML("beforeend", '<details class="acoes"><summary></summary><div class="lista-acoes"></div></details>');
-      grupo = caixa.lastElementChild;
-    }
-    grupo.querySelector(".lista-acoes").insertAdjacentHTML("beforeend", `<div>${esc(m.texto)}</div>`);
-    const n = grupo.querySelectorAll(".lista-acoes > div").length;
-    grupo.querySelector("summary").innerHTML = `<span>${n} ${n === 1 ? "ação" : "ações"}</span><small>${esc(m.texto.slice(0, 90))}</small>`;
-  }
-}
-
 async function formSessao() {
   const pastas = await api("pastas");
   $("lado-sessao").innerHTML = `<div class="nova-sessao">${cartao("Nova sessão", `
@@ -501,8 +477,6 @@ let contasSessao = { agentes: [] };
 
 const contasComLogin = () => contasSessao.agentes.flatMap((ag) =>
   ag.contas.filter((c) => c.logado).map((c) => ({ ...c, motor: ag.id, agente: ag.nome })));
-
-let modelosSessao = { modelos: [], esforcos: {} };
 
 // Menu de escolha próprio do painel (o <select> nativo abre com o tema do sistema, claro no Linux):
 // um botão em pílula com o valor atual e uma lista que abre para cima, com grupos e o ✓ no escolhido.
@@ -535,26 +509,6 @@ function seletorConta(sessao) {
   return escolha("conta-sessao", rotulo, grupos, `${sessao.motor}|${sessao.conta_id}`, "Agente e conta: a conversa continua na troca");
 }
 
-function seletorModelo(sessao) {
-  const atual = modelosSessao.modelos.find((m) => m.id === sessao.modelo);
-  const itens = [{ valor: "", nome: "Padrão da conta" },
-    ...modelosSessao.modelos.map((m) => ({ valor: m.id, nome: m.nome }))];
-  return escolha("modelo-sessao", atual ? atual.nome : "Modelo padrão", [{ itens }], sessao.modelo || "", "Modelo dos próximos pedidos");
-}
-
-function seletorEsforco(sessao) {
-  const modelo = modelosSessao.modelos.find((m) => m.id === sessao.modelo);
-  if (!modelo || !modelo.esforcos.length) return "";
-  const nome = (e) => (modelosSessao.esforcos[e] || e);
-  const padrao = modelo.padrao ? nome(modelo.padrao).toLowerCase() : "padrão";
-  const itens = [{ valor: "", nome: `Padrão do modelo (${padrao})` },
-    ...modelo.esforcos.map((e) => ({ valor: e, nome: nome(e) }))];
-  const rotulo = `Esforço: ${sessao.esforco ? nome(sessao.esforco).toLowerCase() : padrao}`;
-  return escolha("esforco-sessao", rotulo, [{ itens }], sessao.esforco || "", "Quanto o modelo pensa antes de responder");
-}
-
-const ajustesSessao = (sessao) => `${seletorConta(sessao)}${seletorModelo(sessao)}${seletorEsforco(sessao)}`;
-
 function faixaLimite(sessao) {
   if (!sessao.limite) return "";
   const outras = contasComLogin().filter((c) => c.id !== sessao.conta_id)
@@ -568,19 +522,10 @@ function faixaLimite(sessao) {
 
 let sessaoAtual = null;
 
-// Enquanto o agente trabalha, conta e modelo ficam travados (valem para o próximo pedido).
+// Enquanto o agente trabalha, a conta fica travada (a troca reabre o terminal).
 function travarAjustes(trabalhando) {
   document.querySelectorAll("#ajustes-sessao .escolha-botao").forEach((el) => { el.disabled = trabalhando; });
   if (trabalhando) fecharEscolhas();
-}
-
-async function ajustarModelo(modelo, esforco) {
-  const s = await api("sessao/modelo", { id: sessaoAberta, modelo, esforco });
-  sessaoAtual = s;
-  $("ajustes-sessao").innerHTML = ajustesSessao(s);
-  const nome = modelosSessao.modelos.find((m) => m.id === s.modelo)?.nome || "padrão da conta";
-  toast(`Modelo: ${nome}${s.esforco ? ", esforço " + (modelosSessao.esforcos[s.esforco] || s.esforco).toLowerCase() : ""}.`);
-  await acompanharSessao();
 }
 
 async function trocarSessao(motor, conta, continuar) {
@@ -591,80 +536,121 @@ async function trocarSessao(motor, conta, continuar) {
 
 async function abrirSessao(id) {
   sessaoAberta = id;
-  vistas = 0;
   document.querySelectorAll(".item-sessao").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === id)));
-  const [{ sessao, mensagens }, ct, ms] = await Promise.all([api("sessao/ler", { id, desde: 0 }), api("contas"), api("sessao/modelos", { id })]);
+  const [{ sessao }, ct] = await Promise.all([api("sessao/ler", { id, desde: 1e9 }), api("contas")]);
   contasSessao = ct;
-  modelosSessao = ms;
   sessaoAtual = sessao;
-  const semPedidos = !mensagens.some((m) => m.quem === "usuario");
   const lado = $("lado-sessao");
   const trabalhando = sessao.estado === "trabalhando";
   lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
       <div class="titulo-sessao"><h2>${esc(sessao.nome)}</h2><small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}</small></div>
+      <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}</div>
       <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
-      <div class="botoes">${botao("Parar", "sessao-parar", trabalhando ? "" : "hidden", "discreta")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Novo arquivo", "md-abrir")}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
+      <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
+        ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
-    <div class="mensagens" id="mensagens">${semPedidos ? `<div class="vazio-sessao" id="vazio-sessao"><strong>Peça algo ao agente</strong><span>Corrigir um erro, criar uma página, rodar os testes. Ele trabalha nesta pasta e avisa quando terminar.</span></div>` : ""}</div>
-    <div class="indicador" id="indicador" ${trabalhando ? "" : "hidden"}><span class="pontos"><i></i><i></i><i></i></span>${esc(sessao.agente)} trabalhando</div>
+    <section class="editor-md" id="editor-md" hidden>
+      <div class="linha"><label>Arquivo<input id="md-nome" class="mono" placeholder="NOTAS.md" autocomplete="off" spellcheck="false"></label>
+        <label class="interruptor"><input type="checkbox" id="md-substituir"> Substituir se existir</label></div>
+      <textarea id="md-texto" class="mono" rows="10"></textarea>
+      <div class="linha">${botao("Salvar na pasta", "md-salvar", "", "principal")}${botao("Cancelar", "md-fechar", "", "discreta")}</div>
+    </section>
     <section class="previa-arquivo" id="previa" hidden></section>
-    <form class="compor" id="compor">
-      <section class="editor-md" id="editor-md" hidden>
-        <div class="linha"><label>Arquivo<input id="md-nome" class="mono" placeholder="NOTAS.md" autocomplete="off" spellcheck="false"></label>
-          <label class="interruptor"><input type="checkbox" id="md-substituir"> Substituir se existir</label></div>
-        <textarea id="md-texto" class="mono" rows="10"></textarea>
-        <div class="linha">${botao("Salvar na pasta", "md-salvar", "", "principal")}${botao("Cancelar", "md-fechar", "", "discreta")}</div>
-      </section>
-      <div class="pendentes" id="anexos" hidden></div>
-      <textarea id="texto-sessao" placeholder="O que você precisa?" rows="2"></textarea>
-      <div class="compor-rodape"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
-        <div class="ajustes-sessao" id="ajustes-sessao">${ajustesSessao(sessao)}</div>
-        <button type="submit" class="acao principal">Enviar</button></div>
-    </form></section>
+    <div class="terminal-sessao" id="terminal"></div>
+    <div class="terminal-fechado" id="terminal-fechado" hidden><strong>Terminal fechado</strong>
+      <span>Ao reabrir, a conversa continua de onde parou.</span>${botao("Reabrir", "terminal-reabrir", "", "principal")}</div>
+    </section>
     <aside class="explorador" aria-label="Arquivos">
       <header><strong title="${esc(sessao.pasta)}">${esc(sessao.pasta.split("/").pop())}</strong>
+        <button type="button" class="icone" data-acao="md-abrir" title="Novo arquivo" aria-label="Novo arquivo">+</button>
         <button type="button" class="icone" data-acao="arvore-recolher" title="Recolher tudo" aria-label="Recolher tudo">⇤</button>
         <button type="button" class="icone" data-acao="arvore-atualizar" title="Atualizar" aria-label="Atualizar">↻</button>
-        <button type="button" class="icone" id="fechar-explorador" data-acao="explorador" title="Voltar à conversa" aria-label="Voltar à conversa">✕</button></header>
+        <button type="button" class="icone" id="fechar-explorador" data-acao="explorador" title="Voltar ao terminal" aria-label="Voltar ao terminal">✕</button></header>
       <input id="buscar-arquivos" type="search" placeholder="Buscar" autocomplete="off" spellcheck="false">
       <div class="seg" role="group" aria-label="Buscar por">${botao("Nome", "busca-modo", 'data-modo="nomes" aria-pressed="true"')}${botao("Conteúdo", "busca-modo", 'data-modo="conteudo" aria-pressed="false"')}</div>
       <div class="arvore" id="arvore" role="tree"></div>
     </aside></div>`;
   pintar(lado);
-  limparAnexos();
   abertas = new Set();
-  vistas = mensagens.length;
-  const caixa = $("mensagens");
-  adicionarMensagens(caixa, mensagens);
-  caixa.scrollTop = caixa.scrollHeight;
   travarAjustes(trabalhando);
+  await abrirTerminal(id);
   await carregarPasta("", $("arvore"));
-  $("texto-sessao").focus();
+}
+
+// --- o terminal real da sessão (xterm.js): o agente com todos os comandos dele ------------------------
+
+let term = null, termId = null, termPos = 0, termObservador = null, filaEscrita = Promise.resolve();
+const TEMA_TERMINAL = { background: "#070c11", foreground: "#e6f4f5", cursor: "#46d9de", cursorAccent: "#070c11",
+  selectionBackground: "rgba(70, 217, 222, .28)", black: "#0b131a", brightBlack: "#5c7a80" };
+
+function fecharTerminalTela() {
+  termId = null;
+  termObservador?.disconnect();
+  termObservador = null;
+  term?.dispose();
+  term = null;
+}
+
+async function abrirTerminal(id) {
+  fecharTerminalTela();
+  const caixa = $("terminal");
+  term = new Terminal({ fontFamily: 'ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace', fontSize: 13,
+    lineHeight: 1.15, cursorBlink: true, scrollback: 8000, theme: TEMA_TERMINAL });
+  const ajuste = new FitAddon.FitAddon();
+  term.loadAddon(ajuste);
+  term.open(caixa);
+  try { ajuste.fit(); } catch { /* fora da tela */ }
+  termId = id;
+  $("terminal-fechado").hidden = true;
+  try {
+    const { posicao } = await api("terminal/abrir", { id, colunas: term.cols, linhas: term.rows });
+    termPos = posicao;
+  } catch (erro) {
+    toast(erro.message);
+    $("terminal-fechado").hidden = false;
+    return;
+  }
+  term.onData((d) => escreverNoTerminal(d));
+  term.onResize(({ cols, rows }) => api("terminal/tamanho", { id, colunas: cols, linhas: rows }).catch(() => {}));
+  termObservador = new ResizeObserver(() => { try { ajuste.fit(); } catch { /* fora da tela */ } });
+  termObservador.observe(caixa);
+  term.focus();
+  lerTerminal(id);
+}
+
+// As teclas vão em ordem (uma requisição por vez); senão o agente recebe letras trocadas.
+function escreverNoTerminal(dados) {
+  const id = termId;
+  if (!id) return;
+  filaEscrita = filaEscrita.then(() => api("terminal/escrever", { id, dados })).catch(() => {});
+}
+
+async function lerTerminal(id) {
+  while (termId === id) {
+    try {
+      const r = await api("terminal/ler", { id, desde: termPos });
+      if (termId !== id) return;
+      if (r.dados) term.write(Uint8Array.from(atob(r.dados), (c) => c.charCodeAt(0)));
+      termPos = r.posicao;
+      if (!r.vivo) { $("terminal-fechado").hidden = false; return; }
+    } catch { await new Promise((ok) => setTimeout(ok, 1000)); }
+  }
 }
 
 async function acompanharSessao() {
-  if (!sessaoAberta || !$("mensagens")) return;
-  const { sessao, mensagens } = await api("sessao/ler", { id: sessaoAberta, desde: vistas });
-  const caixa = $("mensagens");
-  if (mensagens.length) {
-    const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
-    adicionarMensagens(caixa, mensagens);
-    vistas += mensagens.length;
-    if (noFim) caixa.scrollTop = caixa.scrollHeight;
-  }
+  if (!sessaoAberta || !$("terminal")) return;
+  const { sessao } = await api("sessao/ler", { id: sessaoAberta, desde: 1e9 });
+  sessaoAtual = sessao;
   const etiqueta = $("estado-sessao");
   if (etiqueta.dataset.estado === "trabalhando" && sessao.estado !== "trabalhando") atualizarArvore();
   etiqueta.dataset.estado = sessao.estado;
   etiqueta.textContent = estadoSessao(sessao);
   etiqueta.classList.toggle("alerta", !!sessao.limite);
   etiqueta.classList.toggle("bom", sessao.estado === "trabalhando");
-  document.querySelector('[data-acao="sessao-parar"]').hidden = sessao.estado !== "trabalhando";
   travarAjustes(sessao.estado === "trabalhando");
-  const indicador = $("indicador");
-  if (indicador) indicador.hidden = sessao.estado !== "trabalhando";
   const faixa = $("limite-sessao");
-  if (faixa && faixa.dataset.limite !== String(sessao.limite)) {
+  if (faixa.dataset.limite !== String(sessao.limite)) {
     faixa.dataset.limite = String(sessao.limite);
     faixa.innerHTML = faixaLimite(sessao);
   }
@@ -679,42 +665,23 @@ async function prepararSessoes() {
   }, 1500);
 }
 
-// anexos: arrastar, colar ou "+"
-function desenharAnexos() {
-  const area = $("anexos");
-  if (!area) return;
-  area.hidden = !anexos.length;
-  area.replaceChildren(...anexos.map((p, i) => {
-    const chip = document.createElement("span");
-    chip.className = "pendente";
-    if (p.previa) { const img = document.createElement("img"); img.src = p.previa; img.alt = ""; chip.append(img); }
-    chip.append(p.arquivo.name);
-    const tirar = document.createElement("button");
-    tirar.type = "button"; tirar.textContent = "×"; tirar.dataset.acao = "anexo-tirar"; tirar.dataset.i = String(i);
-    tirar.setAttribute("aria-label", "Tirar " + p.arquivo.name);
-    chip.append(tirar);
-    return chip;
-  }));
-}
-
-function anexar(lista) {
+// Anexos (arrastar, colar ou "+"): o arquivo sobe para a pasta da sessão e o caminho vai para o
+// terminal, onde o agente lê.
+async function anexar(lista) {
   for (const a of lista) {
-    if (anexos.length >= 10) { toast("No máximo dez anexos."); break; }
     if (a.size > 20 * 1024 * 1024) { toast(a.name + ": maior que 20 MB."); continue; }
     const f = a.name ? a : new File([a], "colado-" + Date.now() + "." + (a.type.split("/")[1] || "png"), { type: a.type });
-    anexos.push({ arquivo: f, previa: f.type.startsWith("image/") ? URL.createObjectURL(f) : "" });
+    try { escreverNoTerminal(`"${await subirAnexo(f)}" `); } catch (erro) { toast(erro.message); }
   }
-  desenharAnexos();
+  term?.focus();
 }
-
-function limparAnexos() { anexos.forEach((p) => p.previa && URL.revokeObjectURL(p.previa)); anexos = []; desenharAnexos(); }
 
 async function subirAnexo(arquivo) {
   const r = await fetch(`/api/sessao/anexo?id=${encodeURIComponent(sessaoAberta)}&nome=${encodeURIComponent(arquivo.name)}`,
     { method: "POST", headers: { "X-Ze-Token": TOKEN, "Content-Type": "application/octet-stream" }, body: arquivo });
   const dados = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(arquivo.name + ": " + (dados.erro || "falha"));
-  return dados.anexo;
+  return dados.caminho;
 }
 
 // explorador
@@ -756,12 +723,12 @@ async function verArquivo(caminho) {
   const corpo = a.tipo === "texto" ? `<pre class="codigo">${esc(a.texto)}</pre>` : a.tipo === "imagem" ? `<img class="imagem-previa" src="${a.url}" alt="">` : vazio(a.tipo === "grande" ? "Imagem grande demais." : "Sem prévia.");
   $("previa").innerHTML = `<header><span class="mono">${esc(caminho)}</span>${botao("Mencionar", "mencionar", `data-caminho="${esc(caminho)}"`)}${botao("Fechar", "previa-fechar", "", "discreta")}</header>${corpo}`;
   $("previa").hidden = false;
-  $("mensagens").hidden = true;
+  $("terminal").hidden = true;
 }
 
 function fecharPrevia() {
   if ($("previa")) { $("previa").hidden = true; $("previa").innerHTML = ""; }
-  if ($("mensagens")) $("mensagens").hidden = false;
+  if ($("terminal")) { $("terminal").hidden = false; term?.focus(); }
 }
 
 // --- Imersão: o modo imersivo de sempre, numa moldura ---------------------------------------------
@@ -960,7 +927,6 @@ const ACOES = {
     const s = await ocupado(b, () => api("sessao/criar", { nome: $("ns-nome").value, pasta: $("ns-pasta").value, motor, novo, projeto: $("ns-projeto").value, isolada: !novo && $("ns-isolada").checked }));
     await listaSessoes(); await abrirSessao(s.id);
   },
-  "sessao-parar": async () => { await api("sessao/parar", { id: sessaoAberta }); toast("Parando…"); },
   "sessao-excluir": (b) => confirmar(b, "Excluir a sessão? A pasta do projeto fica.", async () => {
     const r = await api("sessao/excluir", { id: sessaoAberta });
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();
@@ -987,7 +953,6 @@ const ACOES = {
     toast("Salvo: " + r.arquivo); await acompanharSessao(); await atualizarArvore();
   },
   anexar: () => $("arquivos").click(),
-  "anexo-tirar": (b) => { const i = Number(b.dataset.i); anexos[i].previa && URL.revokeObjectURL(anexos[i].previa); anexos.splice(i, 1); desenharAnexos(); },
   explorador: () => {
     explorador = !explorador;
     document.querySelector('.conversa-topo [data-acao="explorador"]').setAttribute("aria-pressed", String(explorador));
@@ -1006,18 +971,12 @@ const ACOES = {
   "arvore-recolher": async () => { abertas = new Set(); await carregarPasta("", $("arvore")); },
   "busca-modo": async (b) => { modoBusca = b.dataset.modo; document.querySelectorAll('[data-acao="busca-modo"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b))); await buscarArquivos(); },
   "previa-fechar": fecharPrevia,
-  mencionar: (b) => {
-    const campo = $("texto-sessao");
-    const antes = campo.value.slice(0, campo.selectionStart), depois = campo.value.slice(campo.selectionEnd);
-    const trecho = (antes && !antes.endsWith(" ") ? " " : "") + "@" + b.dataset.caminho + " ";
-    campo.value = antes + trecho + depois; fecharPrevia(); campo.focus();
-  },
+  mencionar: (b) => { fecharPrevia(); escreverNoTerminal("@" + b.dataset.caminho + " "); },
+  "terminal-reabrir": () => abrirTerminal(sessaoAberta),
 };
 
 // O que cada menu de escolha faz com o valor escolhido.
 const ESCOLHAS = {
-  "modelo-sessao": (valor) => ajustarModelo(valor, ""),
-  "esforco-sessao": (valor) => ajustarModelo(sessaoAtual?.modelo || "", valor),
   "conta-sessao": async (valor) => {
     const [motor, conta] = valor.split("|");
     await trocarSessao(motor, conta, !!document.querySelector(".faixa.limite"));
@@ -1061,24 +1020,8 @@ document.addEventListener("change", async (ev) => {
   } catch (erro) { toast(erro.message); if (el.type === "checkbox") el.checked = !el.checked; }
 });
 
-conteudo.addEventListener("submit", async (ev) => {
-  if (ev.target.id !== "compor") return;
-  ev.preventDefault();
-  const campo = $("texto-sessao"), texto = campo.value.trim();
-  if (!texto && !anexos.length) return;
-  try {
-    await ocupado(ev.target.querySelector('button[type="submit"]'), async () => {
-      const nomes = [];
-      for (const p of anexos) nomes.push(await subirAnexo(p.arquivo));
-      await api("sessao/enviar", { id: sessaoAberta, texto, anexos: nomes });
-    });
-    campo.value = ""; limparAnexos(); await acompanharSessao(); await listaSessoes();
-  } catch (erro) { toast(erro.message); }
-});
-
 conteudo.addEventListener("keydown", (ev) => {
-  if (ev.target.id === "texto-sessao" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("compor").requestSubmit(); }
-  else if (ev.key === "Enter" && (ev.target.dataset.nova || ev.target.dataset.novaConta || ev.target.id === "passo-novo")) { ev.preventDefault(); ev.target.closest(".add").querySelector("button").click(); }
+  if (ev.key === "Enter" && (ev.target.dataset.nova || ev.target.dataset.novaConta || ev.target.id === "passo-novo")) { ev.preventDefault(); ev.target.closest(".add").querySelector("button").click(); }
 });
 
 conteudo.addEventListener("input", (ev) => {
@@ -1088,16 +1031,16 @@ conteudo.addEventListener("input", (ev) => {
 });
 
 conteudo.addEventListener("paste", (ev) => {
-  if (!$("compor") || !ev.clipboardData?.files.length || ev.target.id === "md-texto") return;
+  if (!$("terminal") || !ev.clipboardData?.files.length || ev.target.id === "md-texto") return;
   ev.preventDefault(); anexar(ev.clipboardData.files);
 });
 for (const tipo of ["dragenter", "dragover"]) conteudo.addEventListener(tipo, (ev) => {
-  if (!$("compor") || !ev.dataTransfer?.types.includes("Files")) return;
+  if (!$("terminal") || !ev.dataTransfer?.types.includes("Files")) return;
   ev.preventDefault(); document.querySelector(".conversa")?.classList.add("soltando");
 });
 conteudo.addEventListener("dragleave", (ev) => { if (!ev.relatedTarget || !conteudo.contains(ev.relatedTarget)) document.querySelector(".conversa")?.classList.remove("soltando"); });
 conteudo.addEventListener("drop", (ev) => {
-  if (!$("compor") || !ev.dataTransfer?.files.length) return;
+  if (!$("terminal") || !ev.dataTransfer?.files.length) return;
   ev.preventDefault(); document.querySelector(".conversa")?.classList.remove("soltando"); anexar(ev.dataTransfer.files);
 });
 
@@ -1111,6 +1054,7 @@ async function abrir() {
   conteudo.hidden = secao === "imersao";
   conteudo.classList.toggle("cheio", secao === "sessoes");
   clearInterval(relogioSessoes);
+  fecharTerminalTela();
   if (secao === "imersao") { ligarImersao(); return; }
   try {
     const html = await PAGINAS[secao]();
