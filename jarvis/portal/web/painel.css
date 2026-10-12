@@ -64,7 +64,8 @@ nav a[aria-current="page"] {
   color: var(--suave); font: 600 11px var(--sans); letter-spacing: .12em; text-transform: uppercase; cursor: pointer; text-align: left; }
 .grupo-titulo:hover { color: var(--texto); }
 /* Setas desenhadas (chevron): o caractere ▾ fica miúdo em várias fontes. */
-.seta { flex: none; width: 7px; height: 7px; font-size: 0; border: solid var(--acento); border-width: 0 2px 2px 0;
+.grupo-titulo .seta, .escolha-botao .seta { flex: none; width: 7px; height: 7px; font-size: 0;
+  border: solid var(--acento); border-width: 0 2px 2px 0;
   transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
 .grupo-titulo .seta { margin: 0 6px 0 auto; }
 .grupo-titulo[aria-expanded="false"] .seta { transform: rotate(-45deg); }
