@@ -49,13 +49,13 @@ def test_credenciais_criadas_uma_vez_e_so_do_usuario(tmp_path: Path) -> None:
 
 def test_servidor_so_no_endereco_local() -> None:
     rede = json.loads(lk.configuracao(7880, "100.64.0.7"))
-    assert rede["bind_addresses"] == ["127.0.0.1"] and rede["rtc"]["node_ip"] == "100.64.0.7"
+    assert rede["bind_addresses"] == ["127.0.0.1"] and "node_ip" not in rede["rtc"]
     assert rede["rtc"]["ips"]["includes"] == ["127.0.0.1/32", "100.64.0.7/32"]
     casa = json.loads(lk.configuracao(7880, "100.64.0.7", "192.168.0.6"))
     assert casa["rtc"]["ips"]["includes"][-1] == "192.168.0.6/32"
     cfg = json.loads(lk.configuracao(7880))
     assert cfg["bind_addresses"] == ["127.0.0.1"]
-    assert cfg["rtc"]["node_ip"] == "127.0.0.1" and not cfg["rtc"]["use_external_ip"]
+    assert not cfg["rtc"]["use_external_ip"]
     assert (cfg["rtc"]["tcp_port"], cfg["rtc"]["udp_port"]) == (0, 7882)
     assert cfg["rtc"]["ips"]["includes"] == ["127.0.0.1/32"]
     assert cfg["rtc"]["enable_loopback_candidate"]
