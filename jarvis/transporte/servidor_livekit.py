@@ -153,8 +153,8 @@ def configuracao(porta: int = PORTA, ip_rede: str = "", ip_casa: str = "") -> st
                 "tcp_port": 0,
                 "udp_port": porta + 2,
                 "use_external_ip": False,
-                # Sem `node_ip`: com ele, o LiveKit anuncia todos os endereços como esse (NAT 1:1), e o
-                # da rede de casa nunca chegava ao celular (teste de 12/10/2026).
+                # Sem `node_ip`: com ele, o LiveKit anuncia todos os endereços como esse
+                # (NAT 1:1), e o da rede de casa nunca chegava ao celular (12/10/2026).
                 "ips": {"includes": ips},
                 "enable_loopback_candidate": True,
             },
