@@ -21,6 +21,7 @@ from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
 from jarvis.oficina.sessoes import Sessao, SessaoErro
+from jarvis.portal import remoto
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
 from jarvis.presenca import modo as modo_escuta
 from jarvis.voz import chamado, deepgram
@@ -106,6 +107,7 @@ class Acoes:
     def leituras(self) -> dict[str, Leitura]:
         return {
             "estado": self.estado,
+            "remoto": self.remoto,
             "configuracao": self.configuracao,
             "contas": self.contas,
             "inicio": self.inicio,
@@ -129,6 +131,8 @@ class Acoes:
             "voz/apertar": self.apertar,
             "voz/soltar": self.soltar,
             "voz/chamado": self.mudar_chamado,
+            "remoto/ativar": self.ativar_remoto,
+            "remoto/desativar": self.desativar_remoto,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
@@ -223,6 +227,19 @@ class Acoes:
         except ValueError as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {"modo": modo, "aviso": aviso}
+
+    def remoto(self) -> dict[str, Any]:
+        return dict(self.n.estado_remoto())
+
+    def ativar_remoto(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            aviso = self.n.ativar_remoto()
+        except remoto.RemotoErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.remoto(), "aviso": aviso}
+
+    def desativar_remoto(self, dados: dict[str, Any]) -> dict[str, Any]:
+        return {**self.remoto(), "aviso": self.n.desativar_remoto()}
 
     def apertar(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Botão de falar apertado: abre o pedido, como o "Ei Zé"."""

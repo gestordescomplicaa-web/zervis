@@ -24,7 +24,8 @@ log = logging.getLogger(__name__)
 WEB = Path(__file__).with_name("web")
 PORTA = int(os.environ.get("JARVIS_PAINEL_PORTA", "8795"))  # o perfil limpo usa outra
 IMERSIVO = "http://127.0.0.1:8794"  # o modo imersivo (Barehands), embutido na aba Imersão
-VOZ_REMOTA = "ws://127.0.0.1:7880 http://127.0.0.1:7880"  # a sala LiveKit da voz remota
+# A sala LiveKit da voz remota: no próprio PC e, pelo celular, a do `tailscale serve` (8443).
+VOZ_REMOTA = "ws://127.0.0.1:7880 http://127.0.0.1:7880 wss://*.ts.net:8443 https://*.ts.net:8443"
 MAXIMO_CORPO = 64 * 1024
 TIPOS = {
     ".html": "text/html",
@@ -73,6 +74,13 @@ class Portal:
         self.http.daemon_threads = True
         self.porta = self.http.server_port
         self.hosts = {f"127.0.0.1:{self.porta}", f"localhost:{self.porta}"}
+
+    def permitir(self, nome: str) -> None:
+        """Aceita o nome da máquina na rede privada (o `tailscale serve` repassa o Host)."""
+        self.hosts |= {nome, f"{nome}:443"}
+
+    def proibir(self, nome: str) -> None:
+        self.hosts -= {nome, f"{nome}:443"}
 
     @property
     def endereco(self) -> str:

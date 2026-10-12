@@ -61,6 +61,7 @@ from jarvis.nucleo import estados as e
 from jarvis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from jarvis.oficina.manutencao import Manutencao
 from jarvis.oficina.sessoes import FOCO_S, Sessao, SessaoErro, Sessoes
+from jarvis.portal import remoto
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import Portal
 from jarvis.presenca import hyprland
@@ -997,7 +998,10 @@ class Nucleo:
 
     def _ligar_voz_remota(self) -> None:
         """Sobe a sala da voz remota e põe o Zé nela (plano da voz remota, etapa 1)."""
-        if not self.livekit.iniciar():
+        rede = remoto.rede(self.portal.porta) if self.portal is not None else remoto.Rede()
+        if rede.ativo and self.portal is not None:
+            self.portal.permitir(rede.nome)  # o celular já alcançava o painel antes do reinício
+        if not self.livekit.iniciar(rede.ip if rede.ativo else ""):
             return
         chave, segredo = servidor_livekit.credenciais()
         self.remota = SalaRemota(
@@ -1016,6 +1020,30 @@ class Nucleo:
         self.voz.destino = remota.tocador if conectada and remota is not None else None
         self.rostos.marcar("remoto", conectada)
         self.eventos.put(e.AoVivo(conectada))  # conectada, a voz é ao vivo (ADR 0023)
+
+    def estado_remoto(self) -> dict[str, Any]:
+        return remoto.rede(self.portal.porta if self.portal else 0).para_tela()
+
+    def ativar_remoto(self) -> str:
+        """Publica o painel e a sala de voz na rede privada (Voz > Acesso pelo celular)."""
+        if self.portal is None:
+            raise remoto.RemotoErro("Painel indisponível.")
+        rede = remoto.rede(self.portal.porta)
+        if not rede.conectado:
+            raise remoto.RemotoErro("Tailscale desconectado neste computador.")
+        remoto.ativar(self.portal.porta, self.livekit.porta)
+        self.portal.permitir(rede.nome)
+        self.livekit.reiniciar(rede.ip)
+        log.info("acesso pelo celular: %s", rede.endereco)
+        return "Acesso pelo celular ativo."
+
+    def desativar_remoto(self) -> str:
+        rede = remoto.rede(self.portal.porta if self.portal else 0)
+        remoto.desativar()
+        if self.portal is not None and rede.nome:
+            self.portal.proibir(rede.nome)
+        self.livekit.reiniciar("")
+        return "Acesso pelo celular desativado."
 
     def token_voz_remota(self) -> dict[str, str]:
         """Um token curto para o navegador entrar na sala e falar com o Zé."""

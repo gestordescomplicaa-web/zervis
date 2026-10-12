@@ -203,7 +203,7 @@ const PAGINAS = {
   },
 
   async voz() {
-    const [e, o] = await Promise.all([api("estado"), api("escuta")]);
+    const [e, o, r] = await Promise.all([api("estado"), api("escuta"), api("remoto")]);
     const etiqueta = (ok, sim, nao) => `<span class="etiqueta ${ok ? "bom" : "alerta"}">${ok ? sim : nao}</span>`;
     const linha = (titulo, estado, texto) => cartao("", `<div class="cabeca"><h2>${titulo}</h2>${estado}</div>${sub(texto)}`);
     return `${cabeca("Voz")}
@@ -216,10 +216,12 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Ativação</h2><span class="etiqueta bom">${e.chamado === "botao" ? "Só o botão" : "“Ei Zé”"}</span></div>
         ${sub("Como chamar o Zé no microfone deste computador. O botão vale nos dois.")}
         <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Ouve só com o botão apertado. A voz conectada continua ao vivo."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
+      ${cartao("", `<div class="cabeca"><h2>Acesso pelo celular</h2>${etiqueta(r.ativo, "Ativo", r.conectado ? "Inativo" : "Não configurado")}</div>
+        ${sub(r.ativo ? `Abra no celular: <span class="mono">${esc(r.endereco)}</span>` : r.conectado ? "Painel e voz pela rede privada do Tailscale." : "Requer o Tailscale neste computador e no celular, na mesma conta.")}
+        ${r.conectado ? `<div class="linha">${r.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.endereco)}"`) + botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar", "", "principal")}</div>` : ""}`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
-      ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}
-      ${cartao("", `<div class="cabeca"><h2>Conversa contínua</h2><span class="etiqueta">Em breve</span></div>${sub("Escuta contínua com interrupção.")}`)}`;
+      ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;
   },
 };
 
@@ -269,7 +271,8 @@ async function ligarVoz() {
   if (salaVoz) { const sala = salaVoz; fim("Voz desconectada."); return sala.disconnect(); }
   vozConectando = true; desenharVozRemota({ disponivel: true });
   try {
-    const { url, token } = await api("voz/token", {});
+    const { url: local, token } = await api("voz/token", {});
+    const url = ["127.0.0.1", "localhost"].includes(location.hostname) ? local : `wss://${location.hostname}:8443`;
     const sala = new L.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     sala.on(L.RoomEvent.TrackSubscribed, (f) => { if (f.kind === "audio") document.body.appendChild(f.attach()).dataset.voz = ""; });
     sala.on(L.RoomEvent.Disconnected, () => salaVoz === sala && fim());
@@ -1097,6 +1100,9 @@ const ACOES = {
   "terminal-reabrir": () => abrirTerminal(sessaoAberta),
   "modo-fala": (b) => mudarModoFala(b.dataset.modo),
   "voz-remota": ligarVoz,
+  "remoto-ativar": async (b) => { const r = await ocupado(b, () => api("remoto/ativar", {})); toast(r.aviso); await recarregar(); },
+  "remoto-desativar": async (b) => { const r = await ocupado(b, () => api("remoto/desativar", {})); toast(r.aviso); await recarregar(); },
+  "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
   "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
   "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },

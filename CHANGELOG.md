@@ -96,3 +96,6 @@
 - O ícone do Zérvis no menu mostra o estado do Zé com animação: ondas ouvindo, brilho girando na
   borda pensando, pulso falando, âmbar esperando o "sim"; apagado quando inativo. O texto do estado
   saiu do menu (fica na dica do ícone), e o painel confere o estado a cada segundo.
+- Acesso pelo celular (plano da voz remota, etapa 2): na página Voz, Ativar publica o painel e a
+  sala de voz na rede privada do Tailscale (`tailscale serve`, HTTPS válido), e a mídia da voz passa
+  a usar o endereço da máquina nessa rede. Nada fica aberto na internet.
