@@ -234,6 +234,9 @@ main.cheio { padding: 0; overflow: hidden; }
 .modo-fala[data-modo="maos_livres"] .escolha-botao { border-color: var(--borda-forte); }
 .voz-remota { padding: 0 14px 10px; }
 .voz-remota .acao { width: 100%; }
+.falar { padding: 0 14px 10px; }
+.falar button { width: 100%; touch-action: none; user-select: none; }
+.falar button[aria-pressed="true"] { background: var(--acento); color: #041417; border-color: var(--acento); }
 .modos-fala { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
 .modo { display: grid; gap: 4px; padding: 12px 14px; text-align: left; cursor: pointer; border-radius: 12px;
   border: 1px solid var(--borda); background: rgb(70 217 222 / .04); color: var(--texto); font: inherit; }
@@ -317,7 +320,6 @@ details.detalhes p { margin: 8px 0 0; }
 .faixa { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px;
   background: rgb(239 190 124 / .08); border: 1px solid rgb(239 190 124 / .35); color: var(--alerta); }
 .faixa span { margin-right: auto; }
-.contador { color: var(--suave); font-size: 12px; font-variant-numeric: tabular-nums; }
 .cheio { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; color: var(--suave);
   font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .barra { width: 80px; height: 6px; border-radius: 999px; background: rgb(255 255 255 / .1); overflow: hidden; }

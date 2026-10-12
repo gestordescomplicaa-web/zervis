@@ -79,7 +79,7 @@ from jarvis.transporte import servidor_livekit
 from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.local import SERVIDOR, Captura
 from jarvis.transporte.remoto import SalaRemota
-from jarvis.voz import piper
+from jarvis.voz import chamado, piper
 from jarvis.voz.ativacao import VAD, Detector, Features, SemAtivacao, carregar_modelo
 from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro
 from jarvis.voz.escuta import DURACAO_QUADRO_S, Segmentador
@@ -255,6 +255,7 @@ class Nucleo:
         # Só Deepgram (decisão de 09/10/2026): sem a chave o Zé não escuta; painel e teclado
         # continuam. Nada de modelo local de transcrição ocupando a máquina.
         self.modo_fala = modo_fala.ler()  # quando o Zé fala sozinho (ADR 0018)
+        self.chamado = chamado.ler()  # "Ei Zé" ou só o botão (ADR 0022)
         self.deepgram = Deepgram(cfg.caminho("escuta", "chave_deepgram"))
         self.meio_transcricao = "deepgram"
         if not self.deepgram.disponivel:
@@ -575,6 +576,8 @@ class Nucleo:
             case e.Bip():
                 self.status.ativacoes += 1
                 self._tocar_bip()
+            case e.FecharPedido():
+                self._fechar_pelo_botao()
             case e.EnviarAoCerebro(texto):
                 self._abrir_latencia("cerebro")
                 self.marca += 1
@@ -1127,30 +1130,10 @@ class Nucleo:
             voz = self.vad.prever(amostras) >= self.cfg["escuta"]["limiar_vad"]
             if voz:
                 self._fim_fala_em = time.monotonic()
+            self.segmentador.segurando = self.maquina.segurando
             trecho = self.segmentador.quadro(dados, voz)
             if trecho is not None:
-                self.status.tempos["fim_pelo_modelo"] = self.segmentador.fechou_pelo_modelo
-                notas = " ".join(f"{n:.2f}" for n in self.segmentador.notas_do_ultimo)
-                log.info(
-                    "pedido fechado %s (fim de turno: %s)",
-                    "pelo modelo" if self.segmentador.fechou_pelo_modelo else "pelo silêncio",
-                    notas or "sem consulta",
-                )
-                self._transcricao_inicio = time.monotonic()
-                turno = None
-                if self.maquina.estado is e.Estado.OUVINDO:
-                    fim = self._fim_fala_em or self._transcricao_inicio
-                    self._turno_atual = turno = self.latencias.iniciar("voz", fim)
-                    self.latencias.marcar(turno, "fim_fala", fim)
-                    self.latencias.marcar(turno, "pedido_fechado", self._transcricao_inicio)
-                    self.latencias.contexto(
-                        turno,
-                        fim_por="modelo" if self.segmentador.fechou_pelo_modelo else "silencio",
-                    )
-                self._fim_fala_em = None
-                escuta, self.escuta = self.escuta, None
-                self.transcrevendo = self.transcricoes.submit(self._transcrever, trecho, escuta)
-                self.transcrevendo.add_done_callback(partial(self._transcrito, turno=turno))
+                self._pedido_fechado(trecho)
             elif (
                 self.maquina.estado is e.Estado.OUVINDO
                 and not self.segmentador.em_fala
@@ -1164,6 +1147,52 @@ class Nucleo:
             ):
                 log.info("ativação (nota %.3f)", self.detector.nota_disparo)
                 self.tratar(e.Ativacao())
+
+    def _pedido_fechado(self, trecho: bytes, por: str = "") -> None:
+        """O áudio do pedido está completo (pausa, fim de turno ou botão solto): transcreve."""
+        por = por or ("modelo" if self.segmentador.fechou_pelo_modelo else "silencio")
+        self.status.tempos["fim_pelo_modelo"] = self.segmentador.fechou_pelo_modelo
+        notas = " ".join(f"{n:.2f}" for n in self.segmentador.notas_do_ultimo)
+        nomes = {"modelo": "pelo modelo", "silencio": "pelo silêncio", "botao": "pelo botão"}
+        log.info("pedido fechado %s (fim de turno: %s)", nomes[por], notas or "sem consulta")
+        self._transcricao_inicio = time.monotonic()
+        turno = None
+        if self.maquina.estado is e.Estado.OUVINDO:
+            fim = self._fim_fala_em or self._transcricao_inicio
+            self._turno_atual = turno = self.latencias.iniciar("voz", fim)
+            self.latencias.marcar(turno, "fim_fala", fim)
+            self.latencias.marcar(turno, "pedido_fechado", self._transcricao_inicio)
+            self.latencias.contexto(turno, fim_por=por)
+        self._fim_fala_em = None
+        escuta, self.escuta = self.escuta, None
+        self.transcrevendo = self.transcricoes.submit(self._transcrever, trecho, escuta)
+        self.transcrevendo.add_done_callback(partial(self._transcrito, turno=turno))
+
+    def _fechar_pelo_botao(self) -> None:
+        """O botão foi solto: o pedido fecha com o que já foi ouvido; sem fala, nada acontece
+        (e numa confirmação, soltar sem dizer nada não nega)."""
+        self.segmentador.segurando = False
+        if self.transcrevendo is not None:
+            return
+        trecho = self.segmentador.fechar()
+        if trecho is not None:
+            self._pedido_fechado(trecho, "botao")
+        elif self.maquina.estado is e.Estado.OUVINDO:
+            self._fechar_escuta()
+            self.tratar(e.Silencio())
+
+    def apertar(self) -> None:
+        self.eventos.put(e.Apertou())
+
+    def soltar(self) -> None:
+        self.eventos.put(e.Soltou())
+
+    def mudar_chamado(self, modo: str) -> str:
+        """Troca como a pessoa chama o Zé: "Ei Zé" ou só o botão (ADR 0022)."""
+        self.chamado = chamado.gravar(modo)
+        self._ligar_ativacao()
+        log.info("ativação: %s", modo)
+        return f"Ativação: {chamado.NOMES[modo]}."
 
     def _fechar_escuta(self) -> None:
         """Parou de ouvir sem pedido (silêncio, janela fechada): a conexão fecha na hora."""
@@ -1228,9 +1257,9 @@ class Nucleo:
         return f"Pronto: o Zé agora usa os conectores {ligados}."
 
     def _ligar_ativacao(self) -> None:
-        """Sem a chave do Deepgram o chamado não dispara (não haveria quem transcrevesse); no
-        modo silencioso, também não."""
-        ouvir = self.deepgram.disponivel and self.modo_fala != "silencioso"
+        """Sem a chave do Deepgram o chamado não dispara (não haveria quem transcrevesse); com a
+        ativação "Só o botão", também não (ADR 0022)."""
+        ouvir = self.deepgram.disponivel and self.chamado == "voz"
         modelo = self.modelo_ativacao if ouvir else SemAtivacao()
         self.detector.modelo = modelo
         self.detector.limiar = modelo.limiar

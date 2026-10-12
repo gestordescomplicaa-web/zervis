@@ -23,7 +23,7 @@ from jarvis.oficina import arquivos
 from jarvis.oficina.sessoes import Sessao, SessaoErro
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
 from jarvis.presenca import modo as modo_escuta
-from jarvis.voz import deepgram
+from jarvis.voz import chamado, deepgram
 
 MOTORES = [
     {"id": "contas", "nome": "Automático", "detalhe": "Usa as contas dos agentes.", "modelo": ""},
@@ -126,6 +126,9 @@ class Acoes:
             "fala/modo": self.mudar_modo_fala,
             "escuta/modo": self.mudar_escuta,
             "voz/token": self.token_voz,
+            "voz/apertar": self.apertar,
+            "voz/soltar": self.soltar,
+            "voz/chamado": self.mudar_chamado,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
@@ -198,6 +201,7 @@ class Acoes:
             "tela_ts": self._tela_ts(),
             "modo_fala": self.n.modo_fala,
             "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
+            "chamado": self.n.chamado,
             "voz_remota": {
                 "disponivel": self.n.remota is not None,
                 "conectada": self.n.remota is not None and self.n.remota.conectada,
@@ -219,6 +223,21 @@ class Acoes:
         except ValueError as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {"modo": modo, "aviso": aviso}
+
+    def apertar(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Botão de falar apertado: abre o pedido, como o "Ei Zé"."""
+        self.n.apertar()
+        return {}
+
+    def soltar(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self.n.soltar()
+        return {}
+
+    def mudar_chamado(self, dados: dict[str, Any]) -> dict[str, Any]:
+        modo = str(dados.get("modo", ""))
+        if modo not in chamado.MODOS:
+            raise PedidoInvalido("ativação desconhecida")
+        return {"modo": modo, "aviso": self.n.mudar_chamado(modo)}
 
     def token_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Entrar na sala da voz remota pelo navegador (token curto, só microfone)."""

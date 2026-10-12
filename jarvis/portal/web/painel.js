@@ -213,6 +213,9 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Escuta</h2><span class="etiqueta bom">${esc(nomeEscuta(e.escuta.modo))}</span></div>
         ${sub("Quando o chamado “Ei Zé” funciona.")}
         <div class="modos-fala" role="radiogroup" aria-label="Escuta">${MODOS_ESCUTA.map((m) => { const sem = m.valor === "janela" && !e.escuta.janela; return `<button type="button" role="radio" class="modo" data-acao="escuta-modo" data-modo="${m.valor}" aria-checked="${m.valor === e.escuta.modo}" ${sem ? "disabled" : ""}><strong>${m.nome}</strong><small>${sem ? "Requer Hyprland." : m.detalhe}</small></button>`; }).join("")}</div>`)}
+      ${cartao("", `<div class="cabeca"><h2>Ativação</h2><span class="etiqueta bom">${e.chamado === "botao" ? "Só o botão" : "“Ei Zé”"}</span></div>
+        ${sub("Como chamar o Zé. O botão Segurar para falar vale nos dois.")}
+        <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Microfone só enquanto o botão está apertado. Poupa bateria no celular."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}
@@ -223,7 +226,7 @@ const PAGINAS = {
 // --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ------------------------------------
 
 const MODOS_FALA = [
-  { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve o chamado. Tudo fica na tela." },
+  { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala. Tudo fica na tela." },
   { valor: "avisos", nome: "Avisos", curto: "Avisos e urgências", detalhe: "Fala avisos e urgências. Respostas das sessões, só se você pedir." },
   { valor: "maos_livres", nome: "Mãos livres", curto: "Também as respostas", detalhe: "Fala também as respostas das sessões, resumidas." },
 ];
@@ -272,10 +275,45 @@ async function ligarVoz() {
     sala.on(L.RoomEvent.Disconnected, () => salaVoz === sala && fim());
     await sala.connect(url, token);
     await sala.localParticipant.setMicrophoneEnabled(true);
-    salaVoz = sala; toast("Voz conectada.");
+    salaVoz = sala; await microfoneDaSala(false); toast("Voz conectada.");
   } catch (erro) { toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message); }
   vozConectando = false; desenharVozRemota({ disponivel: true });
 }
+
+// --- Segurar para falar (ADR 0022): segurar envia ao soltar; um toque começa e outro envia ---
+
+let falando = false, travado = false, apertouEm = 0, chamadoAtual = "voz";
+const microfoneDaSala = (ligado) => salaVoz && chamadoAtual === "botao" && salaVoz.localParticipant.setMicrophoneEnabled(ligado);
+
+function marcarFalar() {
+  $("falar").setAttribute("aria-pressed", String(falando));
+  $("falar").textContent = !falando ? "Segurar para falar" : travado ? "Toque para enviar" : "Solte para enviar";
+}
+
+async function apertarFalar() {
+  if (travado) return soltarFalar(true);
+  if (falando) return;
+  falando = true; apertouEm = Date.now(); marcarFalar();
+  await microfoneDaSala(true);
+  api("voz/apertar", {}).catch((erro) => toast(erro.message));
+}
+
+async function soltarFalar(enviar) {
+  if (!falando || travado && !enviar) return;
+  if (!enviar && Date.now() - apertouEm < 300) { travado = true; marcarFalar(); return; }
+  falando = travado = false; marcarFalar();
+  // O fim da fala ainda está a caminho (rede e fila do áudio): fecha o pedido 0,3 s depois.
+  await new Promise((ok) => setTimeout(ok, 300));
+  await api("voz/soltar", {}).catch((erro) => toast(erro.message));
+  setTimeout(() => falando || microfoneDaSala(false), 300);
+}
+
+$("falar").addEventListener("pointerdown", (ev) => { ev.preventDefault(); apertarFalar(); });
+$("falar").addEventListener("pointerup", () => soltarFalar(false));
+$("falar").addEventListener("pointercancel", () => soltarFalar(false));
+const editavel = (el) => el.closest?.("input, textarea, select, [contenteditable], .terminal-sessao");
+document.addEventListener("keydown", (ev) => { if (ev.code === "Space" && !ev.repeat && !editavel(ev.target)) { ev.preventDefault(); apertarFalar(); } });
+document.addEventListener("keyup", (ev) => { if (ev.code === "Space" && !editavel(ev.target)) soltarFalar(false); });
 
 // --- Modelos: provedor, modelo e chave ---------------------------------------------------------------
 
@@ -1050,6 +1088,7 @@ const ACOES = {
   "terminal-reabrir": () => abrirTerminal(sessaoAberta),
   "modo-fala": (b) => mudarModoFala(b.dataset.modo),
   "voz-remota": ligarVoz,
+  "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
   "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
 };
 
@@ -1163,6 +1202,7 @@ async function batimento() {
     document.querySelector(".marca .anel").classList.toggle("ativo", e.ze !== "inativo");
     desenharModoFala(e.modo_fala);
     desenharVozRemota(e.voz_remota);
+    if (e.chamado !== chamadoAtual) { chamadoAtual = e.chamado; salaVoz?.localParticipant.setMicrophoneEnabled(chamadoAtual === "voz" || falando); }
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }

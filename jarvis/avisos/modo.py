@@ -6,7 +6,7 @@ Três tipos de fala espontânea, separados:
 - **resposta**: o que o agente da sessão respondeu, resumido para ouvir.
 
 Três modos, trocados a qualquer hora (painel, atalho, voz):
-- **Silencioso**: o Zé não fala nem ouve o chamado; tudo fica na tela.
+- **Silencioso**: o Zé não fala; tudo fica na tela. Como ele ouve é outra escolha (ADR 0022).
 - **Avisos** (padrão): notificações e urgências faladas; a resposta, só se a pessoa pedir.
 - **Mãos livres**: tudo falado, inclusive a resposta da sessão, resumida.
 

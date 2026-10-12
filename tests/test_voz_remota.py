@@ -139,3 +139,25 @@ def test_voz_sai_pelo_destino_quando_ha_um() -> None:
     voz.falar("Oi.")
     assert falas.get(timeout=5) == 1
     assert voz.ultimo_erro is None and sala.quadros and sala.esperou
+
+
+def test_segmentador_segurando_so_fecha_ao_soltar() -> None:
+    from jarvis.voz.escuta import Segmentador
+
+    s = Segmentador(fim_silencio_s=0.16, segurando=True)
+    voz, silencio = b"\1\0" * 1280, b"\0\0" * 1280
+    for q in (voz, voz, silencio, silencio, silencio, silencio):
+        assert s.quadro(q, q is voz) is None  # a pausa não fecha com o botão apertado
+    trecho = s.fechar()
+    assert trecho is not None and trecho.startswith(voz)
+    assert s.fechar() is None  # sem fala, nada
+
+
+def test_ativacao_pelo_botao_guardada(tmp_path: Path) -> None:
+    from jarvis.voz import chamado
+
+    arquivo = tmp_path / "chamado.json"
+    assert chamado.ler(arquivo) == "voz"
+    assert chamado.gravar("botao", arquivo) == "botao" and chamado.ler(arquivo) == "botao"
+    with pytest.raises(ValueError):
+        chamado.gravar("assobio", arquivo)

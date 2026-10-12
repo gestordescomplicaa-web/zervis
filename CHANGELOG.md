@@ -82,3 +82,8 @@
 - O chamado repetido ("Ei Zé" de novo, ou o "Eis é" que o Deepgram às vezes escreve) não vira mais
   "Não consegui entender": o Zé segue ouvindo, e o chamado sai do começo do pedido. Pela voz no
   navegador, a fala que começa durante o bip fica no pedido (o navegador já cancela o eco).
+- Segurar para falar (ADR 0022): botão no menu lateral e espaço; segurar envia ao soltar, um toque
+  começa e outro envia. Nova escolha "Ativação" na página Voz: "Ei Zé" ou Só o botão (no celular,
+  o microfone só transmite com o botão apertado). O Silencioso agora só cala o Zé.
+- Voz pelo navegador: uma reconexão deixava duas faixas de microfone escrevendo juntas e o Zé
+  ouvia frases trocadas; agora vale só a mais recente.

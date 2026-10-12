@@ -36,6 +36,8 @@ class Segmentador:
     fechou_pelo_modelo: bool = False  # o último pedido fechou pelo fim de turno (status)
     notas: list[float] = field(default_factory=list)  # do modelo, nas pausas do pedido atual
     notas_do_ultimo: tuple[float, ...] = ()  # as do último pedido fechado (log)
+    # Botão apertado ("segurar para falar"): pausa não fecha o pedido; fecha ao soltar (`fechar`).
+    segurando: bool = False
 
     @property
     def em_fala(self) -> bool:
@@ -60,10 +62,11 @@ class Segmentador:
         self.coletados.append(dados)
         self.com_voz += int(voz)
         self.silencio = 0 if voz else self.silencio + 1
-        terminou = self.silencio * DURACAO_QUADRO_S >= self.fim_silencio_s
+        terminou = not self.segurando and self.silencio * DURACAO_QUADRO_S >= self.fim_silencio_s
         pelo_modelo = False
         if (
             not terminou
+            and not self.segurando
             and self.fim_de_turno is not None
             and self.com_voz >= 2
             and self.silencio == self.pausa_consulta
@@ -73,6 +76,14 @@ class Segmentador:
         if not (terminou or pelo_modelo) and len(self.coletados) < self.maximo_quadros:
             return None
         self.fechou_pelo_modelo = pelo_modelo
+        self.notas_do_ultimo = tuple(self.notas)
+        trecho = b"".join(self.coletados) if self.com_voz >= 2 else None
+        self.limpar()
+        return trecho
+
+    def fechar(self) -> bytes | None:
+        """Fecha o pedido agora (o botão foi solto); None se não houve fala."""
+        self.fechou_pelo_modelo = False
         self.notas_do_ultimo = tuple(self.notas)
         trecho = b"".join(self.coletados) if self.com_voz >= 2 else None
         self.limpar()

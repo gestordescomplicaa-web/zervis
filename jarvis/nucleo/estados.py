@@ -93,6 +93,16 @@ class Tempo:
     """Batida do relógio do laço, para os prazos."""
 
 
+@dataclass(frozen=True)
+class Apertou:
+    """O botão de falar foi apertado (painel, atalho ou fone): vale como o chamado."""
+
+
+@dataclass(frozen=True)
+class Soltou:
+    """O botão de falar foi solto: o pedido fecha agora."""
+
+
 Evento = (
     Presenca
     | Ativacao
@@ -105,6 +115,8 @@ Evento = (
     | PedidoAprovacao
     | Aviso
     | Tempo
+    | Apertou
+    | Soltou
 )
 
 # --- efeitos -------------------------------------------------------------------------------
@@ -157,6 +169,11 @@ class ReterAviso:
 
 
 @dataclass(frozen=True)
+class FecharPedido:
+    """O botão foi solto: o laço fecha o pedido com o que já ouviu, sem esperar a pausa."""
+
+
+@dataclass(frozen=True)
 class Comando:
     """Pedido resolvido no próprio JARVIS, sem o cérebro ("nova conversa", "relatório de uso")."""
 
@@ -174,9 +191,11 @@ Efeito = (
     | ResponderAprovacao
     | ReterAviso
     | Comando
+    | FecharPedido
 )
 
 PRAZO_ESCUTA_S = 20.0
+PRAZO_SEGURANDO_S = 120.0  # botão apertado: o pedido fecha ao soltar, não no silêncio
 PRAZO_CONVERSA_S = 8.0
 PRAZO_CONFIRMACAO_S = 40.0
 # Resposta à pergunta de confirmação (pedido do usuário, 06/10/2026: entender o que ele fala,
@@ -921,6 +940,7 @@ class Maquina:
     aviso_falando: str | None = None  # aviso em fala; cortado, volta para a fila
     escutar_depois: bool = False  # o aviso em fala abre a escuta ao terminar (mãos livres)
     reperguntou: bool = False  # a confirmação já foi repetida uma vez por resposta confusa
+    segurando: bool = False  # botão de falar apertado: o pedido fecha ao soltar
     prazo_conversa_s: float = PRAZO_CONVERSA_S
     historico: list[Estado] = field(default_factory=list)
     # O laço liga ao Hyprland: o Núcleo é a janela ativa agora? (desambigua "aumenta o brilho")
@@ -974,6 +994,13 @@ class Maquina:
         match evento:
             case Ativacao():
                 return self._ativacao(agora)
+            case Apertou():
+                return self._apertou(agora)
+            case Soltou():
+                if not self.segurando:
+                    return []
+                self.segurando = False
+                return [FecharPedido()]
             case FimDeFala(texto) if self.estado is Estado.OUVINDO and sem_chamado(texto) is None:
                 # Só o chamado de novo (não ouviu o bip, ou repetiu): segue ouvindo, sem "não
                 # entendi".
@@ -1022,6 +1049,7 @@ class Maquina:
         return [AbrirMicrofone()]
 
     def _reiniciar(self) -> None:
+        self.segurando = False
         self._ir(Estado.INATIVO)
         self.autorizado = False
         self.cerebro_terminou = True
@@ -1046,6 +1074,18 @@ class Maquina:
         self.continuacao = False
         self.prazo = agora + PRAZO_ESCUTA_S
         return [*efeitos, Bip()]
+
+    def _apertou(self, agora: float) -> list[Efeito]:
+        """O botão vale como o chamado, com ou sem o "Ei Zé" ligado; numa confirmação, é a
+        resposta que vem."""
+        if self.estado is Estado.CONFIRMANDO:
+            self.segurando = not self.pergunta_falando
+            return []
+        efeitos = [] if self.estado is Estado.OUVINDO else self._ativacao(agora)
+        if self.estado is Estado.OUVINDO:
+            self.segurando = self.autorizado = True
+            self.prazo = agora + PRAZO_SEGURANDO_S
+        return efeitos
 
     def _fim_de_fala(self, texto: str) -> list[Efeito]:
         if self.estado is Estado.CONFIRMANDO and not self.pergunta_falando:

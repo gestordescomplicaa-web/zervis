@@ -1,7 +1,7 @@
 # 0018 — Modos de fala: quando o Zé fala sem ser chamado
 
 - Data: 12/10/2026
-- Status: **Aceito** (pedido do usuário: separar notificação, resposta de sessão e mãos livres; quem
+- Status: **Aceito**; o Silencioso não desliga mais o chamado ([ADR 0022](0022-ativacao-e-segurar-para-falar.md)) (pedido do usuário: separar notificação, resposta de sessão e mãos livres; quem
   desenvolve digitando, por voz ou misturando os dois escolhe)
 
 ## Contexto

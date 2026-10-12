@@ -676,3 +676,29 @@ def test_chamado_repetido_continua_ouvindo_sem_nao_entendi() -> None:
     assert m.tratar(e.FimDeFala("Ei Zé, como vai a Loja?"), 3.0) == [
         e.EnviarAoCerebro("como vai a Loja?")
     ]
+
+
+def test_segurar_para_falar_abre_e_soltar_fecha() -> None:
+    from jarvis.nucleo import estados as e
+
+    m = e.Maquina()
+    assert m.tratar(e.Apertou(), 0.0) == []  # inativo: o botão não abre nada
+    m.tratar(e.Presenca(True), 0.0)
+    assert m.tratar(e.Apertou(), 1.0) == [e.Bip()]
+    assert m.estado is e.Estado.OUVINDO and m.segurando and m.prazo >= 120.0
+    assert m.tratar(e.Soltou(), 5.0) == [e.FecharPedido()]
+    assert not m.segurando and m.tratar(e.Soltou(), 5.1) == []
+    assert m.tratar(e.FimDeFala("como vai a Loja?"), 6.0) == [e.EnviarAoCerebro("como vai a Loja?")]
+
+
+def test_apertar_durante_a_fala_interrompe_e_ouve() -> None:
+    from jarvis.nucleo import estados as e
+
+    m = e.Maquina()
+    m.tratar(e.Presenca(True), 0.0)
+    m.tratar(e.Aviso("A sessão Loja terminou."), 1.0)
+    assert m.estado is e.Estado.FALANDO
+    efeitos = m.tratar(e.Apertou(), 2.0)
+    assert e.CortarFala() in efeitos and e.Bip() in efeitos and m.segurando
+    m.tratar(e.Presenca(False), 3.0)
+    assert not m.segurando  # perdeu o rosto: nada fica apertado
