@@ -502,30 +502,55 @@ let contasSessao = { agentes: [] };
 const contasComLogin = () => contasSessao.agentes.flatMap((ag) =>
   ag.contas.filter((c) => c.logado).map((c) => ({ ...c, motor: ag.id, agente: ag.nome })));
 
-function seletorConta(sessao) {
-  const grupos = contasSessao.agentes.map((ag) => {
-    const opcoes = ag.contas.filter((c) => c.logado || c.id === sessao.conta_id).map((c) =>
-      `<option value="${esc(ag.id)}|${esc(c.id)}" ${c.id === sessao.conta_id ? "selected" : ""}>${esc(ag.nome)} · ${esc(c.nome)}</option>`).join("");
-    return opcoes ? `<optgroup label="${esc(ag.nome)}">${opcoes}</optgroup>` : "";
-  }).join("");
-  return `<select class="seletor-conta" data-mudar="conta-sessao" aria-label="Agente e conta da sessão" title="Trocar de agente ou de conta: a conversa continua" ${sessao.estado === "trabalhando" ? "disabled" : ""}>${grupos}</select>`;
-}
-
 let modelosSessao = { modelos: [], esforcos: {} };
 
+// Menu de escolha próprio do painel (o <select> nativo abre com o tema do sistema, claro no Linux):
+// um botão em pílula com o valor atual e uma lista que abre para cima, com grupos e o ✓ no escolhido.
+function escolha(nome, rotulo, grupos, atual, titulo) {
+  const itens = grupos.map((g) => (g.titulo ? `<div class="escolha-grupo">${esc(g.titulo)}</div>` : "") + g.itens.map((i) =>
+    `<button type="button" role="option" class="escolha-item" data-acao="escolha-item" data-valor="${esc(i.valor)}" aria-selected="${i.valor === atual}">
+      <span class="marca-escolha">${i.valor === atual ? "✓" : ""}</span><span class="texto-escolha"><strong>${esc(i.nome)}</strong>${i.detalhe ? `<small>${esc(i.detalhe)}</small>` : ""}</span></button>`).join("")).join("");
+  return `<div class="escolha" data-escolha="${esc(nome)}">
+    <button type="button" class="escolha-botao" data-acao="escolha-abrir" aria-haspopup="listbox" aria-expanded="false" title="${esc(titulo)}">${esc(rotulo)}<span class="seta" aria-hidden="true">▾</span></button>
+    <div class="escolha-menu" role="listbox" aria-label="${esc(titulo)}" hidden>${itens}</div></div>`;
+}
+
+function fecharEscolhas(exceto) {
+  document.querySelectorAll(".escolha-menu:not([hidden])").forEach((m) => {
+    if (m === exceto) return;
+    m.hidden = true;
+    m.previousElementSibling.setAttribute("aria-expanded", "false");
+  });
+}
+
+function seletorConta(sessao) {
+  const grupos = contasSessao.agentes.map((ag) => ({
+    titulo: ag.nome,
+    itens: ag.contas.filter((c) => c.logado || c.id === sessao.conta_id).map((c) => ({
+      valor: `${ag.id}|${c.id}`, nome: c.nome,
+      detalhe: [c.email, c.plano && c.plano[0].toUpperCase() + c.plano.slice(1)].filter(Boolean).join(" · "),
+    })),
+  })).filter((g) => g.itens.length);
+  const rotulo = `${sessao.agente} · ${sessao.conta || "conta em uso"}`;
+  return escolha("conta-sessao", rotulo, grupos, `${sessao.motor}|${sessao.conta_id}`, "Agente e conta: a conversa continua na troca");
+}
+
 function seletorModelo(sessao) {
-  const opcoes = modelosSessao.modelos.map((m) => `<option value="${esc(m.id)}" ${m.id === sessao.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("");
-  return `<select class="seletor-modelo" data-mudar="modelo-sessao" aria-label="Modelo" title="Modelo dos próximos pedidos">
-    <option value="" ${sessao.modelo ? "" : "selected"}>Modelo padrão</option>${opcoes}</select>`;
+  const atual = modelosSessao.modelos.find((m) => m.id === sessao.modelo);
+  const itens = [{ valor: "", nome: "Padrão da conta" },
+    ...modelosSessao.modelos.map((m) => ({ valor: m.id, nome: m.nome }))];
+  return escolha("modelo-sessao", atual ? atual.nome : "Modelo padrão", [{ itens }], sessao.modelo || "", "Modelo dos próximos pedidos");
 }
 
 function seletorEsforco(sessao) {
   const modelo = modelosSessao.modelos.find((m) => m.id === sessao.modelo);
   if (!modelo || !modelo.esforcos.length) return "";
-  const padrao = modelosSessao.esforcos[modelo.padrao] || "padrão";
-  const opcoes = modelo.esforcos.map((e) => `<option value="${esc(e)}" ${e === sessao.esforco ? "selected" : ""}>Esforço: ${esc((modelosSessao.esforcos[e] || e).toLowerCase())}</option>`).join("");
-  return `<select class="seletor-esforco" data-mudar="esforco-sessao" aria-label="Esforço de raciocínio" title="Quanto o modelo pensa antes de responder">
-    <option value="" ${sessao.esforco ? "" : "selected"}>Esforço: ${esc(padrao.toLowerCase())}</option>${opcoes}</select>`;
+  const nome = (e) => (modelosSessao.esforcos[e] || e);
+  const padrao = modelo.padrao ? nome(modelo.padrao).toLowerCase() : "padrão";
+  const itens = [{ valor: "", nome: `Padrão do modelo (${padrao})` },
+    ...modelo.esforcos.map((e) => ({ valor: e, nome: nome(e) }))];
+  const rotulo = `Esforço: ${sessao.esforco ? nome(sessao.esforco).toLowerCase() : padrao}`;
+  return escolha("esforco-sessao", rotulo, [{ itens }], sessao.esforco || "", "Quanto o modelo pensa antes de responder");
 }
 
 const ajustesSessao = (sessao) => `${seletorConta(sessao)}${seletorModelo(sessao)}${seletorEsforco(sessao)}`;
@@ -545,7 +570,8 @@ let sessaoAtual = null;
 
 // Enquanto o agente trabalha, conta e modelo ficam travados (valem para o próximo pedido).
 function travarAjustes(trabalhando) {
-  document.querySelectorAll("#ajustes-sessao select").forEach((el) => { el.disabled = trabalhando; });
+  document.querySelectorAll("#ajustes-sessao .escolha-botao").forEach((el) => { el.disabled = trabalhando; });
+  if (trabalhando) fecharEscolhas();
 }
 
 async function ajustarModelo(modelo, esforco) {
@@ -939,6 +965,19 @@ const ACOES = {
     const r = await api("sessao/excluir", { id: sessaoAberta });
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();
   }),
+  "escolha-abrir": (b) => {
+    const menu = b.nextElementSibling, abrir = menu.hidden;
+    fecharEscolhas(menu);
+    menu.hidden = !abrir;
+    b.setAttribute("aria-expanded", String(abrir));
+    if (abrir) (menu.querySelector('[aria-selected="true"]') || menu.querySelector(".escolha-item"))?.focus();
+  },
+  "escolha-item": async (b) => {
+    const caixa = b.closest(".escolha"), valor = b.dataset.valor;
+    fecharEscolhas();
+    if (b.getAttribute("aria-selected") === "true") return;
+    await ESCOLHAS[caixa.dataset.escolha]?.(valor);
+  },
   "limite-continuar": async (b) => { await ocupado(b, () => trocarSessao(b.dataset.motor, b.dataset.conta, true)); },
   "md-abrir": () => { $("editor-md").hidden = false; $("md-nome").focus(); },
   "md-fechar": () => { $("editor-md").hidden = true; },
@@ -975,19 +1014,33 @@ const ACOES = {
   },
 };
 
+// O que cada menu de escolha faz com o valor escolhido.
+const ESCOLHAS = {
+  "modelo-sessao": (valor) => ajustarModelo(valor, ""),
+  "esforco-sessao": (valor) => ajustarModelo(sessaoAtual?.modelo || "", valor),
+  "conta-sessao": async (valor) => {
+    const [motor, conta] = valor.split("|");
+    await trocarSessao(motor, conta, !!document.querySelector(".faixa.limite"));
+  },
+};
+
 const MUDAR = {
   automacao: async (el) => { await api("automacao/ativar", { id: el.dataset.id, ativo: el.checked }); await recarregar(); },
   skill: async (el) => { await api("skill/ligar", { nome: el.dataset.nome, ligada: el.checked }); toast(el.checked ? "Ligada." : "Desligada."); await recarregar(); },
   conector: async (el) => { await api("conector/ligar", { nome: el.dataset.nome, ligado: el.checked }); await recarregar(); },
   "via-ligada": () => {},
-  "modelo-sessao": (el) => ajustarModelo(el.value, ""),
-  "esforco-sessao": (el) => ajustarModelo(sessaoAtual?.modelo || "", el.value),
-  "conta-sessao": async (el) => {
-    const [motor, conta] = el.value.split("|");
-    const limite = $("limite-sessao")?.dataset.limite === "true" || !!document.querySelector(".faixa.limite");
-    await trocarSessao(motor, conta, limite);
-  },
+
 };
+
+document.addEventListener("click", (ev) => { if (!ev.target.closest(".escolha")) fecharEscolhas(); }, true);
+document.addEventListener("keydown", (ev) => {
+  const menu = ev.target.closest?.(".escolha-menu");
+  if (ev.key === "Escape" && document.querySelector(".escolha-menu:not([hidden])")) { fecharEscolhas(); return; }
+  if (!menu || !["ArrowDown", "ArrowUp"].includes(ev.key)) return;
+  ev.preventDefault();
+  const itens = [...menu.querySelectorAll(".escolha-item")], i = itens.indexOf(ev.target);
+  itens[(i + (ev.key === "ArrowDown" ? 1 : itens.length - 1)) % itens.length]?.focus();
+});
 
 document.addEventListener("click", async (ev) => {
   const b = ev.target.closest("[data-acao]");
