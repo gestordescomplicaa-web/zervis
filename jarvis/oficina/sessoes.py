@@ -105,6 +105,10 @@ class Sessao:
     fios: dict[str, str] = field(default_factory=dict)
     vistos: dict[str, int] = field(default_factory=dict)
     passagem: str = ""
+    # O último pedido de quem usa e se ele bateu no limite da conta: trocando de conta, o Zé
+    # o manda de novo e o trabalho continua de onde parou.
+    ultimo_pedido: str = ""
+    limite: bool = False
 
     @property
     def onde(self) -> Path:
@@ -338,13 +342,18 @@ class Sessoes:
             raise SessaoErro("essa sessão ainda está trabalhando; espere ou pare")
         if len(self.trabalhando()) >= MAXIMO_TRABALHANDO:
             raise SessaoErro(f"já há {MAXIMO_TRABALHANDO} sessões trabalhando")
-        self.anotar(id_, quem, texto or "(anexos)", anexos)
+        if quem == "continuacao":  # o mesmo pedido de novo, noutra conta: anotado como do Zé
+            self.anotar(id_, "sistema", f"Continuando o pedido: {texto[:300]}")
+        else:
+            self.anotar(id_, quem, texto or "(anexos)", anexos)
+        if quem == "usuario":
+            self._mudar(id_, ultimo_pedido=texto)
         if caminhos:  # o agente recebe os caminhos; imagens e PDFs ele lê com o Read
             lista = "\n".join(f"- {c}" for c in caminhos)
             texto = f"{texto}\n\nAnexos do usuário (leia antes de responder):\n{lista}".strip()
         if s.passagem:  # depois de uma troca: o agente novo recebe o que perdeu
             texto = f"{s.passagem}\n\nPedido agora:\n{texto}"
-        s = self._mudar(id_, estado="trabalhando", passagem="")
+        s = self._mudar(id_, estado="trabalhando", passagem="", limite=False)
         laco = asyncio.new_event_loop()
         pronto = threading.Event()
 
@@ -372,6 +381,7 @@ class Sessoes:
         except LimiteErro:
             conta = _nome_da_conta(s)
             estado, resumo = "erro", f"a conta {conta} do {NOMES_MOTORES[s.motor]} bateu o limite"
+            self._mudar(s.id, limite=True)
             self.anotar(
                 s.id,
                 "sistema",
@@ -436,6 +446,13 @@ class Sessoes:
         aviso = f"Agora com o {NOMES_MOTORES[motor]} · {nova.nome}: {como}."
         self.anotar(id_, "sistema", aviso)
         return s, aviso
+
+    def continuar(self, id_: str) -> Sessao:
+        """Manda de novo o pedido que bateu no limite (depois de trocar de conta ou de agente)."""
+        s = self.ler(id_)
+        if not s.ultimo_pedido:
+            raise SessaoErro("não há pedido para continuar")
+        return self.enviar(id_, s.ultimo_pedido, quem="continuacao")
 
     def passagem(self, s: Sessao, motor: str) -> str:
         """O que o agente que assume precisa saber: o objetivo, o que aconteceu desde a última vez
@@ -601,16 +618,26 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
                         )
             elif isinstance(msg, ResultMessage):
                 sessoes._mudar(s.id, sdk_sessao=msg.session_id)
+                if msg.is_error and LIMITE.search(f"{msg.result or ''} {msg.subtype or ''}"):
+                    raise LimiteErro(msg.result or msg.subtype or "limite")
                 if msg.is_error:
                     raise RuntimeError(msg.subtype or "erro")
+                if LIMITE.search(ultimo) and len(ultimo) < 300:  # "usage limit reached|…"
+                    raise LimiteErro(ultimo)
     return _resumo_de(ultimo) if ultimo else "terminou sem dizer nada"
 
 
 # --- motor Codex ----------------------------------------------------------------------------
 
 
-# Como o Codex avisa que a conta acabou ("You've hit your usage limit", "rate limit reached").
-LIMITE_CODEX = re.compile(r"usage limit|rate limit|quota", re.IGNORECASE)
+# Como os agentes avisam que a conta acabou: o Codex ("You've hit your usage limit", "rate limit
+# reached", "insufficient_quota") e o Claude ("Claude AI usage limit reached", "credit balance is
+# too low", "out of extra usage").
+LIMITE = re.compile(
+    r"usage limit|rate limit|quota|credit balance|out of (extra )?usage|limite de uso",
+    re.IGNORECASE,
+)
+LIMITE_CODEX = LIMITE
 
 
 def _comando_codex(s: Sessao, texto: str) -> list[str]:

@@ -481,6 +481,8 @@ class Acoes:
             "isolada": s.isolada,
             "branch": s.branch,
             "estado": "trabalhando" if s.id in self.n.sessoes.trabalhando() else s.estado,
+            "conta_id": s.conta,
+            "limite": s.limite,
             "resumo": s.resumo,
             "atualizada": s.atualizada,
         }
@@ -586,11 +588,16 @@ class Acoes:
         return {"arquivo": relativo}
 
     def trocar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Troca agente ou conta; com `continuar`, manda de novo o pedido que bateu no limite."""
+        id_ = str(dados.get("id", ""))
         s, aviso = self._chamar(
             lambda: self.n.sessoes.trocar(
-                str(dados.get("id", "")), str(dados.get("motor", "")), str(dados.get("conta", ""))
+                id_, str(dados.get("motor", "")), str(dados.get("conta", ""))
             )
         )
+        if dados.get("continuar") and s.ultimo_pedido:
+            s = self._chamar(lambda: self.n.sessoes.continuar(id_))
+            aviso += " Continuando o pedido."
         return {**self._sessao(s), "aviso": aviso}
 
     def parar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:

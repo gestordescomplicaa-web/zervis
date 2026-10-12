@@ -50,3 +50,7 @@
   agente, a conversa nativa vai para a conta nova e continua inteira; noutro agente, ele recebe a
   passagem do que já foi feito e, ao voltar, retoma a própria conversa com o que mudou. Botão
   Trocar na sessão, ferramenta `sessao_trocar` no cérebro e aviso quando a conta bate o limite.
+- Créditos esgotados avisados na tela: quando a conta do agente bate o limite, a sessão mostra
+  "Créditos esgotados" com botões "Continuar com <outra conta>", que trocam de conta e mandam de
+  novo o pedido que ficou sem resposta. O agente e a conta da sessão se trocam ali mesmo, num
+  seletor no cabeçalho.

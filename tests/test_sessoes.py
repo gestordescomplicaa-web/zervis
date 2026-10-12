@@ -278,3 +278,39 @@ def test_trocar_de_conta_copia_a_conversa_e_de_agente_leva_a_passagem(
     assert "- usuário: faça o carrinho" not in s.passagem  # o que ele já viu não se repete
     with pytest.raises(SessaoErro):
         sessoes.trocar(s.id, "claude", trabalho.id)  # conta de outro agente
+
+
+def test_creditos_esgotados_avisam_e_a_outra_conta_continua_o_mesmo_pedido(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from jarvis.cerebro import contas
+    from jarvis.oficina.sessoes import LimiteErro
+
+    cs = contas.Contas(tmp_path / "contas.json", tmp_path / "pastas")
+    monkeypatch.setattr(contas, "Contas", lambda: cs)
+    gratuita = cs.adicionar("codex", "Gratuita")
+    recebidos: list[tuple[str, str]] = []
+
+    async def rodar(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+        recebidos.append((s.conta, texto))
+        if s.conta == "codex:padrao":
+            raise LimiteErro("You've hit your usage limit")
+        return "Feito."
+
+    fim: list[tuple[str, str]] = []
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: fim.append((s.estado, r)), rodar)
+    s = sessoes.criar("Loja", str(raiz / "projetos" / "loja"), motor="codex")
+    sessoes.enviar(s.id, "termine o checkout")
+    esperar(lambda: len(fim) == 1)
+    s = sessoes.ler(s.id)
+    assert s.limite and s.ultimo_pedido == "termine o checkout"
+    assert fim[0] == ("erro", "a conta Padrão do Codex bateu o limite")
+    assert "atingiu o limite" in sessoes.mensagens(s.id)[-1]["texto"]
+    sessoes.trocar(s.id, "codex", gratuita.id)
+    sessoes.continuar(s.id)
+    esperar(lambda: len(fim) == 2)
+    conta, texto = recebidos[-1]  # o mesmo pedido, na outra conta (com a passagem: não havia fio)
+    assert conta == gratuita.id and texto.endswith("Pedido agora:\ntermine o checkout")
+    assert not sessoes.ler(s.id).limite and fim[-1] == ("parada", "Feito.")
+    textos = [m["texto"] for m in sessoes.mensagens(s.id)]
+    assert "Continuando o pedido: termine o checkout" in textos

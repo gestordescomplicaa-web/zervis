@@ -9,6 +9,7 @@ const conteudo = document.getElementById("conteudo");
 
 const ESTADOS = { inativo: "inativo", ativo: "pronto", ouvindo: "ouvindo", pensando: "pensando", falando: "falando", confirmando: "esperando o seu sim" };
 const ESTADO_SESSAO = { parada: "pronta", trabalhando: "trabalhando", erro: "erro" };
+const estadoSessao = (s) => (s.limite ? "sem créditos" : ESTADO_SESSAO[s.estado] || s.estado);
 const TIPO_AUTOMACAO = { lembrete: "Lembrete", pergunta: "Pergunta ao Zé" };
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };
 const NOME_MOTOR = { plano: "Claude", openai: "OpenAI", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
@@ -478,19 +479,52 @@ async function formSessao() {
     <div class="linha">${botao("Criar", "ns-criar", "", "principal")}<span class="resultado" id="ns-resultado"></span></div>`)}</div>`;
 }
 
+// Agente e conta da sessão, trocáveis ali mesmo; a faixa avisa quando a conta acabou.
+let contasSessao = { agentes: [] };
+
+const contasComLogin = () => contasSessao.agentes.flatMap((ag) =>
+  ag.contas.filter((c) => c.logado).map((c) => ({ ...c, motor: ag.id, agente: ag.nome })));
+
+function seletorConta(sessao) {
+  const grupos = contasSessao.agentes.map((ag) => {
+    const opcoes = ag.contas.filter((c) => c.logado || c.id === sessao.conta_id).map((c) =>
+      `<option value="${esc(ag.id)}|${esc(c.id)}" ${c.id === sessao.conta_id ? "selected" : ""}>${esc(ag.nome)} · ${esc(c.nome)}${c.email ? " (" + esc(c.email) + ")" : ""}</option>`).join("");
+    return opcoes ? `<optgroup label="${esc(ag.nome)}">${opcoes}</optgroup>` : "";
+  }).join("");
+  return `<select class="seletor-conta" data-mudar="conta-sessao" aria-label="Agente e conta da sessão" title="Trocar de agente ou de conta: a conversa continua" ${sessao.estado === "trabalhando" ? "disabled" : ""}>${grupos}</select>`;
+}
+
+function faixaLimite(sessao) {
+  if (!sessao.limite) return "";
+  const outras = contasComLogin().filter((c) => c.id !== sessao.conta_id)
+    .sort((a, b) => Number(b.motor === sessao.motor) - Number(a.motor === sessao.motor));
+  const botoes = outras.map((c) => botao(`Continuar com ${esc(c.agente)} · ${esc(c.nome)}`, "limite-continuar",
+    `data-motor="${esc(c.motor)}" data-conta="${esc(c.id)}"`, "principal")).join("");
+  return `<div class="faixa limite" role="alert"><div><strong>Créditos esgotados</strong>
+    <span>A conta ${esc(sessao.conta)} do ${esc(sessao.agente)} atingiu o limite de uso. Escolha outra conta para continuar de onde parou.</span></div>
+    <div class="botoes">${botoes || '<span class="nota">Nenhuma outra conta com login. Adicione uma em Modelos → Contas.</span>'}</div></div>`;
+}
+
+async function trocarSessao(motor, conta, continuar) {
+  const r = await api("sessao/trocar", { id: sessaoAberta, motor, conta, continuar });
+  toast(r.aviso);
+  await abrirSessao(sessaoAberta);
+}
+
 async function abrirSessao(id) {
   sessaoAberta = id;
   vistas = 0;
   document.querySelectorAll(".item-sessao").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === id)));
-  const { sessao, mensagens } = await api("sessao/ler", { id, desde: 0 });
+  const [{ sessao, mensagens }, ct] = await Promise.all([api("sessao/ler", { id, desde: 0 }), api("contas")]);
+  contasSessao = ct;
   const lado = $("lado-sessao");
   const trabalhando = sessao.estado === "trabalhando";
   lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
-      <h2>${esc(sessao.nome)}</h2><span class="etiqueta" title="Agente e conta desta sessão">${esc([sessao.agente, sessao.conta].filter(Boolean).join(" · "))}</span><span class="etiqueta ${trabalhando ? "bom" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${ESTADO_SESSAO[sessao.estado] || esc(sessao.estado)}</span>
-      <div class="botoes">${botao("Trocar", "troca-abrir", trabalhando ? "hidden" : "")}${botao("Novo arquivo", "md-abrir")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}
+      <h2>${esc(sessao.nome)}</h2>${seletorConta(sessao)}<span class="etiqueta ${trabalhando ? "bom" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
+      <div class="botoes">${botao("Novo arquivo", "md-abrir")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}
         ${botao("Parar", "sessao-parar", trabalhando ? "" : "hidden", "discreta")}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
-    <section class="troca" id="troca" hidden></section>
+    <div id="limite-sessao">${faixaLimite(sessao)}</div>
     <div class="mensagens" id="mensagens">${mensagens.map(linhaMensagem).join("")}</div>
     <section class="previa-arquivo" id="previa" hidden></section>
     <form class="compor" id="compor">
@@ -538,10 +572,17 @@ async function acompanharSessao() {
   const etiqueta = $("estado-sessao");
   if (etiqueta.dataset.estado === "trabalhando" && sessao.estado !== "trabalhando") atualizarArvore();
   etiqueta.dataset.estado = sessao.estado;
-  etiqueta.textContent = ESTADO_SESSAO[sessao.estado] || sessao.estado;
+  etiqueta.textContent = estadoSessao(sessao);
+  etiqueta.classList.toggle("alerta", !!sessao.limite);
   etiqueta.classList.toggle("bom", sessao.estado === "trabalhando");
   document.querySelector('[data-acao="sessao-parar"]').hidden = sessao.estado !== "trabalhando";
-  document.querySelector('[data-acao="troca-abrir"]').hidden = sessao.estado === "trabalhando";
+  const seletor = document.querySelector(".seletor-conta");
+  if (seletor) seletor.disabled = sessao.estado === "trabalhando";
+  const faixa = $("limite-sessao");
+  if (faixa && faixa.dataset.limite !== String(sessao.limite)) {
+    faixa.dataset.limite = String(sessao.limite);
+    faixa.innerHTML = faixaLimite(sessao);
+  }
 }
 
 async function prepararSessoes() {
@@ -839,30 +880,7 @@ const ACOES = {
     const r = await api("sessao/excluir", { id: sessaoAberta });
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();
   }),
-  "troca-abrir": async () => {
-    const ct = await api("contas");
-    const caixa = $("troca");
-    const opcoes = (agente) => (ct.agentes.find((a) => a.id === agente)?.contas || [])
-      .filter((c) => c.logado).map((c) => `<option value="${esc(c.id)}">${esc(c.nome)}${c.email ? " · " + esc(c.email) : ""}</option>`).join("");
-    caixa.innerHTML = `<div class="linha"><div class="segmentos" role="group" aria-label="Agente">${botao("Claude", "troca-agente", 'data-motor="claude" aria-pressed="true"')}${botao("Codex", "troca-agente", 'data-motor="codex" aria-pressed="false"')}</div>
-      <select id="troca-conta" aria-label="Conta">${opcoes("claude")}</select>
-      ${botao("Trocar", "troca-fazer", "", "principal")}${botao("Cancelar", "troca-fechar", "", "discreta")}</div>
-      <p class="nota">A conversa continua: na mesma agente, inteira; no outro, com a passagem do que já foi feito.</p>`;
-    caixa.dataset.contas = JSON.stringify(ct.agentes.map((a) => [a.id, opcoes(a.id)]));
-    caixa.hidden = false;
-  },
-  "troca-agente": (b) => {
-    document.querySelectorAll('[data-acao="troca-agente"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    $("troca-conta").innerHTML = new Map(JSON.parse($("troca").dataset.contas)).get(b.dataset.motor) || "";
-  },
-  "troca-fechar": () => { $("troca").hidden = true; },
-  "troca-fazer": async (b) => {
-    const motor = document.querySelector('[data-acao="troca-agente"][aria-pressed="true"]').dataset.motor;
-    const conta = $("troca-conta").value;
-    if (!conta) { toast("Nenhuma conta com login para esse agente."); return; }
-    const r = await ocupado(b, () => api("sessao/trocar", { id: sessaoAberta, motor, conta }));
-    toast(r.aviso); await abrirSessao(sessaoAberta);
-  },
+  "limite-continuar": async (b) => { await ocupado(b, () => trocarSessao(b.dataset.motor, b.dataset.conta, true)); },
   "md-abrir": () => { $("editor-md").hidden = false; $("md-nome").focus(); },
   "md-fechar": () => { $("editor-md").hidden = true; },
   "md-salvar": async (b) => {
@@ -903,6 +921,11 @@ const MUDAR = {
   skill: async (el) => { await api("skill/ligar", { nome: el.dataset.nome, ligada: el.checked }); toast(el.checked ? "Ligada." : "Desligada."); await recarregar(); },
   conector: async (el) => { await api("conector/ligar", { nome: el.dataset.nome, ligado: el.checked }); await recarregar(); },
   "via-ligada": () => {},
+  "conta-sessao": async (el) => {
+    const [motor, conta] = el.value.split("|");
+    const limite = $("limite-sessao")?.dataset.limite === "true" || !!document.querySelector(".faixa.limite");
+    await trocarSessao(motor, conta, limite);
+  },
 };
 
 document.addEventListener("click", async (ev) => {
