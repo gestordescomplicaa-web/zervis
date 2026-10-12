@@ -763,7 +763,12 @@ class Nucleo:
         manutenção fala pelo próprio aperto de mão (o Resumo falado), salvo se falhar."""
         if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
             return
-        if sessao.estado == "erro":
+        if sessao.estado == "erro" and "bateu o limite" in resumo:
+            self._aviso_da_oficina(
+                f"Na sessão {sessao.nome}, {resumo}. Posso trocar de conta ou de agente; a "
+                "conversa continua."
+            )
+        elif sessao.estado == "erro":
             self._aviso_da_oficina(f"A sessão {sessao.nome} falhou; veja no painel.")
         else:
             self._aviso_da_oficina(f"A sessão {sessao.nome} terminou: {resumo}")

@@ -46,3 +46,7 @@
 - O Codex é motor das sessões de código: ao criar uma sessão, escolhe-se Claude ou Codex; o Codex
   roda pelo `codex exec` na conta da sessão, escreve só na pasta do projeto e continua a mesma
   conversa nos pedidos seguintes. O cabeçalho da sessão mostra o agente e a conta.
+- Troca de agente ou de conta no meio da sessão, sem perder a conversa (ADR 0016): na mesma
+  agente, a conversa nativa vai para a conta nova e continua inteira; noutro agente, ele recebe a
+  passagem do que já foi feito e, ao voltar, retoma a própria conversa com o que mudou. Botão
+  Trocar na sessão, ferramenta `sessao_trocar` no cérebro e aviso quando a conta bate o limite.

@@ -358,3 +358,5 @@ details.alternativa { border-top:1px solid var(--borda); padding-top:12px; }
 details.alternativa summary { cursor:pointer; color:var(--suave); font-size:14px; }
 details.alternativa[open] summary { margin-bottom:12px; }
 details.alternativa .nota a { margin-right:6px; }
+.troca { padding:12px 16px; border-bottom:1px solid var(--borda); display:grid; gap:8px; }
+.troca select { min-width:200px; }

@@ -235,3 +235,46 @@ def test_o_motor_codex_anota_guarda_o_fio_e_continua_com_resume(
         "fio-1",
         "agora o resto",
     ]
+
+
+def test_trocar_de_conta_copia_a_conversa_e_de_agente_leva_a_passagem(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from jarvis.cerebro import contas
+
+    cs = contas.Contas(tmp_path / "contas.json", tmp_path / "pastas")
+    monkeypatch.setattr(contas, "Contas", lambda: cs)
+    pessoal, trabalho = cs.listar("codex")[0], cs.adicionar("codex", "Trabalho")
+    rollout = pessoal.onde / "sessions/2026/10/12/rollout-x-fio-codex.jsonl"
+    rollout.parent.mkdir(parents=True)
+    rollout.write_text("{}\n")
+
+    async def rodar(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+        sessoes.anotar(s.id, "agente", f"[{s.motor}] recebi: {texto[:40]}")
+        sessoes._mudar(s.id, sdk_sessao=s.sdk_sessao or f"fio-{s.motor}")
+        return "ok."
+
+    fim: list[str] = []
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: fim.append(r), rodar)
+    s = sessoes.criar("Loja", str(raiz / "projetos" / "loja"), motor="codex")
+    sessoes.enviar(s.id, "faça o carrinho")
+    esperar(lambda: len(fim) == 1)
+    # Mesma agente, outra conta: a conversa nativa vai junto, sem passagem.
+    s, aviso = sessoes.trocar(s.id, "codex", trabalho.id)
+    assert (trabalho.onde / "sessions/2026/10/12/rollout-x-fio-codex.jsonl").exists()
+    assert s.sdk_sessao == "fio-codex" and not s.passagem and "mesma conversa" in aviso
+    # Outro agente: começa com a passagem do que já foi feito.
+    s, aviso = sessoes.trocar(s.id, "claude")
+    assert s.motor == "claude" and s.sdk_sessao == "" and "passagem" in aviso
+    assert "faça o carrinho" in s.passagem and "Codex" in s.passagem
+    sessoes.enviar(s.id, "agora o frete")
+    esperar(lambda: len(fim) == 2)
+    assert "[Passagem do Zé]" in sessoes.mensagens(s.id)[-1]["texto"]  # o Claude recebeu
+    assert sessoes.ler(s.id).fios == {"codex": "fio-codex", "claude": "fio-claude"}
+    # De volta ao Codex: retoma a conversa dele e recebe só o que veio depois.
+    s, aviso = sessoes.trocar(s.id, "codex", trabalho.id)
+    assert s.sdk_sessao == "fio-codex" and "retoma a conversa dele" in aviso
+    assert "- usuário: agora o frete" in s.passagem  # o que veio depois da última vez dele
+    assert "- usuário: faça o carrinho" not in s.passagem  # o que ele já viu não se repete
+    with pytest.raises(SessaoErro):
+        sessoes.trocar(s.id, "claude", trabalho.id)  # conta de outro agente

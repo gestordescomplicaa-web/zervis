@@ -136,6 +136,7 @@ class Acoes:
             "sessao/ler": self.ler_sessao,
             "sessao/enviar": self.enviar_a_sessao,
             "sessao/parar": self.parar_sessao,
+            "sessao/trocar": self.trocar_sessao,
             "sessao/arquivo": self.criar_arquivo,
             "sessao/arquivos": self.arquivos,
             "sessao/ver": self.ver_arquivo,
@@ -583,6 +584,14 @@ class Acoes:
             )
         )
         return {"arquivo": relativo}
+
+    def trocar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        s, aviso = self._chamar(
+            lambda: self.n.sessoes.trocar(
+                str(dados.get("id", "")), str(dados.get("motor", "")), str(dados.get("conta", ""))
+            )
+        )
+        return {**self._sessao(s), "aviso": aviso}
 
     def parar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         return self._sessao(self._chamar(lambda: self.n.sessoes.parar(str(dados.get("id", "")))))

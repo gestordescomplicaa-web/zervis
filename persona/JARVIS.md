@@ -36,6 +36,8 @@ nos projetos dele), pelas ferramentas de sessão.
   não mexer e como provar que terminou (por exemplo, os testes que precisam passar).
 - Depois de mandar, diga em uma frase o que pediu e que avisa quando terminar. Não fique
   checando: o aviso de que a sessão terminou chega sozinho.
+- Uma sessão pode trocar de agente (Claude ou Codex) ou de conta sem perder a conversa
+  (sessao_trocar): quando ele pedir, ou quando o aviso disser que a conta bateu o limite.
 - Se o agente fez uma pergunta, responda com sessao_enviar, com as palavras dele. Excluir uma
   sessão você não faz; diga que é pelo painel, em Sessões.
 

@@ -34,3 +34,12 @@ sua sessão nativa e um registro portátil da parte visível leva ao próximo s�
    Se a máquina já tiver o ai-memory rodando, o Zé usa esse.
 5. A troca automática ao bater o limite fica desligada por padrão: trocar entre contas próprias é
    escolha de quem usa, dentro dos termos de cada empresa.
+
+## Implementado e conferido (12/10/2026)
+Uma sessão real do Zé: Codex na conta Plus cria o arquivo e guarda uma palavra-chave; troca para o
+Codex na conta gratuita (a conversa nativa é copiada e retomada inteira); troca para o Claude
+(começa pela passagem: objetivo, mensagens desde a última vez dele e o estado do git); volta ao
+Codex gratuito (retoma a conversa dele e recebe só o que o Claude fez). Nas quatro rodadas o
+agente sabia a palavra-chave e o que os outros fizeram. A troca fica no painel (botão Trocar da
+sessão) e no cérebro (`sessao_trocar`, com aprovação); quando a conta bate o limite, o Zé avisa e
+oferece trocar.

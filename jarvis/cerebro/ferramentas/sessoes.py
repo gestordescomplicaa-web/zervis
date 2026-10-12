@@ -10,6 +10,7 @@ from typing import Any
 
 from claude_agent_sdk import SdkMcpTool, tool
 
+from jarvis.cerebro import contas
 from jarvis.cerebro.ferramentas.comum import _erro, _texto
 from jarvis.oficina.sessoes import MOTORES, Sessao, SessaoErro, Sessoes
 
@@ -115,6 +116,41 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
         recentes = [{"quem": m["quem"], "texto": m["texto"][:1500]} for m in mensagens[-ULTIMAS:]]
         return _texto({**_resumo(s), "mensagens": recentes})
 
+    @tool(
+        "sessao_trocar",
+        "Troca o agente (claude ou codex) ou a conta de uma sessão parada, sem perder a conversa: "
+        "na mesma agente a conversa continua inteira; noutro, ele recebe a passagem do que já foi "
+        "feito. Use quando o usuário pedir ou quando a conta bater o limite. Conta: o nome dela "
+        "(vazio: a que está em uso para aquele agente).",
+        {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "agente": {"type": "string", "enum": list(MOTORES)},
+                "conta": {"type": "string", "description": "Nome da conta (opcional)"},
+            },
+            "required": ["id", "agente"],
+        },
+    )
+    async def trocar(args: dict[str, Any]) -> dict[str, Any]:
+        def fazer() -> tuple[Sessao, str]:
+            agente, nome = str(args["agente"]), str(args.get("conta", "")).strip().casefold()
+            conta = ""
+            if nome:
+                achada = next(
+                    (c for c in contas.Contas().listar(agente) if c.nome.casefold() == nome), None
+                )
+                if achada is None:
+                    raise SessaoErro(f"não há conta {args['conta']} do {agente}")
+                conta = achada.id
+            return sessoes.trocar(str(args["id"]), agente, conta)
+
+        try:
+            s, aviso = await asyncio.to_thread(fazer)
+        except SessaoErro as erro:
+            return _erro(erro)
+        return _texto({"trocada": True, "aviso": aviso, **_resumo(s)})
+
     @tool("sessao_parar", "Para uma sessão que está trabalhando (a conversa fica).", {"id": str})
     async def parar(args: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -123,4 +159,4 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
             return _erro(erro)
         return _texto({"parada": True, **_resumo(s)})
 
-    return [listar, criar, enviar, ler, parar]
+    return [listar, criar, enviar, ler, trocar, parar]

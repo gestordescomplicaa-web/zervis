@@ -488,8 +488,9 @@ async function abrirSessao(id) {
   lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
       <h2>${esc(sessao.nome)}</h2><span class="etiqueta" title="Agente e conta desta sessão">${esc([sessao.agente, sessao.conta].filter(Boolean).join(" · "))}</span><span class="etiqueta ${trabalhando ? "bom" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${ESTADO_SESSAO[sessao.estado] || esc(sessao.estado)}</span>
-      <div class="botoes">${botao("Novo arquivo", "md-abrir")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}
+      <div class="botoes">${botao("Trocar", "troca-abrir", trabalhando ? "hidden" : "")}${botao("Novo arquivo", "md-abrir")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}
         ${botao("Parar", "sessao-parar", trabalhando ? "" : "hidden", "discreta")}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
+    <section class="troca" id="troca" hidden></section>
     <div class="mensagens" id="mensagens">${mensagens.map(linhaMensagem).join("")}</div>
     <section class="previa-arquivo" id="previa" hidden></section>
     <form class="compor" id="compor">
@@ -540,6 +541,7 @@ async function acompanharSessao() {
   etiqueta.textContent = ESTADO_SESSAO[sessao.estado] || sessao.estado;
   etiqueta.classList.toggle("bom", sessao.estado === "trabalhando");
   document.querySelector('[data-acao="sessao-parar"]').hidden = sessao.estado !== "trabalhando";
+  document.querySelector('[data-acao="troca-abrir"]').hidden = sessao.estado === "trabalhando";
 }
 
 async function prepararSessoes() {
@@ -837,6 +839,30 @@ const ACOES = {
     const r = await api("sessao/excluir", { id: sessaoAberta });
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();
   }),
+  "troca-abrir": async () => {
+    const ct = await api("contas");
+    const caixa = $("troca");
+    const opcoes = (agente) => (ct.agentes.find((a) => a.id === agente)?.contas || [])
+      .filter((c) => c.logado).map((c) => `<option value="${esc(c.id)}">${esc(c.nome)}${c.email ? " · " + esc(c.email) : ""}</option>`).join("");
+    caixa.innerHTML = `<div class="linha"><div class="segmentos" role="group" aria-label="Agente">${botao("Claude", "troca-agente", 'data-motor="claude" aria-pressed="true"')}${botao("Codex", "troca-agente", 'data-motor="codex" aria-pressed="false"')}</div>
+      <select id="troca-conta" aria-label="Conta">${opcoes("claude")}</select>
+      ${botao("Trocar", "troca-fazer", "", "principal")}${botao("Cancelar", "troca-fechar", "", "discreta")}</div>
+      <p class="nota">A conversa continua: na mesma agente, inteira; no outro, com a passagem do que já foi feito.</p>`;
+    caixa.dataset.contas = JSON.stringify(ct.agentes.map((a) => [a.id, opcoes(a.id)]));
+    caixa.hidden = false;
+  },
+  "troca-agente": (b) => {
+    document.querySelectorAll('[data-acao="troca-agente"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("troca-conta").innerHTML = new Map(JSON.parse($("troca").dataset.contas)).get(b.dataset.motor) || "";
+  },
+  "troca-fechar": () => { $("troca").hidden = true; },
+  "troca-fazer": async (b) => {
+    const motor = document.querySelector('[data-acao="troca-agente"][aria-pressed="true"]').dataset.motor;
+    const conta = $("troca-conta").value;
+    if (!conta) { toast("Nenhuma conta com login para esse agente."); return; }
+    const r = await ocupado(b, () => api("sessao/trocar", { id: sessaoAberta, motor, conta }));
+    toast(r.aviso); await abrirSessao(sessaoAberta);
+  },
   "md-abrir": () => { $("editor-md").hidden = false; $("md-nome").focus(); },
   "md-fechar": () => { $("editor-md").hidden = true; },
   "md-salvar": async (b) => {

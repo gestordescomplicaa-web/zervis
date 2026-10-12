@@ -66,6 +66,10 @@ PROIBIDOS = re.compile(
 )
 
 
+class LimiteErro(RuntimeError):
+    """A conta do agente bateu o limite de uso (dá para trocar de conta ou de agente)."""
+
+
 class SessaoErro(ValueError):
     """Mensagem curta, para a tela e para a voz."""
 
@@ -94,8 +98,13 @@ class Sessao:
     criada: str = field(default_factory=agora)
     atualizada: str = field(default_factory=agora)
     resumo: str = ""  # o último recado do agente, curto (a lista e a voz)
-    sdk_sessao: str = ""  # para continuar a conversa do Claude Code (resume)
+    sdk_sessao: str = ""  # a conversa nativa do agente em uso (resume)
     origem: str = "painel"
+    # Troca de agente (ADR 0016): a conversa nativa de cada agente nesta sessão, quantas mensagens
+    # cada um já viu, e a passagem que vai junto do próximo pedido.
+    fios: dict[str, str] = field(default_factory=dict)
+    vistos: dict[str, int] = field(default_factory=dict)
+    passagem: str = ""
 
     @property
     def onde(self) -> Path:
@@ -333,7 +342,9 @@ class Sessoes:
         if caminhos:  # o agente recebe os caminhos; imagens e PDFs ele lê com o Read
             lista = "\n".join(f"- {c}" for c in caminhos)
             texto = f"{texto}\n\nAnexos do usuário (leia antes de responder):\n{lista}".strip()
-        s = self._mudar(id_, estado="trabalhando")
+        if s.passagem:  # depois de uma troca: o agente novo recebe o que perdeu
+            texto = f"{s.passagem}\n\nPedido agora:\n{texto}"
+        s = self._mudar(id_, estado="trabalhando", passagem="")
         laco = asyncio.new_event_loop()
         pronto = threading.Event()
 
@@ -358,18 +369,107 @@ class Sessoes:
             self.anotar(s.id, "sistema", "Parada a pedido.")
             self._mudar(s.id, estado="parada")
             raise
+        except LimiteErro:
+            conta = _nome_da_conta(s)
+            estado, resumo = "erro", f"a conta {conta} do {NOMES_MOTORES[s.motor]} bateu o limite"
+            self.anotar(
+                s.id,
+                "sistema",
+                f"A conta {conta} atingiu o limite de uso. Troque de conta ou de agente para "
+                "continuar: a conversa segue.",
+            )
         except Exception as erro:
             log.exception("sessão %s falhou", s.id)
             estado, resumo = "erro", f"falhou: {type(erro).__name__}"
             self.anotar(s.id, "sistema", f"O agente falhou ({type(erro).__name__}).")
         if s.worktree and estado != "erro" and (mudou := self.mudancas(s)):
             self.anotar(s.id, "sistema", f"Mudanças na branch {s.branch}:\n{mudou}")
-        final = self._mudar(s.id, estado=estado, resumo=resumo[:300])
+        atual = self.ler(s.id)
+        final = self._mudar(
+            s.id,
+            estado=estado,
+            resumo=resumo[:300],
+            fios={**atual.fios, atual.motor: atual.sdk_sessao} if atual.sdk_sessao else atual.fios,
+            vistos={**atual.vistos, atual.motor: len(self.mensagens(s.id))},
+        )
         if self.ao_terminar is not None:
             try:
                 self.ao_terminar(final, resumo)
             except Exception:
                 log.exception("aviso do fim da sessão falhou")
+
+    def trocar(self, id_: str, motor: str, conta_id: str = "") -> tuple[Sessao, str]:
+        """Troca o agente ou a conta de uma sessão parada, sem perder a conversa (ADR 0016).
+
+        Mesmo agente, outra conta: a conversa nativa é copiada para a pasta da conta nova e o
+        agente a retoma inteira. Outro agente: ele retoma a conversa dele nesta sessão, se houver,
+        e o próximo pedido leva a passagem do que aconteceu desde a última vez dele."""
+        s = self.ler(id_)
+        if id_ in self.trabalhando():
+            raise SessaoErro("essa sessão está trabalhando; pare antes de trocar")
+        if motor not in MOTORES:
+            raise SessaoErro(f"agente desconhecido: {motor}")
+        cs = contas.Contas()
+        try:
+            nova = cs.achar(conta_id) if conta_id else cs.em_uso(motor)
+        except contas.ContaErro as erro:
+            raise SessaoErro(str(erro)) from None
+        if nova.agente != motor:
+            raise SessaoErro("essa conta é de outro agente")
+        fios = {**s.fios, **({s.motor: s.sdk_sessao} if s.sdk_sessao else {})}
+        fio = fios.get(motor, "")
+        if fio and not copiar_conversa(motor, fio, cs.listar(motor), nova):
+            fio = ""  # a conversa nativa sumiu: segue pela passagem
+        passagem = ""
+        if motor != s.motor or not fio:
+            passagem = self.passagem(s, motor)
+        s = self._mudar(
+            id_, motor=motor, conta=nova.id, sdk_sessao=fio, fios=fios, passagem=passagem
+        )
+        como = (
+            "continua a mesma conversa"
+            if fio and not passagem
+            else "retoma a conversa dele e recebe o que mudou"
+            if fio
+            else "recebe a passagem do que já foi feito"
+        )
+        aviso = f"Agora com o {NOMES_MOTORES[motor]} · {nova.nome}: {como}."
+        self.anotar(id_, "sistema", aviso)
+        return s, aviso
+
+    def passagem(self, s: Sessao, motor: str) -> str:
+        """O que o agente que assume precisa saber: o objetivo, o que aconteceu desde a última vez
+        dele (as mensagens visíveis, com tamanho limitado) e o estado do git agora."""
+        todas = self.mensagens(s.id)
+        objetivo = next((m["texto"] for m in todas if m["quem"] == "usuario"), "")[:600]
+        rotulos = {"usuario": "usuário", "agente": "agente", "ferramenta": "ação", "sistema": "Zé"}
+        linhas = [
+            f"- {rotulos.get(m['quem'], m['quem'])}: {' '.join(m['texto'].split())[:700]}"
+            for m in todas[s.vistos.get(motor, 0) :]
+        ]
+        recente: list[str] = []
+        total = 0
+        for linha in reversed(linhas):  # do fim para o começo, até ~8 mil caracteres
+            if total + len(linha) > 8000:
+                break
+            recente.insert(0, linha)
+            total += len(linha)
+        git = "\n".join(
+            p
+            for p in (
+                _git(s.onde, "log", "--oneline", "-5").stdout.strip(),
+                _git(s.onde, "status", "--short").stdout.strip(),
+            )
+            if p
+        )
+        anterior = NOMES_MOTORES.get(s.motor, s.motor)
+        return (
+            f"[Passagem do Zé] Você assume esta sessão de código, que estava com o {anterior}. "
+            f"Objetivo da sessão (o primeiro pedido): {objetivo}\n"
+            f"O que aconteceu desde a sua última vez aqui:\n{chr(10).join(recente) or '- nada'}\n"
+            f"Estado do git agora:\n{git or 'sem git ou sem mudanças'}\n"
+            "Use isso para continuar sem refazer o que já foi feito."
+        )
 
     def excluir(self, id_: str) -> str:
         """Apaga a sessão (conversa e anexos). A pasta do projeto fica; a cópia isolada sai,
@@ -489,6 +589,8 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
         await cliente.query(texto)
         async for msg in cliente.receive_response():
             if isinstance(msg, AssistantMessage):
+                if msg.error in ("rate_limit", "billing_error"):
+                    raise LimiteErro(msg.error)
                 for bloco in msg.content:
                     if isinstance(bloco, TextBlock) and bloco.text.strip():
                         ultimo = bloco.text
@@ -505,6 +607,10 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
 
 
 # --- motor Codex ----------------------------------------------------------------------------
+
+
+# Como o Codex avisa que a conta acabou ("You've hit your usage limit", "rate limit reached").
+LIMITE_CODEX = re.compile(r"usage limit|rate limit|quota", re.IGNORECASE)
 
 
 def _comando_codex(s: Sessao, texto: str) -> list[str]:
@@ -559,6 +665,8 @@ async def rodar_codex(sessoes: Sessoes, s: Sessao, texto: str) -> str:
     except asyncio.CancelledError:
         processo.terminate()
         raise
+    if erro and LIMITE_CODEX.search(erro):
+        raise LimiteErro(erro[:200])
     if erro and not ultimo:
         raise RuntimeError(erro[:200])
     if processo.returncode and not ultimo:
@@ -571,3 +679,36 @@ async def rodar_agente(sessoes: Sessoes, s: Sessao, texto: str) -> str:
     if s.motor == "codex":
         return await rodar_codex(sessoes, s, texto)
     return await rodar_claude(sessoes, s, texto)
+
+
+NOMES_MOTORES = {"claude": "Claude", "codex": "Codex"}
+
+
+def _nome_da_conta(s: Sessao) -> str:
+    try:
+        return contas.Contas().achar(s.conta).nome if s.conta else "em uso"
+    except contas.ContaErro:
+        return "em uso"
+
+
+def _arquivo_da_conversa(motor: str, fio: str, onde: Path) -> Path | None:
+    """Onde o próprio agente guarda a conversa: o Claude em `projects/<pasta>/<id>.jsonl`, o
+    Codex em `sessions/AAAA/MM/DD/rollout-...-<id>.jsonl`."""
+    padrao = f"projects/*/{fio}.jsonl" if motor == "claude" else f"sessions/**/*{fio}.jsonl"
+    return next(iter(sorted(onde.glob(padrao))), None)
+
+
+def copiar_conversa(motor: str, fio: str, todas: list[contas.Conta], nova: contas.Conta) -> bool:
+    """Põe a conversa nativa `fio` na pasta da conta nova, copiando de onde ela estiver (testado em
+    10/10/2026: o agente retoma a conversa em outra conta). True se ela está lá."""
+    if _arquivo_da_conversa(motor, fio, nova.onde) is not None:
+        return True
+    for conta in todas:
+        origem = _arquivo_da_conversa(motor, fio, conta.onde)
+        if origem is None:
+            continue
+        destino = nova.onde / origem.relative_to(conta.onde)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(origem, destino)
+        return True
+    return False

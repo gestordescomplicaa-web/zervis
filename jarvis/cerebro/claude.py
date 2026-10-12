@@ -78,6 +78,9 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
         )
     if nome == "mcp__jarvis__sessao_enviar":
         return f"Vou mandar para a sessão: {entrada.get('texto', '')}"
+    if nome == "mcp__jarvis__sessao_trocar":
+        conta = f", conta {entrada['conta']}" if entrada.get("conta") else ""
+        return f"Vou passar a sessão para o {str(entrada.get('agente', '')).capitalize()}{conta}."
     if nome == "mcp__jarvis__sessao_parar":
         return "Vou parar a sessão."
     if nome == "mcp__jarvis__skill_criar":
