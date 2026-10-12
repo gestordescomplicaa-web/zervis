@@ -162,3 +162,19 @@ def test_trabalho_cancelado_nao_avisa_primeiro_som() -> None:
     liberar.set()
     assert ociosa.wait(3)
     assert tempos == [] and voz.faladas == 0
+
+
+def test_muda_nao_toca_e_avisa_que_ficou_ociosa() -> None:
+    abertos: list[str] = []
+
+    def fluxo(texto: str) -> tuple[int, RespostaFalsa]:
+        abertos.append(texto)
+        return 24000, RespostaFalsa(b"")
+
+    ociosa = threading.Event()
+    voz = Voz(abrir_fluxo=fluxo, reprodutor=lambda t: ["/bin/cat"])
+    voz.muda = True
+    voz.ao_ficar_ociosa = lambda numero: ociosa.set()
+    voz.falar("Modo silencioso.")
+    assert ociosa.wait(2)
+    assert abertos == []

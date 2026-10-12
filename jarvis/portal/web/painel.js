@@ -206,12 +206,40 @@ const PAGINAS = {
     const etiqueta = (ok, sim, nao) => `<span class="etiqueta ${ok ? "bom" : "alerta"}">${ok ? sim : nao}</span>`;
     const linha = (titulo, estado, texto) => cartao("", `<div class="cabeca"><h2>${titulo}</h2>${estado}</div>${sub(texto)}`);
     return `${cabeca("Voz")}
+      ${cartao("", `<div class="cabeca"><h2>Modo de fala</h2><span class="etiqueta bom">${esc(nomeModo(e.modo_fala))}</span></div>
+        ${sub("Quando o Zé fala sem você pedir. Atalho: Alt+M.")}
+        <div class="modos-fala" role="radiogroup" aria-label="Modo de fala">${MODOS_FALA.map((m) => `<button type="button" role="radio" class="modo" data-acao="modo-fala" data-modo="${m.valor}" aria-checked="${m.valor === e.modo_fala}"><strong>${m.nome}</strong><small>${m.detalhe}</small></button>`).join("")}</div>`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}
       ${cartao("", `<div class="cabeca"><h2>Conversa contínua</h2><span class="etiqueta">Em breve</span></div>${sub("Escuta contínua com interrupção.")}`)}`;
   },
 };
+
+// --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ------------------------------------
+
+const MODOS_FALA = [
+  { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve o chamado. Tudo fica na tela." },
+  { valor: "avisos", nome: "Avisos", curto: "Avisos e urgências", detalhe: "Fala avisos e urgências. Respostas das sessões, só se você pedir." },
+  { valor: "maos_livres", nome: "Mãos livres", curto: "Também as respostas", detalhe: "Fala também as respostas das sessões, resumidas." },
+];
+const nomeModo = (valor) => MODOS_FALA.find((m) => m.valor === valor)?.nome || valor;
+let modoFala = null;
+
+function desenharModoFala(valor) {
+  if (valor === modoFala) return;
+  modoFala = valor;
+  const itens = MODOS_FALA.map((m) => ({ valor: m.valor, nome: m.nome, detalhe: m.curto }));
+  $("modo-fala").innerHTML = escolha("modo-fala", `Fala: ${nomeModo(valor)}`, [{ itens }], valor, "Modo de fala (Alt+M)");
+  $("modo-fala").dataset.modo = valor;
+}
+
+async function mudarModoFala(valor) {
+  const r = await api("fala/modo", { modo: valor });
+  desenharModoFala(r.modo);
+  toast(r.aviso);
+  if (location.hash === "#voz") await recarregar();
+}
 
 // --- Modelos: provedor, modelo e chave ---------------------------------------------------------------
 
@@ -973,10 +1001,12 @@ const ACOES = {
   "previa-fechar": fecharPrevia,
   mencionar: (b) => { fecharPrevia(); escreverNoTerminal("@" + b.dataset.caminho + " "); },
   "terminal-reabrir": () => abrirTerminal(sessaoAberta),
+  "modo-fala": (b) => mudarModoFala(b.dataset.modo),
 };
 
 // O que cada menu de escolha faz com o valor escolhido.
 const ESCOLHAS = {
+  "modo-fala": mudarModoFala,
   "conta-sessao": async (valor) => {
     const [motor, conta] = valor.split("|");
     await trocarSessao(motor, conta, !!document.querySelector(".faixa.limite"));
@@ -992,6 +1022,12 @@ const MUDAR = {
 };
 
 document.addEventListener("click", (ev) => { if (!ev.target.closest(".escolha")) fecharEscolhas(); }, true);
+document.addEventListener("keydown", (ev) => {
+  if (!ev.altKey || ev.ctrlKey || ev.metaKey || ev.code !== "KeyM" || !modoFala) return;
+  ev.preventDefault(); ev.stopPropagation();
+  const i = MODOS_FALA.findIndex((m) => m.valor === modoFala);
+  mudarModoFala(MODOS_FALA[(i + 1) % MODOS_FALA.length].valor).catch((erro) => toast(erro.message));
+}, true);
 document.addEventListener("keydown", (ev) => {
   const menu = ev.target.closest?.(".escolha-menu");
   if (ev.key === "Escape" && document.querySelector(".escolha-menu:not([hidden])")) { fecharEscolhas(); return; }
@@ -1076,6 +1112,10 @@ async function batimento() {
     telaVista = e.tela_ts;
     $("estado-ze").textContent = ESTADOS[e.ze] || e.ze;
     document.querySelector(".marca .anel").classList.toggle("ativo", e.ze !== "inativo");
+    desenharModoFala(e.modo_fala);
+    if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
+      api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
+    }
   } catch { $("estado-ze").textContent = "desconectado"; }
 }
 

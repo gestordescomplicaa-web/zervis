@@ -227,6 +227,18 @@ main.cheio { padding: 0; overflow: hidden; }
 .nova-sessao { padding: 28px clamp(16px, 4vw, 48px); overflow-y: auto; }
 .nova-sessao .cartao { max-width: 640px; }
 
+/* --- modo de fala: no menu lateral e na página Voz --- */
+.modo-fala { padding: 0 14px 10px; }
+.modo-fala .escolha-botao { width: 100%; max-width: none; justify-content: space-between; }
+.modo-fala[data-modo="silencioso"] .escolha-botao { color: var(--suave); }
+.modo-fala[data-modo="maos_livres"] .escolha-botao { border-color: var(--borda-forte); }
+.modos-fala { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
+.modo { display: grid; gap: 4px; padding: 12px 14px; text-align: left; cursor: pointer; border-radius: 12px;
+  border: 1px solid var(--borda); background: rgb(70 217 222 / .04); color: var(--texto); font: inherit; }
+.modo small { color: var(--suave); font-size: 12.5px; line-height: 1.4; }
+.modo:hover { border-color: var(--borda-forte); }
+.modo[aria-checked="true"] { border-color: var(--acento); background: rgb(70 217 222 / .12); }
+
 /* --- skills e conectores --- */
 .editor-texto { width: 100%; resize: vertical; background: rgb(0 0 0 / .25); color: var(--texto);
   border: 1px solid var(--borda-forte); border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.55; }

@@ -64,3 +64,7 @@
   passagem entre agentes e para o cérebro acompanhar.
 - Trocar de agente não dispara mais um pedido automático: o resumo do que já foi feito entra como
   contexto do agente novo (ou fica no campo, junto com o próximo pedido), sem gastar um turno.
+- Modos de fala (ADR 0018): Silencioso (nada falado, chamado desligado), Avisos (padrão: fim de
+  sessão em uma frase, aprovação, créditos e erros) e Mãos livres (também a resposta da sessão,
+  resumida para ouvir). Troca no menu lateral, na página Voz, com Alt+M ou por voz. O que está
+  aberto na tela não é falado.

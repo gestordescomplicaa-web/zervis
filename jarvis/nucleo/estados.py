@@ -284,6 +284,19 @@ FALAS_DAS_AREAS = {
 }
 
 COMANDOS = {
+    # O modo de fala (ADR 0018). Silencioso fecha a escuta: volta pelo painel ou pelo atalho.
+    "modo_silencioso": {
+        ("modo", "silencioso"),
+        ("fica", "em", "silencio"),
+        ("fique", "em", "silencio"),
+        ("silencio",),
+    },
+    "modo_avisos": {("modo", "avisos"), ("modo", "aviso"), ("modo", "de", "avisos")},
+    "modo_maos_livres": {
+        ("modo", "maos", "livres"),
+        ("modo", "mao", "livre"),
+        ("maos", "livres"),
+    },
     "nova_conversa": {
         ("nova", "conversa"),
         ("conversa", "nova"),

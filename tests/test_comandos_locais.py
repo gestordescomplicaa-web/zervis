@@ -4,6 +4,7 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -106,6 +107,8 @@ def rodar(nome: str, janela_aberta: bool = True) -> tuple[str, list[tuple[str, A
     n.status = Status()
     n.trocar_cerebro = lambda id_: f"trocado para {id_}"  # type: ignore[method-assign]
     n.relatorio_de_baterias = lambda: "baterias"  # type: ignore[method-assign]
+    n.voz = SimpleNamespace(muda=False, parar=lambda: None)  # type: ignore[assignment]
+    n._ligar_ativacao = lambda: None  # type: ignore[method-assign]
     n._comando(nome)
     time.sleep(0.1)  # trazer, abrir, fechar e a busca correm numa linha de execução própria
     frases = [ev.texto for tipo, ev in r.feito if tipo == "evento" and isinstance(ev, e.Frase)]
@@ -121,6 +124,8 @@ NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
     ("nome", "fala", "acoes"),
     [
         ("nova_conversa", "Certo, começando uma conversa nova.", [("reiniciar", None)]),
+        ("modo_maos_livres", "Modo mãos livres.", []),
+        ("modo_avisos", "Modo avisos.", []),
         ("mostrar_mapa", "Está no Núcleo.", [("mapa", None), ("trazer", None)]),
         ("calibrar_maos", "Vamos calibrar. Siga as instruções na tela.", [("maos", "calibrar")]),
         ("maos_padrao", "Pronto, voltei à calibração e à câmera originais.", [("maos", "padrao")]),

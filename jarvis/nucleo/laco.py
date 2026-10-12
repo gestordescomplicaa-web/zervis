@@ -33,6 +33,7 @@ from jarvis.automacoes import executor
 from jarvis.automacoes.agenda import FUSO
 from jarvis.automacoes.calendario import Calendario
 from jarvis.automacoes.jobs import Job, Jobs
+from jarvis.avisos import modo as modo_fala
 from jarvis.avisos.fila import Fila
 from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, rapido
 from jarvis.cerebro.base import Brain, Ponte
@@ -89,6 +90,7 @@ AVISO_RECENTE_S = 600.0  # aviso falado há mais que isso não é contexto do pe
 BATERIAS_S = 30.0  # releitura das cotas do OmniRoute
 # Comandos locais de voz (sem o cérebro), por tipo. "{}" é o argumento do comando
 # ("abrir_orbe:Guia" -> Guia). Os que pedem algo à página pelo maos-pedido: nome -> (pedido, fala).
+VENDO_S = 6.0  # o painel avisa a sessão aberta a cada batida (~2 s)
 AJUSTES_DA_TELA = {
     "calibrar_maos": ("calibrar", "Vamos calibrar. Siga as instruções na tela."),
     "maos_padrao": ("padrao", "Pronto, voltei à calibração e à câmera originais."),
@@ -245,6 +247,7 @@ class Nucleo:
         self.transcricoes = concurrent.futures.ThreadPoolExecutor(1, "transcricao")
         # Só Deepgram (decisão de 09/10/2026): sem a chave o Zé não escuta; painel e teclado
         # continuam. Nada de modelo local de transcrição ocupando a máquina.
+        self.modo_fala = modo_fala.ler()  # quando o Zé fala sozinho (ADR 0018)
         self.deepgram = Deepgram(cfg.caminho("escuta", "chave_deepgram"))
         self.meio_transcricao = "deepgram"
         if not self.deepgram.disponivel:
@@ -260,6 +263,8 @@ class Nucleo:
         threading.Thread(target=self._carregar_voz, name="carregar-voz", daemon=True).start()
         self._ultima_fala = 0
         self.voz.ao_ficar_ociosa = self._voz_ociosa
+        self.voz.muda = self.modo_fala == "silencioso"
+        self._vendo: tuple[str, float] = ("", 0.0)  # a sessão aberta no painel, e quando
         self.fila = Fila(ESTADO / "avisos.json")  # durável: reinício não perde aviso
         self.jobs = Jobs(DADOS / "automacoes" / "jobs.json")
         self.calendario = Calendario(ESTADO / "agenda-avisada.json")
@@ -326,6 +331,7 @@ class Nucleo:
             projetos_novos=cfg.caminho("oficina", "raiz_projetos"),
             skills=self.skills,
         )
+        self.sessoes.ao_avisar = self._sessao_pede
         self.manutencao = Manutencao(self.sessoes, ESTADO / "manutencao")
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
         self.maquina.manutencao = lambda: self.manutencao.ligado
@@ -759,24 +765,61 @@ class Nucleo:
         self.eventos.put(e.Aviso(usuario.PERFIL.vocativo("Bom dia") + ". " + " ".join(partes)))
 
     def _sessao_terminou(self, sessao: Sessao, resumo: str) -> None:
-        """Uma sessão da oficina própria acabou de trabalhar: o Zé conta em uma frase. A de
+        """Uma sessão de código acabou de trabalhar. O modo de fala decide o que vira voz: em
+        Avisos, uma frase; em Mãos livres, a frase e a resposta resumida para ouvir. A de
         manutenção fala pelo próprio aperto de mão (o Resumo falado), salvo se falhar."""
         if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
             return
         if sessao.estado == "erro" and "bateu o limite" in resumo:
-            self._aviso_da_oficina(
-                f"Na sessão {sessao.nome}, {resumo}. Posso trocar de conta ou de agente; a "
-                "conversa continua."
-            )
+            texto = f"Créditos esgotados na sessão {sessao.nome}. Troque de conta para continuar."
+            self._aviso_da_oficina(texto, "urgente", sessao.id)
         elif sessao.estado == "erro":
-            self._aviso_da_oficina(f"A sessão {sessao.nome} falhou; veja no painel.")
+            self._aviso_da_oficina(f"A sessão {sessao.nome} falhou.", "urgente", sessao.id)
         else:
-            self._aviso_da_oficina(f"A sessão {sessao.nome} terminou: {resumo}")
+            texto = f"A sessão {sessao.nome} terminou."
+            if modo_fala.falar(self.modo_fala, "resposta", self.vendo(sessao.id)):
+                resposta = self._ultima_resposta(sessao.id) or resumo
+                if ouvir := modo_fala.para_ouvir(resposta):
+                    texto = f"{texto} {ouvir}"
+            self._aviso_da_oficina(texto, "notificacao", sessao.id)
 
-    def _aviso_da_oficina(self, texto: str) -> None:
-        """O que as sessões de código avisam também entra na linha do tempo."""
+    def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
+        """O agente parou esperando a aprovação da pessoa."""
+        self._aviso_da_oficina(
+            f"A sessão {sessao.nome} está esperando sua aprovação.", "urgente", sessao.id
+        )
+
+    def _ultima_resposta(self, id_: str) -> str:
+        with contextlib.suppress(SessaoErro):
+            for m in reversed(self.sessoes.mensagens(id_)):
+                if m["quem"] == "agente":
+                    return str(m["texto"])
+        return ""
+
+    def vendo(self, id_: str) -> bool:
+        """A pessoa está com esta sessão aberta no painel (o painel avisa a cada batida)."""
+        aberta, quando = self._vendo
+        return bool(id_) and aberta == id_ and time.monotonic() - quando < VENDO_S
+
+    def ver_sessao(self, id_: str) -> None:
+        self._vendo = (id_, time.monotonic())
+
+    def mudar_modo_fala(self, modo: str) -> str:
+        """Troca o modo de fala na hora; devolve a confirmação curta para a tela e a voz."""
+        self.modo_fala = modo_fala.gravar(modo)
+        self.voz.muda = modo == "silencioso"
+        if self.voz.muda:
+            self.voz.parar()
+        self._ligar_ativacao()
+        log.info("modo de fala: %s", modo)
+        return f"Modo {modo_fala.NOMES[modo].lower()}."
+
+    def _aviso_da_oficina(self, texto: str, tipo: modo_fala.Tipo, id_: str = "") -> None:
+        """O que as sessões de código avisam entra na linha do tempo; vira voz se o modo de fala
+        deixar e a pessoa não estiver vendo a sessão."""
         self._na_linha("aviso", texto)
-        self.eventos.put(e.Aviso(texto))
+        if modo_fala.falar(self.modo_fala, tipo, self.vendo(id_)):
+            self.eventos.put(e.Aviso(texto))
 
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
@@ -875,6 +918,8 @@ class Nucleo:
             return "Fechei a minha janela; a câmera apagou."
         if nome == "trocar":
             return self.trocar_cerebro(argumento)
+        if nome in ("modo_silencioso", "modo_avisos", "modo_maos_livres"):
+            return self.mudar_modo_fala(nome.removeprefix("modo_"))
         if nome == "manutencao_sair":
             return self.manutencao.sair()
         if nome == "manutencao_situacao":
@@ -940,6 +985,9 @@ class Nucleo:
     # --- laço ---------------------------------------------------------------------------
 
     def tratar(self, evento: e.Evento) -> None:
+        if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso":
+            log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
+            return
         antes = self.maquina.estado
         agora = time.monotonic()
         self._digitado_em = (
@@ -1101,8 +1149,10 @@ class Nucleo:
         return f"Pronto: o Zé agora usa os conectores {ligados}."
 
     def _ligar_ativacao(self) -> None:
-        """Sem a chave do Deepgram o chamado não dispara: não haveria quem transcrevesse."""
-        modelo = self.modelo_ativacao if self.deepgram.disponivel else SemAtivacao()
+        """Sem a chave do Deepgram o chamado não dispara (não haveria quem transcrevesse); no
+        modo silencioso, também não."""
+        ouvir = self.deepgram.disponivel and self.modo_fala != "silencioso"
+        modelo = self.modelo_ativacao if ouvir else SemAtivacao()
         self.detector.modelo = modelo
         self.detector.limiar = modelo.limiar
 

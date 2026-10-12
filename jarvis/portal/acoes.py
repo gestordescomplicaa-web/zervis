@@ -14,6 +14,7 @@ from typing import Any
 
 from jarvis import fuso, usuario
 from jarvis.automacoes.jobs import JobErro
+from jarvis.avisos import modo as modo_fala
 from jarvis.cerebro import acesso, conectores, contas, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades.skills import SkillErro, frente
@@ -119,6 +120,8 @@ class Acoes:
     def escritas(self) -> dict[str, Escrita]:
         return {
             "cerebro": self.mudar_cerebro,
+            "fala/modo": self.mudar_modo_fala,
+            "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
             "testar": self.testar,
@@ -187,7 +190,19 @@ class Acoes:
             "latencia": _latencia_de_hoje(self.pasta_latencias, agora().date().isoformat()),
             "foco": self.n.foco.onde_estava(),
             "tela_ts": self._tela_ts(),
+            "modo_fala": self.n.modo_fala,
         }
+
+    def mudar_modo_fala(self, dados: dict[str, Any]) -> dict[str, Any]:
+        modo = str(dados.get("modo", ""))
+        if modo not in modo_fala.MODOS:
+            raise PedidoInvalido("modo de fala desconhecido")
+        return {"modo": modo, "aviso": self.n.mudar_modo_fala(modo)}
+
+    def painel_vendo(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O painel está com esta sessão aberta e à vista: o Zé não fala o que ela já mostra."""
+        self.n.ver_sessao(str(dados.get("sessao", ""))[:40])
+        return {}
 
     def _tela_ts(self) -> float:
         """Quando o Zé mandou algo para o modo imersivo pela última vez (o painel abre a aba)."""

@@ -125,6 +125,7 @@ class Voz:
         self.engasgos = 0  # vezes em que a reprodução alcançou a geração
         self.faladas = 0
         self.ao_ficar_ociosa: Callable[[int], None] | None = None
+        self.muda = False  # modo silencioso: nada sai no alto-falante, o resto segue igual
         threading.Thread(target=self._rodar, name="voz", daemon=True).start()
 
     def falar(self, texto: str, ao_iniciar: Callable[[float], None] | None = None) -> int:
@@ -159,7 +160,8 @@ class Voz:
         while True:
             epoca, texto, pedido_em, numero, ao_iniciar = self.trabalhos.get()
             try:
-                self._falar(pedacos(texto), epoca, pedido_em, ao_iniciar)
+                if not self.muda:
+                    self._falar(pedacos(texto), epoca, pedido_em, ao_iniciar)
                 self.ultimo_erro = None
                 if epoca == self.epoca:
                     self.faladas += 1
