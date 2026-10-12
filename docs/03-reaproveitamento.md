@@ -29,7 +29,7 @@ Data: 06/10/2026. O que entra no projeto novo, de onde vem, em que estado está 
 | `lembrar.py` (61) | Busca no ai-memory em todos os projetos | `memoria/historico.py` | Vira ferramenta do cérebro. |
 | `brain.py` (100) | Envio ao painel do Orca + espera da resposta | **Não levar.** Substituído pelo cérebro por SDK (ADR 0002). | `speakable()` (limpeza de Markdown) vai para `voz/fala.py`. |
 | `core.py` (270) | Laço único: microfone, estados, avisos, voz | Reescrever como máquina de estados explícita | Manter as proteções: eco, autorização por palavra de ativação, uma fala por vez. |
-| `persona/JARVIS.md` | Regras de fala e de ação | `persona/JARVIS.md` | Remover a parte "consulte o Orca pela CLI" do texto fixo; vira skill. |
+| `persona/JARVIS.md` | Regras de fala e de ação | `jarvis/persona/JARVIS.md` | Remover a parte "consulte o Orca pela CLI" do texto fixo; vira skill. |
 | Skill `fala-natural` | Resumo falado no fim das respostas das sessões | Fica no projeto onde as sessões rodam | O JARVIS lê o bloco "Resumo falado:" dos avisos. |
 | `hermes-monitor/orca_monitor.py` | Redutor de estado das sessões do Orca | `oficina/monitor.py` | Testado; manter. |
 | `hermes-monitor/calendar_monitor.py` | Leitura da agenda do Omarchy | `automacoes/fontes/agenda.py` | Reativar a agenda que ficou sem dono. |

@@ -23,3 +23,5 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0016](0016-continuidade-entre-contas-e-agentes.md) | Continuidade entre contas e agentes (testada), ai-memory embutido | Aceito |
 | [0017](0017-terminal-real-nas-sessoes.md) | A sessão de código é o terminal real do agente (xterm.js), com os comandos dele | Aceito |
 | [0018](0018-modos-de-fala.md) | Modos de fala (Silencioso, Avisos, Mãos livres): quando o Zé fala sem ser chamado | Aceito |
+| [0019](0019-autorizacao-http-do-imersivo.md) | Pedidos e leituras do imersivo autorizados por instância | Aceito |
+| [0020](0020-contas-na-voz-e-no-cerebro.md) | Contas Claude/Codex na voz e no cérebro, com alternativas antes de qualquer ação | Aceito |

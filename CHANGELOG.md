@@ -68,3 +68,7 @@
   sessão em uma frase, aprovação, créditos e erros) e Mãos livres (também a resposta da sessão,
   resumida para ouvir). Troca no menu lateral, na página Voz, com Alt+M ou por voz. O que está
   aberto na tela não é falado.
+- Mãos livres de verdade: o Zé sabe de qual sessão se fala (a do último aviso, a aberta na tela
+  ou pelo nome), e "diz pra ela rodar os testes" vai para ela; depois de um aviso de sessão ele já
+  fica ouvindo a resposta, sem "Ei Zé"; "como está a Loja?" conta os comandos e os arquivos que o
+  agente mexeu.

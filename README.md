@@ -14,7 +14,7 @@ Inspirado no Hermes e no OpenClaw, mas mais enxuto, rápido e eficiente.
    Nada de nome, fuso ou caminho de alguém fixo no código: o que é seu vem da configuração.
 2. **Só fala quando faz sentido.** Responde ao que você pede, avisa o que você delegou e o que
    precisa da sua decisão.
-3. **Cérebro trocável.** Claude pela assinatura (Agent SDK), chaves da Anthropic, da OpenAI ou do
+3. **Cérebro trocável.** Claude pela assinatura (Agent SDK), Codex pela conta cadastrada, chaves da Anthropic, da OpenAI ou do
    OpenRouter, ou qualquer proxy no formato OpenAI, atrás de uma interface única.
 4. **Aprende com aprovação.** Memória e skills evoluem, mas o que o próprio Zé propõe passa por
    você antes de valer.
@@ -51,6 +51,11 @@ pelo teclado. A fala sai pelo Piper, que vem junto e roda dentro do Zé (primeir
 Plataformas: Linux primeiro. O controle completo da máquina é no Omarchy; outros Linux têm o
 controle reduzido.
 
+As personas ficam em `jarvis/persona/` e acompanham o pacote instalado. Excluir uma sessão ativa
+encerra o agente antes de remover a conversa; os arquivos do projeto ficam. Uma sessão com cópia
+isolada só pode ser excluída depois de preservar as alterações locais, inclusive arquivos novos
+ou ignorados pelo Git. A branch com os commits continua no projeto.
+
 ## Documentação
 
 | Documento | Conteúdo |
@@ -71,3 +76,8 @@ controle reduzido.
 [AGPL-3.0-or-later](LICENSE). A voz usa o [Piper](https://github.com/OHF-Voice/piper1-gpl)
 (GPL-3.0) e a voz Cadu (CC0); outros componentes de terceiros estão em
 [THIRD_PARTY.md](THIRD_PARTY.md).
+
+A voz rápida pode usar **Automático**, aproveitando as contas Claude e Codex cadastradas em
+**Contas**. Codex também pode ser escolhido como cérebro em **Modelos**. A troca automática só
+ocorre antes de qualquer resposta ou ferramenta; OpenAI API usa uma chave separada do login
+Codex. Detalhes em [ADR 0020](docs/adr/0020-contas-na-voz-e-no-cerebro.md).

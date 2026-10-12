@@ -4,6 +4,13 @@ Data: 06/10/2026, revisada em 10/10/2026 (ADR 0014 e 0015: o imersivo dentro do 
 modelos e as sessões de código próprias no lugar do Orca). Detalhes seguem o
 [roteiro.md](roteiro.md).
 
+Implementação em 12/10/2026: as personas são recursos em `jarvis/persona/`; consulta e publicação
+do ai-memory usam o mesmo binário e raiz de dados. O imersivo valida Host/Origin e exige token
+por instância nos pedidos e nas leituras de estado (ADR 0019). Sessões isoladas com trabalho
+pendente não podem ser excluídas. Registros operacionais ainda estão em JSON/JSONL; o SQLite
+descrito abaixo é uma migração planejada, não implementada. Codex funciona nas sessões de código;
+no cérebro, permanece planejado.
+
 ## Visão geral
 
 ```
