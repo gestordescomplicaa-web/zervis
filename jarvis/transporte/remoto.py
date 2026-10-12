@@ -47,6 +47,9 @@ class SalaRemota:
         self.loop = asyncio.new_event_loop()
         self.fonte: rtc.AudioSource | None = None
         self.pessoas: set[str] = set()
+        # Uma faixa ouvida por vez: duas escrevendo na mesma fila intercalam o áudio (uma
+        # reconexão do navegador deixava a faixa velha viva e o Deepgram ouvia frases trocadas).
+        self._ouvindo: asyncio.Task[None] | None = None
         self._parar = threading.Event()
         self._fio: threading.Thread | None = None
 
@@ -101,7 +104,9 @@ class SalaRemota:
         ) -> None:
             if faixa.kind != rtc.TrackKind.KIND_AUDIO or not quem.identity.startswith(PESSOA):
                 return
-            self.loop.create_task(self._ouvir(faixa))
+            if self._ouvindo is not None:
+                self._ouvindo.cancel()
+            self._ouvindo = self.loop.create_task(self._ouvir(faixa))
             if not self.pessoas:
                 self.pessoas.add(quem.identity)
                 log.info("voz remota: conectada")
@@ -121,6 +126,9 @@ class SalaRemota:
             return
         self.pessoas -= identidades
         if not self.pessoas:
+            if self._ouvindo is not None:
+                self._ouvindo.cancel()
+                self._ouvindo = None
             log.info("voz remota: desconectada")
             self.ao_conectar(False)
 
