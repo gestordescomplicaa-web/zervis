@@ -47,6 +47,13 @@ def rodar() -> int:
             log.info("primeira vez: baixei o ai-memory %s", aimemory.VERSAO)
     except (PrepararErro, OSError) as erro:
         log.warning("ai-memory não baixou (%s): o Zé segue sem memória longa", erro)
+    from jarvis.transporte import servidor_livekit
+
+    try:  # opcional: sem ele, a voz remota fica indisponível
+        if servidor_livekit.garantir():
+            log.info("primeira vez: baixei o LiveKit %s", servidor_livekit.VERSAO)
+    except (PrepararErro, OSError) as erro:
+        log.warning("LiveKit não baixou (%s): a voz remota fica indisponível", erro)
     try:
         trava = travar(ESTADO / "jarvisd.lock")
     except JaRodando as erro:

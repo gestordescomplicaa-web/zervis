@@ -75,3 +75,7 @@
 - Voz em qualquer Linux (ADR 0021): a escolha "Escuta" na página Voz, "Sempre" ou "Com a janela
   aberta" (esta só com Hyprland). Sem Hyprland o Zé escuta o chamado enquanto estiver rodando, e
   usa o microfone padrão do sistema quando o MIC FX do Omarchy não existe.
+- Voz pelo navegador (plano da voz remota, etapa 1): o botão "Conectar voz" no menu lateral liga o
+  microfone do navegador ao Zé por uma sala LiveKit que o próprio Zé baixa, confere e mantém, só
+  no endereço local. Conectado, o microfone do PC fecha e a voz do Zé sai pelo navegador.
+- Cérebro Codex voltou a subir: o Codex 0.162 recusava o nome do MCP entre aspas no `-c`.

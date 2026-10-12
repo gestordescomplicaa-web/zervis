@@ -17,7 +17,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 from numpy.typing import NDArray
@@ -58,6 +58,17 @@ class Fluxo(Protocol):
 
 class FluxoPronto(io.BytesIO):
     """O áudio inteiro de uma frase já sintetizada, lido como se fosse um fluxo."""
+
+
+class Tocador(Protocol):
+    """O que a saída usa de um reprodutor: o `subprocess.Popen` do `paplay` ou a faixa da voz
+    remota (`jarvis/transporte/remoto.py`)."""
+
+    stdin: Any
+
+    def poll(self) -> int | None: ...
+    def wait(self) -> int: ...
+    def kill(self) -> None: ...
 
 
 class Onda(Protocol):
@@ -117,7 +128,9 @@ class Voz:
         )
         self.numero = 0  # cada fala pedida ganha um número; o aviso de ociosa diz até qual foi
         self.epoca = 0
-        self.reprodutor: subprocess.Popen[bytes] | None = None
+        self.reprodutor: Tocador | None = None
+        # Com a voz remota conectada, a fala sai pela sala em vez do alto-falante.
+        self.destino: Callable[[int], Tocador] | None = None
         self.resposta: Fluxo | None = None
         self.sintetizando = False
         self.ultimo_erro: str | None = None
@@ -247,12 +260,18 @@ class Voz:
         epoca: int,
         ao_iniciar: Callable[[float], None] | None = None,
     ) -> None:
-        reprodutor = self.reprodutor = subprocess.Popen(  # noqa: S603 (comando fixo)
-            self.comando_reprodutor(taxa),
-            stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+        destino = self.destino
+        reprodutor: Tocador = (
+            destino(taxa)
+            if destino is not None
+            else subprocess.Popen(  # noqa: S603 (comando fixo)
+                self.comando_reprodutor(taxa),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         )
+        self.reprodutor = reprodutor
         assert reprodutor.stdin is not None  # noqa: S101 (criado com PIPE)
         if self.onda:
             self.onda.comecar(pedaco.pcm.amostras, taxa)

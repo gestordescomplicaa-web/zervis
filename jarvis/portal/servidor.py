@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 WEB = Path(__file__).with_name("web")
 PORTA = int(os.environ.get("JARVIS_PAINEL_PORTA", "8795"))  # o perfil limpo usa outra
 IMERSIVO = "http://127.0.0.1:8794"  # o modo imersivo (Barehands), embutido na aba Imersão
+VOZ_REMOTA = "ws://127.0.0.1:7880 http://127.0.0.1:7880"  # a sala LiveKit da voz remota
 MAXIMO_CORPO = 64 * 1024
 TIPOS = {
     ".html": "text/html",
@@ -41,6 +42,8 @@ ARQUIVOS = {
     "/vendor/xterm/xterm.js": "vendor/xterm/xterm.js",
     "/vendor/xterm/xterm.css": "vendor/xterm/xterm.css",
     "/vendor/xterm/addon-fit.js": "vendor/xterm/addon-fit.js",
+    # O cliente da voz remota (livekit-client, Apache-2.0; ver THIRD_PARTY.md).
+    "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
 }
 
 Leitura = Callable[[], Any]
@@ -106,7 +109,8 @@ class Portal:
                 self.send_header(
                     "Content-Security-Policy",
                     "default-src 'self'; img-src 'self' data: blob:; "
-                    "style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; "
+                    "style-src 'self' 'unsafe-inline'; script-src 'self'; "
+                    f"connect-src 'self' {VOZ_REMOTA}; "
                     "frame-ancestors 'none'; "
                     f"frame-src {IMERSIVO}",
                 )

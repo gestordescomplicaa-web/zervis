@@ -10,6 +10,7 @@
 <link rel="icon" type="image/webp" href="/ze.webp">
 <script src="/vendor/xterm/xterm.js" defer></script>
 <script src="/vendor/xterm/addon-fit.js" defer></script>
+<script src="/vendor/livekit/livekit-client.umd.js" defer></script>
 <script src="/painel.js" defer></script>
 </head>
 <body>
@@ -20,6 +21,7 @@
       <div><strong>Zé</strong><small id="estado-ze">conectando…</small></div>
     </header>
     <div class="modo-fala" id="modo-fala"></div>
+    <div class="voz-remota" id="voz-remota" hidden></div>
     <nav aria-label="Seções">
       <a href="#inicio" data-secao="inicio"><i>◉</i>Início</a>
       <a href="#imersao" data-secao="imersao"><i>◐</i>Imersão <span class="ponto" id="ponto-imersao" hidden></span></a>

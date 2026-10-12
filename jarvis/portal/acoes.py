@@ -125,6 +125,7 @@ class Acoes:
             "cerebro": self.mudar_cerebro,
             "fala/modo": self.mudar_modo_fala,
             "escuta/modo": self.mudar_escuta,
+            "voz/token": self.token_voz,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
@@ -197,6 +198,10 @@ class Acoes:
             "tela_ts": self._tela_ts(),
             "modo_fala": self.n.modo_fala,
             "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
+            "voz_remota": {
+                "disponivel": self.n.remota is not None,
+                "conectada": self.n.remota is not None and self.n.remota.conectada,
+            },
         }
 
     def mudar_modo_fala(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -214,6 +219,13 @@ class Acoes:
         except ValueError as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {"modo": modo, "aviso": aviso}
+
+    def token_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Entrar na sala da voz remota pelo navegador (token curto, só microfone)."""
+        try:
+            return dict(self.n.token_voz_remota())
+        except ValueError as erro:
+            raise PedidoInvalido(str(erro)) from erro
 
     def painel_vendo(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O painel está com esta sessão aberta e à vista: o Zé não fala o que ela já mostra."""

@@ -232,6 +232,8 @@ main.cheio { padding: 0; overflow: hidden; }
 .modo-fala .escolha-botao { width: 100%; max-width: none; justify-content: space-between; }
 .modo-fala[data-modo="silencioso"] .escolha-botao { color: var(--suave); }
 .modo-fala[data-modo="maos_livres"] .escolha-botao { border-color: var(--borda-forte); }
+.voz-remota { padding: 0 14px 10px; }
+.voz-remota .acao { width: 100%; }
 .modos-fala { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
 .modo { display: grid; gap: 4px; padding: 12px 14px; text-align: left; cursor: pointer; border-radius: 12px;
   border: 1px solid var(--borda); background: rgb(70 217 222 / .04); color: var(--texto); font: inherit; }

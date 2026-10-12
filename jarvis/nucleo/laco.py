@@ -15,6 +15,7 @@ import math
 import os
 import queue
 import random
+import secrets
 import struct
 import subprocess
 import threading
@@ -74,7 +75,10 @@ from jarvis.rosto.teclado import Teclado
 from jarvis.sistema import catalogo as catalogo_sistema
 from jarvis.sistema.politica import Sistema
 from jarvis.sistema.vigia import Eventos, Vigia
+from jarvis.transporte import servidor_livekit
+from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.local import SERVIDOR, Captura
+from jarvis.transporte.remoto import SalaRemota
 from jarvis.voz import piper
 from jarvis.voz.ativacao import VAD, Detector, Features, SemAtivacao, carregar_modelo
 from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro
@@ -259,7 +263,7 @@ class Nucleo:
         self.escuta: EscutaDeepgram | None = None  # o pedido atual em streaming
         self.transcrevendo: concurrent.futures.Future[str] | None = None
 
-        self.captura = Captura(cfg["audio"]["microfone"])
+        self.captura = Entrada(Captura(cfg["audio"]["microfone"]))
         self.anel = Anel(cfg.caminho("barehands", "pasta_estado"))
         self.voz = Voz(onda=self.anel, abrir_fluxo=piper.PADRAO.abrir_fluxo)
         # A voz carrega em segundo plano: a primeira fala já a encontra pronta.
@@ -321,6 +325,8 @@ class Nucleo:
         self.sistema = Sistema(catalogo_sistema.carregar(forcados=forcados))
         self.tela = tela.Tela(cfg.caminho("barehands", "pasta_estado"))
         self.memoria_longa = AiMemory()  # o ai-memory: o da máquina ou um filho do Zé
+        self.livekit = servidor_livekit.ServidorLiveKit()  # a sala da voz remota
+        self.remota: SalaRemota | None = None
         self.imersivo = Imersivo(
             cfg.caminho("barehands", "pasta_estado"),
             acervo=cfg.caminho("barehands", "pasta_acervo"),
@@ -985,7 +991,47 @@ class Nucleo:
         except Exception as erro:
             log.warning("voz indisponível: %s", erro)
 
+    def _ligar_voz_remota(self) -> None:
+        """Sobe a sala da voz remota e põe o Zé nela (plano da voz remota, etapa 1)."""
+        if not self.livekit.iniciar():
+            return
+        chave, segredo = servidor_livekit.credenciais()
+        self.remota = SalaRemota(
+            self.livekit.url,
+            lambda: servidor_livekit.token(chave, segredo, "ze", "Zé", validade_s=3600),
+            self.captura.receber,
+            self._voz_remota_mudou,
+        )
+        self.remota.iniciar()
+
+    def _voz_remota_mudou(self, conectada: bool) -> None:
+        """A pessoa entrou ou saiu da sala: a entrada e a saída de áudio trocam de lado, e o
+        dispositivo conectado vale como rosto (ADR 0021)."""
+        remota = self.remota
+        self.captura.remota(conectada)
+        self.voz.destino = remota.tocador if conectada and remota is not None else None
+        self.rostos.marcar("remoto", conectada)
+
+    def token_voz_remota(self) -> dict[str, str]:
+        """Um token curto para o navegador entrar na sala e falar com o Zé."""
+        if self.remota is None:
+            raise ValueError("Voz remota indisponível.")
+        chave, segredo = servidor_livekit.credenciais()
+        identidade = f"pessoa-{secrets.token_hex(4)}"
+        return {
+            "url": self.livekit.url,
+            "token": servidor_livekit.token(chave, segredo, identidade, usuario.PERFIL.rotulo),
+        }
+
     def _tocar_bip(self) -> None:
+        remota = self.remota
+        if remota is not None and remota.conectada:
+            try:
+                remota.tocar_wav(self.bip)
+            except Exception as erro:
+                self._erro(f"bip remoto: {erro}")
+            self._descartar_escuta()
+            return
         try:
             subprocess.run(  # noqa: S603 (comando fixo, arquivo nosso)
                 [
@@ -1620,6 +1666,7 @@ class Nucleo:
 
     def rodar(self) -> None:
         self.memoria_longa.iniciar()
+        self._ligar_voz_remota()
         self.imersivo.iniciar()
         if self.presenca is not None:
             self.presenca.start()
@@ -1686,6 +1733,9 @@ class Nucleo:
         self.voz.parar()
         self.captura.fechar()
         self.imersivo.parar()
+        if self.remota is not None:
+            self.remota.parar()
+        self.livekit.parar()
         self.memoria_longa.parar()
         self.transcricoes.shutdown(wait=False, cancel_futures=True)
         self._pasta_exec.shutdown(wait=False, cancel_futures=True)

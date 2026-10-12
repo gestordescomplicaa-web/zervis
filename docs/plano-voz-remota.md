@@ -1,5 +1,10 @@
 # Plano — voz remota: falar com o Zé de qualquer lugar (12/10/2026)
 
+**Estado (12/10/2026):** etapa 0 feita (ADR 0021). Etapa 1 feita no código e provada por um
+participante de teste (entrar na sala liga o Zé e fecha o microfone local; pedido respondido com a
+voz chegando pela faixa; sair desliga). Falta a prova de ouvido pelo navegador: o "Ei Zé" com o
+microfone do navegador e a latência medida.
+
 Pedido do usuário: um canal de voz próprio com o Zé, sem passar pelo WhatsApp, para operá-lo de
 longe (celular, outro computador) e, depois, com o Zé ligado 24 horas numa VPS. É o diferencial
 do Zé diante do Hermes, do OpenClaw e do Paperclip: eles conversam por texto em aplicativos de
@@ -55,7 +60,7 @@ fica ligado 24 horas e opera as sessões dos projetos que estão lá; comandar d
 | `voz/token` | portal | Emite token LiveKit só com sessão do painel válida: uma sala da instalação, validade de 10 min, identidade por dispositivo, publicar só áudio. |
 | Botão "Conectar voz" | painel | Liga o microfone do navegador (`livekit-client`, Apache-2.0, vendorizado) com cancelamento de eco, anel de estado, nível do microfone, desconectar. |
 | PWA | painel | Manifesto para instalar o painel no celular como aplicativo. |
-| `livekit-server` | Zé (filho) | Binário oficial, config gerada, portas só na interface da rede privada. |
+| `livekit-server` | Zé (filho) | Binário oficial, config gerada, só no endereço local (7880 TCP para a sinalização, 7882 UDP para a mídia, sem TCP de mídia); na etapa 2, o endereço da rede privada. |
 | Login do painel | portal | Senha mais código (TOTP) ou passkey, exigido fora do localhost. |
 
 ## Como a pessoa usa

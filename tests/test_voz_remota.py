@@ -1,0 +1,141 @@
+"""A voz remota (plano da voz remota, etapa 1): sala, token, entrada e saída de áudio."""
+
+import base64
+import hashlib
+import hmac
+import json
+import queue
+import stat
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pytest
+from livekit import rtc
+
+from jarvis.transporte import servidor_livekit as lk
+from jarvis.transporte.entrada import Entrada
+from jarvis.transporte.remoto import TAXA_SAIDA, TocadorRemoto
+from jarvis.voz.saida import FluxoPronto, Voz
+
+
+def _decodificar(parte: str) -> Any:
+    return json.loads(base64.urlsafe_b64decode(parte + "=" * (-len(parte) % 4)))
+
+
+def test_token_assinado_so_para_a_sala_e_o_microfone() -> None:
+    t = lk.token("chave", "s" * 32, "pessoa-1", "Ana", agora=1000, validade_s=600)
+    cabeca, corpo, assinatura = t.split(".")
+    esperado = hmac.new(b"s" * 32, f"{cabeca}.{corpo}".encode(), hashlib.sha256).digest()
+    assert base64.urlsafe_b64decode(assinatura + "=" * (-len(assinatura) % 4)) == esperado
+    assert _decodificar(cabeca) == {"alg": "HS256", "typ": "JWT"}
+    carga = _decodificar(corpo)
+    assert (carga["iss"], carga["sub"], carga["name"]) == ("chave", "pessoa-1", "Ana")
+    assert carga["exp"] == 1600 and carga["nbf"] <= 1000
+    assert carga["video"]["room"] == lk.SALA and carga["video"]["roomJoin"]
+    assert carga["video"]["canPublishSources"] == ["microphone"]
+    assert not carga["video"]["canPublishData"]
+
+
+def test_credenciais_criadas_uma_vez_e_so_do_usuario(tmp_path: Path) -> None:
+    arquivo = tmp_path / "livekit.json"
+    chave, segredo = lk.credenciais(arquivo)
+    assert len(segredo) >= 32 and chave.startswith("ze")
+    assert stat.S_IMODE(arquivo.stat().st_mode) == 0o600
+    assert lk.credenciais(arquivo) == (chave, segredo)
+    arquivo.write_text("{quebrado")
+    assert lk.credenciais(arquivo) != (chave, segredo)
+
+
+def test_servidor_so_no_endereco_local() -> None:
+    cfg = json.loads(lk.configuracao(7880))
+    assert cfg["bind_addresses"] == ["127.0.0.1"]
+    assert cfg["rtc"]["node_ip"] == "127.0.0.1" and not cfg["rtc"]["use_external_ip"]
+    assert (cfg["rtc"]["tcp_port"], cfg["rtc"]["udp_port"]) == (0, 7882)
+    assert cfg["rtc"]["ips"]["includes"] == ["127.0.0.1/32"]
+    assert cfg["rtc"]["enable_loopback_candidate"]
+
+
+def test_sem_binario_a_voz_remota_fica_indisponivel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(lk, "porta_ocupada", lambda porta: False)
+    monkeypatch.setattr(lk, "binario", lambda pasta=lk.PASTA: None)
+    assert not lk.ServidorLiveKit(arquivo=tmp_path / "lk.json").iniciar()
+
+
+class CapturaFalsa:
+    def __init__(self) -> None:
+        self.quadros: queue.Queue[bytes] = queue.Queue(maxsize=3)
+        self.aberta = False
+
+    def abrir(self) -> None:
+        self.aberta = True
+
+    def fechar(self) -> None:
+        self.aberta = False
+
+
+def test_voz_remota_tem_a_vez_e_o_microfone_local_volta() -> None:
+    local = CapturaFalsa()
+    entrada = Entrada(local)  # type: ignore[arg-type]
+    entrada.receber(b"a")
+    assert entrada.quadros.empty()  # fechada: nada entra
+    entrada.abrir()
+    assert local.aberta
+    entrada.remota(True)
+    assert not local.aberta and entrada.aberta
+    for q in (b"1", b"2", b"3", b"4"):
+        entrada.receber(q)
+    assert [entrada.quadros.get_nowait() for _ in range(3)] == [b"2", b"3", b"4"]
+    entrada.remota(False)
+    assert local.aberta
+    entrada.fechar()
+    entrada.remota(True)
+    entrada.remota(False)
+    assert not local.aberta  # fechada continua fechada
+
+
+class SalaFalsa:
+    def __init__(self) -> None:
+        self.quadros: list[rtc.AudioFrame] = []
+        self.esperou = self.limpou = False
+
+    def enviar(self, quadro: rtc.AudioFrame) -> None:
+        self.quadros.append(quadro)
+
+    def esperar_tocar(self) -> None:
+        self.esperou = True
+
+    def limpar(self) -> None:
+        self.limpou = True
+
+
+def test_tocador_remoto_converte_e_reamostra() -> None:
+    sala = SalaFalsa()
+    t = TocadorRemoto(sala, 22050)  # type: ignore[arg-type]
+    onda = np.sin(np.linspace(0, 400, 22050)).astype("<f4").tobytes()
+    t.stdin.write(onda[:5])  # pedaço quebrado no meio de uma amostra
+    t.stdin.write(onda[5:])
+    t.stdin.close()
+    assert t.poll() is None and t.wait() == 0 and sala.esperou
+    total = sum(q.samples_per_channel for q in sala.quadros)
+    assert {q.sample_rate for q in sala.quadros} == {TAXA_SAIDA}
+    assert abs(total - TAXA_SAIDA) < 2000  # um segundo de áudio continua um segundo
+    t2 = TocadorRemoto(sala, TAXA_SAIDA)  # type: ignore[arg-type]
+    t2.kill()
+    assert sala.limpou and t2.wait() == -9
+    with pytest.raises(BrokenPipeError):
+        t2.stdin.write(b"\0" * 8)
+
+
+def test_voz_sai_pelo_destino_quando_ha_um() -> None:
+    sala = SalaFalsa()
+    amostras = np.full(2205, 0.25, dtype="<f4").tobytes()
+    voz = Voz(abrir_fluxo=lambda texto: (22050, FluxoPronto(amostras)), folga_s=0)
+    voz.destino = lambda taxa: TocadorRemoto(sala, taxa)  # type: ignore[arg-type]
+    falas: queue.Queue[int] = queue.Queue()
+    voz.ao_ficar_ociosa = falas.put
+    voz.falar("Oi.")
+    assert falas.get(timeout=5) == 1
+    assert voz.ultimo_erro is None and sala.quadros and sala.esperou

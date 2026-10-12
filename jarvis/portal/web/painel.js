@@ -250,6 +250,33 @@ async function mudarModoFala(valor) {
   if (location.hash === "#voz") await recarregar();
 }
 
+// --- Voz pelo navegador: o microfone daqui fala com o Zé pela sala LiveKit ---
+
+let salaVoz = null, vozConectando = false;
+
+function desenharVozRemota(estado) {
+  const caixa = $("voz-remota"), on = !!salaVoz;
+  caixa.hidden = !estado?.disponivel && !on;
+  const html = `<button type="button" class="acao ${on ? "" : "principal"}" data-acao="voz-remota" aria-pressed="${on}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : on ? "Desconectar voz" : "Conectar voz"}</button>`;
+  if (caixa.innerHTML !== html) caixa.innerHTML = html;
+}
+
+async function ligarVoz() {
+  const L = window.LivekitClient, fim = (texto) => { salaVoz = null; document.querySelectorAll("audio[data-voz]").forEach((a) => a.remove()); desenharVozRemota({ disponivel: true }); if (texto) toast(texto); };
+  if (salaVoz) { const sala = salaVoz; fim("Voz desconectada."); return sala.disconnect(); }
+  vozConectando = true; desenharVozRemota({ disponivel: true });
+  try {
+    const { url, token } = await api("voz/token", {});
+    const sala = new L.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    sala.on(L.RoomEvent.TrackSubscribed, (f) => { if (f.kind === "audio") document.body.appendChild(f.attach()).dataset.voz = ""; });
+    sala.on(L.RoomEvent.Disconnected, () => salaVoz === sala && fim());
+    await sala.connect(url, token);
+    await sala.localParticipant.setMicrophoneEnabled(true);
+    salaVoz = sala; toast("Voz conectada.");
+  } catch (erro) { toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message); }
+  vozConectando = false; desenharVozRemota({ disponivel: true });
+}
+
 // --- Modelos: provedor, modelo e chave ---------------------------------------------------------------
 
 let modelo = {};
@@ -1022,6 +1049,7 @@ const ACOES = {
   mencionar: (b) => { fecharPrevia(); escreverNoTerminal("@" + b.dataset.caminho + " "); },
   "terminal-reabrir": () => abrirTerminal(sessaoAberta),
   "modo-fala": (b) => mudarModoFala(b.dataset.modo),
+  "voz-remota": ligarVoz,
   "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
 };
 
@@ -1134,6 +1162,7 @@ async function batimento() {
     $("estado-ze").textContent = ESTADOS[e.ze] || e.ze;
     document.querySelector(".marca .anel").classList.toggle("ativo", e.ze !== "inativo");
     desenharModoFala(e.modo_fala);
+    desenharVozRemota(e.voz_remota);
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }
