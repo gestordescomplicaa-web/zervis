@@ -119,3 +119,18 @@ def test_fluxo_isola_fio_e_conta_cache_sem_duplicar(tmp_path: Path) -> None:
         assert not brain.assinatura
 
     asyncio.run(rodar())
+
+
+def test_mcp_da_conta_desligado_com_chave_sem_aspas(tmp_path: Path) -> None:
+    from jarvis.cerebro.codex_rpc import comando
+    from jarvis.cerebro.contas import Conta
+
+    (tmp_path / "config.toml").write_text(
+        '[mcp_servers.ai-memory]\nurl = "http://127.0.0.1:1/mcp"\n'
+        '[mcp_servers.blender]\ncommand = "uvx"\n'
+        '[mcp_servers."com espaço"]\ncommand = "x"\n'
+    )
+    args = comando(Conta("codex:x", "codex", "X", str(tmp_path)))
+    assert "mcp_servers.ai-memory.enabled=false" in args
+    assert "mcp_servers.blender.enabled=false" in args
+    assert not any('"' in a.split("=", 1)[0] for a in args)  # o Codex 0.162 recusa aspas

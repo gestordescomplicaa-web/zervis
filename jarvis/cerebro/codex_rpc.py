@@ -3,7 +3,9 @@
 import asyncio
 import contextlib
 import json
+import logging
 import os
+import re
 import signal
 import tomllib
 from collections.abc import Awaitable, Callable
@@ -11,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.cerebro.contas import Conta
+
+log = logging.getLogger(__name__)
 
 
 class CodexErro(RuntimeError):
@@ -53,7 +57,12 @@ def comando(conta: Conta) -> list[str]:
     except (OSError, tomllib.TOMLDecodeError):
         dados = {}
     for nome in dados.get("mcp_servers", {}):
-        cfg[f"mcp_servers.{json.dumps(nome)}.enabled"] = False
+        # Chave sem aspas: o `-c` do Codex lê `"nome"` como outro servidor, sem transporte, e o
+        # app-server não sobe ("invalid transport", Codex 0.162). Fora do padrão: ligado, com aviso.
+        if re.fullmatch(r"[A-Za-z0-9_-]+", nome):
+            cfg[f"mcp_servers.{nome}.enabled"] = False
+        else:
+            log.warning("MCP do Codex com nome fora do padrão segue ligado: %r", nome)
     return [
         "codex",
         "app-server",
