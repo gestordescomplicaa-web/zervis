@@ -45,8 +45,29 @@ body {
   width: 40px; height: 40px; border-radius: 10px; flex: none; object-fit: cover;
   box-shadow: 0 0 10px rgb(56 160 255 / .35); opacity: .75; transition: opacity .3s;
 }
-.anel.ativo { opacity: 1; animation: pulso 2.4s ease-in-out infinite; }
-@keyframes pulso { 50% { box-shadow: 0 0 20px rgb(56 160 255 / .75); } }
+/* O ícone mostra o estado do Zé, no espírito da Imersão: ondas ouvindo, arco pensando, pulso
+   falando, âmbar esperando o "sim". */
+.icone-ze { position: relative; flex: none; display: grid; border-radius: 10px; --cor: var(--acento); }
+.icone-ze::before, .icone-ze::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: 2px solid var(--cor); opacity: 0; }
+.icone-ze[data-estado="inativo"] .anel { opacity: .45; filter: grayscale(.6); box-shadow: none; }
+.icone-ze[data-estado="ativo"] .anel { opacity: 1; animation: respirar 4s ease-in-out infinite; }
+.icone-ze[data-estado="ouvindo"] .anel, .icone-ze[data-estado="pensando"] .anel { opacity: 1; box-shadow: 0 0 16px rgb(70 217 222 / .6); }
+.icone-ze[data-estado="ouvindo"]::before, .icone-ze[data-estado="ouvindo"]::after { animation: onda 1.6s ease-out infinite; }
+.icone-ze[data-estado="ouvindo"]::after { animation-delay: .8s; }
+@property --volta { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.icone-ze[data-estado="pensando"]::before { inset: -4px; border: 0; border-radius: 13px; padding: 2px; opacity: 1;
+  background: conic-gradient(from var(--volta), transparent 0 60%, var(--cor));
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); animation: girar 1.1s linear infinite; }
+.icone-ze[data-estado="falando"] .anel, .icone-ze[data-estado="confirmando"] .anel { opacity: 1; animation: falar .5s ease-in-out infinite alternate; }
+.icone-ze[data-estado="falando"]::before, .icone-ze[data-estado="falando"]::after { animation: onda 1s ease-out infinite; }
+.icone-ze[data-estado="falando"]::after { animation-delay: .5s; }
+.icone-ze[data-estado="confirmando"] { --cor: var(--alerta); }
+.icone-ze[data-estado="confirmando"]::before { animation: onda 1.4s ease-out infinite; }
+@keyframes respirar { 50% { box-shadow: 0 0 18px rgb(56 160 255 / .7); } }
+@keyframes onda { from { transform: scale(1); opacity: .7; } to { transform: scale(1.7); opacity: 0; } }
+@keyframes girar { to { --volta: 360deg; } }
+@keyframes falar { from { transform: scale(1); box-shadow: 0 0 10px rgb(70 217 222 / .4); } to { transform: scale(1.08); box-shadow: 0 0 22px var(--cor); } }
 nav { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 nav a {
   display: flex; align-items: center; gap: 12px; padding: 7px 12px; border-radius: 10px;
@@ -372,6 +393,7 @@ details.detalhes p { margin: 8px 0 0; }
     border-bottom: 1px solid var(--borda); min-width: 0; }
   .marca { padding: 0; }
   .marca .anel { width: 32px; height: 32px; }
+  .marca .icone-ze { border-radius: 8px; }
   nav { flex: 1 1 0; min-width: 0; flex-direction: row; align-items: center; overflow-x: auto; scrollbar-width: none; }
   nav a { white-space: nowrap; padding: 6px 10px; }
   .grupo, .grupo-itens { flex-direction: row; margin: 0; }
@@ -381,7 +403,7 @@ details.detalhes p { margin: 8px 0 0; }
   .barra-voz .escolha-menu { top: calc(100% + 8px); bottom: auto; }
   .rodape { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .anel.ativo { animation: none; } .toast { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .icone-ze .anel, .icone-ze::before, .icone-ze::after { animation: none !important; } .toast { transition: none; } }
 
 /* --- configuração inicial e perfil --- */
 .passos { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; flex-wrap: wrap; }

@@ -93,3 +93,6 @@
 - Menu lateral com grupos recolhíveis (Trabalho, O Zé, Ajustes), lembrados no navegador; o grupo
   da página aberta fica sempre aberto. A voz virou uma barra no rodapé do menu: modo de fala, Ao
   vivo e Falar. No celular, o menu vira uma barra no topo e o conteúdo não fica mais por baixo.
+- O ícone do Zérvis no menu mostra o estado do Zé com animação: ondas ouvindo, brilho girando na
+  borda pensando, pulso falando, âmbar esperando o "sim"; apagado quando inativo. O texto do estado
+  saiu do menu (fica na dica do ícone), e o painel confere o estado a cada segundo.

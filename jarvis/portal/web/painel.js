@@ -1209,14 +1209,14 @@ async function batimento() {
     const e = await api("estado");
     if (telaVista !== null && e.tela_ts > telaVista && imersaoLigada() && location.hash !== "#imersao") location.hash = "#imersao";
     telaVista = e.tela_ts;
-    document.querySelector(".marca .anel").title = `Zé ${ESTADOS[e.ze] || e.ze}`;
-    document.querySelector(".marca .anel").classList.toggle("ativo", e.ze !== "inativo");
+    const icone = document.querySelector(".icone-ze");
+    icone.dataset.estado = e.ze; icone.title = `Zé ${ESTADOS[e.ze] || e.ze}`;
     desenharModoFala(e.modo_fala);
     desenharVozRemota(e.voz_remota);
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }
-  } catch { document.querySelector(".marca .anel").title = "Zé desconectado"; }
+  } catch { Object.assign(document.querySelector(".icone-ze"), { title: "Zé desconectado" }).dataset.estado = "inativo"; }
 }
 
 // Sem perfil, o painel abre na configuração inicial.
@@ -1228,4 +1228,4 @@ async function comecar() {
 window.addEventListener("hashchange", abrir);
 comecar();
 batimento();
-setInterval(batimento, 2000);
+setInterval(batimento, 1000);
