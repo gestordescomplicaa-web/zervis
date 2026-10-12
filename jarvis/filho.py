@@ -10,6 +10,7 @@ import socket
 import subprocess
 import threading
 from collections.abc import Sequence
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 ESPERA_S = (1.0, 2.0, 5.0, 15.0, 30.0)
@@ -22,10 +23,19 @@ def porta_ocupada(porta: int, host: str = "127.0.0.1") -> bool:
 
 
 class Filho:
-    def __init__(self, nome: str, comando: Sequence[str], ambiente: dict[str, str]) -> None:
+    def __init__(
+        self,
+        nome: str,
+        comando: Sequence[str],
+        ambiente: dict[str, str],
+        registro: Path | None = None,
+    ) -> None:
         self.nome = nome
         self.comando = list(comando)
         self.ambiente = ambiente
+        self.registro = (
+            registro  # a saída do filho num arquivo (diagnóstico), refeito a cada subida
+        )
         self.processo: subprocess.Popen[bytes] | None = None
         self._parar = threading.Event()
         self._fio: threading.Thread | None = None
@@ -37,17 +47,26 @@ class Filho:
     def _manter(self) -> None:
         quedas = 0
         while not self._parar.is_set():
-            self.processo = subprocess.Popen(  # noqa: S603 (comando montado pelo Zé)
-                self.comando,
-                env={**os.environ, **self.ambiente},
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-            )
-            log.info("%s subiu", self.nome)
-            _, erro = self.processo.communicate()
+            arquivo = self.registro.open("wb") if self.registro is not None else None
+            try:
+                self.processo = subprocess.Popen(  # noqa: S603 (comando montado pelo Zé)
+                    self.comando,
+                    env={**os.environ, **self.ambiente},
+                    stdout=arquivo or subprocess.DEVNULL,
+                    stderr=arquivo or subprocess.PIPE,
+                )
+                log.info("%s subiu", self.nome)
+                _, erro = self.processo.communicate()
+            finally:
+                if arquivo is not None:
+                    arquivo.close()
             if self._parar.is_set():
                 return
-            final = erro.decode(errors="replace").strip().splitlines()[-1:] or ["sem saída"]
+            if self.registro is not None:
+                erro = self.registro.read_bytes()[-2000:]
+            final = (erro or b"").decode(errors="replace").strip().splitlines()[-1:] or [
+                "sem saída"
+            ]
             espera = ESPERA_S[min(quedas, len(ESPERA_S) - 1)]
             log.warning("%s caiu (%s); de novo em %.0f s", self.nome, final[0][:200], espera)
             quedas += 1

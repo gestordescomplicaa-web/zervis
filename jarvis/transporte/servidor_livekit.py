@@ -157,7 +157,7 @@ def configuracao(porta: int = PORTA, ip_rede: str = "") -> str:
                 "enable_loopback_candidate": True,
             },
             "room": {"empty_timeout": 300, "max_participants": 4},
-            "logging": {"level": "warn"},
+            "logging": {"level": "info", "pion_level": "warn"},
         }
     )
 
@@ -193,6 +193,7 @@ class ServidorLiveKit:
                 "LIVEKIT_CONFIG": configuracao(self.porta, ip_rede),
                 "LIVEKIT_KEYS": f"{chave}: {segredo}",
             },
+            registro=lugares.ESTADO / "livekit.log",
         )
         self.filho.iniciar()
         return True
