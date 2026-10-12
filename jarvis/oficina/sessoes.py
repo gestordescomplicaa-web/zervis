@@ -34,7 +34,7 @@ from jarvis.memoria import aimemory
 log = logging.getLogger(__name__)
 FUSO = fuso.local()
 MAXIMO_TRABALHANDO = 3
-MOTORES = ("claude",)  # o Codex entra na fase 4
+MOTORES = ("claude", "codex")
 ESTADOS = ("parada", "trabalhando", "erro")
 LIMITE_MENSAGEM = 8000
 LIMITE_ANEXO = 20 * 1024 * 1024
@@ -129,7 +129,7 @@ class Sessoes:
         self.projetos_novos = projetos_novos  # onde nasce um projeto criado com a sessão
         self.raizes = tuple(r.expanduser().resolve() for r in raizes)
         self.ao_terminar = ao_terminar
-        self.rodar = rodar or rodar_claude
+        self.rodar = rodar or rodar_agente
         self.trava = threading.Lock()
         self.tarefas: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Task[None]]] = {}
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -268,6 +268,7 @@ class Sessoes:
             nome=nome or caminho.name,
             pasta=str(caminho),
             motor=motor,
+            conta=contas.Contas().em_uso(motor).id,
             modelo=modelo.strip(),
             isolada=isolada,
             origem=origem,
@@ -501,3 +502,72 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
                 if msg.is_error:
                     raise RuntimeError(msg.subtype or "erro")
     return _resumo_de(ultimo) if ultimo else "terminou sem dizer nada"
+
+
+# --- motor Codex ----------------------------------------------------------------------------
+
+
+def _comando_codex(s: Sessao, texto: str) -> list[str]:
+    """`codex exec` na primeira vez, `codex exec resume <id>` depois. Escreve só na pasta da
+    sessão (os anexos ele lê de onde estão; liberar escrita numa pasta que ainda não existe
+    derruba o isolamento inteiro do Codex, visto em 12/10/2026)."""
+    comum = ["--json", "--skip-git-repo-check", "-c", 'sandbox_mode="workspace-write"']
+    if s.modelo:
+        comum += ["-m", s.modelo]
+    if s.sdk_sessao:
+        return ["codex", "exec", "resume", *comum, s.sdk_sessao, texto]
+    return ["codex", "exec", *comum, texto]
+
+
+async def rodar_codex(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+    """Uma rodada do Codex na pasta da sessão, pelo `codex exec --json`; devolve o resumo falável.
+    A conta é a pasta de login da sessão (CODEX_HOME); as regras vão na primeira mensagem."""
+    if not s.sdk_sessao:
+        texto = f"{REGRAS.strip()}\n\nPedido:\n{texto}"
+    processo = await asyncio.create_subprocess_exec(
+        *_comando_codex(s, texto),
+        cwd=s.onde,
+        env={**os.environ, **ambiente_da_conta(s)},
+        stdin=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        limit=16 * 1024 * 1024,  # uma linha de evento pode trazer a saída inteira de um comando
+    )
+    ultimo, erro = "", ""
+    try:
+        assert processo.stdout is not None  # noqa: S101 (criado com PIPE acima)
+        async for linha in processo.stdout:
+            try:
+                evento = json.loads(linha)
+            except ValueError:
+                continue
+            tipo, item = evento.get("type"), evento.get("item") or {}
+            if tipo == "thread.started" and evento.get("thread_id"):
+                sessoes._mudar(s.id, sdk_sessao=str(evento["thread_id"]))
+            elif tipo == "item.completed" and item.get("type") == "agent_message":
+                if texto_agente := str(item.get("text", "")).strip():
+                    ultimo = texto_agente
+                    sessoes.anotar(s.id, "agente", texto_agente)
+            elif tipo == "item.started" and item.get("type") == "command_execution":
+                sessoes.anotar(s.id, "ferramenta", f"$ {str(item.get('command', ''))[:160]}")
+            elif tipo == "item.completed" and item.get("type") == "file_change":
+                arquivos = [str(m.get("path", "")) for m in item.get("changes", [])]
+                sessoes.anotar(s.id, "ferramenta", "Editou " + ", ".join(arquivos)[:200])
+            elif tipo in ("turn.failed", "error"):
+                erro = str((evento.get("error") or {}).get("message") or evento.get("message"))
+        await processo.wait()
+    except asyncio.CancelledError:
+        processo.terminate()
+        raise
+    if erro and not ultimo:
+        raise RuntimeError(erro[:200])
+    if processo.returncode and not ultimo:
+        raise RuntimeError(f"codex saiu com {processo.returncode}")
+    return _resumo_de(ultimo) if ultimo else "terminou sem dizer nada"
+
+
+async def rodar_agente(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+    """O motor da sessão: Claude (Agent SDK) ou Codex (`codex exec`)."""
+    if s.motor == "codex":
+        return await rodar_codex(sessoes, s, texto)
+    return await rodar_claude(sessoes, s, texto)

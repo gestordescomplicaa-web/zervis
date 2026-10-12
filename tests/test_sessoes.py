@@ -1,6 +1,8 @@
 """Sessões da oficina própria: criar, conversar, parar, cópia isolada e a lista de proibidos."""
 
 import asyncio
+import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -189,4 +191,47 @@ def test_criar_md_direto_na_pasta_da_sessao(tmp_path: Path, raiz: Path) -> None:
     assert (raiz / "projetos/loja/etc/passwd.md").is_file()
     assert "Você criou docs/ideia.md" in [
         m["texto"].split(" na pasta")[0] for m in sessoes.mensagens(s.id)
+    ]
+
+
+def test_o_motor_codex_anota_guarda_o_fio_e_continua_com_resume(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Um `codex` falso no PATH: emite os eventos do `codex exec --json` e guarda os argumentos."""
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    eventos = [
+        {"type": "thread.started", "thread_id": "fio-1"},
+        {"type": "item.started", "item": {"type": "command_execution", "command": "make test"}},
+        {"type": "item.completed", "item": {"type": "file_change", "changes": [{"path": "a.py"}]}},
+        {
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": "Fiz os testes. Mais."},
+        },
+        {"type": "turn.completed"},
+    ]
+    linhas = "".join(f"echo '{json.dumps(e)}'\n" for e in eventos)
+    (bin_ / "codex").write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > "{tmp_path}/args-$$"\n{linhas}')
+    (bin_ / "codex").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_}:{os.environ['PATH']}")
+    fim: list[tuple[str, str]] = []
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: fim.append((s.estado, r)))
+    s = sessoes.criar("Loja", str(raiz / "projetos" / "loja"), motor="codex")
+    sessoes.enviar(s.id, "rode os testes")
+    esperar(lambda: bool(fim))
+    assert fim == [("parada", "Fiz os testes.")]
+    assert sessoes.ler(s.id).sdk_sessao == "fio-1"
+    quem = [(m["quem"], m["texto"]) for m in sessoes.mensagens(s.id)]
+    assert ("ferramenta", "$ make test") in quem and ("ferramenta", "Editou a.py") in quem
+    primeira = next(tmp_path.glob("args-*")).read_text().split("\n")
+    assert primeira[:2] == ["exec", "--json"] and "rode os testes" in primeira[-2]
+    for arquivo in tmp_path.glob("args-*"):
+        arquivo.unlink()
+    fim.clear()
+    sessoes.enviar(s.id, "agora o resto")
+    esperar(lambda: bool(fim))
+    segunda = next(tmp_path.glob("args-*")).read_text().split("\n")
+    assert segunda[:3] == ["exec", "resume", "--json"] and segunda[-3:-1] == [
+        "fio-1",
+        "agora o resto",
     ]

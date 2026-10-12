@@ -36,9 +36,8 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    ai-memory e pasta dos projetos.
 2. **Três camadas de modelos, sem o Orca (ADR 0015):** feito: a página Modelos com um cartão
    por camada (voz rápida, cérebro, sessões de código) e o modo manutenção sobre as sessões
-   próprias, e o Orca fora do núcleo (o cérebro delega pelas ferramentas `sessao_*`). Falta:
-   motor Codex no cérebro e nas sessões, com troca de agente na mesma sessão (passagem de
-   contexto); a conversa continua na troca de cérebro, com o ai-memory comum aos dois.
+   próprias, e o Orca fora do núcleo (o cérebro delega pelas ferramentas `sessao_*`). Feito também: contas por agente e o Codex nas sessões. Falta: troca de conta ou de
+   agente na mesma sessão (passagem de contexto; captura do Codex no ai-memory); Codex no cérebro; a conversa continua na troca de cérebro, com o ai-memory comum aos dois.
 3. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx` e o OmniRoute (baterias) como
    opcionais que se desligam sozinhos quando não
    existem; Omarchy detectado em vez de suposto. **Escuta sem depender de janela:** hoje o

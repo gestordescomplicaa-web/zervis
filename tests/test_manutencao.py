@@ -66,10 +66,12 @@ def nova(repo: Path, sessoes: SessoesFalsas) -> Manutencao:
 def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) -> None:
     sessoes = SessoesFalsas()
     m = nova(repo, sessoes)
-    assert m.entrar("codex").startswith("Não entrei no modo manutenção: o Codex ainda não")
-    assert not m.ligado and not sessoes.criadas
+    assert m.entrar("gemini").startswith("Modo manutenção ligado, com o Claude.")  # desconhecido
+    m.sair()
+    assert m.entrar("codex").startswith("Modo manutenção ligado, com o Codex.")
+    assert [s.motor for s in sessoes.criadas] == ["claude", "codex"]  # uma sessão por agente
     assert m.entrar("claude").startswith("Modo manutenção ligado, com o Claude.")
-    (sessao,) = sessoes.criadas
+    sessao = sessoes.criadas[0]
     assert (sessao.nome, sessao.pasta, sessao.origem) == (
         "Zé · manutenção",
         str(repo),
@@ -78,7 +80,7 @@ def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) 
     assert nova(repo, sessoes).ligado  # o estado fica gravado: o reinício faz parte
     assert m.sair() == "Saí do modo manutenção."
     m.entrar("claude")
-    assert len(sessoes.criadas) == 1  # a mesma sessão: a conversa do agente continua
+    assert len(sessoes.criadas) == 2  # a mesma sessão de cada agente: a conversa continua
     m.sair()
     assert not nova(repo, sessoes).ligado
 

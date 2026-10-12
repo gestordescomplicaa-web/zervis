@@ -170,8 +170,7 @@ const PAGINAS = {
       <section class="cartao" id="cartao-contas"></section>
       ${cartao("", `<div class="cabeca"><h2>Sessões de código</h2><span class="etiqueta">${sessoes} ${sessoes === 1 ? "sessão" : "sessões"}</span><a class="externo" href="#sessoes">Abrir sessões</a></div>
         ${sub("Agentes que trabalham nos seus projetos e continuam de onde pararam.")}
-        ${seletorAgente(c.sessoes.motor)}
-        <p class="nota">Usa o mesmo acesso do cérebro.</p>`)}
+        <p class="nota">Agentes: ${c.sessoes.agentes.filter((a) => a.disponivel).map((a) => esc(a.nome)).join(" e ")}. Você escolhe o agente ao criar a sessão; a conta é a que está em uso em Contas.</p>`)}
       <section class="cartao" id="cartao-escuta"></section>`;
   },
 
@@ -234,7 +233,7 @@ let passo = 1;
 let acessoTela = {};
 let agentes = [];
 
-const seletorAgente = (atual) => `<div class="segmentos" role="group" aria-label="Agente">${agentes.map((a) => a.disponivel
+const seletorAgente = (atual, lista = agentes) => `<div class="segmentos" role="group" aria-label="Agente">${lista.map((a) => a.disponivel
   ? `<button type="button" aria-pressed="${a.id === atual}">${esc(a.nome)}</button>`
   : `<button type="button" disabled>${esc(a.nome)} <small>Em breve</small></button>`).join("")}</div>`;
 
@@ -471,6 +470,7 @@ async function formSessao() {
   $("lado-sessao").innerHTML = `<div class="nova-sessao">${cartao("Nova sessão", `
     <label>Nome<input id="ns-nome" placeholder="Ligatia — testes" autocomplete="off"></label>
     <div class="segmentos" role="group" aria-label="Onde">${botao("Pasta existente", "ns-onde", 'data-onde="existente" aria-pressed="true"')}${botao("Projeto novo", "ns-onde", 'data-onde="novo" aria-pressed="false"')}</div>
+    <div class="segmentos" role="group" aria-label="Agente">${botao("Claude", "ns-motor", 'data-motor="claude" aria-pressed="true"')}${botao("Codex", "ns-motor", 'data-motor="codex" aria-pressed="false"')}</div>
     <label id="ns-campo-pasta">Pasta<input id="ns-pasta" class="mono" list="ns-pastas" placeholder="~/projetos/…" autocomplete="off" spellcheck="false"></label>
     <datalist id="ns-pastas">${pastas.map((p) => `<option value="${esc(p)}">`).join("")}</datalist>
     <label id="ns-campo-projeto" hidden>Nome da pasta<input id="ns-projeto" class="mono" placeholder="minha-loja" autocomplete="off" spellcheck="false"></label>
@@ -487,7 +487,7 @@ async function abrirSessao(id) {
   const trabalhando = sessao.estado === "trabalhando";
   lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
-      <h2>${esc(sessao.nome)}</h2><span class="etiqueta ${trabalhando ? "bom" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${ESTADO_SESSAO[sessao.estado] || esc(sessao.estado)}</span>
+      <h2>${esc(sessao.nome)}</h2><span class="etiqueta" title="Agente e conta desta sessão">${esc([sessao.agente, sessao.conta].filter(Boolean).join(" · "))}</span><span class="etiqueta ${trabalhando ? "bom" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${ESTADO_SESSAO[sessao.estado] || esc(sessao.estado)}</span>
       <div class="botoes">${botao("Novo arquivo", "md-abrir")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}
         ${botao("Parar", "sessao-parar", trabalhando ? "" : "hidden", "discreta")}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
     <div class="mensagens" id="mensagens">${mensagens.map(linhaMensagem).join("")}</div>
@@ -825,9 +825,11 @@ const ACOES = {
     const novo = b.dataset.onde === "novo";
     $("ns-campo-pasta").hidden = novo; $("ns-campo-projeto").hidden = !novo; $("ns-campo-isolada").hidden = novo;
   },
+  "ns-motor": (b) => document.querySelectorAll('[data-acao="ns-motor"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b))),
   "ns-criar": async (b) => {
     const novo = !$("ns-campo-projeto").hidden;
-    const s = await ocupado(b, () => api("sessao/criar", { nome: $("ns-nome").value, pasta: $("ns-pasta").value, novo, projeto: $("ns-projeto").value, isolada: !novo && $("ns-isolada").checked }));
+    const motor = document.querySelector('[data-acao="ns-motor"][aria-pressed="true"]').dataset.motor;
+    const s = await ocupado(b, () => api("sessao/criar", { nome: $("ns-nome").value, pasta: $("ns-pasta").value, motor, novo, projeto: $("ns-projeto").value, isolada: !novo && $("ns-isolada").checked }));
     await listaSessoes(); await abrirSessao(s.id);
   },
   "sessao-parar": async () => { await api("sessao/parar", { id: sessaoAberta }); toast("Parando…"); },

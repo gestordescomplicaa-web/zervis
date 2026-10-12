@@ -56,9 +56,14 @@ MOTORES = [
 ]
 
 
+# Os agentes de cada camada (ADR 0015). Marca: "Claude", nunca "Claude Code".
 AGENTES = [
-    {"id": "claude", "nome": "Claude", "disponivel": True},  # marca: "Claude", nunca "Claude Code"
-    {"id": "codex", "nome": "Codex", "disponivel": False},
+    {"id": "claude", "nome": "Claude", "disponivel": True},
+    {"id": "codex", "nome": "Codex", "disponivel": False},  # cérebro: a seguir
+]
+AGENTES_SESSOES = [
+    {"id": "claude", "nome": "Claude", "disponivel": True},
+    {"id": "codex", "nome": "Codex", "disponivel": True},
 ]
 
 
@@ -205,7 +210,7 @@ class Acoes:
             },
             # Cérebro e sessões de código são agentes (ADR 0015); o Codex entra a seguir.
             "agentes": AGENTES,
-            "sessoes": {"motor": "claude", "total": len(self.n.sessoes.listar())},
+            "sessoes": {"agentes": AGENTES_SESSOES, "total": len(self.n.sessoes.listar())},
         }
 
     def skills(self) -> list[dict[str, Any]]:
@@ -456,12 +461,21 @@ class Acoes:
 
     # --- sessões da oficina (docs/plano-oficina.md) -------------------------------------------
 
+    @staticmethod
+    def _nome_da_conta(id_: str) -> str:
+        try:
+            return contas.Contas().achar(id_).nome if id_ else ""
+        except contas.ContaErro:
+            return ""
+
     def _sessao(self, s: Sessao) -> dict[str, Any]:
         return {
             "id": s.id,
             "nome": s.nome,
             "pasta": s.pasta.replace(str(Path.home()), "~", 1),
             "motor": s.motor,
+            "agente": contas.NOMES.get(s.motor, s.motor),
+            "conta": self._nome_da_conta(s.conta),
             "modelo": s.modelo,
             "isolada": s.isolada,
             "branch": s.branch,

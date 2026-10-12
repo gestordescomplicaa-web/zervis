@@ -43,3 +43,6 @@
   máquina com o login, o e-mail mascarado e o plano; dá para adicionar outra conta (uma pasta de
   login própria), entrar nela pelo próprio agente (o Zé abre o terminal), escolher a conta em uso
   e remover. O cérebro e as sessões usam a conta escolhida.
+- O Codex é motor das sessões de código: ao criar uma sessão, escolhe-se Claude ou Codex; o Codex
+  roda pelo `codex exec` na conta da sessão, escreve só na pasta do projeto e continua a mesma
+  conversa nos pedidos seguintes. O cabeçalho da sessão mostra o agente e a conta.
