@@ -266,6 +266,8 @@ function desenharVozRemota(estado) {
   if (caixa.innerHTML !== html) caixa.innerHTML = html;
 }
 
+const avisarVoz = (evento, detalhe = "") => api("voz/evento", { evento, detalhe: String(detalhe), aparelho: navigator.userAgent }).catch(() => {});
+
 async function ligarVoz() {
   const L = window.LivekitClient, fim = (texto) => { salaVoz = null; document.querySelectorAll("audio[data-voz]").forEach((a) => a.remove()); desenharVozRemota({ disponivel: true }); if (texto) toast(texto); };
   if (salaVoz) { const sala = salaVoz; fim("Voz desconectada."); return sala.disconnect(); }
@@ -275,11 +277,15 @@ async function ligarVoz() {
     const url = ["127.0.0.1", "localhost"].includes(location.hostname) ? local : `wss://${location.hostname}:8443`;
     const sala = new L.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     sala.on(L.RoomEvent.TrackSubscribed, (f) => { if (f.kind === "audio") document.body.appendChild(f.attach()).dataset.voz = ""; });
-    sala.on(L.RoomEvent.Disconnected, () => salaVoz === sala && fim());
+    sala.on(L.RoomEvent.Disconnected, (motivo) => { avisarVoz("caiu", motivo); if (salaVoz === sala) fim(); });
+    sala.on(L.RoomEvent.MediaDevicesError, (erro) => avisarVoz("microfone", `${erro.name}: ${erro.message}`));
     await sala.connect(url, token);
     await sala.localParticipant.setMicrophoneEnabled(true);
-    salaVoz = sala; toast("Voz ao vivo.");
-  } catch (erro) { toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message); }
+    salaVoz = sala; toast("Voz ao vivo."); avisarVoz("conectou");
+  } catch (erro) {
+    avisarVoz("falhou", `${erro.name}: ${erro.message}`);
+    toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message);
+  }
   vozConectando = false; desenharVozRemota({ disponivel: true });
 }
 
@@ -307,6 +313,8 @@ function marcarFalar() {
 async function apertarFalar() {
   if (travado) return soltarFalar(true);
   if (falando) return;
+  // Fora do PC, sem a voz conectada, quem ouviria é o microfone do PC.
+  if (!salaVoz && !["127.0.0.1", "localhost"].includes(location.hostname)) return toast("Conecte o Ao vivo para falar por aqui.");
   falando = true; apertouEm = Date.now(); marcarFalar();
   api("voz/apertar", {}).catch((erro) => toast(erro.message));
 }

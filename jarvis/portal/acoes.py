@@ -9,6 +9,7 @@ import asyncio
 import base64
 import contextlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,8 @@ from jarvis.portal import remoto
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
 from jarvis.presenca import modo as modo_escuta
 from jarvis.voz import chamado, deepgram
+
+log = logging.getLogger(__name__)
 
 MOTORES = [
     {"id": "contas", "nome": "Automático", "detalhe": "Usa as contas dos agentes.", "modelo": ""},
@@ -132,6 +135,7 @@ class Acoes:
             "voz/soltar": self.soltar,
             "voz/chamado": self.mudar_chamado,
             "remoto/ativar": self.ativar_remoto,
+            "voz/evento": self.evento_voz,
             "remoto/desativar": self.desativar_remoto,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
@@ -240,6 +244,15 @@ class Acoes:
 
     def desativar_remoto(self, dados: dict[str, Any]) -> dict[str, Any]:
         return {**self.remoto(), "aviso": self.n.desativar_remoto()}
+
+    def evento_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O que aconteceu na voz do navegador (conectou, caiu, erro de microfone): só para o
+        registro, para diagnosticar o celular; nunca áudio nem credenciais."""
+        evento = str(dados.get("evento", ""))[:40]
+        detalhe = " ".join(str(dados.get("detalhe", "")).split())[:300]
+        aparelho = str(dados.get("aparelho", ""))[:120]
+        log.warning("voz do navegador: %s %s (%s)", evento, detalhe, aparelho)
+        return {}
 
     def apertar(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Botão de falar apertado: abre o pedido, como o "Ei Zé"."""
