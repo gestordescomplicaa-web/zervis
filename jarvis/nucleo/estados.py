@@ -103,6 +103,13 @@ class Soltou:
     """O botão de falar foi solto: o pedido fecha agora."""
 
 
+@dataclass(frozen=True)
+class AoVivo:
+    """A voz ao vivo ligou ou desligou ("Conectar voz"): ouvir sem parar, sem o chamado."""
+
+    ligado: bool
+
+
 Evento = (
     Presenca
     | Ativacao
@@ -117,6 +124,7 @@ Evento = (
     | Tempo
     | Apertou
     | Soltou
+    | AoVivo
 )
 
 # --- efeitos -------------------------------------------------------------------------------
@@ -196,6 +204,7 @@ Efeito = (
 
 PRAZO_ESCUTA_S = 20.0
 PRAZO_SEGURANDO_S = 120.0  # botão apertado: o pedido fecha ao soltar, não no silêncio
+PRAZO_AO_VIVO_S = 24 * 3600.0  # ao vivo: o silêncio não encerra a escuta
 PRAZO_CONVERSA_S = 8.0
 PRAZO_CONFIRMACAO_S = 40.0
 # Resposta à pergunta de confirmação (pedido do usuário, 06/10/2026: entender o que ele fala,
@@ -941,6 +950,7 @@ class Maquina:
     escutar_depois: bool = False  # o aviso em fala abre a escuta ao terminar (mãos livres)
     reperguntou: bool = False  # a confirmação já foi repetida uma vez por resposta confusa
     segurando: bool = False  # botão de falar apertado: o pedido fecha ao soltar
+    ao_vivo: bool = False  # "Conectar voz": ouve sem parar até desconectar (ADR 0023)
     prazo_conversa_s: float = PRAZO_CONVERSA_S
     historico: list[Estado] = field(default_factory=list)
     # O laço liga ao Hyprland: o Núcleo é a janela ativa agora? (desambigua "aumenta o brilho")
@@ -987,7 +997,9 @@ class Maquina:
 
     def tratar(self, evento: Evento, agora: float) -> list[Efeito]:
         if isinstance(evento, Presenca):
-            return self._presenca(evento.ativo)
+            return self._presenca(evento.ativo, agora)
+        if isinstance(evento, AoVivo):
+            return self._mudar_ao_vivo(evento.ligado, agora)
         if self.estado is Estado.INATIVO:
             # Invariante 1: inativo não ouve, não fala e não segura pedido algum.
             return [ReterAviso(evento.texto)] if isinstance(evento, Aviso) else []
@@ -1022,7 +1034,9 @@ class Maquina:
             case PedidoAprovacao(descricao):
                 return self._pedido_aprovacao(descricao)
             case Aviso(texto, escutar):
-                if self.estado is Estado.ATIVO:
+                if self.estado is Estado.ATIVO or (
+                    self.ao_vivo and self.estado is Estado.OUVINDO and not self.segurando
+                ):
                     self._ir(Estado.FALANDO)
                     self.aviso_falando = texto
                     self.escutar_depois = escutar
@@ -1032,7 +1046,24 @@ class Maquina:
                 return self._tempo(agora)
         return []
 
-    def _presenca(self, ativo: bool) -> list[Efeito]:
+    def _mudar_ao_vivo(self, ligado: bool, agora: float) -> list[Efeito]:
+        self.ao_vivo = ligado
+        if ligado and self.estado is Estado.ATIVO:
+            return [*self._ouvir_ao_vivo(agora), Bip()]
+        if not ligado and self.estado is Estado.OUVINDO and not self.segurando:
+            self.autorizado = self.em_conversa = False
+            self._ir(Estado.ATIVO)
+        return []
+
+    def _ouvir_ao_vivo(self, agora: float) -> list[Efeito]:
+        """Ao vivo: o próximo pedido vem sem chamado, e o silêncio não encerra a escuta."""
+        self._ir(Estado.OUVINDO)
+        self.autorizado = self.em_conversa = True
+        self.continuacao = False
+        self.prazo = agora + PRAZO_AO_VIVO_S
+        return []
+
+    def _presenca(self, ativo: bool, agora: float = 0.0) -> list[Efeito]:
         if not ativo:
             if self.estado is Estado.INATIVO:
                 return []
@@ -1046,6 +1077,8 @@ class Maquina:
         if self.estado is not Estado.INATIVO:
             return []
         self._ir(Estado.ATIVO)
+        if self.ao_vivo:
+            return [AbrirMicrofone(), *self._ouvir_ao_vivo(agora), Bip()]
         return [AbrirMicrofone()]
 
     def _reiniciar(self) -> None:
@@ -1085,6 +1118,10 @@ class Maquina:
         if self.estado is Estado.OUVINDO:
             self.segurando = self.autorizado = True
             self.prazo = agora + PRAZO_SEGURANDO_S
+            # O botão é um pedido só: depois da resposta, o Zé espera o botão de novo (ao vivo,
+            # continua ouvindo como antes).
+            self.em_conversa = self.ao_vivo
+            self.continuacao = False
         return efeitos
 
     def _fim_de_fala(self, texto: str) -> list[Efeito]:
@@ -1099,6 +1136,11 @@ class Maquina:
             return []
         self.autorizado = False  # invariante 2: um pedido por autorização
         texto = sem_chamado(texto) or texto
+        so_hesitacao = set(palavras(texto)) <= VACILOS
+        if self.ao_vivo and (encerra(texto) or so_hesitacao or not pedido_valido(texto)):
+            # Ao vivo, "ok", ruído e frase solta não encerram nem pedem repetição: segue ouvindo.
+            self.autorizado = True
+            return []
         if encerra(texto):
             self.em_conversa = False
             self._ir(Estado.ATIVO)
@@ -1146,7 +1188,9 @@ class Maquina:
         return EnviarAoCerebro(texto)
 
     def _silencio(self) -> list[Efeito]:
-        if self.estado is Estado.OUVINDO:
+        if self.estado is Estado.OUVINDO and self.ao_vivo:
+            self.autorizado = True
+        elif self.estado is Estado.OUVINDO:
             self.autorizado = False
             self.em_conversa = False
             self._ir(Estado.ATIVO)
@@ -1188,6 +1232,8 @@ class Maquina:
             self.continuacao = True
             self.prazo = agora + self.prazo_conversa_s
             return [Bip()]
+        elif self.ao_vivo:
+            self._ouvir_ao_vivo(agora)
         elif self.em_conversa:
             # Conversa aberta pelo usuário: a resposta concede a próxima pergunta sem "Hey Orca".
             self._ir(Estado.OUVINDO)

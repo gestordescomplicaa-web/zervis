@@ -702,3 +702,51 @@ def test_apertar_durante_a_fala_interrompe_e_ouve() -> None:
     assert e.CortarFala() in efeitos and e.Bip() in efeitos and m.segurando
     m.tratar(e.Presenca(False), 3.0)
     assert not m.segurando  # perdeu o rosto: nada fica apertado
+
+
+def test_pedido_pelo_botao_nao_abre_conversa() -> None:
+    from jarvis.nucleo import estados as e
+
+    m = e.Maquina()
+    m.tratar(e.Presenca(True), 0.0)
+    m.tratar(e.Apertou(), 1.0)
+    m.tratar(e.Soltou(), 2.0)
+    m.tratar(e.FimDeFala("como vai a Loja?"), 3.0)
+    m.tratar(e.Frase("Vai bem."), 4.0)
+    m.tratar(e.RespostaFim(), 4.1)
+    m.tratar(e.FalaOcioso(), 5.0)
+    assert m.estado is e.Estado.ATIVO  # espera o botão de novo, não fica ouvindo
+
+
+def test_ao_vivo_ouve_sem_parar_e_sem_chamado() -> None:
+    from jarvis.nucleo import estados as e
+
+    m = e.Maquina()
+    m.tratar(e.AoVivo(True), 0.0)  # chega antes do rosto: só guarda
+    assert m.tratar(e.Presenca(True), 0.0) == [e.AbrirMicrofone(), e.Bip()]
+    assert m.estado is e.Estado.OUVINDO and m.autorizado
+    assert m.tratar(e.Silencio(), 100.0) == [] and m.estado is e.Estado.OUVINDO
+    assert m.tratar(e.FimDeFala("hum"), 101.0) == []  # ruído: sem "não entendi"
+    assert m.tratar(e.FimDeFala("ok"), 102.0) == [] and m.estado is e.Estado.OUVINDO
+    assert m.tratar(e.FimDeFala("como vai a Loja?"), 103.0) == [
+        e.EnviarAoCerebro("como vai a Loja?")
+    ]
+    m.tratar(e.Frase("Vai bem."), 104.0)
+    m.tratar(e.RespostaFim(), 104.1)
+    m.tratar(e.FalaOcioso(), 105.0)
+    assert m.estado is e.Estado.OUVINDO and m.autorizado  # o próximo pedido sem chamado
+    assert m.tratar(e.Aviso("A sessão Loja terminou."), 106.0) == [
+        e.Falar("A sessão Loja terminou.")
+    ]
+    m.tratar(e.FalaOcioso(), 107.0)
+    assert m.estado is e.Estado.OUVINDO
+    m.tratar(e.AoVivo(False), 108.0)
+    assert m.historico[-1] is e.Estado.ATIVO and not m.autorizado
+
+
+def test_ao_vivo_liga_com_o_ze_ja_ativo() -> None:
+    from jarvis.nucleo import estados as e
+
+    m = e.Maquina()
+    m.tratar(e.Presenca(True), 0.0)
+    assert m.tratar(e.AoVivo(True), 1.0) == [e.Bip()] and m.estado is e.Estado.OUVINDO

@@ -858,7 +858,8 @@ class Nucleo:
         if id_:
             self.sessoes.focar(id_)
         if modo_fala.falar(self.modo_fala, tipo, self.vendo(id_)):
-            self.eventos.put(e.Aviso(texto, escutar=self.modo_fala == "maos_livres"))
+            escutar = self.modo_fala == "maos_livres" and self.chamado == "voz"
+            self.eventos.put(e.Aviso(texto, escutar=escutar))
 
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
@@ -1014,6 +1015,7 @@ class Nucleo:
         self.captura.remota(conectada)
         self.voz.destino = remota.tocador if conectada and remota is not None else None
         self.rostos.marcar("remoto", conectada)
+        self.eventos.put(e.AoVivo(conectada))  # conectada, a voz é ao vivo (ADR 0023)
 
     def token_voz_remota(self) -> dict[str, str]:
         """Um token curto para o navegador entrar na sala e falar com o Zé."""
@@ -1069,6 +1071,9 @@ class Nucleo:
     def tratar(self, evento: e.Evento) -> None:
         if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso":
             log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
+            return
+        if isinstance(evento, e.Aviso) and self._pessoa_falando():
+            self.fila.guardar(evento.texto)  # ao vivo: o aviso espera a pausa, não atropela
             return
         antes = self.maquina.estado
         agora = time.monotonic()
@@ -1193,6 +1198,25 @@ class Nucleo:
         self._ligar_ativacao()
         log.info("ativação: %s", modo)
         return f"Ativação: {chamado.NOMES[modo]}."
+
+    def _pessoa_falando(self) -> bool:
+        """Ao vivo, a pessoa no meio de uma frase (ou o pedido dela sendo transcrito)."""
+        return (
+            self.maquina.ao_vivo
+            and self.maquina.estado is e.Estado.OUVINDO
+            and (self.segmentador.em_fala or self.transcrevendo is not None)
+        )
+
+    def _aviso_ao_vivo(self) -> None:
+        """Ao vivo o Zé quase não volta a ATIVO, onde os avisos guardados saem: saem na pausa."""
+        if (
+            self.maquina.ao_vivo
+            and self.maquina.estado is e.Estado.OUVINDO
+            and not self.maquina.segurando
+            and not self._pessoa_falando()
+            and (pendente := self.fila.tirar_tudo()) is not None
+        ):
+            self.eventos.put(e.Aviso(pendente))
 
     def _fechar_escuta(self) -> None:
         """Parou de ouvir sem pedido (silêncio, janela fechada): a conexão fecha na hora."""
@@ -1725,6 +1749,7 @@ class Nucleo:
                     self._gravar_status(agora)
                     self._atualizar_painel(agora)
                     self._conversa_parada()
+                    self._aviso_ao_vivo()
                     self._agendador(agora)
                     self._atualizar_pasta(agora)
                     self._manutencao_chegou(agora)

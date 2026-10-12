@@ -87,3 +87,6 @@
   o microfone só transmite com o botão apertado). O Silencioso agora só cala o Zé.
 - Voz pelo navegador: uma reconexão deixava duas faixas de microfone escrevendo juntas e o Zé
   ouvia frases trocadas; agora vale só a mais recente.
+- Voz ao vivo (ADR 0023): com a voz conectada o Zé ouve sem parar, sem "Ei Zé", até desconectar;
+  silêncio, "ok" e ruído não encerram nem pedem repetição, e os avisos saem nas pausas. O botão de
+  falar virou um pedido só: depois da resposta, o Zé espera o botão de novo.

@@ -22,8 +22,8 @@ navegador) e gasta bateria, porque o áudio sai o tempo todo.
    eventos `Apertou` e `Soltou`, efeito `FecharPedido`; o segmentador não fecha o pedido
    enquanto o botão está apertado. O painel espera 0,3 s depois de soltar, para o fim da fala
    que ainda está na rede entrar no pedido.
-3. **Bateria no celular:** com "Só o botão", a faixa do microfone do navegador fica publicada
-   mas muda; só transmite com o botão apertado.
+3. ~~Bateria no celular: com "Só o botão", a faixa do microfone do navegador fica muda.~~
+   Substituído pelo [ADR 0023](0023-voz-ao-vivo.md): a voz conectada é sempre ao vivo.
 4. **Uma faixa ouvida por vez** na voz remota: a mais recente; a anterior é encerrada.
 
 ## Consequências

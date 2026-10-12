@@ -214,8 +214,8 @@ const PAGINAS = {
         ${sub("Quando o chamado “Ei Zé” funciona.")}
         <div class="modos-fala" role="radiogroup" aria-label="Escuta">${MODOS_ESCUTA.map((m) => { const sem = m.valor === "janela" && !e.escuta.janela; return `<button type="button" role="radio" class="modo" data-acao="escuta-modo" data-modo="${m.valor}" aria-checked="${m.valor === e.escuta.modo}" ${sem ? "disabled" : ""}><strong>${m.nome}</strong><small>${sem ? "Requer Hyprland." : m.detalhe}</small></button>`; }).join("")}</div>`)}
       ${cartao("", `<div class="cabeca"><h2>Ativação</h2><span class="etiqueta bom">${e.chamado === "botao" ? "Só o botão" : "“Ei Zé”"}</span></div>
-        ${sub("Como chamar o Zé. O botão Segurar para falar vale nos dois.")}
-        <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Microfone só enquanto o botão está apertado. Poupa bateria no celular."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
+        ${sub("Como chamar o Zé no microfone deste computador. O botão vale nos dois.")}
+        <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Ouve só com o botão apertado. A voz conectada continua ao vivo."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}
@@ -275,15 +275,14 @@ async function ligarVoz() {
     sala.on(L.RoomEvent.Disconnected, () => salaVoz === sala && fim());
     await sala.connect(url, token);
     await sala.localParticipant.setMicrophoneEnabled(true);
-    salaVoz = sala; await microfoneDaSala(false); toast("Voz conectada.");
+    salaVoz = sala; toast("Voz ao vivo.");
   } catch (erro) { toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message); }
   vozConectando = false; desenharVozRemota({ disponivel: true });
 }
 
 // --- Segurar para falar (ADR 0022): segurar envia ao soltar; um toque começa e outro envia ---
 
-let falando = false, travado = false, apertouEm = 0, chamadoAtual = "voz";
-const microfoneDaSala = (ligado) => salaVoz && chamadoAtual === "botao" && salaVoz.localParticipant.setMicrophoneEnabled(ligado);
+let falando = false, travado = false, apertouEm = 0;
 
 function marcarFalar() {
   $("falar").setAttribute("aria-pressed", String(falando));
@@ -294,7 +293,6 @@ async function apertarFalar() {
   if (travado) return soltarFalar(true);
   if (falando) return;
   falando = true; apertouEm = Date.now(); marcarFalar();
-  await microfoneDaSala(true);
   api("voz/apertar", {}).catch((erro) => toast(erro.message));
 }
 
@@ -305,7 +303,6 @@ async function soltarFalar(enviar) {
   // O fim da fala ainda está a caminho (rede e fila do áudio): fecha o pedido 0,3 s depois.
   await new Promise((ok) => setTimeout(ok, 300));
   await api("voz/soltar", {}).catch((erro) => toast(erro.message));
-  setTimeout(() => falando || microfoneDaSala(false), 300);
 }
 
 $("falar").addEventListener("pointerdown", (ev) => { ev.preventDefault(); apertarFalar(); });
@@ -1202,7 +1199,6 @@ async function batimento() {
     document.querySelector(".marca .anel").classList.toggle("ativo", e.ze !== "inativo");
     desenharModoFala(e.modo_fala);
     desenharVozRemota(e.voz_remota);
-    if (e.chamado !== chamadoAtual) { chamadoAtual = e.chamado; salaVoz?.localParticipant.setMicrophoneEnabled(chamadoAtual === "voz" || falando); }
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }

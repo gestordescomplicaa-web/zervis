@@ -66,10 +66,8 @@ fica ligado 24 horas e opera as sessões dos projetos que estão lá; comandar d
 ## Como a pessoa usa
 
 - **Conectar** no painel (PC, celular ou outro computador): a voz abre com o Zé.
-- Três formas de chamar, escolhidas na página Voz:
-  - **Chamado** ("Ei Zé"): o Zé escuta o canal e só reage ao chamado, como na mesa.
-  - **Apertar para falar**: botão na tela ou o botão do fone.
-  - **Conversa aberta**: enquanto conectado, tudo é pedido; "ok" ou silêncio longo encerra.
+- **Conectado é ao vivo** (ADR 0023): o Zé ouve sem parar, sem o chamado, até desconectar; os
+  avisos saem nas pausas. O "Ei Zé" e o botão de falar interrompem a fala dele.
 - **Modos de fala** valem igual (ADR 0018): em Mãos livres, os avisos das sessões chegam no
   dispositivo conectado; sem dispositivo conectado, ficam na fila de avisos.
 - Um dispositivo conectado por vez; conectar outro assume a conversa (como trocar de fone).
