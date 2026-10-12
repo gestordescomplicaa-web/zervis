@@ -12,6 +12,8 @@ import pytest
 
 from jarvis import config, usuario
 from jarvis.cerebro import acesso, rapido
+from jarvis.oficina.sessoes import Sessoes
+from jarvis.oficina.terminal import Terminal
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import PedidoInvalido, Portal
 from jarvis.voz import deepgram
@@ -75,6 +77,34 @@ def test_outro_host_e_recusado_mesmo_com_token(portal: Portal) -> None:
     """DNS rebinding: um site de fora apontando para 127.0.0.1 chega com outro Host."""
     assert pedir(portal, "GET", "/", host="malicioso.com")[0] == 403
     assert pedir(portal, "GET", "/api/estado", host="malicioso.com")[0] == 403
+
+
+@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+def test_painel_exclui_sessao_com_agente_ativo_e_preserva_projeto(tmp_path: Path) -> None:
+    projeto = tmp_path / "projeto"
+    projeto.mkdir()
+    arquivo = projeto / "trabalho.txt"
+    arquivo.write_text("manter")
+    sessoes = Sessoes(tmp_path / "sessoes", (tmp_path,))
+    s = sessoes.criar("ativa", str(projeto))
+    t = Terminal(["sleep", "30"], projeto, {})
+    sessoes.terminais[s.id] = t
+    sessoes._mudar(s.id, estado="trabalhando")
+    acoes = Acoes(SimpleNamespace(sessoes=sessoes), tmp_path / "latencias", tmp_path / "teste")
+    p = Portal({"sessoes": acoes.sessoes}, {"sessao/excluir": acoes.excluir_sessao}, porta=0)
+    p.iniciar()
+    try:
+        assert pedir(p, "GET", "/api/sessoes")[1][0]["estado"] == "trabalhando"
+        assert pedir(p, "POST", "/api/sessao/excluir", {"id": s.id}) == (
+            200,
+            {"aviso": "", "sessoes": []},
+        )
+        assert not t.vivo and not t.leitor.is_alive()
+        assert not (sessoes.pasta / s.id).exists()
+        assert arquivo.read_text() == "manter"
+    finally:
+        p.parar()
+        t.encerrar()
 
 
 # --- a via rápida pelo painel ---------------------------------------------------------------
@@ -276,3 +306,22 @@ def test_o_acesso_ao_claude_pelo_painel_nunca_devolve_o_segredo(
     assert n.acessos == 2
     with pytest.raises(PedidoInvalido):
         a.guardar_chave_claude({"chave": "com espaço"})
+
+
+def test_conexao_codex_usa_a_conta_do_codex(
+    acoes: tuple[Acoes, NucleoFalso], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from jarvis.cerebro import codex
+
+    a, n = acoes
+    n.provedor = "codex"
+    chamados: list[str] = []
+
+    async def testar(modelo: str, pasta: Path) -> tuple[bool, str]:
+        chamados.append(modelo)
+        return True, "Conectado."
+
+    monkeypatch.setattr(codex, "testar", testar)
+    assert a.testar_acesso({}) == {"ok": True, "mensagem": "Conectado."}
+    assert chamados == [""]
+    assert any(x["id"] == "codex" and x["disponivel"] for x in a.cerebro()["agentes"])

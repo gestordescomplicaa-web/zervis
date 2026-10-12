@@ -85,6 +85,7 @@ PADRAO: dict[str, dict[str, Any]] = {
     "cerebro": {
         "provedor": "claude",
         "modelo": "claude-sonnet-5-5",
+        "modelo_codex": "",  # vazio: o padrão da conta do Codex, sem lista fixa
         "ferramentas": ["WebSearch", "WebFetch"],
         "tempo_limite_s": 30.0,
         # Conversa parada há tanto tempo recomeça do zero (a memória fica): o histórico longo é
@@ -116,8 +117,8 @@ PADRAO: dict[str, dict[str, Any]] = {
         "historico": 12,
     },
 }
-PROVEDORES = {"eco", "claude", "omniroute"}  # Codex na Fase 8
-RESERVAS = {"eco", "claude"}
+PROVEDORES = {"eco", "claude", "codex", "omniroute"}
+RESERVAS = {"eco", "claude", "codex"}
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 
 
@@ -167,9 +168,18 @@ def validar(dados: dict[str, Any], origem: str) -> Config:
         raise ConfigInvalida(
             f"{origem}: cerebro.provedor deve ser um de {sorted(PROVEDORES)} nesta fase"
         )
-    if secoes["via_rapida"]["motor"] not in ("plano", "anthropic", "openai", "openrouter", "ponte"):
+    if secoes["via_rapida"]["motor"] not in (
+        "plano",
+        "codex",
+        "contas",
+        "anthropic",
+        "openai",
+        "openrouter",
+        "ponte",
+    ):
         raise ConfigInvalida(
-            f"{origem}: via_rapida.motor deve ser plano, anthropic, openai, openrouter ou ponte"
+            f"{origem}: via_rapida.motor deve ser plano, codex, contas, "
+            "anthropic, openai, openrouter ou ponte"
         )
     if secoes["via_rapida"]["motor"] == "ponte" and not secoes["via_rapida"]["endereco"]:
         raise ConfigInvalida(f"{origem}: via_rapida.endereco é obrigatório na ponte")

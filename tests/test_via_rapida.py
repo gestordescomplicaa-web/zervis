@@ -297,3 +297,37 @@ def test_religar_troca_o_motor_sem_reiniciar_o_completo() -> None:
         assert desligado is completo
 
     asyncio.run(rodar())
+
+
+class MotorComFalha(MotorFalso):
+    async def gerar(self, sistema: str, mensagens: list[dict[str, str]]) -> AsyncIterator[str]:
+        self.pedidos.append(mensagens)
+        for pedaco in self.respostas.pop(0):
+            yield pedaco
+        raise rapido.MotorErro("limite_de_uso")
+
+
+def test_falha_depois_da_primeira_palavra_nao_repete_no_completo() -> None:
+    motor = MotorComFalha([["Já comecei."]])
+    r, completo = roteado(motor)
+    assert falar(r, "Oi") == "Já comecei."
+    assert completo.pedidos == []
+
+
+def test_motor_automatico_usa_proxima_conta() -> None:
+    primeira = MotorComFalha([[]])
+    segunda = MotorFalso([["Oi!"], ["Sim."]])
+    motor = rapido.MotorContas([primeira, segunda])
+
+    async def rodar() -> None:
+        await motor.iniciar("persona")
+        assert [p async for p in motor.gerar("persona", [{"role": "user", "content": "Olá"}])] == [
+            "Oi!"
+        ]
+        assert [
+            p async for p in motor.gerar("persona", [{"role": "user", "content": "Tudo bem?"}])
+        ] == ["Sim."]
+        assert len(primeira.pedidos) == 1
+        await motor.fechar()
+
+    asyncio.run(rodar())

@@ -3,8 +3,9 @@
 O agente de voz do Ligatia responde em menos de meio segundo porque fala direto com o modelo,
 com um prompt curto e poucas ferramentas. O Zé completo passa pelo Claude Code (Agent SDK),
 com a persona inteira e dezenas de ferramentas: de 1,4 a 2,2 s até a primeira palavra. Aqui a
-conversa simples vai primeiro a um **motor rápido**, com a persona enxuta (`persona/RAPIDO.md`);
-quando o pedido precisa de ferramenta, o motor responde só `[completo]` e o pedido segue para
+conversa simples vai primeiro a um **motor rápido**, com a persona enxuta
+(`jarvis/persona/RAPIDO.md`); quando o pedido precisa de ferramenta, o motor responde só
+`[completo]` e o pedido segue para
 o cérebro completo, que recebe a mesma conversa. Antes dele, o Zé diz "Deixa eu ver.", para
 não ficar calado (etapa 2).
 
@@ -26,6 +27,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import threading
 import unicodedata
 from collections.abc import AsyncIterator, Callable
@@ -34,8 +36,10 @@ from typing import Any, Protocol
 from urllib.parse import urlsplit
 
 from jarvis import lugares, usuario
+from jarvis.cerebro import contas
 from jarvis.cerebro.base import Aprovar, Brain, EventoCerebro, Fim, Texto
 from jarvis.cerebro.claude import ClaudeBrain
+from jarvis.cerebro.codex import CodexBrain
 
 log = logging.getLogger(__name__)
 PASSAR = "[completo]"
@@ -83,7 +87,7 @@ VARIAVEIS = {
     "anthropic": "ANTHROPIC_API_KEY",
     "ponte": "JARVIS_PONTE_API_KEY",
 }
-MOTORES = {"plano", "openai", "openrouter", "anthropic", "ponte"}
+MOTORES = {"plano", "codex", "contas", "openai", "openrouter", "anthropic", "ponte"}
 _FIM = object()
 
 
@@ -109,8 +113,10 @@ class MotorErro(RuntimeError):
 
 class Motor(Protocol):
     nome: str
-    modelo: str
     com_estado: bool  # guarda a conversa sozinho (só recebe o que perdeu)
+
+    @property
+    def modelo(self) -> str: ...
 
     @property
     def uso(self) -> dict[str, Any] | None: ...
@@ -213,7 +219,11 @@ def validar_escolha(dados: dict[str, Any]) -> dict[str, Any]:
         local = partes.hostname in ("127.0.0.1", "localhost", "::1")
         if partes.scheme != "https" and not (partes.scheme == "http" and local):
             raise MotorErro("o endereço precisa ser https (ou http na própria máquina)")
-    if "modelo" in escolha and not escolha["modelo"]:
+    if (
+        "modelo" in escolha
+        and not escolha["modelo"]
+        and escolha.get("motor") not in ("codex", "contas")
+    ):
         raise MotorErro("o modelo não pode ficar vazio")
     return escolha
 
@@ -477,13 +487,31 @@ class MotorPlano:
     com_estado = True
     nome = "plano"
 
-    def __init__(self, modelo: str, pasta: Path, foto: Callable[[], str] | None = None) -> None:
-        self.modelo = modelo
-        self.cerebro = ClaudeBrain(modelo, [], pasta, tempo_limite_s=15.0, foto=foto)
+    def __init__(
+        self,
+        modelo: str,
+        pasta: Path,
+        foto: Callable[[], str] | None = None,
+        conta: contas.Conta | None = None,
+    ) -> None:
+        self._modelo = modelo
+        conta = conta or contas.Contas().em_uso("claude")
+        self.cerebro = ClaudeBrain(
+            modelo,
+            [],
+            pasta,
+            tempo_limite_s=15.0,
+            foto=foto,
+            env={"CLAUDE_CONFIG_DIR": str(conta.onde)},
+        )
 
     @property
     def uso(self) -> dict[str, Any] | None:
         return self.cerebro.uso
+
+    @property
+    def modelo(self) -> str:
+        return self.cerebro.modelo_usado or self._modelo
 
     async def iniciar(self, sistema: str) -> None:
         await self.cerebro.start(sistema)
@@ -505,6 +533,86 @@ class MotorPlano:
         await self.cerebro.close()
 
 
+class MotorCodex(MotorPlano):
+    """O Codex oficial pela conta que já está cadastrada, sem chave adicional."""
+
+    nome = "codex"
+
+    def __init__(
+        self,
+        modelo: str,
+        pasta: Path,
+        foto: Callable[[], str] | None = None,
+        conta: contas.Conta | None = None,
+    ) -> None:
+        self._modelo = modelo
+        self.cerebro = CodexBrain(modelo, [], pasta, tempo_limite_s=20.0, foto=foto, conta=conta)
+
+
+class MotorContas:
+    """Contas cadastradas com alternativa antes da primeira palavra; conserva a conversa."""
+
+    nome = "contas"
+    com_estado = True
+
+    def __init__(self, motores: list[Motor]) -> None:
+        self.motores = motores
+        self.posicao = 0
+        self.sistema = ""
+        self.turnos: list[tuple[str, str]] = []
+
+    @property
+    def modelo(self) -> str:
+        return self.motores[self.posicao].modelo
+
+    @property
+    def uso(self) -> dict[str, Any] | None:
+        return self.motores[self.posicao].uso
+
+    async def iniciar(self, sistema: str) -> None:
+        self.sistema = sistema
+        await self.motores[self.posicao].iniciar(sistema)
+
+    async def gerar(self, sistema: str, mensagens: list[dict[str, str]]) -> AsyncIterator[str]:
+        pedido = mensagens[-1]["content"]
+        texto = pedido
+        while True:
+            resposta = ""
+            motor = self.motores[self.posicao]
+            try:
+                async for pedaco in motor.gerar(sistema, [{"role": "user", "content": texto}]):
+                    resposta += pedaco
+                    yield pedaco
+                self.turnos = [*self.turnos, (pedido, resposta)][-6:]
+                return
+            except MotorErro:
+                if resposta.strip() or self.posicao + 1 == len(self.motores):
+                    raise
+                await motor.fechar()
+                self.posicao += 1
+                await self.motores[self.posicao].iniciar(self.sistema)
+                contexto = "\n".join(f"Usuário: {p}\nZérvis: {r}" for p, r in self.turnos)
+                texto = (
+                    f"Conversa anterior (contexto):\n{contexto}\n\nPedido atual:\n"
+                    if contexto
+                    else ""
+                ) + pedido
+                log.info("voz rápida: alternativa da conta (%s)", self.motores[self.posicao].nome)
+
+    async def interromper(self) -> None:
+        await self.motores[self.posicao].interromper()
+
+    async def reiniciar(self) -> None:
+        await self.fechar()
+        self.posicao, self.turnos = 0, []
+        await self.iniciar(self.sistema)
+
+    async def fechar(self) -> None:
+        for motor in self.motores:
+            with contextlib.suppress(Exception):
+                await motor.fechar()
+
+
 def criar_motor(
     via: dict[str, Any], pasta: Path, foto: Callable[[], str] | None = None
 ) -> Motor | None:
@@ -515,6 +623,27 @@ def criar_motor(
     modelo = str(via["modelo"])
     if nome == "plano":
         return MotorPlano(modelo, pasta, foto)
+    if nome == "codex":
+        return MotorCodex(modelo, pasta / "codex", foto)
+    if nome == "contas":
+        cs = contas.Contas()
+        motores: list[Motor] = []
+        for agente in ("codex", "claude"):
+            if agente == "codex" and shutil.which("codex") is None:
+                continue
+            atual = cs.em_uso(agente)
+            for conta in sorted(cs.listar(agente), key=lambda c: c.id != atual.id):
+                if not conta.login.is_file():
+                    continue
+                if agente == "codex":
+                    motores.append(MotorCodex("", pasta / conta.id.replace(":", "-"), foto, conta))
+                else:
+                    motores.append(
+                        MotorPlano("sonnet", pasta / conta.id.replace(":", "-"), foto, conta)
+                    )
+        if not motores:
+            raise MotorErro("Nenhuma conta de agente configurada.")
+        return MotorContas(motores)
     chave = ler_chave(nome, str(via["arquivo_chave"]))
     if chave is None and nome != "ponte":
         log.warning("via rápida: sem a chave do %s; seguindo só com o cérebro completo", nome)
@@ -638,10 +767,17 @@ class Roteado:
                     resposta += pedaco
                     yield Texto(pedaco)
             except (MotorErro, TimeoutError) as erro:
-                log.warning("via rápida falhou (%s); vai ao completo", str(erro)[:120] or "demora")
+                log.warning("via rápida falhou (%s)", type(erro).__name__)
                 passar = True
                 with contextlib.suppress(Exception):
                     await self.motor.interromper()
+                if falou:
+                    self.uso, self.via = self.motor.uso, "rapida"
+                    self._guardar(texto, resposta, "rapida")
+                    yield Fim(
+                        "tempo_esgotado" if isinstance(erro, TimeoutError) else "falha_resposta"
+                    )
+                    return
             if not passar:
                 self.uso, self.via = self.motor.uso, "rapida"
                 self.modelo_usado = self.motor.modelo
@@ -664,7 +800,13 @@ class Roteado:
         while True:
             try:
                 if primeiro:
-                    pedaco = await asyncio.wait_for(fluxo.__anext__(), self.espera_s)
+                    # A autenticação e a troca de conta do CLI podem levar mais que o HTTP.
+                    espera = (
+                        max(self.espera_s, 30)
+                        if self.motor.nome in ("contas", "codex")
+                        else self.espera_s
+                    )
+                    pedaco = await asyncio.wait_for(fluxo.__anext__(), espera)
                     primeiro = False
                 else:
                     pedaco = await fluxo.__anext__()

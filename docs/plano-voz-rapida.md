@@ -75,7 +75,7 @@ As etapas 1 e 2 tocam `jarvis/config.py` (a seção da via rápida) e talvez
 
 ## Etapa 1 feita (09/10/2026)
 
-`jarvis/cerebro/rapido.py` (motores e `Roteado`), `persona/RAPIDO.md`, `[via_rapida]` na config,
+`jarvis/cerebro/rapido.py` (motores e `Roteado`), `jarvis/persona/RAPIDO.md`, `[via_rapida]` na config,
 testes em `tests/test_via_rapida.py`. Medido pelo teclado, mesmo caminho até o primeiro som:
 cérebro de 3.144 ms (completo, mediana de 09/10) para 977 ms (via rápida pelo plano, Sonnet);
 primeiro som em 1.562 ms. Medidos também os modelos "rápidos" pelos gateways do OmniRoute

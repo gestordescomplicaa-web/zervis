@@ -62,7 +62,8 @@ def test_omniroute_fora_do_ar_usa_a_reserva(
     cerebro, provedor = catalogo.montar(validar(cfg_omniroute, "teste"), tmp_path, None)
     assert provedor == "claude"
     assert isinstance(cerebro, ClaudeBrain)
-    assert cerebro.env == {}
+    assert "CLAUDE_CONFIG_DIR" in cerebro.env
+    assert "ANTHROPIC_BASE_URL" not in cerebro.env
 
     cfg_omniroute["cerebro"] = {"provedor": "omniroute", "reserva": "eco"}
     cerebro, provedor = catalogo.montar(validar(cfg_omniroute, "teste"), tmp_path, None)

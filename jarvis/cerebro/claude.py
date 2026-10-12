@@ -166,6 +166,7 @@ class ClaudeBrain:
         self.limite: dict[str, Any] = {}  # último RateLimitEvent (janela de 5 horas etc.)
         self.ferramentas_usadas: list[str] = []  # as desta resposta (o mapa do cérebro conta)
         self.uso: dict[str, Any] | None = None
+        self._erro_resposta: str | None = None
         self.modelo_usado: str | None = None  # o que respondeu de fato (o OmniRoute escolhe)
 
     async def start(self, persona: str, aprovar: Aprovar | None = None) -> None:
@@ -263,6 +264,7 @@ class ClaudeBrain:
 
     async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
         self.uso = None  # o desta resposta; o núcleo soma no consumo do dia
+        self._erro_resposta = None
         self.ferramentas_usadas = []
         try:
             async with asyncio.timeout(self.tempo_limite_s) as prazo:
@@ -295,13 +297,30 @@ class ClaudeBrain:
                 # Fim de um bloco de texto (antes de uma ferramenta): fecha a frase pendente.
                 return Texto(" ")
         elif isinstance(msg, AssistantMessage):
+            if msg.error:
+                self._erro_resposta = (
+                    "limite_de_uso"
+                    if msg.error == "rate_limit"
+                    else "acesso_invalido"
+                    if msg.error == "authentication_failed"
+                    else "falha_claude"
+                )
             self.modelo_usado = msg.model or self.modelo_usado
             self.ferramentas_usadas += [b.name for b in msg.content if isinstance(b, ToolUseBlock)]
         elif isinstance(msg, RateLimitEvent):
             self.limite = msg.rate_limit_info.raw or {}
         elif isinstance(msg, ResultMessage):
             self.uso = msg.usage
-            return Fim(erro=(msg.subtype or "erro") if msg.is_error else None)
+            if msg.is_error:
+                resultado = (msg.result or "").lower()
+                erro = self._erro_resposta
+                if any(
+                    x in resultado
+                    for x in ("usage limit", "session limit", "rate limit", "credit balance")
+                ):
+                    erro = "limite_de_uso"
+                return Fim(erro or (msg.subtype if msg.subtype != "success" else "falha_claude"))
+            return Fim()
         return None
 
     async def interrupt(self) -> None:

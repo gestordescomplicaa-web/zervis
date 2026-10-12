@@ -7,11 +7,11 @@ from jarvis.cerebro.baterias import Bateria
 from jarvis.rosto.painel import Painel
 
 
-def test_mostra_os_quatro_com_o_ativo_e_as_baterias(tmp_path: Path) -> None:
+def test_mostra_os_cinco_com_o_ativo_e_as_baterias(tmp_path: Path) -> None:
     Painel(tmp_path).mostrar("gpt", {"gpt": Bateria(12, "semana")}, {"gpt": "GPT-6 Luna"}, 100.0)
     dados = json.loads((tmp_path / "cerebros.json").read_text())
-    assert [c["id"] for c in dados["lista"]] == ["claude", "gpt", "gemini", "auto"]
-    gpt = dados["lista"][1]
+    assert [c["id"] for c in dados["lista"]] == ["claude", "codex", "gpt", "gemini", "auto"]
+    gpt = dados["lista"][2]
     assert gpt["ativo"] and gpt["bateria"]["restante"] == 12
     assert gpt["modelo"] == "GPT-6 Luna"
     assert dados["lista"][0]["bateria"] is None

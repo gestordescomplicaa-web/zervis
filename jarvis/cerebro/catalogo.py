@@ -1,19 +1,23 @@
 """Os cérebros que o usuário escolhe por voz ou no Barehands (ADR 0010).
 
-Todos são o mesmo `ClaudeBrain`: o Claude pela assinatura, e os outros pelo OmniRoute com uma
-rota fixa (ADR 0008). A escolha vale até a próxima troca, inclusive depois de reiniciar.
+Claude usa o Agent SDK; Codex usa o app-server oficial; as rotas do OmniRoute usam o SDK
+(ADR 0008). A escolha vale até a próxima troca, inclusive depois de reiniciar.
 """
 
 import logging
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import Any
 
-from jarvis.cerebro import omniroute
+from jarvis.cerebro import contas, omniroute
 from jarvis.cerebro.base import Brain
 from jarvis.cerebro.claude import ClaudeBrain
+from jarvis.cerebro.codex import CodexBrain
 from jarvis.cerebro.eco import Eco
+from jarvis.cerebro.reserva import ComReserva
 from jarvis.config import Config
 
 log = logging.getLogger(__name__)
@@ -29,6 +33,7 @@ class Opcao:
 
 OPCOES = {
     "claude": Opcao("claude", "Claude", "claude", None),
+    "codex": Opcao("codex", "Codex", "gpt", None),
     "gpt": Opcao("gpt", "GPT", "gpt", "cx/gpt-6-luna"),
     "gemini": Opcao("gemini", "Gemini", "gemini", "agy/gemini-3.1-pro-high"),
     "auto": Opcao("auto", "Automático", None, ""),  # rota da config (omniroute_rota)
@@ -65,7 +70,9 @@ def rotulo(modelo: str) -> str:
 
 def inicial(cfg: Config) -> str:
     """O cérebro da config: `provedor = "omniroute"` é o automático."""
-    return {"claude": "claude", "omniroute": "auto"}.get(cfg["cerebro"]["provedor"], "eco")
+    return {"claude": "claude", "codex": "codex", "omniroute": "auto"}.get(
+        cfg["cerebro"]["provedor"], "eco"
+    )
 
 
 @dataclass(frozen=True)
@@ -84,7 +91,13 @@ class Extras:
     depois: Callable[[str, Any], Any | None] | None = None
 
 
-def criar(id_: str, cfg: Config, pasta: Path, extras: Extras | None = None) -> ClaudeBrain:
+def criar(
+    id_: str,
+    cfg: Config,
+    pasta: Path,
+    extras: Extras | None = None,
+    conta: contas.Conta | None = None,
+) -> ClaudeBrain:
     c = cfg["cerebro"]
     opcao = OPCOES[id_]
     ferramentas = list(c["ferramentas"])
@@ -103,7 +116,18 @@ def criar(id_: str, cfg: Config, pasta: Path, extras: Extras | None = None) -> C
         "depois": x.depois,
     }
     if opcao.rota is None:
-        return ClaudeBrain(c["modelo"], ferramentas, pasta, **comum)
+        if id_ == "codex":
+            if shutil.which("codex") is None:
+                raise Indisponivel("Codex não está instalado")
+            return CodexBrain(c["modelo_codex"], [], pasta / "codex", conta=conta, **comum)
+        conta = conta or contas.Contas().em_uso("claude")
+        return ClaudeBrain(
+            c["modelo"],
+            ferramentas,
+            pasta,
+            env={"CLAUDE_CONFIG_DIR": str(conta.onde)},
+            **comum,
+        )
     chave = omniroute.ler_chave(cfg.caminho("cerebro", "omniroute_arquivo_chave"))
     if chave is None:
         raise Indisponivel("não achei a chave do OmniRoute")
@@ -142,10 +166,26 @@ def montar(
     if id_ == "eco":
         return Eco(), "eco"
     try:
-        return criar(id_, cfg, pasta, extras), id_
+        return com_reserva(id_, cfg, pasta, extras), id_
     except Indisponivel as motivo:
         reserva = cfg["cerebro"]["reserva"]
         log.warning("%s: %s; usando a reserva %s", id_, motivo, reserva)
         if reserva == "eco":
             return Eco(), "eco"
-        return criar("claude", cfg, pasta, extras), "claude"
+        return com_reserva(reserva, cfg, pasta, extras), reserva
+
+
+def com_reserva(id_: str, cfg: Config, pasta: Path, extras: Extras | None = None) -> Brain:
+    cerebro = criar(id_, cfg, pasta, extras)
+    cs = contas.Contas()
+    alternativas: list[tuple[str, Callable[[], Brain]]] = []
+    for agente in ("codex", "claude") if id_ == "claude" else ("claude", "codex"):
+        if shutil.which(agente) is None:
+            continue
+        atual = cs.em_uso(agente)
+        candidatas = sorted(cs.listar(agente), key=lambda c: c.id != atual.id)
+        for conta in candidatas:
+            if not conta.login.is_file() or (agente == id_ and conta.id == atual.id):
+                continue
+            alternativas.append((conta.id, partial(criar, agente, cfg, pasta, extras, conta)))
+    return ComReserva(cerebro, alternativas) if alternativas else cerebro

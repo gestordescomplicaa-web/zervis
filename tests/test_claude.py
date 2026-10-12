@@ -84,3 +84,20 @@ def test_o_gancho_depois_troca_a_resposta_que_o_modelo_ve(tmp_path: Path) -> Non
     }
     assert rodar("mcp__jarvis__tela_ver") == {}
     assert vistas[0] == ("mcp__navegador__browser_snapshot", "longa")
+
+
+def test_limite_real_com_subtipo_success_continua_sendo_erro(tmp_path: Path) -> None:
+    from claude_agent_sdk import AssistantMessage, ResultMessage
+
+    brain = ClaudeBrain("m", [], tmp_path)
+    brain._traduzir(AssistantMessage(content=[], model="m", error="rate_limit"))
+    msg = ResultMessage(
+        subtype="success",
+        duration_ms=1,
+        duration_api_ms=1,
+        is_error=True,
+        num_turns=1,
+        session_id="teste",
+        result="You've hit your session limit",
+    )
+    assert brain._traduzir(msg) == Fim("limite_de_uso")

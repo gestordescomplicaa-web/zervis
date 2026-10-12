@@ -25,6 +25,8 @@ from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
 from jarvis.voz import deepgram
 
 MOTORES = [
+    {"id": "contas", "nome": "Automático", "detalhe": "Usa as contas dos agentes.", "modelo": ""},
+    {"id": "codex", "nome": "Codex", "detalhe": "Conta do Codex.", "modelo": ""},
     {
         "id": "plano",
         "nome": "Claude pelo plano",
@@ -61,7 +63,7 @@ MOTORES = [
 # Os agentes de cada camada (ADR 0015). Marca: "Claude", nunca "Claude Code".
 AGENTES = [
     {"id": "claude", "nome": "Claude", "disponivel": True},
-    {"id": "codex", "nome": "Codex", "disponivel": False},  # cérebro: a seguir
+    {"id": "codex", "nome": "Codex", "disponivel": True},
 ]
 AGENTES_SESSOES = [
     {"id": "claude", "nome": "Claude", "disponivel": True},
@@ -163,6 +165,7 @@ class Acoes:
             "skill/ligar": self.ligar_skill,
             "skill/excluir": self.excluir_skill,
             "sessao/excluir": self.excluir_sessao,
+            "cerebro/escolher": self.escolher_cerebro,
         }
 
     def envios(self) -> dict[str, Any]:
@@ -226,12 +229,21 @@ class Acoes:
             },
             "completo": {
                 "provedor": self.n.provedor,
-                "modelo": self.n.cfg["cerebro"]["modelo"],
+                "modelo": self.n.cfg["cerebro"][
+                    "modelo_codex" if self.n.provedor == "codex" else "modelo"
+                ],
             },
-            # Cérebro e sessões de código são agentes (ADR 0015); o Codex entra a seguir.
+            # Cérebro e sessões de código usam as contas cadastradas (ADR 0020).
             "agentes": AGENTES,
             "sessoes": {"agentes": AGENTES_SESSOES, "total": len(self.n.sessoes.listar())},
         }
+
+    def escolher_cerebro(self, dados: dict[str, Any]) -> dict[str, Any]:
+        agente = str(dados.get("agente", ""))
+        if agente not in ("claude", "codex"):
+            raise PedidoInvalido("Agente desconhecido.")
+        aviso = self.n.trocar_cerebro(agente)
+        return {**self.cerebro(), "aviso": aviso}
 
     def skills(self) -> list[dict[str, Any]]:
         sk = self.n.skills
@@ -408,7 +420,14 @@ class Acoes:
         return self._acesso("Chave removida.")
 
     def testar_acesso(self, dados: dict[str, Any]) -> dict[str, Any]:
-        """Uma pergunta mínima ao Claude com o acesso salvo."""
+        """Uma pergunta mínima ao provedor escolhido com o acesso salvo."""
+        if self.n.provedor == "codex":
+            from jarvis.cerebro.codex import testar
+
+            ok, mensagem = asyncio.run(
+                testar(self.n.cfg["cerebro"]["modelo_codex"], self.pasta_teste / "codex")
+            )
+            return {"ok": ok, "mensagem": mensagem}
         if not acesso.situacao()["metodo"]:
             return {"ok": False, "mensagem": "Acesso não configurado."}
         modelo = self.n.cfg["cerebro"]["modelo"]
@@ -458,7 +477,7 @@ class Acoes:
             cs.remover(conta.id)
         except contas.ContaErro as erro:
             raise PedidoInvalido(str(erro)) from None
-        if em_uso and conta.agente == "claude":
+        if em_uso:
             self.n.aplicar_acesso()
         return {**self.contas(), "aviso": "Conta removida."}
 
@@ -467,7 +486,7 @@ class Acoes:
             conta = contas.Contas().usar(str(dados.get("id", "")))
         except contas.ContaErro as erro:
             raise PedidoInvalido(str(erro)) from None
-        aviso = self.n.aplicar_acesso() if conta.agente == "claude" else ""
+        aviso = self.n.aplicar_acesso()
         return {**self.contas(), "aviso": aviso or f"Usando a conta {conta.nome}."}
 
     def entrar_conta(self, dados: dict[str, Any]) -> dict[str, Any]:

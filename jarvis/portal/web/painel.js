@@ -12,7 +12,7 @@ const ESTADO_SESSAO = { parada: "pronta", trabalhando: "trabalhando", erro: "err
 const estadoSessao = (s) => (s.limite ? "sem créditos" : ESTADO_SESSAO[s.estado] || s.estado);
 const TIPO_AUTOMACAO = { lembrete: "Lembrete", pergunta: "Pergunta ao Zé" };
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };
-const NOME_MOTOR = { plano: "Claude", openai: "OpenAI", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
+const NOME_MOTOR = { contas: "Automático", codex: "Codex", plano: "Claude", openai: "OpenAI API", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
 const NOME_CEREBRO = { claude: "Claude", gpt: "GPT", gemini: "Gemini", auto: "Automático" };
 
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -157,13 +157,14 @@ const PAGINAS = {
     escuta = esc_;
     prepararAcesso(cfg);
     acessoTela.modelo = c.completo.modelo;
+    acessoTela.cerebro = c.completo.provedor;
     agentes = c.agentes;
     const sessoes = c.sessoes.total;
     return `${cabeca("Modelos")}${sub("Um modelo para cada tipo de tarefa.")}
       ${cartao("", `<div class="cabeca"><h2>Voz rápida</h2>${liga(c.via.ligada, "via-ligada", "", "Ligada")}</div>
-        ${sub("Conversa simples, em menos de um segundo. Pedidos com ação vão ao cérebro.")}
+        ${sub("Conversa simples por voz. Pedidos com ação vão ao cérebro.")}
         <div class="segmentos" role="group" aria-label="Provedor">${c.motores.map((m) => `<button type="button" data-acao="motor" data-motor="${m.id}" data-modelo="${esc(m.modelo)}" aria-pressed="${m.id === c.via.motor}">${esc(NOME_MOTOR[m.id] || m.nome)}</button>`).join("")}</div>
-        <div class="linha"><label>Modelo<input id="modelo" class="mono" value="${esc(c.via.modelo)}" autocomplete="off" spellcheck="false"></label>
+        <div class="linha"><label>Modelo<input id="modelo" class="mono" value="${esc(c.via.modelo)}" placeholder="Padrão da conta" autocomplete="off" spellcheck="false"></label>
           <label id="campo-endereco">Endereço<input id="endereco" class="mono" value="${esc(c.via.endereco)}" placeholder="http://127.0.0.1:20128/v1" autocomplete="off" spellcheck="false"></label></div>
         <div id="area-chave"></div>
         <div class="linha">${botao("Salvar", "modelo-salvar", "", "principal")}${botao("Testar", "modelo-testar")}<span class="resultado" id="resultado"></span></div>`)}
@@ -250,7 +251,11 @@ function desenharChave() {
   if (!area) return;
   $("campo-endereco").hidden = modelo.motor !== "ponte";
   const k = modelo.chaves[modelo.motor] || { usa: false };
-  if (!k.usa) { area.innerHTML = ""; return; }
+  if (!k.usa) {
+    area.innerHTML = modelo.motor === "contas" ? '<p class="nota">Usa as contas configuradas em Contas.</p>'
+      : contaEmUso(modelo.motor === "codex" ? "codex" : "claude");
+    return;
+  }
   const estado = k.tem ? `<span class="etiqueta bom">chave guardada · …${esc(k.fim)}</span>` : '<span class="etiqueta alerta">sem chave</span>';
   area.innerHTML = `<div class="linha">${estado}<input id="chave" type="password" class="mono" placeholder="colar chave" autocomplete="off" spellcheck="false">
     ${botao("Guardar chave", "chave-guardar")}${k.tem && k.origem === "painel" ? xis("chave-apagar", "", "Apagar chave") : ""}</div>`;
@@ -263,7 +268,7 @@ let acessoTela = {};
 let agentes = [];
 
 const seletorAgente = (atual, lista = agentes) => `<div class="segmentos" role="group" aria-label="Agente">${lista.map((a) => a.disponivel
-  ? `<button type="button" aria-pressed="${a.id === atual}">${esc(a.nome)}</button>`
+  ? `<button type="button" data-acao="cerebro-escolher" data-agente="${esc(a.id)}" aria-pressed="${a.id === atual}">${esc(a.nome)}</button>`
   : `<button type="button" disabled>${esc(a.nome)} <small>Em breve</small></button>`).join("")}</div>`;
 
 function camposPerfil(cfg) {
@@ -284,23 +289,25 @@ function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
   const a = acessoTela, cerebro = area.dataset.contexto === "cerebro";
-  const pronto = Boolean(a.metodo);
+  const agente = cerebro && a.cerebro === "codex" ? "codex" : "claude";
+  const cs = contasTela.agentes.find((x) => x.id === agente);
+  const pronto = agente === "codex" ? Boolean(cs?.contas.find((x) => x.id === cs.em_uso)?.logado) : Boolean(a.metodo);
   const estado = pronto ? '<span class="etiqueta bom">Configurado</span>' : '<span class="etiqueta alerta">Não configurado</span>';
   const temChave = a.metodo === "chave" && a.origem === "painel";
   const topo = cerebro
     ? `<div class="cabeca"><h2>Cérebro</h2>${estado}</div>
       ${sub("Entende os pedidos com ação e usa as ferramentas do Zé.")}
-      ${seletorAgente("claude")}
-      <p class="nota">Modelo <span class="mono">${esc(a.modelo || "")}</span></p>`
+      ${seletorAgente(agente)}
+      <p class="nota">Modelo <span class="mono">${esc(a.modelo || "Padrão da conta")}</span></p>`
     : `<div class="cabeca"><h2>Agente</h2>${estado}</div>
       ${sub("O Zé usa o agente instalado nesta máquina, com o login feito nele.")}`;
   area.innerHTML = `${topo}
-    ${contaEmUso("claude")}
-    <details class="alternativa" ${temChave ? "open" : ""}><summary>Usar chave de API da Anthropic</summary>
+    ${contaEmUso(agente)}
+    ${agente === "claude" ? `<details class="alternativa" ${temChave ? "open" : ""}><summary>Usar chave de API da Anthropic</summary>
       <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${temChave ? "•••• " + esc(a.fim) : "Chave de API"}" autocomplete="off" spellcheck="false" aria-label="Chave de API da Anthropic">
         ${botao("Salvar", "acesso-salvar", "", "principal")}${temChave ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>
       <p class="nota"><a href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a> Pago por uso; vence o login quando preenchida.</p>
-    </details>
+    </details>` : ""}
     <div class="linha">${botao("Testar conexão", "acesso-testar")}</div>
     <p class="resultado" id="resultado-acesso"></p>`;
 }
@@ -784,6 +791,11 @@ function desligarImersao() {
 const recarregar = () => abrir();
 
 const ACOES = {
+  "cerebro-escolher": async (b) => {
+    const c = await ocupado(b, () => api("cerebro/escolher", { agente: b.dataset.agente }));
+    acessoTela.cerebro = c.completo.provedor; acessoTela.modelo = c.completo.modelo;
+    desenharAcesso(); toast(c.aviso || "Agente atualizado.");
+  },
   "confirmar-sim": async (b) => { const f = pendentes.get(b.dataset.id); pendentes.delete(b.dataset.id); if (f) await f(); },
   "confirmar-nao": (b) => { const l = b.closest("[data-antes]"); l.innerHTML = l.dataset.antes; delete l.dataset.antes; pendentes.delete(b.dataset.id); },
   // imersão
@@ -955,7 +967,7 @@ const ACOES = {
     const s = await ocupado(b, () => api("sessao/criar", { nome: $("ns-nome").value, pasta: $("ns-pasta").value, motor, novo, projeto: $("ns-projeto").value, isolada: !novo && $("ns-isolada").checked }));
     await listaSessoes(); await abrirSessao(s.id);
   },
-  "sessao-excluir": (b) => confirmar(b, "Excluir a sessão? A pasta do projeto fica.", async () => {
+  "sessao-excluir": (b) => confirmar(b, "Excluir sessão e encerrar o agente? A pasta do projeto fica.", async () => {
     const r = await api("sessao/excluir", { id: sessaoAberta });
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();
   }),
