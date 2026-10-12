@@ -238,6 +238,7 @@ main.cheio { padding: 0; overflow: hidden; }
 .modo small { color: var(--suave); font-size: 12.5px; line-height: 1.4; }
 .modo:hover { border-color: var(--borda-forte); }
 .modo[aria-checked="true"] { border-color: var(--acento); background: rgb(70 217 222 / .12); }
+.modo:disabled { opacity: .55; cursor: not-allowed; }
 
 /* --- skills e conectores --- */
 .editor-texto { width: 100%; resize: vertical; background: rgb(0 0 0 / .25); color: var(--texto);

@@ -11,6 +11,7 @@ e só depois vira "barehands".
 import json
 import logging
 import os
+import shutil
 import socket
 import subprocess
 import threading
@@ -67,6 +68,16 @@ def pastas_de_instancia(base: Path, assinatura: str | None) -> list[Path]:
     return ([base / assinatura] if assinatura else []) + outras
 
 
+def base_padrao() -> Path:
+    return Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "hypr"
+
+
+def disponivel(base: Path | None = None) -> bool:
+    """Há um Hyprland nesta sessão: o `hyprctl` e a pasta de uma instância em execução."""
+    base = base or base_padrao()
+    return shutil.which("hyprctl") is not None and bool(pastas_de_instancia(base, None))
+
+
 class MonitorPresenca(threading.Thread):
     """Avisa `ao_mudar(aberta)` a cada mudança. Começa ausente até a primeira leitura."""
 
@@ -80,7 +91,7 @@ class MonitorPresenca(threading.Thread):
         super().__init__(name="presenca", daemon=True)
         self.ao_mudar = ao_mudar
         self.parar = parar
-        self.base = base or Path(os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")) / "hypr"
+        self.base = base or base_padrao()
         self.janelas = Janelas(classe)
         self.assinatura: str | None = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
         self.avisado: bool | None = None

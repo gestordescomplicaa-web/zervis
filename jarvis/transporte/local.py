@@ -16,6 +16,26 @@ log = logging.getLogger(__name__)
 SERVIDOR = f"unix:/run/user/{os.getuid()}/pulse/native"
 NOME_CLIENTE = "jarvisd"
 BYTES_QUADRO = 2560  # 1280 amostras int16 = 80 ms a 16 kHz
+PADRAO = "@DEFAULT_SOURCE@"
+
+
+def fonte(dispositivo: str) -> str:
+    """O microfone configurado, se existir nesta máquina; senão o padrão do sistema. O MIC FX
+    (`omarchy_mic_fx`) só existe no Omarchy; em outro Linux vale o microfone do sistema."""
+    if not dispositivo or dispositivo == PADRAO:
+        return PADRAO
+    try:
+        r = subprocess.run(  # noqa: S603 (comando fixo)
+            ["/usr/bin/pactl", "--server", SERVIDOR, "list", "short", "sources"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return dispositivo  # sem como conferir: tenta o configurado
+    nomes = {partes[1] for linha in r.stdout.splitlines() if len(partes := linha.split("\t")) > 1}
+    return dispositivo if dispositivo in nomes else PADRAO
 
 
 class Captura:
@@ -36,13 +56,16 @@ class Captura:
             if self.aberta:
                 return
             self._esvaziar()
+            dispositivo = fonte(self.dispositivo)
+            if dispositivo != self.dispositivo:
+                log.info("microfone %s não existe: usando o padrão do sistema", self.dispositivo)
             self.processo = subprocess.Popen(  # noqa: S603 (comando fixo)
                 [
                     "/usr/bin/parec",
                     "--server",
                     SERVIDOR,
                     "--device",
-                    self.dispositivo,
+                    dispositivo,
                     f"--client-name={NOME_CLIENTE}",
                     "--format=s16le",
                     "--rate=16000",

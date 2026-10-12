@@ -22,6 +22,7 @@ from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
 from jarvis.oficina.sessoes import Sessao, SessaoErro
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
+from jarvis.presenca import modo as modo_escuta
 from jarvis.voz import deepgram
 
 MOTORES = [
@@ -123,6 +124,7 @@ class Acoes:
         return {
             "cerebro": self.mudar_cerebro,
             "fala/modo": self.mudar_modo_fala,
+            "escuta/modo": self.mudar_escuta,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
@@ -194,6 +196,7 @@ class Acoes:
             "foco": self.n.foco.onde_estava(),
             "tela_ts": self._tela_ts(),
             "modo_fala": self.n.modo_fala,
+            "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
         }
 
     def mudar_modo_fala(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -201,6 +204,16 @@ class Acoes:
         if modo not in modo_fala.MODOS:
             raise PedidoInvalido("modo de fala desconhecido")
         return {"modo": modo, "aviso": self.n.mudar_modo_fala(modo)}
+
+    def mudar_escuta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        modo = str(dados.get("modo", ""))
+        if modo not in modo_escuta.MODOS:
+            raise PedidoInvalido("modo de escuta desconhecido")
+        try:
+            aviso = self.n.mudar_escuta(modo)
+        except ValueError as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {"modo": modo, "aviso": aviso}
 
     def painel_vendo(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O painel está com esta sessão aberta e à vista: o Zé não fala o que ela já mostra."""

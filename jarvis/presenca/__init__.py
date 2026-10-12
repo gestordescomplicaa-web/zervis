@@ -1,1 +1,1 @@
-"""Presença: decide ATIVO/INATIVO pelo rosto conectado (janela do Barehands no modo mesa)."""
+"""Presença: decide ATIVO/INATIVO pelos rostos (janela no Hyprland, escuta sempre, voz remota)."""

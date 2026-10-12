@@ -62,7 +62,10 @@ from jarvis.oficina.manutencao import Manutencao
 from jarvis.oficina.sessoes import FOCO_S, Sessao, SessaoErro, Sessoes
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import Portal
+from jarvis.presenca import hyprland
+from jarvis.presenca import modo as modo_escuta
 from jarvis.presenca.hyprland import MonitorPresenca
+from jarvis.presenca.rostos import Rostos
 from jarvis.rosto import hud, manifesto, pasta, tela
 from jarvis.rosto.anel import Anel, separar_emocao
 from jarvis.rosto.painel import Painel
@@ -420,11 +423,17 @@ class Nucleo:
             log.warning("painel não subiu: %s", erro)
         self.bip = ESTADO / "bip.wav"
         criar_bip(self.bip)
-        self.presenca = MonitorPresenca(
-            lambda aberta: self.eventos.put(e.Presenca(aberta)),
-            parar,
-            classe=cfg["presenca"]["classe_janela"],
-        )
+        # Rostos (ADR 0021): a janela no Hyprland, a escuta sempre ligada e, depois, a voz remota.
+        self.rostos = Rostos(lambda ativo: self.eventos.put(e.Presenca(ativo)))
+        self.tem_janela = hyprland.disponivel()
+        self.presenca: MonitorPresenca | None = None
+        if self.tem_janela:
+            self.presenca = MonitorPresenca(
+                lambda aberta: self.rostos.marcar("janela", aberta),
+                parar,
+                classe=cfg["presenca"]["classe_janela"],
+            )
+        self.modo_escuta = modo_escuta.ler(self.tem_janela)
 
     # --- callbacks de outras threads (só põem eventos na fila) --------------------------
 
@@ -823,6 +832,15 @@ class Nucleo:
         self._ligar_ativacao()
         log.info("modo de fala: %s", modo)
         return f"Modo {modo_fala.NOMES[modo].lower()}."
+
+    def mudar_escuta(self, modo: str) -> str:
+        """Troca quando o Zé escuta o chamado: sempre, ou só com a janela aberta (ADR 0021)."""
+        if modo == "janela" and not self.tem_janela:
+            raise ValueError("Requer Hyprland.")
+        self.modo_escuta = modo_escuta.gravar(modo)
+        self.rostos.marcar("sempre", modo == "sempre")
+        log.info("escuta: %s", modo)
+        return f"Escuta: {modo_escuta.NOMES[modo].lower()}."
 
     def _aviso_da_oficina(self, texto: str, tipo: modo_fala.Tipo, id_: str = "") -> None:
         """O que as sessões de código avisam entra na linha do tempo; vira voz se o modo de fala
@@ -1603,7 +1621,9 @@ class Nucleo:
     def rodar(self) -> None:
         self.memoria_longa.iniciar()
         self.imersivo.iniciar()
-        self.presenca.start()
+        if self.presenca is not None:
+            self.presenca.start()
+        self.rostos.marcar("sempre", self.modo_escuta == "sempre")
         proximo_status = 0.0
         try:
             while not self.parar.is_set():

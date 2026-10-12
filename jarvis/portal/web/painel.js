@@ -210,6 +210,9 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Modo de fala</h2><span class="etiqueta bom">${esc(nomeModo(e.modo_fala))}</span></div>
         ${sub("Quando o Zé fala sem você pedir. Atalho: Alt+M.")}
         <div class="modos-fala" role="radiogroup" aria-label="Modo de fala">${MODOS_FALA.map((m) => `<button type="button" role="radio" class="modo" data-acao="modo-fala" data-modo="${m.valor}" aria-checked="${m.valor === e.modo_fala}"><strong>${m.nome}</strong><small>${m.detalhe}</small></button>`).join("")}</div>`)}
+      ${cartao("", `<div class="cabeca"><h2>Escuta</h2><span class="etiqueta bom">${esc(nomeEscuta(e.escuta.modo))}</span></div>
+        ${sub("Quando o chamado “Ei Zé” funciona.")}
+        <div class="modos-fala" role="radiogroup" aria-label="Escuta">${MODOS_ESCUTA.map((m) => { const sem = m.valor === "janela" && !e.escuta.janela; return `<button type="button" role="radio" class="modo" data-acao="escuta-modo" data-modo="${m.valor}" aria-checked="${m.valor === e.escuta.modo}" ${sem ? "disabled" : ""}><strong>${m.nome}</strong><small>${sem ? "Requer Hyprland." : m.detalhe}</small></button>`; }).join("")}</div>`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}
@@ -224,6 +227,11 @@ const MODOS_FALA = [
   { valor: "avisos", nome: "Avisos", curto: "Avisos e urgências", detalhe: "Fala avisos e urgências. Respostas das sessões, só se você pedir." },
   { valor: "maos_livres", nome: "Mãos livres", curto: "Também as respostas", detalhe: "Fala também as respostas das sessões, resumidas." },
 ];
+const MODOS_ESCUTA = [
+  { valor: "sempre", nome: "Sempre", detalhe: "Enquanto o Zé estiver em execução." },
+  { valor: "janela", nome: "Com a janela aberta", detalhe: "Só com a janela do Zé aberta." },
+];
+const nomeEscuta = (valor) => MODOS_ESCUTA.find((m) => m.valor === valor)?.nome || valor;
 const nomeModo = (valor) => MODOS_FALA.find((m) => m.valor === valor)?.nome || valor;
 let modoFala = null;
 
@@ -1014,6 +1022,7 @@ const ACOES = {
   mencionar: (b) => { fecharPrevia(); escreverNoTerminal("@" + b.dataset.caminho + " "); },
   "terminal-reabrir": () => abrirTerminal(sessaoAberta),
   "modo-fala": (b) => mudarModoFala(b.dataset.modo),
+  "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
 };
 
 // O que cada menu de escolha faz com o valor escolhido.

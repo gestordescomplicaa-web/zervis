@@ -41,10 +41,10 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    Feito: Codex na voz e no cérebro, com alternativas entre contas antes de texto ou ação (ADR 0020).
 3. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx` e o OmniRoute (baterias) como
    opcionais que se desligam sozinhos quando não
-   existem; Omarchy detectado em vez de suposto. **Escuta sem depender de janela:** hoje o
-   microfone só abre com a janela do painel (modo aplicativo) aberta, e a classe da janela é a
-   mesma de qualquer Zé na máquina; vira um interruptor "Escuta" no painel e um atalho. O painel
-   segue como página web, instalável como aplicativo (manifesto).
+   existem; Omarchy detectado em vez de suposto. Feito: **escuta sem depender de janela**
+   (ADR 0021): a escolha "Escuta" (Sempre ou Com a janela aberta), o Hyprland detectado e o
+   microfone padrão do sistema quando o MIC FX não existe. Falta: o OmniRoute opcional e o painel
+   instalável como aplicativo (manifesto), que também serve à voz remota.
 4. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
    junto), o ai-memory e o imersivo; README de quem chega.
 5. **SQLite** para os registros, com migração automática dos arquivos.

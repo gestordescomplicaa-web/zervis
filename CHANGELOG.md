@@ -72,3 +72,6 @@
   ou pelo nome), e "diz pra ela rodar os testes" vai para ela; depois de um aviso de sessão ele já
   fica ouvindo a resposta, sem "Ei Zé"; "como está a Loja?" conta os comandos e os arquivos que o
   agente mexeu.
+- Voz em qualquer Linux (ADR 0021): a escolha "Escuta" na página Voz, "Sempre" ou "Com a janela
+  aberta" (esta só com Hyprland). Sem Hyprland o Zé escuta o chamado enquanto estiver rodando, e
+  usa o microfone padrão do sistema quando o MIC FX do Omarchy não existe.
