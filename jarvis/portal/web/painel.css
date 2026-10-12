@@ -40,7 +40,6 @@ body {
 }
 .marca { display: flex; align-items: center; gap: 12px; padding: 4px 8px 10px; }
 .marca strong { display: block; font-size: 20px; letter-spacing: .06em; }
-.marca small { color: var(--suave); font-size: 12px; }
 /* O ícone do Zé: o holograma; acende e pulsa quando ele está ativo. */
 .anel {
   width: 40px; height: 40px; border-radius: 10px; flex: none; object-fit: cover;

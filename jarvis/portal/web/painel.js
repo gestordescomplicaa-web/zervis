@@ -1209,14 +1209,14 @@ async function batimento() {
     const e = await api("estado");
     if (telaVista !== null && e.tela_ts > telaVista && imersaoLigada() && location.hash !== "#imersao") location.hash = "#imersao";
     telaVista = e.tela_ts;
-    $("estado-ze").textContent = ESTADOS[e.ze] || e.ze;
+    document.querySelector(".marca .anel").title = `Zé ${ESTADOS[e.ze] || e.ze}`;
     document.querySelector(".marca .anel").classList.toggle("ativo", e.ze !== "inativo");
     desenharModoFala(e.modo_fala);
     desenharVozRemota(e.voz_remota);
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }
-  } catch { $("estado-ze").textContent = "desconectado"; }
+  } catch { document.querySelector(".marca .anel").title = "Zé desconectado"; }
 }
 
 // Sem perfil, o painel abre na configuração inicial.
