@@ -15,11 +15,17 @@ import logging
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
 PORTA_PAINEL = 443
 PORTA_VOZ = 8443
+PORTA_MIDIA = 7882  # UDP do LiveKit: o áudio chega direto, não pelo `serve`
+REGRAS_UFW = Path("/etc/ufw/user.rules")
+COMANDO_FIREWALL = (
+    f"sudo ufw allow in on tailscale0 to any port {PORTA_MIDIA} proto udp comment 'Zervis voz'"
+)
 
 
 class RemotoErro(ValueError):
@@ -33,6 +39,7 @@ class Rede:
     nome: str = ""  # omarchy.tail1234.ts.net
     ip: str = ""  # 100.x.y.z
     ativo: bool = False  # o painel publicado pelo `serve`
+    firewall: str = ""  # o comando que libera o áudio, se um firewall o estiver barrando
 
     @property
     def endereco(self) -> str:
@@ -71,7 +78,25 @@ def rede(porta_painel: int) -> Rede:
     destino = f"127.0.0.1:{porta_painel}"
     web = (_json("serve", "status").get("Web") or {}).get(f"{nome}:{PORTA_PAINEL}") or {}
     ativo = any(destino in str(h.get("Proxy", "")) for h in (web.get("Handlers") or {}).values())
-    return Rede(instalado=True, conectado=True, nome=nome, ip=ip, ativo=ativo)
+    return Rede(instalado=True, conectado=True, nome=nome, ip=ip, ativo=ativo, firewall=firewall())
+
+
+def firewall(regras: Path = REGRAS_UFW) -> str:
+    """O ufw (padrão no Omarchy e comum no Ubuntu) barra o áudio da voz que chega pela rede
+    privada; devolve o comando que libera a porta só no Tailscale, ou vazio se não precisa."""
+    if shutil.which("ufw") is None or not regras.is_file():
+        return ""
+    try:
+        texto = regras.read_text()
+    except OSError:
+        return ""
+    if "### tuple ###" not in texto:  # sem regras do usuário: ufw nunca configurado
+        return ""
+    liberado = any(
+        f"--dport {PORTA_MIDIA}" in linha and "-p udp" in linha and "ACCEPT" in linha
+        for linha in texto.splitlines()
+    )
+    return "" if liberado else COMANDO_FIREWALL
 
 
 def _serve(porta: int, alvo: str) -> None:

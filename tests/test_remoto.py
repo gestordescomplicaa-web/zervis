@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -77,3 +78,19 @@ def test_painel_aceita_o_nome_da_rede_so_quando_permitido() -> None:
         assert "omarchy.tail1234.ts.net" not in p.hosts
     finally:
         p.http.server_close()
+
+
+def test_firewall_que_barra_o_audio_mostra_o_comando(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("jarvis.portal.remoto.shutil.which", lambda nome: "/usr/bin/ufw")
+    regras = tmp_path / "user.rules"
+    assert remoto.firewall(regras) == ""  # sem ufw configurado
+    regras.write_text(
+        "### tuple ### allow udp 53317\n-A ufw-user-input -p udp --dport 53317 -j ACCEPT\n"
+    )
+    assert "port 7882 proto udp" in remoto.firewall(regras)
+    regras.write_text(
+        regras.read_text() + "-A ufw-user-input -i tailscale0 -p udp --dport 7882 -j ACCEPT\n"
+    )
+    assert remoto.firewall(regras) == ""
