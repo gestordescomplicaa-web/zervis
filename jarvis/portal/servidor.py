@@ -30,8 +30,14 @@ TIPOS = {
     ".css": "text/css",
     ".js": "text/javascript",
     ".svg": "image/svg+xml",
+    ".webp": "image/webp",
 }
-ARQUIVOS = {"/": "index.html", "/painel.css": "painel.css", "/painel.js": "painel.js"}
+ARQUIVOS = {
+    "/": "index.html",
+    "/painel.css": "painel.css",
+    "/painel.js": "painel.js",
+    "/ze.webp": "ze.webp",  # o ícone do Zé (menu lateral e aba)
+}
 
 Leitura = Callable[[], Any]
 Escrita = Callable[[dict[str, Any]], Any]
@@ -85,7 +91,8 @@ class Portal:
 
             def _enviar(self, status: int, corpo: bytes, tipo: str) -> None:
                 self.send_response(status)
-                self.send_header("Content-Type", f"{tipo}; charset=utf-8")
+                texto = tipo.startswith("text/") or tipo.endswith(("json", "svg+xml"))
+                self.send_header("Content-Type", f"{tipo}; charset=utf-8" if texto else tipo)
                 self.send_header("Content-Length", str(len(corpo)))
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("X-Content-Type-Options", "nosniff")

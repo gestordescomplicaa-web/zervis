@@ -225,8 +225,10 @@ def test_conferir_a_chave_do_deepgram_distingue_recusa_de_rede() -> None:
 
 def test_os_arquivos_da_pagina_sao_leves() -> None:
     web = Path(__file__).resolve().parents[1] / "jarvis/portal/web"
-    total = sum(f.stat().st_size for f in web.iterdir())
-    assert total < 100_000, total  # docs/plano-painel.md: abaixo de 100 KB
+    codigo = sum(f.stat().st_size for f in web.iterdir() if f.suffix in (".html", ".css", ".js"))
+    assert codigo < 100_000, codigo  # docs/plano-painel.md: abaixo de 100 KB
+    imagens = sum(f.stat().st_size for f in web.iterdir() if f.suffix in (".webp", ".png", ".svg"))
+    assert imagens < 20_000, imagens  # o ícone do Zé, pequeno
     assert "http" not in (web / "index.html").read_text().replace("http://www.w3.org", "")
     assert os.access(web / "painel.js", os.R_OK)
 

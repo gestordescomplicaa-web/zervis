@@ -54,3 +54,5 @@
   "Créditos esgotados" com botões "Continuar com <outra conta>", que trocam de conta e mandam de
   novo o pedido que ficou sem resposta. O agente e a conta da sessão se trocam ali mesmo, num
   seletor no cabeçalho.
+- O ícone do Zé (o chimpanzé holográfico) no topo do menu lateral do painel e na aba do navegador;
+  acende e pulsa quando o Zé está ativo.

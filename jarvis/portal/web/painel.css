@@ -41,13 +41,13 @@ body {
 .marca { display: flex; align-items: center; gap: 12px; padding: 4px 8px 10px; }
 .marca strong { display: block; font-size: 20px; letter-spacing: .06em; }
 .marca small { color: var(--suave); font-size: 12px; }
+/* O ícone do Zé: o holograma; acende e pulsa quando ele está ativo. */
 .anel {
-  width: 34px; height: 34px; border-radius: 50%; flex: none;
-  border: 2px solid var(--acento);
-  box-shadow: 0 0 14px rgb(70 217 222 / .45), inset 0 0 10px rgb(70 217 222 / .35);
+  width: 40px; height: 40px; border-radius: 10px; flex: none; object-fit: cover;
+  box-shadow: 0 0 10px rgb(56 160 255 / .35); opacity: .75; transition: opacity .3s;
 }
-.anel.ativo { animation: pulso 2.4s ease-in-out infinite; }
-@keyframes pulso { 50% { box-shadow: 0 0 22px rgb(70 217 222 / .7), inset 0 0 14px rgb(70 217 222 / .5); } }
+.anel.ativo { opacity: 1; animation: pulso 2.4s ease-in-out infinite; }
+@keyframes pulso { 50% { box-shadow: 0 0 20px rgb(56 160 255 / .75); } }
 nav { display: flex; flex-direction: column; gap: 4px; }
 nav a {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
