@@ -18,6 +18,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from jarvis import fuso, usuario
+from jarvis.memoria import aimemory
 
 log = logging.getLogger(__name__)
 FUSO = fuso.local()
@@ -120,10 +121,10 @@ class Conversas:
 
 def publicar(caminho: str, corpo: str, tags: tuple[str, ...] = (), tier: str = "episodic") -> bool:
     """Escreve (ou substitui) uma página do Zé no ai-memory; falha só registra, nunca derruba."""
-    comando = [
-        "ai-memory", "write-page", "--project", PROJETO, "--path", caminho, "--body", "-",
+    comando = aimemory.comando(
+        "write-page", "--project", PROJETO, "--path", caminho, "--body", "-",
         "--tier", tier, *(a for tag in tags for a in ("-t", tag)),
-    ]  # fmt: skip
+    )  # fmt: skip
     try:
         feito = subprocess.run(  # noqa: S603 (binário fixo, argumentos em lista)
             comando, input=corpo, capture_output=True, text=True, timeout=30, check=False,

@@ -26,7 +26,7 @@ class HistoricoErro(RuntimeError):
 def _ai_memory(*args: str, limite_s: float = 30) -> str:
     try:
         feito = subprocess.run(  # noqa: S603 (binário fixo, argumentos em lista)
-            [str(aimemory.binario() or "ai-memory"), "--data-dir", str(PASTA), *args],
+            aimemory.comando(*args, dados=PASTA),
             capture_output=True,
             text=True,
             timeout=limite_s,

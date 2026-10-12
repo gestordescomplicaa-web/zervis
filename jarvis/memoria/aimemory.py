@@ -71,6 +71,11 @@ def binario(pasta: Path = PASTA) -> Path | None:
     return proprio if proprio.is_file() else None
 
 
+def comando(*args: str, dados: Path | None = None) -> list[str]:
+    """Leitura e publicação usam o mesmo binário e a mesma raiz da memória longa."""
+    return [str(binario() or "ai-memory"), "--data-dir", str(dados or DADOS), *args]
+
+
 def garantir(pasta: Path = PASTA, abrir: Any = urllib.request.urlopen) -> bool:
     """Baixa e extrai o ai-memory se a máquina não tiver; True se baixou agora."""
     if binario(pasta) is not None:
