@@ -400,3 +400,35 @@ def test_terminal_sem_o_agente_instalado_avisa(
     s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "codex")
     with pytest.raises(SessaoErro, match="Codex não está instalado"):
         sessoes.abrir_terminal(s.id)
+
+
+def test_a_passagem_entra_como_contexto_sem_gastar_um_turno(tmp_path: Path) -> None:
+    from jarvis.oficina.sessoes import comando_terminal
+
+    eventos = tmp_path / "eventos.jsonl"
+    contexto = tmp_path / "contexto.json"
+    contexto.write_text(
+        json.dumps({"hookSpecificOutput": {"additionalContext": "[Passagem do Zé] x"}})
+    )
+    claude = Sessao("s1", "Loja", str(tmp_path), "claude")
+    cmd = comando_terminal(claude, "", eventos, contexto)
+    ajustes = json.loads(cmd[cmd.index("--settings") + 1])
+    entregar = ajustes["hooks"]["SessionStart"][-1]["hooks"][0]["command"]
+    assert str(contexto) in entregar and "rm -f" in entregar  # uma vez só
+    assert not any(c.startswith("[Passagem") for c in cmd)  # nenhum pedido automático
+    codex = Sessao("s2", "Loja", str(tmp_path), "codex")
+    cmd = comando_terminal(codex, "", eventos, contexto)
+    assert any(c.startswith("developer_instructions=") and "Passagem" in c for c in cmd)
+    assert not any(c.startswith("[Passagem") for c in cmd)
+
+
+def test_passagem_sem_as_notas_do_ze(tmp_path: Path, raiz: Path) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "claude")
+    sessoes.anotar(s.id, "sistema", "Modelo: Opus.")
+    sessoes.anotar(s.id, "usuario", "meu nome é Bilu")
+    sessoes.anotar(s.id, "agente", "Prazer, Bilu!")
+    texto = sessoes.passagem(sessoes.ler(s.id), "codex")
+    assert "Modelo: Opus" not in texto and "Sessão criada" not in texto
+    assert "- usuário: meu nome é Bilu" in texto and "- agente: Prazer, Bilu!" in texto
+    assert "não responda a isto" in texto

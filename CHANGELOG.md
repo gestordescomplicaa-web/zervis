@@ -62,3 +62,5 @@
   créditos esgotados, os arquivos e os anexos (arrastar, colar ou "+": o caminho vai para o
   terminal). O que se digita e o que o agente responde continuam na conversa do Zé, para a
   passagem entre agentes e para o cérebro acompanhar.
+- Trocar de agente não dispara mais um pedido automático: o resumo do que já foi feito entra como
+  contexto do agente novo (ou fica no campo, junto com o próximo pedido), sem gastar um turno.

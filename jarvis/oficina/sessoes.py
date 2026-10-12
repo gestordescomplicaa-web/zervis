@@ -525,10 +525,11 @@ class Sessoes:
         dele (as mensagens visíveis, com tamanho limitado) e o estado do git agora."""
         todas = self.mensagens(s.id)
         objetivo = next((m["texto"] for m in todas if m["quem"] == "usuario"), "")[:600]
-        rotulos = {"usuario": "usuário", "agente": "agente", "ferramenta": "ação", "sistema": "Zé"}
-        linhas = [
-            f"- {rotulos.get(m['quem'], m['quem'])}: {' '.join(m['texto'].split())[:700]}"
+        rotulos = {"usuario": "usuário", "agente": "agente", "ferramenta": "ação"}
+        linhas = [  # as notas do Zé (terminal aberto, modelo trocado...) não ajudam o agente
+            f"- {rotulos[m['quem']]}: {' '.join(m['texto'].split())[:700]}"
             for m in todas[s.vistos.get(motor, 0) :]
+            if m["quem"] in rotulos
         ]
         recente: list[str] = []
         total = 0
@@ -547,11 +548,11 @@ class Sessoes:
         )
         anterior = NOMES_MOTORES.get(s.motor, s.motor)
         return (
-            f"{PASSAGEM} Você assume esta sessão de código, que estava com o {anterior}. "
-            f"Objetivo da sessão (o primeiro pedido): {objetivo}\n"
+            f"{PASSAGEM} Esta sessão de código estava com o {anterior}; agora é com você. "
+            "É contexto: não responda a isto, siga o pedido da pessoa sem refazer o que já foi "
+            f"feito.\nObjetivo da sessão (o primeiro pedido): {objetivo or '(nenhum ainda)'}\n"
             f"O que aconteceu desde a sua última vez aqui:\n{chr(10).join(recente) or '- nada'}\n"
-            f"Estado do git agora:\n{git or 'sem git ou sem mudanças'}\n"
-            "Use isso para continuar sem refazer o que já foi feito."
+            f"Estado do git agora:\n{git or 'sem git ou sem mudanças'}"
         )
 
     # --- o terminal real (ADR 0017) ---------------------------------------------------------
@@ -563,13 +564,20 @@ class Sessoes:
         self, id_: str, pedido: str = "", colunas: int = 120, linhas: int = 32
     ) -> Terminal:
         """O agente da sessão num terminal: o mesmo se já estiver aberto; senão, abre retomando a
-        conversa nativa (com a passagem, depois de uma troca de agente)."""
+        conversa nativa. Depois de uma troca de agente, a passagem chega sem gastar um turno:
+        como contexto (hook do Claude; instruções do Codex numa conversa nova) ou, no Codex que
+        retoma a própria conversa, colada no campo, sem Enter, e vai com o próximo pedido."""
         terminal = self.terminais.get(id_)
         if terminal is not None and terminal.vivo:
             return terminal
         s = self.ler(id_)
-        if s.passagem:
-            pedido = f"{s.passagem}{PEDIDO_AGORA}{pedido}" if pedido else s.passagem
+        contexto = rascunho = ""
+        if s.passagem and pedido:  # já há um pedido de verdade: vai junto com ele
+            pedido = f"{s.passagem}{PEDIDO_AGORA}{pedido}"
+        elif s.passagem and s.motor == "codex" and s.sdk_sessao:
+            rascunho = f"{s.passagem}{PEDIDO_AGORA}"
+        elif s.passagem:
+            contexto = s.passagem
         if s.motor == "claude":
             confiar_pasta_claude(s)
         else:
@@ -578,7 +586,7 @@ class Sessoes:
         self._lidos[id_] = self.eventos(id_).stat().st_size
         try:
             terminal = Terminal(
-                comando_terminal(s, pedido, self.eventos(id_)),
+                comando_terminal(s, pedido, self.eventos(id_), self._contexto(id_, contexto)),
                 s.onde,
                 ambiente_da_conta(s),
                 ao_sair=lambda codigo: self._terminal_saiu(id_, codigo),
@@ -591,9 +599,23 @@ class Sessoes:
                 f"{NOMES_MOTORES[s.motor]} não está instalado nesta máquina."
             ) from None
         self.terminais[id_] = terminal
+        if rascunho:
+            terminal.rascunho(rascunho)
         if s.passagem:  # entregue: o agente novo já recebeu
             self._mudar(id_, passagem="")
         return terminal
+
+    def _contexto(self, id_: str, texto: str) -> Path | None:
+        """A passagem num arquivo de uso único, que o hook do Claude entrega no início."""
+        if not texto:
+            return None
+        arquivo = self._dir(id_) / "contexto.json"
+        saida = {
+            "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": texto}
+        }
+        arquivo.write_text(json.dumps(saida, ensure_ascii=False))
+        arquivo.chmod(0o600)
+        return arquivo
 
     def _terminal_saiu(self, id_: str, codigo: int) -> None:
         with contextlib.suppress(SessaoErro):
@@ -1055,11 +1077,17 @@ def confiar_pasta_codex(s: Sessao) -> None:
         f.write(f'\n[projects.{json.dumps(str(s.onde))}]\ntrust_level = "trusted"\n')
 
 
-def comando_terminal(s: Sessao, pedido: str, eventos: Path) -> list[str]:
-    """O agente interativo da sessão: retoma a conversa nativa e conta ao Zé o que acontece."""
+def comando_terminal(
+    s: Sessao, pedido: str, eventos: Path, contexto: Path | None = None
+) -> list[str]:
+    """O agente interativo da sessão: retoma a conversa nativa e conta ao Zé o que acontece.
+    `contexto` (a passagem) entra sem virar pedido."""
     if s.motor == "codex":
         avisar = ["sh", "-c", 'printf "%s\\n" "$1" >> "$0"', str(eventos)]  # + o JSON do Codex
         cmd = ["codex", "-c", f"notify={json.dumps(avisar)}", "--sandbox", "workspace-write"]
+        if contexto is not None:  # conversa nova: instruções do desenvolvedor (TOML aceita JSON)
+            texto = json.loads(contexto.read_text())["hookSpecificOutput"]["additionalContext"]
+            cmd += ["-c", f"developer_instructions={json.dumps(texto)}"]
         if s.modelo:
             cmd += ["-m", s.modelo]
         if s.esforco:
@@ -1073,6 +1101,13 @@ def comando_terminal(s: Sessao, pedido: str, eventos: Path) -> list[str]:
         hooks[evento] = [
             *hooks.get(evento, []),
             {"matcher": "", "hooks": [{"type": "command", "command": gravar}]},
+        ]
+    if contexto is not None:  # entregue uma vez só: o arquivo sai depois de lido
+        c = shlex.quote(str(contexto))
+        entregar = {"type": "command", "command": f"cat {c} 2>/dev/null && rm -f {c}"}
+        hooks["SessionStart"] = [
+            *hooks.get("SessionStart", []),
+            {"matcher": "", "hooks": [entregar]},
         ]
     cmd = [
         "claude",

@@ -25,9 +25,16 @@ painel sempre ficaria atrás.
    agentes, o aviso de fim de turno e o que o cérebro lê com `sessao_ler`.
 4. O cérebro e a voz mandam pedidos para a sessão colando no terminal (colagem entre colchetes e
    Enter); sem terminal aberto, o Zé abre um com o pedido.
-5. A pasta do projeto é marcada como confiável no perfil da conta (Claude: `hasTrustDialogAccepted`;
+5. **A passagem não gasta turno.** Ao trocar de agente, o resumo do que já foi feito chega como
+   contexto, sem virar pedido: no Claude, por um hook `SessionStart` de uso único (o mesmo jeito
+   do ai-memory); no Codex numa conversa nova, por `developer_instructions`. O Codex que retoma a
+   própria conversa ignora instruções novas (testado), então o Zé deixa a passagem colada no campo,
+   sem Enter, e ela vai junto com o próximo pedido da pessoa. As notas do Zé (terminal aberto,
+   modelo trocado) não entram na passagem. Testado (12/10/2026): nenhum turno sozinho e o agente
+   novo respondeu com o que estava na passagem, no Claude e no Codex.
+6. A pasta do projeto é marcada como confiável no perfil da conta (Claude: `hasTrustDialogAccepted`;
    Codex: `trust_level` no `config.toml` da conta), senão o agente para na pergunta de confiança.
-6. A política de segurança do painel passa a aceitar estilo inline (`style-src 'unsafe-inline'`):
+7. A política de segurança do painel passa a aceitar estilo inline (`style-src 'unsafe-inline'`):
    o xterm.js gera o CSS de fonte e cores. Scripts continuam só do próprio painel.
 
 ## Consequências

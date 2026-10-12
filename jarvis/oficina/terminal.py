@@ -123,6 +123,25 @@ class Terminal:
         time.sleep(0.15)  # o agente separa o colar do Enter
         self.escrever(b"\r")
 
+    def rascunho(
+        self, texto: str, quieto_s: float = 1.5, minimo_s: float = 3.0, limite_s: float = 30.0
+    ) -> None:
+        """Cola `texto` no campo do agente sem Enter, quando ele terminar de abrir (passados
+        `minimo_s`, a tela fica quieta por `quieto_s`). Vai junto com o próximo pedido."""
+
+        def esperar_e_colar() -> None:
+            inicio = time.monotonic()
+            visto = self.fim
+            while time.monotonic() - inicio < limite_s and self.vivo:
+                time.sleep(quieto_s)
+                pronto = time.monotonic() - inicio >= minimo_s
+                if pronto and self.fim == visto and visto > 0:
+                    break
+                visto = self.fim
+            self.escrever(b"\x1b[200~" + texto.encode() + b"\x1b[201~")
+
+        threading.Thread(target=esperar_e_colar, name=f"rascunho-{self.pid}", daemon=True).start()
+
     def redimensionar(self, colunas: int, linhas: int) -> None:
         if self.vivo:
             tamanho = struct.pack("HHHH", max(2, linhas), max(10, colunas), 0, 0)

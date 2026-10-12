@@ -1,6 +1,7 @@
 """O terminal das sessões: um programa real num PTY, lido a partir de uma posição."""
 
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -70,3 +71,12 @@ def test_encerrar_para_o_programa(tmp_path: Path) -> None:
 def test_programa_inexistente_falha_antes_do_fork(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         Terminal(["ze-nao-existe-123"], tmp_path, {})
+
+
+def test_rascunho_espera_o_programa_abrir_e_nao_confirma(tmp_path: Path) -> None:
+    t = Terminal(["sh", "-c", "sleep 0.3; printf pronto; read x; echo fim:$x"], tmp_path, {})
+    t.rascunho("passagem ", quieto_s=0.2, minimo_s=0.5)
+    time.sleep(1.5)
+    t.escrever(b"pedido\r")
+    assert b"fim:" in _ler_ate(t, b"fim:")
+    t.encerrar()
