@@ -260,7 +260,7 @@ let salaVoz = null, vozConectando = false;
 function desenharVozRemota(estado) {
   const caixa = $("voz-remota"), on = !!salaVoz;
   caixa.hidden = !estado?.disponivel && !on;
-  const html = `<button type="button" class="acao ${on ? "" : "principal"}" data-acao="voz-remota" aria-pressed="${on}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : on ? "Desconectar voz" : "Conectar voz"}</button>`;
+  const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz ao vivo" : "Conectar a voz ao vivo: ouve sem parar até desconectar"}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : "Ao vivo"}</button>`;
   if (caixa.innerHTML !== html) caixa.innerHTML = html;
 }
 
@@ -280,13 +280,25 @@ async function ligarVoz() {
   vozConectando = false; desenharVozRemota({ disponivel: true });
 }
 
+// --- Menu lateral: grupos recolhíveis, lembrados neste navegador ---
+
+const GRUPOS = "ze.grupos-fechados";
+function lerFechados() { try { return new Set(JSON.parse(localStorage.getItem(GRUPOS) || "[]")); } catch { return new Set(); } }
+lerFechados().forEach((g) => document.querySelector(`.grupo[data-grupo="${g}"] .grupo-titulo`)?.setAttribute("aria-expanded", "false"));
+function alternarGrupo(b) {
+  const aberto = b.getAttribute("aria-expanded") === "true", fechados = lerFechados(), g = b.closest(".grupo").dataset.grupo;
+  b.setAttribute("aria-expanded", String(!aberto));
+  aberto ? fechados.add(g) : fechados.delete(g);
+  try { localStorage.setItem(GRUPOS, JSON.stringify([...fechados])); } catch { /* sem armazenamento: vale só agora */ }
+}
+
 // --- Segurar para falar (ADR 0022): segurar envia ao soltar; um toque começa e outro envia ---
 
 let falando = false, travado = false, apertouEm = 0;
 
 function marcarFalar() {
   $("falar").setAttribute("aria-pressed", String(falando));
-  $("falar").textContent = !falando ? "Segurar para falar" : travado ? "Toque para enviar" : "Solte para enviar";
+  $("falar").textContent = !falando ? "Falar" : travado ? "Enviar" : "Ouvindo…";
 }
 
 async function apertarFalar() {
@@ -1085,6 +1097,7 @@ const ACOES = {
   "terminal-reabrir": () => abrirTerminal(sessaoAberta),
   "modo-fala": (b) => mudarModoFala(b.dataset.modo),
   "voz-remota": ligarVoz,
+  grupo: alternarGrupo,
   "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
   "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
 };
@@ -1171,6 +1184,7 @@ async function abrir() {
   const nome = (location.hash || "#inicio").slice(1);
   const secao = PAGINAS[nome] || nome === "imersao" ? nome : "inicio";
   document.querySelectorAll("nav a").forEach((a) => (a.dataset.secao === secao ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+  document.querySelector(`nav a[data-secao="${secao}"]`)?.closest(".grupo")?.querySelector(".grupo-titulo").setAttribute("aria-expanded", "true");
   imersao.hidden = secao !== "imersao";
   conteudo.hidden = secao === "imersao";
   conteudo.classList.toggle("cheio", secao === "sessoes");

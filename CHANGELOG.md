@@ -90,3 +90,6 @@
 - Voz ao vivo (ADR 0023): com a voz conectada o Zé ouve sem parar, sem "Ei Zé", até desconectar;
   silêncio, "ok" e ruído não encerram nem pedem repetição, e os avisos saem nas pausas. O botão de
   falar virou um pedido só: depois da resposta, o Zé espera o botão de novo.
+- Menu lateral com grupos recolhíveis (Trabalho, O Zé, Ajustes), lembrados no navegador; o grupo
+  da página aberta fica sempre aberto. A voz virou uma barra no rodapé do menu: modo de fala, Ao
+  vivo e Falar. No celular, o menu vira uma barra no topo e o conteúdo não fica mais por baixo.
