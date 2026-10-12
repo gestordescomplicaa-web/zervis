@@ -20,8 +20,11 @@ def porta_livre() -> int:
         return int(s.getsockname()[1])
 
 
-def pegar(porta: int, caminho: str) -> Any:
-    with urllib.request.urlopen(f"http://127.0.0.1:{porta}{caminho}", timeout=3) as r:
+def pegar(imersivo: Imersivo, caminho: str) -> Any:
+    pedido = urllib.request.Request(
+        f"http://127.0.0.1:{imersivo.porta}{caminho}", headers={"X-Ze-Token": imersivo.token}
+    )
+    with urllib.request.urlopen(pedido, timeout=3) as r:  # noqa: S310 (http em loopback)
         corpo = r.read()
     return json.loads(corpo) if caminho != "/stage.html" else corpo.decode()
 
@@ -45,17 +48,17 @@ def imersivo(tmp_path: Path) -> Any:
 
 
 def test_sobe_com_a_pagina_e_le_o_estado_da_pasta_do_ze(imersivo: Imersivo) -> None:
-    assert "<title>" in pegar(imersivo.porta, "/stage.html")
-    assert pegar(imersivo.porta, "/orb")["state"] == "idle"
+    assert "<title>" in pegar(imersivo, "/stage.html")
+    assert pegar(imersivo, "/orb")["state"] == "idle"
     (imersivo.pasta_estado / "state").write_text("speaking")
     onda = {"samples": [0.5] * 64, "ts": time.time()}
     (imersivo.pasta_estado / "wave.json").write_text(json.dumps(onda))
-    orbe = pegar(imersivo.porta, "/orb")
+    orbe = pegar(imersivo, "/orb")
     assert orbe["state"] == "speaking" and orbe["wave"] == [0.5] * 64
 
 
 def test_sem_manifesto_os_orbes_do_padrao_iguais_aos_do_ze(imersivo: Imersivo) -> None:
-    titulos = [o["title"] for o in pegar(imersivo.porta, "/config")["orbs"]]
+    titulos = [o["title"] for o in pegar(imersivo, "/config")["orbs"]]
     assert titulos == [o.titulo for o in manifesto.ler(imersivo.pasta_estado.parent / "nada")]
     assert titulos == ["Mapa", "Hoje", "Trabalho", "Acervo", "Guia"]
 
@@ -72,7 +75,7 @@ def test_pedido_invalido_e_recusado_mesmo_com_python_otimizado(imersivo: Imersiv
     pedido = urllib.request.Request(
         f"http://127.0.0.1:{imersivo.porta}/foco",
         data=json.dumps({"acao": "apagar-tudo", "id": "x"}).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "X-Ze-Token": imersivo.token},
     )
     with pytest.raises(urllib.error.HTTPError) as erro:
         urllib.request.urlopen(pedido, timeout=3)  # noqa: S310 (http local)
@@ -84,11 +87,11 @@ def test_o_acervo_e_uma_pasta_do_ze_com_imagens_e_3d(imersivo: Imersivo) -> None
     acervo = imersivo.acervo
     esperar(lambda: (acervo / "imagens").is_dir() and (acervo / "3d").is_dir())
     # Pastas vazias somem da lista (e o orbe não aparece): nada da página vaza para o Acervo.
-    assert pegar(imersivo.porta, "/props") == {"name": "Props", "items": [], "dirs": []}
+    assert pegar(imersivo, "/props") == {"name": "Props", "items": [], "dirs": []}
     assert not tem_acervo(acervo)  # pastas vazias: o orbe não aparece
     (acervo / "imagens" / "capa.png").write_bytes(b"png")
     (acervo / "imagens" / "roteiro.txt").write_text("não é imagem")
     (acervo / "3d" / "cabeca.glb").write_bytes(b"glb")
-    itens = json.dumps(pegar(imersivo.porta, "/props"))
+    itens = json.dumps(pegar(imersivo, "/props"))
     assert "imagens/capa.png" in itens and "3d/cabeca.glb" in itens and "roteiro" not in itens
     assert tem_acervo(acervo)

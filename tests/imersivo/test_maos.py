@@ -181,6 +181,8 @@ def browser_handler():
             d = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             assert self.headers['Content-Type'] == 'application/json'
             if self.path == '/maos/perfil':
+                if not d.get('padrao') and estado.get('salvar_liberado'):
+                    assert estado['salvar_liberado'].wait(10), 'save was not released by the test'
                 perfil.padrao() if d.get('padrao') else perfil.gravar(d['perfil'], d['origem'], d.get('resumo'))
                 self._json(perfil.ler())
             elif self.path == '/cerebro':
@@ -396,12 +398,21 @@ async def calibrar_no_navegador():
                 await asyncio.sleep(3.5)
                 await check('a lasting change makes it settle again', 'jarvisMaos.estado().modoLuz==="ajustando"')
                 await check('no software lift while the camera can still add gain', 'jarvisMaos.estado().reforco===1 || jarvisMaos.estado().reforco<1.05')
+                estado['salvar_liberado'] = threading.Event()
                 await ev('document.querySelector("#hud-maos .btn").click()')
                 await asyncio.sleep(.3)
                 await check('the chip opens the guided calibration', '!document.getElementById("jv-calibra").hidden && jarvisMaos.calibrando')
                 await check('while calibrating, the hand drives nothing else', 'jarvisMaos.amostra(0,{ratio:.9,f8v:1.9,backMean:1.9,aspect:2.5,tRel:.5,pinched:false,x:1,y:1,now:performance.now(),caixa:[.3,.3,.6,.7]})===true')
                 for _ in range(900):   # ~25 s of steps; generous under machine load
-                    if await ev('jarvisMaos.estado().fase==="fim" || document.getElementById("jv-calibra").hidden'):
+                    if await ev('["salvando", "fim"].includes(jarvisMaos.estado().fase) || document.getElementById("jv-calibra").hidden'):
+                        break
+                    await asyncio.sleep(.1)
+                await check('the result waits for the save and gestures remain suspended',
+                            'jarvisMaos.estado().fase==="salvando" && jarvisMaos.calibrando && document.querySelector("#jv-calibra h2").textContent==="Salvando calibração"')
+                assert perfil.ler()['origem'] != 'calibrado'
+                estado['salvar_liberado'].set()
+                for _ in range(100):
+                    if await ev('jarvisMaos.estado().fase==="fim"'):
                         break
                     await asyncio.sleep(.1)
                 texto = await ev('document.querySelector("#jv-calibra h2").textContent + " | " + document.querySelector("#jv-calibra .texto").textContent')

@@ -5,6 +5,7 @@ sobe o servidor (`servidor.py`) como processo filho e o reinicia se cair; a pág
 """
 
 import logging
+import secrets
 import subprocess
 import sys
 from pathlib import Path
@@ -33,6 +34,7 @@ class Imersivo:
         self.pasta_estado = pasta_estado
         self.porta = porta
         self.acervo = acervo or pasta_estado.parent / "acervo"
+        self.token = secrets.token_urlsafe(32)
         self.filho = Filho(
             "modo imersivo",
             [sys.executable, "-m", "jarvis.imersivo.servidor"],
@@ -40,6 +42,7 @@ class Imersivo:
                 "ZE_IMERSIVO_ESTADO": str(self.pasta_estado),
                 "ZE_IMERSIVO_PORTA": str(self.porta),
                 "ZE_ACERVO": str(self.acervo),
+                "ZE_IMERSIVO_TOKEN": self.token,
             },
         )
 

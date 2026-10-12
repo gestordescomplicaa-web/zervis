@@ -383,7 +383,7 @@
   // Called by the timer (time only runs while the hand is seen, except "luz").
   function avancar(agora) {
     const c = calib;
-    if (!c || c.fase === "fim") return;
+    if (!c || c.fase === "fim" || c.salvando) return;
     const dt = Math.min(agora - c.ultimo, 100); c.ultimo = agora;
     const vista = agora - maoEm < 250;
     c.semMao = vista ? 0 : c.semMao + dt;
@@ -405,6 +405,7 @@
   // Every frame of the chosen hand during calibration.
   function coletar(f) {
     const c = calib, t = f.now;
+    if (c.salvando) return;
     if (c.fase === "parada" && c.tempo > 500) c.parada.push({ x: f.x, y: f.y });
     if (c.fase === "punho" && c.tempo > 350) (c.fechado[c.punhos] ||= []).push(f);
     if (c.fase === "quase" && c.tempo > 450) (c.perto[c.quases] ||= []).push(f);
@@ -478,7 +479,10 @@
   }
   async function concluir() {
     const c = calib;
-    c.fase = "fim";
+    // O resultado só existe depois da resposta da gravação, não ao terminar as amostras.
+    c.salvando = true;
+    $("h2").textContent = "Salvando calibração";
+    $(".texto").textContent = "Aguarde a conclusão da calibração.";
     let { p, tremor, toque, t3 } = propor(c);
     const pinchas = p2 => c.eps.filter(e => reconhece(p2, e.fr)).length;
     const punhos = p2 => c.fechado.filter(fr => fr && reconhece(p2, fr)).length;
@@ -499,6 +503,7 @@
       quases: c.perto.filter(Boolean).length, quasesAceitos: quases(p), quasesPadrao: quases(PADRAO), tremorPx: Math.round(tremor),
       qps: Math.round(qps), luz: estadoLuz(), em: Date.now() };
     const ok = aceito && await salvar(p, "calibrado", res);
+    if (calib !== c) return;
     $(".passo").textContent = "CALIBRAR AS MÃOS · RESULTADO";
     $("h2").textContent = ok ? "Calibração pronta" : "Mantive a calibração anterior";
     $(".texto").textContent = ok
@@ -511,6 +516,8 @@
     $(".leitura").innerHTML = `<dt>Encostar (3D)</dt><dd>${perfil.toque3 > 0 ? "abaixo de " + perfil.toque3.toFixed(2) : "desligado"}</dd><dt>Tolerância de movimento</dt><dd>${perfil.tremor} px</dd><dt>Tempo de uma pinça</dt><dd>até ${perfil.toqueMs} ms</dd>` +
       `<dt>Câmera</dt><dd>${esc(modoMedido)} · ${Math.round(qps)} quadros/s</dd><dt>Luz na mão</dt><dd>${esc(estadoLuz())}</dd>`;
     $("button[data-a=fechar]").textContent = "Fechar";
+    c.salvando = false;
+    c.fase = "fim";
     setTimeout(() => { if (calib?.fase === "fim") encerrar(null); }, 9000);
   }
   async function padrao() {
@@ -601,7 +608,7 @@
     get emUso() { return performance.now() - pincaEm < 1500 || !!window.jarvisBrainGestures?.holding?.(0) || !!window.jarvisBrainGestures?.holding?.(1); },
     PADRAO, amostra, entrada, registrar, calibrar, padrao, valido, acionar, mudarBrilho,
     get brilho() { return BRILHOS[brilho].nome; }, get nivelBrilho() { return brilho; },
-    estado: () => ({ fase: calib?.fase || null, modoLuz, qps, luma, lumaMao, luz: estadoLuz(), reforco, modo: modoMedido, inferencia, origem, perfil, contagem }),
+    estado: () => ({ fase: calib?.salvando ? "salvando" : calib?.fase || null, modoLuz, qps, luma, lumaMao, luz: estadoLuz(), reforco, modo: modoMedido, inferencia, origem, perfil, contagem }),
   };
   carregar(); aplicarFiltro();
   setInterval(tique, 100);

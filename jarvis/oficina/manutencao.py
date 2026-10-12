@@ -40,6 +40,8 @@ PROTEGIDOS = (
     "jarvis/cerebro/claude.py",  # can_use_tool: a aprovação falada
     "jarvis/sistema/politica.py",
     "jarvis/sistema/catalogo.py",  # níveis de risco do Omarchy
+    "jarvis/imersivo/servidor.py",  # fronteira HTTP dos pedidos do usuário
+    "jarvis/imersivo/http.py",  # autorização dos clientes locais
     "jarvis/config.py",
     "jarvis/oficina/manutencao.py",
     "deploy/reinicio-seguro.sh",

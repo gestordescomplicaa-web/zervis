@@ -57,24 +57,29 @@ Your AI drives the ring by writing tiny files into the state folder:
 Missing files are fine — the ring just idles.
 """
 
+import hmac
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
 import time
 import urllib.parse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jarvis import lugares
 from jarvis.imersivo import PASTAS_ACERVO, TIPOS_ACERVO
+from jarvis.imersivo.http import gravar_token
 
 HERE = Path(__file__).resolve().parent / "web"  # a página, o avatar e o Guia
 ESTADO = Path(os.environ.get("ZE_IMERSIVO_ESTADO") or lugares.DADOS / "imersivo" / "state")
 # O Acervo do Zé: imagens/ e 3d/ nos dados de quem usa, nunca no repositório.
 ACERVO = Path(os.environ.get("ZE_ACERVO") or lugares.DADOS / "acervo")
+TOKEN = os.environ.get("ZE_IMERSIVO_TOKEN") or secrets.token_urlsafe(32)
+MAXIMO_CORPO = 262144
 
 
 def _exigir(condicao: object) -> None:
@@ -233,6 +238,30 @@ _ALLOWED = (
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def setup(self) -> None:
+        super().setup()
+        self.connection.settimeout(5)
+
+    def _origem_local(self) -> bool:
+        porta = cast(ThreadingHTTPServer, self.server).server_port
+        hosts = {f"127.0.0.1:{porta}", f"localhost:{porta}"}
+        return (
+            len(self.headers.get_all("Host", [])) == 1
+            and self.headers.get("Host") in hosts
+            and self.headers.get("Origin") in (None, *(f"http://{host}" for host in hosts))
+        )
+
+    def _autorizado(self) -> bool:
+        return self._origem_local() and hmac.compare_digest(
+            self.headers.get("X-Ze-Token", "").encode(), TOKEN.encode()
+        )
+
+    def do_HEAD(self) -> None:
+        if not self._origem_local():
+            self._json({"erro": "Pedido não autorizado."}, 403)
+            return
+        super().do_HEAD()
+
     def translate_path(self, path: str) -> str:
         """Serve /media/* from the configured Props folder, not blindly from ./media.
 
@@ -255,6 +284,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().translate_path(path)
 
     def end_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         # no-store on the page itself so a plain reload always serves
         # current code (Chrome happily caches through reloads otherwise)
         caminho = self.path.split("?")[0]
@@ -286,8 +317,18 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         global _STATE
-        n = int(self.headers.get("Content-Length", 0) or 0)
-        body = self.rfile.read(n) if 0 < n < 262144 else b"{}"
+        if not self._autorizado():
+            self._json({"erro": "Pedido não autorizado."}, 403)
+            return
+        try:
+            n = int(self.headers.get("Content-Length", 0) or 0)
+        except ValueError:
+            self._json({"erro": "Tamanho inválido."}, 400)
+            return
+        if not 0 <= n < MAXIMO_CORPO:
+            self._json({"erro": "Tamanho inválido."}, 413 if n >= MAXIMO_CORPO else 400)
+            return
+        body = self.rfile.read(n) if n else b"{}"
         if self.path == "/state":
             # the tracker's heartbeat doubles as the command channel
             _STATE = body
@@ -427,6 +468,31 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
+        if not self._origem_local():
+            self._json({"erro": "Pedido não autorizado."}, 403)
+            return
+        caminho = self.path.split("?", 1)[0]
+        if caminho in ("/", "/stage.html"):
+            pagina = (HERE / "stage.html").read_bytes().replace(b"__ZE_TOKEN__", TOKEN.encode())
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(pagina)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(pagina)
+            return
+        leitura = caminho.startswith(("/tree", "/note", "/jarvis/", "/camera/")) or caminho in (
+            "/config",
+            "/props",
+            "/stats",
+            "/cerebros",
+            "/maos/perfil",
+            "/orb",
+            "/state",
+        )
+        if leitura and not self._autorizado():
+            self._json({"erro": "Pedido não autorizado."}, 403)
+            return
         if self.path == "/config":
             # the page builds its ring name + orb bloom from this
             # gdautomacao.ia: the orbs are the Núcleo's manifest (id, title, kind,
@@ -675,6 +741,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     ESTADO.mkdir(parents=True, exist_ok=True, mode=0o700)  # the ring's runtime files land here
+    gravar_token(ESTADO, TOKEN)
     for pasta in PASTAS_ACERVO:  # onde quem usa põe o que o Zé mostra
         (ACERVO / pasta).mkdir(parents=True, exist_ok=True, mode=0o700)
     CAMERA.vigiar()

@@ -7,11 +7,11 @@ Roda no próprio computador; a câmera nunca sai da máquina.
 ## Rodar
 
 ```bash
-python3 server.py
+uv run python -m jarvis.imersivo.servidor
 ```
 
-Abra **http://127.0.0.1:8794/stage.html** no Chromium e permita a câmera. A janela do
-dia a dia sobe pelo serviço `barehands-window` com `?res=1280x720&fps=auto&cam=EMEET`.
+Abra **http://127.0.0.1:8794/stage.html** no Chromium e permita a câmera. O próprio Zérvis
+sobe o servidor no uso normal; parâmetros como resolução e câmera são opcionais na URL.
 
 ## Na tela
 
@@ -73,7 +73,15 @@ Copyright (c) 2026 Jared Rhodenizer — obra original sob a mesma licença.
 
 ## Testes
 
-`make check` roda todos os testes da interface num Chromium sem janela (cerca de 45 s).
-`make gancho` instala esses testes como pre-commit: nenhum commit da interface passa sem eles.
+`make check` roda a qualidade do Python e os testes de servidor. `make check-imersivo` roda
+os testes da interface no Chromium sem janela, com mãos e câmera simuladas.
 
 Otimizações e medições da interface: [DESEMPENHO.md](DESEMPENHO.md).
+
+## Autorização local
+
+A página envia a autorização automaticamente. Clientes HTTP do imersivo precisam de
+`X-Ze-Token`, além de Host local; Origin, quando presente, deve ser o próprio imersivo. O token
+fica em `<estado-imersivo>/.http-token` com permissão 0600. Não o inclua em logs nem na URL.
+Os comandos `bin/board.sh` e `bin/board-state.sh` leem esse arquivo. Para outra instância, use
+`ZE_IMERSIVO_ESTADO` e `ZE_IMERSIVO_PORTA`. Detalhes no [ADR 0019](../adr/0019-autorizacao-http-do-imersivo.md).

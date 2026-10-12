@@ -15,9 +15,10 @@ URL = "http://127.0.0.1:8794/cmd"
 
 
 class Quadro:
-    def __init__(self, aberto: Callable[[], bool], url: str = URL) -> None:
+    def __init__(self, aberto: Callable[[], bool], url: str = URL, token: str = "") -> None:
         self.aberto = aberto
         self.url = url
+        self.token = token
 
     def apresentar(self, titulo: str, corpo: str, ttl: int = 60) -> bool:
         if not self.aberto():
@@ -26,7 +27,7 @@ class Quadro:
         pedido = urllib.request.Request(  # noqa: S310 (URL fixa em loopback)
             self.url,
             data=json.dumps(comando, ensure_ascii=False).encode(),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Ze-Token": self.token},
         )
         abridor = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         try:

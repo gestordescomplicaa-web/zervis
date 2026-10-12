@@ -60,7 +60,13 @@ if [ -z "$PYBIN" ]; then
     echo "that is not an interpreter. Install the real one from python.org." >&2
     exit 1
 fi
-PORT=$("$PYBIN" -c "import json;print(json.load(open('$DIR/barehands.json')).get('port',8794))" 2>/dev/null || echo 8794)
+PORT=${ZE_IMERSIVO_PORTA:-8794}
+TOKEN=$(PYTHONPATH="$DIR/../..${PYTHONPATH:+:$PYTHONPATH}" "$PYBIN" -c \
+    'from jarvis.imersivo.http import ler_token; print(ler_token())')
+if [ -z "$TOKEN" ]; then
+    echo 'Imersivo indisponível.' >&2
+    exit 1
+fi
 JSON="${1:-}"
 if [ -z "$JSON" ]; then
     echo 'usage: board.sh <json-command>' >&2
@@ -68,4 +74,5 @@ if [ -z "$JSON" ]; then
 fi
 curl -sS --max-time 5 -X POST "http://127.0.0.1:$PORT/cmd" \
     -H "Content-Type: application/json" \
+    -H "X-Ze-Token: $TOKEN" \
     -d "$JSON" -o /dev/null -w "%{http_code}\n"

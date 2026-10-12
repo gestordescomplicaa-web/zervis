@@ -51,8 +51,14 @@ if [ -z "$PYBIN" ]; then
     echo "that is not an interpreter. Install the real one from python.org." >&2
     exit 1
 fi
-PORT=$("$PYBIN" -c "import json;print(json.load(open('$DIR/barehands.json')).get('port',8794))" 2>/dev/null || echo 8794)
-STATE=$(curl -sS --max-time 3 "http://127.0.0.1:$PORT/state" 2>/dev/null) || {
+PORT=${ZE_IMERSIVO_PORTA:-8794}
+TOKEN=$(PYTHONPATH="$DIR/../..${PYTHONPATH:+:$PYTHONPATH}" "$PYBIN" -c \
+    'from jarvis.imersivo.http import ler_token; print(ler_token())')
+if [ -z "$TOKEN" ]; then
+    echo 'Imersivo indisponível.' >&2
+    exit 1
+fi
+STATE=$(curl -fsS --max-time 3 -H "X-Ze-Token: $TOKEN" "http://127.0.0.1:$PORT/state" 2>/dev/null) || {
     echo "The board is dark — the barehands server isn't running."; exit 1; }
 export STATE
 "$PYBIN" <<'PY'
