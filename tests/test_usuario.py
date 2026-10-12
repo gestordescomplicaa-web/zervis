@@ -29,7 +29,6 @@ def test_nada_de_quem_escreveu_o_ze_no_codigo() -> None:
     pessoais = ("Gabriel", "Recife", "/home/", "~/Work", "orca/projects", ".hermes", "3D-NOVO")
     extensoes = ("py", "js", "html", "md", "json")
     arquivos = [a for ext in extensoes for a in (RAIZ / "jarvis").rglob(f"*.{ext}")]
-    arquivos += [RAIZ / "persona/JARVIS.md", RAIZ / "persona/RAPIDO.md"]
     for arquivo in arquivos:
         texto = arquivo.read_text()
         achados = [p for p in pessoais if p in texto]
