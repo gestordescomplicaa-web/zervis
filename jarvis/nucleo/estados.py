@@ -883,6 +883,28 @@ def palavras(texto: str) -> tuple[str, ...]:
     )
 
 
+def sem_chamado(texto: str) -> str | None:
+    """O pedido sem o chamado do começo ("Ei Zé, que horas são?" -> "que horas são?"); o texto
+    como veio se não começar pelo chamado; None se for só o chamado (a pessoa o repetiu ou não
+    ouviu o bip; testes da voz pelo navegador, 12/10/2026)."""
+    p = palavras(texto)
+    so = p
+    while so[:1] and so[0] in VACILOS and so[:2] not in CHAMADOS:
+        so = so[1:]
+    if so and (so in CHAMADOS or (len(so) == 1 and so[0] in NOMES)):
+        return None
+    n = 0
+    while n < len(p) - 1 and p[n] in VACILOS and p[n : n + 2] not in CHAMADOS:
+        n += 1
+    if p[n : n + 2] in CHAMADOS:
+        n += 2
+    elif p[n : n + 1] and p[n] in NOMES:
+        n += 1
+    else:
+        return texto
+    return re.sub(rf"^\W*(?:\w+\W+){{{n - 1}}}\w+\W*", "", texto.strip())
+
+
 def pedido_valido(texto: str) -> bool:
     return any(len(p) > 1 or p.isdigit() for p in palavras(texto))
 
@@ -952,6 +974,11 @@ class Maquina:
         match evento:
             case Ativacao():
                 return self._ativacao(agora)
+            case FimDeFala(texto) if self.estado is Estado.OUVINDO and sem_chamado(texto) is None:
+                # Só o chamado de novo (não ouviu o bip, ou repetiu): segue ouvindo, sem "não
+                # entendi".
+                self.prazo = agora + PRAZO_ESCUTA_S
+                return [Bip()] if self.autorizado else []
             case FimDeFala(texto):
                 return self._fim_de_fala(texto)
             case Digitado(texto):
@@ -1031,6 +1058,7 @@ class Maquina:
         if self.estado is not Estado.OUVINDO or not self.autorizado:
             return []
         self.autorizado = False  # invariante 2: um pedido por autorização
+        texto = sem_chamado(texto) or texto
         if encerra(texto):
             self.em_conversa = False
             self._ir(Estado.ATIVO)

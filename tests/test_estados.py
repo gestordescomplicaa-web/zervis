@@ -652,3 +652,27 @@ def test_evento_da_tela_e_tratado_uma_vez_e_so_recente() -> None:
     assert evento_novo(dados, "a1", 105.0) is None  # já falado
     assert evento_novo(dados, "", 200.0) is None  # velho: o JARVIS estava parado
     assert evento_novo({}, "", 105.0) is None
+
+
+def test_chamado_no_comeco_sai_do_pedido() -> None:
+    from jarvis.nucleo.estados import sem_chamado
+
+    assert sem_chamado("Ei Zé, que horas são?") == "que horas são?"
+    assert sem_chamado("Eis é. Tá me ouvindo?") == "Tá me ouvindo?"
+    assert sem_chamado("Zé, abre a sessão Loja") == "abre a sessão Loja"
+    assert sem_chamado("Ei, Zé!") is None and sem_chamado("Zé.") is None
+    assert sem_chamado("Que horas são?") == "Que horas são?"
+    assert sem_chamado("Zezinho chegou?") == "Zezinho chegou?"
+
+
+def test_chamado_repetido_continua_ouvindo_sem_nao_entendi() -> None:
+    from jarvis.nucleo import estados as e
+
+    m = e.Maquina()
+    m.tratar(e.Presenca(True), 0.0)
+    m.tratar(e.Ativacao(), 1.0)
+    assert m.tratar(e.FimDeFala("Eis é."), 2.0) == [e.Bip()]
+    assert m.estado is e.Estado.OUVINDO and m.autorizado
+    assert m.tratar(e.FimDeFala("Ei Zé, como vai a Loja?"), 3.0) == [
+        e.EnviarAoCerebro("como vai a Loja?")
+    ]

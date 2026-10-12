@@ -79,3 +79,6 @@
   microfone do navegador ao Zé por uma sala LiveKit que o próprio Zé baixa, confere e mantém, só
   no endereço local. Conectado, o microfone do PC fecha e a voz do Zé sai pelo navegador.
 - Cérebro Codex voltou a subir: o Codex 0.162 recusava o nome do MCP entre aspas no `-c`.
+- O chamado repetido ("Ei Zé" de novo, ou o "Eis é" que o Deepgram às vezes escreve) não vira mais
+  "Não consegui entender": o Zé segue ouvindo, e o chamado sai do começo do pedido. Pela voz no
+  navegador, a fala que começa durante o bip fica no pedido (o navegador já cancela o eco).

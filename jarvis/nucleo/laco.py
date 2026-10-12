@@ -1030,7 +1030,10 @@ class Nucleo:
                 remota.tocar_wav(self.bip)
             except Exception as erro:
                 self._erro(f"bip remoto: {erro}")
-            self._descartar_escuta()
+            # O navegador cancela o eco do bip: o que chegou enquanto ele tocava é a pessoa já
+            # falando, e fica para o pedido.
+            self.segmentador.limpar()
+            self.vad.reiniciar()
             return
         try:
             subprocess.run(  # noqa: S603 (comando fixo, arquivo nosso)
