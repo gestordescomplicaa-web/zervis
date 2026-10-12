@@ -139,10 +139,11 @@ def token(
     return f"{cabeca}.{corpo}.{_b64(assinatura.digest())}"
 
 
-def configuracao(porta: int = PORTA, ip_rede: str = "") -> str:
+def configuracao(porta: int = PORTA, ip_rede: str = "", ip_casa: str = "") -> str:
     """A configuração do servidor (YAML; JSON é YAML válido). A sinalização fica no endereço local
-    (o `tailscale serve` a publica); a mídia, no local e, com `ip_rede`, no da rede privada."""
-    ips = ["127.0.0.1/32", *([f"{ip_rede}/32"] if ip_rede else [])]
+    (o `tailscale serve` a publica); a mídia, no local e, com o acesso pelo celular, no da rede
+    privada e no da rede de casa (o Chrome do Android só oferece o do Wi-Fi para o áudio)."""
+    ips = ["127.0.0.1/32", *[f"{ip}/32" for ip in (ip_rede, ip_casa) if ip]]
     return json.dumps(
         {
             "port": porta,
@@ -169,15 +170,15 @@ class ServidorLiveKit:
         self.porta = porta
         self.arquivo = arquivo
         self.filho: Filho | None = None
-        self.ip_rede = ""
+        self.ip_rede = self.ip_casa = ""
 
     @property
     def url(self) -> str:
         return f"ws://127.0.0.1:{self.porta}"
 
-    def iniciar(self, ip_rede: str = "") -> bool:
+    def iniciar(self, ip_rede: str = "", ip_casa: str = "") -> bool:
         """Sobe o servidor; False se não houver binário (a voz remota fica indisponível)."""
-        self.ip_rede = ip_rede
+        self.ip_rede, self.ip_casa = ip_rede, ip_casa
         if porta_ocupada(self.porta):
             log.info("LiveKit: usando o servidor já na porta %d", self.porta)
             return True
@@ -190,7 +191,7 @@ class ServidorLiveKit:
             "livekit",
             [str(bin_)],
             {
-                "LIVEKIT_CONFIG": configuracao(self.porta, ip_rede),
+                "LIVEKIT_CONFIG": configuracao(self.porta, ip_rede, ip_casa),
                 "LIVEKIT_KEYS": f"{chave}: {segredo}",
             },
             registro=lugares.ESTADO / "livekit.log",
@@ -202,12 +203,12 @@ class ServidorLiveKit:
         if self.filho is not None:
             self.filho.parar()
 
-    def reiniciar(self, ip_rede: str) -> bool:
-        """Sobe de novo com outro endereço da rede privada (o celular passou a alcançar a sala)."""
-        if ip_rede == self.ip_rede or self.filho is None:
+    def reiniciar(self, ip_rede: str, ip_casa: str = "") -> bool:
+        """Sobe de novo com outros endereços (o celular passou a alcançar a sala, ou deixou)."""
+        if (ip_rede, ip_casa) == (self.ip_rede, self.ip_casa) or self.filho is None:
             return False
         self.filho.parar()
         prazo = time.monotonic() + 5
         while porta_ocupada(self.porta) and time.monotonic() < prazo:
             time.sleep(0.1)
-        return self.iniciar(ip_rede)
+        return self.iniciar(ip_rede, ip_casa)

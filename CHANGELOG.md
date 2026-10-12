@@ -99,3 +99,7 @@
 - Acesso pelo celular (plano da voz remota, etapa 2): na página Voz, Ativar publica o painel e a
   sala de voz na rede privada do Tailscale (`tailscale serve`, HTTPS válido), e a mídia da voz passa
   a usar o endereço da máquina nessa rede. Nada fica aberto na internet.
+- Voz pelo celular em casa: o Chrome do Android não manda o áudio pela VPN do Tailscale; o servidor
+  de voz passa a oferecer também o endereço do PC na rede de casa, e o cartão "Acesso pelo celular"
+  mostra o comando que libera o firewall só para essa rede. O registro do LiveKit fica em
+  `livekit.log`, na pasta de estado.

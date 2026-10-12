@@ -85,12 +85,28 @@ def test_firewall_que_barra_o_audio_mostra_o_comando(
 ) -> None:
     monkeypatch.setattr("jarvis.portal.remoto.shutil.which", lambda nome: "/usr/bin/ufw")
     regras = tmp_path / "user.rules"
-    assert remoto.firewall(regras) == ""  # sem ufw configurado
+    assert remoto.firewall(regras=regras) == ""  # sem ufw configurado
     regras.write_text(
         "### tuple ### allow udp 53317\n-A ufw-user-input -p udp --dport 53317 -j ACCEPT\n"
     )
-    assert "port 7882 proto udp" in remoto.firewall(regras)
+    assert "port 7882 proto udp" in remoto.firewall(regras=regras)
     regras.write_text(
         regras.read_text() + "-A ufw-user-input -i tailscale0 -p udp --dport 7882 -j ACCEPT\n"
     )
-    assert remoto.firewall(regras) == ""
+    assert remoto.firewall(regras=regras) == ""
+    casa = remoto.firewall("192.168.0.0/24", regras)
+    assert casa.startswith("sudo ufw allow from 192.168.0.0/24 to any port 7882")
+    regras.write_text(
+        regras.read_text() + "-A ufw-user-input -p udp --dport 7882 -s 192.168.0.0/24 -j ACCEPT\n"
+    )
+    assert remoto.firewall("192.168.0.0/24", regras) == ""
+
+
+def test_rede_de_casa_ignora_vpn_e_conteineres() -> None:
+    saida = (
+        "2: eno1    inet 192.168.0.6/24 brd 192.168.0.255 scope global eno1\n"
+        "3: tailscale0    inet 100.119.75.47/32 scope global tailscale0\n"
+        "4: docker0    inet 172.17.0.1/16 scope global docker0\n"
+    )
+    assert remoto.rede_local(saida) == ("192.168.0.6", "192.168.0.0/24")
+    assert remoto.rede_local("3: tailscale0    inet 100.119.75.47/32 scope global x\n") is None

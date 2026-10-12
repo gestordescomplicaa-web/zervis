@@ -1001,7 +1001,7 @@ class Nucleo:
         rede = remoto.rede(self.portal.porta) if self.portal is not None else remoto.Rede()
         if rede.ativo and self.portal is not None:
             self.portal.permitir(rede.nome)  # o celular já alcançava o painel antes do reinício
-        if not self.livekit.iniciar(rede.ip if rede.ativo else ""):
+        if not self.livekit.iniciar(*((rede.ip, rede.casa) if rede.ativo else ("", ""))):
             return
         chave, segredo = servidor_livekit.credenciais()
         self.remota = SalaRemota(
@@ -1033,7 +1033,7 @@ class Nucleo:
             raise remoto.RemotoErro("Tailscale desconectado neste computador.")
         remoto.ativar(self.portal.porta, self.livekit.porta)
         self.portal.permitir(rede.nome)
-        self.livekit.reiniciar(rede.ip)
+        self.livekit.reiniciar(rede.ip, rede.casa)
         log.info("acesso pelo celular: %s", rede.endereco)
         return "Acesso pelo celular ativo."
 

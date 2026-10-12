@@ -15,7 +15,24 @@ Evolui o [ADR 0005](adr/0005-celular-por-livekit-e-tailscale.md) (celular por Li
 Tailscale), que já previa o desenho; este plano o detalha, traz para antes no roteiro e
 acrescenta a VPS. Vira ADR próprio quando a etapa 1 provar o caminho.
 
-## Decisões
+## Alvo: o celular falando com o Zé de qualquer lugar (decisão do usuário, 12/10/2026)
+
+Com o Zé no PC ou numa VPS, o celular precisa alcançá-lo de qualquer rede (Wi-Fi de casa, 4G,
+outro Wi-Fi). O teste de 12/10/2026 mostrou o limite do caminho atual: **o Chrome do Android não
+usa a VPN do Tailscale para o áudio das chamadas (WebRTC)**. A página chega pelo Tailscale (HTTPS
+comum), mas o áudio só oferece o endereço do Wi-Fi e o público; o servidor mandou 8 verificações e
+não recebeu nenhuma.
+
+- **Agora (feito):** o servidor de voz oferece também o endereço do PC na rede de casa. Com o
+  celular no mesmo Wi-Fi, o áudio vai direto (o firewall libera a porta só para essa rede).
+- **Alvo (próximo passo da voz):** **o áudio dentro do HTTPS**, por WebSocket: o navegador captura
+  o microfone (AudioWorklet, 16 kHz) e manda pelo mesmo endereço do painel; a voz do Zé volta pelo
+  mesmo canal. Passa por qualquer caminho que o HTTPS passa (Tailscale, domínio da VPS, proxy),
+  sem depender de UDP nem de TURN. O transporte do Zé ganha uma terceira entrada, ao lado do
+  microfone local e da sala LiveKit, sem mudar a máquina de estados.
+- **Com a VPS:** o mesmo áudio por WebSocket num domínio público com login; o LiveKit público com
+  TURN fica para as outras portas de entrada (SIP, WhatsApp).
+
 
 1. **Desenvolver no localhost, não na VPS.** As sessões de código, os projetos, os logins do
    Claude e do Codex e o microfone estão no PC; testar voz exige ouvir. O LiveKit roda no próprio

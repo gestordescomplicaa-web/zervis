@@ -51,6 +51,8 @@ def test_servidor_so_no_endereco_local() -> None:
     rede = json.loads(lk.configuracao(7880, "100.64.0.7"))
     assert rede["bind_addresses"] == ["127.0.0.1"] and rede["rtc"]["node_ip"] == "100.64.0.7"
     assert rede["rtc"]["ips"]["includes"] == ["127.0.0.1/32", "100.64.0.7/32"]
+    casa = json.loads(lk.configuracao(7880, "100.64.0.7", "192.168.0.6"))
+    assert casa["rtc"]["ips"]["includes"][-1] == "192.168.0.6/32"
     cfg = json.loads(lk.configuracao(7880))
     assert cfg["bind_addresses"] == ["127.0.0.1"]
     assert cfg["rtc"]["node_ip"] == "127.0.0.1" and not cfg["rtc"]["use_external_ip"]
