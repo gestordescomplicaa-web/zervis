@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import fuso
-from jarvis.cerebro import contas
+from jarvis.cerebro import contas, modelos
 from jarvis.memoria import aimemory
 
 log = logging.getLogger(__name__)
@@ -89,7 +89,8 @@ class Sessao:
     pasta: str
     motor: str = "claude"
     conta: str = ""  # a conta do agente (jarvis.cerebro.contas); vazio: a que o Zé usa agora
-    modelo: str = ""
+    modelo: str = ""  # vazio: o padrão da conta
+    esforco: str = ""  # esforço de raciocínio (Codex); vazio: o padrão do modelo
     isolada: bool = False
     worktree: str = ""
     branch: str = ""
@@ -433,8 +434,17 @@ class Sessoes:
         passagem = ""
         if motor != s.motor or not fio:
             passagem = self.passagem(s, motor)
+        # O modelo escolhido só segue se a conta nova também o oferece.
+        mantem = motor == s.motor and any(m["id"] == s.modelo for m in modelos.da_conta(nova))
         s = self._mudar(
-            id_, motor=motor, conta=nova.id, sdk_sessao=fio, fios=fios, passagem=passagem
+            id_,
+            motor=motor,
+            conta=nova.id,
+            sdk_sessao=fio,
+            fios=fios,
+            passagem=passagem,
+            modelo=s.modelo if mantem else "",
+            esforco=s.esforco if mantem else "",
         )
         como = (
             "continua a mesma conversa"
@@ -446,6 +456,26 @@ class Sessoes:
         aviso = f"Agora com o {NOMES_MOTORES[motor]} · {nova.nome}: {como}."
         self.anotar(id_, "sistema", aviso)
         return s, aviso
+
+    def ajustar_modelo(self, id_: str, modelo: str, esforco: str = "") -> Sessao:
+        """O modelo (e o esforço, no Codex) dos próximos pedidos; a conversa continua."""
+        s = self.ler(id_)
+        if id_ in self.trabalhando():
+            raise SessaoErro("essa sessão está trabalhando; espere para trocar o modelo")
+        try:
+            conta = contas.Contas().achar(s.conta) if s.conta else contas.Contas().em_uso(s.motor)
+        except contas.ContaErro:
+            conta = contas.Contas().em_uso(s.motor)
+        opcoes = {m["id"]: m for m in modelos.da_conta(conta)}
+        if modelo and modelo not in opcoes:
+            raise SessaoErro("esse modelo não está disponível nesta conta")
+        if esforco and esforco not in (opcoes.get(modelo, {}).get("esforcos") or modelos.ESFORCOS):
+            raise SessaoErro("esse esforço não vale para este modelo")
+        s = self._mudar(id_, modelo=modelo, esforco=esforco if s.motor == "codex" else "")
+        nome = opcoes[modelo]["nome"] if modelo else "o padrão da conta"
+        extra = f", esforço {modelos.ESFORCOS[esforco].lower()}" if s.esforco else ""
+        self.anotar(id_, "sistema", f"Modelo: {nome}{extra}.")
+        return s
 
     def continuar(self, id_: str) -> Sessao:
         """Manda de novo o pedido que bateu no limite (depois de trocar de conta ou de agente)."""
@@ -647,6 +677,8 @@ def _comando_codex(s: Sessao, texto: str) -> list[str]:
     comum = ["--json", "--skip-git-repo-check", "-c", 'sandbox_mode="workspace-write"']
     if s.modelo:
         comum += ["-m", s.modelo]
+    if s.esforco:
+        comum += ["-c", f'model_reasoning_effort="{s.esforco}"']
     if s.sdk_sessao:
         return ["codex", "exec", "resume", *comum, s.sdk_sessao, texto]
     return ["codex", "exec", *comum, texto]

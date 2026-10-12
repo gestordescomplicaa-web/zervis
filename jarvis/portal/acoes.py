@@ -13,7 +13,7 @@ from typing import Any
 
 from jarvis import fuso, usuario
 from jarvis.automacoes.jobs import JobErro
-from jarvis.cerebro import acesso, conectores, contas, rapido
+from jarvis.cerebro import acesso, conectores, contas, modelos, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
@@ -137,6 +137,8 @@ class Acoes:
             "sessao/enviar": self.enviar_a_sessao,
             "sessao/parar": self.parar_sessao,
             "sessao/trocar": self.trocar_sessao,
+            "sessao/modelos": self.modelos_da_sessao,
+            "sessao/modelo": self.modelo_da_sessao,
             "sessao/arquivo": self.criar_arquivo,
             "sessao/arquivos": self.arquivos,
             "sessao/ver": self.ver_arquivo,
@@ -478,6 +480,7 @@ class Acoes:
             "agente": contas.NOMES.get(s.motor, s.motor),
             "conta": self._nome_da_conta(s.conta),
             "modelo": s.modelo,
+            "esforco": s.esforco,
             "isolada": s.isolada,
             "branch": s.branch,
             "estado": "trabalhando" if s.id in self.n.sessoes.trabalhando() else s.estado,
@@ -599,6 +602,31 @@ class Acoes:
             s = self._chamar(lambda: self.n.sessoes.continuar(id_))
             aviso += " Continuando o pedido."
         return {**self._sessao(s), "aviso": aviso}
+
+    def modelos_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Os modelos que a conta da sessão oferece, e os nomes dos esforços."""
+        s = self._chamar(lambda: self.n.sessoes.ler(str(dados.get("id", ""))))
+        cs = contas.Contas()
+        try:
+            conta = cs.achar(s.conta) if s.conta else cs.em_uso(s.motor)
+        except contas.ContaErro:
+            conta = cs.em_uso(s.motor)
+        return {
+            "modelos": modelos.da_conta(conta),
+            "esforcos": modelos.ESFORCOS,
+            "modelo": s.modelo,
+            "esforco": s.esforco,
+        }
+
+    def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        s = self._chamar(
+            lambda: self.n.sessoes.ajustar_modelo(
+                str(dados.get("id", "")),
+                str(dados.get("modelo", "")),
+                str(dados.get("esforco", "")),
+            )
+        )
+        return self._sessao(s)
 
     def parar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         return self._sessao(self._chamar(lambda: self.n.sessoes.parar(str(dados.get("id", "")))))

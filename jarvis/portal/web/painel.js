@@ -463,7 +463,24 @@ async function listaSessoes() {
 
 function linhaMensagem(m) {
   const chips = (m.anexos || []).map((a) => `<span class="anexo">📎 ${esc(a.replace(/^\d{6}-[0-9a-f]{4}-/, ""))}</span>`).join("");
-  return `<div class="msg ${esc(m.quem)}">${m.quem === "agente" ? leve(m.texto) : esc(m.texto)}${chips ? `<div class="anexos">${chips}</div>` : ""}</div>`;
+  const aviso = m.quem === "sistema" && /limite|falhou|recusei/i.test(m.texto) ? " aviso" : "";
+  return `<div class="msg ${esc(m.quem)}${aviso}">${m.quem === "agente" ? leve(m.texto) : esc(m.texto)}${chips ? `<div class="anexos">${chips}</div>` : ""}</div>`;
+}
+
+// As ações do agente (comandos, arquivos editados) seguidas viram um grupo recolhível: "4 ações".
+function adicionarMensagens(caixa, lista) {
+  for (const m of lista) {
+    if (m.quem === "usuario") $("vazio-sessao")?.remove();
+    if (m.quem !== "ferramenta") { caixa.insertAdjacentHTML("beforeend", linhaMensagem(m)); continue; }
+    let grupo = caixa.lastElementChild;
+    if (!grupo?.classList.contains("acoes")) {
+      caixa.insertAdjacentHTML("beforeend", '<details class="acoes"><summary></summary><div class="lista-acoes"></div></details>');
+      grupo = caixa.lastElementChild;
+    }
+    grupo.querySelector(".lista-acoes").insertAdjacentHTML("beforeend", `<div>${esc(m.texto)}</div>`);
+    const n = grupo.querySelectorAll(".lista-acoes > div").length;
+    grupo.querySelector("summary").innerHTML = `<span>${n} ${n === 1 ? "ação" : "ações"}</span><small>${esc(m.texto.slice(0, 90))}</small>`;
+  }
 }
 
 async function formSessao() {
@@ -488,11 +505,30 @@ const contasComLogin = () => contasSessao.agentes.flatMap((ag) =>
 function seletorConta(sessao) {
   const grupos = contasSessao.agentes.map((ag) => {
     const opcoes = ag.contas.filter((c) => c.logado || c.id === sessao.conta_id).map((c) =>
-      `<option value="${esc(ag.id)}|${esc(c.id)}" ${c.id === sessao.conta_id ? "selected" : ""}>${esc(ag.nome)} · ${esc(c.nome)}${c.email ? " (" + esc(c.email) + ")" : ""}</option>`).join("");
+      `<option value="${esc(ag.id)}|${esc(c.id)}" ${c.id === sessao.conta_id ? "selected" : ""}>${esc(ag.nome)} · ${esc(c.nome)}</option>`).join("");
     return opcoes ? `<optgroup label="${esc(ag.nome)}">${opcoes}</optgroup>` : "";
   }).join("");
   return `<select class="seletor-conta" data-mudar="conta-sessao" aria-label="Agente e conta da sessão" title="Trocar de agente ou de conta: a conversa continua" ${sessao.estado === "trabalhando" ? "disabled" : ""}>${grupos}</select>`;
 }
+
+let modelosSessao = { modelos: [], esforcos: {} };
+
+function seletorModelo(sessao) {
+  const opcoes = modelosSessao.modelos.map((m) => `<option value="${esc(m.id)}" ${m.id === sessao.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("");
+  return `<select class="seletor-modelo" data-mudar="modelo-sessao" aria-label="Modelo" title="Modelo dos próximos pedidos">
+    <option value="" ${sessao.modelo ? "" : "selected"}>Modelo padrão</option>${opcoes}</select>`;
+}
+
+function seletorEsforco(sessao) {
+  const modelo = modelosSessao.modelos.find((m) => m.id === sessao.modelo);
+  if (!modelo || !modelo.esforcos.length) return "";
+  const padrao = modelosSessao.esforcos[modelo.padrao] || "padrão";
+  const opcoes = modelo.esforcos.map((e) => `<option value="${esc(e)}" ${e === sessao.esforco ? "selected" : ""}>Esforço: ${esc((modelosSessao.esforcos[e] || e).toLowerCase())}</option>`).join("");
+  return `<select class="seletor-esforco" data-mudar="esforco-sessao" aria-label="Esforço de raciocínio" title="Quanto o modelo pensa antes de responder">
+    <option value="" ${sessao.esforco ? "" : "selected"}>Esforço: ${esc(padrao.toLowerCase())}</option>${opcoes}</select>`;
+}
+
+const ajustesSessao = (sessao) => `${seletorConta(sessao)}${seletorModelo(sessao)}${seletorEsforco(sessao)}`;
 
 function faixaLimite(sessao) {
   if (!sessao.limite) return "";
@@ -505,6 +541,22 @@ function faixaLimite(sessao) {
     <div class="botoes">${botoes || '<span class="nota">Nenhuma outra conta com login. Adicione uma em Modelos → Contas.</span>'}</div></div>`;
 }
 
+let sessaoAtual = null;
+
+// Enquanto o agente trabalha, conta e modelo ficam travados (valem para o próximo pedido).
+function travarAjustes(trabalhando) {
+  document.querySelectorAll("#ajustes-sessao select").forEach((el) => { el.disabled = trabalhando; });
+}
+
+async function ajustarModelo(modelo, esforco) {
+  const s = await api("sessao/modelo", { id: sessaoAberta, modelo, esforco });
+  sessaoAtual = s;
+  $("ajustes-sessao").innerHTML = ajustesSessao(s);
+  const nome = modelosSessao.modelos.find((m) => m.id === s.modelo)?.nome || "padrão da conta";
+  toast(`Modelo: ${nome}${s.esforco ? ", esforço " + (modelosSessao.esforcos[s.esforco] || s.esforco).toLowerCase() : ""}.`);
+  await acompanharSessao();
+}
+
 async function trocarSessao(motor, conta, continuar) {
   const r = await api("sessao/trocar", { id: sessaoAberta, motor, conta, continuar });
   toast(r.aviso);
@@ -515,17 +567,21 @@ async function abrirSessao(id) {
   sessaoAberta = id;
   vistas = 0;
   document.querySelectorAll(".item-sessao").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === id)));
-  const [{ sessao, mensagens }, ct] = await Promise.all([api("sessao/ler", { id, desde: 0 }), api("contas")]);
+  const [{ sessao, mensagens }, ct, ms] = await Promise.all([api("sessao/ler", { id, desde: 0 }), api("contas"), api("sessao/modelos", { id })]);
   contasSessao = ct;
+  modelosSessao = ms;
+  sessaoAtual = sessao;
+  const semPedidos = !mensagens.some((m) => m.quem === "usuario");
   const lado = $("lado-sessao");
   const trabalhando = sessao.estado === "trabalhando";
   lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
-      <h2>${esc(sessao.nome)}</h2>${seletorConta(sessao)}<span class="etiqueta ${trabalhando ? "bom" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
-      <div class="botoes">${botao("Novo arquivo", "md-abrir")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}
-        ${botao("Parar", "sessao-parar", trabalhando ? "" : "hidden", "discreta")}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
-    <div id="limite-sessao">${faixaLimite(sessao)}</div>
-    <div class="mensagens" id="mensagens">${mensagens.map(linhaMensagem).join("")}</div>
+      <div class="titulo-sessao"><h2>${esc(sessao.nome)}</h2><small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}</small></div>
+      <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
+      <div class="botoes">${botao("Parar", "sessao-parar", trabalhando ? "" : "hidden", "discreta")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Novo arquivo", "md-abrir")}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
+    <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
+    <div class="mensagens" id="mensagens">${semPedidos ? `<div class="vazio-sessao" id="vazio-sessao"><strong>Peça algo ao agente</strong><span>Corrigir um erro, criar uma página, rodar os testes. Ele trabalha nesta pasta e avisa quando terminar.</span></div>` : ""}</div>
+    <div class="indicador" id="indicador" ${trabalhando ? "" : "hidden"}><span class="pontos"><i></i><i></i><i></i></span>${esc(sessao.agente)} trabalhando</div>
     <section class="previa-arquivo" id="previa" hidden></section>
     <form class="compor" id="compor">
       <section class="editor-md" id="editor-md" hidden>
@@ -537,7 +593,7 @@ async function abrirSessao(id) {
       <div class="pendentes" id="anexos" hidden></div>
       <textarea id="texto-sessao" placeholder="O que você precisa?" rows="2"></textarea>
       <div class="compor-rodape"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
-        <small>${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}</small>
+        <div class="ajustes-sessao" id="ajustes-sessao">${ajustesSessao(sessao)}</div>
         <button type="submit" class="acao principal">Enviar</button></div>
     </form></section>
     <aside class="explorador" aria-label="Arquivos">
@@ -554,7 +610,9 @@ async function abrirSessao(id) {
   abertas = new Set();
   vistas = mensagens.length;
   const caixa = $("mensagens");
+  adicionarMensagens(caixa, mensagens);
   caixa.scrollTop = caixa.scrollHeight;
+  travarAjustes(trabalhando);
   await carregarPasta("", $("arvore"));
   $("texto-sessao").focus();
 }
@@ -565,7 +623,7 @@ async function acompanharSessao() {
   const caixa = $("mensagens");
   if (mensagens.length) {
     const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
-    caixa.insertAdjacentHTML("beforeend", mensagens.map(linhaMensagem).join(""));
+    adicionarMensagens(caixa, mensagens);
     vistas += mensagens.length;
     if (noFim) caixa.scrollTop = caixa.scrollHeight;
   }
@@ -576,8 +634,9 @@ async function acompanharSessao() {
   etiqueta.classList.toggle("alerta", !!sessao.limite);
   etiqueta.classList.toggle("bom", sessao.estado === "trabalhando");
   document.querySelector('[data-acao="sessao-parar"]').hidden = sessao.estado !== "trabalhando";
-  const seletor = document.querySelector(".seletor-conta");
-  if (seletor) seletor.disabled = sessao.estado === "trabalhando";
+  travarAjustes(sessao.estado === "trabalhando");
+  const indicador = $("indicador");
+  if (indicador) indicador.hidden = sessao.estado !== "trabalhando";
   const faixa = $("limite-sessao");
   if (faixa && faixa.dataset.limite !== String(sessao.limite)) {
     faixa.dataset.limite = String(sessao.limite);
@@ -921,6 +980,8 @@ const MUDAR = {
   skill: async (el) => { await api("skill/ligar", { nome: el.dataset.nome, ligada: el.checked }); toast(el.checked ? "Ligada." : "Desligada."); await recarregar(); },
   conector: async (el) => { await api("conector/ligar", { nome: el.dataset.nome, ligado: el.checked }); await recarregar(); },
   "via-ligada": () => {},
+  "modelo-sessao": (el) => ajustarModelo(el.value, ""),
+  "esforco-sessao": (el) => ajustarModelo(sessaoAtual?.modelo || "", el.value),
   "conta-sessao": async (el) => {
     const [motor, conta] = el.value.split("|");
     const limite = $("limite-sessao")?.dataset.limite === "true" || !!document.querySelector(".faixa.limite");

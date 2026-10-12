@@ -56,3 +56,6 @@
   seletor no cabeçalho.
 - O ícone do Zé (o chimpanzé holográfico) no topo do menu lateral do painel e na aba do navegador;
   acende e pulsa quando o Zé está ativo.
+- Tela da sessão refeita: o campo de mensagem tem agente e conta, modelo e esforço (no Codex),
+  com a lista real de modelos de cada conta; cabeçalho com nome, pasta e estado; as ações do agente
+  agrupadas e recolhíveis; avisos do Zé discretos; indicador de trabalho e estado vazio que orienta.

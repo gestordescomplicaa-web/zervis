@@ -314,3 +314,35 @@ def test_creditos_esgotados_avisam_e_a_outra_conta_continua_o_mesmo_pedido(
     assert not sessoes.ler(s.id).limite and fim[-1] == ("parada", "Feito.")
     textos = [m["texto"] for m in sessoes.mensagens(s.id)]
     assert "Continuando o pedido: termine o checkout" in textos
+
+
+def test_o_modelo_e_o_esforco_vem_da_lista_da_conta(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from jarvis.cerebro import contas
+
+    cs = contas.Contas(tmp_path / "contas.json", tmp_path / "pastas")
+    monkeypatch.setattr(contas, "Contas", lambda: cs)
+    conta = cs.adicionar("codex", "Plus")
+    cache = {
+        "models": [
+            {"slug": "gpt-x", "display_name": "GPT-X", "visibility": "list",
+             "default_reasoning_level": "medium",
+             "supported_reasoning_levels": [{"effort": "low"}, {"effort": "high"}]},
+            {"slug": "interno", "display_name": "Interno", "visibility": "hide"},
+        ]
+    }  # fmt: skip
+    (Path(conta.pasta) / "models_cache.json").write_text(json.dumps(cache))
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), rodar=lambda *a: None)
+    s = sessoes.criar("Loja", str(raiz / "projetos" / "loja"), motor="codex")
+    s = sessoes._mudar(s.id, conta=conta.id)
+    s = sessoes.ajustar_modelo(s.id, "gpt-x", "high")
+    assert (s.modelo, s.esforco) == ("gpt-x", "high")
+    assert sessoes.mensagens(s.id)[-1]["texto"] == "Modelo: GPT-X, esforço alto."
+    from jarvis.oficina.sessoes import _comando_codex
+
+    assert _comando_codex(s, "oi")[6:8] == ["-m", "gpt-x"]
+    assert 'model_reasoning_effort="high"' in _comando_codex(s, "oi")
+    for modelo, esforco in (("interno", ""), ("gpt-x", "ultra"), ("nao-existe", "")):
+        with pytest.raises(SessaoErro):
+            sessoes.ajustar_modelo(s.id, modelo, esforco)
