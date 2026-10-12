@@ -58,7 +58,8 @@ class Terminal:
                 os._exit(127)
         self.pid, self.fd = pid, fd
         self.redimensionar(colunas, linhas)
-        threading.Thread(target=self._ler, name=f"terminal-{pid}", daemon=True).start()
+        self.leitor = threading.Thread(target=self._ler, name=f"terminal-{pid}", daemon=True)
+        self.leitor.start()
 
     @property
     def fim(self) -> int:
@@ -148,14 +149,36 @@ class Terminal:
             fcntl.ioctl(self.fd, termios.TIOCSWINSZ, tamanho)
 
     def encerrar(self, espera_s: float = 5.0) -> None:
-        if not self.vivo:
-            return
-        try:
-            os.kill(self.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            return
+        """Encerra o grupo do agente e o comando em primeiro plano; espera também os callbacks."""
+        grupos: set[int] = set()
         with self.cond:
-            self.cond.wait_for(lambda: not self.vivo, espera_s)
-        if self.vivo:
+            # O fd pode ser reutilizado depois da saída. Só consulta o terminal ainda vivo.
+            if self.vivo:
+                grupos.add(self.pid)
+                with contextlib.suppress(OSError):
+                    if primeiro_plano := os.tcgetpgrp(self.fd):
+                        grupos.add(primeiro_plano)
+        for grupo in grupos:
             with contextlib.suppress(ProcessLookupError):
-                os.kill(self.pid, signal.SIGKILL)
+                os.killpg(grupo, signal.SIGTERM)
+        self.leitor.join(espera_s)
+        # Um filho pode ignorar SIGTERM e fechar a saída: o fim do leitor não prova seu fim.
+        for grupo in grupos:
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(grupo, signal.SIGKILL)
+        if self.leitor.is_alive():
+            self.leitor.join(espera_s)
+        if self.leitor.is_alive():
+            raise TimeoutError("O terminal ainda está encerrando.")
+        # SIGKILL é assíncrono: não remove a sessão enquanto o grupo ainda existir.
+        prazo = time.monotonic() + espera_s
+        while grupos:
+            for grupo in tuple(grupos):
+                try:
+                    os.killpg(grupo, 0)
+                except ProcessLookupError:
+                    grupos.remove(grupo)
+            if grupos:
+                if time.monotonic() >= prazo:
+                    raise TimeoutError("Os processos do terminal ainda estão encerrando.")
+                time.sleep(0.01)
