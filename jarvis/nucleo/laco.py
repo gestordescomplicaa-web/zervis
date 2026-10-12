@@ -59,7 +59,7 @@ from jarvis.memoria.linha import LinhaDoTempo
 from jarvis.nucleo import estados as e
 from jarvis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from jarvis.oficina.manutencao import Manutencao
-from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes
+from jarvis.oficina.sessoes import FOCO_S, Sessao, SessaoErro, Sessoes
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.servidor import Portal
 from jarvis.presenca.hyprland import MonitorPresenca
@@ -84,7 +84,7 @@ from jarvis.voz.saida import Voz
 log = logging.getLogger(__name__)
 ESTADO = lugares.ESTADO
 DADOS = lugares.DADOS
-PERSONA = Path(__file__).resolve().parents[2] / "persona" / "JARVIS.md"
+PERSONA = Path(__file__).resolve().parents[1] / "persona" / "JARVIS.md"
 PERSONA_RAPIDA = PERSONA.with_name("RAPIDO.md")
 AVISO_RECENTE_S = 600.0  # aviso falado há mais que isso não é contexto do pedido
 BATERIAS_S = 30.0  # releitura das cotas do OmniRoute
@@ -308,7 +308,6 @@ class Nucleo:
         self._curadoria_em = 0.0
         self._pasta_rodando: concurrent.futures.Future[None] | None = None
         self._pasta_exec = concurrent.futures.ThreadPoolExecutor(1, "pasta")
-        self.quadro = Quadro(lambda: self.maquina.estado is not e.Estado.INATIVO)
         self._fontes: tuple[int, list[str]] = (-1, [])
         self._evento_visto = (
             ""  # o último evento da página já tratado (id)  # marca da resposta, fontes guardadas
@@ -322,6 +321,11 @@ class Nucleo:
         self.imersivo = Imersivo(
             cfg.caminho("barehands", "pasta_estado"),
             acervo=cfg.caminho("barehands", "pasta_acervo"),
+        )
+        self.quadro = Quadro(
+            lambda: self.maquina.estado is not e.Estado.INATIVO,
+            url=f"http://127.0.0.1:{self.imersivo.porta}/cmd",
+            token=self.imersivo.token,
         )
         self.maquina.nucleo_em_foco = self.tela.em_foco
         self.sessoes = Sessoes(
@@ -493,7 +497,11 @@ class Nucleo:
             ).start()
         if erro:
             self._erro(f"cérebro: {erro}")
-            self.eventos.put(e.Frase(FALHA_NO_CEREBRO))
+            mensagem = {
+                "limite_de_uso": "Limite de uso atingido. Troque a conta em Modelos.",
+                "acesso_invalido": "Acesso ao modelo inválido. Confira a conta em Modelos.",
+            }.get(erro, FALHA_NO_CEREBRO)
+            self.eventos.put(e.Frase(mensagem))
         self.eventos.put(e.RespostaFim())
 
     def _transcrito(self, futuro: concurrent.futures.Future[str], turno: str | None = None) -> None:
@@ -560,7 +568,7 @@ class Nucleo:
                 self._conversa_suja = True
                 self.turnos.append({"gabriel": texto, "jarvis": ""})
                 self._pedido_quando = datetime.now(FUSO)
-                pedido = self._com_avisos(self._com_nucleo(texto))
+                pedido = self._com_foco(self._com_avisos(self._com_nucleo(texto)))
                 self._turno_cerebro = (self.marca, self._turno_atual)
                 self.latencias.contexto(
                     self._turno_atual,
@@ -803,6 +811,8 @@ class Nucleo:
 
     def ver_sessao(self, id_: str) -> None:
         self._vendo = (id_, time.monotonic())
+        if id_:
+            self.sessoes.focar(id_)
 
     def mudar_modo_fala(self, modo: str) -> str:
         """Troca o modo de fala na hora; devolve a confirmação curta para a tela e a voz."""
@@ -818,8 +828,10 @@ class Nucleo:
         """O que as sessões de código avisam entra na linha do tempo; vira voz se o modo de fala
         deixar e a pessoa não estiver vendo a sessão."""
         self._na_linha("aviso", texto)
+        if id_:
+            self.sessoes.focar(id_)
         if modo_fala.falar(self.modo_fala, tipo, self.vendo(id_)):
-            self.eventos.put(e.Aviso(texto))
+            self.eventos.put(e.Aviso(texto, escutar=self.modo_fala == "maos_livres"))
 
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
@@ -1138,7 +1150,7 @@ class Nucleo:
         if self.provedor not in catalogo.OPCOES:
             return "Com o cérebro de teste os conectores não valem."
         try:
-            novo = catalogo.criar(self.provedor, self.cfg, DADOS / "cerebro", self.extras)
+            novo = catalogo.com_reserva(self.provedor, self.cfg, DADOS / "cerebro", self.extras)
         except catalogo.Indisponivel as motivo:
             return f"Não remontei o cérebro: {motivo}."
         cerebro = self._com_via_rapida(novo)
@@ -1177,7 +1189,7 @@ class Nucleo:
         return self._remontar()
 
     def aplicar_acesso(self) -> str:
-        """O painel mudou o acesso ao Claude: põe no ambiente e remonta o cérebro com ele."""
+        """O painel mudou o acesso: aplica a conta e remonta as duas camadas de conversa."""
         acesso.aplicar()
         return self._remontar()
 
@@ -1186,7 +1198,7 @@ class Nucleo:
         if self.provedor not in catalogo.OPCOES:
             return ""
         try:
-            novo = catalogo.criar(self.provedor, self.cfg, DADOS / "cerebro", self.extras)
+            novo = catalogo.com_reserva(self.provedor, self.cfg, DADOS / "cerebro", self.extras)
         except catalogo.Indisponivel as motivo:
             return f"Cérebro indisponível: {motivo}."
         cerebro = self._com_via_rapida(novo)
@@ -1241,7 +1253,7 @@ class Nucleo:
         if id_ == self.provedor:
             return f"Já estou com o {atual.nome}."
         try:
-            novo = catalogo.criar(id_, self.cfg, DADOS / "cerebro", self.extras)
+            novo = catalogo.com_reserva(id_, self.cfg, DADOS / "cerebro", self.extras)
         except catalogo.Indisponivel as motivo:
             log.warning("troca para %s recusada: %s", id_, motivo)
             return f"Não consegui trocar: {motivo}. Continuo com o {atual.nome}."
@@ -1261,6 +1273,7 @@ class Nucleo:
         c = self.cfg["cerebro"]
         modelos = {
             "claude": catalogo.rotulo(c["modelo"]),
+            "codex": catalogo.rotulo(c["modelo_codex"]) or "Padrão da conta",
             "gpt": catalogo.rotulo(catalogo.OPCOES["gpt"].rota or ""),
             "gemini": catalogo.rotulo(catalogo.OPCOES["gemini"].rota or ""),
             "auto": self.modelo_auto or "OmniRoute escolhe",
@@ -1293,6 +1306,7 @@ class Nucleo:
 
     def _atualizar_painel(self, agora: float) -> None:
         completo = getattr(self.cerebro, "completo", self.cerebro)
+        completo = getattr(completo, "cerebro_ativo", completo)
         if (
             isinstance(completo, ClaudeBrain)
             and completo.assinatura
@@ -1370,6 +1384,17 @@ class Nucleo:
             return f"({self.tela.resumo()}) {texto}"
         except OSError:
             return texto
+
+    def _com_foco(self, texto: str) -> str:
+        """A sessão de código de que se fala agora vai junto do pedido: "diz pra ela" é ela."""
+        id_, quando = self.sessoes.em_foco
+        if not id_ or time.time() - quando > FOCO_S:
+            return texto
+        try:
+            s = self.sessoes.ler(id_)
+        except SessaoErro:
+            return texto
+        return f"(Sessão em foco: {s.nome}, {s.estado}.) {texto}"
 
     def _com_avisos(self, texto: str) -> str:
         """Os avisos falados nos últimos minutos vão junto do pedido, como contexto."""

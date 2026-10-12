@@ -198,6 +198,20 @@ def test_aviso_nao_abre_conversa() -> None:
     assert m.tratar(FimDeFala("abre o navegador"), 3) == []
 
 
+def test_aviso_de_maos_livres_abre_a_escuta_sem_o_chamado() -> None:
+    m = ativa()
+    m.tratar(Aviso("A sessão Loja terminou.", escutar=True), 1)
+    assert m.tratar(FalaOcioso(), 2) == [Bip()]
+    assert estado(m) is Estado.OUVINDO and m.em_conversa and m.autorizado
+
+
+def test_aviso_de_maos_livres_retido_volta_como_aviso_comum() -> None:
+    m = pensando()
+    assert m.tratar(Aviso("A sessão Loja terminou.", escutar=True), 1) == [
+        ReterAviso("A sessão Loja terminou.")
+    ]
+
+
 def test_fechar_a_janela_encerra_a_conversa() -> None:
     m = _respondido()
     m.tratar(Presenca(False), 5)

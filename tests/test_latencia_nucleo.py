@@ -61,6 +61,7 @@ class NucleoCronometrado(Nucleo):
         self._fontes = (0, [])
         self.turnos = []
         self.avisos_falados = []
+        self.sessoes = SimpleNamespace(em_foco=("", 0.0))  # type: ignore[assignment]
         self.cerebro, self.provedor = Eco(), "eco"
         self.voz = VozCronometrada()  # type: ignore[assignment]
         self.ponte = SimpleNamespace(  # type: ignore[assignment]

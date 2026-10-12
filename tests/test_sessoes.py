@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ from jarvis.oficina.sessoes import (
     comando_proibido,
     rodar_agente,
 )
+from jarvis.oficina.terminal import Terminal
 
 
 def esperar(condicao: Any, limite_s: float = 5.0) -> None:
@@ -131,6 +133,136 @@ def test_reiniciar_no_meio_marca_como_parada(tmp_path: Path, raiz: Path) -> None
     de_novo, _ = nova(tmp_path, raiz, None)
     assert de_novo.ler(s.id).estado == "parada"
     assert "reiniciou" in de_novo.mensagens(s.id)[-1]["texto"]
+
+
+def test_excluir_sessao_ativa_espera_o_cancelamento_e_preserva_o_projeto(
+    tmp_path: Path, raiz: Path
+) -> None:
+    projeto = raiz / "projetos/loja"
+    pronto = threading.Event()
+
+    async def demorado(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+        pronto.set()
+        try:
+            await asyncio.sleep(30)
+        finally:
+            # A limpeza assíncrona pode ainda gravar dados: excluir deve esperar por ela.
+            await asyncio.sleep(0.05)
+            (projeto / "resultado.txt").write_text("trabalho preservado")
+        return "não chega aqui"
+
+    sessoes, fim = nova(tmp_path, raiz, demorado)
+    s = sessoes.criar("ativa", str(projeto))
+    sessoes.enviar(s.id, "trabalho longo")
+    assert pronto.wait(5)
+    sessoes.excluir(s.id)
+    assert (projeto / "resultado.txt").read_text() == "trabalho preservado"
+    assert not (sessoes.pasta / s.id).exists()
+    assert not sessoes.listar() and not sessoes.trabalhando() and not fim
+    with pytest.raises(SessaoErro, match="qual sessão"):
+        sessoes.achar("")
+
+
+def test_excluir_preserva_sessao_se_o_agente_ainda_nao_parou(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    liberar = threading.Event()
+    pronto = threading.Event()
+
+    async def demorado(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+        pronto.set()
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            await asyncio.to_thread(liberar.wait)
+        return "parou"
+
+    sessoes, _ = nova(tmp_path, raiz, demorado)
+    s = sessoes.criar("ativa", str(raiz / "projetos/loja"))
+    sessoes.enviar(s.id, "trabalho longo")
+    assert pronto.wait(5)
+    encerrar = sessoes._encerrar_agente
+    monkeypatch.setattr(sessoes, "_encerrar_agente", lambda id_: encerrar(id_, espera_s=0.05))
+    try:
+        with pytest.raises(SessaoErro, match="ainda está encerrando"):
+            sessoes.excluir(s.id)
+        assert sessoes.ler(s.id).id == s.id and sessoes.mensagens(s.id)
+    finally:
+        liberar.set()
+        esperar(lambda: s.id not in sessoes.trabalhando())
+    sessoes.excluir(s.id)
+    assert not sessoes.listar()
+
+
+@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+def test_excluir_sessao_com_terminal_ativo_encerra_antes_de_remover(
+    tmp_path: Path, raiz: Path
+) -> None:
+    sessoes, _ = nova(tmp_path, raiz, None)
+    projeto = raiz / "projetos/loja"
+    arquivo = projeto / "trabalho.txt"
+    arquivo.write_text("manter")
+    s = sessoes.criar("ativa", str(projeto))
+    terminal = Terminal(
+        ["sleep", "30"],
+        projeto,
+        {},
+        ao_sair=lambda codigo: sessoes._terminal_saiu(s.id, codigo),
+    )
+    sessoes.terminais[s.id] = terminal
+    sessoes._mudar(s.id, estado="trabalhando")
+    try:
+        assert s.id in sessoes.trabalhando()
+        sessoes.excluir(s.id)
+        assert not terminal.vivo and not terminal.leitor.is_alive()
+        assert not (sessoes.pasta / s.id).exists() and not sessoes.terminais
+        assert arquivo.read_text() == "manter"
+    finally:
+        terminal.encerrar()
+
+
+@pytest.mark.parametrize("pendente", ["editado", "novo", "ignorado"])
+def test_excluir_copia_preserva_trabalho_sem_commit(
+    tmp_path: Path, raiz: Path, pendente: str
+) -> None:
+    projeto = raiz / "projetos/loja"
+    (projeto / "a.txt").write_text("original\n")
+    (projeto / ".gitignore").write_text("local.txt\n")
+    for args in (
+        ["init", "-q"],
+        ["config", "user.email", "t@t"],
+        ["config", "user.name", "t"],
+        ["add", "."],
+        ["commit", "-qm", "base"],
+    ):
+        assert _git(projeto, *args).returncode == 0
+    sessoes, _ = nova(tmp_path, raiz, lambda *args: None)
+    s = sessoes.criar("iso", str(projeto), isolada=True)
+    nome = {"editado": "a.txt", "novo": "novo.txt", "ignorado": "local.txt"}[pendente]
+    arquivo = Path(s.worktree) / nome
+    arquivo.write_text("trabalho pendente\n")
+    with pytest.raises(SessaoErro, match="alterações"):
+        sessoes.excluir(s.id)
+    assert arquivo.read_text() == "trabalho pendente\n"
+    assert sessoes.ler(s.id).id == s.id and sessoes.mensagens(s.id)
+
+
+def test_excluir_copia_limpa_preserva_branch(tmp_path: Path, raiz: Path) -> None:
+    projeto = raiz / "projetos/loja"
+    for args in (
+        ["init", "-q"],
+        ["config", "user.email", "t@t"],
+        ["config", "user.name", "t"],
+        ["commit", "--allow-empty", "-qm", "base"],
+    ):
+        assert _git(projeto, *args).returncode == 0
+    sessoes, _ = nova(tmp_path, raiz, lambda *args: None)
+    s = sessoes.criar("iso", str(projeto), isolada=True)
+    assert "branch" in sessoes.excluir(s.id)
+    assert not Path(s.worktree).exists()
+    assert _git(projeto, "rev-parse", "--verify", s.branch).returncode == 0
+    with pytest.raises(SessaoErro):
+        sessoes.ler(s.id)
 
 
 @pytest.mark.parametrize(
@@ -432,3 +564,34 @@ def test_passagem_sem_as_notas_do_ze(tmp_path: Path, raiz: Path) -> None:
     assert "Modelo: Opus" not in texto and "Sessão criada" not in texto
     assert "- usuário: meu nome é Bilu" in texto and "- agente: Prazer, Bilu!" in texto
     assert "não responda a isto" in texto
+
+
+def test_o_andamento_do_claude_entra_na_conversa(tmp_path: Path, raiz: Path) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"))
+    eventos = [
+        {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "npm  test"},
+        },
+        {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "/x/src/login.ts"},
+        },
+        {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Write",
+            "tool_input": {"file_path": "/x/NOTAS.md"},
+        },
+        {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Read",
+            "tool_input": {"file_path": "/x/a.py"},
+        },
+    ]
+    sessoes.eventos(s.id).write_text("".join(json.dumps(e) + "\n" for e in eventos))
+    sessoes._ler_eventos(s.id)
+    acoes = [m["texto"] for m in sessoes.mensagens(s.id) if m["quem"] == "ferramenta"]
+    assert acoes == ["$ npm test", "editou login.ts", "criou NOTAS.md"]

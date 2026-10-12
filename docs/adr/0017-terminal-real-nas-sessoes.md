@@ -44,3 +44,17 @@ painel sempre ficaria atrás.
 - Testado de ponta a ponta no navegador (12/10/2026, Codex 0.160.1, Claude Code 2.1.291): pedido
   digitado no terminal do Codex e respondido; troca para o Claude na mesma sessão, que assumiu com
   a passagem e o estado do git.
+
+### Exclusão de sessão ativa (12/10/2026)
+
+Excluir encerra o grupo de processos do agente e o comando em primeiro plano do terminal, espera
+a leitura e os callbacks de saída e só então remove a sessão. No modo sem terminal, cancela a
+tarefa e espera sua limpeza assíncrona. Falha ou demora no encerramento preserva a sessão.
+Abertura, envio, consumo de eventos e exclusão são serializados para evitar reabrir o agente ou
+aplicar um evento enquanto a sessão é removida. Os arquivos do projeto continuam no lugar;
+cópias isoladas com alterações, arquivos novos ou ignorados continuam bloqueando a exclusão.
+
+Esse encerramento não é uma sandbox: processos que se desvinculem do terminal e do grupo do
+agente ainda precisam de contenção própria. A separação de arquivos é opcional (`isolada`); sem
+ela, sessões podem trabalhar na mesma pasta. O Claude interativo recebe `acceptEdits` e regras
+no prompt; o Codex recebe `workspace-write`. Isso não garante isolamento equivalente entre eles.

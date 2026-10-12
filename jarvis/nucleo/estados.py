@@ -85,6 +85,7 @@ class PedidoAprovacao:
 @dataclass(frozen=True)
 class Aviso:
     texto: str
+    escutar: bool = False  # mãos livres: depois do aviso, ouve a resposta sem o chamado
 
 
 @dataclass(frozen=True)
@@ -896,6 +897,7 @@ class Maquina:
     em_conversa: bool = False  # aberta por "Hey Orca"; fechada por "ok", silêncio ou janela
     continuacao: bool = False  # pergunta seguinte da conversa (sem "Hey Orca")
     aviso_falando: str | None = None  # aviso em fala; cortado, volta para a fila
+    escutar_depois: bool = False  # o aviso em fala abre a escuta ao terminar (mãos livres)
     reperguntou: bool = False  # a confirmação já foi repetida uma vez por resposta confusa
     prazo_conversa_s: float = PRAZO_CONVERSA_S
     historico: list[Estado] = field(default_factory=list)
@@ -965,10 +967,11 @@ class Maquina:
                 return self._fala_ociosa(agora)
             case PedidoAprovacao(descricao):
                 return self._pedido_aprovacao(descricao)
-            case Aviso(texto):
+            case Aviso(texto, escutar):
                 if self.estado is Estado.ATIVO:
                     self._ir(Estado.FALANDO)
                     self.aviso_falando = texto
+                    self.escutar_depois = escutar
                     return [Falar(texto)]
                 return [ReterAviso(texto)]
             case Tempo():
@@ -1105,9 +1108,18 @@ class Maquina:
         return [ReterAviso(aviso)] if aviso else []
 
     def _voltar(self, agora: float) -> list[Efeito]:
-        self.aviso_falando = None
+        escutar = self.aviso_falando is not None and self.escutar_depois
+        self.aviso_falando, self.escutar_depois = None, False
         if not self.cerebro_terminou:
             self._ir(Estado.PENSANDO)
+        elif escutar:
+            # Mãos livres: o aviso abre a conversa; "diz pra ela rodar os testes" sem "Ei Zé".
+            self.em_conversa = True
+            self._ir(Estado.OUVINDO)
+            self.autorizado = True
+            self.continuacao = True
+            self.prazo = agora + self.prazo_conversa_s
+            return [Bip()]
         elif self.em_conversa:
             # Conversa aberta pelo usuário: a resposta concede a próxima pergunta sem "Hey Orca".
             self._ir(Estado.OUVINDO)

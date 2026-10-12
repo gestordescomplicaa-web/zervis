@@ -27,7 +27,16 @@ pessoa olhando a sessão na tela. Para quem digita, incomoda; para quem quer toc
    respostas a pedidos escritos.
 5. O agente esperando aprovação passa a avisar (hook `Notification` do Claude).
 
-## Próximos passos (mãos livres de verdade)
-- O Zé saber de qual sessão a pessoa fala (a do último aviso ou pelo nome) e repassar pedidos por
-  voz; resumo para ouvir pensado pelo modelo, não só limpo.
+## Mãos livres (12/10/2026)
+6. **Sessão em foco:** a do último aviso, a aberta na tela ou a última que o cérebro usou (vale
+   30 minutos). Ela vai no começo de cada pedido ao cérebro, e as ferramentas de sessão aceitam o
+   nome ou nada (vazio é a em foco): "diz pra ela rodar os testes" vai para a sessão certa.
+7. **Escuta depois do aviso:** no Mãos livres, o aviso de sessão abre a conversa (bip, sem "Ei
+   Zé"), para responder na hora.
+8. **Andamento:** os comandos e os arquivos que o Claude mexe (hook `PostToolUse`, só Bash e
+   edições) entram na conversa do Zé; "como está a Loja?" conta o que ela faz agora. O Codex não
+   avisa as ações: dele, ficam os pedidos e as respostas.
+
+## Próximos passos
+- Resumo para ouvir escrito pelo modelo, não só limpo.
 - Aprovações por voz, sempre com confirmação.

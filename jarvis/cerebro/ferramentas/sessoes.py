@@ -15,6 +15,13 @@ from jarvis.cerebro.ferramentas.comum import _erro, _texto
 from jarvis.oficina.sessoes import MOTORES, Sessao, SessaoErro, Sessoes
 
 ULTIMAS = 12  # mensagens que sessao_ler devolve
+_REF = {"type": "string", "description": "Id ou nome da sessão; vazio: a sessão em foco"}
+SESSAO: dict[str, Any] = {"type": "object", "properties": {"sessao": _REF}}
+SESSAO_E_TEXTO: dict[str, Any] = {
+    "type": "object",
+    "properties": {"sessao": _REF, "texto": {"type": "string"}},
+    "required": ["texto"],
+}
 
 
 def _resumo(s: Sessao) -> dict[str, Any]:
@@ -91,25 +98,35 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "sessao_enviar",
-        "Manda uma mensagem a uma sessão parada: uma tarefa nova ou a resposta a uma pergunta do "
-        "agente (use o id de sessoes_listar).",
-        {"id": str, "texto": str},
+        "Manda uma mensagem a uma sessão: uma tarefa nova ou a resposta a uma pergunta do agente. "
+        "Se ela estiver trabalhando, a mensagem entra na fila do agente. Sessão: o id ou o nome; "
+        "vazio é a sessão em foco (a do último aviso ou a aberta na tela).",
+        SESSAO_E_TEXTO,
     )
     async def enviar(args: dict[str, Any]) -> dict[str, Any]:
+        def fazer() -> Sessao:
+            return sessoes.enviar(sessoes.achar(str(args.get("sessao", ""))).id, args["texto"])
+
         try:
-            s = await asyncio.to_thread(sessoes.enviar, args["id"], args["texto"])
+            s = await asyncio.to_thread(fazer)
         except SessaoErro as erro:
             return _erro(erro)
         return _texto({"enviada": True, **_resumo(s)})
 
     @tool(
         "sessao_ler",
-        f"As últimas {ULTIMAS} mensagens de uma sessão (o pedido, o que o agente fez e respondeu).",
-        {"id": str},
+        f"O andamento de uma sessão: estado e as últimas {ULTIMAS} mensagens (pedidos, comandos "
+        "e arquivos que o agente mexeu, respostas). Sessão: o id ou o nome; vazio é a em foco.",
+        SESSAO,
     )
     async def ler(args: dict[str, Any]) -> dict[str, Any]:
+        def achar() -> Sessao:
+            s = sessoes.achar(str(args.get("sessao", "")))
+            sessoes.focar(s.id)
+            return s
+
         try:
-            s = await asyncio.to_thread(sessoes.ler, args["id"])
+            s = await asyncio.to_thread(achar)
         except SessaoErro as erro:
             return _erro(erro)
         mensagens = await asyncio.to_thread(sessoes.mensagens, s.id)
@@ -125,11 +142,11 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
         {
             "type": "object",
             "properties": {
-                "id": {"type": "string"},
+                "sessao": _REF,
                 "agente": {"type": "string", "enum": list(MOTORES)},
                 "conta": {"type": "string", "description": "Nome da conta (opcional)"},
             },
-            "required": ["id", "agente"],
+            "required": ["agente"],
         },
     )
     async def trocar(args: dict[str, Any]) -> dict[str, Any]:
@@ -143,7 +160,7 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
                 if achada is None:
                     raise SessaoErro(f"não há conta {args['conta']} do {agente}")
                 conta = achada.id
-            return sessoes.trocar(str(args["id"]), agente, conta)
+            return sessoes.trocar(sessoes.achar(str(args.get("sessao", ""))).id, agente, conta)
 
         try:
             s, aviso = await asyncio.to_thread(fazer)
@@ -151,10 +168,17 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
             return _erro(erro)
         return _texto({"trocada": True, "aviso": aviso, **_resumo(s)})
 
-    @tool("sessao_parar", "Para uma sessão que está trabalhando (a conversa fica).", {"id": str})
+    @tool(
+        "sessao_parar",
+        "Para uma sessão que está trabalhando (a conversa fica). Sessão: id ou nome; vazio é a "
+        "em foco.",
+        SESSAO,
+    )
     async def parar(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            s = await asyncio.to_thread(sessoes.parar, args["id"])
+            s = await asyncio.to_thread(
+                lambda: sessoes.parar(sessoes.achar(str(args.get("sessao", ""))).id)
+            )
         except SessaoErro as erro:
             return _erro(erro)
         return _texto({"parada": True, **_resumo(s)})

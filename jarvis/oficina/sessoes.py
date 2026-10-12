@@ -23,6 +23,7 @@ import subprocess
 import threading
 import time
 import tomllib
+import unicodedata
 import uuid
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -158,7 +159,10 @@ class Sessoes:
         self.terminais: dict[str, Terminal] = {}
         self._lidos: dict[str, int] = {}  # quanto do arquivo de eventos de cada sessão já foi lido
         self._limite_visto: set[str] = set()
+        self.em_foco: tuple[str, float] = ("", 0.0)  # a sessão de que se fala agora, e quando
         self.trava = threading.Lock()
+        # Não abre ou envia para um agente enquanto a exclusão espera ele encerrar.
+        self._operacoes = threading.RLock()
         self.tarefas: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Task[None]]] = {}
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
         if not self.legado:
@@ -191,6 +195,31 @@ class Sessoes:
             return Sessao(**json.loads((self._dir(id_) / "sessao.json").read_text()))
         except (OSError, ValueError, TypeError):
             raise SessaoErro("sessão desconhecida") from None
+
+    def focar(self, id_: str) -> None:
+        """Esta sessão é a de que se fala agora (aviso, tela, pedido): "diz pra ela..." é ela."""
+        self.em_foco = (id_, time.time())
+
+    def achar(self, ref: str) -> Sessao:
+        """A sessão pelo id ou pelo nome (sem acento nem maiúscula; basta um pedaço único);
+        vazio é a sessão em foco."""
+        ref = ref.strip()
+        if not ref:
+            id_, quando = self.em_foco
+            if not id_ or time.time() - quando > FOCO_S:
+                raise SessaoErro("diga de qual sessão se trata")
+            return self.ler(id_)
+        with contextlib.suppress(SessaoErro):
+            return self.ler(ref)
+        alvo = _simples(ref)
+        todas = self.listar()
+        iguais = [x for x in todas if _simples(x.nome) == alvo]
+        parecidas = iguais or [x for x in todas if alvo in _simples(x.nome)]
+        if len(parecidas) == 1:
+            return parecidas[0]
+        if not parecidas:
+            raise SessaoErro(f"não há sessão {ref}")
+        raise SessaoErro("há mais de uma: " + ", ".join(x.nome for x in parecidas[:4]))
 
     def listar(self) -> list[Sessao]:
         sessoes = []
@@ -320,6 +349,7 @@ class Sessoes:
         self._gravar(s)
         onde = f"numa cópia isolada (branch {s.branch})" if isolada else "direto na pasta"
         self.anotar(s.id, "sistema", f"Sessão criada em {caminho}, {onde}, com o {motor}.")
+        self.focar(s.id)
         return s
 
     def criar_projeto(self, nome: str) -> Path:
@@ -351,11 +381,16 @@ class Sessoes:
     def enviar(
         self, id_: str, texto: str, quem: str = "usuario", anexos: list[str] | None = None
     ) -> Sessao:
+        with self._operacoes:
+            return self._enviar(id_, texto, quem, anexos)
+
+    def _enviar(self, id_: str, texto: str, quem: str, anexos: list[str] | None) -> Sessao:
         texto = texto.strip()
         anexos = list(anexos or [])
         if not texto and not anexos:
             raise SessaoErro("mensagem vazia")
         s = self.ler(id_)
+        self.focar(id_)
         pasta = self.pasta_de_anexos(id_)
         caminhos = []
         for nome in anexos:
@@ -567,6 +602,10 @@ class Sessoes:
         conversa nativa. Depois de uma troca de agente, a passagem chega sem gastar um turno:
         como contexto (hook do Claude; instruções do Codex numa conversa nova) ou, no Codex que
         retoma a própria conversa, colada no campo, sem Enter, e vai com o próximo pedido."""
+        with self._operacoes:
+            return self._abrir_terminal(id_, pedido, colunas, linhas)
+
+    def _abrir_terminal(self, id_: str, pedido: str, colunas: int, linhas: int) -> Terminal:
         terminal = self.terminais.get(id_)
         if terminal is not None and terminal.vivo:
             return terminal
@@ -656,6 +695,10 @@ class Sessoes:
                     log.exception("eventos da sessão %s", id_)
 
     def _ler_eventos(self, id_: str) -> None:
+        with self._operacoes:
+            self._consumir_eventos(id_)
+
+    def _consumir_eventos(self, id_: str) -> None:
         arquivo = self.eventos(id_)
         try:
             tamanho = arquivo.stat().st_size
@@ -688,6 +731,9 @@ class Sessoes:
                 limite=False,
                 ultimo_pedido=str(e.get("prompt", ""))[:8000],
             )
+        elif nome == "PostToolUse":
+            if acao := _acao_do_claude(e):
+                self.anotar(id_, "ferramenta", acao)
         elif nome == "Notification" and "permission" in str(e.get("message", "")).lower():
             if self.ao_avisar is not None:
                 self.ao_avisar(self.ler(id_), str(e.get("message", "")))
@@ -737,20 +783,78 @@ class Sessoes:
                 log.exception("aviso do fim da sessão falhou")
 
     def excluir(self, id_: str) -> str:
-        """Apaga a sessão (conversa e anexos). A pasta do projeto fica; a cópia isolada sai,
-        mas a branch dela fica no projeto, para nada do trabalho se perder."""
+        """Encerra o agente e exclui a sessão; alterações na cópia bloqueiam a exclusão.
+
+        Uma branch conserva commits, não arquivos locais. Inclui os ignorados na checagem:
+        uma configuração ou um resultado local também não pode desaparecer por engano.
+        """
+        with self._operacoes:
+            return self._excluir(id_)
+
+    def _encerrar_agente(self, id_: str, espera_s: float = 5.0) -> None:
+        if (terminal := self.terminais.get(id_)) is not None:
+            try:
+                terminal.encerrar(espera_s)
+            except (OSError, TimeoutError):
+                raise SessaoErro(
+                    "Não foi possível encerrar o agente. A sessão foi preservada."
+                ) from None
+        laco_tarefa = self.tarefas.get(id_)
+        if laco_tarefa is None or laco_tarefa[1].done():
+            return
+        laco, tarefa = laco_tarefa
+        encerrada = threading.Event()
+
+        def cancelar() -> None:
+            tarefa.add_done_callback(lambda _: encerrada.set())
+            tarefa.cancel()
+
+        try:
+            laco.call_soon_threadsafe(cancelar)
+        except RuntimeError:
+            if tarefa.done():
+                return
+            raise SessaoErro(
+                "Não foi possível encerrar o agente. A sessão foi preservada."
+            ) from None
+        if not encerrada.wait(espera_s):
+            raise SessaoErro("O agente ainda está encerrando. Tente excluir novamente.")
+
+    def _excluir(self, id_: str) -> str:
         s = self.ler(id_)
-        if (terminal := self.terminais.pop(id_, None)) is not None:
-            terminal.encerrar()
-        if id_ in self.trabalhando():
-            raise SessaoErro("pare a sessão antes de excluir")
+        # Espera o cancelamento e os callbacks antes de conferir o Git e remover os arquivos.
+        self._encerrar_agente(id_)
+        if s.worktree and Path(s.worktree).exists():
+            estado = _git(
+                Path(s.worktree), "status", "--porcelain", "--untracked-files=all", "--ignored"
+            )
+            if estado.returncode != 0:
+                raise SessaoErro("Não foi possível verificar a cópia isolada.")
+            if estado.stdout.strip():
+                raise SessaoErro(
+                    "A cópia isolada tem alterações. Preserve o trabalho antes de excluir."
+                )
         aviso = ""
         if s.worktree:
-            _git(Path(s.pasta), "worktree", "remove", "--force", s.worktree)
-            _git(Path(s.pasta), "worktree", "prune")
+            if Path(s.worktree).exists():
+                # O próprio git verifica novamente alterações feitas depois da consulta acima.
+                feito = _git(Path(s.pasta), "worktree", "remove", s.worktree)
+                if feito.returncode != 0:
+                    raise SessaoErro(
+                        "Não foi possível remover a cópia isolada. A sessão foi preservada."
+                    )
             aviso = f"A branch {s.branch} continua no projeto."
-        shutil.rmtree(self._dir(id_), ignore_errors=True)
+        try:
+            with self.trava:
+                shutil.rmtree(self._dir(id_))
+        except OSError:
+            raise SessaoErro("Não foi possível excluir os arquivos da sessão.") from None
+        self.terminais.pop(id_, None)
         self.tarefas.pop(id_, None)
+        self._lidos.pop(id_, None)
+        self._limite_visto.discard(id_)
+        if self.em_foco[0] == id_:
+            self.em_foco = ("", 0.0)
         return aviso
 
     def parar(self, id_: str) -> Sessao:
@@ -1007,7 +1111,33 @@ LIMITE_TERMINAL = re.compile(
     r"|limit will reset|upgrade to pro|purchase more credits",
     re.IGNORECASE,
 )
-HOOKS_DO_ZE = ("SessionStart", "UserPromptSubmit", "Stop", "Notification")
+HOOKS_DO_ZE = ("SessionStart", "UserPromptSubmit", "Stop", "Notification", "PostToolUse")
+# Do que o agente faz, o Zé guarda o que conta o andamento: comandos e arquivos mexidos.
+ACOES_DO_CLAUDE = "Bash|Edit|MultiEdit|Write|NotebookEdit"
+FOCO_S = 30 * 60  # depois disso, "a sessão" sem nome não aponta mais para a última
+
+
+def _simples(texto: str) -> str:
+    sem_acento = unicodedata.normalize("NFKD", texto.casefold())
+    return " ".join("".join(c for c in sem_acento if not unicodedata.combining(c)).split())
+
+
+def _acao_do_claude(e: dict[str, Any]) -> str:
+    """Uma linha para a ação do Claude: "$ npm test", "editou login.ts"."""
+    entrada = e.get("tool_input")
+    if not isinstance(entrada, dict):
+        entrada = {}
+    ferramenta = str(e.get("tool_name", ""))
+    if ferramenta not in ACOES_DO_CLAUDE.split("|"):
+        return ""
+    if ferramenta == "Bash":
+        comando = " ".join(str(entrada.get("command", "")).split())
+        return f"$ {comando[:160]}" if comando else ""
+    arquivo = str(entrada.get("file_path") or entrada.get("notebook_path") or "")
+    if not arquivo:
+        return ""
+    verbo = "criou" if ferramenta == "Write" else "editou"
+    return f"{verbo} {Path(arquivo).name}"
 
 
 def _turno_auxiliar_do_codex(e: dict[str, Any]) -> bool:
@@ -1098,9 +1228,10 @@ def comando_terminal(
     gravar = f"cat >> {shlex.quote(str(eventos))}; echo >> {shlex.quote(str(eventos))}"
     hooks: dict[str, list[dict[str, Any]]] = dict(aimemory.hooks_claude().get("hooks", {}))
     for evento in HOOKS_DO_ZE:
+        filtro = ACOES_DO_CLAUDE if evento == "PostToolUse" else ""
         hooks[evento] = [
             *hooks.get(evento, []),
-            {"matcher": "", "hooks": [{"type": "command", "command": gravar}]},
+            {"matcher": filtro, "hooks": [{"type": "command", "command": gravar}]},
         ]
     if contexto is not None:  # entregue uma vez só: o arquivo sai depois de lido
         c = shlex.quote(str(contexto))

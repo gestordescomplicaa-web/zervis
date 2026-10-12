@@ -38,7 +38,7 @@ def test_delegar_acompanhar_e_ler_uma_sessao(tmp_path: Path) -> None:
     assert (
         item["nome"] == "Loja" and item["estado"] == "parada" and item["ultimo_recado"] == "Feito."
     )
-    lido, _ = chamar(f, "sessao_ler", {"id": criada["id"]})
+    lido, _ = chamar(f, "sessao_ler", {"sessao": criada["id"]})
     assert [m["quem"] for m in lido["mensagens"]][-2:] == ["usuario", "agente"]
     assert lido["mensagens"][-1]["texto"] == "Feito: testes"
     # Fora das pastas permitidas não vira sessão; sem pasta nem projeto novo, avisa.
@@ -52,3 +52,29 @@ def test_ler_e_listar_sao_livres_e_o_resto_pede_aprovacao() -> None:
     assert {"sessoes_listar", "sessao_ler"} <= livres
     assert not {"sessao_criar", "sessao_enviar", "sessao_parar"} & livres
     assert g.ferramentas(None) == []
+
+
+def test_a_sessao_pelo_nome_ou_a_em_foco(tmp_path: Path) -> None:
+    casa = tmp_path / "casa"
+    for nome in ("loja", "site", "site-novo"):
+        (casa / nome).mkdir(parents=True)
+
+    async def rodar(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+        return "ok"
+
+    sessoes = Sessoes(tmp_path / "sessoes", (casa,), rodar=rodar)
+    loja = sessoes.criar("Loja Virtual", str(casa / "loja"))
+    sessoes.criar("Site", str(casa / "site"))
+    sessoes.criar("Site novo", str(casa / "site-novo"))
+    f = {t.name: t.handler for t in g.ferramentas(sessoes)}
+    assert sessoes.achar("loja virtual").id == loja.id
+    assert sessoes.achar("LOJA").id == loja.id  # um pedaço único basta
+    assert sessoes.achar("site").nome == "Site"  # o nome exato vence o pedaço
+    texto, erro = chamar(f, "sessao_ler", {"sessao": "novo site"})
+    assert erro and "não há sessão" in texto
+    sessoes.focar(loja.id)  # o último aviso foi dela
+    lido, erro = chamar(f, "sessao_ler", {})
+    assert not erro and lido["nome"] == "Loja Virtual"
+    sessoes.em_foco = (loja.id, time.time() - 3600)  # foco velho não vale
+    texto, erro = chamar(f, "sessao_ler", {})
+    assert erro and "qual sessão" in texto
