@@ -136,4 +136,5 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
    causa das ativações sozinhas. A decidir: cancelamento de eco (muda a saída padrão do sistema).
 9. **No Silencioso o Zé ainda ouvia** (o chamado continuava, ADR 0022) e atrapalhava o YouTube.
    Pedido da pessoa: o Silencioso trava o microfone. Feito: nem "Ei Zé", nem botão, nem ao vivo;
-   a conversa é pela tela. Para conferir no passo 2 refeito.
+   a conversa é pela tela. **Conferido ✅ 13/10/2026:** "Ei Zé" sem resposta, botão recusado com
+   aviso, pedido escrito respondido na tela.
