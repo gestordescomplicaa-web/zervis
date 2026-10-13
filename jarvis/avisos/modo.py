@@ -7,7 +7,8 @@ Três tipos de fala espontânea, separados:
 
 Três modos, trocados a qualquer hora (painel, atalho, voz):
 - **Silencioso**: o Zé não fala; tudo fica na tela. Como ele ouve é outra escolha (ADR 0022).
-- **Avisos** (padrão): notificações e urgências faladas; a resposta, só se a pessoa pedir.
+- **Normal** (padrão; "avisos" na configuração): notificações e urgências faladas; a resposta,
+  só se a pessoa pedir. Chamava-se "Avisos" até 13/10/2026.
 - **Mãos livres**: tudo falado, inclusive a resposta da sessão, resumida.
 
 Em qualquer modo, o que a pessoa já está vendo (a sessão aberta no painel) não é falado. O modo
@@ -23,7 +24,7 @@ from jarvis import lugares
 
 ARQUIVO = lugares.CONFIG / "fala.json"
 MODOS = ("silencioso", "avisos", "maos_livres")
-NOMES = {"silencioso": "Silencioso", "avisos": "Avisos", "maos_livres": "Mãos livres"}
+NOMES = {"silencioso": "Silencioso", "avisos": "Normal", "maos_livres": "Mãos livres"}
 PADRAO = "avisos"
 Tipo = Literal["notificacao", "urgente", "resposta"]
 

@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- O modo de fala "Avisos" passa a se chamar "Normal" ("modo avisos" por voz continua valendo).
 - Chamado universal: o "Ei Zé" vem treinado no repositório, com vozes sintéticas, e funciona para
   qualquer pessoa sem gravar a própria voz. A gravação pessoal virou ajuste opcional.
 - O chamado ignora silêncio e som de fundo: precisa de volume de alguém falando ao microfone

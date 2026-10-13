@@ -352,7 +352,12 @@ COMANDOS = {
         ("fique", "em", "silencio"),
         ("silencio",),
     },
-    "modo_avisos": {("modo", "avisos"), ("modo", "aviso"), ("modo", "de", "avisos")},
+    "modo_avisos": {
+        ("modo", "normal"),
+        ("modo", "avisos"),  # o nome antigo continua valendo
+        ("modo", "aviso"),
+        ("modo", "de", "avisos"),
+    },
     "modo_maos_livres": {
         ("modo", "maos", "livres"),
         ("modo", "mao", "livre"),

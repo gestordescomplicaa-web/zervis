@@ -98,7 +98,9 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 ### Passo 8. Voltar às preferências
 
 - **Como:** deixar Ativação, Escuta e Modo de fala como a pessoa quer usar no dia a dia.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. "Avisos" passou a se chamar **Normal** (descreve o padrão).
+
+**Área fechada em 13/10/2026.**
 
 ## Fora dos passos (só testes automáticos)
 

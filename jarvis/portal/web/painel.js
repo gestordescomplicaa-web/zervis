@@ -232,7 +232,7 @@ const PAGINAS = {
 
 const MODOS_FALA = [
   { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve. Tudo pela tela." },
-  { valor: "avisos", nome: "Avisos", curto: "Avisos e urgências", detalhe: "Fala avisos e urgências. Respostas das sessões, só se você pedir." },
+  { valor: "avisos", nome: "Normal", curto: "Avisos e urgências", detalhe: "Fala avisos e urgências. Respostas das sessões, só se você pedir." },
   { valor: "maos_livres", nome: "Mãos livres", curto: "Também as respostas", detalhe: "Fala também as respostas das sessões, resumidas." },
 ];
 const MODOS_ESCUTA = [

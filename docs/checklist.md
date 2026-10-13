@@ -11,20 +11,21 @@ conhecida · ⬜ ainda não verificado.
 
 Última revisão: 13/10/2026.
 
-## 1. Voz e comunicação
+## 1. Voz e comunicação — **Pronta** (13/10/2026, `docs/auditoria/01-voz-e-comunicacao.md`)
 
-Conceito: o canal da conversa. Não guarda nada, só leva e traz.
+Conceito: o canal da conversa (ouvir pelo Deepgram, falar pelo Piper). Não guarda nada, só leva e
+traz. Três escolhas: Ativação, Escuta e Modo de fala.
 
-- ✅ "Ei Zé" no microfone do PC (Ativação: "Ei Zé")
-- ⬜ Só o botão (Ativação: só o botão)
-- ✅ Falar (segurar para falar)
-- ✅ Ao vivo no PC (conversa contínua até desconectar)
-- ✅ Voz pelo celular (navegador, WebSocket), em casa e no 4G
-- ✅ Reconexão sozinha da voz do celular após queda de rede
-- ⬜ Escuta: Sempre / Com a janela aberta
-- ⬜ Modo de fala: Silencioso, Avisos, Mãos livres (e o atalho Alt+M)
-- 🟡 Regras de fala (ADR 0027): manchete, uma repetição, sem duplicados
-- ⬜ Voz rápida (conversa simples sem o cérebro) e o botão Testar
+- ✅ "Ei Zé" universal, sem gravar a voz de ninguém; ignora silêncio e som de fundo
+- ✅ Só o botão; Falar (segurar e soltar); Ao vivo no PC e no celular
+- ✅ Voz pelo celular (navegador, WebSocket), em casa e no 4G, com reconexão
+- ✅ Escuta: Sempre (qualquer Linux) e Com a janela aberta (Hyprland)
+- ✅ Modo de fala: Silencioso (não fala nem ouve), Normal, Mãos livres; Alt+M
+- ✅ Conversa no painel: o fio do dia e o pedido escrito
+- ✅ Central de avisos (ADR 0029): o Zé narra as sessões, por prioridade; "próximo", "repete"
+- ✅ O Zé tem a vez: vídeo e música pausam enquanto ele ouve ou fala
+- 🟡 Regras de fala (ADR 0027): uma repetição e sem duplicados, só nos testes automáticos
+- Em aberto: cancelamento de eco (decidir com o uso); latência da conversa simples (~3 s)
 
 ## 2. Cérebro e contas
 

@@ -984,7 +984,7 @@ class Nucleo:
 
     def _sessao_terminou(self, sessao: Sessao, resumo: str) -> None:
         """Uma sessão de código acabou de trabalhar. O modo de fala decide o que vira voz: em
-        Avisos, uma frase; em Mãos livres, a frase e a resposta resumida para ouvir. A de
+        Normal, uma frase; em Mãos livres, a frase e a resposta resumida para ouvir. A de
         manutenção fala pelo próprio aperto de mão (o Resumo falado), salvo se falhar."""
         if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
             return

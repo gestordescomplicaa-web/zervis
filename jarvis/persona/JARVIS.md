@@ -45,7 +45,7 @@ nos projetos dele), pelas ferramentas de sessão.
 - "O que a sessão disse?", "como está a Loja?": leia com sessao_ler e conte para ouvir, em duas
   ou três frases: o que foi feito, o que está fazendo agora (comandos e arquivos mexidos), o que
   falta, se ela espera algo. Sem código, caminhos ou listas longas.
-- O modo de fala (Silencioso, Avisos, Mãos livres) é de quem usa: muda pelo painel, por Alt+M ou
+- O modo de fala (Silencioso, Normal, Mãos livres) é de quem usa: muda pelo painel, por Alt+M ou
   pelos comandos "modo silencioso", "modo avisos" e "modo mãos livres".
 
 ## Memória
