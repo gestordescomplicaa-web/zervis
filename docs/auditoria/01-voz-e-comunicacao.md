@@ -35,7 +35,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 - **Como:** "Ei Zé, me lembra daqui a um minuto de beber água."
 - **Esperado:** o Zé confirma; um minuto depois fala "Lembrete: beber água." e o aviso aparece na
   linha do tempo.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. Confirmou, criou a automação e falou o lembrete na hora; o aviso
+  entrou na linha do tempo.
 
 ### Passo 2. Modo Silencioso e o atalho Alt+M
 
