@@ -77,13 +77,14 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 
 - **Como:** Voz → Escuta → Sempre. Fechar a janela do painel e dizer "Ei Zé".
 - **Esperado:** o Zé responde mesmo com a janela fechada.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. Respondeu com a janela fechada. "Com a janela aberta" depende do
+  Hyprland (é ele que avisa quando a janela abre e fecha); sem ele, vale "Sempre".
 
 ### Passo 6. Ativação: Só o botão
 
 - **Como:** Voz → Ativação → Só o botão. Dizer "Ei Zé". Depois segurar **Falar** e pedir algo.
 - **Esperado:** o "Ei Zé" não faz nada; o botão funciona.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. "Ei Zé" ignorado; o botão e o Ao vivo funcionaram.
 
 ### Passo 7. Voz rápida
 
