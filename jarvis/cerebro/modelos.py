@@ -54,3 +54,15 @@ def do_codex(conta: Conta) -> list[dict[str, Any]]:
 
 def da_conta(conta: Conta) -> list[dict[str, Any]]:
     return do_codex(conta) if conta.agente == "codex" else list(CLAUDE)
+
+
+def do_cerebro(agente: str) -> list[dict[str, Any]]:
+    """Os modelos que o cérebro do Zé pode usar com a conta em uso do agente: a mesma lista das
+    sessões de código."""
+    from jarvis.cerebro import contas
+
+    try:
+        conta = contas.Contas().em_uso(agente)
+    except contas.ContaErro:
+        return list(CLAUDE) if agente == "claude" else []
+    return da_conta(conta)

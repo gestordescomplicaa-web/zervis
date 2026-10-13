@@ -147,19 +147,19 @@ const PAGINAS = {
     modelo = { ...c.via, chaves: c.chaves };
     escuta = esc_;
     prepararAcesso(cfg);
-    acessoTela.modelo = c.completo.modelo;
+    acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos;
     acessoTela.cerebro = c.completo.provedor;
     agentes = c.agentes;
     const sessoes = c.sessoes.total;
     return `${cabeca("Modelos")}${sub("Um modelo para cada tipo de tarefa.")}
-      ${cartao("", `<div class="cabeca"><h2>Voz rápida</h2>${liga(c.via.ligada, "via-ligada", "", "Ligada")}</div>
-        ${sub("Conversa simples por voz. Pedidos com ação vão ao cérebro.")}
+      <section class="cartao" id="cartao-acesso" data-contexto="cerebro"></section>
+      ${cartao("", `<div class="cabeca"><h2>Respostas rápidas</h2>${liga(c.via.ligada, "via-ligada", "", "Ligada")}</div>
+        ${sub("Parte do cérebro: conversa simples com um modelo leve. Pedidos com ação vão ao modelo principal.")}
         <div class="segmentos" role="group" aria-label="Provedor">${c.motores.map((m) => `<button type="button" data-acao="motor" data-motor="${m.id}" data-modelo="${esc(m.modelo)}" aria-pressed="${m.id === c.via.motor}">${esc(NOME_MOTOR[m.id] || m.nome)}</button>`).join("")}</div>
         <div class="linha"><label>Modelo<input id="modelo" class="mono" value="${esc(c.via.modelo)}" placeholder="Padrão da conta" autocomplete="off" spellcheck="false"></label>
           <label id="campo-endereco">Endereço<input id="endereco" class="mono" value="${esc(c.via.endereco)}" placeholder="http://127.0.0.1:20128/v1" autocomplete="off" spellcheck="false"></label></div>
         <div id="area-chave"></div>
         <div class="linha">${botao("Salvar", "modelo-salvar", "", "principal")}${botao("Testar", "modelo-testar")}<span class="resultado" id="resultado"></span></div>`)}
-      <section class="cartao" id="cartao-acesso" data-contexto="cerebro"></section>
       <section class="cartao" id="cartao-contas"></section>
       ${cartao("", `<div class="cabeca"><h2>Sessões de código</h2><span class="etiqueta">${sessoes} ${sessoes === 1 ? "sessão" : "sessões"}</span><a class="externo" href="#sessoes">Abrir sessões</a></div>
         ${sub("Agentes que trabalham nos seus projetos e continuam de onde pararam.")}
@@ -494,6 +494,15 @@ function prepararAcesso(cfg) {
   acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
 }
 
+// O modelo do cérebro, da mesma lista das sessões; o atual entra mesmo se não estiver nela.
+function seletorModelo(a) {
+  const lista = a.modelos || [];
+  const atual = lista.find((m) => m.id === a.modelo || (a.modelo || "").includes(m.id))?.id || a.modelo || "";
+  const opcoes = [...(lista.some((m) => m.id === atual) || !atual ? [] : [{ id: atual, nome: atual }]), ...lista];
+  if (!opcoes.length) return `<p class="nota">Modelo: padrão da conta</p>`;
+  return `<label>Modelo<select data-mudar="cerebro-modelo">${opcoes.map((m) => `<option value="${esc(m.id)}" ${m.id === atual ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
+}
+
 function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
@@ -507,7 +516,7 @@ function desenharAcesso() {
     ? `<div class="cabeca"><h2>Cérebro</h2>${estado}</div>
       ${sub("Entende os pedidos com ação e usa as ferramentas do Zé.")}
       ${seletorAgente(agente)}
-      <p class="nota">Modelo <span class="mono">${esc(a.modelo || "Padrão da conta")}</span></p>`
+      ${seletorModelo(a)}`
     : `<div class="cabeca"><h2>Agente</h2>${estado}</div>
       ${sub("O Zé usa o agente instalado nesta máquina, com o login feito nele.")}`;
   area.innerHTML = `${topo}
@@ -987,7 +996,7 @@ const recarregar = () => abrir();
 const ACOES = {
   "cerebro-escolher": async (b) => {
     const c = await ocupado(b, () => api("cerebro/escolher", { agente: b.dataset.agente }));
-    acessoTela.cerebro = c.completo.provedor; acessoTela.modelo = c.completo.modelo;
+    acessoTela.cerebro = c.completo.provedor; acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos;
     desenharAcesso(); toast(c.aviso || "Agente atualizado.");
   },
   "confirmar-sim": async (b) => { const f = pendentes.get(b.dataset.id); pendentes.delete(b.dataset.id); if (f) await f(); },
@@ -1199,6 +1208,10 @@ const MUDAR = {
   automacao: async (el) => { await api("automacao/ativar", { id: el.dataset.id, ativo: el.checked }); await recarregar(); },
   skill: async (el) => { await api("skill/ligar", { nome: el.dataset.nome, ligada: el.checked }); toast(el.checked ? "Ligada." : "Desligada."); await recarregar(); },
   "via-ligada": () => {},
+  "cerebro-modelo": async (el) => {
+    const c = await api("cerebro/modelo", { agente: acessoTela.cerebro, modelo: el.value });
+    acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos; desenharAcesso(); toast(c.aviso);
+  },
 
 };
 

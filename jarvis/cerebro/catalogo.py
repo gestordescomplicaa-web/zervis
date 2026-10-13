@@ -4,6 +4,7 @@ Claude usa o Agent SDK; Codex usa o app-server oficial; as rotas do OmniRoute us
 (ADR 0008). A escolha vale até a próxima troca, inclusive depois de reiniciar.
 """
 
+import json
 import logging
 import shutil
 from collections.abc import Callable
@@ -150,6 +151,31 @@ def ler_escolha(arquivo: Path) -> str | None:
     except OSError:
         return None
     return escolha if escolha in OPCOES else None
+
+
+CHAVE_DO_MODELO = {"claude": "modelo", "codex": "modelo_codex"}
+
+
+def ler_modelos(arquivo: Path) -> dict[str, str]:
+    """O modelo escolhido no painel para cada agente do cérebro (vale sobre a config)."""
+    try:
+        dados = json.loads(arquivo.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(dados, dict):
+        return {}
+    return {k: str(v) for k, v in dados.items() if k in CHAVE_DO_MODELO and v}
+
+
+def gravar_modelos(arquivo: Path, modelos: dict[str, str]) -> None:
+    temporario = arquivo.with_suffix(".next")
+    temporario.write_text(json.dumps(modelos))
+    temporario.replace(arquivo)
+
+
+def aplicar_modelos(cfg: Config, modelos: dict[str, str]) -> None:
+    for agente, modelo in modelos.items():
+        cfg["cerebro"][CHAVE_DO_MODELO[agente]] = modelo
 
 
 def gravar_escolha(arquivo: Path, id_: str) -> None:

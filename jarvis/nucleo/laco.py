@@ -41,6 +41,7 @@ from jarvis.avisos import central
 from jarvis.avisos import modo as modo_fala
 from jarvis.avisos.fila import PRIORIDADES, Fila
 from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, rapido
+from jarvis.cerebro import modelos as modelos_dos_agentes
 from jarvis.cerebro.base import Brain, Ponte
 from jarvis.cerebro.baterias import Bateria, da_assinatura, do_omniroute
 from jarvis.cerebro.claude import ClaudeBrain, carimbo
@@ -468,6 +469,8 @@ class Nucleo:
             depois=navegador.ajustar,
         )
         self.escolhido = ESTADO / "cerebro"
+        self.modelos_escolhidos = ESTADO / "cerebro-modelos.json"
+        catalogo.aplicar_modelos(cfg, catalogo.ler_modelos(self.modelos_escolhidos))
         cerebro, self.provedor = catalogo.montar(
             cfg, DADOS / "cerebro", catalogo.ler_escolha(self.escolhido), self.extras
         )
@@ -1967,6 +1970,28 @@ class Nucleo:
             return "Pronto, agora é o automático: o OmniRoute escolhe o modelo a cada pedido."
         nome = catalogo.OPCOES[id_].nome
         return f"Pronto, agora quem responde é o {nome}, com o {self.modelos()[id_]}."
+
+    def mudar_modelo_do_cerebro(self, agente: str, modelo: str) -> str:
+        """O modelo do cérebro escolhido no painel: vale na hora, se o agente for o atual, e
+        depois de reiniciar."""
+        if agente not in catalogo.CHAVE_DO_MODELO:
+            raise ValueError("Agente desconhecido.")
+        if modelo not in {m["id"] for m in modelos_dos_agentes.do_cerebro(agente)}:
+            raise ValueError("Modelo indisponível para esta conta.")
+        escolhas = catalogo.ler_modelos(self.modelos_escolhidos) | {agente: modelo}
+        catalogo.aplicar_modelos(self.cfg, escolhas)
+        catalogo.gravar_modelos(self.modelos_escolhidos, escolhas)
+        if agente == self.provedor:
+            try:
+                novo = catalogo.com_reserva(agente, self.cfg, DADOS / "cerebro", self.extras)
+            except catalogo.Indisponivel as motivo:
+                return f"Modelo guardado, mas o cérebro não trocou: {motivo}."
+            cerebro = self._com_via_rapida(novo)
+            self.ponte.trocar(cerebro)
+            self.cerebro = cerebro
+        log.info("cérebro: modelo do %s agora é %s", agente, modelo)
+        nome = next(m["nome"] for m in modelos_dos_agentes.do_cerebro(agente) if m["id"] == modelo)
+        return f"Modelo do cérebro: {nome}."
 
     def modelos(self) -> dict[str, str]:
         """O modelo de cada opção; o do cérebro ativo é o que respondeu de fato, se já houver."""

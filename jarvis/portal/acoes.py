@@ -20,7 +20,7 @@ import segno
 from jarvis import atividade, fuso, lugares, usuario
 from jarvis.automacoes.jobs import JobErro
 from jarvis.avisos import modo as modo_fala
-from jarvis.cerebro import acesso, conectores, contas, rapido
+from jarvis.cerebro import acesso, conectores, contas, modelos, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
@@ -223,6 +223,7 @@ class Acoes:
             "skill/excluir": self.excluir_skill,
             "sessao/excluir": self.excluir_sessao,
             "cerebro/escolher": self.escolher_cerebro,
+            "cerebro/modelo": self.modelo_do_cerebro,
         }
 
     def envios(self) -> dict[str, Any]:
@@ -493,11 +494,25 @@ class Acoes:
                 "modelo": self.n.cfg["cerebro"][
                     "modelo_codex" if self.n.provedor == "codex" else "modelo"
                 ],
+                "modelos": [
+                    {"id": m["id"], "nome": m["nome"]} for m in modelos.do_cerebro(self.n.provedor)
+                ]
+                if self.n.provedor in ("claude", "codex")
+                else [],
             },
             # Cérebro e sessões de código usam as contas cadastradas (ADR 0020).
             "agentes": AGENTES,
             "sessoes": {"agentes": AGENTES_SESSOES, "total": len(self.n.sessoes.listar())},
         }
+
+    def modelo_do_cerebro(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            aviso = self.n.mudar_modelo_do_cerebro(
+                str(dados.get("agente", "")), str(dados.get("modelo", ""))
+            )
+        except ValueError as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {**self.cerebro(), "aviso": aviso}
 
     def escolher_cerebro(self, dados: dict[str, Any]) -> dict[str, Any]:
         agente = str(dados.get("agente", ""))
