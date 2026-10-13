@@ -51,5 +51,6 @@ git -C "$REPO" reset -q --hard "$volta"
 dizer voltou
 antes=$(pid_de)
 agora=$(date +%s)
+systemctl --user reset-failed zervis 2>/dev/null  # a versão que não subiu pode ter batido o limite
 systemctl --user restart zervis
 subiu "$antes" "$agora"
