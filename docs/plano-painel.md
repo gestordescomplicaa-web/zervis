@@ -11,8 +11,9 @@ como está, como outra opção, e é o caminho futuro para óculos de realidade 
    o modo imersivo, o celular ou os óculos só mostram e pedem. Função feita uma vez serve a
    todas as portas; nada de regra de negócio dentro de uma tela.
 2. **Rápido por carregar pouco.** HTML, CSS e JavaScript puros, sem framework, sem build e sem
-   nada vindo da internet: o código próprio do painel abaixo de 120 KB (era 100 KB; subiu em
-   12/10/2026 com a voz pelo navegador e o botão de falar), aberto em menos de 1 s. A pressa
+   nada vindo da internet: o código próprio do painel abaixo de 130 KB (era 100 KB; subiu em
+   12/10/2026 com a voz pelo navegador, o botão de falar, a senha de acesso e a Imersão no
+   celular), aberto em menos de 1 s. A pressa
    não vem da linguagem (o navegador desenha), vem de não carregar câmera, rastreador, 3D nem
    bibliotecas. Uma janela própria, se ele quiser, vem depois empacotando a mesma página com o
    Tauri (Rust, leve), sem reescrever.

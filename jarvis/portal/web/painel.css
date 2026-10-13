@@ -447,3 +447,40 @@ details.alternativa .nota a { margin-right:6px; }
 .aparelho { align-items: center; }
 .aparelho span { white-space: nowrap; }
 .aparelho small { color: var(--suave); flex: 1 1 140px; min-width: 0; }
+
+/* --- Imersão no celular: o holograma do Zé reagindo à conversa (--voz e --mic de 0 a 1) --- */
+.holo { --cor: var(--acento); --voz: 0; --mic: 0; display: grid; justify-items: center; align-content: center;
+  gap: 18px; min-height: 100%; padding: 24px 16px; text-align: center; }
+.holo-palco { --brilho: .12; position: relative; width: min(78vw, 420px); aspect-ratio: 1; display: grid; place-items: center;
+  background: radial-gradient(circle, rgb(70 217 222 / var(--brilho)) 0, transparent 62%); }
+/* O fundo preto da imagem some (tela) e as bordas se esfumam: só o rosto aparece. */
+.holo-palco img { width: 100%; height: auto; mix-blend-mode: screen; mask-image: radial-gradient(circle, #000 52%, transparent 71%);
+  transition: opacity .4s, transform .08s linear; }
+.holo-palco::before, .holo-palco::after { content: ""; position: absolute; inset: 8%; border-radius: 50%;
+  border: 2px solid var(--cor); opacity: 0; pointer-events: none; }
+.holo[data-estado="inativo"] img { opacity: .35; filter: grayscale(.7); }
+.holo[data-estado="inativo"] .holo-palco { --brilho: 0; }
+.holo[data-estado="ativo"] .holo-palco { animation: holo-respirar 5s ease-in-out infinite; }
+.holo[data-estado="ouvindo"] img { transform: scale(calc(1 + var(--mic) * .05)); }
+.holo[data-estado="ouvindo"] .holo-palco { --brilho: calc(.18 + var(--mic) * .3); }
+.holo[data-estado="ouvindo"] .holo-palco::before, .holo[data-estado="ouvindo"] .holo-palco::after { animation: holo-onda 2s ease-out infinite; }
+.holo[data-estado="ouvindo"] .holo-palco::after { animation-delay: 1s; }
+.holo[data-estado="pensando"] .holo-palco::before { inset: 3%; border: 0; padding: 3px; opacity: 1;
+  background: conic-gradient(from var(--volta), transparent 0 65%, var(--cor));
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); animation: girar 1.2s linear infinite; }
+.holo[data-estado="falando"] img, .holo[data-estado="confirmando"] img { transform: scale(calc(1 + var(--voz) * .08));
+  filter: brightness(calc(1 + var(--voz) * .6)); }
+.holo[data-estado="falando"] .holo-palco { --brilho: calc(.2 + var(--voz) * .4); }
+.holo[data-estado="confirmando"] .holo-palco { background: radial-gradient(circle, rgb(239 190 124 / .22) 0, transparent 62%); }
+.holo[data-estado="falando"] .holo-palco::before, .holo[data-estado="falando"] .holo-palco::after { animation: holo-onda 1.2s ease-out infinite; }
+.holo[data-estado="falando"] .holo-palco::after { animation-delay: .6s; }
+.holo[data-estado="confirmando"] { --cor: var(--alerta); }
+.holo[data-estado="confirmando"] .holo-palco::before { animation: holo-onda 1.6s ease-out infinite; }
+.holo-estado { margin: 0; min-height: 1.4em; color: var(--suave); font-size: 15px; letter-spacing: .04em; }
+.holo-botoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: min(100%, 420px); }
+.holo-botoes button { width: 100%; padding: 16px; font-size: 17px; border-radius: 14px; touch-action: none; user-select: none; }
+.holo-botoes button[aria-pressed="true"] { background: var(--acento); color: #041417; border-color: var(--acento); }
+@keyframes holo-onda { from { transform: scale(.88); opacity: .6; } to { transform: scale(1.22); opacity: 0; } }
+@property --brilho { syntax: "<number>"; inherits: false; initial-value: .12; }
+@keyframes holo-respirar { 50% { --brilho: .26; } }
+@media (prefers-reduced-motion: reduce) { .holo-palco, .holo-palco::before, .holo-palco::after { animation: none !important; } }

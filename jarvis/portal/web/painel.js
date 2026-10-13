@@ -5,6 +5,7 @@
 "use strict";
 
 const TOKEN = document.querySelector('meta[name="ze-token"]').content;
+const NO_PC = ["127.0.0.1", "localhost"].includes(location.hostname); // o próprio PC, não outro aparelho
 const conteudo = document.getElementById("conteudo");
 
 const ESTADOS = { inativo: "inativo", ativo: "pronto", ouvindo: "ouvindo", pensando: "pensando", falando: "falando", confirmando: "esperando o seu sim" };
@@ -272,17 +273,38 @@ async function mudarModoFala(valor) {
 let salaVoz = null, vozConectando = false, codigoPreparado = null;
 
 function desenharVozRemota() {
-  const caixa = $("voz-remota"), on = !!salaVoz;
-  caixa.hidden = false;
+  const on = !!salaVoz;
   const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz ao vivo" : "Conectar a voz ao vivo: ouve sem parar até desconectar"}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : "Ao vivo"}</button>`;
-  if (caixa.innerHTML !== html) caixa.innerHTML = html;
+  for (const caixa of [$("voz-remota"), $("voz-holo")]) {
+    if (!caixa) continue;
+    caixa.hidden = false;
+    if (caixa.innerHTML !== html) caixa.innerHTML = html;
+  }
 }
 
 const avisarVoz = (evento, detalhe = "") => api("voz/evento", { evento, detalhe: String(detalhe), aparelho: navigator.userAgent }).catch(() => {});
 
 // A voz do Zé chega em PCM de 16 bits; cada pedaço entra na fila logo depois do anterior.
+// O volume de um sinal (0 a 1), para o holograma reagir à voz.
+function medidor(ctx) {
+  const a = ctx.createAnalyser(), dados = new Float32Array(512);
+  a.fftSize = 512;
+  return { no: a, nivel() { a.getFloatTimeDomainData(dados); let s = 0; for (const v of dados) s += v * v; return Math.min(1, Math.sqrt(s / dados.length) * 4); } };
+}
+
+let medidores = { voz: null, mic: null };
+(function animarHolograma() {
+  const holo = document.querySelector(".holo");
+  if (holo) {
+    holo.style.setProperty("--voz", (medidores.voz?.nivel() || 0).toFixed(3));
+    holo.style.setProperty("--mic", (medidores.mic?.nivel() || 0).toFixed(3));
+  }
+  requestAnimationFrame(animarHolograma);
+})();
+
 function tocadorVoz() {
-  const ctx = new AudioContext(), tocando = new Set();
+  const ctx = new AudioContext(), tocando = new Set(), m = medidor(ctx);
+  m.no.connect(ctx.destination); medidores.voz = m;
   let taxa = 22050, proximo = 0;
   return {
     ctx,
@@ -294,7 +316,7 @@ function tocadorVoz() {
       const pcm = new Int16Array(dados), buf = ctx.createBuffer(1, pcm.length, taxa), canal = buf.getChannelData(0);
       for (let i = 0; i < pcm.length; i++) canal[i] = pcm[i] / 32768;
       const f = ctx.createBufferSource();
-      f.buffer = buf; f.connect(ctx.destination);
+      f.buffer = buf; f.connect(m.no);
       proximo = Math.max(proximo, ctx.currentTime + 0.05);
       f.start(proximo); proximo += buf.duration;
       tocando.add(f); f.onended = () => tocando.delete(f);
@@ -322,7 +344,8 @@ async function ligarVoz() {
     await captura.audioWorklet.addModule("/voz-captura.js");
     const no = new AudioWorkletNode(captura, "captura"), mudo = captura.createGain();
     mudo.gain.value = 0;
-    captura.createMediaStreamSource(mic).connect(no);
+    const entrada = captura.createMediaStreamSource(mic), mm = medidor(captura);
+    entrada.connect(no); entrada.connect(mm.no); medidores.mic = mm;
     no.connect(mudo).connect(captura.destination);
     const saida = tocadorVoz();
     const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/voz/ws`);
@@ -332,6 +355,7 @@ async function ligarVoz() {
     };
     const fim = () => {
       mic.getTracks().forEach((t) => t.stop()); captura.close(); saida.ctx.close(); manterTela(false);
+      medidores = { voz: null, mic: null };
       if (salaVoz === conexao) { salaVoz = null; desenharVozRemota(); }
     };
     await new Promise((ok, erro) => {
@@ -368,15 +392,17 @@ function alternarGrupo(b) {
 let falando = false, travado = false, apertouEm = 0;
 
 function marcarFalar() {
-  $("falar").setAttribute("aria-pressed", String(falando));
-  $("falar").textContent = !falando ? "Falar" : travado ? "Enviar" : "Ouvindo…";
+  document.querySelectorAll("[data-falar]").forEach((b) => {
+    b.setAttribute("aria-pressed", String(falando));
+    b.textContent = !falando ? "Falar" : travado ? "Enviar" : "Ouvindo…";
+  });
 }
 
 async function apertarFalar() {
   if (travado) return soltarFalar(true);
   if (falando) return;
   // Fora do PC, sem a voz conectada, quem ouviria é o microfone do PC.
-  if (!salaVoz && !["127.0.0.1", "localhost"].includes(location.hostname)) return toast("Conecte o Ao vivo para falar por aqui.");
+  if (!salaVoz && !NO_PC) return toast("Conecte o Ao vivo para falar por aqui.");
   falando = true; apertouEm = Date.now(); marcarFalar();
   api("voz/apertar", {}).catch((erro) => toast(erro.message));
 }
@@ -390,9 +416,9 @@ async function soltarFalar(enviar) {
   await api("voz/soltar", {}).catch((erro) => toast(erro.message));
 }
 
-$("falar").addEventListener("pointerdown", (ev) => { ev.preventDefault(); apertarFalar(); });
-$("falar").addEventListener("pointerup", () => soltarFalar(false));
-$("falar").addEventListener("pointercancel", () => soltarFalar(false));
+document.addEventListener("pointerdown", (ev) => { if (ev.target.closest?.("[data-falar]")) { ev.preventDefault(); apertarFalar(); } });
+document.addEventListener("pointerup", (ev) => { if (ev.target.closest?.("[data-falar]")) soltarFalar(false); });
+document.addEventListener("pointercancel", (ev) => { if (ev.target.closest?.("[data-falar]")) soltarFalar(false); });
 const editavel = (el) => el.closest?.("input, textarea, select, [contenteditable], .terminal-sessao");
 document.addEventListener("keydown", (ev) => { if (ev.code === "Space" && !ev.repeat && !editavel(ev.target)) { ev.preventDefault(); apertarFalar(); } });
 document.addEventListener("keyup", (ev) => { if (ev.code === "Space" && !editavel(ev.target)) soltarFalar(false); });
@@ -921,6 +947,16 @@ function fecharPrevia() {
   if ($("terminal")) { $("terminal").hidden = false; term?.focus(); }
 }
 
+// --- Imersão no celular: o holograma do Zé reagindo à conversa (a completa é só do PC) ---
+
+const ESTADO_HOLO = { inativo: "Inativo", ativo: "Pronto", ouvindo: "Ouvindo", pensando: "Pensando", falando: "Falando", confirmando: "Esperando o seu sim" };
+let estadoZe = "inativo";
+const telaHolograma = () => `<div class="holo" data-estado="${estadoZe}">
+  <div class="holo-palco"><img src="/imagens/holograma.webp" alt="O Zé" width="520" height="520"></div>
+  <p class="holo-estado" id="holo-estado">${ESTADO_HOLO[estadoZe] || ""}</p>
+  <div class="holo-botoes"><div class="voz-remota" id="voz-holo"></div><button type="button" class="acao" data-falar aria-pressed="false">Falar</button></div>
+</div>`;
+
 // --- Imersão: o modo imersivo de sempre, numa moldura ---------------------------------------------
 
 const IMERSIVO = "http://127.0.0.1:8794/stage.html?res=1280x720&fps=auto";
@@ -1273,6 +1309,11 @@ async function abrir() {
   conteudo.classList.toggle("cheio", secao === "sessoes");
   clearInterval(relogioSessoes);
   fecharTerminalTela();
+  if (secao === "imersao" && !NO_PC) {
+    imersao.hidden = true; conteudo.hidden = false;
+    conteudo.innerHTML = telaHolograma(); desenharVozRemota();
+    return;
+  }
   if (secao === "imersao") { ligarImersao(); return; }
   try {
     const html = await PAGINAS[secao]();
@@ -1294,6 +1335,9 @@ async function batimento() {
     telaVista = e.tela_ts;
     const icone = document.querySelector(".icone-ze");
     icone.dataset.estado = e.ze; icone.title = `Zé ${ESTADOS[e.ze] || e.ze}`;
+    estadoZe = e.ze;
+    const holo = document.querySelector(".holo");
+    if (holo && holo.dataset.estado !== e.ze) { holo.dataset.estado = e.ze; $("holo-estado").textContent = ESTADO_HOLO[e.ze] || ""; }
     desenharModoFala(e.modo_fala);
     desenharVozRemota();
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {

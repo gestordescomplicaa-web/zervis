@@ -59,6 +59,8 @@ ARQUIVOS = {
     "/manifest.webmanifest": "manifest.webmanifest",
     "/icones/ze-192.webp": "icones/ze-192.webp",
     "/icones/ze-512.webp": "icones/ze-512.webp",
+    # O holograma da Imersão no celular.
+    "/imagens/holograma.webp": "imagens/holograma.webp",
 }
 
 # O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).

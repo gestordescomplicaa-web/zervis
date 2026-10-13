@@ -119,3 +119,7 @@
   para o acesso de qualquer lugar; bloqueio de tentativas por endereço de origem (quem ataca não
   tranca quem usa); aviso falado e na tela quando um aparelho entra, com a lista de aparelhos e
   Desconectar em cada um; ajustes de acesso (senha, código, túnel) só pelo próprio PC.
+- Imersão no celular: em outro aparelho, a aba Imersão mostra o holograma do Zé em tela cheia,
+  reagindo à conversa (ondas ouvindo, que crescem com a sua voz; brilho girando pensando; pulso no
+  volume real da fala; âmbar esperando o "sim"), com Ao vivo e Falar grandes embaixo. A Imersão
+  completa, com as mãos e o Núcleo, continua só no PC.
