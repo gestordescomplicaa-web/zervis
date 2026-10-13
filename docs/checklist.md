@@ -4,6 +4,8 @@ Cada coisa do Zé, área por área, com base no painel. Uma área só fica **Pro
 foi usado de verdade (não só nos testes automáticos) e o conceito está claro em uma frase
 (`docs/conceitos.md`). Trabalhamos uma área por vez, até fechar, antes de abrir a próxima.
 
+Auditorias em andamento: `docs/auditoria/`.
+
 Legenda: ✅ usado de verdade e funciona · 🟡 só nos testes automáticos · ❌ defeito ou lacuna
 conhecida · ⬜ ainda não verificado.
 
