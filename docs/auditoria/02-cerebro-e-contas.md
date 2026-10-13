@@ -64,7 +64,8 @@ usam a conta em uso de cada agente.
 
 - **Como:** desligar e ligar; Testar; "Ei Zé, tudo bem?".
 - **Esperado:** ligada, a conversa simples vai pelo atalho; desligada, tudo vai ao cérebro.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. Desligada, os dois pedidos foram ao cérebro (Claude); ligada, o
+  atalho voltou (Claude pelo plano; antes, pelo Codex).
 
 ### Passo 4. Contas
 
