@@ -1,0 +1,134 @@
+# Checklist funcional do Zé
+
+Cada coisa do Zé, área por área, com base no painel. Uma área só fica **Pronta** quando cada item
+foi usado de verdade (não só nos testes automáticos) e o conceito está claro em uma frase
+(`docs/conceitos.md`). Trabalhamos uma área por vez, até fechar, antes de abrir a próxima.
+
+Legenda: ✅ usado de verdade e funciona · 🟡 só nos testes automáticos · ❌ defeito ou lacuna
+conhecida · ⬜ ainda não verificado.
+
+Última revisão: 13/10/2026.
+
+## 1. Voz e comunicação
+
+Conceito: o canal da conversa. Não guarda nada, só leva e traz.
+
+- ✅ "Ei Zé" no microfone do PC (Ativação: "Ei Zé")
+- ⬜ Só o botão (Ativação: só o botão)
+- ✅ Falar (segurar para falar)
+- ✅ Ao vivo no PC (conversa contínua até desconectar)
+- ✅ Voz pelo celular (navegador, WebSocket), em casa e no 4G
+- ✅ Reconexão sozinha da voz do celular após queda de rede
+- ⬜ Escuta: Sempre / Com a janela aberta
+- ⬜ Modo de fala: Silencioso, Avisos, Mãos livres (e o atalho Alt+M)
+- 🟡 Regras de fala (ADR 0027): manchete, uma repetição, sem duplicados
+- ⬜ Voz rápida (conversa simples sem o cérebro) e o botão Testar
+
+## 2. Cérebro e contas
+
+Conceito: quem entende os pedidos com ação e usa as ferramentas do Zé.
+
+- ✅ Cérebro Claude pela assinatura
+- ⬜ Cérebro Codex
+- ⬜ Chave de API da Anthropic (Testar conexão)
+- ⬜ Contas: adicionar, usar, trocar quando a conta bate o limite
+
+## 3. Memória
+
+Conceito: o que o Zé sabe. Curta (fatos aprovados, em toda conversa) e longa (conversas, linha do
+tempo, notas do dia, ai-memory, buscadas quando precisa).
+
+- ⬜ Adicionar e remover em "Sobre você" e "Sobre a máquina e o Zé"
+- ⬜ "Zé, lembra que…" grava na memória curta
+- ⬜ Memória longa: "o que conversamos ontem?" acha a conversa
+- ❌ Sugestões que o Zé aprende sozinho (memória e skill) não aparecem no painel: só por voz.
+  Hoje há sugestão esperando e a página diz "Vazia".
+
+## 4. Skills
+
+Conceito: um procedimento do jeito do usuário que o Zé (ou uma sessão) lê antes de agir. Um fato é
+memória, não skill.
+
+- ⬜ Nova skill pelo painel; editar, ligar/desligar, excluir
+- ⬜ "Zé, transforma isso numa skill" (com aprovação falada)
+- ⬜ O Zé lê a skill antes de uma tarefa que ela cobre
+- 🟡 Sessões no terminal recebem as skills (corrigido em 13/10/2026)
+- 🟡 Curadoria: sem uso há 30 dias, vai para o arquivo
+- ❌ As skills que a pessoa já tem nos agentes (`~/.claude/skills`, `~/.codex/skills`) não
+  aparecem nem valem para o Zé. Falta decidir: importar, mostrar ou ignorar.
+
+## 5. Sessões
+
+Conceito: um agente de código com uma pasta e a sua conversa. Cada pedido é uma tarefa.
+
+- ✅ Criar sessão (pasta existente), Claude, no terminal
+- ⬜ Projeto novo
+- ⬜ Sessão Codex
+- ⬜ Anexos, Arquivos (explorador), Mencionar
+- ⬜ Cópia isolada (git worktree) numa sessão comum
+- ✅ Aviso de fim de sessão e de aprovação pedida
+- ⬜ Pedido por voz a uma sessão ("manda a sessão X rodar os testes")
+- 🟡 No máximo 3 trabalhando
+- ⬜ Trocar de conta no meio, quando a conta bate o limite
+
+## 6. Foco
+
+Conceito: no que **você** está. No máximo três frentes ativas, cada uma com o próximo passo.
+
+- ⬜ "Comecei…" cria a frente; próximo passo; Pausar, Retomar, Concluir
+- ⬜ Virar frente (a partir de uma sessão ou conversa)
+- ⬜ "Onde eu estava?" e o bom dia com o Foco
+
+## 7. Automações
+
+Conceito: o que roda sozinho, e quando. Lembrete (só fala) ou rotina (faz).
+
+- ⬜ "Me lembra amanhã às nove de…" cria e o Zé avisa na hora
+- ⬜ Rotina (pergunta ao Zé ou manda tarefa a uma sessão)
+- ⬜ Ligar e desligar no painel
+
+## 8. Conectores
+
+Conceito: a porta do Zé para outros sistemas, por MCP. Encanamento, não um conceito de uso.
+
+- ⬜ Adicionar local e remoto; guardar segredo
+- ⬜ Ferramentas: ver, e para cada uma livre, com aprovação ou bloqueada
+- ⬜ Aplicar agora (o cérebro passa a usar)
+
+## 9. Acesso pelo celular
+
+Conceito: o Zé no navegador do celular, em casa ou fora, com senha e autenticador.
+
+- ✅ Senha, código do autenticador, bloqueio por tentativas
+- ✅ Túnel (Cloudflare) com QR; endereço novo a cada subida
+- ✅ Aviso de aparelho novo; lista de aparelhos; desconectar
+- ⬜ Ícone na tela inicial (PWA)
+- ❌ A seção "Rede privada (Tailscale)" continua no painel, mas o caminho escolhido é o túnel.
+  Decidir: tirar ou deixar como alternativa documentada.
+
+## 10. Imersão
+
+- ✅ Holograma no PC; desliga ao sair da tela
+- ⬜ Mãos (Barehands) movendo a tela
+- ⬜ Holograma no celular reagindo à conversa
+
+## 11. Atividade
+
+- ✅ Execuções, negadas, falhas, não entendi, pedidos; filtros
+- ✅ Registro técnico
+- 🟡 Reinício sem falsas falhas (corrigido em 13/10/2026)
+
+## 12. Autodesenvolvimento
+
+- ✅ Estado de manutenção em laranja; entrar e sair pelo painel
+- ✅ Diagnosticar, propor, implementar na cópia
+- ✅ Aplicar, volta automática, descartar, conflito
+- 🟡 Aplicar espera as outras sessões; só do próprio PC
+- ⬜ Pedido por voz no modo manutenção
+
+## 13. Perfil, configuração inicial e painel
+
+- ⬜ Configuração inicial do zero (perfil, acesso ao Claude, reconhecimento de fala)
+- ✅ Perfil: nome, sobre você, fuso
+- ⬜ Painel no celular (menu, sessões, holograma)
+- 🟡 Painel recarrega sozinho depois de um reinício
