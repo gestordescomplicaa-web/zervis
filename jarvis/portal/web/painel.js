@@ -497,7 +497,7 @@ function prepararAcesso(cfg) {
 // O modelo do cérebro, da mesma lista das sessões; o atual entra mesmo se não estiver nela.
 function seletorModelo(a) {
   const lista = a.modelos || [];
-  const atual = lista.find((m) => m.id === a.modelo || (a.modelo || "").includes(m.id))?.id || a.modelo || "";
+  const atual = lista.find((m) => m.id === a.modelo || m.id.includes(`-${a.modelo}-`))?.id || a.modelo || "";
   const opcoes = [...(lista.some((m) => m.id === atual) || !atual ? [] : [{ id: atual, nome: atual }]), ...lista];
   if (!opcoes.length) return `<p class="nota">Modelo: padrão da conta</p>`;
   return `<label>Modelo<select data-mudar="cerebro-modelo">${opcoes.map((m) => `<option value="${esc(m.id)}" ${m.id === atual ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
@@ -1209,8 +1209,11 @@ const MUDAR = {
   skill: async (el) => { await api("skill/ligar", { nome: el.dataset.nome, ligada: el.checked }); toast(el.checked ? "Ligada." : "Desligada."); await recarregar(); },
   "via-ligada": () => {},
   "cerebro-modelo": async (el) => {
-    const c = await api("cerebro/modelo", { agente: acessoTela.cerebro, modelo: el.value });
-    acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos; desenharAcesso(); toast(c.aviso);
+    el.disabled = true; toast("Testando o modelo…");
+    try {
+      const c = await api("cerebro/modelo", { agente: acessoTela.cerebro, modelo: el.value });
+      acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos; toast(c.aviso);
+    } finally { desenharAcesso(); } // recusado: volta a mostrar o modelo em uso
   },
 
 };

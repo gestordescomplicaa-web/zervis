@@ -3,7 +3,7 @@
 O Codex guarda na pasta de cada conta a lista do que aquele plano oferece (`models_cache.json`:
 modelo, nome, os níveis de esforço e o padrão); o Zé lê essa lista, sem lista fixa no código.
 Conta que ainda não rodou o Codex não tem a lista: fica só o padrão da conta. O Claude Code aceita
-os apelidos `opus`, `sonnet` e `haiku`, que apontam para a versão mais nova de cada um.
+o identificador exato de cada modelo (com a versão), que a lista abaixo mostra pelo nome.
 """
 
 import json
@@ -11,10 +11,13 @@ from typing import Any
 
 from jarvis.cerebro.contas import Conta
 
+# Com a versão no nome e o identificador exato: "Opus" sozinho não diz qual modelo está
+# respondendo (13/10/2026). Atualizar aqui quando sair uma versão nova.
 CLAUDE = [
-    {"id": "opus", "nome": "Opus", "esforcos": [], "padrao": ""},
-    {"id": "sonnet", "nome": "Sonnet", "esforcos": [], "padrao": ""},
-    {"id": "haiku", "nome": "Haiku", "esforcos": [], "padrao": ""},
+    {"id": "claude-fable-5-1", "nome": "Fable 5.1", "esforcos": [], "padrao": ""},
+    {"id": "claude-opus-5-5", "nome": "Opus 5.5", "esforcos": [], "padrao": ""},
+    {"id": "claude-sonnet-5-5", "nome": "Sonnet 5.5", "esforcos": [], "padrao": ""},
+    {"id": "claude-haiku-4-5-20251001", "nome": "Haiku 4.5", "esforcos": [], "padrao": ""},
 ]
 ESFORCOS = {
     "low": "Baixo",

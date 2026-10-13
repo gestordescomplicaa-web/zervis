@@ -1971,6 +1971,24 @@ class Nucleo:
         nome = catalogo.OPCOES[id_].nome
         return f"Pronto, agora quem responde é o {nome}, com o {self.modelos()[id_]}."
 
+    def _testar_modelo(self, modelo: str) -> str | None:
+        """Uma pergunta mínima ao modelo antes de trocar: a conta pode não ter acesso a ele (o
+        Fable 5.1 pede créditos de uso fora da assinatura, 13/10/2026). None se respondeu."""
+        try:
+            futuro = asyncio.run_coroutine_threadsafe(
+                revisao.perguntar_ao_modelo(
+                    "Responda só: ok", modelo, DADOS / "cerebro", 0, "Responda em uma palavra."
+                ),
+                self.ponte.laco,
+            )
+            futuro.result(timeout=40)
+        except Exception as erro:
+            log.warning("cérebro: %s recusado no teste: %s", modelo, erro)
+            if "credit" in str(erro).lower():
+                return "Este modelo exige créditos de uso nesta conta."
+            return "Este modelo não respondeu nesta conta."
+        return None
+
     def mudar_modelo_do_cerebro(self, agente: str, modelo: str) -> str:
         """O modelo do cérebro escolhido no painel: vale na hora, se o agente for o atual, e
         depois de reiniciar."""
@@ -1978,6 +1996,8 @@ class Nucleo:
             raise ValueError("Agente desconhecido.")
         if modelo not in {m["id"] for m in modelos_dos_agentes.do_cerebro(agente)}:
             raise ValueError("Modelo indisponível para esta conta.")
+        if agente == "claude" and (recusa := self._testar_modelo(modelo)):
+            raise ValueError(recusa)
         escolhas = catalogo.ler_modelos(self.modelos_escolhidos) | {agente: modelo}
         catalogo.aplicar_modelos(self.cfg, escolhas)
         catalogo.gravar_modelos(self.modelos_escolhidos, escolhas)

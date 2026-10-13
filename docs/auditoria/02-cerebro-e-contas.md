@@ -19,6 +19,9 @@ usam a conta em uso de cada agente.
    configuração). **Corrigido em 13/10/2026:** Modelos → Cérebro → Modelo, com a mesma lista das
    sessões (Claude: Opus, Sonnet, Haiku; Codex: os modelos do plano da conta). Vale na hora e
    depois de reiniciar (`<estado>/cerebro-modelos.json`).
+   Os nomes levam a versão (Opus 5.5, Sonnet 5.5, Haiku 4.5, Fable 5.1) e o identificador exato
+   do modelo, também nas sessões. Antes de trocar, o Zé testa o modelo: o Fable 5.1 pede
+   créditos de uso fora da assinatura, e a escolha é recusada com essa razão, sem quebrar nada.
 2. **"Voz rápida" parecia uma quarta coisa.** Ela é um atalho do cérebro, não voz. **Corrigido:**
    chama-se **Respostas rápidas** e fica logo abaixo do Cérebro.
 
@@ -26,9 +29,10 @@ usam a conta em uso de cada agente.
 
 ### Passo 1. Escolher o modelo do cérebro
 
-- **Como:** Modelos → Cérebro → Modelo → Opus. Depois, "Ei Zé, me lembra daqui a um minuto de
+- **Como:** Modelos → Cérebro → Modelo → Opus 5.5 (e, para ver a recusa, Fable 5.1). Depois, "Ei Zé, me lembra daqui a um minuto de
   beber água".
-- **Esperado:** aviso "Modelo do cérebro: Opus."; o pedido funciona, e o registro mostra o Opus.
+- **Esperado:** "Modelo do cérebro: Opus 5.5."; o pedido funciona, e o registro mostra o Opus 5.5.
+  O Fable 5.1, sem créditos de uso, é recusado e o modelo em uso continua.
 - **Resultado:** ⬜
 
 ### Passo 2. Cérebro Codex
