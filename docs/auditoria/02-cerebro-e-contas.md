@@ -50,14 +50,15 @@ usam a conta em uso de cada agente.
 
 - **Como:** Modelos → Cérebro → Codex; escolher um modelo; fazer um pedido com ação.
 - **Esperado:** o Codex responde e age; voltar para Claude funciona.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. O Codex atendeu os pedidos e a troca de volta para o Claude
+  funcionou; as Respostas rápidas também passaram a usar o Codex (GPT-6-Luna).
 
 ### Passo 2b. Cérebro pelo OmniRoute
 
 - **Como:** Modelos → Cérebro → OmniRoute; colar o endereço e a chave do OmniRoute; Salvar;
   Testar conexão; escolher um modelo da lista; fazer um pedido com ação.
 - **Esperado:** "Conectado: N modelos."; o cérebro troca para o OmniRoute e o pedido funciona.
-- **Resultado:** ⬜
+- **Resultado:** ⬜ pendente (a pessoa vai recuperar a chave do OmniRoute).
 
 ### Passo 3. Respostas rápidas
 
