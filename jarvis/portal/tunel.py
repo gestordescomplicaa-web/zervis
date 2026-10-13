@@ -19,6 +19,7 @@ import logging
 import platform
 import re
 import shutil
+import signal
 import subprocess
 import threading
 import urllib.request
@@ -51,6 +52,7 @@ PASTA = lugares.DADOS / "cloudflared" / VERSAO
 ESCOLHA = lugares.CONFIG / "tunel.json"
 ENDERECO = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 ESPERA_S = (2.0, 5.0, 15.0, 30.0, 60.0)
+ENCERRADO = frozenset({0, -signal.SIGTERM, -signal.SIGINT})
 
 
 def binario(pasta: Path = PASTA) -> Path | None:
@@ -145,10 +147,18 @@ class Tunel:
                 log.info("túnel: pronto em %s", self.endereco)
                 self.ao_endereco(self.endereco)
         processo.wait()
-        log.warning("túnel: o cloudflared saiu")
         if processo is not self.processo:  # parado ou trocado de propósito
             return
-        atividade.PADRAO.registrar("falha", "O túnel do acesso de fora caiu")
+        if processo.returncode in ENCERRADO:
+            # Término pedido de fora (o serviço parando: o systemd encerra todos os processos
+            # juntos), não uma queda: sem falha na atividade e sem subir de novo.
+            log.info("túnel: o cloudflared foi encerrado (código %s)", processo.returncode)
+            self.endereco = ""
+            return
+        log.warning("túnel: o cloudflared saiu (código %s)", processo.returncode)
+        atividade.PADRAO.registrar(
+            "falha", "O túnel do acesso de fora caiu", origem="sistema", codigo=processo.returncode
+        )
         antigo, self.endereco = self.endereco, ""
         if antigo and self.ao_cair is not None:
             self.ao_cair(antigo)

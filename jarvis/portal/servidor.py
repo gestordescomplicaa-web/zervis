@@ -365,6 +365,8 @@ class Portal:
             def _responder(self, fazer: Callable[[], Any]) -> None:
                 try:
                     self._json(200, fazer())
+                except (BrokenPipeError, ConnectionResetError):
+                    return  # a página saiu antes da resposta (trocou de tela, fechou): não é falha
                 except PedidoInvalido as erro:
                     self._json(400, {"erro": str(erro)})
                 except Exception:

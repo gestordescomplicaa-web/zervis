@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Revisão do painel: as sessões no terminal (Claude e Codex) passam a receber as skills do
+  usuário, como a página promete. Reiniciar o Zé não registra mais "o túnel caiu" nem erros de
+  conexão do painel; o diagnóstico ignora o encerramento normal do agente.
 - Segurança: aplicar ou reiniciar o Zé só do próprio PC. A voz do celular e o texto digitado não
   aplicam, e a zona protegida nunca entra pela voz, só pelo painel com a revisão marcada.
 - Manutenção é um estado do Zé (ADR 0028): liga por voz ou no Autodesenvolvimento, deixa o

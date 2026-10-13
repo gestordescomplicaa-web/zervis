@@ -633,7 +633,13 @@ class Sessoes:
         self._lidos[id_] = self.eventos(id_).stat().st_size
         try:
             terminal = Terminal(
-                comando_terminal(s, pedido, self.eventos(id_), self._contexto(id_, contexto)),
+                comando_terminal(
+                    s,
+                    pedido,
+                    self.eventos(id_),
+                    self._contexto(id_, contexto),
+                    regras_de_skills(self.skills),
+                ),
                 s.onde,
                 ambiente_da_conta(s),
                 ao_sair=lambda codigo: self._terminal_saiu(id_, codigo),
@@ -947,15 +953,11 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
             return PermissionResultDeny(message="Nesta oficina o agente não delega.")
         return PermissionResultAllow()
 
-    regras = REGRAS
+    extra, pasta_skills = regras_de_skills(sessoes.skills)
+    regras = REGRAS + extra
     pastas_extras: list[str | Path] = [sessoes.pasta_de_anexos(s.id)]
-    if sessoes.skills is not None and sessoes.skills.listar():
-        regras += (
-            "\nO usuário tem skills: procedimentos do jeito dele. Antes de uma tarefa que uma "
-            f"delas cobre, leia {sessoes.skills.pasta}/<nome>/SKILL.md e siga.\n"
-            + sessoes.skills.catalogo()
-        )
-        pastas_extras.append(sessoes.skills.pasta)
+    if pasta_skills is not None:
+        pastas_extras.append(pasta_skills)
     opcoes = ClaudeAgentOptions(
         system_prompt={"type": "preset", "preset": "claude_code", "append": regras},
         cwd=str(s.onde),
@@ -1228,16 +1230,36 @@ def conversa_claude_existe(s: Sessao) -> bool:
     return any((onde / "projects").glob(f"*/{s.sdk_sessao}.jsonl"))
 
 
+def regras_de_skills(skills: Any) -> tuple[str, Path | None]:
+    """O que as sessões recebem das skills do usuário: o aviso com o catálogo e a pasta para ler
+    (vazio sem skills). O mesmo para o terminal e para o agente sem tela."""
+    if skills is None or not skills.listar():
+        return "", None
+    texto = (
+        "\nO usuário tem skills: procedimentos do jeito dele. Antes de uma tarefa que uma "
+        f"delas cobre, leia {skills.pasta}/<nome>/SKILL.md e siga.\n" + skills.catalogo()
+    )
+    return texto, Path(skills.pasta)
+
+
 def comando_terminal(
-    s: Sessao, pedido: str, eventos: Path, contexto: Path | None = None
+    s: Sessao,
+    pedido: str,
+    eventos: Path,
+    contexto: Path | None = None,
+    skills: tuple[str, Path | None] = ("", None),
 ) -> list[str]:
     """O agente interativo da sessão: retoma a conversa nativa e conta ao Zé o que acontece.
-    `contexto` (a passagem) entra sem virar pedido."""
+    `contexto` (a passagem) entra sem virar pedido; `skills`, de `regras_de_skills`."""
+    extra, pasta_skills = skills
     if s.motor == "codex":
         avisar = ["sh", "-c", 'printf "%s\\n" "$1" >> "$0"', str(eventos)]  # + o JSON do Codex
         cmd = ["codex", "-c", f"notify={json.dumps(avisar)}", "--sandbox", "workspace-write"]
+        texto = extra.strip()
         if contexto is not None:  # conversa nova: instruções do desenvolvedor (TOML aceita JSON)
-            texto = json.loads(contexto.read_text())["hookSpecificOutput"]["additionalContext"]
+            passagem = json.loads(contexto.read_text())["hookSpecificOutput"]["additionalContext"]
+            texto = f"{passagem}\n{texto}".strip()
+        if texto:
             cmd += ["-c", f"developer_instructions={json.dumps(texto)}"]
         if s.modelo:
             cmd += ["-m", s.modelo]
@@ -1266,10 +1288,12 @@ def comando_terminal(
         "--permission-mode",
         "acceptEdits",
         "--append-system-prompt",
-        REGRAS.strip(),
+        (REGRAS + extra).strip(),
         "--settings",
         json.dumps({"hooks": hooks}),
     ]
+    if pasta_skills is not None:  # logo depois de "claude": --add-dir engole o que vier até a
+        cmd[1:1] = ["--add-dir", str(pasta_skills)]  # próxima opção, e o pedido vem no fim
     if s.sdk_sessao:
         cmd += ["--resume", s.sdk_sessao]
     if s.modelo:

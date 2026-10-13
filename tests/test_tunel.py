@@ -85,3 +85,22 @@ def test_binario_da_maquina_tem_preferencia(
     assert tunel.binario(tmp_path) is None
     (tmp_path / "cloudflared").write_text("")
     assert tunel.binario(tmp_path) == tmp_path / "cloudflared"
+
+
+def test_encerrado_de_fora_nao_e_queda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O serviço parando: o systemd encerra o cloudflared junto. Não é falha nem sobe de novo."""
+    from jarvis import atividade
+
+    monkeypatch.setattr(tunel, "ESPERA_S", (0.05,))
+    falhas: list[str] = []
+    monkeypatch.setattr(atividade.PADRAO, "registrar", lambda tipo, *a, **k: falhas.append(tipo))
+    (tmp_path / "n").write_text("1")
+    t = tunel.Tunel(lambda _: None)
+    t.iniciar(8795, _falso(tmp_path))
+    _esperar(lambda: bool(t.endereco))
+    assert t.processo is not None
+    t.processo.terminate()
+    _esperar(lambda: t.endereco == "")
+    time.sleep(0.3)
+    assert falhas == [] and (tmp_path / "n").read_text().strip() == "2"
+    t.parar()

@@ -39,6 +39,11 @@ QUADRO = re.compile(r'File "(?:.*/)?([^/"]+)", line \d+, in (\S+)')
 ENCADEADO = ("During handling", "The above exception")
 
 
+# O que aparece em todo reinício e não é defeito: o agente do cérebro encerrado pelo systemd
+# (código 143 = SIGTERM) junto com o serviço.
+RUIDO = ("exit code 143",)
+
+
 def _sinais(registro: list[str]) -> Iterable[str]:
     """Os erros e avisos do registro, cada traceback como uma linha só: a exceção final e onde
     ela nasceu. Sem isso, todos viravam "Traceback (most recent call last):"."""
@@ -48,7 +53,7 @@ def _sinais(registro: list[str]) -> Iterable[str]:
         linha = linhas[i]
         i += 1
         if linha.strip() != TRACEBACK:
-            if any(m in linha for m in ("ERROR", "WARNING")):
+            if any(m in linha for m in ("ERROR", "WARNING")) and not any(r in linha for r in RUIDO):
                 yield assinatura(linha)
             continue
         excecao, onde, encadeado = "", "", False

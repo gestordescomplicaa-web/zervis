@@ -93,3 +93,11 @@ def test_traceback_agrupa_pela_excecao_final_e_onde_nasceu() -> None:
     assert "- Erro não tratado: KeyError: 'voz' (laco.py, _ouvir): 2 vez(es)" in texto
     assert "- Erro não tratado: RuntimeError: quebrou # vezes (acoes.py, g): 1 vez(es)" in texto
     assert "most recent call last" not in texto and "seguiu" not in texto
+
+
+def test_reinicio_normal_nao_vira_erro() -> None:
+    registro = [
+        "ERROR claude_agent_sdk._internal.query: Fatal error in message reader: Command failed "
+        "with exit code 143 (exit code: 143)",
+    ]
+    assert "Registro técnico" not in diagnostico.montar([], registro)

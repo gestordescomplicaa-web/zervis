@@ -554,6 +554,27 @@ def test_a_passagem_entra_como_contexto_sem_gastar_um_turno(tmp_path: Path) -> N
     assert not any(c.startswith("[Passagem") for c in cmd)
 
 
+def test_sessoes_no_terminal_recebem_as_skills_do_usuario(tmp_path: Path) -> None:
+    from jarvis.habilidades.skills import Skills
+    from jarvis.oficina.sessoes import comando_terminal, regras_de_skills
+
+    skills = Skills(tmp_path / "skills")
+    assert regras_de_skills(skills) == ("", None)  # sem skills, nada muda
+    (tmp_path / "skills/deploy").mkdir(parents=True)
+    (tmp_path / "skills/deploy/SKILL.md").write_text(
+        "---\nname: deploy\ndescription: Como publicar o site\n---\n\nPasso a passo.\n"
+    )
+    regras = regras_de_skills(skills)
+    eventos = tmp_path / "eventos.jsonl"
+    cmd = comando_terminal(
+        Sessao("s1", "Loja", str(tmp_path), "claude"), "faz", eventos, None, regras
+    )
+    assert cmd[1:3] == ["--add-dir", str(tmp_path / "skills")] and cmd[-1] == "faz"
+    assert "Como publicar o site" in cmd[cmd.index("--append-system-prompt") + 1]
+    cmd = comando_terminal(Sessao("s2", "Loja", str(tmp_path), "codex"), "", eventos, None, regras)
+    assert any(c.startswith("developer_instructions=") and "deploy" in c for c in cmd)
+
+
 def test_passagem_sem_as_notas_do_ze(tmp_path: Path, raiz: Path) -> None:
     sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
     s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "claude")
