@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Diagnóstico de uso: o túnel do acesso de fora sobe de novo sozinho quando cai e revoga o
+  endereço antigo; a voz do navegador reconecta após queda de rede e separa "desligou" de "caiu";
+  o modo imersivo guarda a própria saída e o vigia mostra o código de saída, sem chamar de queda
+  a saída ordenada; escuta vazia fecha com o bip em vez de "não entendi"; o relatório agrupa cada
+  erro não tratado pela exceção final e onde ela nasceu.
 - Regras de fala (ADR 0027): aviso falado em no máximo 30 palavras, com o resto na tela; o fim
   da sessão de melhorias é uma frase; aviso cortado volta uma vez só; o mesmo aviso não se repete
   em 2 minutos.
