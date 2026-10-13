@@ -28,7 +28,9 @@ PADRAO: dict[str, dict[str, Any]] = {
     },
     # conversa_s: quanto tempo a conversa espera a próxima pergunta antes de encerrar sozinha.
     # registrar_texto: diagnóstico; põe o que foi transcrito no log. Desligado por padrão.
+    # pausar_midia: enquanto o Zé ouve ou fala, pausa vídeo e música (MPRIS) e depois retoma.
     "escuta": {
+        "pausar_midia": True,
         "fim_silencio_s": 3.0,
         "limiar_vad": 0.35,
         "conversa_s": 8.0,

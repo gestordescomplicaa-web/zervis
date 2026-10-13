@@ -130,3 +130,7 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
    deixavam o microfone aberto 20 s, mandando o áudio da sala ao reconhecimento. Corrigido em
    parte: sem fala nos primeiros 6 s, a escuta fecha. Falta a causa: o som do computador chegando
    ao microfone (vazamento do fone ou falta de cancelamento de eco). Em investigação.
+   Medido: um tom tocado no fone aparece 54 dB acima do ruído no microfone (o fone vaza). Feito:
+   **o Zé tem a vez** — enquanto ouve, pensa ou fala, vídeo e música pausam (MPRIS) e voltam
+   depois; e o som que disparou cada chamado fica guardado (os 10 últimos, só no PC) para achar a
+   causa das ativações sozinhas. A decidir: cancelamento de eco (muda a saída padrão do sistema).

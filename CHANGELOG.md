@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- O Zé tem a vez: enquanto ouve, pensa ou fala, vídeo e música (navegador e players) pausam e
+  voltam depois. Chamado sem ninguém falar depois fecha a escuta em 6 s.
 - "Repete" (ou "não entendi", "fala de novo") repete a última fala do Zé inteira, na hora.
 - Central de avisos (ADR 0029): o Zé narra as sessões em vez de ler a resposta delas ("A sessão
   Loja terminou. Ela corrigiu o login."), com um toque antes; aprovação e falha passam na frente;

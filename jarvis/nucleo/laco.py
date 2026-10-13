@@ -80,6 +80,7 @@ from jarvis.rosto.painel import Painel
 from jarvis.rosto.quadro import Quadro
 from jarvis.rosto.teclado import Teclado
 from jarvis.sistema import catalogo as catalogo_sistema
+from jarvis.sistema.midia import Midia
 from jarvis.sistema.politica import Sistema
 from jarvis.sistema.vigia import Eventos, Vigia
 from jarvis.transporte import servidor_livekit
@@ -256,6 +257,7 @@ class Nucleo:
         self._turno_atual: str | None = None
         self._turno_cerebro: tuple[int, str | None] = (0, None)
         self._digitado_em: float | None = None
+        self.midia = Midia()  # vídeo e música pausam enquanto o Zé ouve ou fala
         self._antes_do_chamado: collections.deque[bytes] = collections.deque(maxlen=38)  # ~3 s
         self._ouvindo_desde = 0.0  # quando começou a ouvir, e se já ouviu voz desde então
         self._ouviu_voz = False
@@ -1580,6 +1582,8 @@ class Nucleo:
                 if not self.maquina.em_conversa:
                     self._fim_da_conversa()
                 self._sair_da_fila()
+            if getattr(self, "cfg", {}).get("escuta", {}).get("pausar_midia", True):
+                self._dar_a_vez(antes, depois)
             if depois is e.Estado.OUVINDO and antes is not e.Estado.OUVINDO:
                 self._ouvindo_desde, self._ouviu_voz = time.monotonic(), False
             if depois is e.Estado.OUVINDO and antes is e.Estado.FALANDO:
@@ -1635,6 +1639,18 @@ class Nucleo:
                 velho.unlink(missing_ok=True)
         except OSError as erro:
             log.warning("chamado: %s", erro)
+
+    def _dar_a_vez(self, antes: e.Estado, depois: e.Estado) -> None:
+        """Saiu de ATIVO (ouvir, pensar, falar): a mídia pausa; voltou a ATIVO: retoma. Só com o
+        microfone do PC: a voz do celular não precisa calar o computador."""
+        midia: Midia | None = getattr(self, "midia", None)
+        if midia is None:
+            return
+        local = getattr(self, "_fonte", None) is None
+        if antes is e.Estado.ATIVO and depois is not e.Estado.INATIVO and local:
+            threading.Thread(target=midia.pausar, daemon=True).start()
+        elif depois in (e.Estado.ATIVO, e.Estado.INATIVO) and midia.pausados:
+            threading.Thread(target=midia.retomar, daemon=True).start()
 
     def _ninguem_falou(self) -> bool:
         """Chamado sem ninguém falar depois (um vídeo, um ruído): fecha em poucos segundos, em
