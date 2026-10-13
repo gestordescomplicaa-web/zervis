@@ -27,14 +27,17 @@ traz. Três escolhas: Ativação, Escuta e Modo de fala.
 - 🟡 Regras de fala (ADR 0027): uma repetição e sem duplicados, só nos testes automáticos
 - Em aberto: cancelamento de eco (decidir com o uso); latência da conversa simples (~3 s)
 
-## 2. Cérebro e contas
+## 2. Cérebro e contas — **Pronta** (13/10/2026, `docs/auditoria/02-cerebro-e-contas.md`)
 
-Conceito: quem entende os pedidos com ação e usa as ferramentas do Zé.
+Conceito: o cérebro é o Zé em si (entende, decide, usa as ferramentas do Zé), com as Respostas
+rápidas como atalho para conversa simples; as sessões de código são outra coisa (área 5).
 
-- ✅ Cérebro Claude pela assinatura
-- ⬜ Cérebro Codex
-- ⬜ Chave de API da Anthropic (Testar conexão)
-- ⬜ Contas: adicionar, usar, trocar quando a conta bate o limite
+- ✅ Cérebro Claude e Codex; o modelo se escolhe no painel, com a versão (Opus 5.5, Sonnet 5.5…)
+- ✅ Teste do modelo antes de trocar (o Fable 5.1 sem créditos é recusado com a razão)
+- ✅ Respostas rápidas: ligar e desligar, motor e modelo da lista
+- ✅ Contas: trocar a conta em uso atualiza os modelos
+- ⬜ OmniRoute (endereço e chave de quem usa): feito, falta o teste com uma chave real
+- Não se aplica aqui: chave de API da Anthropic (a pessoa usa a assinatura)
 
 ## 3. Memória
 

@@ -81,4 +81,7 @@ usam a conta em uso de cada agente.
 
 - **Como:** só se a pessoa usar chave em vez do login; Testar conexão.
 - **Esperado:** "Chave válida." e o cérebro funcionando por ela.
-- **Resultado:** ⬜
+- **Resultado:** não se aplica (a pessoa usa a assinatura).
+
+**Área fechada em 13/10/2026**, com o passo 2b (OmniRoute) pendente até a pessoa recuperar a
+chave dele.
