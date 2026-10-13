@@ -1,6 +1,7 @@
 """Ponto de entrada do `jarvisd`."""
 
 import logging
+import os
 import signal
 import sys
 import threading
@@ -27,6 +28,9 @@ def rodar() -> int:
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     log = logging.getLogger("jarvisd")
+    if os.environ.get("INVOCATION_ID"):  # TESTE DA VOLTA AUTOMÁTICA: o serviço não sobe
+        log.error("teste da volta automática: saindo de propósito")
+        return 1
     from jarvis import caminhos
 
     caminhos.completar()  # o serviço sobe com PATH mínimo: acha os agentes nas pastas pessoais
