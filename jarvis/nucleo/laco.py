@@ -1582,7 +1582,7 @@ class Nucleo:
                 if not self.maquina.em_conversa:
                     self._fim_da_conversa()
                 self._sair_da_fila()
-            if getattr(self, "cfg", {}).get("escuta", {}).get("pausar_midia", True):
+            if self._pausar_midia():
                 self._dar_a_vez(antes, depois)
             if depois is e.Estado.OUVINDO and antes is not e.Estado.OUVINDO:
                 self._ouvindo_desde, self._ouviu_voz = time.monotonic(), False
@@ -1639,6 +1639,10 @@ class Nucleo:
                 velho.unlink(missing_ok=True)
         except OSError as erro:
             log.warning("chamado: %s", erro)
+
+    def _pausar_midia(self) -> bool:
+        cfg: Config | None = getattr(self, "cfg", None)
+        return cfg is None or bool(cfg["escuta"].get("pausar_midia", True))
 
     def _dar_a_vez(self, antes: e.Estado, depois: e.Estado) -> None:
         """Saiu de ATIVO (ouvir, pensar, falar): a mídia pausa; voltou a ATIVO: retoma. Só com o

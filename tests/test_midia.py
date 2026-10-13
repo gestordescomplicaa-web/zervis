@@ -53,3 +53,12 @@ def test_sem_busctl_nao_quebra() -> None:
     m.pausar()
     m.retomar()
     assert m.pausados == []
+
+
+def test_a_escolha_vem_da_config_de_verdade(tmp_path: Any) -> None:
+    """13/10/2026: a primeira versão tratou a Config como dict e derrubou o Zé ao subir."""
+    from jarvis.config import carregar
+    from jarvis.nucleo.laco import Nucleo
+
+    n = SimpleNamespace(cfg=carregar(tmp_path / "nao-existe.toml"))
+    assert Nucleo._pausar_midia(n) is True  # type: ignore[arg-type]
