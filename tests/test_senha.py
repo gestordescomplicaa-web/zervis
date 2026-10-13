@@ -133,3 +133,10 @@ def test_proprio_pc_entra_direto_e_outro_aparelho_passa_pela_senha(portal: Porta
 
 def test_nome_nao_permitido_continua_barrado(portal: Portal) -> None:
     assert _pedir(portal, "GET", "/entrar", "malicioso.com")[0] == 403
+
+
+def test_pedido_repassado_por_tunel_nunca_vale_como_o_proprio_pc(portal: Portal) -> None:
+    local = f"127.0.0.1:{portal.porta}"
+    for cabecalho in ("Cf-Connecting-Ip", "X-Forwarded-For"):
+        status, cab, _ = _pedir(portal, "GET", "/", local, cab={cabecalho: "203.0.113.9"})
+        assert status == 303 and cab["Location"] == "/entrar"

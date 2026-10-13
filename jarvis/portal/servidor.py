@@ -40,6 +40,7 @@ TIPOS = {
     ".js": "text/javascript",
     ".svg": "image/svg+xml",
     ".webp": "image/webp",
+    ".webmanifest": "application/manifest+json",
 }
 ARQUIVOS = {
     "/": "index.html",
@@ -54,9 +55,20 @@ ARQUIVOS = {
     "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
     # O microfone do navegador em pedaços de 80 ms a 16 kHz (voz pelo HTTPS do painel).
     "/voz-captura.js": "voz-captura.js",
+    # O ícone na tela inicial do celular (instalar como app).
+    "/manifest.webmanifest": "manifest.webmanifest",
+    "/icones/ze-192.webp": "icones/ze-192.webp",
+    "/icones/ze-512.webp": "icones/ze-512.webp",
 }
 
-LIVRES = {"/painel.css", "/ze.webp"}  # o que a tela "Entrar" usa, antes de entrar
+# O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).
+LIVRES = {
+    "/painel.css",
+    "/ze.webp",
+    "/manifest.webmanifest",
+    "/icones/ze-192.webp",
+    "/icones/ze-512.webp",
+}
 COOKIE = "ze_acesso"
 
 Leitura = Callable[[], Any]
@@ -158,9 +170,14 @@ class Portal:
                         return valor
                 return ""
 
+            def _repassado(self) -> bool:
+                """Chegou por um túnel ou proxy (Cloudflare, Tailscale): é outro aparelho, mesmo
+                que o `Host` diga o endereço local."""
+                return any(self.headers.get(c) for c in ("Cf-Connecting-Ip", "X-Forwarded-For"))
+
             def _entrou(self) -> bool:
                 """O próprio PC entra direto; outro aparelho, só com o cookie da senha."""
-                if self.headers.get("Host", "") in portal.locais:
+                if self.headers.get("Host", "") in portal.locais and not self._repassado():
                     return True
                 return portal.acesso is not None and portal.acesso.valido(self._cookie())
 

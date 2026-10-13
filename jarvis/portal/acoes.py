@@ -140,6 +140,8 @@ class Acoes:
             "acesso/senha": self.definir_senha,
             "acesso/encerrar": self.encerrar_acessos,
             "remoto/desativar": self.desativar_remoto,
+            "tunel/ativar": self.ativar_tunel,
+            "tunel/desativar": self.desativar_tunel,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
             "chave/apagar": self.apagar_chave,
@@ -241,6 +243,16 @@ class Acoes:
         except remoto.RemotoErro as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {**self.remoto(), "aviso": aviso}
+
+    def ativar_tunel(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            aviso = self.n.ativar_tunel()
+        except remoto.RemotoErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.remoto(), "aviso": aviso}
+
+    def desativar_tunel(self, dados: dict[str, Any]) -> dict[str, Any]:
+        return {**self.remoto(), "aviso": self.n.desativar_tunel()}
 
     def desativar_remoto(self, dados: dict[str, Any]) -> dict[str, Any]:
         return {**self.remoto(), "aviso": self.n.desativar_remoto()}

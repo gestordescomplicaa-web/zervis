@@ -26,8 +26,10 @@ from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import numpy as np
+import segno
 
 from jarvis import lugares, usuario
 from jarvis.automacoes import executor
@@ -61,10 +63,11 @@ from jarvis.nucleo import estados as e
 from jarvis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from jarvis.oficina.manutencao import Manutencao
 from jarvis.oficina.sessoes import FOCO_S, Sessao, SessaoErro, Sessoes
-from jarvis.portal import remoto
+from jarvis.portal import remoto, tunel
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.senha import Acesso
 from jarvis.portal.servidor import Portal
+from jarvis.preparar import PrepararErro
 from jarvis.presenca import hyprland
 from jarvis.presenca import modo as modo_escuta
 from jarvis.presenca.hyprland import MonitorPresenca
@@ -428,6 +431,7 @@ class Nucleo:
         )
         self.portal: Portal | None = None
         self.acesso = Acesso()  # a senha de quem entra de outro aparelho
+        self.tunel = tunel.Tunel(self._tunel_pronto)  # acesso de qualquer lugar (Cloudflare)
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
             self.portal = Portal(
@@ -1062,7 +1066,59 @@ class Nucleo:
 
     def estado_remoto(self) -> dict[str, Any]:
         rede = remoto.rede(self.portal.porta if self.portal else 0).para_tela()
-        return {**rede, "senha": self.acesso.tem_senha, "aparelhos": self.acesso.aparelhos()}
+        endereco = self.tunel.endereco
+        qr = (
+            segno.make(endereco, error="m").svg_inline(
+                scale=5, dark="#070c11", light="#ffffff", border=2
+            )
+            if endereco
+            else ""
+        )
+        return {
+            **rede,
+            "senha": self.acesso.tem_senha,
+            "aparelhos": self.acesso.aparelhos(),
+            "tunel": {"ativo": self.tunel.ativo, "endereco": endereco, "qr": qr},
+        }
+
+    def _tunel_pronto(self, endereco: str) -> None:
+        if self.portal is not None:
+            self.portal.permitir(urlsplit(endereco).netloc)
+
+    def _subir_tunel(self) -> None:
+        if self.portal is None:
+            return
+        try:
+            self.tunel.iniciar(self.portal.porta, tunel.garantir())
+        except (PrepararErro, OSError) as erro:
+            log.warning("túnel não subiu: %s", erro)
+
+    def ativar_tunel(self) -> str:
+        """Acesso de qualquer lugar, sem nada no celular além do navegador (Cloudflare)."""
+        if self.portal is None:
+            raise remoto.RemotoErro("Painel indisponível.")
+        if not self.acesso.tem_senha:
+            raise remoto.RemotoErro("Defina a senha de acesso antes de ativar.")
+        try:
+            self.tunel.iniciar(self.portal.porta, tunel.garantir())
+        except (PrepararErro, OSError) as erro:
+            raise remoto.RemotoErro("Não consegui baixar o túnel do Cloudflare.") from erro
+        tunel.escolher(True)
+        for _ in range(150):  # o endereço sai em alguns segundos
+            if self.tunel.endereco or not self.tunel.ativo:
+                break
+            time.sleep(0.1)
+        if not self.tunel.endereco:
+            raise remoto.RemotoErro("O túnel não respondeu. Tente de novo em instantes.")
+        return "Acesso de qualquer lugar ativo."
+
+    def desativar_tunel(self) -> str:
+        tunel.escolher(False)
+        endereco = self.tunel.endereco
+        self.tunel.parar()
+        if self.portal is not None and endereco:
+            self.portal.proibir(urlsplit(endereco).netloc)
+        return "Acesso de qualquer lugar desativado."
 
     def ativar_remoto(self) -> str:
         """Publica o painel e a sala de voz na rede privada (Voz > Acesso pelo celular)."""
@@ -1793,6 +1849,8 @@ class Nucleo:
     def rodar(self) -> None:
         self.memoria_longa.iniciar()
         self._ligar_voz_remota()
+        if tunel.escolhido():  # o acesso de qualquer lugar continua depois de um reinício
+            threading.Thread(target=self._subir_tunel, name="tunel", daemon=True).start()
         self.imersivo.iniciar()
         if self.presenca is not None:
             self.presenca.start()
@@ -1863,6 +1921,7 @@ class Nucleo:
         if self.remota is not None:
             self.remota.parar()
         self.livekit.parar()
+        self.tunel.parar()
         self.memoria_longa.parar()
         self.transcricoes.shutdown(wait=False, cancel_futures=True)
         self._pasta_exec.shutdown(wait=False, cancel_futures=True)

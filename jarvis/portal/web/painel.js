@@ -216,12 +216,14 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Ativação</h2><span class="etiqueta bom">${e.chamado === "botao" ? "Só o botão" : "“Ei Zé”"}</span></div>
         ${sub("Como chamar o Zé no microfone deste computador. O botão vale nos dois.")}
         <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Ouve só com o botão apertado. A voz conectada continua ao vivo."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
-      ${cartao("", `<div class="cabeca"><h2>Acesso pelo celular</h2>${etiqueta(r.ativo, "Ativo", r.conectado ? "Inativo" : "Não configurado")}</div>
-        ${sub(r.ativo ? `Abra no celular: <span class="mono">${esc(r.endereco)}</span>` : r.conectado ? "Painel e voz pela rede privada do Tailscale." : "Requer o Tailscale neste computador e no celular, na mesma conta.")}
+      ${cartao("", `<div class="cabeca"><h2>Acesso pelo celular</h2>${etiqueta(!!r.tunel.endereco, "Ativo", "Inativo")}</div>
+        ${sub("O Zé no navegador do celular, em casa ou fora, protegido pela senha de acesso.")}
         <div class="linha"><label>Senha de acesso${r.senha ? " (definida)" : ""}<input id="senha-acesso" type="password" autocomplete="new-password" placeholder="${r.senha ? "Nova senha" : "Mínimo de 8 caracteres"}"></label>${botao("Salvar senha", "senha-salvar")}${r.aparelhos ? botao(`Encerrar acessos (${r.aparelhos})`, "acessos-encerrar", "", "discreta") : ""}</div>
-        ${r.ativo && !r.senha ? '<p class="aviso">Sem senha definida, nenhum aparelho consegue entrar.</p>' : ""}
-        ${r.ativo && r.firewall ? `<p class="aviso">O firewall bloqueia a voz pelo celular. Libere no terminal: <span class="mono">${esc(r.firewall)}</span></p>` : ""}
-        ${r.conectado ? `<div class="linha">${r.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.endereco)}"`) + botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar", "", "principal")}</div>` : ""}`)}
+        ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">O endereço muda quando o Zé reinicia.</p></div></div>` : ""}
+        <div class="linha">${r.tunel.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.tunel.endereco)}"`) + botao("Desativar", "tunel-desativar", "", "discreta") : botao("Ativar", "tunel-ativar", "", "principal")}</div>
+        ${r.instalado ? `<h3>Rede privada (Tailscale)</h3>${sub(r.ativo ? `Ativa em <span class="mono">${esc(r.endereco)}</span>` : "Alternativa ao túnel, para quem já usa o Tailscale.")}
+          ${r.ativo && r.firewall ? `<p class="aviso">Libere a voz no firewall: <span class="mono">${esc(r.firewall)}</span></p>` : ""}
+          ${r.conectado ? `<div class="linha">${r.ativo ? botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar")}</div>` : ""}` : ""}`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;
@@ -1165,6 +1167,8 @@ const ACOES = {
   "remoto-desativar": async (b) => { const r = await ocupado(b, () => api("remoto/desativar", {})); toast(r.aviso); await recarregar(); },
   "senha-salvar": async (b) => { const r = await ocupado(b, () => api("acesso/senha", { senha: $("senha-acesso").value })); toast(r.aviso); await recarregar(); },
   "acessos-encerrar": (b) => confirmar(b, "Encerrar o acesso de todos os aparelhos?", async () => { const r = await api("acesso/encerrar", {}); toast(r.aviso); await recarregar(); }),
+  "tunel-ativar": async (b) => { const r = await ocupado(b, () => api("tunel/ativar", {})); toast(r.aviso); await recarregar(); },
+  "tunel-desativar": async (b) => { const r = await ocupado(b, () => api("tunel/desativar", {})); toast(r.aviso); await recarregar(); },
   "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
   "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },

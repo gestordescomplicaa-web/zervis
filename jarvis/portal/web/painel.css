@@ -433,3 +433,6 @@ details.alternativa .nota a { margin-right:6px; }
 .entrar .marca { justify-content: center; }
 .entrar .cartao { display: grid; gap: 14px; }
 .entrar .acao { width: 100%; }
+.acesso-qr { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.acesso-qr svg { flex: none; border-radius: 10px; }
+.acesso-qr p { margin: 4px 0; }

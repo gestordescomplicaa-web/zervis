@@ -110,3 +110,8 @@
 - Voz pelo HTTPS (ADR 0024): o Ao vivo do navegador manda o microfone e recebe a voz do Zé pelo
   WebSocket do próprio painel, sem WebRTC: onde o painel abre, a voz funciona, sem porta nem firewall.
   A tela fica ligada durante o ao vivo. O painel não carrega mais o cliente do LiveKit.
+- Acesso de qualquer lugar sem nada no celular (roteiro, passo 4.3): em Voz > Acesso pelo celular,
+  Ativar abre um túnel do Cloudflare que o Zé baixa e confere, e mostra o endereço e um QR; o
+  celular abre no navegador, entra com a senha e fala pelo ao vivo, em casa ou no 4G. O painel vira
+  app instalável (ícone na tela inicial). Pedido que chega por túnel ou proxy nunca vale como o
+  próprio PC. O Tailscale fica como alternativa, só se estiver instalado.
