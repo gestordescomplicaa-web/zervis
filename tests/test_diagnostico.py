@@ -60,3 +60,36 @@ def test_assinatura_ignora_o_que_muda_a_cada_vez() -> None:
 def test_pedido_mantem_o_agente_longe_dos_dados_da_pessoa() -> None:
     assert "não leia as pastas de dados do Zé" in diagnostico.PEDIDO
     assert "~/.local/state/zervis" in diagnostico.PEDIDO
+
+
+def test_traceback_agrupa_pela_excecao_final_e_onde_nasceu() -> None:
+    p = "2026-10-13T11:24:19-03:00 pc python[12]: "
+
+    def erro(n: int, msg: str) -> list[str]:
+        return [
+            f"{p}Traceback (most recent call last):",
+            f'{p}  File "/usr/lib/python3/threading.py", line {n}, in run',
+            f"{p}    self._target()",
+            f'{p}  File "/home/x/jarvis/nucleo/laco.py", line {n + 9}, in _ouvir',
+            f"{p}    texto = fila.get()",
+            f"{p}{msg}",
+        ]
+
+    registro = [
+        *erro(10, "KeyError: 'voz'"),
+        *erro(20, "KeyError: 'voz'"),
+        f"{p}Traceback (most recent call last):",
+        f'{p}  File "/a/b/portal/acoes.py", line 3, in f',
+        f"{p}ValueError: x",
+        f"{p}",
+        f"{p}During handling of the above exception, another exception occurred:",
+        f"{p}",
+        f"{p}Traceback (most recent call last):",
+        f'{p}  File "/a/b/portal/acoes.py", line 5, in g',
+        f"{p}RuntimeError: quebrou 3 vezes",
+        f"{p}INFO jarvis: seguiu",
+    ]
+    texto = diagnostico.montar([], registro, agora=1.0)
+    assert "- Erro não tratado: KeyError: 'voz' (laco.py, _ouvir): 2 vez(es)" in texto
+    assert "- Erro não tratado: RuntimeError: quebrou # vezes (acoes.py, g): 1 vez(es)" in texto
+    assert "most recent call last" not in texto and "seguiu" not in texto

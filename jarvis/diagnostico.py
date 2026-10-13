@@ -24,12 +24,52 @@ ROTULOS = {
 }
 # Prefixo do journal ("2026-10-13T11:24:19-03:00 omarchy python[123]: ") e o que muda a cada vez.
 PREFIXO = re.compile(r"^\S+\s+\S+\s+[\w.-]+\[\d+\]:\s*")
+CABECA = re.compile(r"^\S+\s+\S+\s+[\w.-]+\[\d+\]: ?")  # o mesmo, sem comer o recuo
 VARIAVEL = re.compile(r"\b\d[\d:.,/-]*\b|0x[0-9a-f]+|https?://\S+|/[\w./-]{8,}")
 
 
 def assinatura(linha: str) -> str:
     """A mesma mensagem com números, endereços e caminhos trocados por #: o que se repete."""
     return VARIAVEL.sub("#", PREFIXO.sub("", linha)).strip()[:160]
+
+
+TRACEBACK = "Traceback (most recent call last):"
+EXCECAO = re.compile(r"^[A-Za-z_][\w.]*(: .*)?$")
+QUADRO = re.compile(r'File "(?:.*/)?([^/"]+)", line \d+, in (\S+)')
+ENCADEADO = ("During handling", "The above exception")
+
+
+def _sinais(registro: list[str]) -> Iterable[str]:
+    """Os erros e avisos do registro, cada traceback como uma linha só: a exceção final e onde
+    ela nasceu. Sem isso, todos viravam "Traceback (most recent call last):"."""
+    linhas = [CABECA.sub("", x).rstrip() for x in registro]
+    i = 0
+    while i < len(linhas):
+        linha = linhas[i]
+        i += 1
+        if linha.strip() != TRACEBACK:
+            if any(m in linha for m in ("ERROR", "WARNING")):
+                yield assinatura(linha)
+            continue
+        excecao, onde, encadeado = "", "", False
+        while i < len(linhas):
+            atual = linhas[i]
+            if atual.startswith((" ", "\t")) or not atual.strip():
+                if achado := QUADRO.search(atual):
+                    onde = f"{achado[1]}, {achado[2]}"
+            elif atual.startswith(ENCADEADO):
+                encadeado = True
+            elif atual.strip() == TRACEBACK:
+                if not encadeado:
+                    break  # outro erro, não a continuação deste
+                encadeado = False
+            elif EXCECAO.match(atual):
+                excecao = atual
+            else:
+                break
+            i += 1
+        sufixo = f" ({onde})" if onde else ""
+        yield f"Erro não tratado: {assinatura(excecao)}{sufixo}" if excecao else TRACEBACK
 
 
 def _exemplos(itens: Iterable[dict[str, Any]], campo: str, maximo: int = 3) -> list[str]:
@@ -93,9 +133,7 @@ def montar(
         Counter(f"{i.get('titulo')} ({i.get('motivo', '')})" for i in negadas),
         {},
     )
-    erros = Counter(
-        assinatura(x) for x in registro if any(m in x for m in ("ERROR", "WARNING", "Traceback"))
-    )
+    erros = Counter(_sinais(registro))
     secao("Registro técnico (erros e avisos que mais se repetem)", erros, {})
     if len(linhas) == 3:
         linhas.extend(["", "Nada a corrigir nos últimos dias."])
