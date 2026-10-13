@@ -1132,8 +1132,10 @@ FOCO_S = 30 * 60  # depois disso, "a sessão" sem nome não aponta mais para a �
 
 
 def _simples(texto: str) -> str:
+    """Sem acento, maiúscula nem pontuação: "Universo - Teste" e "universo teste" são iguais."""
     sem_acento = unicodedata.normalize("NFKD", texto.casefold())
-    return " ".join("".join(c for c in sem_acento if not unicodedata.combining(c)).split())
+    letras = "".join(c for c in sem_acento if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^\w]+", " ", letras).split())
 
 
 def _acao_do_claude(e: dict[str, Any]) -> str:

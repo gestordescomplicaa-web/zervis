@@ -654,3 +654,10 @@ def test_conversa_do_claude_existe_pela_pasta_da_conta(
     (tmp_path / "conta/projects/-qualquer-pasta").mkdir(parents=True)
     (tmp_path / "conta/projects/-qualquer-pasta/c9.jsonl").write_text("{}\n")
     assert conversa_claude_existe(s)
+
+
+def test_acha_a_sessao_pelo_nome_sem_pontuacao(tmp_path: Path, raiz: Path) -> None:
+    """13/10/2026: "universo teste" não achava a sessão "Universo - Teste"."""
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Universo - Teste", str(raiz / "projetos/loja"), "claude")
+    assert sessoes.achar("universo teste").id == s.id

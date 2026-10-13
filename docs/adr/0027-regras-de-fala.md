@@ -19,7 +19,8 @@ recomeçava do início: quatro leituras completas.
 3. **Uma repetição no máximo.** Um aviso que começou a ser falado e foi cortado volta uma vez; se
    for cortado de novo, fica só na tela. Aviso retido porque o Zé estava ocupado (sem ter começado)
    espera sem contar.
-4. **Sem duplicados.** O mesmo aviso não se repete em 2 minutos (salvo a volta do cortado).
+4. **Sem duplicados.** O mesmo aviso não se repete em 2 minutos depois de falado (salvo a volta
+   do cortado); um aviso que esperou o Zé ficar livre não conta como falado.
 5. Os modos de fala do ADR 0018 continuam valendo antes de tudo isto; respostas a pedidos da
    pessoa não mudam.
 

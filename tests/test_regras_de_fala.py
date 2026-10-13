@@ -65,11 +65,22 @@ def test_o_mesmo_aviso_nao_se_repete_em_dois_minutos(monkeypatch: pytest.MonkeyP
     agora = [1000.0]
     monkeypatch.setattr("jarvis.nucleo.laco.time.monotonic", lambda: agora[0])
     n = _Nucleo()
-    assert _regra(n, "A sessão Loja está esperando sua aprovação.")
+    texto = "A sessão Loja está esperando sua aprovação."
+    assert _regra(n, texto)
+    n._avisos_dados[texto] = agora[0]  # a fala começou (o Falar marca)
     agora[0] += 30
-    assert _regra(n, "A sessão Loja está esperando sua aprovação.") is None
+    assert _regra(n, texto) is None
     agora[0] += modo.REPETIR_S
-    assert _regra(n, "A sessão Loja está esperando sua aprovação.")
+    assert _regra(n, texto)
+
+
+def test_aviso_que_esperou_o_ze_ficar_livre_nao_conta_como_repetido() -> None:
+    """13/10/2026: o fim da sessão chegou com o Zé ocupado, esperou e foi descartado."""
+    n = _Nucleo()
+    texto = "A sessão Universo - Teste terminou."
+    assert _regra(n, texto)  # chegou, mas o Zé estava ocupado
+    _reter(n, texto)  # ficou guardado sem começar a falar
+    assert _regra(n, texto) == texto  # a volta é dita
 
 
 def test_aviso_longo_fica_inteiro_na_tela_uma_vez() -> None:

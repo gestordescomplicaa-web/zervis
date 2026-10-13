@@ -57,7 +57,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
   Universo - Teste explicar em cinco parágrafos o que é o projeto." Ficar em outra tela.
 - **Esperado:** ao terminar, o Zé fala "A sessão Universo - Teste terminou." e um resumo de no
   máximo umas 30 palavras, com "O resto está na tela."; não repete.
-- **Resultado:** ⬜
+- **Resultado:** ❌ 13/10/2026. Dois defeitos (achados 4 e 5): o aviso de fim não foi falado e a
+  sessão não foi achada pelo nome na primeira tentativa. Corrigidos; para refazer.
 
 ### Passo 4. Escuta: Com a janela aberta
 
@@ -109,3 +110,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
    Silencioso, o que o Zé não falou aparece também como notificação em qualquer página.
 3. **Lembrete que já tocou aparece como "desligado"** em Automações, como se a pessoa o tivesse
    desligado. É da área 7 (Automações); anotado para lá.
+4. **O aviso de fim de sessão não foi falado.** Chegou com o Zé ainda respondendo, esperou e, ao
+   sair, a regra "sem duplicados" (ADR 0027) o tomou por repetido: contava o aviso como dado na
+   chegada, não na fala. Corrigido: só conta depois de começar a ser falado.
+5. **"Universo teste" não achava a sessão "Universo - Teste".** O nome era comparado com a
+   pontuação. Corrigido: sem acento, maiúscula nem pontuação.

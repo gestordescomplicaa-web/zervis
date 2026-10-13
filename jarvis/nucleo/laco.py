@@ -643,6 +643,7 @@ class Nucleo:
                     # aviso chegava sem contexto (teste de 06/10/2026).
                     self.avisos_falados.append((time.monotonic(), texto))
                     self._comecados[texto] = self._comecados.get(texto, 0) + 1
+                    self._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
                 self.teclado.falou(texto)
                 if texto == e.NAO_ENTENDI:
                     self.evidencias.registrar("nao_entendi", self._ouvido)
@@ -1501,15 +1502,15 @@ class Nucleo:
         texto = aviso.texto
         cortado = texto in self._cortados
         self._cortados.discard(texto)
-        if not cortado and agora - self._avisos_dados.get(texto, -1e9) < modo_fala.REPETIR_S:
+        curto = modo_fala.manchete(texto)
+        # Repetido é o que já foi falado há pouco (marcado quando a fala começa): um aviso que
+        # esperou o Zé ficar livre não conta como dado.
+        if not cortado and agora - self._avisos_dados.get(curto, -1e9) < modo_fala.REPETIR_S:
             log.info("aviso repetido em menos de 2 minutos: só na tela")
             return None
-        self._avisos_dados[texto] = agora
-        if (curto := modo_fala.manchete(texto)) != texto:
+        if curto != texto:
             if texto not in self._na_tela:
                 self._na_linha("aviso", texto)  # o texto inteiro fica na tela
-            # A volta de um aviso cortado chega já curta: o corte conta pela manchete.
-            self._avisos_dados[curto] = agora
             return e.Aviso(curto, escutar=aviso.escutar)
         return aviso
 
