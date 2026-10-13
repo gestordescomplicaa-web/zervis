@@ -126,3 +126,6 @@
 - Painel no celular refeito: barra no topo com o menu, menu deslizante com os grupos e a voz numa barra
   fixa embaixo (Fala, Ao vivo, Falar); em Sessões, uma coisa por vez (a lista ou a sessão, com
   "Sessões" para voltar) e o cabeçalho da sessão em duas linhas. Holograma em resolução cheia.
+- Depois de reiniciar o computador, o Zé dizia que o Codex não estava instalado: o serviço sobe com
+  um PATH mínimo, antes de a sessão carregar o ambiente da pessoa. Agora o Zé completa o PATH na
+  subida com o do shell de login e as pastas pessoais de programas (~/.local/bin, mise, npm, bun…).

@@ -27,6 +27,9 @@ def rodar() -> int:
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     log = logging.getLogger("jarvisd")
+    from jarvis import caminhos
+
+    caminhos.completar()  # o serviço sobe com PATH mínimo: acha os agentes nas pastas pessoais
     try:
         cfg = carregar()
     except ConfigInvalida as erro:
