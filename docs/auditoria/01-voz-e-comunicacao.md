@@ -40,8 +40,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 
 ### Passo 2. Modo Silencioso e o atalho Alt+M
 
-- **Como:** com o painel em foco, Alt+M até "Silencioso". Dizer "Ei Zé". Depois, no painel, pedir
-  por texto um lembrete para daqui a um minuto.
+- **Como:** ainda em Avisos, "Ei Zé, me lembra daqui a dois minutos de alongar." Com o painel em
+  foco, Alt+M até "Silencioso". Dizer "Ei Zé" e esperar o lembrete.
 - **Esperado:** Alt+M troca o modo e o menu lateral mostra "Fala: Silencioso"; o "Ei Zé" não
   responde; o lembrete chega só na tela, sem voz.
 - **Resultado:** ⬜
@@ -93,4 +93,6 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 
 ## Achados
 
-(anotados durante os passos)
+1. **Sem conversa por texto no painel.** O conceito Conversa diz "por voz ou texto", mas o painel
+   não tem onde escrever ao Zé (o texto só existe pelo teclado no terminal do serviço). Afeta quem
+   está em silêncio ou sem microfone. A decidir ao fim desta auditoria.
