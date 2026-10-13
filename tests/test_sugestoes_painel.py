@@ -15,7 +15,7 @@ from jarvis.portal.servidor import PedidoInvalido
 
 def _acoes(tmp_path: Path) -> Acoes:
     a = Acoes.__new__(Acoes)
-    a.n = SimpleNamespace(  # type: ignore[assignment]
+    a.n = SimpleNamespace(
         memoria=Memoria(tmp_path / "memoria", {"usuario": 2000, "jarvis": 2000}),
         skills=Skills(tmp_path / "skills"),
         pendencias=revisao.Pendencias(tmp_path / "pendencias.json"),
