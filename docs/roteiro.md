@@ -45,12 +45,24 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    (ADR 0021): a escolha "Escuta" (Sempre ou Com a janela aberta), o Hyprland detectado e o
    microfone padrão do sistema quando o MIC FX não existe. Falta: o OmniRoute opcional e o painel
    instalável como aplicativo (manifesto), que também serve à voz remota.
-4. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
-   junto), o ai-memory e o imersivo; README de quem chega.
-5. **SQLite** para os registros, com migração automática dos arquivos.
-6. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
+4. **O Zé pelo celular e por outros aparelhos** (plano da voz remota; decisão de 12/10/2026). Dois
+   públicos: quem desenvolve testando no próprio PC e quem instala do zero (Linux, PC ou VPS).
+   Seguro por padrão: instalado, o Zé só responde no próprio PC; abrir para outros aparelhos é
+   escolha explícita e sempre com senha. Em ordem:
+   1. **Senha de acesso** para todo aparelho que não seja o próprio PC (uma vez por aparelho,
+      "lembrar este aparelho"); senha mais código (TOTP) na internet aberta (VPS).
+   2. **Áudio dentro do HTTPS** (WebSocket) como padrão do navegador, e a tela ligada durante o
+      Ao vivo: se o painel abre, a voz funciona (Wi-Fi, 4G, Tailscale ou domínio), sem porta nem
+      firewall. O LiveKit fica para o próprio PC e para telefone.
+   3. **Assistente "Acesso pelo celular"** com dois modos: rede privada (Tailscale, já com as
+      verificações de certificado e firewall) e domínio próprio (VPS, certificado automático).
+   4. **Modelo de segurança dos canais** (ADR) antes de app ou ligação: nível de confiança por
+      canal; nada destrutivo por telefone; o Zé liga para a pessoa, não o contrário.
+5. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
+   junto), o ai-memory e o imersivo; README de quem chega; o modo servidor (VPS).
+6. **SQLite** para os registros, com migração automática dos arquivos.
+7. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
    falam do Orca e do JARVIS: visão, conceitos, reaproveitamento, plano da oficina).
-7. **VPS** sem tela e sem microfone; depois o celular.
 
 ## Em aberto
 
