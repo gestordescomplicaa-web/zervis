@@ -40,7 +40,7 @@ from jarvis.automacoes.jobs import Job, Jobs
 from jarvis.avisos import central
 from jarvis.avisos import modo as modo_fala
 from jarvis.avisos.fila import PRIORIDADES, Fila
-from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, rapido
+from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, omniroute, rapido
 from jarvis.cerebro import modelos as modelos_dos_agentes
 from jarvis.cerebro.base import Brain, Ponte
 from jarvis.cerebro.baterias import Bateria, da_assinatura, do_omniroute
@@ -471,6 +471,8 @@ class Nucleo:
         self.escolhido = ESTADO / "cerebro"
         self.modelos_escolhidos = ESTADO / "cerebro-modelos.json"
         catalogo.aplicar_modelos(cfg, catalogo.ler_modelos(self.modelos_escolhidos))
+        if endereco_omni := omniroute.ler_endereco():  # o OmniRoute configurado no painel
+            cfg["cerebro"]["omniroute_endereco"] = endereco_omni
         cerebro, self.provedor = catalogo.montar(
             cfg, DADOS / "cerebro", catalogo.ler_escolha(self.escolhido), self.extras
         )
@@ -1995,16 +1997,20 @@ class Nucleo:
         if agente not in catalogo.CHAVE_DO_MODELO:
             raise ValueError("Agente desconhecido.")
         padrao = agente == "codex" and not modelo  # o Codex pode usar o padrão da conta
-        if not padrao and modelo not in {m["id"] for m in modelos_dos_agentes.do_cerebro(agente)}:
+        if agente == "omniroute":
+            if modelo not in {*self.modelos_do_omniroute(), self.cfg["cerebro"]["omniroute_rota"]}:
+                raise ValueError("Modelo indisponível neste OmniRoute.")
+        elif not padrao and modelo not in {m["id"] for m in modelos_dos_agentes.do_cerebro(agente)}:
             raise ValueError("Modelo indisponível para esta conta.")
         if agente == "claude" and (recusa := self._testar_modelo(modelo)):
             raise ValueError(recusa)
         escolhas = catalogo.ler_modelos(self.modelos_escolhidos) | {agente: modelo}
         catalogo.aplicar_modelos(self.cfg, escolhas)
         catalogo.gravar_modelos(self.modelos_escolhidos, escolhas)
-        if agente == self.provedor:
+        provedor = catalogo.PROVEDOR_DO_AGENTE.get(agente, agente)
+        if provedor == self.provedor:
             try:
-                novo = catalogo.com_reserva(agente, self.cfg, DADOS / "cerebro", self.extras)
+                novo = catalogo.com_reserva(provedor, self.cfg, DADOS / "cerebro", self.extras)
             except catalogo.Indisponivel as motivo:
                 return f"Modelo guardado, mas o cérebro não trocou: {motivo}."
             cerebro = self._com_via_rapida(novo)
@@ -2012,7 +2018,43 @@ class Nucleo:
             self.cerebro = cerebro
         log.info("cérebro: modelo do %s agora é %s", agente, modelo)
         nomes = {m["id"]: m["nome"] for m in modelos_dos_agentes.do_cerebro(agente)}
-        return f"Modelo do cérebro: {nomes.get(modelo, 'padrão da conta')}."
+        return f"Modelo do cérebro: {nomes.get(modelo, modelo or 'padrão da conta')}."
+
+    def _chave_do_omniroute(self) -> str | None:
+        return omniroute.ler_chave(self.cfg.caminho("cerebro", "omniroute_arquivo_chave"))
+
+    def modelos_do_omniroute(self) -> list[str]:
+        """Os modelos do OmniRoute configurado; vazio sem chave ou sem conexão."""
+        chave = self._chave_do_omniroute()
+        if not chave:
+            return []
+        try:
+            return omniroute.modelos(self.cfg["cerebro"]["omniroute_endereco"], chave)
+        except omniroute.OmniErro:
+            return []
+
+    def configurar_omniroute(self, endereco: str, chave: str | None) -> str:
+        """O endereço e a chave do OmniRoute de quem usa, salvos no painel (só no próprio PC)."""
+        omniroute.gravar_conexao(
+            endereco, chave, self.cfg.caminho("cerebro", "omniroute_arquivo_chave")
+        )
+        self.cfg["cerebro"]["omniroute_endereco"] = omniroute.validar_endereco(endereco)
+        if self.provedor == "auto":
+            with contextlib.suppress(catalogo.Indisponivel):
+                novo = catalogo.com_reserva("auto", self.cfg, DADOS / "cerebro", self.extras)
+                self.cerebro = self._com_via_rapida(novo)
+                self.ponte.trocar(self.cerebro)
+        return "OmniRoute salvo."
+
+    def testar_omniroute(self) -> tuple[bool, str]:
+        chave = self._chave_do_omniroute()
+        if not chave:
+            return False, "Chave não configurada."
+        try:
+            n = len(omniroute.modelos(self.cfg["cerebro"]["omniroute_endereco"], chave))
+        except omniroute.OmniErro as erro:
+            return False, str(erro)
+        return True, f"Conectado: {n} modelos."
 
     def modelos(self) -> dict[str, str]:
         """O modelo de cada opção; o do cérebro ativo é o que respondeu de fato, se já houver."""

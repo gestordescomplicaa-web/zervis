@@ -86,6 +86,12 @@ MOTORES = [
         "detalhe": "Qualquer serviço no formato OpenAI.",
         "modelo": "",
     },
+    {
+        "id": "omniroute",
+        "nome": "OmniRoute",
+        "detalhe": "A conexão do OmniRoute configurada no Cérebro.",
+        "modelo": "",
+    },
 ]
 
 
@@ -93,11 +99,17 @@ MOTORES = [
 AGENTES = [
     {"id": "claude", "nome": "Claude", "disponivel": True},
     {"id": "codex", "nome": "Codex", "disponivel": True},
+    {"id": "omniroute", "nome": "OmniRoute", "disponivel": True},
 ]
 AGENTES_SESSOES = [
     {"id": "claude", "nome": "Claude", "disponivel": True},
     {"id": "codex", "nome": "Codex", "disponivel": True},
 ]
+
+
+def catalogo_provedor(agente: str) -> str:
+    """O agente da tela no catálogo de cérebros: o OmniRoute é a opção "auto"."""
+    return {"omniroute": "auto"}.get(agente, agente)
 
 
 def _latencia_de_hoje(pasta: Path, dia: str) -> list[dict[str, Any]]:
@@ -224,6 +236,7 @@ class Acoes:
             "sessao/excluir": self.excluir_sessao,
             "cerebro/escolher": self.escolher_cerebro,
             "cerebro/modelo": self.modelo_do_cerebro,
+            "omniroute/salvar": self.salvar_omniroute,
         }
 
     def envios(self) -> dict[str, Any]:
@@ -491,6 +504,7 @@ class Acoes:
                     ("plano", modelos.do_cerebro("claude")),
                     ("codex", modelos.do_cerebro("codex")),
                     ("anthropic", modelos.CLAUDE),
+                    ("omniroute", [{"id": r, "nome": r} for r in self.n.modelos_do_omniroute()]),
                 )
             },
             "chaves": {
@@ -499,21 +513,42 @@ class Acoes:
                 )
                 for m in MOTORES
             },
-            "completo": {
-                "provedor": self.n.provedor,
-                "modelo": self.n.cfg["cerebro"][
-                    "modelo_codex" if self.n.provedor == "codex" else "modelo"
-                ],
-                "modelos": [
-                    {"id": m["id"], "nome": m["nome"]} for m in modelos.do_cerebro(self.n.provedor)
-                ]
-                if self.n.provedor in ("claude", "codex")
-                else [],
-            },
+            "completo": self._completo(),
             # Cérebro e sessões de código usam as contas cadastradas (ADR 0020).
             "agentes": AGENTES,
             "sessoes": {"agentes": AGENTES_SESSOES, "total": len(self.n.sessoes.listar())},
         }
+
+    def _completo(self) -> dict[str, Any]:
+        """O cérebro em uso para a tela: o agente, o modelo e a lista de modelos dele."""
+        c, provedor = self.n.cfg["cerebro"], self.n.provedor
+        omni = {
+            "endereco": c["omniroute_endereco"],
+            "tem_chave": bool(self.n._chave_do_omniroute()),
+        }
+        if provedor == "auto":
+            rotas = self.n.modelos_do_omniroute()
+            return {
+                "provedor": "omniroute",
+                "modelo": c["omniroute_rota"],
+                "modelos": [{"id": r, "nome": r} for r in rotas],
+                "omniroute": omni,
+            }
+        lista = modelos.do_cerebro(provedor) if provedor in ("claude", "codex") else []
+        return {
+            "provedor": provedor,
+            "modelo": c["modelo_codex" if provedor == "codex" else "modelo"],
+            "modelos": [{"id": m["id"], "nome": m["nome"]} for m in lista],
+            "omniroute": omni,
+        }
+
+    def salvar_omniroute(self, dados: dict[str, Any]) -> dict[str, Any]:
+        chave = str(dados.get("chave", "")).strip() or None  # vazio: mantém a chave salva
+        try:
+            aviso = self.n.configurar_omniroute(str(dados.get("endereco", "")), chave)
+        except ValueError as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {**self.cerebro(), "aviso": aviso}
 
     def modelo_do_cerebro(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -526,9 +561,9 @@ class Acoes:
 
     def escolher_cerebro(self, dados: dict[str, Any]) -> dict[str, Any]:
         agente = str(dados.get("agente", ""))
-        if agente not in ("claude", "codex"):
+        if agente not in ("claude", "codex", "omniroute"):
             raise PedidoInvalido("Agente desconhecido.")
-        aviso = self.n.trocar_cerebro(agente)
+        aviso = self.n.trocar_cerebro(catalogo_provedor(agente))
         return {**self.cerebro(), "aviso": aviso}
 
     def skills(self) -> list[dict[str, Any]]:
@@ -707,6 +742,9 @@ class Acoes:
 
     def testar_acesso(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Uma pergunta mínima ao provedor escolhido com o acesso salvo."""
+        if self.n.provedor == "auto":
+            ok, mensagem = self.n.testar_omniroute()
+            return {"ok": ok, "mensagem": mensagem}
         if self.n.provedor == "codex":
             from jarvis.cerebro.codex import testar
 

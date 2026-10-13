@@ -4,6 +4,7 @@ import http.client
 import json
 import os
 import stat
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -116,6 +117,8 @@ class NucleoFalso:
         self.cerebro = SimpleNamespace(modelo="claude-sonnet-5-5")
         self.provedor = "claude"
         self.aplicadas = 0
+        self.modelos_do_omniroute: Callable[[], list[str]] = lambda: []
+        self._chave_do_omniroute: Callable[[], str | None] = lambda: None
         self.deepgram: deepgram.Deepgram
         self.modelo_ativacao = SimpleNamespace(treinada=False)
         self.sessoes = SimpleNamespace(listar=lambda: [])

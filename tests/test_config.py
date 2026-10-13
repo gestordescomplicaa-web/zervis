@@ -42,7 +42,8 @@ def test_arquivo_sobrescreve_so_o_que_traz(tmp_path: Path) -> None:
         ('[cerebro]\nreserva = "omniroute"\n', "cerebro.reserva"),
         ("[cerebro]\ntempo_limite_s = 0\n", "positivo"),
         ('[cerebro]\nomniroute_endereco = "http://192.168.0.5:20128"\n', "loopback"),
-        ('[cerebro]\nomniroute_endereco = "https://127.0.0.1:20128"\n', "loopback"),
+        # https vale em qualquer lugar; http, só na própria máquina (a chave não vai aberta)
+        ('[cerebro]\nomniroute_endereco = "http://omniroute.exemplo.com:20128"\n', "loopback"),
         ("versao = 2\n", "versao"),
         ("isto não é toml", "TOML inválido"),
     ],

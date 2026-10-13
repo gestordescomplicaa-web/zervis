@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- OmniRoute no painel: Cérebro → OmniRoute, com o endereço e a chave do OmniRoute de quem usa
+  (local por http ou num servidor por https) e a lista de modelos dele; também nas Respostas rápidas.
 - Respostas rápidas: o modelo vem da lista com a versão (Claude, Codex, Anthropic); o Codex do
   cérebro mostra "Padrão da conta" quando não há modelo escolhido.
 - Modelos: o modelo do cérebro se escolhe no painel (a mesma lista das sessões) e vale na hora;

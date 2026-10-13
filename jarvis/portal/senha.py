@@ -60,6 +60,7 @@ SO_NO_PC = {
     "ze/sessao",
     "ze/diagnosticar",
     "ze/manutencao",
+    "omniroute/salvar",
     "ze/descartar",
 }
 

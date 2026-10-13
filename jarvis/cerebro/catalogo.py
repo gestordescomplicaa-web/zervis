@@ -153,7 +153,8 @@ def ler_escolha(arquivo: Path) -> str | None:
     return escolha if escolha in OPCOES else None
 
 
-CHAVE_DO_MODELO = {"claude": "modelo", "codex": "modelo_codex"}
+CHAVE_DO_MODELO = {"claude": "modelo", "codex": "modelo_codex", "omniroute": "omniroute_rota"}
+PROVEDOR_DO_AGENTE = {"omniroute": "auto"}  # o OmniRoute é a opção "auto" do catálogo
 
 
 def ler_modelos(arquivo: Path) -> dict[str, str]:

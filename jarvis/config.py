@@ -183,6 +183,7 @@ def validar(dados: dict[str, Any], origem: str) -> Config:
         "openai",
         "openrouter",
         "ponte",
+        "omniroute",
     ):
         raise ConfigInvalida(
             f"{origem}: via_rapida.motor deve ser plano, codex, contas, "
@@ -197,9 +198,10 @@ def validar(dados: dict[str, Any], origem: str) -> Config:
     if cerebro["tempo_limite_s"] <= 0:
         raise ConfigInvalida(f"{origem}: cerebro.tempo_limite_s precisa ser positivo")
     endereco = urlsplit(cerebro["omniroute_endereco"])
-    if endereco.scheme != "http" or endereco.hostname not in LOOPBACK:
+    local = endereco.scheme == "http" and endereco.hostname in LOOPBACK
+    if not local and not (endereco.scheme == "https" and endereco.hostname):
         raise ConfigInvalida(
-            f"{origem}: cerebro.omniroute_endereco precisa ser http em loopback (ADR 0008)"
+            f"{origem}: cerebro.omniroute_endereco precisa ser https, ou http em loopback"
         )
     return Config(secoes)
 

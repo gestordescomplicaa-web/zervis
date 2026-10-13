@@ -12,7 +12,7 @@ const ESTADOS = { inativo: "inativo", ativo: "pronto", ouvindo: "ouvindo", pensa
 const ESTADO_SESSAO = { parada: "pronta", trabalhando: "trabalhando", erro: "erro" };
 const estadoSessao = (s) => (s.limite ? "sem créditos" : ESTADO_SESSAO[s.estado] || s.estado);
 const TIPO_AUTOMACAO = { lembrete: "Lembrete", pergunta: "Pergunta ao Zé" };
-const NOME_MOTOR = { contas: "Automático", codex: "Codex", plano: "Claude", openai: "OpenAI API", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
+const NOME_MOTOR = { contas: "Automático", codex: "Codex", plano: "Claude", openai: "OpenAI API", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte", omniroute: "OmniRoute" };
 
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const seg = (ms) => (ms == null ? "—" : (ms / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " s");
@@ -147,8 +147,7 @@ const PAGINAS = {
     modelo = { ...c.via, chaves: c.chaves, listas: c.listas };
     escuta = esc_;
     prepararAcesso(cfg);
-    acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos;
-    acessoTela.cerebro = c.completo.provedor;
+    Object.assign(acessoTela, completo(c));
     agentes = c.agentes;
     const sessoes = c.sessoes.total;
     return `${cabeca("Modelos")}${sub("Um modelo para cada tipo de tarefa.")}
@@ -462,6 +461,7 @@ function desenharChave() {
   const k = modelo.chaves[modelo.motor] || { usa: false };
   if (!k.usa) {
     area.innerHTML = modelo.motor === "contas" ? '<p class="nota">Usa as contas configuradas em Contas.</p>'
+      : modelo.motor === "omniroute" ? '<p class="nota">Usa a conexão do OmniRoute configurada no Cérebro.</p>'
       : contaEmUso(modelo.motor === "codex" ? "codex" : "claude");
     return;
   }
@@ -494,6 +494,8 @@ function prepararAcesso(cfg) {
   acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
 }
 
+const completo = (c) => ({ cerebro: c.completo.provedor, modelo: c.completo.modelo, modelos: c.completo.modelos, omniroute: c.completo.omniroute });
+
 // O modelo das Respostas rápidas: lista com a versão para Claude, Codex e Anthropic; campo livre
 // para os motores com modelos demais (OpenAI, OpenRouter, Ponte).
 function campoModelo(motor, atual) {
@@ -514,10 +516,23 @@ function seletorModelo(a) {
   return `<label>Modelo<select data-mudar="cerebro-modelo">${padrao}${opcoes.map((m) => `<option value="${esc(m.id)}" ${m.id === atual ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
 }
 
+// O cérebro pelo OmniRoute de quem usa: endereço e chave; os modelos vêm do próprio OmniRoute.
+function cartaoOmni(a) {
+  const o = a.omniroute || {}, pronto = o.tem_chave && o.endereco && !a.omniPendente;
+  return `<div class="cabeca"><h2>Cérebro</h2><span class="etiqueta ${pronto ? "bom" : "alerta"}">${pronto ? "Configurado" : "Não configurado"}</span></div>
+    ${sub("Entende os pedidos com ação e usa as ferramentas do Zé.")}${seletorAgente("omniroute")}
+    <div class="linha"><label>Endereço<input id="omni-endereco" class="mono" value="${esc(o.endereco || "")}" placeholder="http://127.0.0.1:20128" autocomplete="off" spellcheck="false"></label>
+      <label>Chave de API<input id="omni-chave" type="password" class="mono" placeholder="${o.tem_chave ? "Salva" : "Chave do OmniRoute"}" autocomplete="off" spellcheck="false"></label></div>
+    <div class="linha">${botao("Salvar", "omni-salvar", "", "principal")}${a.omniPendente ? "" : botao("Testar conexão", "acesso-testar")}</div>
+    ${!a.omniPendente && a.modelos?.length ? seletorModelo(a) : ""}
+    <p class="resultado" id="resultado-acesso"></p>`;
+}
+
 function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
   const a = acessoTela, cerebro = area.dataset.contexto === "cerebro";
+  if (cerebro && a.cerebro === "omniroute") { area.innerHTML = cartaoOmni(a); return; }
   const agente = cerebro && a.cerebro === "codex" ? "codex" : "claude";
   const cs = contasTela.agentes.find((x) => x.id === agente);
   const pronto = agente === "codex" ? Boolean(cs?.contas.find((x) => x.id === cs.em_uso)?.logado) : Boolean(a.metodo);
@@ -1006,9 +1021,19 @@ const recarregar = () => abrir();
 
 const ACOES = {
   "cerebro-escolher": async (b) => {
-    const c = await ocupado(b, () => api("cerebro/escolher", { agente: b.dataset.agente }));
-    acessoTela.cerebro = c.completo.provedor; acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos;
+    const pedido = b.dataset.agente;
+    const c = await ocupado(b, () => api("cerebro/escolher", { agente: pedido }));
+    Object.assign(acessoTela, completo(c));
+    // Sem a conexão, o OmniRoute não sobe: os campos aparecem e a troca sai depois de salvar.
+    if (pedido === "omniroute" && c.completo.provedor !== "omniroute") Object.assign(acessoTela, { cerebro: "omniroute", omniPendente: true });
     desenharAcesso(); toast(c.aviso || "Agente atualizado.");
+  },
+  "omni-salvar": async (b) => {
+    let c = await ocupado(b, () => api("omniroute/salvar", { endereco: $("omni-endereco").value, chave: $("omni-chave").value }));
+    if (acessoTela.omniPendente) c = await api("cerebro/escolher", { agente: "omniroute" });
+    const trocou = c.completo.provedor === "omniroute";
+    Object.assign(acessoTela, completo(c), trocou ? { omniPendente: false } : { cerebro: "omniroute" });
+    desenharAcesso(); mostrar("resultado-acesso", trocou, c.aviso);
   },
   "confirmar-sim": async (b) => { const f = pendentes.get(b.dataset.id); pendentes.delete(b.dataset.id); if (f) await f(); },
   "confirmar-nao": (b) => { const l = b.closest("[data-antes]"); l.innerHTML = l.dataset.antes; delete l.dataset.antes; pendentes.delete(b.dataset.id); },
@@ -1223,7 +1248,7 @@ const MUDAR = {
     el.disabled = true; toast("Testando o modelo…");
     try {
       const c = await api("cerebro/modelo", { agente: acessoTela.cerebro, modelo: el.value });
-      acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos; toast(c.aviso);
+      Object.assign(acessoTela, completo(c)); toast(c.aviso);
     } finally { desenharAcesso(); } // recusado: volta a mostrar o modelo em uso
   },
 

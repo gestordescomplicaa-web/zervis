@@ -29,6 +29,11 @@ usam a conta em uso de cada agente.
    demais para listar) continuam com o campo livre.
 4. **Com o cérebro no Codex, a lista mostrava o primeiro modelo como escolhido**, quando valia o
    padrão da conta. **Corrigido:** opção "Padrão da conta".
+5. **O OmniRoute não aparecia no painel** (o cérebro já sabia usá-lo, só pela configuração).
+   **Feito:** Cérebro → **OmniRoute**, com Endereço e Chave de API do OmniRoute de quem usa (na
+   própria máquina por http, ou num servidor por https), Testar conexão e a lista de modelos vinda
+   do próprio OmniRoute; e o motor **OmniRoute** nas Respostas rápidas, com a mesma conexão.
+   Salvar a conexão vale só no próprio PC.
 
 ## Passos
 
@@ -45,6 +50,13 @@ usam a conta em uso de cada agente.
 
 - **Como:** Modelos → Cérebro → Codex; escolher um modelo; fazer um pedido com ação.
 - **Esperado:** o Codex responde e age; voltar para Claude funciona.
+- **Resultado:** ⬜
+
+### Passo 2b. Cérebro pelo OmniRoute
+
+- **Como:** Modelos → Cérebro → OmniRoute; colar o endereço e a chave do OmniRoute; Salvar;
+  Testar conexão; escolher um modelo da lista; fazer um pedido com ação.
+- **Esperado:** "Conectado: N modelos."; o cérebro troca para o OmniRoute e o pedido funciona.
 - **Resultado:** ⬜
 
 ### Passo 3. Respostas rápidas

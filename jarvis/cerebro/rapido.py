@@ -87,7 +87,7 @@ VARIAVEIS = {
     "anthropic": "ANTHROPIC_API_KEY",
     "ponte": "JARVIS_PONTE_API_KEY",
 }
-MOTORES = {"plano", "codex", "contas", "openai", "openrouter", "anthropic", "ponte"}
+MOTORES = {"plano", "codex", "contas", "openai", "openrouter", "anthropic", "ponte", "omniroute"}
 _FIM = object()
 
 
@@ -644,6 +644,22 @@ def criar_motor(
         if not motores:
             raise MotorErro("Nenhuma conta de agente configurada.")
         return MotorContas(motores)
+    if nome == "omniroute":  # a mesma conexão do cérebro (Modelos → Cérebro → OmniRoute)
+        from jarvis.cerebro import omniroute
+
+        chave_omni = omniroute.ler_chave(lugares.CONFIG / "omniroute.key")
+        if chave_omni is None:
+            log.warning("via rápida: sem a chave do OmniRoute; seguindo só com o cérebro completo")
+            return None
+        base = omniroute.ler_endereco() or "http://127.0.0.1:20128"
+        return MotorOpenAI(
+            "omniroute",
+            f"{base}/v1",
+            chave_omni,
+            modelo,
+            str(via["raciocinio"]),
+            int(via["max_tokens"]),
+        )
     chave = ler_chave(nome, str(via["arquivo_chave"]))
     if chave is None and nome != "ponte":
         log.warning("via rápida: sem a chave do %s; seguindo só com o cérebro completo", nome)
