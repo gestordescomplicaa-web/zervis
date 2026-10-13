@@ -37,7 +37,13 @@ PASTA = lugares.DADOS / "ativacao"
 MODELO = PASTA / "ei_ze.npz"
 MODELOS_ONNX = lugares.DADOS / "modelos"
 CHAMADOS = ["Ei Zé", "Hey Zé"]
-PARECIDAS = ["Zé", "José", "Café", "Pois é", "Ei, você", "Né", "Até", "Ei", "Hey", "Jarvis"]
+PARECIDAS = [
+    "Zé", "José", "Café", "Pois é", "Ei, você", "Né", "Até", "Ei", "Hey", "Jarvis",
+    "Pois é, né", "É isso", "Não é", "Olha só",
+]  # fmt: skip
+# Sons que dispararam o chamado sem ninguém chamar (o Zé guarda os últimos em
+# <estado>/chamados): conferidos e copiados para cá, entram no treino como negativos.
+FALSOS = PASTA / "falsos"
 DIFICEIS = [
     "Zé.", "Ei.", "Hey.", "José.", "Café.", "Pois é.", "Né?", "Até mais.", "É sim.", "Ei, você.",
     "Hey Jarvis.", "Hey Orca.", "Ei, Orca.", "O Zé Ramalho.", "Esse é o José.", "Fé.", "Pé.",
@@ -109,7 +115,7 @@ def gravar(vezes: int = 30) -> Path:
             _salvar(sessao / "positivo" / f"{i:02d}.wav", _gravar(captura, 2.5))
             print(f"chamado {i + 1}/{vezes}: {frase}", flush=True)
         _falar("Agora palavras parecidas, que não podem me acordar.")
-        for i, palavra in enumerate(PARECIDAS):
+        for i, palavra in enumerate(PARECIDAS * 2):  # duas vezes cada: são as que confundem
             _falar(f"{palavra}.")
             _bip()
             _salvar(sessao / "negativo" / f"parecida-{i:02d}.wav", _gravar(captura, 2.0))
@@ -255,6 +261,16 @@ def treinar(destino: Path = MODELO) -> dict[str, Any]:
                 )
     for a in fundo_treino:
         neg.extend(_janelas(a, int(0.1 * TAXA)))
+    # Silêncio e ruído baixo nunca acordam (13/10/2026: disparou em silêncio a -91 dBFS).
+    for nivel in (0.0, 1e-5, 1e-4, 1e-3, 3e-3):
+        for _ in range(40):
+            neg.append((rng.standard_normal(CLIP) * nivel).astype(np.float32))
+    sons_falsos = [_carregar(p) for p in sorted(FALSOS.glob("*.wav"))] if FALSOS.is_dir() else []
+    for x in sons_falsos:
+        for _ in range(8):
+            neg.append(
+                _colocar(x[-CLIP:] * rng.uniform(0.6, 1.4), FIM + int(rng.integers(-1600, 1600)))
+            )
     neg.extend(_negativos_do_cadu(rng))
     neg.extend(fundo() for _ in range(len(neg) // 4))
 
@@ -288,8 +304,10 @@ def treinar(destino: Path = MODELO) -> dict[str, Any]:
         acerto = sum(
             _contar(detector, np.concatenate([silencio, x, silencio])) > 0 for x, _ in separados
         ) / len(separados)
-        falsos = sum(_contar(detector, a) for a in fundo_teste) + sum(
-            _contar(detector, np.concatenate([silencio, x, silencio])) for x in parecidas
+        falsos = (
+            sum(_contar(detector, a) for a in fundo_teste)
+            + sum(_contar(detector, np.concatenate([silencio, x, silencio])) for x in parecidas)
+            + sum(_contar(detector, np.concatenate([silencio, x, silencio])) for x in sons_falsos)
         )
         relatorio[f"limiar_{limiar}"] = {"acerto": round(acerto, 2), "falsos": falsos}
         if falsos == 0 and acerto > 0 and (melhor is None or acerto >= melhor[1]):
