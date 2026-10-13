@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- Memória: as sugestões que o Zé aprende numa conversa aparecem no painel, com Aprovar e Descartar.
 - OmniRoute no painel: Cérebro → OmniRoute, com o endereço e a chave do OmniRoute de quem usa
   (local por http ou num servidor por https) e a lista de modelos dele; também nas Respostas rápidas.
 - Respostas rápidas: o modelo vem da lista com a versão (Claude, Codex, Anthropic); o Codex do

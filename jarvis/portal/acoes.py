@@ -22,6 +22,7 @@ from jarvis.automacoes.jobs import JobErro
 from jarvis.avisos import modo as modo_fala
 from jarvis.cerebro import acesso, conectores, contas, modelos, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
+from jarvis.habilidades import revisao
 from jarvis.habilidades.skills import SkillErro, frente
 from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
@@ -231,6 +232,7 @@ class Acoes:
             "automacao/ativar": self.ativar_automacao,
             "automacao/remover": self.remover_automacao,
             "memoria/mudar": self.mudar_memoria,
+            "sugestao/decidir": self.decidir_sugestao,
             "skill/ligar": self.ligar_skill,
             "skill/excluir": self.excluir_skill,
             "sessao/excluir": self.excluir_sessao,
@@ -594,7 +596,29 @@ class Acoes:
             "usuario": m.entradas("usuario"),
             "jarvis": m.entradas("jarvis"),
             "limites": dict(m.limites),
+            # O que o Zé aprendeu sozinho numa conversa e espera a pessoa (memória e skill).
+            "sugestoes": [revisao.resumo_dict(p) for p in self.n.pendencias.listar()],
         }
+
+    def decidir_sugestao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Aprovar ou descartar uma sugestão pelo painel: o mesmo caminho da voz."""
+        id_, aprovar = str(dados.get("id", "")), bool(dados.get("aprovar"))
+        try:
+            proposta = self.n.pendencias.tirar(id_)
+        except KeyError:
+            raise PedidoInvalido("Sugestão não encontrada.") from None
+        if aprovar:
+            self._chamar(lambda: revisao.aplicar(proposta, self.n.memoria, self.n.skills))
+            self.n.diario.registrar(
+                "aprovada",
+                proposta.resumo,
+                origem=proposta.origem,
+                sugerida=round(proposta.criada),
+                **revisao.alvo_da_proposta(proposta),
+            )
+        else:
+            self.n.diario.registrar("descartada", proposta.resumo, origem=proposta.origem)
+        return {**self.memoria(), "aviso": "Aprovada." if aprovar else "Descartada."}
 
     def automacoes(self) -> list[dict[str, Any]]:
         return [

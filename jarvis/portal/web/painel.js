@@ -127,8 +127,11 @@ const PAGINAS = {
         `<div class="itens">${entradas.map((t) => item("", esc(t), xis("memoria-remover", `data-alvo="${alvo}" data-texto="${esc(t)}"`, "Remover"))).join("") || vazio("Vazia.")}</div>
          <div class="add"><input data-nova="${alvo}" placeholder="Algo para o Zé lembrar sempre" autocomplete="off">${botao("Adicionar", "memoria-adicionar", `data-alvo="${alvo}"`)}</div>`);
     };
+    const sugestoes = m.sugestoes.length ? cartao("Sugestões", `${sub("O que o Zé aprendeu numa conversa e espera a sua aprovação.")}
+      <div class="itens">${m.sugestoes.map((s) => item(s.tipo === "skill" ? "Skill" : "Memória", esc(s.resumo),
+        botao("Aprovar", "sugestao", `data-id="${esc(s.id)}" data-aprovar="1"`, "principal") + botao("Descartar", "sugestao", `data-id="${esc(s.id)}"`, "discreta"))).join("")}</div>`) : "";
     return `${cabeca("Memória")}${sub("O que o Zé sabe em toda conversa. Mudanças valem a partir da próxima conversa.")}
-      ${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}`;
+      ${sugestoes}${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}`;
   },
 
   async skills() {
@@ -1027,6 +1030,7 @@ document.addEventListener("visibilitychange", () => {
 const recarregar = () => abrir();
 
 const ACOES = {
+  sugestao: async (b) => { const r = await ocupado(b, () => api("sugestao/decidir", { id: b.dataset.id, aprovar: !!b.dataset.aprovar })); toast(r.aviso); await recarregar(); },
   "cerebro-escolher": async (b) => {
     const pedido = b.dataset.agente;
     const c = await ocupado(b, () => api("cerebro/escolher", { agente: pedido }));
