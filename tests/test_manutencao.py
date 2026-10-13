@@ -24,12 +24,33 @@ class SessoesFalsas:
     def listar(self) -> list[Sessao]:
         return list(self.criadas)
 
-    def criar(self, nome: str, pasta: str, motor: str = "claude", origem: str = "") -> Sessao:
+    def criar(
+        self,
+        nome: str,
+        pasta: str,
+        motor: str = "claude",
+        origem: str = "",
+        isolada: bool = False,
+    ) -> Sessao:
         s = Sessao(
-            id=f"{len(self.criadas):08x}", nome=nome, pasta=pasta, motor=motor, origem=origem
+            id=f"{len(self.criadas):08x}",
+            nome=nome,
+            pasta=pasta,
+            motor=motor,
+            origem=origem,
+            isolada=isolada,
         )
+        if isolada:  # a cópia isolada de verdade, como as sessões fazem
+            s.branch, s.worktree = f"ze/{s.id}", str(Path(pasta).parent / f"copia-{s.id}")
+            git(Path(pasta), "worktree", "add", "-q", "-b", s.branch, s.worktree, "HEAD")
         self.criadas.append(s)
         return s
+
+    def ler(self, id_: str) -> Sessao:
+        for s in self.criadas:
+            if s.id == id_:
+                return s
+        raise SessaoErro("sessão desconhecida")
 
     def enviar(self, id_: str, texto: str, quem: str = "usuario") -> Sessao:
         if self.ocupada:
@@ -73,7 +94,7 @@ def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) 
     assert m.entrar("claude").startswith("Modo manutenção ligado, com o Claude.")
     sessao = sessoes.criadas[0]
     assert (sessao.nome, sessao.pasta, sessao.origem) == (
-        "Zé · manutenção",
+        "Zé · melhorias",
         str(repo),
         "manutencao",
     )
@@ -270,3 +291,52 @@ def test_o_cerebro_tem_a_ferramenta_e_ela_pede_aprovacao(repo: Path) -> None:
     )
     assert descrever(nome, {"acao": "sair"}) == "Vou desligar o modo manutenção."
     assert descrever("mcp__jarvis__tela_agir", {}) is None
+
+
+def _commit(pasta: Path, arquivo: str, texto: str) -> None:
+    (pasta / arquivo).parent.mkdir(parents=True, exist_ok=True)
+    (pasta / arquivo).write_text(texto)
+    git(pasta, "add", "-A")
+    git(pasta, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", f"muda {arquivo}")
+
+
+def test_melhorias_numa_copia_isolada_aplicar_e_descartar(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    m = nova(repo, SessoesFalsas())
+    m.entrar()
+    m.encaminhar("melhora o guia", "", 1.0)
+    copia = Path(m.copia().worktree)  # type: ignore[union-attr]
+    assert m.copia().nome == "Zé · melhorias"  # type: ignore[union-attr]
+    assert m.mudancas()["commits"] == [] and m.aplicar() == (
+        False,
+        "Não há melhorias para aplicar.",
+    )
+    _commit(copia, "docs/guia.md", "guia novo\n")
+    _commit(copia, "jarvis/cerebro/ferramentas/__init__.py", "LEITURA = ['tudo']\n")
+    mud = m.mudancas()
+    assert len(mud["commits"]) == 2 and not (repo / "docs/guia.md").exists()  # o Zé em uso intacto
+    assert mud["protegidos"] == ["jarvis/cerebro/ferramentas/__init__.py"]
+    ok, texto = m.aplicar()
+    assert not ok and "zona protegida" in texto
+    m.testar = lambda pasta: False
+    assert m.aplicar(revisado=True) == (
+        False,
+        "Os testes falharam na cópia. Peça para a sessão corrigir antes.",
+    )
+    reinicios: list[bool] = []
+    m.testar = lambda pasta: True
+
+    def reiniciar(revisado: bool = False) -> tuple[bool, str]:
+        reinicios.append(revisado)
+        return True, "ok"
+
+    monkeypatch.setattr(m, "reiniciar", reiniciar)
+    assert m.aplicar(revisado=True) == (True, "ok") and reinicios == [True]
+    assert (repo / "docs/guia.md").read_text() == "guia novo\n" and m.mudancas()["commits"] == []
+    _commit(copia, "docs/rascunho.md", "descartável\n")
+    (copia / "solto.txt").write_text("sem commit")
+    assert m.mudancas()["sem_commit"]
+    assert m.descartar() == "Melhorias descartadas."
+    assert m.mudancas()["commits"] == [] and not (copia / "docs/rascunho.md").exists()
+    assert not (copia / "solto.txt").exists()

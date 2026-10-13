@@ -1,7 +1,7 @@
 # 0026 — A sessão de auto-desenvolvimento do Zé, com essência e travas
 
 - Data: 13/10/2026
-- Status: **Aceito**; passo 1 feito (pedido do usuário: uma sessão única para o Zé se aprimorar,
+- Status: **Aceito**; passos 1 e 2 feitos (pedido do usuário: uma sessão única para o Zé se aprimorar,
   com travas para ele não mudar a essência nem virar um "faz qualquer coisa")
 
 ## Contexto

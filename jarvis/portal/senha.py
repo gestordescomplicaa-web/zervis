@@ -56,6 +56,9 @@ SO_NO_PC = {
     "tunel/desativar",
     "remoto/ativar",
     "remoto/desativar",
+    "ze/aplicar",
+    "ze/sessao",
+    "ze/descartar",
 }
 
 

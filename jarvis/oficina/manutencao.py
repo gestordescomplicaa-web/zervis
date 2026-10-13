@@ -25,14 +25,14 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from jarvis import lugares
-from jarvis.oficina.sessoes import MOTORES, SessaoErro, Sessoes
+from jarvis import atividade, lugares
+from jarvis.oficina.sessoes import MOTORES, Sessao, SessaoErro, Sessoes
 
 log = logging.getLogger(__name__)
 
 REPO = Path(__file__).resolve().parents[2]  # o repositório do próprio Zé
 AGENTES = {"claude": "Claude", "codex": "Codex"}
-NOME_DA_SESSAO = "Zé · manutenção"
+NOME_DA_SESSAO = "Zé · melhorias"
 ORIGEM = "manutencao"
 # Mudam só com o usuário aprovando: o que decide o que o JARVIS faz sem perguntar.
 PROTEGIDOS = (
@@ -93,6 +93,31 @@ class Chegada:
     protegidos: tuple[str, ...] = ()
 
 
+def _make_check(pasta: Path) -> bool:
+    """Os testes do projeto na pasta (a cópia isolada cria o ambiente dela na primeira vez)."""
+    try:
+        feito = subprocess.run(
+            ["/usr/bin/make", "-s", "check"],
+            cwd=pasta,
+            capture_output=True,
+            text=True,
+            timeout=900,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return feito.returncode == 0
+
+
+def _git_ok(*args: str, repo: Path = REPO) -> int:
+    try:
+        return subprocess.run(  # noqa: S603 (git com argumentos montados aqui)
+            ["/usr/bin/git", "-C", str(repo), *args], capture_output=True, timeout=60, check=False
+        ).returncode
+    except (OSError, subprocess.SubprocessError):
+        return 1
+
+
 def _git(*args: str, repo: Path = REPO) -> str:
     try:
         return subprocess.run(  # noqa: S603 (git com argumentos em lista)
@@ -117,6 +142,7 @@ class Manutencao:
         # A versão que este processo carregou: a guarda e o reinício comparam a partir dela, e é
         # para ela que o reinício volta se a nova não subir (commits fora de um pedido contam).
         self.rodando = _git("rev-parse", "HEAD", repo=self.repo).strip()
+        self.testar = _make_check  # os testes da cópia antes de aplicar (os testes trocam)
 
     # --- estado (sobrevive ao reinício, que faz parte da manutenção) -----------------------
 
@@ -147,6 +173,14 @@ class Manutencao:
         return AGENTES.get(self.estado.agente, self.estado.agente)
 
     # --- ligar, desligar, encaminhar -------------------------------------------------------
+
+    def abrir_sessao(self, agente: str = "") -> str:
+        """A sessão de melhorias (a mesma de antes, ou nova, na cópia isolada), sem ligar o modo
+        manutenção: a voz continua indo ao Zé; o painel abre a sessão para trabalhar nela."""
+        agente = agente if agente in AGENTES else self.estado.agente
+        self.estado.sessao, self.estado.agente = self._sessao(agente), agente
+        self._gravar()
+        return self.estado.sessao
 
     def entrar(self, agente: str = "") -> str:
         agente = agente if agente in AGENTES else self.estado.agente
@@ -194,15 +228,21 @@ class Manutencao:
             raise SessaoErro(
                 f"o {AGENTES.get(agente, agente)} ainda não está disponível nas sessões"
             )
+        # Só a cópia isolada (ADR 0026): sessões antigas, direto no repositório, ficam como estão.
         minhas = [
             s
             for s in self.sessoes.listar()
-            if s.origem == ORIGEM and s.motor == agente and Path(s.pasta) == self.repo.resolve()
+            if s.origem == ORIGEM
+            and s.motor == agente
+            and Path(s.pasta) == self.repo.resolve()
+            and s.worktree
         ]
         escolhida = next((s for s in minhas if s.id == self.estado.sessao), None)
         if escolhida or minhas:
             return (escolhida or minhas[0]).id
-        nova = self.sessoes.criar(NOME_DA_SESSAO, str(self.repo), motor=agente, origem=ORIGEM)
+        nova = self.sessoes.criar(
+            NOME_DA_SESSAO, str(self.repo), motor=agente, origem=ORIGEM, isolada=True
+        )
         return nova.id
 
     def encaminhar(self, texto: str, contexto: str, agora: float, rodada: str = "") -> str:
@@ -274,12 +314,14 @@ class Manutencao:
         return chegadas
 
     def guarda(self, inicio: str) -> tuple[bool, tuple[str, ...]]:
-        """Desde `inicio`: mudou código que pede reinício? Mexeu na zona protegida?"""
+        """Desde `inicio`: mudou código que pede reinício? Mexeu na zona protegida? Vale o que
+        a cópia isolada mudou e o que mudou direto no repositório."""
         mudados = (
             set(_git("diff", "--name-only", inicio, repo=self.repo).split()) if inicio else set()
         )
         for linha in _git("status", "--porcelain", repo=self.repo).splitlines():
             mudados.add(linha[3:].strip().strip('"'))
+        mudados |= set(self.mudancas().get("arquivos", []))
         mudados.discard("")
         protegidos = sorted(m for m in mudados if any(m.startswith(p) for p in PROTEGIDOS))
         if self._mtime_config() != self._config_mtime:
@@ -292,6 +334,97 @@ class Manutencao:
             return CONFIG_DO_USUARIO.stat().st_mtime
         except OSError:
             return 0.0
+
+    # --- a cópia isolada: o que mudou, aplicar, descartar (ADR 0026) ---------------------------
+
+    def copia(self) -> Sessao | None:
+        """A sessão de melhorias com a cópia isolada dela, se existir."""
+        if not self.estado.sessao:
+            return None
+        try:
+            s = self.sessoes.ler(self.estado.sessao)
+        except SessaoErro:
+            return None
+        return s if s.worktree and Path(s.worktree).is_dir() else None
+
+    def mudancas(self) -> dict[str, Any]:
+        """O que a cópia tem a mais que o Zé em uso: commits, arquivos e a zona protegida."""
+        s = self.copia()
+        if s is None:
+            return {"copia": False}
+        onde = Path(s.worktree)
+        commits = _git("log", "--oneline", f"HEAD..{s.branch}", repo=self.repo).splitlines()
+        arquivos = set(_git("diff", "--name-only", f"HEAD...{s.branch}", repo=self.repo).split())
+        sem_commit = [
+            linha[3:].strip().strip('"')
+            for linha in _git("status", "--porcelain", repo=onde).splitlines()
+            if linha.strip()
+        ]
+        arquivos |= set(sem_commit)
+        arquivos.discard("")
+        return {
+            "copia": True,
+            "sessao": s.id,
+            "branch": s.branch,
+            "commits": commits[:30],
+            "arquivos": sorted(arquivos)[:200],
+            "protegidos": sorted(a for a in arquivos if a.startswith(PROTEGIDOS)),
+            "sem_commit": bool(sem_commit),
+            "resumo": _git("diff", "--stat", f"HEAD...{s.branch}", repo=self.repo)[-1500:],
+        }
+
+    def aplicar(self, revisado: bool = False) -> tuple[bool, str]:
+        """Junta as melhorias da cópia ao Zé em uso, com os testes da cópia verdes, e reinicia."""
+        s = self.copia()
+        m = self.mudancas()
+        if s is None or not m.get("commits"):
+            return False, "Não há melhorias para aplicar."
+        if s.estado == "trabalhando":
+            return False, "A sessão de melhorias ainda está trabalhando."
+        if m["sem_commit"]:
+            return False, "A cópia tem alterações sem commit. Peça para a sessão concluir."
+        if m["protegidos"] and not revisado:
+            return False, (
+                "As melhorias mexem na zona protegida (essência, segurança ou o que eu faço sem "
+                "perguntar). Revise no painel e confirme a revisão para aplicar."
+            )
+        if not self.testar(Path(s.worktree)):
+            return False, "Os testes falharam na cópia. Peça para a sessão corrigir antes."
+        if _git("status", "--porcelain", "--untracked-files=no", repo=self.repo).strip():
+            return False, "O repositório do Zé tem alterações sem commit. Resolva antes de aplicar."
+        if _git_ok("merge", "--ff-only", s.branch, repo=self.repo) != 0:
+            mensagem = f"Melhorias do Zé ({s.branch})"
+            if _git_ok("merge", "--no-ff", "-m", mensagem, s.branch, repo=self.repo) != 0:
+                _git_ok("merge", "--abort", repo=self.repo)
+                return (
+                    False,
+                    "Conflito ao juntar as melhorias. Peça para a sessão atualizar a cópia.",
+                )
+        atual = _git("rev-parse", "HEAD", repo=self.repo).strip()
+        _git_ok("merge", "--ff-only", atual, repo=Path(s.worktree))  # a cópia acompanha
+        atividade.PADRAO.registrar(
+            "execucao",
+            f"Aplicou {len(m['commits'])} melhoria(s) do Zé",
+            commits=m["commits"],
+            protegidos=m["protegidos"],
+            autorizacao="revisada" if m["protegidos"] else "aprovada",
+        )
+        return self.reiniciar(revisado=True)
+
+    def descartar(self) -> str:
+        """Joga fora o que a cópia tem a mais: ela volta a ser igual ao Zé em uso."""
+        s = self.copia()
+        if s is None:
+            return "Não há cópia de melhorias."
+        m = self.mudancas()
+        atual = _git("rev-parse", "HEAD", repo=self.repo).strip()
+        onde = Path(s.worktree)
+        _git_ok("reset", "--hard", atual, repo=onde)
+        _git_ok("clean", "-fd", repo=onde)
+        atividade.PADRAO.registrar(
+            "execucao", "Descartou as melhorias da cópia", commits=m.get("commits", [])
+        )
+        return "Melhorias descartadas."
 
     # --- reiniciar para valer ----------------------------------------------------------------
 

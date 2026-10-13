@@ -702,6 +702,8 @@ class Nucleo:
                 self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
             elif nome == "rodada_melhoria":
                 resposta = self._rodada_de_melhoria()
+            elif m.mudancas().get("commits"):  # reiniciar: há melhorias na cópia, aplica
+                resposta = self.aplicar_melhorias(revisado=argumento == "revisado")
             else:  # reiniciar
                 _, resposta = m.reiniciar(revisado=argumento == "revisado")
         except (SessaoErro, OSError, subprocess.SubprocessError) as erro:
@@ -728,6 +730,23 @@ class Nucleo:
                 "seus pedidos vão para a sessão de código."
             )
         return "Vou desligar o modo manutenção." if entrada.get("acao") == "sair" else None
+
+    def aplicar_melhorias(self, revisado: bool = False) -> str:
+        """Testa a cópia, junta as melhorias e reinicia, em segundo plano (os testes demoram);
+        o resultado chega como aviso e fica na atividade."""
+
+        def aplicar() -> None:
+            try:
+                ok, texto = self.manutencao.aplicar(revisado)
+            except (OSError, subprocess.SubprocessError, SessaoErro) as erro:
+                ok, texto = False, f"Não consegui aplicar as melhorias: {erro}"
+            if not ok:
+                atividade.PADRAO.registrar("falha", "Melhorias não aplicadas", motivo=texto)
+            self._na_linha("manutencao", texto)
+            self.eventos.put(e.Aviso(texto))
+
+        threading.Thread(target=aplicar, name="aplicar-melhorias", daemon=True).start()
+        return "Aplicando as melhorias: primeiro os testes na cópia, depois eu reinicio."
 
     def _rodada_de_melhoria(self) -> str:
         """Junta as evidências do uso real e pede à sessão de código uma lista curta, sem fazer."""
@@ -777,7 +796,10 @@ class Nucleo:
                         "sem perguntar. Revise a sessão no painel antes de valer."
                     )
                 if c.mudou_codigo:
-                    texto += " Para valer, diga: reinicia o JARVIS."
+                    texto += (
+                        " As mudanças estão na cópia isolada: aprove em Sessões, no painel, ou "
+                        "diga: reinicia o Zé."
+                    )
             log.info("manutenção: %s do pedido %s", c.tipo, c.pedido)
             self.eventos.put(e.Aviso(texto))
 

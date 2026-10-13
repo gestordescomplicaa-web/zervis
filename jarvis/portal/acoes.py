@@ -142,6 +142,10 @@ class Acoes:
             "remoto/ativar": self.ativar_remoto,
             "voz/evento": self.evento_voz,
             "atividade/registro": self.registro_tecnico,
+            "ze/melhorias": self.melhorias,
+            "ze/sessao": self.sessao_de_melhorias,
+            "ze/aplicar": self.aplicar_melhorias,
+            "ze/descartar": self.descartar_melhorias,
             "acesso/senha": self.definir_senha,
             "acesso/encerrar": self.encerrar_acessos,
             "acesso/desconectar": self.desconectar_aparelho,
@@ -306,6 +310,19 @@ class Acoes:
     def encerrar_acessos(self, dados: dict[str, Any]) -> dict[str, Any]:
         self.n.acesso.sair_todos()
         return {**self.remoto(), "aviso": "Acessos encerrados."}
+
+    def melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O que a sessão de melhorias do Zé tem pronto para aprovar (ADR 0026)."""
+        return dict(self.n.manutencao.mudancas())
+
+    def sessao_de_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        return {"id": self._chamar(lambda: self.n.manutencao.abrir_sessao())}
+
+    def aplicar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        return {"aviso": self.n.aplicar_melhorias(revisado=bool(dados.get("revisei")))}
+
+    def descartar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        return {**self.n.manutencao.mudancas(), "aviso": self.n.manutencao.descartar()}
 
     def atividade(self) -> dict[str, Any]:
         """O que o Zé fez e onde tropeçou (ADR 0025), do mais recente ao mais antigo."""
@@ -684,6 +701,7 @@ class Acoes:
             "esforco": s.esforco,
             "isolada": s.isolada,
             "branch": s.branch,
+            "melhorias": s.origem == "manutencao" and bool(s.worktree),  # a sessão do Zé
             "estado": "trabalhando" if s.id in self.n.sessoes.trabalhando() else s.estado,
             "conta_id": s.conta,
             "limite": s.limite,

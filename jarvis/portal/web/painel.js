@@ -672,8 +672,10 @@ const itemSessao = (s) => `<button type="button" class="item-sessao" data-acao="
 async function listaSessoes() {
   const lista = $("lista-sessoes");
   if (!lista) return;
-  const sessoes = await api("sessoes");
-  lista.innerHTML = sessoes.length ? sessoes.map(itemSessao).join("") : vazio("Nenhuma sessão.");
+  const sessoes = (await api("sessoes")).sort((a, b) => b.melhorias - a.melhorias); // a do Zé no topo
+  const doZe = sessoes.some((s) => s.melhorias) ? "" : `<button type="button" class="item-sessao" data-acao="ze-sessao">
+    <span class="avatar">Z</span><strong>Zé · melhorias</strong><time></time><small>Sessão para o Zé se aprimorar</small></button>`;
+  lista.innerHTML = doZe + (sessoes.length ? sessoes.map(itemSessao).join("") : vazio("Nenhuma sessão."));
   pintar(lista);
   $("ponto-sessoes").hidden = !sessoes.some((s) => s.estado === "trabalhando");
 }
@@ -771,6 +773,7 @@ async function abrirSessao(id) {
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
         ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
+    <div id="melhorias-ze"></div>
     <section class="editor-md" id="editor-md" hidden>
       <div class="linha"><label>Arquivo<input id="md-nome" class="mono" placeholder="NOTAS.md" autocomplete="off" spellcheck="false"></label>
         <label class="interruptor"><input type="checkbox" id="md-substituir"> Substituir se existir</label></div>
@@ -795,6 +798,7 @@ async function abrirSessao(id) {
   pintar(lado);
   abertas = new Set();
   travarAjustes(trabalhando);
+  if (sessao.melhorias) carregarPagina("melhorias").then(() => desenharMelhorias()).catch(() => {});
   await abrirTerminal(id);
   await carregarPasta("", $("arvore"));
 }
@@ -864,7 +868,10 @@ async function acompanharSessao() {
   const { sessao } = await api("sessao/ler", { id: sessaoAberta, desde: 1e9 });
   sessaoAtual = sessao;
   const etiqueta = $("estado-sessao");
-  if (etiqueta.dataset.estado === "trabalhando" && sessao.estado !== "trabalhando") atualizarArvore();
+  if (etiqueta.dataset.estado === "trabalhando" && sessao.estado !== "trabalhando") {
+    atualizarArvore();
+    if (sessao.melhorias) window.desenharMelhorias?.();
+  }
   etiqueta.dataset.estado = sessao.estado;
   etiqueta.textContent = estadoSessao(sessao);
   etiqueta.classList.toggle("alerta", !!sessao.limite);
@@ -1149,6 +1156,7 @@ const ACOES = {
   "escuta-apagar": (b) => confirmar(b, "Remover a chave?", async () => { escuta = await api("escuta/apagar", {}); desenharEscuta(); toast(escuta.aviso); }),
   "chave-apagar": (b) => confirmar(b, "Apagar a chave?", async () => { const c = await api("chave/apagar", { motor: modelo.motor }); modelo.chaves = c.chaves; desenharChave(); }),
   // sessões
+  "ze-sessao": async (b) => { const { id } = await ocupado(b, () => api("ze/sessao", {})); await listaSessoes(); await abrirSessao(id); },
   "sessoes-voltar": () => {
     fecharTerminalTela(); sessaoAberta = null; mostrarLado(false);
     document.querySelectorAll(".item-sessao").forEach((x) => x.setAttribute("aria-current", "false"));
@@ -1313,12 +1321,13 @@ conteudo.addEventListener("drop", (ev) => {
 // --- navegação e batimento -----------------------------------------------------------------------------
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
-const SOB_DEMANDA = { atividade: "/paginas/atividade.js" };
-const carregarPagina = (nome) => PAGINAS[nome] ? Promise.resolve() : new Promise((ok, erro) => {
+const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js" };
+const carregados = {};
+const carregarPagina = (nome) => (carregados[nome] ??= new Promise((ok, erro) => {
   const s = document.createElement("script");
-  s.src = SOB_DEMANDA[nome]; s.onload = ok; s.onerror = () => erro(new Error("Página indisponível."));
+  s.src = SOB_DEMANDA[nome]; s.onload = ok; s.onerror = () => { delete carregados[nome]; erro(new Error("Página indisponível.")); };
   document.head.appendChild(s);
-});
+}));
 
 async function abrir() {
   const nome = (location.hash || "#inicio").slice(1);

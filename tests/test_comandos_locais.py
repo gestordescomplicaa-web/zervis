@@ -89,6 +89,9 @@ class ManutencaoFalsa:
         self.r.feito.append(("encaminhar", texto if not rodada else "rodada"))
         return "Mandei para o Claude."
 
+    def mudancas(self) -> dict[str, Any]:
+        return {"copia": False}  # sem melhorias na cópia: "reinicia" só reinicia
+
     def reiniciar(self, revisado: bool = False) -> tuple[bool, str]:
         self.r.feito.append(("reiniciar", revisado))
         return True, "Vou me reiniciar."

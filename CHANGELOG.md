@@ -137,3 +137,7 @@
 - Essência do Zé (`docs/essencia.md`, ADR 0026): o que ele é e não deixa de ser. A sessão de
   manutenção passa a ler a essência, só trabalha no próprio Zé (recusa o resto) e tem a zona
   protegida ampliada com a segurança nova (senha, túnel, atividade, WebSocket) e a persona.
+- Sessão "Zé · melhorias" (ADR 0026, passo 2): fixa no topo de Sessões, trabalha numa cópia isolada
+  do Zé (git worktree) e mostra o que mudou; "Aprovar e aplicar" roda os testes na cópia, junta ao
+  Zé em uso e reinicia com o reinício seguro (zona protegida exige a revisão marcada; só pelo
+  próprio PC); "Descartar" volta a cópia ao Zé em uso. "Reinicia o Zé" por voz também aplica.

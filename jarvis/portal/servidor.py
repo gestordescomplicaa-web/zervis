@@ -55,7 +55,8 @@ ARQUIVOS = {
     "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
     # O microfone do navegador em pedaços de 80 ms a 16 kHz (voz pelo HTTPS do painel).
     "/voz-captura.js": "voz-captura.js",
-    "/paginas/atividade.js": "paginas/atividade.js",  # página carregada sob demanda
+    "/paginas/atividade.js": "paginas/atividade.js",  # páginas carregadas sob demanda
+    "/paginas/melhorias.js": "paginas/melhorias.js",
     # O ícone na tela inicial do celular (instalar como app).
     "/manifest.webmanifest": "manifest.webmanifest",
     "/icones/ze-192.webp": "icones/ze-192.webp",
