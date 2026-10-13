@@ -438,7 +438,7 @@ class Nucleo:
         )
         self.portal: Portal | None = None
         self.acesso = Acesso(ao_entrar=self._aparelho_entrou)  # quem entra de outro aparelho
-        self.tunel = tunel.Tunel(self._tunel_pronto)  # acesso de qualquer lugar (Cloudflare)
+        self.tunel = tunel.Tunel(self._tunel_pronto, self._tunel_caiu)  # acesso de qualquer lugar
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
             self.portal = Portal(
@@ -1173,6 +1173,10 @@ class Nucleo:
     def _tunel_pronto(self, endereco: str) -> None:
         if self.portal is not None:
             self.portal.permitir(urlsplit(endereco).netloc)
+
+    def _tunel_caiu(self, endereco: str) -> None:
+        if self.portal is not None:
+            self.portal.proibir(urlsplit(endereco).netloc)
 
     def _subir_tunel(self) -> None:
         if self.portal is None:

@@ -1,5 +1,7 @@
 """O túnel do Cloudflare (roteiro, passo 4.3): o endereço lido e a escolha guardada."""
 
+import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -22,6 +24,56 @@ def test_escolha_sobrevive_ao_reinicio(tmp_path: Path) -> None:
     assert tunel.escolhido(arquivo)
     tunel.escolher(False, arquivo)
     assert not tunel.escolhido(arquivo)
+
+
+def _falso(pasta: Path) -> Path:
+    """Um cloudflared de mentira: a primeira subida cai logo; a segunda fica de pé."""
+    programa = pasta / "cloudflared"
+    programa.write_text(
+        "#!/bin/sh\n"
+        f'n=$(cat "{pasta}/n" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "{pasta}/n"\n'
+        'echo "INF |  https://tunel-$n.trycloudflare.com  |" >&2\n'
+        '[ "$n" -ge 2 ] && exec sleep 30\n'
+    )
+    programa.chmod(0o755)
+    return programa
+
+
+def _esperar(condicao: Callable[[], bool]) -> None:
+    fim = time.monotonic() + 10
+    while not condicao():
+        assert time.monotonic() < fim
+        time.sleep(0.02)
+
+
+def test_sobe_de_novo_sozinho_quando_cai(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(tunel, "ESPERA_S", (0.05,))
+    prontos: list[str] = []
+    caidos: list[str] = []
+    t = tunel.Tunel(prontos.append, caidos.append)
+    t.iniciar(8795, _falso(tmp_path))
+    try:
+        _esperar(lambda: t.endereco == "https://tunel-2.trycloudflare.com")
+        assert prontos == ["https://tunel-1.trycloudflare.com", "https://tunel-2.trycloudflare.com"]
+        assert caidos == ["https://tunel-1.trycloudflare.com"]
+    finally:
+        t.parar()
+    assert not t.ativo and t.endereco == ""
+
+
+def test_parado_de_proposito_nao_sobe_de_novo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(tunel, "ESPERA_S", (0.05,))
+    (tmp_path / "n").write_text("1")  # já na subida que fica de pé
+    caidos: list[str] = []
+    t = tunel.Tunel(lambda _: None, caidos.append)
+    t.iniciar(8795, _falso(tmp_path))
+    _esperar(lambda: bool(t.endereco))
+    t.parar()
+    time.sleep(0.3)
+    assert not t.ativo and caidos == []
+    assert (tmp_path / "n").read_text().strip() == "2"
 
 
 def test_binario_da_maquina_tem_preferencia(

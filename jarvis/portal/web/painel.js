@@ -333,8 +333,33 @@ async function manterTela(ligar) {
 }
 document.addEventListener("visibilitychange", () => { if (salaVoz && document.visibilityState === "visible") { telaLigada = null; manterTela(true); } });
 
-async function ligarVoz() {
+// Queda da rede (código 1006: túnel, 4G, Wi-Fi): reconecta sozinho algumas vezes. Fechamento
+// limpo do Zé (outro aparelho assumiu a voz) ou pedido aqui não reconecta.
+const RELIGAR_MS = [1000, 3000, 8000];
+let religarVoz = { tentativas: 0, espera: null };
+
+function agendarReligar() {
+  if (religarVoz.tentativas >= RELIGAR_MS.length) { religarVoz.tentativas = 0; toast("Voz desconectada."); return; }
+  toast("Reconectando a voz…");
+  const tentar = () => {
+    religarVoz.espera = null;
+    if (salaVoz || vozConectando) return;
+    if (document.visibilityState !== "visible") {
+      document.addEventListener("visibilitychange", tentar, { once: true });
+      return;
+    }
+    conectarVoz(true);
+  };
+  religarVoz.espera = setTimeout(tentar, RELIGAR_MS[religarVoz.tentativas++]);
+}
+
+function ligarVoz() {
+  clearTimeout(religarVoz.espera); religarVoz = { tentativas: 0, espera: null };
   if (salaVoz) { salaVoz.encerrar(); toast("Voz desconectada."); return; }
+  conectarVoz(false);
+}
+
+async function conectarVoz(religando) {
   vozConectando = true; desenharVozRemota();
   let mic = null;
   try {
@@ -350,7 +375,8 @@ async function ligarVoz() {
     const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/voz/ws`);
     ws.binaryType = "arraybuffer";
     const conexao = {
-      encerrar() { ws.close(); },
+      pedido: false,
+      encerrar() { conexao.pedido = true; ws.close(); },
     };
     const fim = () => {
       mic.getTracks().forEach((t) => t.stop()); captura.close(); saida.ctx.close(); manterTela(false);
@@ -363,13 +389,23 @@ async function ligarVoz() {
     });
     no.port.onmessage = (ev) => { if (ws.readyState === 1) ws.send(ev.data); };
     ws.onmessage = (ev) => (typeof ev.data === "string" ? saida.controle(JSON.parse(ev.data)) : saida.pedaco(ev.data));
-    ws.onclose = (ev) => { avisarVoz("caiu", ev.code); fim(); };
+    const inicio = Date.now();
+    ws.onclose = (ev) => {
+      const queda = !conexao.pedido && ev.code === 1006;
+      avisarVoz(conexao.pedido ? "desligou" : queda ? "caiu" : "encerrada", ev.code);
+      fim();
+      if (queda) {
+        if (Date.now() - inicio > 30000) religarVoz.tentativas = 0;
+        agendarReligar();
+      }
+    };
     salaVoz = conexao; manterTela(true);
-    toast("Voz ao vivo."); avisarVoz("conectou", `${captura.sampleRate} Hz`);
+    toast(religando ? "Voz reconectada." : "Voz ao vivo."); avisarVoz("conectou", `${captura.sampleRate} Hz`);
   } catch (erro) {
     if (!salaVoz) mic?.getTracks().forEach((t) => t.stop());
     avisarVoz("falhou", `${erro.name}: ${erro.message}`);
-    toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message);
+    if (religando && erro.name !== "NotAllowedError") agendarReligar();
+    else toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message);
   }
   vozConectando = false; desenharVozRemota();
 }

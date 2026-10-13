@@ -400,10 +400,12 @@ def test_transcricao_vazia_na_continuacao_encerra_sem_laco() -> None:
     assert not m.em_conversa
 
 
-def test_transcricao_vazia_logo_apos_hey_orca_pede_repeticao() -> None:
+def test_transcricao_vazia_logo_apos_hey_orca_fecha_com_bip() -> None:
     m = ativa()
     m.tratar(Ativacao(), 1)
-    assert m.tratar(FimDeFala(""), 2) == [Falar(NAO_ENTENDI)]
+    assert m.tratar(FimDeFala(""), 2) == [Bip()]
+    assert estado(m) is Estado.ATIVO
+    assert not m.autorizado
 
 
 @pytest.mark.parametrize(

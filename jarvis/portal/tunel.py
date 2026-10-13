@@ -50,6 +50,7 @@ PACOTES = {
 PASTA = lugares.DADOS / "cloudflared" / VERSAO
 ESCOLHA = lugares.CONFIG / "tunel.json"
 ENDERECO = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
+ESPERA_S = (2.0, 5.0, 15.0, 30.0, 60.0)
 
 
 def binario(pasta: Path = PASTA) -> Path | None:
@@ -86,13 +87,23 @@ def escolher(ativo: bool, arquivo: Path = ESCOLHA) -> None:
 
 
 class Tunel:
-    """O `cloudflared` rodando para o painel; avisa o endereço quando o túnel fica pronto."""
+    """O `cloudflared` rodando para o painel; avisa o endereço quando o túnel fica pronto e sobe
+    de novo sozinho se cair sem ninguém pedir (com espera crescente, e o endereço novo no painel).
+    """
 
-    def __init__(self, ao_endereco: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        ao_endereco: Callable[[str], None],
+        ao_cair: Callable[[str], None] | None = None,
+    ) -> None:
         self.ao_endereco = ao_endereco
+        self.ao_cair = ao_cair  # recebe o endereço que deixou de valer
         self.endereco = ""
         self.processo: subprocess.Popen[str] | None = None
         self._trava = threading.Lock()
+        self._parado = threading.Event()
+        self._comando: list[str] = []
+        self._quedas = 0
 
     @property
     def ativo(self) -> bool:
@@ -100,37 +111,58 @@ class Tunel:
 
     def iniciar(self, porta: int, programa: Path) -> None:
         with self._trava:
+            self._parado.clear()
+            self._comando = [
+                str(programa),
+                "tunnel",
+                "--no-autoupdate",
+                "--url",
+                f"http://127.0.0.1:{porta}",
+            ]
             if self.ativo:
                 return
-            self.endereco = ""
-            self.processo = subprocess.Popen(  # noqa: S603 (o binário conferido, argumentos fixos)
-                [
-                    str(programa),
-                    "tunnel",
-                    "--no-autoupdate",
-                    "--url",
-                    f"http://127.0.0.1:{porta}",
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            threading.Thread(target=self._ler, args=(self.processo,), daemon=True).start()
-            log.info("túnel: subindo")
+            self._quedas = 0
+            self._subir()
+
+    def _subir(self) -> None:
+        self.endereco = ""
+        self.processo = subprocess.Popen(  # noqa: S603 (o binário conferido, argumentos fixos)
+            self._comando,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        threading.Thread(target=self._ler, args=(self.processo,), daemon=True).start()
+        log.info("túnel: subindo")
 
     def _ler(self, processo: subprocess.Popen[str]) -> None:
         assert processo.stderr is not None  # noqa: S101 (criado com PIPE)
         for linha in processo.stderr:
-            if not self.endereco and (achado := ENDERECO.search(linha)):
+            novo = processo is self.processo and not self.endereco
+            if novo and (achado := ENDERECO.search(linha)):
                 self.endereco = achado.group(0)
+                self._quedas = 0
                 log.info("túnel: pronto em %s", self.endereco)
                 self.ao_endereco(self.endereco)
+        processo.wait()
         log.warning("túnel: o cloudflared saiu")
-        if processo is self.processo:  # saiu sem ninguém pedir
-            atividade.PADRAO.registrar("falha", "O túnel do acesso de fora caiu")
-        self.endereco = ""
+        if processo is not self.processo:  # parado ou trocado de propósito
+            return
+        atividade.PADRAO.registrar("falha", "O túnel do acesso de fora caiu")
+        antigo, self.endereco = self.endereco, ""
+        if antigo and self.ao_cair is not None:
+            self.ao_cair(antigo)
+        espera = ESPERA_S[min(self._quedas, len(ESPERA_S) - 1)]
+        self._quedas += 1
+        log.warning("túnel: de novo em %.0f s", espera)
+        if self._parado.wait(espera):
+            return
+        with self._trava:
+            if processo is self.processo and not self._parado.is_set():
+                self._subir()
 
     def parar(self) -> None:
+        self._parado.set()
         with self._trava:
             processo, self.processo = self.processo, None
             self.endereco = ""

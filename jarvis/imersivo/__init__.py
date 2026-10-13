@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from jarvis import lugares
 from jarvis.filho import Filho, porta_ocupada
 
 log = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ class Imersivo:
                 "ZE_ACERVO": str(self.acervo),
                 "ZE_IMERSIVO_TOKEN": self.token,
             },
+            registro=lugares.ESTADO / "imersivo.log",
         )
 
     @property

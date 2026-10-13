@@ -380,7 +380,8 @@ class Acoes:
         evento = str(dados.get("evento", ""))[:40]
         detalhe = " ".join(str(dados.get("detalhe", "")).split())[:300]
         aparelho = str(dados.get("aparelho", ""))[:120]
-        log.warning("voz do navegador: %s %s (%s)", evento, detalhe, aparelho)
+        nivel = logging.INFO if evento in ("conectou", "desligou", "encerrada") else logging.WARNING
+        log.log(nivel, "voz do navegador: %s %s (%s)", evento, detalhe, aparelho)
         if evento in ("falhou", "microfone"):
             atividade.PADRAO.registrar(
                 "falha", "A voz do navegador falhou", erro=detalhe, aparelho=aparelho

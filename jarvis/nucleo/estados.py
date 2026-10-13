@@ -1152,6 +1152,12 @@ class Maquina:
                 self.em_conversa = False
                 self._ir(Estado.ATIVO)
                 return []
+            if not palavras(texto):
+                # Nada transcrito (ativação falsa, botão sem fala): fecha com o bip. "Não
+                # entendi" soava como erro de algo que ninguém pediu.
+                self.em_conversa = False
+                self._ir(Estado.ATIVO)
+                return [Bip()]
             return self._dizer(NAO_ENTENDI)
         self._ir(Estado.PENSANDO)
         self.cerebro_terminou = False

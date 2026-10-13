@@ -6,6 +6,7 @@ até 30 s, para um filho que não sobe não ocupar a máquina.
 
 import logging
 import os
+import signal
 import socket
 import subprocess
 import threading
@@ -14,6 +15,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 ESPERA_S = (1.0, 2.0, 5.0, 15.0, 30.0)
+ENCERRADO = frozenset({0, -signal.SIGTERM, -signal.SIGINT})
 
 
 def porta_ocupada(porta: int, host: str = "127.0.0.1") -> bool:
@@ -41,6 +43,8 @@ class Filho:
         self._fio: threading.Thread | None = None
 
     def iniciar(self) -> None:
+        if self.registro is not None:
+            self.registro.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._fio = threading.Thread(target=self._manter, name=self.nome, daemon=True)
         self._fio.start()
 
@@ -67,9 +71,21 @@ class Filho:
             final = (erro or b"").decode(errors="replace").strip().splitlines()[-1:] or [
                 "sem saída"
             ]
+            codigo = self.processo.returncode
             espera = ESPERA_S[min(quedas, len(ESPERA_S) - 1)]
-            log.warning("%s caiu (%s); de novo em %.0f s", self.nome, final[0][:200], espera)
-            quedas += 1
+            if codigo in ENCERRADO:
+                # Saída ordenada (código 0 ou sinal de término), como quando o serviço inteiro
+                # para: não é queda, mas se o Zé segue de pé, o filho volta.
+                log.info("%s encerrado (código %s); de novo em %.0f s", self.nome, codigo, espera)
+            else:
+                log.warning(
+                    "%s caiu (código %s: %s); de novo em %.0f s",
+                    self.nome,
+                    codigo,
+                    final[0][:200],
+                    espera,
+                )
+                quedas += 1
             self._parar.wait(espera)
 
     def parar(self) -> None:
