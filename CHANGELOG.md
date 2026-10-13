@@ -123,3 +123,6 @@
   reagindo à conversa (ondas ouvindo, que crescem com a sua voz; brilho girando pensando; pulso no
   volume real da fala; âmbar esperando o "sim"), com Ao vivo e Falar grandes embaixo. A Imersão
   completa, com as mãos e o Núcleo, continua só no PC.
+- Painel no celular refeito: barra no topo com o menu, menu deslizante com os grupos e a voz numa barra
+  fixa embaixo (Fala, Ao vivo, Falar); em Sessões, uma coisa por vez (a lista ou a sessão, com
+  "Sessões" para voltar) e o cabeçalho da sessão em duas linhas. Holograma em resolução cheia.

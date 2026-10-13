@@ -158,7 +158,7 @@ p.resultado:empty { display: none; }
 
 /* --- Sessões: os agentes de código, cada um com a sua pasta (como os bots do Hermes) --- */
 main.cheio { padding: 0; overflow: hidden; }
-.sessoes { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: 100%; }
+.sessoes { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: 100%; flex: 1 1 auto; min-width: 0; }
 .sessoes-lista { border-right: 1px solid var(--borda); overflow-y: auto; background: rgb(7 12 17 / .5); }
 .sessoes-topo { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
 .sessoes-topo .rotulo { margin: 0; }
@@ -387,23 +387,61 @@ details.detalhes p { margin: 8px 0 0; }
   .sessao-aberta:not(.sem-explorador) .explorador { border-left: 0; }
   #fechar-explorador { display: block; }
 }
+/* Esconde no PC: o botão de menu e o véu só existem no celular. */
+.botao-menu, .veu, .barra-voltar { display: none; }
+
+/* --- celular: barra no topo, menu deslizante e a voz embaixo, ao alcance do polegar --- */
 @media (max-width: 720px) {
-  .sessoes { grid-template-columns: 1fr; grid-template-rows: 40% minmax(0, 1fr); }
-  .app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  .app > main, .app > .imersao { grid-column: 1; grid-row: 2; }
-  .lateral { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-right: 0;
-    border-bottom: 1px solid var(--borda); min-width: 0; }
-  .marca { padding: 0; }
+  .sessoes { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
+  .sessoes .lado { display: none; }
+  .sessoes-lista { border-right: 0; }
+  .sessoes.no-lado { grid-template-rows: auto minmax(0, 1fr); }
+  .sessoes.no-lado .sessoes-lista { display: none; }
+  .sessoes.no-lado .barra-voltar { display: block; padding: 8px 12px; border-bottom: 1px solid var(--borda); }
+  .sessoes.no-lado .lado { display: grid; }
+  /* Cabeçalho da sessão em duas linhas: nome e estado em cima, conta e botões embaixo. */
+  .conversa-topo { flex-wrap: wrap; gap: 8px 10px; padding: 10px 12px; }
+  .conversa-topo .titulo-sessao { flex: 1 1 calc(100% - 140px); }
+  .ajustes-sessao { order: 3; flex: 1 1 auto; }
+  .conversa-topo .botoes { order: 4; }
+  .voltar { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; border: 0; border-radius: 8px;
+    background: none; color: var(--acento); font: 500 15px var(--sans); cursor: pointer; }
+  .voltar::before { content: ""; width: 8px; height: 8px; border: solid currentColor; border-width: 0 0 2px 2px; transform: rotate(45deg); }
+  .app { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; height: 100dvh; }
+  .lateral { display: contents; }
+  .marca { grid-row: 1; gap: 10px; padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+    background: rgb(9 16 22 / .96); border-bottom: 1px solid var(--borda); }
+  .marca strong { font-size: 18px; }
   .marca .anel { width: 32px; height: 32px; }
   .marca .icone-ze { border-radius: 8px; }
-  nav { flex: 1 1 0; min-width: 0; flex-direction: row; align-items: center; overflow-x: auto; scrollbar-width: none; }
-  nav a { white-space: nowrap; padding: 6px 10px; }
-  .grupo, .grupo-itens { flex-direction: row; margin: 0; }
-  .grupo-titulo { display: none; }
-  .grupo-titulo[aria-expanded="false"] + .grupo-itens { display: flex; }
-  .barra-voz { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; padding-top: 8px; }
-  .barra-voz .escolha-menu { top: calc(100% + 8px); bottom: auto; }
+  .app > main, .app > .imersao { grid-column: 1; grid-row: 2; }
+  main { padding: 20px 16px 28px; }
+  .barra-voz { grid-row: 3; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: center; gap: 10px;
+    padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--borda);
+    background: rgb(9 16 22 / .96); }
+  .barra-voz .botoes-voz button { padding: 11px 10px; }
+  .barra-voz .escolha-botao { width: 100%; max-width: none; justify-content: space-between; padding: 9px 12px; }
+  body.tela-holo .barra-voz { display: none; } /* a tela do holograma já tem os botões grandes */
+
+  .botao-menu { display: grid; place-items: center; width: 40px; height: 40px; margin-left: -8px; border: 0; border-radius: 10px;
+    background: none; cursor: pointer; }
+  .botao-menu i, .botao-menu i::before, .botao-menu i::after { display: block; width: 20px; height: 2px; border-radius: 2px;
+    background: var(--texto); content: ""; position: relative; transition: transform .2s; }
+  .botao-menu i::before { position: absolute; top: -6px; }
+  .botao-menu i::after { position: absolute; top: 6px; }
+  .botao-menu:active { background: rgb(70 217 222 / .1); }
+
+  nav { position: fixed; z-index: 60; inset: 0 auto 0 0; width: min(84vw, 320px); padding: 18px 12px;
+    padding-top: max(18px, env(safe-area-inset-top)); background: #0a131a; border-right: 1px solid var(--borda-forte);
+    box-shadow: 18px 0 50px rgb(0 0 0 / .5); transform: translateX(-102%); transition: transform .22s ease; }
+  nav a { padding: 11px 12px; }
+  body.menu-aberto nav { transform: none; }
+  .veu { display: block; position: fixed; z-index: 55; inset: 0; background: rgb(0 0 0 / .55); opacity: 0;
+    pointer-events: none; transition: opacity .22s; }
+  body.menu-aberto .veu { opacity: 1; pointer-events: auto; }
   .rodape { display: none; }
+}
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) { nav, .veu { transition: none; } }
 }
 @media (prefers-reduced-motion: reduce) { .icone-ze .anel, .icone-ze::before, .icone-ze::after { animation: none !important; } .toast { transition: none; } }
 

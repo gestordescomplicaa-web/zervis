@@ -380,6 +380,7 @@ async function ligarVoz() {
 const GRUPOS = "ze.grupos-fechados";
 function lerFechados() { try { return new Set(JSON.parse(localStorage.getItem(GRUPOS) || "[]")); } catch { return new Set(); } }
 lerFechados().forEach((g) => document.querySelector(`.grupo[data-grupo="${g}"] .grupo-titulo`)?.setAttribute("aria-expanded", "false"));
+document.querySelector("nav").addEventListener("click", (ev) => { if (ev.target.closest("a")) document.body.classList.remove("menu-aberto"); });
 function alternarGrupo(b) {
   const aberto = b.getAttribute("aria-expanded") === "true", fechados = lerFechados(), g = b.closest(".grupo").dataset.grupo;
   b.setAttribute("aria-expanded", String(!aberto));
@@ -660,7 +661,11 @@ const pintar = (raiz) => raiz.querySelectorAll(".avatar[data-matiz]").forEach((a
 
 PAGINAS.sessoes = async () => `<div class="sessoes">
   <aside class="sessoes-lista"><div class="sessoes-topo"><p class="rotulo">Sessões</p><button type="button" class="mais" data-acao="sessao-nova" aria-label="Nova sessão">+</button></div><div id="lista-sessoes"></div></aside>
+  <div class="barra-voltar"><button type="button" class="voltar" data-acao="sessoes-voltar">Sessões</button></div>
   <div id="lado-sessao" class="lado"><div class="nova-sessao">${vazio("Escolha uma sessão ou crie uma no +.")}</div></div></div>`;
+
+// No celular, uma coisa por vez: a lista ou a sessão aberta (com "Sessões" para voltar).
+const mostrarLado = (sim) => document.querySelector(".sessoes")?.classList.toggle("no-lado", sim);
 
 const itemSessao = (s) => `<button type="button" class="item-sessao" data-acao="sessao-abrir" data-id="${s.id}" aria-current="${s.id === sessaoAberta}">
   <span class="avatar ${s.estado === "trabalhando" ? "trabalhando" : ""}" data-matiz="${matiz(s.nome)}">${inicial(s.nome)}</span>
@@ -676,6 +681,7 @@ async function listaSessoes() {
 }
 
 async function formSessao() {
+  mostrarLado(true);
   const pastas = await api("pastas");
   $("lado-sessao").innerHTML = `<div class="nova-sessao">${cartao("Nova sessão", `
     <label>Nome<input id="ns-nome" placeholder="Ligatia — testes" autocomplete="off"></label>
@@ -751,6 +757,7 @@ async function trocarSessao(motor, conta, continuar) {
 }
 
 async function abrirSessao(id) {
+  mostrarLado(true);
   sessaoAberta = id;
   document.querySelectorAll(".item-sessao").forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === id)));
   const [{ sessao }, ct] = await Promise.all([api("sessao/ler", { id, desde: 1e9 }), api("contas")]);
@@ -952,7 +959,7 @@ function fecharPrevia() {
 const ESTADO_HOLO = { inativo: "Inativo", ativo: "Pronto", ouvindo: "Ouvindo", pensando: "Pensando", falando: "Falando", confirmando: "Esperando o seu sim" };
 let estadoZe = "inativo";
 const telaHolograma = () => `<div class="holo" data-estado="${estadoZe}">
-  <div class="holo-palco"><img src="/imagens/holograma.webp" alt="O Zé" width="520" height="520"></div>
+  <div class="holo-palco"><img src="/imagens/holograma.webp" alt="O Zé" width="780" height="780" decoding="async"></div>
   <p class="holo-estado" id="holo-estado">${ESTADO_HOLO[estadoZe] || ""}</p>
   <div class="holo-botoes"><div class="voz-remota" id="voz-holo"></div><button type="button" class="acao" data-falar aria-pressed="false">Falar</button></div>
 </div>`;
@@ -1144,6 +1151,10 @@ const ACOES = {
   "escuta-apagar": (b) => confirmar(b, "Remover a chave?", async () => { escuta = await api("escuta/apagar", {}); desenharEscuta(); toast(escuta.aviso); }),
   "chave-apagar": (b) => confirmar(b, "Apagar a chave?", async () => { const c = await api("chave/apagar", { motor: modelo.motor }); modelo.chaves = c.chaves; desenharChave(); }),
   // sessões
+  "sessoes-voltar": () => {
+    fecharTerminalTela(); sessaoAberta = null; mostrarLado(false);
+    document.querySelectorAll(".item-sessao").forEach((x) => x.setAttribute("aria-current", "false"));
+  },
   "sessao-nova": async () => { sessaoAberta = null; document.querySelectorAll(".item-sessao").forEach((x) => x.setAttribute("aria-current", "false")); await formSessao(); },
   "sessao-abrir": (b) => abrirSessao(b.dataset.id),
   "ns-onde": (b) => {
@@ -1217,6 +1228,10 @@ const ACOES = {
   "tunel-desativar": async (b) => { const r = await ocupado(b, () => api("tunel/desativar", {})); toast(r.aviso); await recarregar(); },
   "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
+  menu: () => {
+    const aberto = document.body.classList.toggle("menu-aberto");
+    document.querySelector(".botao-menu").setAttribute("aria-expanded", String(aberto));
+  },
   "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
   "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
 };
@@ -1306,6 +1321,8 @@ async function abrir() {
   document.querySelector(`nav a[data-secao="${secao}"]`)?.closest(".grupo")?.querySelector(".grupo-titulo").setAttribute("aria-expanded", "true");
   imersao.hidden = secao !== "imersao";
   conteudo.hidden = secao === "imersao";
+  document.body.classList.remove("menu-aberto");
+  document.body.classList.toggle("tela-holo", secao === "imersao" && !NO_PC);
   conteudo.classList.toggle("cheio", secao === "sessoes");
   clearInterval(relogioSessoes);
   fecharTerminalTela();
