@@ -63,7 +63,7 @@ from jarvis.nucleo import estados as e
 from jarvis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from jarvis.oficina.manutencao import Manutencao
 from jarvis.oficina.sessoes import FOCO_S, Sessao, SessaoErro, Sessoes
-from jarvis.portal import remoto, tunel
+from jarvis.portal import remoto, senha, tunel
 from jarvis.portal.acoes import Acoes
 from jarvis.portal.senha import Acesso
 from jarvis.portal.servidor import Portal
@@ -219,21 +219,6 @@ class Status:
     pedidos: int = 0
     meio_transcricao: str = ""
     tempos: dict[str, float | bool | None] = field(default_factory=dict)
-
-
-# Ajustes de acesso que só valem pelo próprio PC (servidor do painel recusa de outro aparelho).
-SO_NO_PC = {
-    "acesso/senha",
-    "acesso/encerrar",
-    "acesso/desconectar",
-    "acesso/codigo/preparar",
-    "acesso/codigo/confirmar",
-    "acesso/codigo/desligar",
-    "tunel/ativar",
-    "tunel/desativar",
-    "remoto/ativar",
-    "remoto/desativar",
-}
 
 
 class Nucleo:
@@ -456,7 +441,7 @@ class Nucleo:
                 envios=acoes.envios(),
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
-                so_no_pc=SO_NO_PC,
+                so_no_pc=senha.SO_NO_PC,
             )
             self.portal.iniciar()
         except OSError as erro:

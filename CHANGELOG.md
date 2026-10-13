@@ -134,3 +134,6 @@
   o que ele não entendeu (com o que ouviu), as correções e os pedidos atendidos. Nova página
   Atividade, com o registro técnico do serviço e "Copiar diagnóstico". Nova ação: suspender o
   computador (confirmação falada).
+- Essência do Zé (`docs/essencia.md`, ADR 0026): o que ele é e não deixa de ser. A sessão de
+  manutenção passa a ler a essência, só trabalha no próprio Zé (recusa o resto) e tem a zona
+  protegida ampliada com a segurança nova (senha, túnel, atividade, WebSocket) e a persona.

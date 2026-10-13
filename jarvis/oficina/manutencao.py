@@ -48,6 +48,18 @@ PROTEGIDOS = (
     "systemd/",
     "CLAUDE.md",
     "AGENTS.md",
+    # A essência e quem o Zé é (ADR 0026).
+    "docs/essencia.md",
+    "jarvis/persona/",
+    # A segurança do acesso de outro aparelho e o registro do que ele executa.
+    "jarvis/portal/senha.py",
+    "jarvis/portal/servidor.py",
+    "jarvis/portal/remoto.py",
+    "jarvis/portal/tunel.py",
+    "jarvis/transporte/websocket.py",
+    "jarvis/atividade.py",
+    "jarvis/cerebro/codex_rpc.py",  # o que o cérebro Codex pode fazer (sem shell)
+    "jarvis/cerebro/codex_mcp.py",  # a aprovação das ferramentas no Codex
 )
 CONFIG_DO_USUARIO = lugares.CONFIG / "config.toml"
 # Precisam de reinício para valer (o resto é página, documento ou teste).
@@ -208,7 +220,10 @@ class Manutencao:
         mensagem = (
             f"[JARVIS · modo manutenção · pedido {pedido.id}] {corpo} Contexto agora: {contexto} "
             "Trabalhe como sempre neste projeto (CLAUDE.md, testes, conferir na janela real, "
-            "commit). Zona protegida: não altere sem o usuário aprovar explicitamente nesta "
+            "commit). Leia docs/essencia.md: nenhuma mudança pode contrariá-la. Escopo: só "
+            "trabalho sobre o próprio Zérvis; pedido fora disso (outro projeto, um site, um "
+            "script qualquer) você recusa e grava como resposta que ele deve abrir uma sessão "
+            "comum. Zona protegida: não altere sem o usuário aprovar explicitamente nesta "
             f"sessão: {', '.join(PROTEGIDOS)} e {CONFIG_DO_USUARIO}. Ao terminar, grave só o seu "
             f"Resumo falado (um parágrafo, sem símbolos nem caminhos, números por extenso) em "
             f"{resposta}. Se precisar perguntar algo ao usuário antes, grave só a pergunta em "

@@ -44,6 +44,21 @@ PASSO_S = 30  # o código muda a cada 30 s
 DIGITOS = 6
 
 
+# Ajustes de acesso que só valem pelo próprio PC (servidor do painel recusa de outro aparelho).
+SO_NO_PC = {
+    "acesso/senha",
+    "acesso/encerrar",
+    "acesso/desconectar",
+    "acesso/codigo/preparar",
+    "acesso/codigo/confirmar",
+    "acesso/codigo/desligar",
+    "tunel/ativar",
+    "tunel/desativar",
+    "remoto/ativar",
+    "remoto/desativar",
+}
+
+
 class SenhaErro(ValueError):
     pass
 

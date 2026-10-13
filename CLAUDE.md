@@ -2,6 +2,7 @@
 
 Antes de codar, leia `README.md` e `docs/roteiro.md` (para onde o projeto vai, em ordem).
 Regras de engenharia: `docs/06-qualidade.md` (obrigatórias). Decisões: `docs/adr/`.
+O que o Zé é e não deixa de ser: `docs/essencia.md` (nenhuma mudança pode contrariá-la).
 
 - O Zé é para qualquer pessoa instalar do zero: nada de nome, fuso, caminho ou serviço de
   alguém fixo no código. O que é de quem usa vem da configuração (`jarvis/lugares.py`,

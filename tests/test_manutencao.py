@@ -100,6 +100,25 @@ def test_pedido_vai_com_contexto_e_o_combinado_dos_arquivos(repo: Path) -> None:
     assert str(m.pasta / f"resposta-{pedido}.md") in texto
     assert str(m.pasta / f"pergunta-{pedido}.md") in texto
     assert "jarvis/cerebro/claude.py" in texto  # a zona protegida vai escrita no pedido
+    assert "docs/essencia.md" in texto and "Escopo: só trabalho sobre o próprio Zérvis" in texto
+
+
+def test_essencia_e_seguranca_na_zona_protegida() -> None:
+    from jarvis.oficina.manutencao import PROTEGIDOS
+
+    raiz = Path(__file__).resolve().parents[1]
+    for arquivo in (
+        "docs/essencia.md",
+        "jarvis/portal/senha.py",
+        "jarvis/portal/servidor.py",
+        "jarvis/portal/tunel.py",
+        "jarvis/atividade.py",
+        "jarvis/transporte/websocket.py",
+        "jarvis/cerebro/codex_rpc.py",
+    ):
+        assert arquivo in PROTEGIDOS and (raiz / arquivo).is_file(), arquivo
+    for pasta in ("jarvis/persona/", "systemd/"):
+        assert pasta in PROTEGIDOS and (raiz / pasta).is_dir(), pasta
 
 
 def test_sessao_ocupada_nao_perde_o_pedido_em_silencio(repo: Path) -> None:
