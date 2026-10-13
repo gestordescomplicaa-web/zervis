@@ -1,7 +1,7 @@
 # 0022 — Ativação ("Ei Zé" ou botão) separada do modo de fala; segurar para falar
 
 - Data: 12/10/2026
-- Status: **Aceito** (pedido do usuário: diferenciar o "Ei Zé" ao vivo, o botão, o modo
+- Status: **Aceito**; revisto em 13/10/2026: o Silencioso volta a fechar o microfone, agora por inteiro (o chamado, o botão e o ao vivo), a pedido do usuário: "no modo silencioso não quero que ele atrapalhe o YouTube; o microfone deveria ficar travado" (pedido do usuário: diferenciar o "Ei Zé" ao vivo, o botão, o modo
   silencioso e o texto; no celular, com fone, poupando bateria). Altera o
   [ADR 0018](0018-modos-de-fala.md) num ponto: o Silencioso não desliga mais o chamado.
 

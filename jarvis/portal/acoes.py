@@ -440,7 +440,10 @@ class Acoes:
 
     def apertar(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Botão de falar apertado: abre o pedido, como o "Ei Zé"."""
-        self.n.apertar()
+        try:
+            self.n.apertar()
+        except ValueError as erro:
+            raise PedidoInvalido(str(erro)) from None
         return {}
 
     def soltar(self, dados: dict[str, Any]) -> dict[str, Any]:

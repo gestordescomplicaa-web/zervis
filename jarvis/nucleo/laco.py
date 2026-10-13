@@ -636,7 +636,8 @@ class Nucleo:
                 self.vad.reiniciar()
                 self.segmentador.limpar()
                 self._fim_fala_em = None
-                self.captura.abrir()
+                if not self.microfone_travado:  # Silencioso: o microfone fica fechado
+                    self.captura.abrir()
             case e.FecharMicrofone():
                 self.captura.fechar()
                 self.segmentador.limpar()
@@ -1058,6 +1059,16 @@ class Nucleo:
         self.voz.muda = modo == "silencioso"
         if self.voz.muda:
             self.voz.parar()
+            # Silencioso trava o microfone: nem chamado, nem botão, nem ao vivo (13/10/2026).
+            if (captura := getattr(self, "captura", None)) is not None:
+                captura.fechar()
+                self.segmentador.limpar()
+            if self.maquina.estado is e.Estado.OUVINDO:
+                self.eventos.put(e.Silencio())
+        elif (captura := getattr(self, "captura", None)) is not None and (
+            self.maquina.estado is not e.Estado.INATIVO
+        ):
+            captura.abrir()
         self._ligar_ativacao()
         log.info("modo de fala: %s", modo)
         return f"Modo {modo_fala.NOMES[modo].lower()}."
@@ -1362,12 +1373,16 @@ class Nucleo:
             self.eventos.put(e.AoVivo(ligada))  # conectada, a voz é ao vivo (ADR 0023)
 
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None:
-        if fonte is self._fonte:
+        if fonte is self._fonte and not self.microfone_travado:
             self.captura.receber(quadro)
 
     def voz_pelo_navegador(self, conexao: Conexao, taxa: int) -> None:
         """O botão Ao vivo do navegador abriu o canal de voz pelo HTTPS do painel (roteiro,
         passo 4.2); fica aqui, na thread da conexão, até ela fechar."""
+        if self.microfone_travado:
+            log.info("voz pelo navegador: recusada no modo Silencioso")
+            conexao.fechar()
+            return
         voz = VozNavegador(conexao, taxa)
         log.info("voz pelo navegador: conectada (%d Hz)", voz.taxa)
         self._fonte_remota(voz, True)
@@ -1699,7 +1714,14 @@ class Nucleo:
             self._fechar_escuta()
             self.tratar(e.Silencio())
 
+    @property
+    def microfone_travado(self) -> bool:
+        """No Silencioso o Zé não ouve: o microfone fica fechado e o botão não abre."""
+        return getattr(self, "modo_fala", "") == "silencioso"
+
     def apertar(self) -> None:
+        if self.microfone_travado:
+            raise ValueError("Microfone desligado no modo Silencioso.")
         self.eventos.put(e.Apertou())
 
     def soltar(self) -> None:

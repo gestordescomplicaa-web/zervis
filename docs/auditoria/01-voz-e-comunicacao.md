@@ -11,7 +11,7 @@ com uma pergunta:
 |---|---|---|
 | Ativação | Como eu chamo o Zé no microfone do PC? | "Ei Zé" ou Só o botão |
 | Escuta | Quando o "Ei Zé" funciona? | Sempre ou Com a janela aberta (painel ou imersão) |
-| Modo de fala | Quando o Zé fala sem eu pedir? | Silencioso, Avisos, Mãos livres |
+| Modo de fala | Quando o Zé fala sem eu pedir? | Silencioso (não fala nem ouve), Avisos, Mãos livres |
 
 E duas formas de conversar: **Falar** (segurar e soltar, um pedido) e **Ao vivo** (conversa
 contínua até desconectar), no PC ou no celular.
@@ -134,3 +134,6 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
    **o Zé tem a vez** — enquanto ouve, pensa ou fala, vídeo e música pausam (MPRIS) e voltam
    depois; e o som que disparou cada chamado fica guardado (os 10 últimos, só no PC) para achar a
    causa das ativações sozinhas. A decidir: cancelamento de eco (muda a saída padrão do sistema).
+9. **No Silencioso o Zé ainda ouvia** (o chamado continuava, ADR 0022) e atrapalhava o YouTube.
+   Pedido da pessoa: o Silencioso trava o microfone. Feito: nem "Ei Zé", nem botão, nem ao vivo;
+   a conversa é pela tela. Para conferir no passo 2 refeito.

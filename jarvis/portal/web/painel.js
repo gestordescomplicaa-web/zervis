@@ -231,7 +231,7 @@ const PAGINAS = {
 // --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ---
 
 const MODOS_FALA = [
-  { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala. Tudo fica na tela." },
+  { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve. Tudo pela tela." },
   { valor: "avisos", nome: "Avisos", curto: "Avisos e urgências", detalhe: "Fala avisos e urgências. Respostas das sessões, só se você pedir." },
   { valor: "maos_livres", nome: "Mãos livres", curto: "Também as respostas", detalhe: "Fala também as respostas das sessões, resumidas." },
 ];
@@ -351,6 +351,7 @@ function ligarVoz() {
 }
 
 async function conectarVoz(religando) {
+  if (modoFala === "silencioso") return toast("Microfone desligado no modo Silencioso.");
   vozConectando = true; desenharVozRemota();
   let mic = null;
   try {
