@@ -211,7 +211,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
     monkeypatch.setattr(subprocess, "run", rodar)
     monkeypatch.setattr(m, "guarda", lambda inicio: (True, ("jarvis/cerebro/claude.py",)))
     ok, fala = m.reiniciar()
-    assert not ok and "eu revisei" in fala and not rodou
+    assert not ok and "pelo painel" in fala and not rodou
     ok, fala = m.reiniciar(revisado=True)
     assert ok and "Reiniciando" in fala
     assert rodou[0][0][:2] == ["/usr/bin/make", "-s"]  # os testes antes

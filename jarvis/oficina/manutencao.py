@@ -11,7 +11,7 @@ igual com qualquer agente.
 Supervisionado de propósito (docs/05-roadmap.md, fase de manutenção):
 - a zona protegida (regras de aprovação, política do sistema, configuração, este módulo, o
   reinício) pode mudar só com o usuário aprovando na sessão; se mudar, o JARVIS avisa e não se
-  reinicia sem um "eu revisei";
+  reinicia sem a revisão marcada no painel, no próprio PC (ADR 0028);
 - reiniciar para a mudança valer passa pelos testes e por `deploy/reinicio-seguro.sh`, que volta
   sozinho para a última versão boa se a nova não subir.
 """
@@ -441,8 +441,7 @@ class Manutencao:
         if protegidos and not revisado:
             return False, (
                 "Não reiniciei: a mudança mexeu na zona protegida, nas regras do que eu faço sem "
-                "perguntar. Revise na sessão de manutenção, no painel; para valer mesmo assim, "
-                "diga: reinicia o Zé, eu revisei."
+                "perguntar. Revise e aplique pelo painel, no computador."
             )
         testes = subprocess.run(
             ["/usr/bin/make", "-s", "check"],

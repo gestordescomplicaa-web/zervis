@@ -186,7 +186,11 @@ NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
             [("encaminhar", "melhora o teclado")],
         ),
         ("reiniciar", "Vou me reiniciar.", [("reiniciar", False)]),
-        ("reiniciar:revisado", "Vou me reiniciar.", [("reiniciar", True)]),
+        (
+            "reiniciar:revisado",
+            "Vou me reiniciar.",
+            [("reiniciar", False)],
+        ),  # "eu revisei" pela voz não vale (ADR 0028)
         ("rodada_melhoria", "Mandei para o Claude.", [("encaminhar", "rodada")]),
     ],
 )

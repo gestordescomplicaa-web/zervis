@@ -1,6 +1,7 @@
 """Manutenção como estado do Zé (ADR 0028): aplicar só nele e sem interromper outras sessões."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -79,3 +80,44 @@ def test_sessao_reservada_recusa_trabalho_novo_menos_a_do_ze(tmp_path: Path) -> 
 
 def test_entrar_e_sair_da_manutencao_so_pelo_pc() -> None:
     assert "ze/manutencao" in SO_NO_PC
+
+
+class _Voz:
+    """O núcleo só com o que o pedido falado de reiniciar usa."""
+
+    def __init__(self, fonte: object = None, digitado: float | None = None) -> None:
+        self._fonte = fonte
+        self._digitado_em = digitado
+        self.aplicados: list[bool] = []
+        self.ditos: list[str] = []
+        self.manutencao = self
+        self.eventos = self
+
+    def mudancas(self) -> dict[str, Any]:
+        return {"commits": ["abc muda"]}
+
+    def aplicar_melhorias(self, revisado: bool = False) -> str:
+        self.aplicados.append(revisado)
+        return "aplicando"
+
+    def _no_proprio_pc(self) -> bool:
+        return Nucleo._no_proprio_pc(self)  # type: ignore[arg-type]
+
+    def put(self, evento: Any) -> None:
+        if hasattr(evento, "texto"):
+            self.ditos.append(evento.texto)
+
+
+@pytest.mark.parametrize(
+    ("voz", "aplicados", "dito"),
+    [
+        (_Voz(), [False], "aplicando"),  # "eu revisei" pela voz não vale como revisão
+        (_Voz(fonte=object()), [], "Aplique no computador."),  # celular
+        (_Voz(digitado=1.0), [], "Aplique no computador."),  # digitado no painel
+    ],
+)
+def test_pela_voz_so_no_pc_e_nunca_a_zona_protegida(
+    voz: _Voz, aplicados: list[bool], dito: str
+) -> None:
+    Nucleo._responder_depois(voz, "reiniciar", "revisado")  # type: ignore[arg-type]
+    assert voz.aplicados == aplicados and voz.ditos == [dito]

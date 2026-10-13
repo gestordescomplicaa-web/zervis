@@ -722,10 +722,15 @@ class Nucleo:
                 self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
             elif nome == "rodada_melhoria":
                 resposta = self._rodada_de_melhoria()
+            elif not self._no_proprio_pc():
+                # Reiniciar e aplicar mudam o Zé em uso: nunca de outro aparelho (ADR 0028).
+                resposta = "Aplique no computador."
+            # Pela voz, nunca com "eu revisei": a zona protegida só se aplica no painel, no PC,
+            # com a revisão marcada (docs/essencia.md, item 7).
             elif m.mudancas().get("commits"):  # reiniciar: há melhorias na cópia, aplica
-                resposta = self.aplicar_melhorias(revisado=argumento == "revisado")
+                resposta = self.aplicar_melhorias(revisado=False)
             else:  # reiniciar
-                _, resposta = m.reiniciar(revisado=argumento == "revisado")
+                _, resposta = m.reiniciar(revisado=False)
         except (SessaoErro, OSError, subprocess.SubprocessError) as erro:
             log.warning("manutenção: %s", erro)
             resposta = "Não consegui falar com a sessão de manutenção agora."
@@ -989,6 +994,10 @@ class Nucleo:
         if modo_fala.falar(self.modo_fala, tipo, self.vendo(id_)):
             escutar = self.modo_fala == "maos_livres" and self.chamado == "voz"
             self.eventos.put(e.Aviso(texto, escutar=escutar))
+
+    def _no_proprio_pc(self) -> bool:
+        """O pedido em curso veio do microfone do próprio PC (não do celular nem digitado)."""
+        return getattr(self, "_digitado_em", None) is None and getattr(self, "_fonte", None) is None
 
     def _origem(self) -> str:
         """De onde veio o pedido em curso, para a atividade."""

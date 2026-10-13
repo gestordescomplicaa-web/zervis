@@ -22,7 +22,11 @@ outros projetos no meio do trabalho (visto no registro de 13/10/2026).
 4. **Aplicar não interrompe ninguém**: com sessões de outros projetos trabalhando, o Zé espera
    ("Aplico quando terminarem") e aplica sozinho quando ficarem livres; enquanto espera, não
    aceita trabalho novo nelas. Sair da manutenção cancela a espera.
-5. As travas do ADR 0026 continuam: cópia isolada, `make check`, zona protegida com revisão,
+5. **Aplicar e reiniciar, só do próprio PC.** Pela voz, só o microfone do PC aplica, e nunca a
+   zona protegida: "eu revisei" falado não vale como revisão. Voz do celular ou texto digitado
+   recebem "Aplique no computador." A zona protegida só entra pelo painel, no PC, com a revisão
+   marcada (essência, item 7).
+6. As travas do ADR 0026 continuam: cópia isolada, `make check`, zona protegida com revisão,
    volta automática.
 
 ## Consequências
