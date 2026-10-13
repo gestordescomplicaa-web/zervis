@@ -80,7 +80,9 @@ from jarvis.sistema.vigia import Eventos, Vigia
 from jarvis.transporte import servidor_livekit
 from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.local import SERVIDOR, Captura
+from jarvis.transporte.navegador import VozNavegador
 from jarvis.transporte.remoto import SalaRemota
+from jarvis.transporte.websocket import Conexao
 from jarvis.voz import chamado, piper
 from jarvis.voz.ativacao import VAD, Detector, Features, SemAtivacao, carregar_modelo
 from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro
@@ -330,6 +332,7 @@ class Nucleo:
         self.memoria_longa = AiMemory()  # o ai-memory: o da máquina ou um filho do Zé
         self.livekit = servidor_livekit.ServidorLiveKit()  # a sala da voz remota
         self.remota: SalaRemota | None = None
+        self._fonte: Any = None  # a voz remota em uso: o navegador ou a sala LiveKit
         self.imersivo = Imersivo(
             cfg.caminho("barehands", "pasta_estado"),
             acervo=cfg.caminho("barehands", "pasta_acervo"),
@@ -428,7 +431,11 @@ class Nucleo:
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
             self.portal = Portal(
-                acoes.leituras(), acoes.escritas(), envios=acoes.envios(), acesso=self.acesso
+                acoes.leituras(),
+                acoes.escritas(),
+                envios=acoes.envios(),
+                acesso=self.acesso,
+                voz=self.voz_pelo_navegador,
             )
             self.portal.iniciar()
         except OSError as erro:
@@ -1011,19 +1018,47 @@ class Nucleo:
         self.remota = SalaRemota(
             self.livekit.url,
             lambda: servidor_livekit.token(chave, segredo, "ze", "Zé", validade_s=3600),
-            self.captura.receber,
-            self._voz_remota_mudou,
+            lambda quadro: self._quadro_remoto(self.remota, quadro),
+            lambda conectada: self._fonte_remota(self.remota, conectada),
         )
         self.remota.iniciar()
 
-    def _voz_remota_mudou(self, conectada: bool) -> None:
-        """A pessoa entrou ou saiu da sala: a entrada e a saída de áudio trocam de lado, e o
-        dispositivo conectado vale como rosto (ADR 0021)."""
-        remota = self.remota
-        self.captura.remota(conectada)
-        self.voz.destino = remota.tocador if conectada and remota is not None else None
-        self.rostos.marcar("remoto", conectada)
-        self.eventos.put(e.AoVivo(conectada))  # conectada, a voz é ao vivo (ADR 0023)
+    def _fonte_remota(self, fonte: Any, conectada: bool) -> None:
+        """Uma voz remota (o navegador pelo HTTPS do painel ou a sala LiveKit) conectou ou saiu:
+        a entrada e a saída de áudio trocam de lado, e o aparelho conectado vale como rosto
+        (ADR 0021). Uma fonte por vez: a nova assume e a anterior é desligada, para duas não
+        escreverem juntas na mesma fila."""
+        anterior = self._fonte
+        if conectada:
+            self._fonte = fonte
+            if isinstance(anterior, VozNavegador) and anterior is not fonte:
+                anterior.conexao.fechar()
+        elif anterior is fonte:
+            self._fonte = None
+        else:
+            return  # saiu uma fonte que já não era a atual
+        ligada = self._fonte is not None
+        self.captura.remota(ligada)
+        self.voz.destino = self._fonte.tocador if self._fonte is not None else None
+        if (anterior is None) != (self._fonte is None):
+            self.rostos.marcar("remoto", ligada)
+            self.eventos.put(e.AoVivo(ligada))  # conectada, a voz é ao vivo (ADR 0023)
+
+    def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None:
+        if fonte is self._fonte:
+            self.captura.receber(quadro)
+
+    def voz_pelo_navegador(self, conexao: Conexao, taxa: int) -> None:
+        """O botão Ao vivo do navegador abriu o canal de voz pelo HTTPS do painel (roteiro,
+        passo 4.2); fica aqui, na thread da conexão, até ela fechar."""
+        voz = VozNavegador(conexao, taxa)
+        log.info("voz pelo navegador: conectada (%d Hz)", voz.taxa)
+        self._fonte_remota(voz, True)
+        try:
+            voz.ouvir(lambda quadro: self._quadro_remoto(voz, quadro))
+        finally:
+            self._fonte_remota(voz, False)
+            log.info("voz pelo navegador: desconectada")
 
     def estado_remoto(self) -> dict[str, Any]:
         rede = remoto.rede(self.portal.porta if self.portal else 0).para_tela()
@@ -1064,7 +1099,7 @@ class Nucleo:
         }
 
     def _tocar_bip(self) -> None:
-        remota = self.remota
+        remota = self._fonte
         if remota is not None and remota.conectada:
             try:
                 remota.tocar_wav(self.bip)

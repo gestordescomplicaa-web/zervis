@@ -213,10 +213,7 @@ class Acoes:
             "modo_fala": self.n.modo_fala,
             "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
             "chamado": self.n.chamado,
-            "voz_remota": {
-                "disponivel": self.n.remota is not None,
-                "conectada": self.n.remota is not None and self.n.remota.conectada,
-            },
+            "voz_remota": {"conectada": self.n._fonte is not None},
         }
 
     def mudar_modo_fala(self, dados: dict[str, Any]) -> dict[str, Any]:

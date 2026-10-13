@@ -25,6 +25,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from jarvis.portal.senha import Acesso, SenhaErro
+from jarvis.transporte import websocket
 
 log = logging.getLogger(__name__)
 WEB = Path(__file__).with_name("web")
@@ -51,12 +52,15 @@ ARQUIVOS = {
     "/vendor/xterm/addon-fit.js": "vendor/xterm/addon-fit.js",
     # O cliente da voz remota (livekit-client, Apache-2.0; ver THIRD_PARTY.md).
     "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
+    # O microfone do navegador em pedaços de 80 ms a 16 kHz (voz pelo HTTPS do painel).
+    "/voz-captura.js": "voz-captura.js",
 }
 
 LIVRES = {"/painel.css", "/ze.webp"}  # o que a tela "Entrar" usa, antes de entrar
 COOKIE = "ze_acesso"
 
 Leitura = Callable[[], Any]
+Voz = Callable[[websocket.Conexao, int], None]  # o canal de voz do navegador (bloqueia até fechar)
 Escrita = Callable[[dict[str, Any]], Any]
 Envio = Callable[[bytes, dict[str, str]], Any]  # corpo cru (um arquivo) e os parâmetros da URL
 MAXIMO_ENVIO = 20 * 1024 * 1024
@@ -75,8 +79,10 @@ class Portal:
         token: str | None = None,
         envios: dict[str, Envio] | None = None,
         acesso: Acesso | None = None,
+        voz: Voz | None = None,
     ) -> None:
         self.acesso = acesso
+        self.voz = voz
         self.leituras = leituras
         self.escritas = escritas
         self.envios = envios or {}
@@ -202,11 +208,40 @@ class Portal:
                 )
                 self._ir("/", cookie)
 
+            def _mesma_origem(self) -> bool:
+                """O WebSocket leva o cookie sozinho: outro site não pode abri-lo em nome de quem
+                já entrou (a origem precisa ser o próprio endereço do painel)."""
+                return urlsplit(self.headers.get("Origin", "")).netloc == self.headers.get("Host")
+
+            def _voz(self) -> None:
+                if portal.voz is None or not self._entrou() or not self._mesma_origem():
+                    self._json(403, {"erro": "voz"})
+                    return
+                conexao = websocket.aceitar(self)
+                if conexao is None:
+                    self._json(400, {"erro": "esperado WebSocket"})
+                    return
+                try:
+                    self.connection.settimeout(10)  # a primeira mensagem traz o código do painel
+                    _, primeira = conexao.receber()
+                    self.connection.settimeout(None)
+                    dados = json.loads(primeira)
+                    if not hmac.compare_digest(str(dados.get("token", "")), portal.token):
+                        raise ValueError("token")
+                    taxa = int(dados.get("taxa", 16000))
+                except (OSError, ValueError, AttributeError, websocket.FechouErro):
+                    conexao.fechar()
+                    return
+                portal.voz(conexao, taxa)
+
             def do_GET(self) -> None:
                 if not self._host_local():
                     self._json(403, {"erro": "host"})
                     return
                 caminho = self.path.split("?", 1)[0]
+                if caminho == "/api/voz/ws":
+                    self._voz()
+                    return
                 if caminho == "/entrar":
                     if self._entrou():
                         self._ir("/")

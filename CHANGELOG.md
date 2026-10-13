@@ -107,3 +107,6 @@
   pela tela Entrar, uma vez por aparelho ("lembrar este aparelho": 30 dias). A senha é guardada só
   como resumo (scrypt), cinco erros bloqueiam por 15 minutos, e trocar a senha ou "Encerrar
   acessos" desconecta todos. Ativar o acesso pelo celular exige a senha definida.
+- Voz pelo HTTPS (ADR 0024): o Ao vivo do navegador manda o microfone e recebe a voz do Zé pelo
+  WebSocket do próprio painel, sem WebRTC: onde o painel abre, a voz funciona, sem porta nem firewall.
+  A tela fica ligada durante o ao vivo. O painel não carrega mais o cliente do LiveKit.

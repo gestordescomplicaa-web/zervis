@@ -258,38 +258,88 @@ async function mudarModoFala(valor) {
   if (location.hash === "#voz") await recarregar();
 }
 
-// --- Voz pelo navegador: o microfone daqui fala com o Zé pela sala LiveKit ---
+// --- Voz ao vivo pelo navegador: o microfone vai ao Zé pelo HTTPS do painel (WebSocket) ---
 
 let salaVoz = null, vozConectando = false;
 
-function desenharVozRemota(estado) {
+function desenharVozRemota() {
   const caixa = $("voz-remota"), on = !!salaVoz;
-  caixa.hidden = !estado?.disponivel && !on;
+  caixa.hidden = false;
   const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz ao vivo" : "Conectar a voz ao vivo: ouve sem parar até desconectar"}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : "Ao vivo"}</button>`;
   if (caixa.innerHTML !== html) caixa.innerHTML = html;
 }
 
 const avisarVoz = (evento, detalhe = "") => api("voz/evento", { evento, detalhe: String(detalhe), aparelho: navigator.userAgent }).catch(() => {});
 
-async function ligarVoz() {
-  const L = window.LivekitClient, fim = (texto) => { salaVoz = null; document.querySelectorAll("audio[data-voz]").forEach((a) => a.remove()); desenharVozRemota({ disponivel: true }); if (texto) toast(texto); };
-  if (salaVoz) { const sala = salaVoz; fim("Voz desconectada."); return sala.disconnect(); }
-  vozConectando = true; desenharVozRemota({ disponivel: true });
+// A voz do Zé chega em PCM de 16 bits; cada pedaço entra na fila logo depois do anterior.
+function tocadorVoz() {
+  const ctx = new AudioContext(), tocando = new Set();
+  let taxa = 22050, proximo = 0;
+  return {
+    ctx,
+    controle(m) {
+      if (m.tipo === "voz") taxa = m.taxa;
+      if (m.tipo === "parar") { tocando.forEach((f) => f.stop()); tocando.clear(); proximo = 0; }
+    },
+    pedaco(dados) {
+      const pcm = new Int16Array(dados), buf = ctx.createBuffer(1, pcm.length, taxa), canal = buf.getChannelData(0);
+      for (let i = 0; i < pcm.length; i++) canal[i] = pcm[i] / 32768;
+      const f = ctx.createBufferSource();
+      f.buffer = buf; f.connect(ctx.destination);
+      proximo = Math.max(proximo, ctx.currentTime + 0.05);
+      f.start(proximo); proximo += buf.duration;
+      tocando.add(f); f.onended = () => tocando.delete(f);
+    },
+  };
+}
+
+// A tela fica ligada durante o ao vivo: bloqueada, o navegador para o microfone.
+let telaLigada = null;
+async function manterTela(ligar) {
   try {
-    const { url: local, token } = await api("voz/token", {});
-    const url = ["127.0.0.1", "localhost"].includes(location.hostname) ? local : `wss://${location.hostname}:8443`;
-    const sala = new L.Room({ audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    sala.on(L.RoomEvent.TrackSubscribed, (f) => { if (f.kind === "audio") document.body.appendChild(f.attach()).dataset.voz = ""; });
-    sala.on(L.RoomEvent.Disconnected, (motivo) => { avisarVoz("caiu", motivo); if (salaVoz === sala) fim(); });
-    sala.on(L.RoomEvent.MediaDevicesError, (erro) => avisarVoz("microfone", `${erro.name}: ${erro.message}`));
-    await sala.connect(url, token);
-    await sala.localParticipant.setMicrophoneEnabled(true);
-    salaVoz = sala; toast("Voz ao vivo."); avisarVoz("conectou");
+    if (ligar && !telaLigada) telaLigada = await navigator.wakeLock?.request("screen");
+    if (!ligar) { await telaLigada?.release(); telaLigada = null; }
+  } catch { /* sem suporte: segue sem */ }
+}
+document.addEventListener("visibilitychange", () => { if (salaVoz && document.visibilityState === "visible") { telaLigada = null; manterTela(true); } });
+
+async function ligarVoz() {
+  if (salaVoz) { salaVoz.encerrar(); toast("Voz desconectada."); return; }
+  vozConectando = true; desenharVozRemota();
+  let mic = null;
+  try {
+    mic = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const captura = new AudioContext({ sampleRate: 16000 });
+    await captura.audioWorklet.addModule("/voz-captura.js");
+    const no = new AudioWorkletNode(captura, "captura"), mudo = captura.createGain();
+    mudo.gain.value = 0;
+    captura.createMediaStreamSource(mic).connect(no);
+    no.connect(mudo).connect(captura.destination);
+    const saida = tocadorVoz();
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/voz/ws`);
+    ws.binaryType = "arraybuffer";
+    const conexao = {
+      encerrar() { ws.close(); },
+    };
+    const fim = () => {
+      mic.getTracks().forEach((t) => t.stop()); captura.close(); saida.ctx.close(); manterTela(false);
+      if (salaVoz === conexao) { salaVoz = null; desenharVozRemota(); }
+    };
+    await new Promise((ok, erro) => {
+      ws.onopen = () => { ws.send(JSON.stringify({ token: TOKEN, taxa: captura.sampleRate })); ok(); };
+      ws.onerror = () => erro(new Error("Sem conexão com o Zé."));
+    });
+    no.port.onmessage = (ev) => { if (ws.readyState === 1) ws.send(ev.data); };
+    ws.onmessage = (ev) => (typeof ev.data === "string" ? saida.controle(JSON.parse(ev.data)) : saida.pedaco(ev.data));
+    ws.onclose = (ev) => { avisarVoz("caiu", ev.code); fim(); };
+    salaVoz = conexao; manterTela(true);
+    toast("Voz ao vivo."); avisarVoz("conectou", `${captura.sampleRate} Hz`);
   } catch (erro) {
+    if (!salaVoz) mic?.getTracks().forEach((t) => t.stop());
     avisarVoz("falhou", `${erro.name}: ${erro.message}`);
     toast(erro.name === "NotAllowedError" ? "Microfone bloqueado no navegador." : erro.message);
   }
-  vozConectando = false; desenharVozRemota({ disponivel: true });
+  vozConectando = false; desenharVozRemota();
 }
 
 // --- Menu lateral: grupos recolhíveis, lembrados neste navegador ---
@@ -1231,7 +1281,7 @@ async function batimento() {
     const icone = document.querySelector(".icone-ze");
     icone.dataset.estado = e.ze; icone.title = `Zé ${ESTADOS[e.ze] || e.ze}`;
     desenharModoFala(e.modo_fala);
-    desenharVozRemota(e.voz_remota);
+    desenharVozRemota();
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }
