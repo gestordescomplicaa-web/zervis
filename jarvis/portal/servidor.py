@@ -92,8 +92,12 @@ class Portal:
         envios: dict[str, Envio] | None = None,
         acesso: Acesso | None = None,
         voz: Voz | None = None,
+        so_no_pc: set[str] | None = None,
     ) -> None:
         self.acesso = acesso
+        # Ajustes de acesso (senha, código, túnel): só pelo próprio PC. Quem entrou de fora não
+        # desliga as proteções que o deixaram entrar.
+        self.so_no_pc = so_no_pc or set()
         self.voz = voz
         self.leituras = leituras
         self.escritas = escritas
@@ -200,27 +204,43 @@ class Portal:
             def _tela_entrar(self, mensagem: str = "") -> None:
                 corpo = (WEB / "entrar.html").read_bytes()
                 aviso = f'<p class="resultado erro">{mensagem}</p>' if mensagem else ""
+                codigo = (
+                    '<label>Código do autenticador<input name="codigo" inputmode="numeric" '
+                    'autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required></label>'
+                    if portal.acesso is not None and portal.acesso.tem_codigo
+                    else ""
+                )
+                corpo = corpo.replace(b"__CODIGO__", codigo.encode())
                 self._enviar(200, corpo.replace(b"__MENSAGEM__", aviso.encode()), "text/html")
+
+            def _origem(self) -> str:
+                """O endereço de quem pede: o que o túnel ou proxy informa, senão a conexão."""
+                if ip := self.headers.get("Cf-Connecting-Ip"):
+                    return ip.strip()
+                if repasse := self.headers.get("X-Forwarded-For"):
+                    return repasse.split(",")[0].strip()
+                return str(self.client_address[0])
 
             def _entrar(self) -> None:
                 tamanho = min(int(self.headers.get("Content-Length") or 0), 4096)
                 campos = parse_qs(self.rfile.read(tamanho).decode(errors="replace"))
                 senha = campos.get("senha", [""])[0]
+                codigo = campos.get("codigo", [""])[0]
                 lembrar = campos.get("lembrar", [""])[0] == "1"
                 if portal.acesso is None:
                     self._tela_entrar("Acesso por outro aparelho indisponível.")
                     return
                 try:
-                    codigo, validade = portal.acesso.entrar(
-                        senha, lembrar, self.headers.get("User-Agent", "")
+                    aparelho, validade = portal.acesso.entrar(
+                        senha, codigo, lembrar, self.headers.get("User-Agent", ""), self._origem()
                     )
                 except SenhaErro as erro:
-                    log.warning("painel: entrada recusada (%s)", erro)
+                    log.warning("painel: entrada recusada de %s (%s)", self._origem(), erro)
                     self._tela_entrar(str(erro))
                     return
                 log.info("painel: um aparelho entrou")
                 cookie = (
-                    f"{COOKIE}={codigo}; Path=/; HttpOnly; Secure; SameSite=Strict; "
+                    f"{COOKIE}={aparelho}; Path=/; HttpOnly; Secure; SameSite=Strict; "
                     f"Max-Age={validade}"
                 )
                 self._ir("/", cookie)
@@ -302,6 +322,10 @@ class Portal:
                     return
                 if not self._autorizado():
                     self._json(403, {"erro": "token"})
+                    return
+                local = self.headers.get("Host", "") in portal.locais and not self._repassado()
+                if caminho[5:] in portal.so_no_pc and not local:
+                    self._json(403, {"erro": "Ajuste disponível só no computador do Zé."})
                     return
                 envio = portal.envios.get(caminho[5:]) if caminho.startswith("/api/") else None
                 if envio is not None:

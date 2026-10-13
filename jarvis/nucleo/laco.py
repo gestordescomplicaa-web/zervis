@@ -221,6 +221,21 @@ class Status:
     tempos: dict[str, float | bool | None] = field(default_factory=dict)
 
 
+# Ajustes de acesso que só valem pelo próprio PC (servidor do painel recusa de outro aparelho).
+SO_NO_PC = {
+    "acesso/senha",
+    "acesso/encerrar",
+    "acesso/desconectar",
+    "acesso/codigo/preparar",
+    "acesso/codigo/confirmar",
+    "acesso/codigo/desligar",
+    "tunel/ativar",
+    "tunel/desativar",
+    "remoto/ativar",
+    "remoto/desativar",
+}
+
+
 class Nucleo:
     def __init__(self, cfg: Config, parar: threading.Event) -> None:
         self.cfg = cfg
@@ -430,7 +445,7 @@ class Nucleo:
             self._primeiro_texto_do_cerebro,
         )
         self.portal: Portal | None = None
-        self.acesso = Acesso()  # a senha de quem entra de outro aparelho
+        self.acesso = Acesso(ao_entrar=self._aparelho_entrou)  # quem entra de outro aparelho
         self.tunel = tunel.Tunel(self._tunel_pronto)  # acesso de qualquer lugar (Cloudflare)
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
@@ -440,6 +455,7 @@ class Nucleo:
                 envios=acoes.envios(),
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
+                so_no_pc=SO_NO_PC,
             )
             self.portal.iniciar()
         except OSError as erro:
@@ -1077,9 +1093,20 @@ class Nucleo:
         return {
             **rede,
             "senha": self.acesso.tem_senha,
+            "codigo": self.acesso.tem_codigo,
             "aparelhos": self.acesso.aparelhos(),
+            "lista": self.acesso.lista(),
             "tunel": {"ativo": self.tunel.ativo, "endereco": endereco, "qr": qr},
         }
+
+    def _aparelho_entrou(self, nome: str) -> None:
+        """Quem entra de outro aparelho não passa em silêncio: aviso na tela e, se o modo de
+        fala deixar, falado."""
+        texto = f"Um aparelho entrou no painel: {nome}."
+        log.warning("painel: %s", texto)
+        self._na_linha("aviso", texto)
+        if modo_fala.falar(self.modo_fala, "urgente"):
+            self.eventos.put(e.Aviso(texto))
 
     def _tunel_pronto(self, endereco: str) -> None:
         if self.portal is not None:
@@ -1097,8 +1124,8 @@ class Nucleo:
         """Acesso de qualquer lugar, sem nada no celular além do navegador (Cloudflare)."""
         if self.portal is None:
             raise remoto.RemotoErro("Painel indisponível.")
-        if not self.acesso.tem_senha:
-            raise remoto.RemotoErro("Defina a senha de acesso antes de ativar.")
+        if not (self.acesso.tem_senha and self.acesso.tem_codigo):
+            raise remoto.RemotoErro("Defina a senha e ligue o código do autenticador antes.")
         try:
             self.tunel.iniciar(self.portal.porta, tunel.garantir())
         except (PrepararErro, OSError) as erro:
@@ -1850,7 +1877,10 @@ class Nucleo:
         self.memoria_longa.iniciar()
         self._ligar_voz_remota()
         if tunel.escolhido():  # o acesso de qualquer lugar continua depois de um reinício
-            threading.Thread(target=self._subir_tunel, name="tunel", daemon=True).start()
+            if self.acesso.tem_senha and self.acesso.tem_codigo:
+                threading.Thread(target=self._subir_tunel, name="tunel", daemon=True).start()
+            else:
+                log.warning("túnel não sobe: falta a senha ou o código do autenticador")
         self.imersivo.iniciar()
         if self.presenca is not None:
             self.presenca.start()

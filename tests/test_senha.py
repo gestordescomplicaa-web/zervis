@@ -8,7 +8,15 @@ from typing import Any
 
 import pytest
 
-from jarvis.portal.senha import LEMBRAR_S, SESSAO_S, Acesso, SenhaErro
+from jarvis.portal.senha import (
+    LEMBRAR_S,
+    PASSO_S,
+    SESSAO_S,
+    Acesso,
+    SenhaErro,
+    codigo_totp,
+    nome_do_aparelho,
+)
 from jarvis.portal.servidor import Portal
 
 
@@ -67,6 +75,7 @@ def test_cinco_erros_bloqueiam_por_quinze_minutos(tmp_path: Path) -> None:
             a.entrar("chute", lembrar=False)
     with pytest.raises(SenhaErro, match="Muitas tentativas"):
         a.entrar("uma senha boa", lembrar=False)  # nem a certa entra durante o bloqueio
+    assert a.entrar("uma senha boa", origem="203.0.113.9")  # outro endereço continua entrando
     relogio.t += 15 * 60 + 1
     assert a.entrar("uma senha boa", lembrar=False)
 
@@ -140,3 +149,88 @@ def test_pedido_repassado_por_tunel_nunca_vale_como_o_proprio_pc(portal: Portal)
     for cabecalho in ("Cf-Connecting-Ip", "X-Forwarded-For"):
         status, cab, _ = _pedir(portal, "GET", "/", local, cab={cabecalho: "203.0.113.9"})
         assert status == 303 and cab["Location"] == "/entrar"
+
+
+def test_codigo_do_autenticador_segue_a_rfc_6238() -> None:
+    # Vetor da RFC 6238 (SHA-1, semente "12345678901234567890", t = 59 s): 94287082 -> 287082.
+    semente = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+    assert codigo_totp(semente, 59 // PASSO_S) == "287082"
+
+
+def test_com_codigo_ligado_a_senha_sozinha_nao_entra(tmp_path: Path) -> None:
+    relogio = Relogio()
+    avisos: list[str] = []
+    a = Acesso(tmp_path / "p.json", tmp_path / "a.json", relogio, ao_entrar=avisos.append)
+    a.definir("uma senha boa")
+    endereco = a.preparar_codigo("Ana")
+    assert endereco.startswith("otpauth://totp/Z%C3%A9rvis%3AAna?secret=")
+    semente = a.semente_pendente
+    with pytest.raises(SenhaErro, match="incorreto"):
+        a.confirmar_codigo("000000")
+    a.confirmar_codigo(codigo_totp(semente, int(relogio.t // PASSO_S)))
+    assert a.tem_codigo and "totp" in json.loads((tmp_path / "p.json").read_text())
+    with pytest.raises(SenhaErro, match="Senha ou código"):
+        a.entrar("uma senha boa", "", lembrar=True)
+    relogio.t += PASSO_S
+    certo = codigo_totp(semente, int(relogio.t // PASSO_S))
+    agente = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/155.0 Mobile Safari"
+    assert a.entrar("uma senha boa", certo, lembrar=True, aparelho=agente, origem="198.51.100.4")
+    assert avisos == ["Android · Chrome"]
+    with pytest.raises(SenhaErro, match="Senha ou código"):
+        a.entrar("uma senha boa", certo, lembrar=True)  # o mesmo código não vale duas vezes
+    a.definir("outra senha boa")
+    assert a.tem_codigo  # trocar a senha não desliga o código
+    a.desligar_codigo()
+    assert not a.tem_codigo
+
+
+def test_lista_de_aparelhos_e_desconectar_um(tmp_path: Path) -> None:
+    relogio = Relogio()
+    a = _acesso(tmp_path, relogio)
+    a.definir("uma senha boa")
+    primeiro, _ = a.entrar("uma senha boa", aparelho="iPhone Safari/605", origem="1.2.3.4")
+    relogio.t += 10
+    segundo, _ = a.entrar("uma senha boa", aparelho="X11; Linux Firefox/130")
+    lista = a.lista()
+    assert [x["aparelho"] for x in lista] == ["Linux · Firefox", "iPhone · Safari"]
+    assert lista[1]["origem"] == "1.2.3.4" and primeiro not in json.dumps(lista)
+    a.desconectar_por_id(lista[1]["id"])
+    assert not a.valido(primeiro) and a.valido(segundo)
+    with pytest.raises(SenhaErro):
+        a.desconectar_por_id("curto")
+    assert nome_do_aparelho("algo estranho") == "Aparelho"
+
+
+def test_ajuste_de_acesso_so_pelo_proprio_pc(tmp_path: Path) -> None:
+    a = _acesso(tmp_path)
+    a.definir("uma senha boa")
+    trocas: list[str] = []
+
+    def trocar(dados: dict[str, Any]) -> dict[str, Any]:
+        trocas.append("x")
+        return {}
+
+    p = Portal(
+        {},
+        {"acesso/senha": trocar},
+        porta=0,
+        acesso=a,
+        so_no_pc={"acesso/senha"},
+    )
+    p.permitir("pc.rede.ts.net")
+    p.iniciar()
+    try:
+        codigo, _ = a.entrar("uma senha boa")
+        token = {"X-Ze-Token": p.token, "Content-Type": "application/json"}
+        remoto = _pedir(
+            p,
+            "POST",
+            "/api/acesso/senha",
+            "pc.rede.ts.net",
+            cab={**token, "Cookie": f"ze_acesso={codigo}"},
+        )
+        assert remoto[0] == 403 and trocas == []
+        local = _pedir(p, "POST", "/api/acesso/senha", f"127.0.0.1:{p.porta}", cab=token)
+        assert local[0] == 200 and trocas == ["x"]
+    finally:
+        p.parar()

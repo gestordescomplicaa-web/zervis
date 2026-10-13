@@ -115,3 +115,7 @@
   celular abre no navegador, entra com a senha e fala pelo ao vivo, em casa ou no 4G. O painel vira
   app instalável (ícone na tela inicial). Pedido que chega por túnel ou proxy nunca vale como o
   próprio PC. O Tailscale fica como alternativa, só se estiver instalado.
+- Segurança do acesso de fora: código do autenticador (verificação em duas etapas, TOTP) obrigatório
+  para o acesso de qualquer lugar; bloqueio de tentativas por endereço de origem (quem ataca não
+  tranca quem usa); aviso falado e na tela quando um aparelho entra, com a lista de aparelhos e
+  Desconectar em cada um; ajustes de acesso (senha, código, túnel) só pelo próprio PC.

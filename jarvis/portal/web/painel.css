@@ -143,6 +143,7 @@ button.acao:hover { background: rgb(70 217 222 / .18); }
 button.acao.principal { background: var(--acento); color: #041417; border-color: var(--acento); font-weight: 600; }
 button.acao.principal:hover { filter: brightness(1.08); }
 button.acao.discreta { background: transparent; color: var(--suave); }
+button.acao:disabled { opacity: .45; cursor: not-allowed; filter: none; }
 button:disabled { opacity: .5; cursor: progress; }
 .chave { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
 .chave label { flex: 1 1 260px; }
@@ -436,3 +437,6 @@ details.alternativa .nota a { margin-right:6px; }
 .acesso-qr { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .acesso-qr svg { flex: none; border-radius: 10px; }
 .acesso-qr p { margin: 4px 0; }
+.aparelho { align-items: center; flex-wrap: nowrap; padding: 8px 0; border-top: 1px solid var(--borda); }
+.aparelho span { white-space: nowrap; }
+.aparelho small { color: var(--suave); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
