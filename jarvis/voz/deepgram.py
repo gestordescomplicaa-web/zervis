@@ -35,8 +35,15 @@ PARAMETROS = {
     "punctuate": "true",
     "smart_format": "false",  # "um Codex" virava "1 Codex"
 }
+# Palavras que o reconhecimento deve preferir (keyterm do nova-3): sem isto, "Ei Zé" virava
+# "Reis é" e "Hey Zé" virava "Pois é" (gravações do chamado, 13/10/2026).
+TERMOS = ("Zé", "Ei Zé", "Hey Zé", "Zérvis")
 FINALIZAR = object()
 FECHAR = object()
+
+
+def consulta() -> str:
+    return urlencode([*PARAMETROS.items(), *(("keyterm", t) for t in TERMOS)])
 
 
 class EscutaErro(RuntimeError):
@@ -123,7 +130,7 @@ class EscutaDeepgram:
 
     def _rodar(self) -> None:
         try:
-            self._ws = self.conectar(f"{ENDERECO}?{urlencode(PARAMETROS)}", self.chave)
+            self._ws = self.conectar(f"{ENDERECO}?{consulta()}", self.chave)
         except Exception as erro:
             self.erro = f"conexão: {type(erro).__name__}"
             self.finalizado.set()

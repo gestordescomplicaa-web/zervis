@@ -1,5 +1,9 @@
 """Treino do chamado pessoal ("Ei Zé" / "Hey Zé"), com a voz do usuário (08/10/2026).
 
+Opcional desde 13/10/2026: o padrão é o chamado universal (`treino_universal.py`), que funciona
+para qualquer pessoa. Este é o ajuste fino de quem quer mais precisão com a própria voz; o modelo
+sai em `<dados>/ativacao/ei_ze.npz` e vale quando `ativacao.modelo` aponta para ele.
+
 Portado do `train_wake.py` do JARVIS antigo (VIBE-CODING, o "Hey Orca"), agora sobre os mesmos
 embeddings em fluxo do `ativacao.py`: o treino vê exatamente o que o detector vê ao vivo.
 
@@ -208,7 +212,7 @@ def _embeddings(clips: list[Audio], features: Features) -> np.ndarray[Any, np.dt
 def _contar(detector: Detector, audio: Audio) -> int:
     detector.reiniciar()
     n = 0
-    for i in range(0, len(audio) - QUADRO, QUADRO):
+    for i in range(0, len(audio) - QUADRO + 1, QUADRO):  # até o último quadro (era pulado)
         n += detector.processar(np.clip(audio[i : i + QUADRO], -32768, 32767).astype(np.int16))
     return n
 

@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Chamado universal: o "Ei Zé" vem treinado no repositório, com vozes sintéticas, e funciona para
+  qualquer pessoa sem gravar a própria voz. A gravação pessoal virou ajuste opcional.
 - O chamado ignora silêncio e som de fundo: precisa de volume de alguém falando ao microfone
   (configurável em `ativacao.nivel_minimo_dbfs`).
 - Silencioso trava o microfone: nem "Ei Zé", nem o botão, nem o Ao vivo; a conversa é pela tela.

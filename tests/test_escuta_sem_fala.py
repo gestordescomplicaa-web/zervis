@@ -2,6 +2,7 @@
 20 s ouvindo e mandando áudio ao reconhecimento): a escuta fecha em poucos segundos."""
 
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 from jarvis.nucleo.laco import PRIMEIRA_FALA_S, Nucleo
@@ -39,3 +40,23 @@ def test_chamado_baixo_demais_e_ignorado() -> None:
     assert nivel_de_pico(alto) > -40 > nivel_de_pico(fundo)
     assert nivel_de_pico(bytes(32000)) < -100  # silêncio
     assert nivel_de_pico(b"") == -120.0
+
+
+def test_reconhecimento_prefere_o_nome_do_ze() -> None:
+    from urllib.parse import parse_qs
+
+    from jarvis.voz import deepgram
+
+    termos = parse_qs(deepgram.consulta())["keyterm"]
+    assert {"Zé", "Ei Zé", "Hey Zé"} <= set(termos)
+
+
+def test_o_chamado_universal_vem_no_repositorio(tmp_path: Path) -> None:
+    """Quem instala do zero tem o "Ei Zé" sem gravar a própria voz (13/10/2026)."""
+    from jarvis.config import carregar
+    from jarvis.voz.ativacao import ModeloAtivacao, carregar_modelo
+
+    caminho = carregar(tmp_path / "nao-existe.toml").caminho("ativacao", "modelo")
+    assert "/voz/modelos/ei_ze.npz" in str(caminho)
+    modelo = carregar_modelo(caminho)
+    assert isinstance(modelo, ModeloAtivacao) and 0.5 <= modelo.limiar < 1

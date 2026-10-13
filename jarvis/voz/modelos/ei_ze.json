@@ -1,0 +1,74 @@
+{
+ "treinado_em": "2026-10-13 18:18",
+ "positivos": 4180,
+ "negativos": 10560,
+ "teste": {
+  "chamados": 180,
+  "parecidas": 240,
+  "reais": 2
+ },
+ "limiar_0.3": {
+  "acerto": 0.783,
+  "reais": 0.5,
+  "falsos_parecidas": 29,
+  "falsos_fala": 6,
+  "falsos_reais": 5
+ },
+ "limiar_0.5": {
+  "acerto": 0.733,
+  "reais": 0.5,
+  "falsos_parecidas": 19,
+  "falsos_fala": 4,
+  "falsos_reais": 4
+ },
+ "limiar_0.7": {
+  "acerto": 0.689,
+  "reais": 0.5,
+  "falsos_parecidas": 11,
+  "falsos_fala": 0,
+  "falsos_reais": 2
+ },
+ "limiar_0.8": {
+  "acerto": 0.683,
+  "reais": 0.5,
+  "falsos_parecidas": 10,
+  "falsos_fala": 0,
+  "falsos_reais": 0
+ },
+ "limiar_0.9": {
+  "acerto": 0.639,
+  "reais": 0.5,
+  "falsos_parecidas": 6,
+  "falsos_fala": 0,
+  "falsos_reais": 0
+ },
+ "limiar_0.95": {
+  "acerto": 0.611,
+  "reais": 0.5,
+  "falsos_parecidas": 5,
+  "falsos_fala": 0,
+  "falsos_reais": 0
+ },
+ "limiar_0.98": {
+  "acerto": 0.561,
+  "reais": 0.5,
+  "falsos_parecidas": 2,
+  "falsos_fala": 0,
+  "falsos_reais": 0
+ },
+ "limiar_0.99": {
+  "acerto": 0.506,
+  "reais": 0.5,
+  "falsos_parecidas": 2,
+  "falsos_fala": 0,
+  "falsos_reais": 0
+ },
+ "limiar_escolhido": 0.7,
+ "segundos": 1207,
+ "conferido_em_13_10_2026": {
+  "chamados_reais_de_uma_pessoa": "10/10",
+  "parecidas_reais_que_disparam": "2/10",
+  "sons_falsos_reais_que_disparam": "3/8 (o modelo pessoal anterior: 8/8)",
+  "nota": "limiar escolhido à mão: 0,8 perdia 2 de 10 chamados reais"
+ }
+}

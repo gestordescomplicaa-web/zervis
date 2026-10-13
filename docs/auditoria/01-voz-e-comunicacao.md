@@ -146,3 +146,11 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
     - 4 eram **voz perto do microfone** que não era o chamado: "Pois é" (duas vezes), "Reis é" e
       uma frase longa. O modelo do chamado confunde "pois é" com "Ei Zé". Em aberto: conferir o
       chamado pela transcrição ou treinar o modelo de novo com esses exemplos.
+11. **O chamado só funcionava com a voz de quem gravou.** O detector tinha sido treinado com a voz
+    de uma pessoa: quem instala do zero teria de gravar a sua. Feito: **chamado universal**
+    (`jarvis/voz/treino_universal.py`), treinado com ~4 mil "Ei Zé" sintéticos de mais de mil vozes
+    (Piper; as estrangeiras recebem a pronúncia em português pelos fonemas) e ~10 mil negativos,
+    sem gravar ninguém; vem no repositório. Conferido com uma pessoa real: 10/10 chamados; dos 8
+    sons falsos de hoje, dispara em 3 (o modelo pessoal disparava nos 8). Também corrigido: o
+    teste dos detectores pulava o último quadro de áudio. O filtro de volume ficou em -45 dBFS
+    (chamados reais medidos entre -21 e -25; "pois é" de perto a -24: volume não separa isso).

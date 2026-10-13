@@ -20,14 +20,16 @@ PADRAO: dict[str, dict[str, Any]] = {
     "presenca": {"classe_janela": "chrome-127.0.0.1__stage.html-Default"},
     "audio": {"microfone": "omarchy_mic_fx"},
     "ativacao": {
-        # "Ei Zé" / "Hey Zé", treinado com a voz de quem usa (voz/treino_ativacao.py); sem o
-        # modelo treinado, o Zé atende pelo teclado e pelo painel.
-        "modelo": str(lugares.DADOS / "ativacao/ei_ze.npz"),
+        # "Ei Zé" / "Hey Zé": o chamado universal, treinado com vozes sintéticas e que vem no
+        # repositório (voz/treino_universal.py), funciona para qualquer pessoa sem gravar nada.
+        # Quem quiser pode treinar com a própria voz (voz/treino_ativacao.py) e apontar para
+        # o modelo dela aqui.
+        "modelo": str(Path(__file__).resolve().parent / "voz/modelos/ei_ze.npz"),
         "modelos_onnx": str(lugares.DADOS / "modelos"),
         "paciencia": 3,
         # Volume mínimo do chamado (pico de 100 ms, dBFS): abaixo disso é silêncio, um vídeo
         # vazando no fone ou alguém longe, não a pessoa falando ao microfone (13/10/2026).
-        "nivel_minimo_dbfs": -35.0,
+        "nivel_minimo_dbfs": -45.0,
     },
     # conversa_s: quanto tempo a conversa espera a próxima pergunta antes de encerrar sozinha.
     # registrar_texto: diagnóstico; põe o que foi transcrito no log. Desligado por padrão.
