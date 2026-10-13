@@ -219,18 +219,18 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Acesso pelo celular</h2></div>
         ${sub("O Zé no navegador do celular, em casa ou fora. Exige senha e código do autenticador.")}
         <div class="linha"><label>Senha de acesso${r.senha ? " (definida)" : ""}<input id="senha-acesso" type="password" autocomplete="new-password" placeholder="${r.senha ? "Nova senha" : "Mínimo de 8 caracteres"}"></label>${botao("Salvar senha", "senha-salvar")}</div>
-        <div class="cabeca"><h3>Código do autenticador</h3>${etiqueta(r.codigo, "Ligado", "Desligado")}</div>
-        ${codigoPreparado ? `<div class="acesso-qr">${codigoPreparado.qr}<div><p>Leia com o aplicativo autenticador (Google Authenticator, Aegis…) ou digite a chave:</p><p class="mono">${esc(codigoPreparado.chave)}</p>
-          <div class="linha"><label>Código de 6 dígitos<input id="codigo-confirmar" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>${botao("Confirmar", "codigo-confirmar", "", "principal")}</div></div></div>`
-          : `<div class="linha">${r.codigo ? botao("Desligar", "codigo-desligar", "", "discreta") : botao("Ligar", "codigo-preparar", r.senha ? "" : "disabled")}</div>`}
-        <div class="cabeca"><h3>Acesso de qualquer lugar</h3>${etiqueta(!!r.tunel.endereco, "Ativo", "Inativo")}</div>
-        ${r.tunel.endereco ? "" : `<p class="nota">${r.senha && r.codigo ? "Abre um endereço seguro pelo Cloudflare, para o Wi-Fi e o 4G." : "Requer a senha e o código do autenticador ligados."}</p>`}
-        ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">O endereço muda quando o Zé reinicia.</p></div></div>` : ""}
-        <div class="linha">${r.tunel.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.tunel.endereco)}"`) + botao("Desativar", "tunel-desativar", "", "discreta") : botao("Ativar", "tunel-ativar", r.senha && r.codigo ? "" : "disabled", "principal")}</div>
-        ${r.lista.length ? `<h3>Aparelhos conectados</h3>${r.lista.map((a) => `<div class="linha aparelho"><span>${esc(a.aparelho)}</span><small>${new Date(a.desde * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}${a.origem ? ` · ${esc(a.origem)}` : ""}</small>${botao("Desconectar", "aparelho-desconectar", `data-id="${esc(a.id)}"`, "discreta")}</div>`).join("")}` : ""}
-        ${r.instalado ? `<h3>Rede privada (Tailscale)</h3>${sub(r.ativo ? `Ativa em <span class="mono">${esc(r.endereco)}</span>` : "Alternativa ao túnel, para quem já usa o Tailscale.")}
+        <div class="parte"><div class="cabeca"><h3 class="subtitulo">Código do autenticador</h3>${etiqueta(r.codigo, "Ligado", "Desligado")}</div>
+          ${codigoPreparado ? `<div class="acesso-qr">${codigoPreparado.qr}<div class="campos"><p>Leia com o aplicativo autenticador (Google Authenticator, Aegis…) ou digite a chave:</p><p class="mono">${esc(codigoPreparado.chave)}</p>
+            <div class="linha"><label>Código de 6 dígitos<input id="codigo-confirmar" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>${botao("Confirmar", "codigo-confirmar", "", "principal")}</div></div></div>`
+            : `<div class="linha">${r.codigo ? botao("Desligar", "codigo-desligar", "", "discreta") : botao("Ligar", "codigo-preparar", r.senha ? "" : "disabled")}</div>`}</div>
+        <div class="parte"><div class="cabeca"><h3 class="subtitulo">Acesso de qualquer lugar</h3>${etiqueta(!!r.tunel.endereco, "Ativo", "Inativo")}</div>
+          ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div class="campos"><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">O endereço muda quando o Zé reinicia.</p></div></div>`
+            : `<p class="nota">${r.senha && r.codigo ? "Abre um endereço seguro pelo Cloudflare, para o Wi-Fi e o 4G." : "Requer a senha e o código do autenticador ligados."}</p>`}
+          <div class="linha">${r.tunel.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.tunel.endereco)}"`) + botao("Desativar", "tunel-desativar", "", "discreta") : botao("Ativar", "tunel-ativar", r.senha && r.codigo ? "" : "disabled", "principal")}</div></div>
+        ${r.lista.length ? `<div class="parte"><h3 class="subtitulo">Aparelhos conectados</h3>${r.lista.map((a) => `<div class="linha aparelho"><span>${esc(a.aparelho)}</span><small>${new Date(a.desde * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}${a.origem ? ` · ${esc(a.origem)}` : ""}</small>${botao("Desconectar", "aparelho-desconectar", `data-id="${esc(a.id)}"`, "discreta")}</div>`).join("")}</div>` : ""}
+        ${r.instalado ? `<div class="parte"><h3 class="subtitulo">Rede privada (Tailscale)</h3>${sub(r.ativo ? `Ativa em <span class="mono">${esc(r.endereco)}</span>` : "Alternativa ao túnel, para quem já usa o Tailscale.")}
           ${r.ativo && r.firewall ? `<p class="aviso">Libere a voz no firewall: <span class="mono">${esc(r.firewall)}</span></p>` : ""}
-          ${r.conectado ? `<div class="linha">${r.ativo ? botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar")}</div>` : ""}` : ""}`)}
+          ${r.conectado ? `<div class="linha">${r.ativo ? botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar")}</div>` : ""}</div>` : ""}`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;

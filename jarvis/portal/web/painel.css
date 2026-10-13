@@ -134,6 +134,7 @@ input:focus, select:focus, button:focus-visible, nav a:focus-visible {
 }
 .linha { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .linha > label { flex: 1 1 220px; }
+.linha:has(> label) { align-items: flex-end; } /* o botão na altura do campo, não do rótulo */
 .linha > input[type="password"] { flex: 1 1 260px; }
 button.acao {
   font: inherit; cursor: pointer; padding: 10px 16px; border-radius: 10px;
@@ -418,7 +419,11 @@ details.detalhes p { margin: 8px 0 0; }
 p.nota { color: var(--suave); font-size: 13px; }
 .segmentos button:disabled { opacity:.55; cursor:not-allowed; }
 .segmentos button small { margin-left:4px; font-size:11px; opacity:.8; }
+.cartao h3 { margin: 0; }
 .cartao h3.subtitulo { margin:4px 0 0; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--suave); }
+/* Partes de um cartão (código, acesso de fora, aparelhos): separadas por uma linha fina. */
+.parte { display: grid; gap: 12px; padding-top: 14px; border-top: 1px solid var(--borda); }
+.parte .cabeca h3.subtitulo { margin: 0; }
 details.alternativa { border-top:1px solid var(--borda); padding-top:12px; }
 details.alternativa summary { cursor:pointer; color:var(--suave); font-size:14px; }
 details.alternativa[open] summary { margin-bottom:12px; }
@@ -437,6 +442,8 @@ details.alternativa .nota a { margin-right:6px; }
 .acesso-qr { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 .acesso-qr svg { flex: none; border-radius: 10px; }
 .acesso-qr p { margin: 4px 0; }
-.aparelho { align-items: center; flex-wrap: nowrap; padding: 8px 0; border-top: 1px solid var(--borda); }
+.acesso-qr > div { flex: 1 1 200px; min-width: 0; }
+.acesso-qr .mono { overflow-wrap: anywhere; }
+.aparelho { align-items: center; }
 .aparelho span { white-space: nowrap; }
-.aparelho small { color: var(--suave); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aparelho small { color: var(--suave); flex: 1 1 140px; min-width: 0; }
