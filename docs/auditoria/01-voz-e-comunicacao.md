@@ -154,3 +154,4 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
     sons falsos de hoje, dispara em 3 (o modelo pessoal disparava nos 8). Também corrigido: o
     teste dos detectores pulava o último quadro de áudio. O filtro de volume ficou em -45 dBFS
     (chamados reais medidos entre -21 e -25; "pois é" de perto a -24: volume não separa isso).
+    Conferido no uso ✅ 13/10/2026: atende o chamado e acorda menos sozinho.
