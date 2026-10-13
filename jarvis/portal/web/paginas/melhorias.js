@@ -6,7 +6,7 @@ PAGINAS.melhorias = async () => {
   if (!NO_PC) return `<div class="secao">${cabeca("Autodesenvolvimento")}${sub("Disponível só no computador do Zé.")}</div>`;
   return `<div class="pagina-melhorias">
     <header class="melhorias-topo"><div><h1>Autodesenvolvimento</h1>${sub("O Zé se aprimora numa cópia isolada. Nada entra sem a sua aprovação.")}</div>
-      <span class="espaco"></span><span id="manut" class="linha"></span>${botao("Último diagnóstico", "diagnostico-ver", "", "discreta")}${botao("Diagnosticar", "diagnosticar", 'id="ze-diagnosticar" disabled', "principal")}</header>
+      <span class="espaco"></span><span id="manut"></span>${botao("Último diagnóstico", "diagnostico-ver", "", "discreta")}${botao("Diagnosticar", "diagnosticar", 'id="ze-diagnosticar" disabled', "principal")}</header>
     <section class="diagnostico" id="diagnostico" hidden></section>
     <div class="sessoes so-ze no-lado"><div id="lado-sessao" class="lado"></div></div></div>`;
 };
@@ -95,7 +95,8 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .pagina-melhorias { display: grid; grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-width: 0; flex: 1 1 auto; }
 .melhorias-topo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 18px 20px 12px; border-bottom: 1px solid var(--borda); }
 .melhorias-topo .sub { margin: 4px 0 0; }
-#manut { gap: 8px; align-items: center; color: var(--suave); font-size: 13.5px; }
+#manut { display: flex; gap: 8px; align-items: center; color: var(--suave); }
+#manut > span:first-child { font-size: 13.5px; }
 .diagnostico { padding: 0 20px 12px; border-bottom: 1px solid var(--borda); }
 .diagnostico pre { margin: 12px 0 0; max-height: 34vh; overflow: auto; padding: 12px; border-radius: 10px;
   background: var(--fundo-2); font: 12px/1.5 var(--mono); white-space: pre-wrap; }

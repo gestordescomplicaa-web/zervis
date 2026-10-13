@@ -524,4 +524,4 @@ details.alternativa .nota a { margin-right:6px; }
 .faixa-fora { position: fixed; inset: 0 0 auto; z-index: 60; padding: 8px; text-align: center; font-size: 13.5px; background: var(--alerta); color: #1a1a1a; }
 /* Estado de manutenção (ADR 0028): o Zé trabalhando em si mesmo, em laranja */
 body.manutencao { --acento: #f59e0b; --acento-escuro: #3d2804; --borda: rgb(245 158 11 / .22); --borda-forte: rgb(245 158 11 / .5); }
-body.manutencao .marca strong::after { content: " · Manutenção"; color: var(--acento); font: 500 12px var(--sans); }
+body.manutencao .marca strong::after { content: "Manutenção"; display: block; color: var(--acento); font: 500 12px var(--sans); }

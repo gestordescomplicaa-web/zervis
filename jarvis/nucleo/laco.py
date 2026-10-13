@@ -785,8 +785,10 @@ class Nucleo:
     def mudar_manutencao(self, ligar: bool) -> str:
         """Entra ou sai do estado de manutenção pelo painel (ADR 0028), igual à voz."""
         if not ligar:
-            return self._comando_especial("manutencao_sair", "")
-        return self.manutencao.entrar()
+            self._comando_especial("manutencao_sair", "")
+            return "Manutenção desligada."
+        texto = self.manutencao.entrar()
+        return texto if texto.startswith("Não entrei") else "Manutenção ligada."
 
     def _aplicar_quando_livre(self) -> None:
         """A atualização esperando as outras sessões terminarem: sai assim que ficarem livres."""
