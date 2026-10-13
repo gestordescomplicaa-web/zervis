@@ -218,6 +218,8 @@ const PAGINAS = {
         <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Ouve só com o botão apertado. A voz conectada continua ao vivo."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
       ${cartao("", `<div class="cabeca"><h2>Acesso pelo celular</h2>${etiqueta(r.ativo, "Ativo", r.conectado ? "Inativo" : "Não configurado")}</div>
         ${sub(r.ativo ? `Abra no celular: <span class="mono">${esc(r.endereco)}</span>` : r.conectado ? "Painel e voz pela rede privada do Tailscale." : "Requer o Tailscale neste computador e no celular, na mesma conta.")}
+        <div class="linha"><label>Senha de acesso${r.senha ? " (definida)" : ""}<input id="senha-acesso" type="password" autocomplete="new-password" placeholder="${r.senha ? "Nova senha" : "Mínimo de 8 caracteres"}"></label>${botao("Salvar senha", "senha-salvar")}${r.aparelhos ? botao(`Encerrar acessos (${r.aparelhos})`, "acessos-encerrar", "", "discreta") : ""}</div>
+        ${r.ativo && !r.senha ? '<p class="aviso">Sem senha definida, nenhum aparelho consegue entrar.</p>' : ""}
         ${r.ativo && r.firewall ? `<p class="aviso">O firewall bloqueia a voz pelo celular. Libere no terminal: <span class="mono">${esc(r.firewall)}</span></p>` : ""}
         ${r.conectado ? `<div class="linha">${r.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.endereco)}"`) + botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar", "", "principal")}</div>` : ""}`)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
@@ -1111,6 +1113,8 @@ const ACOES = {
   "voz-remota": ligarVoz,
   "remoto-ativar": async (b) => { const r = await ocupado(b, () => api("remoto/ativar", {})); toast(r.aviso); await recarregar(); },
   "remoto-desativar": async (b) => { const r = await ocupado(b, () => api("remoto/desativar", {})); toast(r.aviso); await recarregar(); },
+  "senha-salvar": async (b) => { const r = await ocupado(b, () => api("acesso/senha", { senha: $("senha-acesso").value })); toast(r.aviso); await recarregar(); },
+  "acessos-encerrar": (b) => confirmar(b, "Encerrar o acesso de todos os aparelhos?", async () => { const r = await api("acesso/encerrar", {}); toast(r.aviso); await recarregar(); }),
   "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
   "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },

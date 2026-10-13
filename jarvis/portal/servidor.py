@@ -6,6 +6,10 @@ outros sites abertos no navegador, que também alcançam 127.0.0.1:
 - toda chamada de API leva o cabeçalho `X-Ze-Token`, um segredo por sessão que só aparece
   dentro da própria página (outro site não consegue lê-la).
 As respostas nunca trazem segredo: a chave colada no painel só entra.
+
+Outro aparelho (celular, outro computador) só chega por um nome permitido (o `tailscale serve`
+repassa o dele) e passa pela tela "Entrar": sem o cookie do aparelho (`jarvis/portal/senha.py`),
+só a tela de entrada e o que ela usa ficam abertos.
 """
 
 import hmac
@@ -19,6 +23,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
+
+from jarvis.portal.senha import Acesso, SenhaErro
 
 log = logging.getLogger(__name__)
 WEB = Path(__file__).with_name("web")
@@ -47,6 +53,9 @@ ARQUIVOS = {
     "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
 }
 
+LIVRES = {"/painel.css", "/ze.webp"}  # o que a tela "Entrar" usa, antes de entrar
+COOKIE = "ze_acesso"
+
 Leitura = Callable[[], Any]
 Escrita = Callable[[dict[str, Any]], Any]
 Envio = Callable[[bytes, dict[str, str]], Any]  # corpo cru (um arquivo) e os parâmetros da URL
@@ -65,7 +74,9 @@ class Portal:
         porta: int = PORTA,
         token: str | None = None,
         envios: dict[str, Envio] | None = None,
+        acesso: Acesso | None = None,
     ) -> None:
+        self.acesso = acesso
         self.leituras = leituras
         self.escritas = escritas
         self.envios = envios or {}
@@ -73,7 +84,8 @@ class Portal:
         self.http = ThreadingHTTPServer(("127.0.0.1", porta), self._tratador())
         self.http.daemon_threads = True
         self.porta = self.http.server_port
-        self.hosts = {f"127.0.0.1:{self.porta}", f"localhost:{self.porta}"}
+        self.locais = {f"127.0.0.1:{self.porta}", f"localhost:{self.porta}"}
+        self.hosts = set(self.locais)
 
     def permitir(self, nome: str) -> None:
         """Aceita o nome da máquina na rede privada (o `tailscale serve` repassa o Host)."""
@@ -133,16 +145,80 @@ class Portal:
             def _host_local(self) -> bool:
                 return self.headers.get("Host", "") in portal.hosts
 
+            def _cookie(self) -> str:
+                for parte in self.headers.get("Cookie", "").split(";"):
+                    nome, _, valor = parte.strip().partition("=")
+                    if nome == COOKIE:
+                        return valor
+                return ""
+
+            def _entrou(self) -> bool:
+                """O próprio PC entra direto; outro aparelho, só com o cookie da senha."""
+                if self.headers.get("Host", "") in portal.locais:
+                    return True
+                return portal.acesso is not None and portal.acesso.valido(self._cookie())
+
             def _autorizado(self) -> bool:
-                return self._host_local() and hmac.compare_digest(
-                    self.headers.get("X-Ze-Token", ""), portal.token
+                return (
+                    self._host_local()
+                    and self._entrou()
+                    and hmac.compare_digest(self.headers.get("X-Ze-Token", ""), portal.token)
                 )
+
+            def _ir(self, destino: str, cookie: str = "") -> None:
+                self.send_response(303)
+                self.send_header("Location", destino)
+                self.send_header("Cache-Control", "no-store")
+                if cookie:
+                    self.send_header("Set-Cookie", cookie)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            def _tela_entrar(self, mensagem: str = "") -> None:
+                corpo = (WEB / "entrar.html").read_bytes()
+                aviso = f'<p class="resultado erro">{mensagem}</p>' if mensagem else ""
+                self._enviar(200, corpo.replace(b"__MENSAGEM__", aviso.encode()), "text/html")
+
+            def _entrar(self) -> None:
+                tamanho = min(int(self.headers.get("Content-Length") or 0), 4096)
+                campos = parse_qs(self.rfile.read(tamanho).decode(errors="replace"))
+                senha = campos.get("senha", [""])[0]
+                lembrar = campos.get("lembrar", [""])[0] == "1"
+                if portal.acesso is None:
+                    self._tela_entrar("Acesso por outro aparelho indisponível.")
+                    return
+                try:
+                    codigo, validade = portal.acesso.entrar(
+                        senha, lembrar, self.headers.get("User-Agent", "")
+                    )
+                except SenhaErro as erro:
+                    log.warning("painel: entrada recusada (%s)", erro)
+                    self._tela_entrar(str(erro))
+                    return
+                log.info("painel: um aparelho entrou")
+                cookie = (
+                    f"{COOKIE}={codigo}; Path=/; HttpOnly; Secure; SameSite=Strict; "
+                    f"Max-Age={validade}"
+                )
+                self._ir("/", cookie)
 
             def do_GET(self) -> None:
                 if not self._host_local():
                     self._json(403, {"erro": "host"})
                     return
                 caminho = self.path.split("?", 1)[0]
+                if caminho == "/entrar":
+                    if self._entrou():
+                        self._ir("/")
+                    else:
+                        self._tela_entrar()
+                    return
+                if not self._entrou() and caminho not in LIVRES:
+                    if caminho.startswith("/api/"):
+                        self._json(401, {"erro": "entrar"})
+                    else:
+                        self._ir("/entrar")
+                    return
                 if caminho in ARQUIVOS:
                     arquivo = WEB / ARQUIVOS[caminho]
                     corpo = arquivo.read_bytes()
@@ -164,6 +240,14 @@ class Portal:
 
             def do_POST(self) -> None:
                 caminho = self.path.split("?", 1)[0]
+                if caminho in ("/entrar", "/sair") and self._host_local():
+                    if caminho == "/entrar":
+                        self._entrar()
+                    else:
+                        if portal.acesso is not None:
+                            portal.acesso.sair(self._cookie())
+                        self._ir("/entrar", f"{COOKIE}=; Path=/; Max-Age=0")
+                    return
                 if not self._autorizado():
                     self._json(403, {"erro": "token"})
                     return

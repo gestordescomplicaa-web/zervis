@@ -426,3 +426,10 @@ details.alternativa .nota a { margin-right:6px; }
   padding:12px 16px; border-radius:12px; border:1px solid rgb(239 190 124 / .55); background:rgb(239 190 124 / .10); }
 .faixa.limite strong { display:block; color:var(--alerta); margin-bottom:2px; }
 .faixa.limite span { color:var(--texto); font-size:14px; }
+
+/* --- tela Entrar: outro aparelho, antes da senha --- */
+.tela-entrar { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+.entrar { display: grid; gap: 18px; width: min(380px, 100%); }
+.entrar .marca { justify-content: center; }
+.entrar .cartao { display: grid; gap: 14px; }
+.entrar .acao { width: 100%; }

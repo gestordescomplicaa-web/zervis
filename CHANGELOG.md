@@ -103,3 +103,7 @@
   de voz passa a oferecer também o endereço do PC na rede de casa, e o cartão "Acesso pelo celular"
   mostra o comando que libera o firewall só para essa rede. O registro do LiveKit fica em
   `livekit.log`, na pasta de estado.
+- Senha de acesso (roteiro, passo 4.1): o próprio PC entra direto; qualquer outro aparelho passa
+  pela tela Entrar, uma vez por aparelho ("lembrar este aparelho": 30 dias). A senha é guardada só
+  como resumo (scrypt), cinco erros bloqueiam por 15 minutos, e trocar a senha ou "Encerrar
+  acessos" desconecta todos. Ativar o acesso pelo celular exige a senha definida.

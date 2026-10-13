@@ -63,6 +63,7 @@ from jarvis.oficina.manutencao import Manutencao
 from jarvis.oficina.sessoes import FOCO_S, Sessao, SessaoErro, Sessoes
 from jarvis.portal import remoto
 from jarvis.portal.acoes import Acoes
+from jarvis.portal.senha import Acesso
 from jarvis.portal.servidor import Portal
 from jarvis.presenca import hyprland
 from jarvis.presenca import modo as modo_escuta
@@ -423,9 +424,12 @@ class Nucleo:
             self._primeiro_texto_do_cerebro,
         )
         self.portal: Portal | None = None
+        self.acesso = Acesso()  # a senha de quem entra de outro aparelho
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
-            self.portal = Portal(acoes.leituras(), acoes.escritas(), envios=acoes.envios())
+            self.portal = Portal(
+                acoes.leituras(), acoes.escritas(), envios=acoes.envios(), acesso=self.acesso
+            )
             self.portal.iniciar()
         except OSError as erro:
             log.warning("painel não subiu: %s", erro)
@@ -1022,12 +1026,15 @@ class Nucleo:
         self.eventos.put(e.AoVivo(conectada))  # conectada, a voz é ao vivo (ADR 0023)
 
     def estado_remoto(self) -> dict[str, Any]:
-        return remoto.rede(self.portal.porta if self.portal else 0).para_tela()
+        rede = remoto.rede(self.portal.porta if self.portal else 0).para_tela()
+        return {**rede, "senha": self.acesso.tem_senha, "aparelhos": self.acesso.aparelhos()}
 
     def ativar_remoto(self) -> str:
         """Publica o painel e a sala de voz na rede privada (Voz > Acesso pelo celular)."""
         if self.portal is None:
             raise remoto.RemotoErro("Painel indisponível.")
+        if not self.acesso.tem_senha:
+            raise remoto.RemotoErro("Defina a senha de acesso antes de ativar.")
         rede = remoto.rede(self.portal.porta)
         if not rede.conectado:
             raise remoto.RemotoErro("Tailscale desconectado neste computador.")

@@ -23,6 +23,7 @@ from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
 from jarvis.oficina.sessoes import Sessao, SessaoErro
 from jarvis.portal import remoto
+from jarvis.portal.senha import SenhaErro
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
 from jarvis.presenca import modo as modo_escuta
 from jarvis.voz import chamado, deepgram
@@ -136,6 +137,8 @@ class Acoes:
             "voz/chamado": self.mudar_chamado,
             "remoto/ativar": self.ativar_remoto,
             "voz/evento": self.evento_voz,
+            "acesso/senha": self.definir_senha,
+            "acesso/encerrar": self.encerrar_acessos,
             "remoto/desativar": self.desativar_remoto,
             "painel/vendo": self.painel_vendo,
             "chave": self.guardar_chave,
@@ -244,6 +247,18 @@ class Acoes:
 
     def desativar_remoto(self, dados: dict[str, Any]) -> dict[str, Any]:
         return {**self.remoto(), "aviso": self.n.desativar_remoto()}
+
+    def definir_senha(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A senha de quem entra de outro aparelho; trocá-la encerra os acessos."""
+        try:
+            self.n.acesso.definir(str(dados.get("senha", "")))
+        except SenhaErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.remoto(), "aviso": "Senha salva."}
+
+    def encerrar_acessos(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self.n.acesso.sair_todos()
+        return {**self.remoto(), "aviso": "Acessos encerrados."}
 
     def evento_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O que aconteceu na voz do navegador (conectou, caiu, erro de microfone): só para o
