@@ -2,9 +2,9 @@
 // aprimora, numa cópia isolada, com aprovar ou descartar. Carregada sob demanda; só no PC do Zé.
 
 PAGINAS.melhorias = async () => {
-  if (!NO_PC) return `<div class="secao">${cabeca("Melhorias")}${sub("As melhorias do Zé ficam no computador dele.")}</div>`;
+  if (!NO_PC) return `<div class="secao">${cabeca("Autodesenvolvimento")}${sub("Disponível só no computador do Zé.")}</div>`;
   return `<div class="pagina-melhorias">
-    <header class="melhorias-topo"><div><h1>Melhorias</h1>${sub("O Zé se aprimora numa cópia isolada. Nada entra sem a sua aprovação.")}</div>
+    <header class="melhorias-topo"><div><h1>Autodesenvolvimento</h1>${sub("O Zé se aprimora numa cópia isolada. Nada entra sem a sua aprovação.")}</div>
       <span class="espaco"></span>${botao("Último diagnóstico", "diagnostico-ver", "", "discreta")}${botao("Diagnosticar", "diagnosticar", "", "principal")}</header>
     <section class="diagnostico" id="diagnostico" hidden></section>
     <div class="sessoes so-ze no-lado"><div id="lado-sessao" class="lado"></div></div></div>`;
@@ -32,13 +32,13 @@ async function desenharMelhorias() {
   const m = await api("ze/melhorias", {});
   if (!m.copia) { caixa.innerHTML = ""; return; }
   const n = m.commits.length;
-  if (!n && !m.sem_commit) { caixa.innerHTML = `<div class="faixa melhorias"><span>Nenhuma melhoria pendente.</span></div>`; return; }
-  const resumo = `${n} ${n === 1 ? "melhoria" : "melhorias"} · ${m.arquivos.length} ${m.arquivos.length === 1 ? "arquivo" : "arquivos"}`;
+  if (!n && !m.sem_commit) { caixa.innerHTML = `<div class="faixa melhorias"><span>Nenhuma mudança pendente.</span></div>`; return; }
+  const resumo = `${n} ${n === 1 ? "mudança" : "mudanças"} · ${m.arquivos.length} ${m.arquivos.length === 1 ? "arquivo" : "arquivos"}`;
   const protegidos = m.protegidos.length
     ? `<p class="aviso">Mexe na zona protegida: <span class="mono">${m.protegidos.map(esc).join(", ")}</span></p>
        <label class="interruptor"><input type="checkbox" id="revisei" ${revisouProtegidos ? "checked" : ""}> Revisei as mudanças na zona protegida</label>` : "";
   const pode = n && !m.sem_commit && (!m.protegidos.length || revisouProtegidos);
-  caixa.innerHTML = `<div class="faixa melhorias"><div class="linha"><strong>Melhorias do Zé</strong><span>${resumo}</span><span class="espaco"></span>
+  caixa.innerHTML = `<div class="faixa melhorias"><div class="linha"><strong>Mudanças do Zé</strong><span>${resumo}</span><span class="espaco"></span>
       ${botao(verMudancas ? "Ocultar mudanças" : "Ver mudanças", "melhorias-ver", "", "discreta")}
       ${botao("Descartar", "melhorias-descartar", "", "discreta")}
       ${botao("Aprovar e aplicar", "melhorias-aplicar", pode ? "" : "disabled", "principal")}</div>

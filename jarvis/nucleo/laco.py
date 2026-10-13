@@ -760,7 +760,7 @@ class Nucleo:
             diagnostico.PEDIDO + relatorio,
         )
         atividade.PADRAO.registrar(
-            "execucao", "Diagnóstico enviado às melhorias", autorizacao="painel"
+            "execucao", "Diagnóstico enviado ao autodesenvolvimento", autorizacao="painel"
         )
         return relatorio, aviso
 
@@ -774,7 +774,7 @@ class Nucleo:
             except (OSError, subprocess.SubprocessError, SessaoErro) as erro:
                 ok, texto = False, f"Não consegui aplicar as melhorias: {erro}"
             if not ok:
-                atividade.PADRAO.registrar("falha", "Melhorias não aplicadas", motivo=texto)
+                atividade.PADRAO.registrar("falha", "Mudanças não aplicadas", motivo=texto)
             self._na_linha("manutencao", texto)
             self.eventos.put(e.Aviso(texto))
 
@@ -823,13 +823,13 @@ class Nucleo:
                 )
             else:
                 # Uma frase, nunca o conteúdo (ADR 0027): a resposta fica na sessão, na tela.
-                texto = "A sessão de melhorias terminou."
+                texto = "A sessão de autodesenvolvimento terminou."
                 if c.protegidos:
                     texto += " A mudança mexeu na zona protegida: revise antes de aplicar."
                 if c.mudou_codigo:
-                    texto += " Há mudanças para aprovar em Melhorias."
+                    texto += " Há mudanças para aprovar em Autodesenvolvimento."
                 else:
-                    texto += " Veja a resposta em Melhorias."
+                    texto += " Veja a resposta em Autodesenvolvimento."
             log.info("manutenção: %s do pedido %s", c.tipo, c.pedido)
             self.eventos.put(e.Aviso(texto))
 

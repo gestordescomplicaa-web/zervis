@@ -32,7 +32,8 @@ log = logging.getLogger(__name__)
 
 REPO = Path(__file__).resolve().parents[2]  # o repositório do próprio Zé
 AGENTES = {"claude": "Claude", "codex": "Codex"}
-NOME_DA_SESSAO = "Zé · melhorias"
+NOME_DA_SESSAO = "Zé · autodesenvolvimento"
+NOMES_ANTIGOS = ("Zé · melhorias",)
 ORIGEM = "manutencao"
 # Mudam só com o usuário aprovando: o que decide o que o JARVIS faz sem perguntar.
 PROTEGIDOS = (
@@ -338,14 +339,19 @@ class Manutencao:
     # --- a cópia isolada: o que mudou, aplicar, descartar (ADR 0026) ---------------------------
 
     def copia(self) -> Sessao | None:
-        """A sessão de melhorias com a cópia isolada dela, se existir."""
+        """A sessão de autodesenvolvimento com a cópia isolada dela, se existir."""
         if not self.estado.sessao:
             return None
         try:
             s = self.sessoes.ler(self.estado.sessao)
         except SessaoErro:
             return None
-        return s if s.worktree and Path(s.worktree).is_dir() else None
+        if not (s.worktree and Path(s.worktree).is_dir()):
+            return None
+        if s.nome in NOMES_ANTIGOS:  # a sessão criada antes do nome atual
+            s.nome = NOME_DA_SESSAO
+            self.sessoes._gravar(s)
+        return s
 
     def mudancas(self) -> dict[str, Any]:
         """O que a cópia tem a mais que o Zé em uso: commits, arquivos e a zona protegida."""
@@ -393,7 +399,7 @@ class Manutencao:
         if _git("status", "--porcelain", "--untracked-files=no", repo=self.repo).strip():
             return False, "O repositório do Zé tem alterações sem commit. Resolva antes de aplicar."
         if _git_ok("merge", "--ff-only", s.branch, repo=self.repo) != 0:
-            mensagem = f"Melhorias do Zé ({s.branch})"
+            mensagem = f"Autodesenvolvimento do Zé ({s.branch})"
             if _git_ok("merge", "--no-ff", "-m", mensagem, s.branch, repo=self.repo) != 0:
                 _git_ok("merge", "--abort", repo=self.repo)
                 return (
@@ -424,7 +430,7 @@ class Manutencao:
         atividade.PADRAO.registrar(
             "execucao", "Descartou as melhorias da cópia", commits=m.get("commits", [])
         )
-        return "Melhorias descartadas."
+        return "Mudanças descartadas."
 
     # --- reiniciar para valer ----------------------------------------------------------------
 

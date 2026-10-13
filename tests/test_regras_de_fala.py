@@ -9,7 +9,7 @@ from jarvis.nucleo import estados as e
 from jarvis.nucleo.laco import Nucleo
 
 LONGO = (
-    "A sessão de melhorias terminou. Proposta um: agrupar os erros pela mensagem final. "
+    "A sessão de autodesenvolvimento terminou. Proposta um: agrupar os erros pela mensagem final. "
     "Proposta dois: registrar a queda do modo imersivo. Proposta três: reiniciar o túnel "
     "sozinho. Proposta quatro: reconectar a voz do navegador."
 )
@@ -21,7 +21,7 @@ def test_aviso_curto_passa_como_esta() -> None:
 
 def test_aviso_longo_vira_manchete_com_o_resto_na_tela() -> None:
     curto = modo.manchete(LONGO)
-    assert curto.startswith("A sessão de melhorias terminou.")
+    assert curto.startswith("A sessão de autodesenvolvimento terminou.")
     assert curto.endswith("O resto está na tela.")
     assert len(curto.split()) <= modo.MANCHETE_PALAVRAS + 5
 

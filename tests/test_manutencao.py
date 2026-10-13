@@ -20,6 +20,7 @@ class SessoesFalsas:
     criadas: list[Sessao] = field(default_factory=list)
     enviados: list[tuple[str, str]] = field(default_factory=list)
     ocupada: bool = False
+    gravadas: list[str] = field(default_factory=list)
 
     def listar(self) -> list[Sessao]:
         return list(self.criadas)
@@ -45,6 +46,9 @@ class SessoesFalsas:
             git(Path(pasta), "worktree", "add", "-q", "-b", s.branch, s.worktree, "HEAD")
         self.criadas.append(s)
         return s
+
+    def _gravar(self, s: Sessao) -> None:
+        self.gravadas.append(s.nome)
 
     def ler(self, id_: str) -> Sessao:
         for s in self.criadas:
@@ -94,7 +98,7 @@ def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) 
     assert m.entrar("claude").startswith("Modo manutenção ligado, com o Claude.")
     sessao = sessoes.criadas[0]
     assert (sessao.nome, sessao.pasta, sessao.origem) == (
-        "Zé · melhorias",
+        "Zé · autodesenvolvimento",
         str(repo),
         "manutencao",
     )
@@ -307,7 +311,9 @@ def test_melhorias_numa_copia_isolada_aplicar_e_descartar(
     m.entrar()
     m.encaminhar("melhora o guia", "", 1.0)
     copia = Path(m.copia().worktree)  # type: ignore[union-attr]
-    assert m.copia().nome == "Zé · melhorias"  # type: ignore[union-attr]
+    assert m.copia().nome == "Zé · autodesenvolvimento"  # type: ignore[union-attr]
+    m.copia().nome = "Zé · melhorias"  # type: ignore[union-attr]  # criada com o nome antigo
+    assert m.copia().nome == "Zé · autodesenvolvimento"  # type: ignore[union-attr]
     assert m.mudancas()["commits"] == [] and m.aplicar() == (
         False,
         "Não há melhorias para aplicar.",
@@ -337,6 +343,6 @@ def test_melhorias_numa_copia_isolada_aplicar_e_descartar(
     _commit(copia, "docs/rascunho.md", "descartável\n")
     (copia / "solto.txt").write_text("sem commit")
     assert m.mudancas()["sem_commit"]
-    assert m.descartar() == "Melhorias descartadas."
+    assert m.descartar() == "Mudanças descartadas."
     assert m.mudancas()["commits"] == [] and not (copia / "docs/rascunho.md").exists()
     assert not (copia / "solto.txt").exists()
