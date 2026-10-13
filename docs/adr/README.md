@@ -29,5 +29,5 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0022](0022-ativacao-e-segurar-para-falar.md) | Ativação ("Ei Zé" ou só o botão) separada do modo de fala; segurar para falar | Aceito (ponto 3 ajustado pela 0023) |
 | [0023](0023-voz-ao-vivo.md) | Voz ao vivo: "Conectar voz" ouve sem parar até desconectar | Aceito |
 | [0024](0024-voz-pelo-https.md) | A voz do navegador dentro do HTTPS do painel (WebSocket) | Aceito |
-| [0025](0025-atividade-e-auto-aperfeicoamento.md) | Atividade e auto-aperfeiçoamento: o que o Zé fez e onde tropeçou | Aceito (camada 1) |
-| [0026](0026-sessao-de-auto-desenvolvimento.md) | A sessão de auto-desenvolvimento do Zé, com essência e travas | Aceito (passos 1 e 2) |
+| [0025](0025-atividade-e-auto-aperfeicoamento.md) | Atividade e auto-aperfeiçoamento: o que o Zé fez e onde tropeçou | Aceito (camadas 1 e 2) |
+| [0026](0026-sessao-de-auto-desenvolvimento.md) | A sessão de auto-desenvolvimento do Zé, com essência e travas | Aceito |

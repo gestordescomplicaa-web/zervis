@@ -16,7 +16,7 @@ from typing import Any
 
 import segno
 
-from jarvis import atividade, fuso, usuario
+from jarvis import atividade, fuso, lugares, usuario
 from jarvis.automacoes.jobs import JobErro
 from jarvis.avisos import modo as modo_fala
 from jarvis.cerebro import acesso, conectores, contas, rapido
@@ -32,6 +32,25 @@ from jarvis.presenca import modo as modo_escuta
 from jarvis.voz import chamado, deepgram
 
 log = logging.getLogger(__name__)
+DIAGNOSTICO = lugares.ESTADO / "diagnostico.md"  # o último diagnóstico, para rever na página
+
+
+def linhas_do_registro() -> list[str] | None:
+    """As últimas linhas do serviço no journal, sem segredos; None sem acesso ao journal."""
+    try:
+        r = subprocess.run(
+            ["/usr/bin/journalctl", "--user", "-u", "zervis", "-n", "3000", "-o", "short-iso",
+             "--no-pager"],
+            capture_output=True, text=True, timeout=10, check=False,
+        )  # fmt: skip
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return [
+        atividade.VALOR_SECRETO.sub("•••", x)
+        for x in r.stdout.splitlines()
+        if not x.startswith("-- ")
+    ]
+
 
 MOTORES = [
     {"id": "contas", "nome": "Automático", "detalhe": "Usa as contas dos agentes.", "modelo": ""},
@@ -143,6 +162,8 @@ class Acoes:
             "voz/evento": self.evento_voz,
             "atividade/registro": self.registro_tecnico,
             "ze/melhorias": self.melhorias,
+            "ze/diagnosticar": self.diagnosticar,
+            "ze/diagnostico": self.diagnostico,
             "ze/sessao": self.sessao_de_melhorias,
             "ze/aplicar": self.aplicar_melhorias,
             "ze/descartar": self.descartar_melhorias,
@@ -335,19 +356,23 @@ class Acoes:
             "erros": ("ERROR", "CRITICAL", "Traceback"),
             "avisos": ("WARNING", "ERROR", "CRITICAL", "Traceback"),
         }
-        filtro = marcas.get(str(dados.get("nivel", "")))
-        try:
-            r = subprocess.run(
-                ["/usr/bin/journalctl", "--user", "-u", "zervis", "-n", "3000", "-o", "short-iso",
-                 "--no-pager"],
-                capture_output=True, text=True, timeout=10, check=False,
-            )  # fmt: skip
-        except (OSError, subprocess.SubprocessError):
+        linhas = linhas_do_registro()
+        if linhas is None:
             return {"linhas": [], "aviso": "Registro do sistema indisponível."}
-        linhas = [x for x in r.stdout.splitlines() if not x.startswith("-- ")]
-        if filtro:
+        if filtro := marcas.get(str(dados.get("nivel", ""))):
             linhas = [x for x in linhas if any(m in x for m in filtro)]
-        return {"linhas": [atividade.VALOR_SECRETO.sub("•••", x) for x in linhas[-400:]]}
+        return {"linhas": linhas[-400:]}
+
+    def diagnosticar(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O relatório do que deu errado vai para a sessão de melhorias (ADR 0025 e 0026)."""
+        relatorio, aviso = self.n.diagnosticar(linhas_do_registro() or [])
+        return {"relatorio": relatorio, "aviso": aviso}
+
+    def diagnostico(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return {"relatorio": DIAGNOSTICO.read_text()}
+        except OSError:
+            return {"relatorio": ""}
 
     def evento_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O que aconteceu na voz do navegador (conectou, caiu, erro de microfone): só para o
@@ -710,7 +735,8 @@ class Acoes:
         }
 
     def sessoes(self) -> list[dict[str, Any]]:
-        return [self._sessao(s) for s in self.n.sessoes.listar()]
+        # A sessão do Zé (melhorias) mora na página Melhorias, não junto dos projetos.
+        return [self._sessao(s) for s in self.n.sessoes.listar() if s.origem != "manutencao"]
 
     def pastas(self) -> list[str]:
         """Sugestões para uma sessão nova: as pastas de projetos que existem nesta máquina."""

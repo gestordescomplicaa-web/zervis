@@ -1,7 +1,7 @@
 # 0026 — A sessão de auto-desenvolvimento do Zé, com essência e travas
 
 - Data: 13/10/2026
-- Status: **Aceito**; passos 1 e 2 feitos (pedido do usuário: uma sessão única para o Zé se aprimorar,
+- Status: **Aceito**; passos 1, 2 e 3 feitos (pedido do usuário: uma sessão única para o Zé se aprimorar,
   com travas para ele não mudar a essência nem virar um "faz qualquer coisa")
 
 ## Contexto
@@ -30,3 +30,5 @@ trabalho numa cópia isolada, com aprovar ou descartar no painel; e a ligação 
 - Para o público: o auto-desenvolvimento precisa de uma cópia git do Zé (a instalação de um
   comando também clona). As melhorias ficam na cópia de cada um; adiante, uma melhoria aprovada
   pode virar um pull request para o projeto, se a pessoa quiser.
+- A sessão do Zé não fica junto dos projetos: mora na página **Melhorias** (grupo O Zé), só no
+  próprio PC, com o Diagnosticar no topo (pedido do usuário, 13/10/2026).

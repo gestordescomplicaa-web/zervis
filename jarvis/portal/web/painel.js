@@ -672,10 +672,8 @@ const itemSessao = (s) => `<button type="button" class="item-sessao" data-acao="
 async function listaSessoes() {
   const lista = $("lista-sessoes");
   if (!lista) return;
-  const sessoes = (await api("sessoes")).sort((a, b) => b.melhorias - a.melhorias); // a do Zé no topo
-  const doZe = sessoes.some((s) => s.melhorias) ? "" : `<button type="button" class="item-sessao" data-acao="ze-sessao">
-    <span class="avatar">Z</span><strong>Zé · melhorias</strong><time></time><small>Sessão para o Zé se aprimorar</small></button>`;
-  lista.innerHTML = doZe + (sessoes.length ? sessoes.map(itemSessao).join("") : vazio("Nenhuma sessão."));
+  const sessoes = await api("sessoes");
+  lista.innerHTML = sessoes.length ? sessoes.map(itemSessao).join("") : vazio("Nenhuma sessão.");
   pintar(lista);
   $("ponto-sessoes").hidden = !sessoes.some((s) => s.estado === "trabalhando");
 }
@@ -886,6 +884,8 @@ async function acompanharSessao() {
 
 async function prepararSessoes() {
   await listaSessoes();
+  // A sessão do Zé (Melhorias) não abre aqui: só as que estão na lista.
+  if (sessaoAberta && !document.querySelector(`.item-sessao[data-id="${sessaoAberta}"]`)) sessaoAberta = null;
   if (sessaoAberta) await abrirSessao(sessaoAberta).catch(() => { sessaoAberta = null; });
   let volta = 0;
   relogioSessoes = setInterval(async () => {
@@ -1156,7 +1156,6 @@ const ACOES = {
   "escuta-apagar": (b) => confirmar(b, "Remover a chave?", async () => { escuta = await api("escuta/apagar", {}); desenharEscuta(); toast(escuta.aviso); }),
   "chave-apagar": (b) => confirmar(b, "Apagar a chave?", async () => { const c = await api("chave/apagar", { motor: modelo.motor }); modelo.chaves = c.chaves; desenharChave(); }),
   // sessões
-  "ze-sessao": async (b) => { const { id } = await ocupado(b, () => api("ze/sessao", {})); await listaSessoes(); await abrirSessao(id); },
   "sessoes-voltar": () => {
     fecharTerminalTela(); sessaoAberta = null; mostrarLado(false);
     document.querySelectorAll(".item-sessao").forEach((x) => x.setAttribute("aria-current", "false"));
@@ -1322,6 +1321,7 @@ conteudo.addEventListener("drop", (ev) => {
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
 const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js" };
+const CHEIAS = ["sessoes", "melhorias"]; // páginas sem margem, que ocupam a tela
 const carregados = {};
 const carregarPagina = (nome) => (carregados[nome] ??= new Promise((ok, erro) => {
   const s = document.createElement("script");
@@ -1338,7 +1338,7 @@ async function abrir() {
   conteudo.hidden = secao === "imersao";
   document.body.classList.remove("menu-aberto");
   document.body.classList.toggle("tela-holo", secao === "imersao" && !NO_PC);
-  conteudo.classList.toggle("cheio", secao === "sessoes");
+  conteudo.classList.toggle("cheio", CHEIAS.includes(secao));
   clearInterval(relogioSessoes);
   fecharTerminalTela();
   if (secao === "imersao" && !NO_PC) {
@@ -1350,11 +1350,12 @@ async function abrir() {
   try {
     if (SOB_DEMANDA[secao]) await carregarPagina(secao);
     const html = await PAGINAS[secao]();
-    conteudo.innerHTML = secao === "sessoes" ? html : `<div class="secao">${html}</div>`;
+    conteudo.innerHTML = CHEIAS.includes(secao) ? html : `<div class="secao">${html}</div>`;
     if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); desenharContas(); }
     if (secao === "configurar") { desenharAcesso(); desenharEscuta(); desenharContas(); }
     encher();
     if (secao === "sessoes") await prepararSessoes();
+    if (secao === "melhorias") await prepararMelhorias();
   } catch (erro) {
     conteudo.innerHTML = `<div class="secao">${cabeca("Sem conexão com o Zé")}<p class="aviso">${esc(erro.message)}</p></div>`;
   }

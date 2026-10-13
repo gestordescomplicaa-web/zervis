@@ -595,3 +595,41 @@ def test_o_andamento_do_claude_entra_na_conversa(tmp_path: Path, raiz: Path) -> 
     sessoes._ler_eventos(s.id)
     acoes = [m["texto"] for m in sessoes.mensagens(s.id) if m["quem"] == "ferramenta"]
     assert acoes == ["$ npm test", "editou login.ts", "criou NOTAS.md"]
+
+
+def test_abrir_sem_pedido_nao_guarda_conversa_que_o_claude_nao_salvou(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Zé", str(raiz / "projetos/loja"))
+    salva = tmp_path / "conversa.jsonl"
+    eventos = [
+        {"hook_event_name": "SessionStart", "session_id": "nova", "transcript_path": "/nao/existe"},
+    ]
+    sessoes.eventos(s.id).write_text("".join(json.dumps(e) + "\n" for e in eventos))
+    sessoes._ler_eventos(s.id)
+    assert sessoes.ler(s.id).sdk_sessao == ""  # só o SessionStart: nada para retomar
+    salva.write_text("{}\n")
+    eventos = [
+        {"hook_event_name": "SessionStart", "session_id": "velha", "transcript_path": str(salva)},
+        {"hook_event_name": "UserPromptSubmit", "session_id": "c9", "prompt": "oi"},
+    ]
+    with sessoes.eventos(s.id).open("a") as f:
+        f.write("".join(json.dumps(e) + "\n" for e in eventos))
+    sessoes._ler_eventos(s.id)
+    assert sessoes.ler(s.id).sdk_sessao == "c9"
+
+
+def test_conversa_do_claude_existe_pela_pasta_da_conta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from jarvis.cerebro import contas
+    from jarvis.oficina.sessoes import conversa_claude_existe
+
+    conta = contas.Conta("claude:x", "claude", "X", str(tmp_path / "conta"))
+    monkeypatch.setattr(contas.Contas, "achar", lambda self, id_: conta)
+    s = Sessao(id="ab12cd34", nome="Zé", pasta=str(tmp_path), sdk_sessao="c9")
+    assert not conversa_claude_existe(s)
+    (tmp_path / "conta/projects/-qualquer-pasta").mkdir(parents=True)
+    (tmp_path / "conta/projects/-qualquer-pasta/c9.jsonl").write_text("{}\n")
+    assert conversa_claude_existe(s)

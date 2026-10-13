@@ -141,3 +141,9 @@
   do Zé (git worktree) e mostra o que mudou; "Aprovar e aplicar" roda os testes na cópia, junta ao
   Zé em uso e reinicia com o reinício seguro (zona protegida exige a revisão marcada; só pelo
   próprio PC); "Descartar" volta a cópia ao Zé em uso. "Reinicia o Zé" por voz também aplica.
+- Página Melhorias (ADR 0025 e 0026): a sessão do Zé sai de Sessões e mora aqui, só no próprio PC.
+  Diagnosticar monta o relatório do que deu errado (falhas, não entendi, correções, negadas e os
+  erros que mais se repetem no registro técnico, agrupados por causa) e o entrega à sessão, que
+  propõe as correções sem implementar até a pessoa escolher.
+- Sessão de código aberta e fechada sem nenhum pedido não trava mais ao reabrir ("No conversation
+  found"): o Zé só retoma conversas do Claude que existem e, se não existir, começa uma nova.

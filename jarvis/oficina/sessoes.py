@@ -619,6 +619,10 @@ class Sessoes:
             contexto = s.passagem
         if s.motor == "claude":
             confiar_pasta_claude(s)
+            if s.sdk_sessao and not conversa_claude_existe(s):
+                # Aberta e fechada sem nenhum pedido: o Claude não salvou a conversa, e retomá-la
+                # falha ("No conversation found"). Começa uma nova.
+                s = self._mudar(id_, sdk_sessao="")
         else:
             confiar_pasta_codex(s)
         self.eventos(id_).touch(mode=0o600)
@@ -721,8 +725,12 @@ class Sessoes:
         """O que os agentes contam pelos hooks (Claude) e pelo notify (Codex)."""
         nome = str(e.get("hook_event_name") or e.get("type") or "")
         if nome == "SessionStart" and e.get("session_id"):
-            self._mudar(id_, sdk_sessao=str(e["session_id"]))
+            # Só uma conversa que já existe em disco: a nova o Claude só salva no primeiro pedido.
+            if Path(str(e.get("transcript_path") or "")).is_file():
+                self._mudar(id_, sdk_sessao=str(e["session_id"]))
         elif nome == "UserPromptSubmit":
+            if e.get("session_id"):
+                self._mudar(id_, sdk_sessao=str(e["session_id"]))
             self._pedido(id_, str(e.get("prompt", "")))
             self._limite_visto.discard(id_)
             self._mudar(
@@ -1205,6 +1213,15 @@ def confiar_pasta_codex(s: Sessao) -> None:
     arquivo.parent.mkdir(parents=True, exist_ok=True)
     with arquivo.open("a") as f:
         f.write(f'\n[projects.{json.dumps(str(s.onde))}]\ntrust_level = "trusted"\n')
+
+
+def conversa_claude_existe(s: Sessao) -> bool:
+    """A conversa do Claude que a sessão retomaria está salva na pasta da conta?"""
+    try:
+        onde = contas.Contas().achar(s.conta).onde
+    except contas.ContaErro:
+        onde = contas.Contas().em_uso("claude").onde
+    return any((onde / "projects").glob(f"*/{s.sdk_sessao}.jsonl"))
 
 
 def comando_terminal(

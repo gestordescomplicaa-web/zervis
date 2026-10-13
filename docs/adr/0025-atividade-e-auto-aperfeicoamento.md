@@ -1,7 +1,7 @@
 # 0025 — Atividade e auto-aperfeiçoamento: o Zé registra o que fez e aprende com os tropeços
 
 - Data: 13/10/2026
-- Status: **Aceito**; camada 1 feita (pedido do usuário: o Zé desligou o PC com a frase exata, mas
+- Status: **Aceito**; camadas 1 e 2 feitas (pedido do usuário: o Zé desligou o PC com a frase exata, mas
   no dia seguinte não havia sinal do que ele tinha executado; "auditoria simples" de tudo, e um
   botão para o Zé se diagnosticar e acertar onde errou)
 

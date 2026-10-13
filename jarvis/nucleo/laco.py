@@ -31,7 +31,7 @@ from urllib.parse import urlsplit
 import numpy as np
 import segno
 
-from jarvis import atividade, lugares, usuario
+from jarvis import atividade, diagnostico, lugares, usuario
 from jarvis.automacoes import executor
 from jarvis.automacoes.agenda import FUSO
 from jarvis.automacoes.calendario import Calendario
@@ -730,6 +730,26 @@ class Nucleo:
                 "seus pedidos vão para a sessão de código."
             )
         return "Vou desligar o modo manutenção." if entrada.get("acao") == "sair" else None
+
+    def diagnosticar(self, registro: list[str]) -> tuple[str, str]:
+        """Monta o diagnóstico (atividade e registro técnico), guarda o último e o entrega à
+        sessão de melhorias, sem ligar o modo manutenção (ADR 0025 e 0026)."""
+        relatorio = diagnostico.montar(atividade.PADRAO.listar(5000), registro)
+        arquivo = ESTADO / "diagnostico.md"
+        arquivo.write_text(relatorio)
+        arquivo.chmod(0o600)
+        m = self.manutencao
+        m.abrir_sessao()
+        aviso = m.encaminhar(
+            "diagnóstico",
+            self._contexto_da_manutencao(),
+            time.time(),
+            diagnostico.PEDIDO + relatorio,
+        )
+        atividade.PADRAO.registrar(
+            "execucao", "Diagnóstico enviado às melhorias", autorizacao="painel"
+        )
+        return relatorio, aviso
 
     def aplicar_melhorias(self, revisado: bool = False) -> str:
         """Testa a cópia, junta as melhorias e reinicia, em segundo plano (os testes demoram);

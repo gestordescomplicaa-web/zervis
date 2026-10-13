@@ -58,6 +58,7 @@ SO_NO_PC = {
     "remoto/desativar",
     "ze/aplicar",
     "ze/sessao",
+    "ze/diagnosticar",
     "ze/descartar",
 }
 
