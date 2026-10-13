@@ -59,6 +59,7 @@ SO_NO_PC = {
     "ze/aplicar",
     "ze/sessao",
     "ze/diagnosticar",
+    "ze/manutencao",
     "ze/descartar",
 }
 

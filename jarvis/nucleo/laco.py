@@ -364,6 +364,13 @@ class Nucleo:
         self.manutencao = Manutencao(self.sessoes, ESTADO / "manutencao")
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
         self.maquina.manutencao = lambda: self.manutencao.ligado
+        # Atualização esperando as outras sessões (ADR 0028): None, ou se a revisão foi feita.
+        self._aplicar_depois: bool | None = None
+        self.sessoes.reservada = lambda: (
+            "Atualização do Zé em andamento. Tente em instantes."
+            if self._aplicar_depois is not None
+            else None
+        )
         self.orbes = manifesto.ler(
             cfg.caminho("barehands", "pasta_estado").parent / "barehands.json"
         )
@@ -746,7 +753,9 @@ class Nucleo:
 
     def diagnosticar(self, registro: list[str]) -> tuple[str, str]:
         """Monta o diagnóstico (atividade e registro técnico), guarda o último e o entrega à
-        sessão de melhorias, sem ligar o modo manutenção (ADR 0025 e 0026)."""
+        sessão de autodesenvolvimento; só no estado de manutenção (ADR 0025, 0026 e 0028)."""
+        if not self.manutencao.ligado:
+            return "", "Entre no modo manutenção para diagnosticar."
         relatorio = diagnostico.montar(atividade.PADRAO.listar(5000), registro)
         arquivo = ESTADO / "diagnostico.md"
         arquivo.write_text(relatorio)
@@ -764,9 +773,43 @@ class Nucleo:
         )
         return relatorio, aviso
 
+    def _outras_trabalhando(self) -> list[str]:
+        """As sessões de outros projetos no meio de um trabalho (o reinício as interromperia)."""
+        ids = []
+        for id_ in self.sessoes.trabalhando():
+            with contextlib.suppress(SessaoErro):
+                if self.sessoes.ler(id_).origem != ORIGEM_MANUTENCAO:
+                    ids.append(id_)
+        return ids
+
+    def mudar_manutencao(self, ligar: bool) -> str:
+        """Entra ou sai do estado de manutenção pelo painel (ADR 0028), igual à voz."""
+        if not ligar:
+            return self._comando_especial("manutencao_sair", "")
+        return self.manutencao.entrar()
+
+    def _aplicar_quando_livre(self) -> None:
+        """A atualização esperando as outras sessões terminarem: sai assim que ficarem livres."""
+        if self._aplicar_depois is None:
+            return
+        if not self.manutencao.ligado:
+            self._aplicar_depois = None
+        elif not self._outras_trabalhando():
+            revisado, self._aplicar_depois = self._aplicar_depois, None
+            self.aplicar_melhorias(revisado)
+
     def aplicar_melhorias(self, revisado: bool = False) -> str:
         """Testa a cópia, junta as melhorias e reinicia, em segundo plano (os testes demoram);
-        o resultado chega como aviso e fica na atividade."""
+        o resultado chega como aviso e fica na atividade. Só no estado de manutenção e sem
+        interromper ninguém: com outras sessões trabalhando, espera elas terminarem (ADR 0028)."""
+        if not self.manutencao.ligado:
+            return "Entre no modo manutenção para aplicar."
+        if outras := self._outras_trabalhando():
+            self._aplicar_depois = revisado
+            if len(outras) == 1:
+                return "Uma sessão está trabalhando. Aplico quando ela terminar."
+            return f"{len(outras)} sessões estão trabalhando. Aplico quando terminarem."
+        self._aplicar_depois = None
 
         def aplicar() -> None:
             try:
@@ -1055,6 +1098,7 @@ class Nucleo:
         if nome in ("modo_silencioso", "modo_avisos", "modo_maos_livres"):
             return self.mudar_modo_fala(nome.removeprefix("modo_"))
         if nome == "manutencao_sair":
+            self._aplicar_depois = None
             return self.manutencao.sair()
         if nome == "manutencao_situacao":
             return self.manutencao.situacao(time.time())
@@ -2007,6 +2051,7 @@ class Nucleo:
                     self._agendador(agora)
                     self._atualizar_pasta(agora)
                     self._manutencao_chegou(agora)
+                    self._aplicar_quando_livre()
                     self._evento_da_tela()
                     self._foco_na_tela(agora)
                     self._nota_do_dia(agora)

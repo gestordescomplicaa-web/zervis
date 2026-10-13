@@ -1425,6 +1425,7 @@ async function batimento() {
     const holo = document.querySelector(".holo");
     if (holo && holo.dataset.estado !== e.ze) { holo.dataset.estado = e.ze; $("holo-estado").textContent = ESTADO_HOLO[e.ze] || ""; }
     desenharModoFala(e.modo_fala);
+    document.body.classList.toggle("manutencao", !!e.manutencao?.ligada); window.desenharManutencao?.(e.manutencao);
     desenharVozRemota();
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});

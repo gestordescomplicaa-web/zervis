@@ -32,3 +32,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0025](0025-atividade-e-auto-aperfeicoamento.md) | Atividade e auto-aperfeiçoamento: o que o Zé fez e onde tropeçou | Aceito (camadas 1 e 2) |
 | [0026](0026-sessao-de-auto-desenvolvimento.md) | A sessão de auto-desenvolvimento do Zé, com essência e travas | Aceito |
 | [0027](0027-regras-de-fala.md) | Regras de fala: quando o Zé fala sozinho, sobre o quê e quantas vezes | Aceito |
+| [0028](0028-manutencao-estado-do-ze.md) | Manutenção, um estado do Zé: o centro do próprio código | Aceito |

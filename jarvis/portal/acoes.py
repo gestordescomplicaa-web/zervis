@@ -164,6 +164,7 @@ class Acoes:
             "atividade/registro": self.registro_tecnico,
             "ze/melhorias": self.melhorias,
             "ze/diagnosticar": self.diagnosticar,
+            "ze/manutencao": self.manutencao,
             "ze/diagnostico": self.diagnostico,
             "ze/sessao": self.sessao_de_melhorias,
             "ze/aplicar": self.aplicar_melhorias,
@@ -251,6 +252,10 @@ class Acoes:
             "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
             "chamado": self.n.chamado,
             "voz_remota": {"conectada": self.n._fonte is not None},
+            "manutencao": {
+                "ligada": self.n.manutencao.ligado,
+                "aguardando": self.n._aplicar_depois is not None,
+            },
             "inicio": os.getpid(),  # muda a cada reinício: o painel recarrega sozinho
         }
 
@@ -344,6 +349,11 @@ class Acoes:
     def aplicar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
         atividade.PADRAO.origem = "painel"
         return {"aviso": self.n.aplicar_melhorias(revisado=bool(dados.get("revisei")))}
+
+    def manutencao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Entra ou sai do estado de manutenção (ADR 0028)."""
+        atividade.PADRAO.origem = "painel"
+        return {"aviso": self.n.mudar_manutencao(bool(dados.get("ligar")))}
 
     def descartar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
         atividade.PADRAO.origem = "painel"

@@ -152,6 +152,8 @@ class Sessoes:
         self.raizes = tuple(r.expanduser().resolve() for r in raizes)
         self.ao_terminar = ao_terminar
         self.ao_avisar: Callable[[Sessao, str], None] | None = None  # aprovação pedida no terminal
+        # Motivo para não aceitar trabalho agora (o Zé vai se atualizar, ADR 0028), ou None.
+        self.reservada: Callable[[], str | None] = lambda: None
         # Sem `rodar`, cada sessão é um terminal real (o agente com todos os comandos dele);
         # com `rodar` (testes, ou trabalho sem tela), roda sem terminal.
         self.legado = rodar is not None
@@ -390,6 +392,8 @@ class Sessoes:
         if not texto and not anexos:
             raise SessaoErro("mensagem vazia")
         s = self.ler(id_)
+        if s.origem != "manutencao" and (motivo := self.reservada()):
+            raise SessaoErro(motivo)  # o Zé vai reiniciar para se atualizar (ADR 0028)
         self.focar(id_)
         pasta = self.pasta_de_anexos(id_)
         caminhos = []

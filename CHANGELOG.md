@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Manutenção é um estado do Zé (ADR 0028): liga por voz ou no Autodesenvolvimento, deixa o
+  painel em laranja, e só nele valem Diagnosticar e Aplicar. Aplicar espera as sessões de outros
+  projetos terminarem, sem interromper ninguém.
 - Reinício e atualização: o painel mostra "Reconectando…" e recarrega sozinho quando o Zé volta.
   A volta automática desiste em segundos quando a versão nova cai ao subir, e a cópia isolada
   volta a ficar igual ao Zé em uso. Volta testada de ponta a ponta (13/10/2026).
