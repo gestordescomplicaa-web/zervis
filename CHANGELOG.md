@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- O chamado ignora silêncio e som de fundo: precisa de volume de alguém falando ao microfone
+  (configurável em `ativacao.nivel_minimo_dbfs`).
 - Silencioso trava o microfone: nem "Ei Zé", nem o botão, nem o Ao vivo; a conversa é pela tela.
 - O Zé tem a vez: enquanto ouve, pensa ou fala, vídeo e música (navegador e players) pausam e
   voltam depois. Chamado sem ninguém falar depois fecha a escuta em 6 s.

@@ -25,6 +25,9 @@ PADRAO: dict[str, dict[str, Any]] = {
         "modelo": str(lugares.DADOS / "ativacao/ei_ze.npz"),
         "modelos_onnx": str(lugares.DADOS / "modelos"),
         "paciencia": 3,
+        # Volume mínimo do chamado (pico de 100 ms, dBFS): abaixo disso é silêncio, um vídeo
+        # vazando no fone ou alguém longe, não a pessoa falando ao microfone (13/10/2026).
+        "nivel_minimo_dbfs": -40.0,
     },
     # conversa_s: quanto tempo a conversa espera a próxima pergunta antes de encerrar sozinha.
     # registrar_texto: diagnóstico; põe o que foi transcrito no log. Desligado por padrão.

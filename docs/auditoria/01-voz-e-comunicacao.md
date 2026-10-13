@@ -138,3 +138,11 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
    Pedido da pessoa: o Silencioso trava o microfone. Feito: nem "Ei Zé", nem botão, nem ao vivo;
    a conversa é pela tela. **Conferido ✅ 13/10/2026:** "Ei Zé" sem resposta, botão recusado com
    aviso, pedido escrito respondido na tela.
+10. **Os bipes sozinhos têm duas causas** (10 gravações de 13/10/2026, com nível e transcrição):
+    - 6 de 10 eram **silêncio** (-91 dBFS) ou **voz de fundo** baixa (-46 a -88 dBFS: "o código
+      código…", de um vídeo ou de alguém longe). O detector dava nota alta a isso. Corrigido: o
+      chamado precisa de volume de alguém falando ao microfone (pico acima de -40 dBFS; a pessoa
+      chamando ficou entre -22 e -28). As 6 passariam a ser ignoradas.
+    - 4 eram **voz perto do microfone** que não era o chamado: "Pois é" (duas vezes), "Reis é" e
+      uma frase longa. O modelo do chamado confunde "pois é" com "Ei Zé". Em aberto: conferir o
+      chamado pela transcrição ou treinar o modelo de novo com esses exemplos.

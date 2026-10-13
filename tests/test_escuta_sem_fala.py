@@ -24,3 +24,18 @@ def test_fecha_se_ninguem_falou_depois_do_chamado() -> None:
 def test_botao_e_ao_vivo_nao_fecham_por_isso() -> None:
     assert not Nucleo._ninguem_falou(_n(False, 30, segurando=True))  # type: ignore[arg-type]
     assert not Nucleo._ninguem_falou(_n(False, 30, ao_vivo=True))  # type: ignore[arg-type]
+
+
+def test_chamado_baixo_demais_e_ignorado() -> None:
+    """13/10/2026: o detector disparou em silêncio digital (-91 dBFS) e em voz de fundo
+    (-53 a -87 dBFS); a pessoa chamando ao microfone ficou entre -22 e -28 dBFS."""
+    import numpy as np
+
+    from jarvis.nucleo.laco import nivel_de_pico
+
+    t = np.arange(16000) / 16000
+    alto = (0.05 * 32767 * np.sin(2 * np.pi * 300 * t)).astype("<i2").tobytes()  # ~ -29 dBFS
+    fundo = (0.001 * 32767 * np.sin(2 * np.pi * 300 * t)).astype("<i2").tobytes()  # ~ -63 dBFS
+    assert nivel_de_pico(alto) > -40 > nivel_de_pico(fundo)
+    assert nivel_de_pico(bytes(32000)) < -100  # silêncio
+    assert nivel_de_pico(b"") == -120.0

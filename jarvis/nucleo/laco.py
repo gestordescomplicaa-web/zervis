@@ -218,6 +218,17 @@ def criar_bip(caminho: Path) -> None:
         )
 
 
+def nivel_de_pico(audio: bytes, janela: int = 1600, segundos: float = 1.2) -> float:
+    """O volume mais alto (dBFS) em janelas de 100 ms no fim do trecho: o chamado de verdade é
+    alguém falando ao microfone; silêncio e som de fundo ficam bem abaixo."""
+    x = np.frombuffer(audio, dtype="<i2").astype(np.float64)[-int(16000 * segundos) :]
+    if len(x) < janela:
+        return -120.0
+    blocos = x[: len(x) // janela * janela].reshape(-1, janela)
+    rms = np.sqrt((blocos**2).mean(axis=1)).max()
+    return float(20 * np.log10(rms / 32768 + 1e-12))
+
+
 def criar_toque(caminho: Path) -> None:
     """O toque antes de um aviso de sessão (ADR 0029): duas notas subindo, diferente do bip."""
     quadros = []
@@ -1633,19 +1644,27 @@ class Nucleo:
             if self.maquina.detector_ligado and self.detector.processar(
                 np.frombuffer(dados, dtype="<i2")
             ):
-                log.info("ativação (nota %.3f)", self.detector.nota_disparo)
-                self._guardar_chamado()
+                nivel = nivel_de_pico(b"".join(self._antes_do_chamado))
+                minimo = float(self.cfg["ativacao"].get("nivel_minimo_dbfs", -40.0))
+                self._guardar_chamado(nivel < minimo)
+                if nivel < minimo:
+                    log.info(
+                        "chamado ignorado: baixo demais (nota %.3f, %.0f dBFS)",
+                        self.detector.nota_disparo,
+                        nivel,
+                    )
+                    return
+                log.info("ativação (nota %.3f, %.0f dBFS)", self.detector.nota_disparo, nivel)
                 self.tratar(e.Ativacao())
 
-    def _guardar_chamado(self) -> None:
+    def _guardar_chamado(self, ignorado: bool = False) -> None:
         """Os segundos de som que dispararam o chamado, para entender ativações sozinhas
         (achado 8 da auditoria de voz). Só neste computador, 0600, e só as últimas."""
         pasta = ESTADO / "chamados"
         try:
             pasta.mkdir(mode=0o700, exist_ok=True)
-            arquivo = (
-                pasta / f"{time.strftime('%Y%m%d-%H%M%S')}-{self.detector.nota_disparo:.3f}.wav"
-            )
+            nota = f"{self.detector.nota_disparo:.3f}{'-ignorado' if ignorado else ''}"
+            arquivo = pasta / f"{time.strftime('%Y%m%d-%H%M%S')}-{nota}.wav"
             with wave.open(str(arquivo), "wb") as w:
                 w.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
                 w.writeframes(b"".join(self._antes_do_chamado))
