@@ -82,3 +82,22 @@ def para_ouvir(texto: str, limite: int = 320) -> str:
             break
         saida = f"{saida} {frase}".strip()
     return saida or texto[:limite].rsplit(" ", 1)[0] + "…"
+
+
+MANCHETE_PALAVRAS = 30
+REPETIR_S = 120.0  # o mesmo aviso não se repete antes disto (ADR 0027)
+
+
+def manchete(texto: str, palavras: int = MANCHETE_PALAVRAS) -> str:
+    """O aviso falado em no máximo `palavras` (ADR 0027): as frases inteiras que couberem e, se
+    sobrar, "O resto está na tela." Texto curto passa como está."""
+    if len(texto.split()) <= palavras:
+        return texto
+    saida: list[str] = []
+    for frase in re.split(r"(?<=[.!?:;])\s+", texto.strip()):
+        if len(" ".join([*saida, frase]).split()) > palavras:
+            break
+        saida.append(frase)
+    if not saida:  # uma frase só, comprida: corta nas palavras
+        saida = [" ".join(texto.split()[:palavras]).rstrip(",;:") + "…"]
+    return f"{' '.join(saida)} O resto está na tela."

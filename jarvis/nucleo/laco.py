@@ -286,6 +286,12 @@ class Nucleo:
         self._rodando: set[str] = set()  # automações do tipo pergunta em execução
         self._agenda_em = 0.0
         self.avisos_falados: list[tuple[float, str]] = []
+        # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
+        # que podem voltar uma vez e quando cada aviso foi dado.
+        self._comecados: dict[str, int] = {}
+        self._cortados: set[str] = set()
+        self._avisos_dados: dict[str, float] = {}
+        self._na_tela: dict[str, None] = {}  # os últimos avisos já postos na linha do tempo
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
         self.vigia = Vigia()
         self._vigia_em = 0.0
@@ -625,6 +631,7 @@ class Nucleo:
                     # O cérebro não ouve a própria voz: sem isto, "pode aprovar" depois de um
                     # aviso chegava sem contexto (teste de 06/10/2026).
                     self.avisos_falados.append((time.monotonic(), texto))
+                    self._comecados[texto] = self._comecados.get(texto, 0) + 1
                 self.teclado.falou(texto)
                 if texto == e.NAO_ENTENDI:
                     self.evidencias.registrar("nao_entendi", self._ouvido)
@@ -657,6 +664,12 @@ class Nucleo:
                 )
                 self._comando(nome)
             case e.ReterAviso(texto):
+                if self._comecados.get(texto, 0) >= 2:
+                    # Já foi cortado uma vez e voltou: não lê pela terceira vez (ADR 0027).
+                    log.info("aviso cortado de novo: fica só na tela")
+                    return
+                if self._comecados.get(texto):
+                    self._cortados.add(texto)  # a volta de um aviso cortado não é repetição
                 # Fila durável (Fase 7): o aviso sai quando o JARVIS voltar a ATIVO.
                 log.info("aviso retido até ficar ativo: %d caracteres", len(texto))
                 self.fila.guardar(texto)
@@ -809,22 +822,23 @@ class Nucleo:
                     "no painel."
                 )
             else:
-                texto = f"O {agente} terminou. {c.texto}"
+                # Uma frase, nunca o conteúdo (ADR 0027): a resposta fica na sessão, na tela.
+                texto = "A sessão de melhorias terminou."
                 if c.protegidos:
-                    texto += (
-                        " Atenção: a mudança mexeu na zona protegida, nas regras do que eu faço "
-                        "sem perguntar. Revise a sessão no painel antes de valer."
-                    )
+                    texto += " A mudança mexeu na zona protegida: revise antes de aplicar."
                 if c.mudou_codigo:
-                    texto += (
-                        " As mudanças estão na cópia isolada: aprove em Sessões, no painel, ou "
-                        "diga: reinicia o Zé."
-                    )
+                    texto += " Há mudanças para aprovar em Melhorias."
+                else:
+                    texto += " Veja a resposta em Melhorias."
             log.info("manutenção: %s do pedido %s", c.tipo, c.pedido)
             self.eventos.put(e.Aviso(texto))
 
     def _na_linha(self, tipo: str, texto: str) -> None:
         """Um evento na linha do tempo; falha de disco não derruba nada."""
+        if tipo == "aviso":
+            self._na_tela[texto] = None
+            while len(self._na_tela) > 50:
+                del self._na_tela[next(iter(self._na_tela))]
         try:
             self.linha.registrar(tipo, texto)
         except (OSError, ValueError) as erro:
@@ -1273,6 +1287,11 @@ class Nucleo:
         if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso":
             log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
             return
+        if isinstance(evento, e.Aviso):
+            permitido = self._regras_de_fala(evento)
+            if permitido is None:
+                return
+            evento = permitido
         if isinstance(evento, e.Aviso) and self._pessoa_falando():
             self.fila.guardar(evento.texto)  # ao vivo: o aviso espera a pausa, não atropela
             return
@@ -1399,6 +1418,30 @@ class Nucleo:
         self._ligar_ativacao()
         log.info("ativação: %s", modo)
         return f"Ativação: {chamado.NOMES[modo]}."
+
+    def _regras_de_fala(self, aviso: e.Aviso) -> e.Aviso | None:
+        """O que vira voz (ADR 0027): o mesmo aviso não se repete em 2 minutos (salvo a volta de
+        um aviso cortado, uma vez), e aviso longo vira manchete, com o resto na tela."""
+        agora = time.monotonic()
+        self._avisos_dados = {
+            t: q for t, q in self._avisos_dados.items() if agora - q < modo_fala.REPETIR_S
+        }
+        if len(self._comecados) > 50:
+            self._comecados = {t: n for t, n in self._comecados.items() if t in self._cortados}
+        texto = aviso.texto
+        cortado = texto in self._cortados
+        self._cortados.discard(texto)
+        if not cortado and agora - self._avisos_dados.get(texto, -1e9) < modo_fala.REPETIR_S:
+            log.info("aviso repetido em menos de 2 minutos: só na tela")
+            return None
+        self._avisos_dados[texto] = agora
+        if (curto := modo_fala.manchete(texto)) != texto:
+            if texto not in self._na_tela:
+                self._na_linha("aviso", texto)  # o texto inteiro fica na tela
+            # A volta de um aviso cortado chega já curta: o corte conta pela manchete.
+            self._avisos_dados[curto] = agora
+            return e.Aviso(curto, escutar=aviso.escutar)
+        return aviso
 
     def _pessoa_falando(self) -> bool:
         """Ao vivo, a pessoa no meio de uma frase (ou o pedido dela sendo transcrito)."""

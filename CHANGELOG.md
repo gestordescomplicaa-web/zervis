@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Regras de fala (ADR 0027): aviso falado em no máximo 30 palavras, com o resto na tela; o fim
+  da sessão de melhorias é uma frase; aviso cortado volta uma vez só; o mesmo aviso não se repete
+  em 2 minutos.
 - O Zé começa aqui como projeto aberto, para instalar do zero. Ele herda o núcleo já existente:
   voz (Deepgram e Piper), cérebro trocável, via rápida, memória curta e longa, skills, Foco,
   automações, sessões de agentes de código e o painel.
