@@ -6,6 +6,7 @@ uma fila curta: se o laço atrasar, os mais velhos caem, mas o laço nunca esper
 """
 
 import asyncio
+import collections
 import concurrent.futures
 import contextlib
 import dataclasses
@@ -137,6 +138,7 @@ FALAS_DE_TONTO = (
     "Socorro, eu sou um holograma, não um pião!",
 )
 # Comandos que falam com a sessão de manutenção ou rodam os testes: respondem quando terminarem.
+CHAMADOS_GUARDADOS = 10  # os últimos sons que dispararam o chamado (ESTADO/chamados)
 PRIMEIRA_FALA_S = 6.0  # depois do chamado, sem nenhuma fala nesse tempo, a escuta fecha
 OFERTA_S = 45.0  # quanto tempo "sim", "próximo" e "depois" respondem a uma oferta de avisos
 LIMITE_ESCRITO = 4000  # caracteres de um pedido escrito no painel
@@ -254,6 +256,7 @@ class Nucleo:
         self._turno_atual: str | None = None
         self._turno_cerebro: tuple[int, str | None] = (0, None)
         self._digitado_em: float | None = None
+        self._antes_do_chamado: collections.deque[bytes] = collections.deque(maxlen=38)  # ~3 s
         self._ouvindo_desde = 0.0  # quando começou a ouvir, e se já ouviu voz desde então
         self._ouviu_voz = False
         self._fim_fala_em: float | None = None
@@ -1607,11 +1610,31 @@ class Nucleo:
                 self.tratar(e.Silencio())
         else:
             self._fechar_escuta()
+            self._antes_do_chamado.append(dados)
             if self.maquina.detector_ligado and self.detector.processar(
                 np.frombuffer(dados, dtype="<i2")
             ):
                 log.info("ativação (nota %.3f)", self.detector.nota_disparo)
+                self._guardar_chamado()
                 self.tratar(e.Ativacao())
+
+    def _guardar_chamado(self) -> None:
+        """Os segundos de som que dispararam o chamado, para entender ativações sozinhas
+        (achado 8 da auditoria de voz). Só neste computador, 0600, e só as últimas."""
+        pasta = ESTADO / "chamados"
+        try:
+            pasta.mkdir(mode=0o700, exist_ok=True)
+            arquivo = (
+                pasta / f"{time.strftime('%Y%m%d-%H%M%S')}-{self.detector.nota_disparo:.3f}.wav"
+            )
+            with wave.open(str(arquivo), "wb") as w:
+                w.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
+                w.writeframes(b"".join(self._antes_do_chamado))
+            arquivo.chmod(0o600)
+            for velho in sorted(pasta.glob("*.wav"))[:-CHAMADOS_GUARDADOS]:
+                velho.unlink(missing_ok=True)
+        except OSError as erro:
+            log.warning("chamado: %s", erro)
 
     def _ninguem_falou(self) -> bool:
         """Chamado sem ninguém falar depois (um vídeo, um ruído): fecha em poucos segundos, em
