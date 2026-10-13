@@ -1645,7 +1645,7 @@ class Nucleo:
                 np.frombuffer(dados, dtype="<i2")
             ):
                 nivel = nivel_de_pico(b"".join(self._antes_do_chamado))
-                minimo = float(self.cfg["ativacao"].get("nivel_minimo_dbfs", -40.0))
+                minimo = float(self.cfg["ativacao"].get("nivel_minimo_dbfs", -35.0))
                 self._guardar_chamado(nivel < minimo)
                 if nivel < minimo:
                     log.info(

@@ -27,7 +27,7 @@ PADRAO: dict[str, dict[str, Any]] = {
         "paciencia": 3,
         # Volume mínimo do chamado (pico de 100 ms, dBFS): abaixo disso é silêncio, um vídeo
         # vazando no fone ou alguém longe, não a pessoa falando ao microfone (13/10/2026).
-        "nivel_minimo_dbfs": -40.0,
+        "nivel_minimo_dbfs": -35.0,
     },
     # conversa_s: quanto tempo a conversa espera a próxima pergunta antes de encerrar sozinha.
     # registrar_texto: diagnóstico; põe o que foi transcrito no log. Desligado por padrão.
