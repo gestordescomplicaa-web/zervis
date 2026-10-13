@@ -1429,7 +1429,8 @@ async function batimento() {
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }
-  } catch {
+  } catch (erro) {
+    if (erro.message === "token") { location.reload(); return; } // o Zé voltou com chave nova
     Object.assign(document.querySelector(".icone-ze"), { title: "Zé desconectado" }).dataset.estado = "inativo";
     if (++semResposta >= 3) faixaFora(true);
   }
