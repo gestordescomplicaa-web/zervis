@@ -47,6 +47,9 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 - **Resultado:** ❌ 13/10/2026. Alt+M ✅. O lembrete disparou sem voz ✅, e a resposta ao "Ei Zé"
   saiu muda ✅, mas **nenhum dos dois aparece no painel** (achado 2): o Silencioso hoje é um
   buraco. Para refazer depois da correção.
+  **Refeito: ✅ 13/10/2026.** Sem voz; a resposta ao "Ei Zé" e o lembrete escrito na Conversa
+  apareceram como notificação e no fio. A notificação sumia rápido demais (2,6 s): agora fica de
+  5 a 15 s, conforme o tamanho do texto.
 
 ### Passo 3. Modo Mãos livres e as regras de fala
 

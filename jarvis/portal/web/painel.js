@@ -32,13 +32,13 @@ async function api(caminho, corpo) {
   return dados;
 }
 
-function toast(texto) {
+function toast(texto, ms = 2600) {
   let t = document.querySelector(".toast");
   if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.append(t); }
   t.textContent = texto;
   t.classList.add("on");
   clearTimeout(toast.prazo);
-  toast.prazo = setTimeout(() => t.classList.remove("on"), 2600);
+  toast.prazo = setTimeout(() => t.classList.remove("on"), ms);
 }
 
 async function ocupado(botao, trabalho) {
@@ -1321,7 +1321,7 @@ async function batimento() {
     inicioZe = e.inicio; semResposta = 0; faixaFora(false);
     // O que o Zé não falou (Silencioso) aparece em qualquer página
     const tela = e.tela?.[0] ?? null;
-    if (telaDita !== undefined && tela !== telaDita && location.hash !== "#conversa") toast(e.tela[1]);
+    if (telaDita !== undefined && tela !== telaDita && location.hash !== "#conversa") toast(e.tela[1], Math.min(15000, 5000 + 80 * e.tela[1].length)); // tempo de ler
     telaDita = tela;
     if (telaVista !== null && e.tela_ts > telaVista && imersaoLigada() && location.hash !== "#imersao") location.hash = "#imersao";
     telaVista = e.tela_ts;
