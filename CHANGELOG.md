@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Respostas rápidas: o modelo vem da lista com a versão (Claude, Codex, Anthropic); o Codex do
+  cérebro mostra "Padrão da conta" quando não há modelo escolhido.
 - Modelos: o modelo do cérebro se escolhe no painel (a mesma lista das sessões) e vale na hora;
   "Voz rápida" passa a se chamar "Respostas rápidas" e fica junto do Cérebro.
 - O modo de fala "Avisos" passa a se chamar "Normal" ("modo avisos" por voz continua valendo).

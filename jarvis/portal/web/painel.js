@@ -144,7 +144,7 @@ const PAGINAS = {
   async modelos() {
     const [c, esc_, cfg, ct] = await Promise.all([api("cerebro"), api("escuta"), api("configuracao"), api("contas")]);
     contasTela = ct;
-    modelo = { ...c.via, chaves: c.chaves };
+    modelo = { ...c.via, chaves: c.chaves, listas: c.listas };
     escuta = esc_;
     prepararAcesso(cfg);
     acessoTela.modelo = c.completo.modelo; acessoTela.modelos = c.completo.modelos;
@@ -156,7 +156,7 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Respostas rápidas</h2>${liga(c.via.ligada, "via-ligada", "", "Ligada")}</div>
         ${sub("Parte do cérebro: conversa simples com um modelo leve. Pedidos com ação vão ao modelo principal.")}
         <div class="segmentos" role="group" aria-label="Provedor">${c.motores.map((m) => `<button type="button" data-acao="motor" data-motor="${m.id}" data-modelo="${esc(m.modelo)}" aria-pressed="${m.id === c.via.motor}">${esc(NOME_MOTOR[m.id] || m.nome)}</button>`).join("")}</div>
-        <div class="linha"><label>Modelo<input id="modelo" class="mono" value="${esc(c.via.modelo)}" placeholder="Padrão da conta" autocomplete="off" spellcheck="false"></label>
+        <div class="linha"><label id="campo-modelo">Modelo${campoModelo(c.via.motor, c.via.modelo)}</label>
           <label id="campo-endereco">Endereço<input id="endereco" class="mono" value="${esc(c.via.endereco)}" placeholder="http://127.0.0.1:20128/v1" autocomplete="off" spellcheck="false"></label></div>
         <div id="area-chave"></div>
         <div class="linha">${botao("Salvar", "modelo-salvar", "", "principal")}${botao("Testar", "modelo-testar")}<span class="resultado" id="resultado"></span></div>`)}
@@ -494,13 +494,24 @@ function prepararAcesso(cfg) {
   acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
 }
 
+// O modelo das Respostas rápidas: lista com a versão para Claude, Codex e Anthropic; campo livre
+// para os motores com modelos demais (OpenAI, OpenRouter, Ponte).
+function campoModelo(motor, atual) {
+  const lista = modelo.listas?.[motor];
+  if (!lista?.length) return `<input id="modelo" class="mono" value="${esc(atual || "")}" placeholder="Padrão da conta" autocomplete="off" spellcheck="false">`;
+  const escolhido = lista.find((m) => m.id === atual || m.id.includes(`-${atual}-`))?.id || atual || "";
+  const opcoes = [...(lista.some((m) => m.id === escolhido) || !escolhido ? [] : [{ id: escolhido, nome: escolhido }]), ...lista];
+  return `<select id="modelo">${motor === "codex" ? `<option value="" ${escolhido ? "" : "selected"}>Padrão da conta</option>` : ""}${opcoes.map((m) => `<option value="${esc(m.id)}" ${m.id === escolhido ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select>`;
+}
+
 // O modelo do cérebro, da mesma lista das sessões; o atual entra mesmo se não estiver nela.
 function seletorModelo(a) {
   const lista = a.modelos || [];
   const atual = lista.find((m) => m.id === a.modelo || m.id.includes(`-${a.modelo}-`))?.id || a.modelo || "";
   const opcoes = [...(lista.some((m) => m.id === atual) || !atual ? [] : [{ id: atual, nome: atual }]), ...lista];
   if (!opcoes.length) return `<p class="nota">Modelo: padrão da conta</p>`;
-  return `<label>Modelo<select data-mudar="cerebro-modelo">${opcoes.map((m) => `<option value="${esc(m.id)}" ${m.id === atual ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
+  const padrao = a.cerebro === "codex" ? `<option value="" ${atual ? "" : "selected"}>Padrão da conta</option>` : "";
+  return `<label>Modelo<select data-mudar="cerebro-modelo">${padrao}${opcoes.map((m) => `<option value="${esc(m.id)}" ${m.id === atual ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>`;
 }
 
 function desenharAcesso() {
@@ -1034,7 +1045,7 @@ const ACOES = {
   motor: (b) => {
     modelo.motor = b.dataset.motor;
     document.querySelectorAll('[data-acao="motor"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    if (b.dataset.modelo) $("modelo").value = b.dataset.modelo;
+    $("campo-modelo").innerHTML = "Modelo" + campoModelo(modelo.motor, b.dataset.modelo);
     desenharChave();
   },
   "modelo-salvar": async (b) => {

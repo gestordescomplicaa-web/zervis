@@ -1994,7 +1994,8 @@ class Nucleo:
         depois de reiniciar."""
         if agente not in catalogo.CHAVE_DO_MODELO:
             raise ValueError("Agente desconhecido.")
-        if modelo not in {m["id"] for m in modelos_dos_agentes.do_cerebro(agente)}:
+        padrao = agente == "codex" and not modelo  # o Codex pode usar o padrão da conta
+        if not padrao and modelo not in {m["id"] for m in modelos_dos_agentes.do_cerebro(agente)}:
             raise ValueError("Modelo indisponível para esta conta.")
         if agente == "claude" and (recusa := self._testar_modelo(modelo)):
             raise ValueError(recusa)
@@ -2010,8 +2011,8 @@ class Nucleo:
             self.ponte.trocar(cerebro)
             self.cerebro = cerebro
         log.info("cérebro: modelo do %s agora é %s", agente, modelo)
-        nome = next(m["nome"] for m in modelos_dos_agentes.do_cerebro(agente) if m["id"] == modelo)
-        return f"Modelo do cérebro: {nome}."
+        nomes = {m["id"]: m["nome"] for m in modelos_dos_agentes.do_cerebro(agente)}
+        return f"Modelo do cérebro: {nomes.get(modelo, 'padrão da conta')}."
 
     def modelos(self) -> dict[str, str]:
         """O modelo de cada opção; o do cérebro ativo é o que respondeu de fato, se já houver."""

@@ -72,7 +72,7 @@ MOTORES = [
         "id": "anthropic",
         "nome": "Anthropic",
         "detalhe": "Chave de API da Anthropic.",
-        "modelo": "claude-haiku-4-5",
+        "modelo": "claude-haiku-4-5-20251001",
     },
     {
         "id": "openrouter",
@@ -483,6 +483,16 @@ class Acoes:
             "via": {k: via[k] for k in rapido.AJUSTAVEIS},
             "ativa": isinstance(self.n.cerebro, rapido.Roteado),
             "motores": MOTORES,
+            # Os motores com lista de modelos (com a versão), como no cérebro; os outros têm
+            # modelos demais para listar e ficam com o campo livre.
+            "listas": {
+                motor: [{"id": m["id"], "nome": m["nome"]} for m in lista]
+                for motor, lista in (
+                    ("plano", modelos.do_cerebro("claude")),
+                    ("codex", modelos.do_cerebro("codex")),
+                    ("anthropic", modelos.CLAUDE),
+                )
+            },
             "chaves": {
                 m["id"]: rapido.situacao_da_chave(
                     m["id"], via["arquivo_chave"] if m["id"] == via["motor"] else ""
