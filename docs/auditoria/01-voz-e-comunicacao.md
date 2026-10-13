@@ -91,7 +91,9 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 - **Como:** Modelos → Voz rápida → Testar. Depois, "Ei Zé, tudo bem?".
 - **Esperado:** o Testar responde "funcionando" (ou parecido); a conversa simples responde rápido,
   sem passar pelo cérebro (o registro mostra a via rápida).
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. "Tudo bem?" foi pela via rápida (rapida:plano) e o lembrete pelo
+  cérebro. Observação: a via rápida levou ~3 s até o primeiro som (1,2 s só até o primeiro
+  token); vale olhar a latência numa rodada própria.
 
 ### Passo 8. Voltar às preferências
 
