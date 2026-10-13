@@ -494,6 +494,13 @@ function prepararAcesso(cfg) {
   acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
 }
 
+// Outra conta, outro plano: as listas de modelos do Cérebro e das Respostas rápidas mudam.
+async function modelosDaConta() {
+  const c = await api("cerebro");
+  Object.assign(acessoTela, completo(c)); modelo.listas = c.listas; desenharAcesso();
+  if ($("campo-modelo")) $("campo-modelo").innerHTML = "Modelo" + campoModelo(modelo.motor, $("modelo")?.value);
+}
+
 const completo = (c) => ({ cerebro: c.completo.provedor, modelo: c.completo.modelo, modelos: c.completo.modelos, omniroute: c.completo.omniroute });
 
 // O modelo das Respostas rápidas: lista com a versão para Claude, Codex e Anthropic; campo livre
@@ -1106,7 +1113,8 @@ const ACOES = {
   },
   "conta-usar": async (b) => {
     const r = await ocupado(b, () => api("conta/usar", { id: b.dataset.id }));
-    contasTela = r; desenharContas(); desenharAcesso(); toast(r.aviso);
+    contasTela = r; desenharContas(); toast(r.aviso);
+    await modelosDaConta();
   },
   "conta-entrar": async (b) => {
     const r = await ocupado(b, () => api("conta/entrar", { id: b.dataset.id }));
@@ -1115,7 +1123,7 @@ const ACOES = {
   },
   "conta-remover": (b) => confirmar(b, "Remover a conta e o login dela?", async () => {
     const r = await api("conta/remover", { id: b.dataset.id });
-    contasTela = r; desenharContas(); desenharAcesso(); toast(r.aviso);
+    contasTela = r; desenharContas(); toast(r.aviso); await modelosDaConta();
   }),
   "acesso-salvar": async (b) => {
     const r = await ocupado(b, () => api("acesso/chave", { chave: $("segredo-acesso").value }));

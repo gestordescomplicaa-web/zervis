@@ -34,6 +34,9 @@ usam a conta em uso de cada agente.
    própria máquina por http, ou num servidor por https), Testar conexão e a lista de modelos vinda
    do próprio OmniRoute; e o motor **OmniRoute** nas Respostas rápidas, com a mesma conexão.
    Salvar a conexão vale só no próprio PC.
+6. **Trocar a conta não atualizava a lista das Respostas rápidas** (a conta Plus do Codex libera
+   outros modelos). **Corrigido:** ao trocar ou remover uma conta, as listas do Cérebro e das
+   Respostas rápidas são recarregadas.
 
 ## Passos
 
@@ -71,7 +74,8 @@ usam a conta em uso de cada agente.
 
 - **Como:** ver as contas de cada agente; trocar a conta em uso (se houver mais de uma).
 - **Esperado:** o cérebro e as sessões passam a usar a conta escolhida.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. Trocou para a conta Plus do Codex; o Cérebro mostrou os modelos
+  dela e funcionou. A lista das Respostas rápidas não acompanhava (achado 6, corrigido).
 
 ### Passo 5. Chave de API da Anthropic (opcional)
 
