@@ -70,7 +70,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 - **Como:** fechar a janela do painel (e a da imersão, se aberta) e dizer "Ei Zé". Abrir o painel
   e dizer "Ei Zé" de novo.
 - **Esperado:** com a janela fechada, nada; com ela aberta, o bip e o Zé ouvindo.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. Fechado, nada; aberto, funcionou. A pessoa relatou o Zé ouvindo
+  sozinho às vezes, como se fossem vídeos do navegador (achado 8).
 
 ### Passo 5. Escuta: Sempre
 
@@ -125,3 +126,7 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
    de avisos), implementado.
 7. **"Repete" ia ao cérebro**, que reescrevia a resposta, mais devagar. Agora "repete", "pode
    repetir", "não entendi" e "fala de novo" repetem a última fala inteira, igual e na hora.
+8. **O Zé às vezes ouve sozinho** (vídeos do navegador). No registro, ativações sem fala depois
+   deixavam o microfone aberto 20 s, mandando o áudio da sala ao reconhecimento. Corrigido em
+   parte: sem fala nos primeiros 6 s, a escuta fecha. Falta a causa: o som do computador chegando
+   ao microfone (vazamento do fone ou falta de cancelamento de eco). Em investigação.

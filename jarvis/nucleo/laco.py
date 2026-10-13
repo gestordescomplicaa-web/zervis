@@ -137,6 +137,7 @@ FALAS_DE_TONTO = (
     "Socorro, eu sou um holograma, não um pião!",
 )
 # Comandos que falam com a sessão de manutenção ou rodam os testes: respondem quando terminarem.
+PRIMEIRA_FALA_S = 6.0  # depois do chamado, sem nenhuma fala nesse tempo, a escuta fecha
 OFERTA_S = 45.0  # quanto tempo "sim", "próximo" e "depois" respondem a uma oferta de avisos
 LIMITE_ESCRITO = 4000  # caracteres de um pedido escrito no painel
 EM_SEGUNDO_PLANO = ("manutencao_entrar", "manutencao_pedido", "rodada_melhoria", "reiniciar")
@@ -253,6 +254,8 @@ class Nucleo:
         self._turno_atual: str | None = None
         self._turno_cerebro: tuple[int, str | None] = (0, None)
         self._digitado_em: float | None = None
+        self._ouvindo_desde = 0.0  # quando começou a ouvir, e se já ouviu voz desde então
+        self._ouviu_voz = False
         self._fim_fala_em: float | None = None
 
         modelos = cfg.caminho("ativacao", "modelos_onnx")
@@ -1574,6 +1577,8 @@ class Nucleo:
                 if not self.maquina.em_conversa:
                     self._fim_da_conversa()
                 self._sair_da_fila()
+            if depois is e.Estado.OUVINDO and antes is not e.Estado.OUVINDO:
+                self._ouvindo_desde, self._ouviu_voz = time.monotonic(), False
             if depois is e.Estado.OUVINDO and antes is e.Estado.FALANDO:
                 self._descartar_escuta()  # conversa contínua: próxima pergunta sem "Hey Orca"
 
@@ -1589,6 +1594,7 @@ class Nucleo:
             voz = self.vad.prever(amostras) >= self.cfg["escuta"]["limiar_vad"]
             if voz:
                 self._fim_fala_em = time.monotonic()
+                self._ouviu_voz = True
             self.segmentador.segurando = self.maquina.segurando
             trecho = self.segmentador.quadro(dados, voz)
             if trecho is not None:
@@ -1596,7 +1602,7 @@ class Nucleo:
             elif (
                 self.maquina.estado is e.Estado.OUVINDO
                 and not self.segmentador.em_fala
-                and time.monotonic() > self.maquina.prazo
+                and (time.monotonic() > self.maquina.prazo or self._ninguem_falou())
             ):
                 self.tratar(e.Silencio())
         else:
@@ -1606,6 +1612,16 @@ class Nucleo:
             ):
                 log.info("ativação (nota %.3f)", self.detector.nota_disparo)
                 self.tratar(e.Ativacao())
+
+    def _ninguem_falou(self) -> bool:
+        """Chamado sem ninguém falar depois (um vídeo, um ruído): fecha em poucos segundos, em
+        vez de deixar o microfone aberto e mandando áudio ao reconhecimento pelo prazo inteiro."""
+        return (
+            not self._ouviu_voz
+            and not self.maquina.segurando
+            and not self.maquina.ao_vivo
+            and time.monotonic() - self._ouvindo_desde > PRIMEIRA_FALA_S
+        )
 
     def _pedido_fechado(self, trecho: bytes, por: str = "") -> None:
         """O áudio do pedido está completo (pausa, fim de turno ou botão solto): transcreve."""
