@@ -55,3 +55,8 @@ def test_assinatura_ignora_o_que_muda_a_cada_vez() -> None:
         "2026-10-13T11:25:00-03:00 pc python[99]: WARNING porta 8796 em /home/q/r/s.py"
     )
     assert a == b
+
+
+def test_pedido_mantem_o_agente_longe_dos_dados_da_pessoa() -> None:
+    assert "não leia as pastas de dados do Zé" in diagnostico.PEDIDO
+    assert "~/.local/state/zervis" in diagnostico.PEDIDO

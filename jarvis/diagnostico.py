@@ -108,5 +108,8 @@ PEDIDO = (
     "com: o problema que resolve, a causa provável, o tipo (aprender: sinônimo, memória ou skill; "
     "ajustar: configuração; corrigir código) e o risco. Não implemente ainda: espere a pessoa "
     "escolher nesta sessão. Ao implementar, trabalhe nesta cópia, com testes e commit; nada entra "
-    "no Zé em uso sem a pessoa aprovar no painel.\n\n"
+    "no Zé em uso sem a pessoa aprovar no painel. Os dados do uso estão todos neste relatório: "
+    "não leia as pastas de dados do Zé (~/.config/zervis, ~/.local/share/zervis, "
+    "~/.local/state/zervis), que guardam conversas e acessos da pessoa; trabalhe com o relatório "
+    "e o código.\n\n"
 )
