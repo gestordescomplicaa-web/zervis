@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Conversa no painel: o fio do dia com o Zé (pedidos, respostas e avisos) e o campo para escrever.
+  No Silencioso, o que o Zé não falou aparece também como notificação em qualquer página.
+  Conectores passa a carregar só quando aberto.
 - Revisão do painel: as sessões no terminal (Claude e Codex) passam a receber as skills do
   usuário, como a página promete. Reiniciar o Zé não registra mais "o túnel caiu" nem erros de
   conexão do painel; o diagnóstico ignora o encerramento normal do agente.

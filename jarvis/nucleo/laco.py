@@ -136,6 +136,7 @@ FALAS_DE_TONTO = (
     "Socorro, eu sou um holograma, não um pião!",
 )
 # Comandos que falam com a sessão de manutenção ou rodam os testes: respondem quando terminarem.
+LIMITE_ESCRITO = 4000  # caracteres de um pedido escrito no painel
 EM_SEGUNDO_PLANO = ("manutencao_entrar", "manutencao_pedido", "rodada_melhoria", "reiniciar")
 # Os que mostram algo no Núcleo (abrem a janela se ela estiver fechada): nome -> (ações, fala).
 MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
@@ -291,7 +292,10 @@ class Nucleo:
         self._comecados: dict[str, int] = {}
         self._cortados: set[str] = set()
         self._avisos_dados: dict[str, float] = {}
-        self._na_tela: dict[str, None] = {}  # os últimos avisos já postos na linha do tempo
+        self._na_tela: dict[str, None] = {}
+        self.ultimo_na_tela: list[float | str] | None = (
+            None  # o painel mostra (Silencioso)  # os últimos avisos já postos na linha do tempo
+        )
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
         self.vigia = Vigia()
         self._vigia_em = 0.0
@@ -1005,9 +1009,15 @@ class Nucleo:
             return "texto"
         return "voz remota" if isinstance(getattr(self, "_fonte", None), VozNavegador) else "voz"
 
+    def _mostrar(self, texto: str) -> None:
+        """O que não foi falado (Silencioso) aparece no painel, em qualquer página."""
+        self.ultimo_na_tela = [time.time(), texto[:200]]
+
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
         pedido = turno["gabriel"]
+        if self.voz.muda and turno["jarvis"]:
+            self._mostrar(turno["jarvis"])
         atividade.PADRAO.registrar("pedido", pedido, resposta=turno["jarvis"])
         if atividade.e_correcao(pedido):
             atividade.PADRAO.registrar("correcao", pedido)
@@ -1345,6 +1355,7 @@ class Nucleo:
     def tratar(self, evento: e.Evento) -> None:
         if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso":
             log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
+            self._mostrar(evento.texto)
             return
         if isinstance(evento, e.Aviso):
             permitido = self._regras_de_fala(evento)
@@ -2078,6 +2089,20 @@ class Nucleo:
                     continue
         finally:
             self.desligar()
+
+    def escrever(self, texto: str) -> str:
+        """Um pedido escrito no painel (Conversa) vira um Digitado, como no Teclado do Núcleo."""
+        texto = " ".join(texto.split())[:LIMITE_ESCRITO]
+        if not texto:
+            return "Mensagem vazia."
+        estado = self.maquina.estado
+        if estado is e.Estado.INATIVO:
+            return "O Zé está inativo."
+        if estado is not e.Estado.CONFIRMANDO and not e.pedido_valido(texto):
+            return "Não entendi o que foi escrito."
+        log.info("painel: pedido escrito (%d caracteres)", len(texto))
+        self.eventos.put(e.Digitado(texto))
+        return "Enviado."
 
     def _ler_teclado(self) -> None:
         """Um pedido escrito no Teclado do Núcleo vira um Digitado, como uma fala autorizada."""

@@ -134,6 +134,7 @@ class Acoes:
     def leituras(self) -> dict[str, Leitura]:
         return {
             "estado": self.estado,
+            "conversa": self.conversa,
             "remoto": self.remoto,
             "atividade": self.atividade,
             "configuracao": self.configuracao,
@@ -165,6 +166,7 @@ class Acoes:
             "ze/melhorias": self.melhorias,
             "ze/diagnosticar": self.diagnosticar,
             "ze/manutencao": self.manutencao,
+            "conversa/escrever": self.escrever,
             "ze/diagnostico": self.diagnostico,
             "ze/sessao": self.sessao_de_melhorias,
             "ze/aplicar": self.aplicar_melhorias,
@@ -256,6 +258,7 @@ class Acoes:
                 "ligada": self.n.manutencao.ligado,
                 "aguardando": self.n._aplicar_depois is not None,
             },
+            "tela": self.n.ultimo_na_tela,  # [quando, texto]: o painel mostra no Silencioso
             "inicio": os.getpid(),  # muda a cada reinício: o painel recarrega sozinho
         }
 
@@ -349,6 +352,36 @@ class Acoes:
     def aplicar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
         atividade.PADRAO.origem = "painel"
         return {"aviso": self.n.aplicar_melhorias(revisado=bool(dados.get("revisei")))}
+
+    def conversa(self) -> dict[str, Any]:
+        """O fio de hoje com o Zé: o que a pessoa disse ou escreveu, as respostas e os avisos."""
+        from jarvis.memoria.linha import agora
+
+        hoje = agora()
+        itens: list[dict[str, str]] = []
+        for t in self.n.conversas.do_dia(hoje.date()):
+            quando = t.em.isoformat(timespec="seconds")
+            itens.append({"quando": quando, "tipo": "voce", "texto": t.gabriel})
+            if t.ze:
+                itens.append({"quando": quando, "tipo": "ze", "texto": t.ze})
+        inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)
+        for ev in self.n.linha.entre(inicio, hoje, {"aviso", "lembrete", "manutencao"}):
+            # Um lembrete é gravado ao ser criado, com a hora em que vai tocar.
+            momento = max(ev.quando, ev.registrado)
+            if momento <= hoje:
+                itens.append(
+                    {
+                        "quando": momento.isoformat(timespec="seconds"),
+                        "tipo": "aviso",
+                        "texto": ev.texto,
+                    }
+                )
+        itens.sort(key=lambda i: i["quando"])  # estável: o pedido antes da resposta
+        return {"itens": itens[-200:]}
+
+    def escrever(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Um pedido escrito no painel: o mesmo caminho da fala."""
+        return {"aviso": self.n.escrever(str(dados.get("texto", "")))}
 
     def manutencao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Entra ou sai do estado de manutenção (ADR 0028)."""

@@ -97,9 +97,12 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 
 1. **Sem conversa por texto no painel.** O conceito Conversa diz "por voz ou texto", mas o painel
    não tem onde escrever ao Zé (o texto só existe pelo teclado no terminal do serviço). Afeta quem
-   está em silêncio ou sem microfone. A decidir ao fim desta auditoria.
+   está em silêncio ou sem microfone. **Corrigido em 13/10/2026:** página Conversa, com o campo
+   "Escreva para o Zé"; o texto segue o mesmo caminho da fala.
 2. **"Fica na tela" não tem tela.** No Silencioso, avisos e respostas vão para a linha do tempo e
    para a conversa gravada, mas o painel não mostra nenhuma das duas: não há onde ler o que o Zé
    respondeu nem os avisos que chegaram. Junto com o achado 1, falta a **Conversa** no painel.
+   **Corrigido em 13/10/2026:** a Conversa mostra o fio do dia (pedidos, respostas e avisos) e, no
+   Silencioso, o que o Zé não falou aparece também como notificação em qualquer página.
 3. **Lembrete que já tocou aparece como "desligado"** em Automações, como se a pessoa o tivesse
    desligado. É da área 7 (Automações); anotado para lá.
