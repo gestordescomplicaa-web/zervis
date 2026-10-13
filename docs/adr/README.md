@@ -33,3 +33,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0026](0026-sessao-de-auto-desenvolvimento.md) | A sessão de auto-desenvolvimento do Zé, com essência e travas | Aceito |
 | [0027](0027-regras-de-fala.md) | Regras de fala: quando o Zé fala sozinho, sobre o quê e quantas vezes | Aceito |
 | [0028](0028-manutencao-estado-do-ze.md) | Manutenção, um estado do Zé: o centro do próprio código | Aceito |
+| [0029](0029-central-de-avisos.md) | Central de avisos: como o Zé narra várias sessões pela voz | Proposta |
