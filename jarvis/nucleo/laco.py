@@ -31,7 +31,7 @@ from urllib.parse import urlsplit
 import numpy as np
 import segno
 
-from jarvis import lugares, usuario
+from jarvis import atividade, lugares, usuario
 from jarvis.automacoes import executor
 from jarvis.automacoes.agenda import FUSO
 from jarvis.automacoes.calendario import Calendario
@@ -351,6 +351,7 @@ class Nucleo:
         self.livekit = servidor_livekit.ServidorLiveKit()  # a sala da voz remota
         self.remota: SalaRemota | None = None
         self._fonte: Any = None  # a voz remota em uso: o navegador ou a sala LiveKit
+        self._ouvido = ""  # a última transcrição
         self.imersivo = Imersivo(
             cfg.caminho("barehands", "pasta_estado"),
             acervo=cfg.caminho("barehands", "pasta_acervo"),
@@ -528,6 +529,8 @@ class Nucleo:
             self.evidencias.registrar("so_tela", self.turnos[-1]["gabriel"])
         if erro:
             self.evidencias.registrar("falha_cerebro", erro)
+            pedido = self.turnos[-1]["gabriel"] if self.turnos else ""
+            atividade.PADRAO.registrar("falha", "O cérebro falhou", erro=erro, pedido=pedido)
         if marca != self.marca:
             return
         turno = self._latencia_do_cerebro(marca)
@@ -571,6 +574,7 @@ class Nucleo:
         self.status.meio_transcricao = self.meio_transcricao
         if not texto.strip():
             self.evidencias.registrar("transcricao_vazia")
+        self._ouvido = texto  # para o "não entendi" dizer o que foi ouvido
         self.eventos.put(e.FimDeFala(texto))
 
     def _erro(self, mensagem: str) -> None:
@@ -611,6 +615,7 @@ class Nucleo:
             case e.FecharPedido():
                 self._fechar_pelo_botao()
             case e.EnviarAoCerebro(texto):
+                atividade.PADRAO.origem = self._origem()
                 self._abrir_latencia("cerebro")
                 self.marca += 1
                 self.status.pedidos += 1
@@ -637,7 +642,9 @@ class Nucleo:
                     self.avisos_falados.append((time.monotonic(), texto))
                 self.teclado.falou(texto)
                 if texto == e.NAO_ENTENDI:
-                    self.evidencias.registrar("nao_entendi")
+                    self.evidencias.registrar("nao_entendi", self._ouvido)
+                    ouvido = f'Ouviu "{self._ouvido}"' if self._ouvido.strip() else "Não ouviu nada"
+                    atividade.PADRAO.registrar("nao_entendi", ouvido)
                 turno = self._turno_atual
                 if turno is not None:
                     self.latencias.marcar(turno, "primeira_frase")
@@ -656,6 +663,10 @@ class Nucleo:
                     self._na_linha("aprovado", self.pergunta)
                 self.ponte.responder_aprovacao(aprovado, fala)
             case e.Comando(nome):
+                atividade.PADRAO.origem = self._origem()
+                atividade.PADRAO.registrar(
+                    "execucao", f"Comando local: {nome}", autorizacao="comando local"
+                )
                 self._abrir_latencia(
                     "manutencao" if nome.startswith("manutencao_pedido:") else "comando"
                 )
@@ -893,8 +904,18 @@ class Nucleo:
             escutar = self.modo_fala == "maos_livres" and self.chamado == "voz"
             self.eventos.put(e.Aviso(texto, escutar=escutar))
 
+    def _origem(self) -> str:
+        """De onde veio o pedido em curso, para a atividade."""
+        if self._digitado_em is not None:
+            return "texto"
+        return "voz remota" if isinstance(getattr(self, "_fonte", None), VozNavegador) else "voz"
+
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
+        pedido = turno["gabriel"]
+        atividade.PADRAO.registrar("pedido", pedido, resposta=turno["jarvis"])
+        if atividade.e_correcao(pedido):
+            atividade.PADRAO.registrar("correcao", pedido)
         try:
             feito = self.conversas.registrar(turno["gabriel"], turno["jarvis"], self._pedido_quando)
         except OSError as erro:
@@ -1388,6 +1409,7 @@ class Nucleo:
             return texto
         except EscutaErro as erro:
             log.warning("Deepgram falhou (%s)", erro)
+            atividade.PADRAO.registrar("falha", "A transcrição falhou (Deepgram)", erro=str(erro))
             return ""
 
     # --- cérebros e baterias (ADR 0010) -----------------------------------------------------

@@ -129,3 +129,8 @@
 - Depois de reiniciar o computador, o Zé dizia que o Codex não estava instalado: o serviço sobe com
   um PATH mínimo, antes de a sessão carregar o ambiente da pessoa. Agora o Zé completa o PATH na
   subida com o do shell de login e as pastas pessoais de programas (~/.local/bin, mise, npm, bun…).
+- Atividade (ADR 0025): tudo o que o Zé executa fica registrado, com o comando, como foi autorizado
+  (livre, aprovado, frase exata), de onde veio o pedido e o resultado; também as negadas, as falhas,
+  o que ele não entendeu (com o que ouviu), as correções e os pedidos atendidos. Nova página
+  Atividade, com o registro técnico do serviço e "Copiar diagnóstico". Nova ação: suspender o
+  computador (confirmação falada).

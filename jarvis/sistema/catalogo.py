@@ -57,6 +57,7 @@ class Acao:
     risco: int
     usa_sudo: bool
     caminho: Path  # o script de onde o catálogo foi lido (nunca remontado a partir do nome)
+    fixos: tuple[str, ...] = ()  # argumentos que sempre vão (ações do sistema fora do Omarchy)
 
 
 def _cabecalho(texto: str) -> dict[str, str]:
@@ -100,6 +101,19 @@ def carregar(pasta: Path = PASTA, forcados: dict[str, int] | None = None) -> dic
             usa_sudo,
             arquivo,
         )
+    # Suspender: o Omarchy não tem um comando próprio (13/10/2026: "suspenda o computador" virou
+    # "desligar"). Volta ao tocar o teclado, então basta a confirmação falada.
+    if (systemctl := pasta / "systemctl").is_file() and "system-suspend" not in acoes:
+        acoes["system-suspend"] = Acao(
+            "system-suspend",
+            "Suspend the computer (sleep).",
+            "",
+            "",
+            2,
+            False,
+            systemctl,
+            ("suspend",),
+        )
     return acoes
 
 
@@ -109,6 +123,7 @@ COMUNS = [
     "audio-output-volume", "audio-input-mute", "brightness-display", "capture-screenshot",
     "launch-browser", "launch-or-focus", "menu", "theme-list", "theme-set", "theme-current",
     "toggle-nightlight", "toggle-notification-silencing", "system-reboot", "system-shutdown",
+    "system-suspend",
 ]  # fmt: skip
 
 

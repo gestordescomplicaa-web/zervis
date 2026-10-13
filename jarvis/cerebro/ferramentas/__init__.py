@@ -9,10 +9,13 @@ projeto, abrir frente, mudar status e renomear passam pela aprovação falada do
 Apagar não existe aqui de propósito: excluir uma sessão é no painel (decisão de 06/10/2026).
 """
 
+import dataclasses
+import time
 from typing import Any
 
 from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_server
 
+from jarvis import atividade
 from jarvis.automacoes.jobs import Jobs
 from jarvis.cerebro.ferramentas import aprendizado as g_aprendizado
 from jarvis.cerebro.ferramentas import automacoes as g_automacoes
@@ -122,13 +125,48 @@ def montar(
     tela: Tela | None = None,
     manutencao: Manutencao | None = None,
 ) -> list[SdkMcpTool[Any]]:
-    """As ferramentas do servidor `jarvis` (a pasta do JARVIS lista os nomes como conexões)."""
+    """As ferramentas do servidor `jarvis` (a pasta do JARVIS lista os nomes como conexões),
+    cada uma registrada na atividade ao rodar (ADR 0025)."""
     return [
-        *g_sessoes.ferramentas(sessoes),
-        *g_tela.ferramentas(tela),
-        *g_sistema.ferramentas(sistema),
-        *g_automacoes.ferramentas(jobs),
-        *g_aprendizado.ferramentas(memoria, skills, pendencias, diario),
-        *g_manutencao.ferramentas(manutencao),
-        *g_navegador.ferramentas(),
+        auditada(f)
+        for f in [
+            *g_sessoes.ferramentas(sessoes),
+            *g_tela.ferramentas(tela),
+            *g_sistema.ferramentas(sistema),
+            *g_automacoes.ferramentas(jobs),
+            *g_aprendizado.ferramentas(memoria, skills, pendencias, diario),
+            *g_manutencao.ferramentas(manutencao),
+            *g_navegador.ferramentas(),
+        ]
     ]
+
+
+def auditada(ferramenta: SdkMcpTool[Any]) -> SdkMcpTool[Any]:
+    """A mesma ferramenta, registrando na atividade o que fez, como foi autorizada e o resultado."""
+    original = ferramenta.handler
+
+    async def registrar(entrada: dict[str, Any]) -> dict[str, Any]:
+        inicio = time.monotonic()
+        titulo = atividade.titulo_da_ferramenta(ferramenta.name, entrada)
+        como = atividade.PADRAO.autorizacao(ferramenta.name)
+        try:
+            resposta = await original(entrada)
+        except Exception as erro:
+            atividade.PADRAO.registrar(
+                "falha", titulo, ferramenta=ferramenta.name, entrada=entrada, autorizacao=como,
+                erro=f"{type(erro).__name__}: {erro}",
+            )  # fmt: skip
+            raise
+        textos = [c.get("text", "") for c in resposta.get("content", []) if isinstance(c, dict)]
+        atividade.PADRAO.registrar(
+            "falha" if resposta.get("is_error") else "execucao",
+            titulo,
+            ferramenta=ferramenta.name,
+            entrada=entrada,
+            autorizacao=como,
+            resultado=" ".join(textos).strip(),
+            duracao_ms=round((time.monotonic() - inicio) * 1000),
+        )
+        return resposta
+
+    return dataclasses.replace(ferramenta, handler=registrar)

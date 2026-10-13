@@ -38,7 +38,7 @@ from claude_agent_sdk import (
 )
 from claude_agent_sdk.types import CanUseToolShadowedWarning, HookInput, SyncHookJSONOutput
 
-from jarvis import fuso
+from jarvis import atividade, fuso
 from jarvis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 from jarvis.sistema.politica import frase_confere
 
@@ -228,11 +228,17 @@ class ClaudeBrain:
         self, nome: str, entrada: dict[str, Any], _ctx: ToolPermissionContext
     ) -> PermissionResultAllow | PermissionResultDeny:
         # Falhar fechado: sem quem aprove, ou na dúvida, nega.
+        curto = nome.removeprefix("mcp__jarvis__")
+        titulo = atividade.titulo_da_ferramenta(nome, entrada)
         if self.prechecar is not None and (erro := self.prechecar(nome, entrada)):
             log.info("ferramenta %s: recusada antes de perguntar (%s)", nome, erro[:80])
+            atividade.PADRAO.registrar(
+                "negada", titulo, ferramenta=curto, entrada=entrada, motivo=erro
+            )
             return PermissionResultDeny(message=erro)
         if self.autoaprovar is not None and self.autoaprovar(nome, entrada):
             log.info("ferramenta %s: liberada pela política de risco", nome)
+            atividade.PADRAO.autorizada(curto, "livre (risco baixo)")
             return PermissionResultAllow()
         exigida = self.frase_exata(nome, entrada) if self.frase_exata else None
         if self.mostrar is not None:
@@ -250,12 +256,19 @@ class ClaudeBrain:
                 log.exception("falha ao pedir aprovação")
         if exigida and aprovado and not frase_confere(fala, exigida):
             log.info("ferramenta %s: faltou a frase exata", nome)
+            atividade.PADRAO.registrar(
+                "negada", titulo, ferramenta=curto, entrada=entrada, motivo="sem a frase exata"
+            )
             return PermissionResultDeny(
                 message=f'Não executado: o usuário não disse a frase exata "{exigida}".'
             )
         log.info("ferramenta %s: %s", nome, "aprovada" if aprovado else "negada")
         if aprovado:
+            atividade.PADRAO.autorizada(curto, "frase exata" if exigida else "aprovada")
             return PermissionResultAllow()
+        atividade.PADRAO.registrar(
+            "negada", titulo, ferramenta=curto, entrada=entrada, motivo="não aprovada", fala=fala
+        )
         motivo = "O usuário não aprovou por voz."
         if fala:
             # Uma correção ("sim, mas no projeto Y") chega aqui: o cérebro ajusta e pergunta.

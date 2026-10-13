@@ -128,7 +128,7 @@ class Sistema:
             raise ValueError("ação não permitida")
         try:
             feito = subprocess.run(  # noqa: S603 (binário do catálogo, sem shell)
-                [str(acao.caminho), *argumentos],
+                [str(acao.caminho), *acao.fixos, *argumentos],
                 capture_output=True,
                 text=True,
                 timeout=self.tempo_limite_s,

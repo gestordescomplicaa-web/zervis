@@ -363,8 +363,6 @@ details.detalhes p { margin: 8px 0 0; }
 .barra span { display: block; height: 100%; width: var(--cheio, 0%); background: var(--acento); border-radius: inherit; }
 .add { display: flex; gap: 8px; }
 .add input { flex: 1 1 auto; }
-.estado-ze { display: flex; align-items: center; gap: 14px; }
-.estado-ze .anel { width: 44px; height: 44px; }
 .segmentos { display: flex; flex-wrap: wrap; gap: 6px; }
 .segmentos button { font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 999px; cursor: pointer;
   color: var(--suave); background: transparent; border: 1px solid var(--borda-forte); }
@@ -452,7 +450,7 @@ details.detalhes p { margin: 8px 0 0; }
 .passos li[aria-current="step"] { color: var(--texto); border-color: var(--acento); }
 .passos li[aria-current="step"] span { background: var(--acento); color: #041417; }
 .passos li.feito span { background: rgb(95 214 160 / .18); color: var(--bom); }
-.rodape-passos .espaco { flex: 1; }
+.rodape-passos .espaco, .linha .espaco { flex: 1; }
 .cartao label textarea#perfil-sobre { font: inherit; }
 p.nota { color: var(--suave); font-size: 13px; }
 .segmentos button:disabled { opacity:.55; cursor:not-allowed; }

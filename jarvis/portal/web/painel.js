@@ -14,7 +14,6 @@ const estadoSessao = (s) => (s.limite ? "sem créditos" : ESTADO_SESSAO[s.estado
 const TIPO_AUTOMACAO = { lembrete: "Lembrete", pergunta: "Pergunta ao Zé" };
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };
 const NOME_MOTOR = { contas: "Automático", codex: "Codex", plano: "Claude", openai: "OpenAI API", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte" };
-const NOME_CEREBRO = { claude: "Claude", gpt: "GPT", gemini: "Gemini", auto: "Automático" };
 
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const seg = (ms) => (ms == null ? "—" : (ms / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " s");
@@ -655,7 +654,6 @@ let buscaPendente = null;
 const matiz = (t) => [...t].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 const inicial = (n) => esc((n.trim()[0] || "?").toUpperCase());
 const ha = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? "agora" : s < 3600 ? Math.floor(s / 60) + " min" : s < 86400 ? Math.floor(s / 3600) + " h" : Math.floor(s / 86400) + " d"; };
-const leve = (t) => esc(t).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`\n]+)`/g, "<code>$1</code>");
 const encher = () => document.querySelectorAll("[data-cheio]").forEach((b) => b.style.setProperty("--cheio", b.dataset.cheio + "%"));
 const pintar = (raiz) => raiz.querySelectorAll(".avatar[data-matiz]").forEach((a) => a.style.setProperty("--matiz", a.dataset.matiz));
 
@@ -1314,9 +1312,17 @@ conteudo.addEventListener("drop", (ev) => {
 
 // --- navegação e batimento -----------------------------------------------------------------------------
 
+// Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
+const SOB_DEMANDA = { atividade: "/paginas/atividade.js" };
+const carregarPagina = (nome) => PAGINAS[nome] ? Promise.resolve() : new Promise((ok, erro) => {
+  const s = document.createElement("script");
+  s.src = SOB_DEMANDA[nome]; s.onload = ok; s.onerror = () => erro(new Error("Página indisponível."));
+  document.head.appendChild(s);
+});
+
 async function abrir() {
   const nome = (location.hash || "#inicio").slice(1);
-  const secao = PAGINAS[nome] || nome === "imersao" ? nome : "inicio";
+  const secao = PAGINAS[nome] || SOB_DEMANDA[nome] || nome === "imersao" ? nome : "inicio";
   document.querySelectorAll("nav a").forEach((a) => (a.dataset.secao === secao ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
   document.querySelector(`nav a[data-secao="${secao}"]`)?.closest(".grupo")?.querySelector(".grupo-titulo").setAttribute("aria-expanded", "true");
   imersao.hidden = secao !== "imersao";
@@ -1333,6 +1339,7 @@ async function abrir() {
   }
   if (secao === "imersao") { ligarImersao(); return; }
   try {
+    if (SOB_DEMANDA[secao]) await carregarPagina(secao);
     const html = await PAGINAS[secao]();
     conteudo.innerHTML = secao === "sessoes" ? html : `<div class="secao">${html}</div>`;
     if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); desenharContas(); }

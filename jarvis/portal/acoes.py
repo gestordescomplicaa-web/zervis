@@ -10,12 +10,13 @@ import base64
 import contextlib
 import json
 import logging
+import subprocess
 from pathlib import Path
 from typing import Any
 
 import segno
 
-from jarvis import fuso, usuario
+from jarvis import atividade, fuso, usuario
 from jarvis.automacoes.jobs import JobErro
 from jarvis.avisos import modo as modo_fala
 from jarvis.cerebro import acesso, conectores, contas, rapido
@@ -114,6 +115,7 @@ class Acoes:
         return {
             "estado": self.estado,
             "remoto": self.remoto,
+            "atividade": self.atividade,
             "configuracao": self.configuracao,
             "contas": self.contas,
             "inicio": self.inicio,
@@ -139,6 +141,7 @@ class Acoes:
             "voz/chamado": self.mudar_chamado,
             "remoto/ativar": self.ativar_remoto,
             "voz/evento": self.evento_voz,
+            "atividade/registro": self.registro_tecnico,
             "acesso/senha": self.definir_senha,
             "acesso/encerrar": self.encerrar_acessos,
             "acesso/desconectar": self.desconectar_aparelho,
@@ -304,6 +307,31 @@ class Acoes:
         self.n.acesso.sair_todos()
         return {**self.remoto(), "aviso": "Acessos encerrados."}
 
+    def atividade(self) -> dict[str, Any]:
+        """O que o Zé fez e onde tropeçou (ADR 0025), do mais recente ao mais antigo."""
+        return {"itens": atividade.PADRAO.listar(300), "resumo": atividade.PADRAO.resumo()}
+
+    def registro_tecnico(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """As últimas linhas do registro do serviço, sem segredos; `nivel`: erros, avisos, tudo.
+        O nível sai do texto da linha: o journal guarda tudo o que o Zé escreve num nível só."""
+        marcas = {
+            "erros": ("ERROR", "CRITICAL", "Traceback"),
+            "avisos": ("WARNING", "ERROR", "CRITICAL", "Traceback"),
+        }
+        filtro = marcas.get(str(dados.get("nivel", "")))
+        try:
+            r = subprocess.run(
+                ["/usr/bin/journalctl", "--user", "-u", "zervis", "-n", "3000", "-o", "short-iso",
+                 "--no-pager"],
+                capture_output=True, text=True, timeout=10, check=False,
+            )  # fmt: skip
+        except (OSError, subprocess.SubprocessError):
+            return {"linhas": [], "aviso": "Registro do sistema indisponível."}
+        linhas = [x for x in r.stdout.splitlines() if not x.startswith("-- ")]
+        if filtro:
+            linhas = [x for x in linhas if any(m in x for m in filtro)]
+        return {"linhas": [atividade.VALOR_SECRETO.sub("•••", x) for x in linhas[-400:]]}
+
     def evento_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O que aconteceu na voz do navegador (conectou, caiu, erro de microfone): só para o
         registro, para diagnosticar o celular; nunca áudio nem credenciais."""
@@ -311,6 +339,10 @@ class Acoes:
         detalhe = " ".join(str(dados.get("detalhe", "")).split())[:300]
         aparelho = str(dados.get("aparelho", ""))[:120]
         log.warning("voz do navegador: %s %s (%s)", evento, detalhe, aparelho)
+        if evento in ("falhou", "microfone"):
+            atividade.PADRAO.registrar(
+                "falha", "A voz do navegador falhou", erro=detalhe, aparelho=aparelho
+            )
         return {}
 
     def apertar(self, dados: dict[str, Any]) -> dict[str, Any]:

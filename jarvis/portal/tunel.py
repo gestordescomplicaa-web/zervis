@@ -26,7 +26,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from jarvis import lugares
+from jarvis import atividade, lugares
 from jarvis.preparar import Modelo, PrepararErro, baixar
 
 log = logging.getLogger(__name__)
@@ -126,6 +126,8 @@ class Tunel:
                 log.info("túnel: pronto em %s", self.endereco)
                 self.ao_endereco(self.endereco)
         log.warning("túnel: o cloudflared saiu")
+        if processo is self.processo:  # saiu sem ninguém pedir
+            atividade.PADRAO.registrar("falha", "O túnel do acesso de fora caiu")
         self.endereco = ""
 
     def parar(self) -> None:
