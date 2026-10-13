@@ -323,6 +323,19 @@ COMANDOS = {
         ("le", "os", "avisos"),
         ("ler", "os", "avisos"),
     },
+    # Repetir a última fala (aviso ou resposta), na hora e igual, sem passar pelo cérebro.
+    "repetir": {
+        ("repete",),
+        ("repita",),
+        ("repete", "por", "favor"),
+        ("repita", "por", "favor"),
+        ("pode", "repetir"),
+        ("repete", "ai"),
+        ("fala", "de", "novo"),
+        ("nao", "entendi"),
+        ("nao", "ouvi"),
+        ("o", "que", "voce", "disse"),
+    },
     "aviso_detalhe": {
         ("o", "que", "ela", "disse"),
         ("o", "que", "ele", "disse"),

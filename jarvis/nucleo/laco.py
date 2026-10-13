@@ -313,6 +313,8 @@ class Nucleo:
         # Central de avisos (ADR 0029): o que se sabe de cada aviso (prioridade, sessão,
         # manchete, detalhe), até quando vale responder a uma oferta e o último aviso de sessão.
         self._meta: dict[str, dict[str, Any]] = {}
+        self._ultimo_dito = ""  # a última fala inteira, para "repete"
+        self._dito_marca: int | None = None
         self._oferta_ate = 0.0
         self._ultimo_de_sessao: dict[str, Any] | None = None
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
@@ -660,6 +662,14 @@ class Nucleo:
                 self.marca += 1
                 self.ponte.interromper()
             case e.Falar(texto):
+                # O que foi dito por último, inteiro, para "repete": um aviso, ou as frases de
+                # uma mesma resposta (a marca muda a cada pedido).
+                if texto == self.maquina.aviso_falando:
+                    self._ultimo_dito, self._dito_marca = texto, None
+                elif getattr(self, "_dito_marca", None) == self.marca:
+                    self._ultimo_dito = f"{self._ultimo_dito} {texto}"
+                else:
+                    self._ultimo_dito, self._dito_marca = texto, self.marca
                 if texto == self.maquina.aviso_falando:
                     # O cérebro não ouve a própria voz: sem isto, "pode aprovar" depois de um
                     # aviso chegava sem contexto (teste de 06/10/2026).
@@ -1268,6 +1278,8 @@ class Nucleo:
             return "Certo. Ficam na Conversa."
         if nome == "aviso_detalhe":
             return self._detalhe_do_aviso()
+        if nome == "repetir":
+            return getattr(self, "_ultimo_dito", "") or "Ainda não falei nada."
         if nome == "manutencao_sair":
             self._aplicar_depois = None
             return self.manutencao.sair()

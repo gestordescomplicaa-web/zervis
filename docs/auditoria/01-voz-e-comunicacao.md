@@ -62,6 +62,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
   sessão não foi achada pelo nome na primeira tentativa. Corrigidos; para refazer.
   Refeito: o aviso de fim foi falado ✅, mas lendo a resposta da sessão na voz do Zé ("Oi, Kiko!
   Como você está?"): quem ouve não sabe quem fala (achado 6). Passo em espera do ADR 0029.
+  **Refeito com a central de avisos: ✅ 13/10/2026.** Toque, narração em terceira pessoa, sem
+  repetir. Pedido da pessoa: "repete" deve repetir igual (achado 7, feito).
 
 ### Passo 4. Escuta: Com a janela aberta
 
@@ -121,3 +123,5 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 6. **Com sessões, a voz confunde e acumula.** O Zé lê a resposta da sessão como se fosse dele, e
    não há prioridade, agrupamento nem "próximo". **Corrigido em 13/10/2026:** ADR 0029 (Central
    de avisos), implementado.
+7. **"Repete" ia ao cérebro**, que reescrevia a resposta, mais devagar. Agora "repete", "pode
+   repetir", "não entendi" e "fala de novo" repetem a última fala inteira, igual e na hora.

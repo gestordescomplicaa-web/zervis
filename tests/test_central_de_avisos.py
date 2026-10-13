@@ -72,3 +72,21 @@ def test_proximo_diz_um_por_vez_e_poe_a_sessao_em_foco(tmp_path: Path) -> None:
     assert Nucleo._detalhe_do_aviso(n) == "Corrigi o login."  # type: ignore[arg-type]
     assert Nucleo._proximo_aviso(n) == "A sessão Blog terminou."  # type: ignore[arg-type]
     assert Nucleo._proximo_aviso(n) == "Nenhum aviso esperando."  # type: ignore[arg-type]
+
+
+def test_repete_a_ultima_fala_inteira_sem_o_cerebro() -> None:
+    assert e.comando("Repete, por favor") == "repetir"
+    assert e.comando("Não entendi") == "repetir"
+    n = SimpleNamespace(
+        marca=3,
+        maquina=SimpleNamespace(aviso_falando=None, estado=e.Estado.FALANDO),
+        teclado=SimpleNamespace(falou=lambda t: None),
+        voz=SimpleNamespace(falar=lambda t, ao_iniciar=None: None),
+        _turno_atual=None,
+    )
+    for frase in ("A Loja terminou.", "Os testes passaram."):  # duas frases da mesma resposta
+        Nucleo._executar(n, e.Falar(frase))  # type: ignore[arg-type]
+    assert Nucleo._comando_especial(n, "repetir", "") == "A Loja terminou. Os testes passaram."  # type: ignore[arg-type]
+    n.marca = 4  # outro pedido: começa de novo
+    Nucleo._executar(n, e.Falar("São três horas."))  # type: ignore[arg-type]
+    assert Nucleo._comando_especial(n, "repetir", "") == "São três horas."  # type: ignore[arg-type]

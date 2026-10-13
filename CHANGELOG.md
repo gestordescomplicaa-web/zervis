@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- "Repete" (ou "não entendi", "fala de novo") repete a última fala do Zé inteira, na hora.
 - Central de avisos (ADR 0029): o Zé narra as sessões em vez de ler a resposta delas ("A sessão
   Loja terminou. Ela corrigiu o login."), com um toque antes; aprovação e falha passam na frente;
   vários avisos viram uma oferta ("Duas novidades… Começo pela Site?") e a pessoa conduz com
