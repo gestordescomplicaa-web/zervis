@@ -55,8 +55,9 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 
 - **Como:** Alt+M até "Mãos livres". Sem abrir a sessão, pedir: "Ei Zé, pede para a sessão
   Universo - Teste explicar em cinco parágrafos o que é o projeto." Ficar em outra tela.
-- **Esperado:** ao terminar, o Zé fala "A sessão Universo - Teste terminou." e um resumo de no
-  máximo umas 30 palavras, com "O resto está na tela."; não repete.
+- **Esperado (ADR 0029):** ao terminar, um toque e "A sessão Universo - Teste terminou. Ela …",
+  uma frase em terceira pessoa sobre o que ela fez; não repete. Depois, "Ei Zé, o que ela disse?"
+  traz o resumo maior.
 - **Resultado:** ❌ 13/10/2026. Dois defeitos (achados 4 e 5): o aviso de fim não foi falado e a
   sessão não foi achada pelo nome na primeira tentativa. Corrigidos; para refazer.
   Refeito: o aviso de fim foi falado ✅, mas lendo a resposta da sessão na voz do Zé ("Oi, Kiko!
