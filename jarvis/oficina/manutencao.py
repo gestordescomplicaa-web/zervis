@@ -16,6 +16,7 @@ Supervisionado de propósito (docs/05-roadmap.md, fase de manutenção):
   sozinho para a última versão boa se a nova não subir.
 """
 
+import contextlib
 import json
 import logging
 import subprocess
@@ -468,7 +469,7 @@ class Manutencao:
             timeout=15,
             check=False,
         )
-        return True, "Testes passaram. Vou me reiniciar; volto em alguns segundos."
+        return True, "Testes aprovados. Reiniciando; o painel recarrega sozinho."
 
     def resultado_do_reinicio(self) -> str | None:
         """O que o script deixou dito sobre o último reinício (uma vez só)."""
@@ -479,12 +480,12 @@ class Manutencao:
             return None
         arquivo.unlink(missing_ok=True)
         if d.get("resultado") == "ok":
-            return "Voltei com a versão nova."
+            return "Atualização aplicada."
         if d.get("resultado") == "voltou":
-            return (
-                "A versão nova não subiu, então voltei sozinho para a anterior. O que mudou está "
-                "guardado; peça para a sessão ver o que quebrou."
-            )
+            # A cópia volta a ser igual ao Zé em uso; a versão que falhou fica no histórico.
+            with contextlib.suppress(OSError, subprocess.SubprocessError):
+                self.descartar()
+            return "A versão nova não iniciou. Voltei para a anterior; nada foi perdido."
         return None
 
 

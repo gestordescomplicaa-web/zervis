@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Reinício e atualização: o painel mostra "Reconectando…" e recarrega sozinho quando o Zé volta.
+  A volta automática desiste em segundos quando a versão nova cai ao subir, e a cópia isolada
+  volta a ficar igual ao Zé em uso. Volta testada de ponta a ponta (13/10/2026).
 - A página Melhorias passa a se chamar Autodesenvolvimento, assim como a sessão do Zé.
 - Imersão no PC só roda à vista: sair dela ou esconder o painel desliga a câmera e o holograma.
 - Diagnóstico de uso: o túnel do acesso de fora sobe de novo sozinho quando cai e revoga o

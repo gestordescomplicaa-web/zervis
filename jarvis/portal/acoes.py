@@ -10,6 +10,7 @@ import base64
 import contextlib
 import json
 import logging
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -250,6 +251,7 @@ class Acoes:
             "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
             "chamado": self.n.chamado,
             "voz_remota": {"conectada": self.n._fonte is not None},
+            "inicio": os.getpid(),  # muda a cada reinício: o painel recarrega sozinho
         }
 
     def mudar_modo_fala(self, dados: dict[str, Any]) -> dict[str, Any]:

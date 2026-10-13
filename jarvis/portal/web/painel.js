@@ -47,7 +47,7 @@ async function ocupado(botao, trabalho) {
   try { return await trabalho(); } finally { if (botao) botao.disabled = false; }
 }
 
-// --- pedaços de tela --------------------------------------------------------------------------
+// --- pedaços de tela ---
 
 const cabeca = (titulo, acoes = "") => `<div class="cabeca"><h1>${titulo}</h1>${acoes}</div>`;
 const sub = (texto) => `<p class="sub">${texto}</p>`;
@@ -70,7 +70,7 @@ function confirmar(el, pergunta, fazer) {
   lugar.innerHTML = `<span class="confirmar">${pergunta} ${botao("Sim", "confirmar-sim", `data-id="${id}"`, "perigo")} ${botao("Não", "confirmar-nao", `data-id="${id}"`, "discreta")}</span>`;
 }
 
-// --- as páginas ---------------------------------------------------------------------------------
+// --- as páginas ---
 
 const PAGINAS = {
   async inicio() {
@@ -237,7 +237,7 @@ const PAGINAS = {
   },
 };
 
-// --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ------------------------------------
+// --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ---
 
 const MODOS_FALA = [
   { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala. Tudo fica na tela." },
@@ -459,7 +459,7 @@ const editavel = (el) => el.closest?.("input, textarea, select, [contenteditable
 document.addEventListener("keydown", (ev) => { if (ev.code === "Space" && !ev.repeat && !editavel(ev.target)) { ev.preventDefault(); apertarFalar(); } });
 document.addEventListener("keyup", (ev) => { if (ev.code === "Space" && !editavel(ev.target)) soltarFalar(false); });
 
-// --- Modelos: provedor, modelo e chave ---------------------------------------------------------------
+// --- Modelos: provedor, modelo e chave ---
 
 let modelo = {};
 
@@ -478,7 +478,7 @@ function desenharChave() {
     ${botao("Guardar chave", "chave-guardar")}${k.tem && k.origem === "painel" ? xis("chave-apagar", "", "Apagar chave") : ""}</div>`;
 }
 
-// --- Perfil e acesso ao Claude (também na configuração inicial) ------------------------------------
+// --- Perfil e acesso ao Claude (também na configuração inicial) ---
 
 let passo = 1;
 let acessoTela = {};
@@ -538,7 +538,7 @@ function mostrar(id, ok, texto) {
   r.textContent = texto;
 }
 
-// --- Contas dos agentes (ADR 0016): cada conta é uma pasta de login do próprio agente ---------------
+// --- Contas dos agentes (ADR 0016): cada conta é uma pasta de login do próprio agente ---
 
 let contasTela = { agentes: [] };
 let vigiaContas = null;
@@ -589,7 +589,7 @@ function vigiarContas() {
   }, 3000);
 }
 
-// --- Escuta: a chave do Deepgram -------------------------------------------------------------------
+// --- Escuta: a chave do Deepgram ---
 
 let escuta = {};
 
@@ -607,7 +607,7 @@ function desenharEscuta() {
 
 const lerModelo = () => ({ ligada: document.querySelector('[data-mudar="via-ligada"]').checked, motor: modelo.motor, modelo: $("modelo").value.trim(), endereco: $("endereco").value.trim() });
 
-// --- Conectores ------------------------------------------------------------------------------------
+// --- Conectores ---
 
 let conectoresVistos = [];
 
@@ -650,7 +650,7 @@ function formConector() {
   $("cx-nome").focus();
 }
 
-// --- Skills ---------------------------------------------------------------------------------------------
+// --- Skills ---
 
 const MODELO_SKILL = (nome) => `---
 name: ${nome}
@@ -678,7 +678,7 @@ function editorSkill(nome, texto, nova) {
   ed.scrollIntoView({ block: "nearest" });
 }
 
-// --- Sessões: o terminal do agente, com pasta, anexos e explorador -----------------------------
+// --- Sessões: o terminal do agente, com pasta, anexos e explorador ---
 
 let sessaoAberta = null;
 let relogioSessoes = null;
@@ -837,7 +837,7 @@ async function abrirSessao(id) {
   await carregarPasta("", $("arvore"));
 }
 
-// --- o terminal real da sessão (xterm.js): o agente com todos os comandos dele ------------------------
+// --- o terminal real da sessão (xterm.js): o agente com todos os comandos dele ---
 
 let term = null, termId = null, termPos = 0, termObservador = null, filaEscrita = Promise.resolve();
 const TEMA_TERMINAL = { background: "#070c11", foreground: "#e6f4f5", cursor: "#46d9de", cursorAccent: "#070c11",
@@ -1005,7 +1005,7 @@ const telaHolograma = () => `<div class="holo" data-estado="${estadoZe}">
   <div class="holo-botoes"><div class="voz-remota" id="voz-holo"></div><button type="button" class="acao" data-falar aria-pressed="false">Falar</button></div>
 </div>`;
 
-// --- Imersão: o modo imersivo de sempre, numa moldura ---------------------------------------------
+// --- Imersão: o modo imersivo de sempre, numa moldura ---
 
 const IMERSIVO = "http://127.0.0.1:8794/stage.html?res=1280x720&fps=auto";
 const imersao = $("imersao");
@@ -1359,7 +1359,7 @@ conteudo.addEventListener("drop", (ev) => {
   ev.preventDefault(); document.querySelector(".conversa")?.classList.remove("soltando"); anexar(ev.dataTransfer.files);
 });
 
-// --- navegação e batimento -----------------------------------------------------------------------------
+// --- navegação e batimento ---
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
 const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js" };
@@ -1405,9 +1405,18 @@ async function abrir() {
 }
 
 let telaVista = null;
+let inicioZe = null; let semResposta = 0;
+// Fora do ar: faixa no topo; o Zé volta noutro processo e o painel recarrega
+function faixaFora(ligar) {
+  let f = document.querySelector(".faixa-fora");
+  if (ligar && !f) { f = document.createElement("div"); f.className = "faixa-fora"; f.role = "status"; f.textContent = "Reconectando…"; document.body.append(f); }
+  if (!ligar) f?.remove();
+}
 async function batimento() {
   try {
     const e = await api("estado");
+    if (inicioZe !== null && e.inicio !== inicioZe) { location.reload(); return; }
+    inicioZe = e.inicio; semResposta = 0; faixaFora(false);
     if (telaVista !== null && e.tela_ts > telaVista && imersaoLigada() && location.hash !== "#imersao") location.hash = "#imersao";
     telaVista = e.tela_ts;
     const icone = document.querySelector(".icone-ze");
@@ -1420,7 +1429,10 @@ async function batimento() {
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
       api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
     }
-  } catch { Object.assign(document.querySelector(".icone-ze"), { title: "Zé desconectado" }).dataset.estado = "inativo"; }
+  } catch {
+    Object.assign(document.querySelector(".icone-ze"), { title: "Zé desconectado" }).dataset.estado = "inativo";
+    if (++semResposta >= 3) faixaFora(true);
+  }
 }
 
 // Sem perfil, o painel abre na configuração inicial.

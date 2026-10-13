@@ -213,7 +213,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
     ok, fala = m.reiniciar()
     assert not ok and "eu revisei" in fala and not rodou
     ok, fala = m.reiniciar(revisado=True)
-    assert ok and "Vou me reiniciar" in fala
+    assert ok and "Reiniciando" in fala
     assert rodou[0][0][:2] == ["/usr/bin/make", "-s"]  # os testes antes
     assert "deploy/reinicio-seguro.sh" in rodou[1][0][4] and rodou[1][0][6] == "abc"
 
@@ -221,7 +221,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
 def test_resultado_do_reinicio_e_dito_uma_vez(repo: Path) -> None:
     m = nova(repo, SessoesFalsas())
     (m.pasta / "reinicio.json").write_text('{"resultado": "voltou"}')
-    assert "voltei sozinho para a anterior" in (m.resultado_do_reinicio() or "")
+    assert "Voltei para a anterior" in (m.resultado_do_reinicio() or "")
     assert m.resultado_do_reinicio() is None
 
 

@@ -520,3 +520,5 @@ details.alternativa .nota a { margin-right:6px; }
 @property --brilho { syntax: "<number>"; inherits: false; initial-value: .12; }
 @keyframes holo-respirar { 50% { --brilho: .26; } }
 @media (prefers-reduced-motion: reduce) { .holo-palco, .holo-palco::before, .holo-palco::after { animation: none !important; } }
+
+.faixa-fora { position: fixed; inset: 0 0 auto; z-index: 60; padding: 8px; text-align: center; font-size: 13.5px; background: var(--alerta); color: #1a1a1a; }

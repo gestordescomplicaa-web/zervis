@@ -12,13 +12,18 @@ STATUS="${XDG_STATE_HOME:-$HOME/.local/state}/zervis/status.json"
 pid_de() { /usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("pid",""))' "$STATUS" 2>/dev/null; }
 batida_de() { /usr/bin/python3 -c 'import json,sys; print(int(json.load(open(sys.argv[1])).get("batimento",0)))' "$STATUS" 2>/dev/null; }
 
+partidas() { systemctl --user show -p NRestarts --value zervis 2>/dev/null || echo 0; }
+
 subiu() {
   antes=$1
   desde=$2
+  base=$(partidas)
   i=0
   while [ $i -lt 40 ]; do
     sleep 1
     i=$((i + 1))
+    # Caiu ao subir duas vezes seguidas: não adianta esperar o resto do prazo.
+    [ "$(partidas)" -ge $((base + 2)) ] && return 1
     pid=$(pid_de)
     batida=$(batida_de)
     if systemctl --user is-active --quiet zervis && [ -n "$pid" ] && [ "$pid" != "$antes" ] \
