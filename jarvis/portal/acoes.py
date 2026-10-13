@@ -342,10 +342,13 @@ class Acoes:
         return {"id": self._chamar(lambda: self.n.manutencao.abrir_sessao())}
 
     def aplicar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        atividade.PADRAO.origem = "painel"
         return {"aviso": self.n.aplicar_melhorias(revisado=bool(dados.get("revisei")))}
 
     def descartar_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
-        return {**self.n.manutencao.mudancas(), "aviso": self.n.manutencao.descartar()}
+        atividade.PADRAO.origem = "painel"
+        aviso = self.n.manutencao.descartar()
+        return {**self.n.manutencao.mudancas(), "aviso": aviso}
 
     def atividade(self) -> dict[str, Any]:
         """O que o Zé fez e onde tropeçou (ADR 0025), do mais recente ao mais antigo."""

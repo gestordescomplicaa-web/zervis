@@ -429,7 +429,7 @@ class Manutencao:
         _git_ok("reset", "--hard", atual, repo=onde)
         _git_ok("clean", "-fd", repo=onde)
         atividade.PADRAO.registrar(
-            "execucao", "Descartou as melhorias da cópia", commits=m.get("commits", [])
+            "execucao", "Descartou as mudanças da cópia", commits=m.get("commits", [])
         )
         return "Mudanças descartadas."
 
