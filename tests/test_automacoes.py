@@ -83,18 +83,19 @@ def test_pausar_retomar_remover_e_validacao(tmp_path: Path) -> None:
         jobs.criar("x", "em pouco", "lembrete", "oi", AGORA)
 
 
-def test_fila_um_aviso_ou_resumo_unico_e_validade(tmp_path: Path) -> None:
+def test_fila_um_aviso_ou_oferta_e_validade(tmp_path: Path) -> None:
     fila = Fila(tmp_path / "avisos.json")
-    assert fila.tirar_tudo() is None
+    assert fila.oferecer() is None
     fila.guardar("O Codex terminou: deu certo.")
-    assert Fila(tmp_path / "avisos.json").tirar_tudo() == "O Codex terminou: deu certo."
-    fila.guardar("Lembrete: beber água.")
+    texto, aviso = Fila(tmp_path / "avisos.json").oferecer() or ("", None)
+    assert texto == "O Codex terminou: deu certo." and aviso is not None  # um só: ele mesmo
+    fila.guardar("Lembrete: beber água.", prioridade=1, titulo="um lembrete")
     fila.guardar("Daqui a 5 minutos: reunião.", "agenda", expira=1.0)  # já expirou
     fila.guardar("Tenho uma sugestão para você aprovar.")
-    assert fila.tirar_tudo() == (
-        "Enquanto isso, 2 avisos: Lembrete: beber água; Tenho uma sugestão para você aprovar."
-    )
-    assert fila.tirar_tudo() is None
+    texto, aviso = fila.oferecer() or ("", None)
+    assert aviso is None and texto.startswith("Duas novidades: um lembrete e um aviso.")
+    assert fila.oferecer() is None  # oferecidos não se oferecem de novo sozinhos
+    assert fila.proximo().texto == "Lembrete: beber água."  # type: ignore[union-attr]
 
 
 def _cache(tmp_path: Path, agora: datetime, eventos: list[dict[str, Any]]) -> Path:

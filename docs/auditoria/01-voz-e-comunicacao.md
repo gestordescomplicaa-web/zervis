@@ -118,4 +118,5 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 5. **"Universo teste" não achava a sessão "Universo - Teste".** O nome era comparado com a
    pontuação. Corrigido: sem acento, maiúscula nem pontuação.
 6. **Com sessões, a voz confunde e acumula.** O Zé lê a resposta da sessão como se fosse dele, e
-   não há prioridade, agrupamento nem "próximo". Proposta: ADR 0029 (Central de avisos).
+   não há prioridade, agrupamento nem "próximo". **Corrigido em 13/10/2026:** ADR 0029 (Central
+   de avisos), implementado.

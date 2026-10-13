@@ -1,7 +1,7 @@
 # 0029 — Central de avisos: como o Zé narra várias sessões pela voz
 
 - Data: 13/10/2026
-- Status: **Proposta** (auditoria de voz, passo 3: com a sessão respondendo, o Zé disse "A sessão
+- Status: **Aceito**, implementado em 13/10/2026 (auditoria de voz, passo 3: com a sessão respondendo, o Zé disse "A sessão
   Universo - Teste terminou. Oi, Kiko! Como você está?". Quem ouve não sabe quem está falando,
   e com três sessões ao mesmo tempo os avisos se acumulam sem ordem)
 
@@ -50,6 +50,13 @@ precisa de **quê**, e decidir o que fazer, uma coisa por vez.
 > Zé: "A Loja corrigiu o login; os testes passaram."
 > Você: "Próximo."
 > Zé: "O Blog publicou o rascunho do post de terça."
+
+## Como foi feito
+- Sem serviço externo: a fila é a de sempre (`jarvis/avisos/fila.py`, um JSON em disco), agora
+  com prioridade, manchete, sessão e detalhe; o resumo de uma frase sai do mesmo modelo pequeno da
+  revisão (`jarvis/avisos/central.py`), em uns 3 s; sem ele, a citação marcada ("Ela respondeu:").
+- "sim", "começa", "próximo" e "depois" só valem por 45 s depois de uma oferta; "próximo aviso",
+  "quais são os avisos" e "o que ela disse?" valem sempre.
 
 ## Consequências
 - Cada aviso de fim de tarefa custa uma chamada curta ao modelo da voz rápida (o resumo).

@@ -3,7 +3,7 @@
 // falou no Silencioso.
 
 PAGINAS.conversa = async () => `<div class="pagina-conversa">
-  <header class="conversa-cabeca">${cabeca("Conversa")}${sub("O que você falou com o Zé hoje, as respostas e os avisos.")}</header>
+  <header class="conversa-cabeca">${cabeca("Conversa")}${sub("O que você falou com o Zé hoje, as respostas e os avisos.")}<p class="esperando" id="esperando" hidden></p></header>
   <div class="fio" id="fio" aria-live="polite"></div>
   <form class="escrever" id="escrever">
     <textarea id="escrever-texto" rows="1" placeholder="Escreva para o Zé" autocomplete="off" aria-label="Mensagem"></textarea>
@@ -16,7 +16,10 @@ const horaFio = (q) => q.slice(11, 16);
 async function desenharFio() {
   const fio = $("fio");
   if (!fio) return;
-  const { itens } = await api("conversa");
+  const { itens, esperando } = await api("conversa");
+  const fila = $("esperando");
+  fila.hidden = !esperando.length;
+  fila.textContent = esperando.length ? `Esperando: ${esperando.join(" · ")}.` : "";
   const pensando = ["pensando", "falando"].includes(estadoZe);
   const marca = `${itens.length}|${itens.at(-1)?.quando}|${pensando}`;
   if (marca === fioVisto) return;
@@ -54,6 +57,7 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .pagina-conversa { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-width: 0; flex: 1 1 auto; max-width: 860px; }
 .conversa-cabeca { padding: 18px 20px 10px; }
 .conversa-cabeca .sub { margin: 4px 0 0; }
+.esperando { margin: 8px 0 0; padding: 6px 10px; border-radius: 10px; font-size: 13.5px; color: var(--alerta); border: 1px solid rgb(239 190 124 / .4); }
 .fio { overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
 .fala { max-width: 78%; display: grid; gap: 2px; }
 .fala p { margin: 0; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }

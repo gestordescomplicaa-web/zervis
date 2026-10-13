@@ -377,7 +377,9 @@ class Acoes:
                     }
                 )
         itens.sort(key=lambda i: i["quando"])  # estável: o pedido antes da resposta
-        return {"itens": itens[-200:]}
+        fila = getattr(self.n, "fila", None)
+        esperando = [a.titulo or a.texto for a in fila.validos()] if fila is not None else []
+        return {"itens": itens[-200:], "esperando": esperando}
 
     def escrever(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Um pedido escrito no painel: o mesmo caminho da fala."""

@@ -313,6 +313,25 @@ FALAS_DAS_AREAS = {
 }
 
 COMANDOS = {
+    # A central de avisos (ADR 0029): ouvir o que espera e o detalhe do último.
+    "avisos_proximo": {
+        ("proximo", "aviso"),
+        ("quais", "avisos"),
+        ("quais", "sao", "os", "avisos"),
+        ("tem", "aviso"),
+        ("tem", "algum", "aviso"),
+        ("le", "os", "avisos"),
+        ("ler", "os", "avisos"),
+    },
+    "aviso_detalhe": {
+        ("o", "que", "ela", "disse"),
+        ("o", "que", "ele", "disse"),
+        ("o", "que", "a", "sessao", "disse"),
+        ("le", "a", "resposta"),
+        ("ler", "a", "resposta"),
+        ("mais", "detalhes"),
+        ("detalhes",),
+    },
     # O modo de fala (ADR 0018). Silencioso fecha a escuta: volta pelo painel ou pelo atalho.
     "modo_silencioso": {
         ("modo", "silencioso"),
@@ -903,6 +922,28 @@ def comando(
     )
 
 
+# Respostas a uma oferta de avisos (ADR 0029), só logo depois dela.
+OFERTA = {
+    "avisos_proximo": {
+        ("sim",),
+        ("pode",),
+        ("comeca",),
+        ("pode", "comecar"),
+        ("vai",),
+        ("manda",),
+        ("proximo",),
+        ("o", "proximo"),
+        ("sim", "pode"),
+    },
+    "avisos_depois": {("depois",), ("agora", "nao"), ("nao",), ("mais", "tarde"), ("deixa",)},
+}
+
+
+def resposta_a_oferta(texto: str) -> str | None:
+    p = sem_nome(palavras(texto))
+    return next((nome for nome, frases in OFERTA.items() if p in frases), None)
+
+
 def palavras(texto: str) -> tuple[str, ...]:
     """Minúsculas, sem acentos e sem pontuação: "Sim, pode!" -> ("sim", "pode")."""
     sem_acento = unicodedata.normalize("NFKD", texto.casefold())
@@ -959,6 +1000,9 @@ class Maquina:
     orbes: dict[str, str] = field(default_factory=lambda: dict(ORBES_PADRAO))
     # Modo manutenção ligado: o que não for comando local vai para a sessão de código.
     manutencao: Callable[[], bool] = field(default=lambda: False)
+    # Uma oferta de avisos acabou de ser feita ("Começo pela Loja?", ADR 0029): "sim", "próximo"
+    # e "depois" respondem a ela, não vão ao cérebro.
+    oferta: Callable[[], bool] = field(default=lambda: False)
 
     # --- o que o laço consulta ----------------------------------------------------------
 
@@ -1187,6 +1231,8 @@ class Maquina:
 
     def _pedido(self, texto: str) -> Efeito:
         """Comando local, a sessão de código (modo manutenção) ou o cérebro, nessa ordem."""
+        if self.oferta() and (nome := resposta_a_oferta(texto)):
+            return Comando(nome)
         if nome := comando(texto, self.nucleo_em_foco(), self.orbes):
             return Comando(nome)
         if self.manutencao() and not so_chamado(texto):

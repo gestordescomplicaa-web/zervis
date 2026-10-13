@@ -36,8 +36,9 @@ from jarvis.automacoes import executor
 from jarvis.automacoes.agenda import FUSO
 from jarvis.automacoes.calendario import Calendario
 from jarvis.automacoes.jobs import Job, Jobs
+from jarvis.avisos import central
 from jarvis.avisos import modo as modo_fala
-from jarvis.avisos.fila import Fila
+from jarvis.avisos.fila import PRIORIDADES, Fila
 from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, rapido
 from jarvis.cerebro.base import Brain, Ponte
 from jarvis.cerebro.baterias import Bateria, da_assinatura, do_omniroute
@@ -136,6 +137,7 @@ FALAS_DE_TONTO = (
     "Socorro, eu sou um holograma, não um pião!",
 )
 # Comandos que falam com a sessão de manutenção ou rodam os testes: respondem quando terminarem.
+OFERTA_S = 45.0  # quanto tempo "sim", "próximo" e "depois" respondem a uma oferta de avisos
 LIMITE_ESCRITO = 4000  # caracteres de um pedido escrito no painel
 EM_SEGUNDO_PLANO = ("manutencao_entrar", "manutencao_pedido", "rodada_melhoria", "reiniciar")
 # Os que mostram algo no Núcleo (abrem a janela se ela estiver fechada): nome -> (ações, fala).
@@ -210,6 +212,20 @@ def criar_bip(caminho: Path) -> None:
                 for i in range(2400)
             )
         )
+
+
+def criar_toque(caminho: Path) -> None:
+    """O toque antes de um aviso de sessão (ADR 0029): duas notas subindo, diferente do bip."""
+    quadros = []
+    for nota in (880, 1175):
+        for i in range(1440):  # 90 ms cada
+            envelope = min(1.0, i / 160, (1440 - i) / 400)
+            quadros.append(
+                struct.pack("<h", int(1800 * envelope * math.sin(2 * math.pi * nota * i / 16000)))
+            )
+    with wave.open(str(caminho), "wb") as w:
+        w.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
+        w.writeframes(b"".join(quadros))
 
 
 @dataclass
@@ -292,10 +308,13 @@ class Nucleo:
         self._comecados: dict[str, int] = {}
         self._cortados: set[str] = set()
         self._avisos_dados: dict[str, float] = {}
-        self._na_tela: dict[str, None] = {}
-        self.ultimo_na_tela: list[float | str] | None = (
-            None  # o painel mostra (Silencioso)  # os últimos avisos já postos na linha do tempo
-        )
+        self._na_tela: dict[str, None] = {}  # os últimos avisos já postos na linha do tempo
+        self.ultimo_na_tela: list[float | str] | None = None  # o painel mostra (Silencioso)
+        # Central de avisos (ADR 0029): o que se sabe de cada aviso (prioridade, sessão,
+        # manchete, detalhe), até quando vale responder a uma oferta e o último aviso de sessão.
+        self._meta: dict[str, dict[str, Any]] = {}
+        self._oferta_ate = 0.0
+        self._ultimo_de_sessao: dict[str, Any] | None = None
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
         self.vigia = Vigia()
         self._vigia_em = 0.0
@@ -368,6 +387,7 @@ class Nucleo:
         self.manutencao = Manutencao(self.sessoes, ESTADO / "manutencao")
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
         self.maquina.manutencao = lambda: self.manutencao.ligado
+        self.maquina.oferta = lambda: time.monotonic() < self._oferta_ate
         # Atualização esperando as outras sessões (ADR 0028): None, ou se a revisão foi feita.
         self._aplicar_depois: bool | None = None
         self.sessoes.reservada = lambda: (
@@ -465,6 +485,8 @@ class Nucleo:
             log.warning("painel não subiu: %s", erro)
         self.bip = ESTADO / "bip.wav"
         criar_bip(self.bip)
+        self.toque = ESTADO / "toque.wav"
+        criar_toque(self.toque)
         # Rostos (ADR 0021): a janela no Hyprland, a escuta sempre ligada e, depois, a voz remota.
         self.rostos = Rostos(lambda ativo: self.eventos.put(e.Presenca(ativo)))
         self.tem_janela = hyprland.disponivel()
@@ -644,6 +666,7 @@ class Nucleo:
                     self.avisos_falados.append((time.monotonic(), texto))
                     self._comecados[texto] = self._comecados.get(texto, 0) + 1
                     self._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
+                    self._antes_de_avisar(texto)
                 self.teclado.falou(texto)
                 if texto == e.NAO_ENTENDI:
                     self.evidencias.registrar("nao_entendi", self._ouvido)
@@ -684,7 +707,7 @@ class Nucleo:
                     self._cortados.add(texto)  # a volta de um aviso cortado não é repetição
                 # Fila durável (Fase 7): o aviso sai quando o JARVIS voltar a ATIVO.
                 log.info("aviso retido até ficar ativo: %d caracteres", len(texto))
-                self.fila.guardar(texto)
+                self._guardar(texto)
 
     def _comando(self, nome: str) -> None:
         log.info("comando: %s", nome)
@@ -935,23 +958,63 @@ class Nucleo:
         manutenção fala pelo próprio aperto de mão (o Resumo falado), salvo se falhar."""
         if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
             return
+        nome = sessao.nome
         if sessao.estado == "erro" and "bateu o limite" in resumo:
-            texto = f"Créditos esgotados na sessão {sessao.nome}. Troque de conta para continuar."
-            self._aviso_da_oficina(texto, "urgente", sessao.id)
-        elif sessao.estado == "erro":
-            self._aviso_da_oficina(f"A sessão {sessao.nome} falhou.", "urgente", sessao.id)
-        else:
-            texto = f"A sessão {sessao.nome} terminou."
-            if modo_fala.falar(self.modo_fala, "resposta", self.vendo(sessao.id)):
-                resposta = self._ultima_resposta(sessao.id) or resumo
-                if ouvir := modo_fala.para_ouvir(resposta):
-                    texto = f"{texto} {ouvir}"
-            self._aviso_da_oficina(texto, "notificacao", sessao.id)
+            texto = f"Créditos esgotados na sessão {nome}. Troque de conta para continuar."
+            self._aviso_da_oficina(texto, "urgente", sessao.id, f"a sessão {nome} sem créditos")
+            return
+        if sessao.estado == "erro":
+            titulo = f"a sessão {nome} falhou"
+            self._aviso_da_oficina(f"A sessão {nome} falhou.", "urgente", sessao.id, titulo)
+            return
+        resposta = self._ultima_resposta(sessao.id) or resumo
+        detalhe = modo_fala.para_ouvir(resposta)
+        titulo = f"a sessão {nome} terminou"
+        if not modo_fala.falar(self.modo_fala, "resposta", self.vendo(sessao.id)):
+            self._aviso_da_oficina(
+                f"A sessão {nome} terminou.", "notificacao", sessao.id, titulo, detalhe
+            )
+            return
+        # Mãos livres: o Zé narra o que ela fez, numa frase escrita por um modelo pequeno; a
+        # resposta dela não é lida como se fosse dele (ADR 0029).
+        ponte = getattr(self, "ponte", None)
+        if ponte is None or not resposta.strip():
+            texto = central.narrar(nome, None, resposta)
+            self._aviso_da_oficina(texto, "notificacao", sessao.id, titulo, detalhe)
+            return
+        asyncio.run_coroutine_threadsafe(
+            self._narrar_fim(sessao.id, nome, resposta, titulo, detalhe), ponte.laco
+        )
+
+    async def _narrar_fim(
+        self, id_: str, nome: str, resposta: str, titulo: str, detalhe: str
+    ) -> None:
+        resumo = None
+        try:
+            saida, uso = await asyncio.wait_for(
+                revisao.perguntar_ao_modelo(
+                    central.pedido_de_resumo(resposta),
+                    self.cfg["revisao"]["modelo"],
+                    DADOS / "cerebro",
+                    0,
+                    central.SISTEMA,
+                ),
+                timeout=25,
+            )
+            self.consumo.somar(uso, "aviso")
+            resumo = central.limpar_resumo(saida)
+        except Exception as erro:  # sem o resumo, a primeira frase como citação
+            log.warning("resumo do aviso: %s", erro)
+        texto = central.narrar(nome, resumo, resposta)
+        self._aviso_da_oficina(texto, "notificacao", id_, titulo, detalhe)
 
     def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
         """O agente parou esperando a aprovação da pessoa."""
         self._aviso_da_oficina(
-            f"A sessão {sessao.nome} está esperando sua aprovação.", "urgente", sessao.id
+            f"A sessão {sessao.nome} está esperando sua aprovação.",
+            "urgente",
+            sessao.id,
+            f"a sessão {sessao.nome} pede aprovação",
         )
 
     def _ultima_resposta(self, id_: str) -> str:
@@ -990,15 +1053,94 @@ class Nucleo:
         log.info("escuta: %s", modo)
         return f"Escuta: {modo_escuta.NOMES[modo].lower()}."
 
-    def _aviso_da_oficina(self, texto: str, tipo: modo_fala.Tipo, id_: str = "") -> None:
+    def _aviso_da_oficina(
+        self,
+        texto: str,
+        tipo: modo_fala.Tipo,
+        id_: str = "",
+        titulo: str = "",
+        detalhe: str = "",
+    ) -> None:
         """O que as sessões de código avisam entra na linha do tempo; vira voz se o modo de fala
-        deixar e a pessoa não estiver vendo a sessão."""
+        deixar e a pessoa não estiver vendo a sessão. Na fila, entra com a prioridade, a
+        manchete e o detalhe (ADR 0029)."""
+        self._meta[texto] = {
+            "prioridade": PRIORIDADES[tipo],
+            "titulo": titulo,
+            "sessao": id_,
+            "detalhe": detalhe,
+            "toque": bool(id_),
+        }
         self._na_linha("aviso", texto)
         if id_:
             self.sessoes.focar(id_)
         if modo_fala.falar(self.modo_fala, tipo, self.vendo(id_)):
             escutar = self.modo_fala == "maos_livres" and self.chamado == "voz"
             self.eventos.put(e.Aviso(texto, escutar=escutar))
+
+    def _guardar(self, texto: str) -> None:
+        """O aviso espera na fila com o que se sabe dele (prioridade, sessão, manchete)."""
+        m = self._meta.get(texto, {})
+        self.fila.guardar(
+            texto,
+            prioridade=int(m.get("prioridade", PRIORIDADES["notificacao"])),
+            titulo=str(m.get("titulo", "")),
+            sessao=str(m.get("sessao", "")),
+            detalhe=str(m.get("detalhe", "")),
+        )
+
+    def _sair_da_fila(self) -> None:
+        """O Zé ficou livre: um aviso esperando é dito; vários viram uma oferta (ADR 0029)."""
+        saida = self.fila.oferecer()
+        if saida is None:
+            return
+        texto, aviso = saida
+        if aviso is not None:  # um só: volta a ser o aviso de antes
+            self._meta[texto] = {
+                "prioridade": aviso.prioridade,
+                "titulo": aviso.titulo,
+                "sessao": aviso.sessao,
+                "detalhe": aviso.detalhe,
+                "toque": bool(aviso.sessao),
+            }
+            self.eventos.put(e.Aviso(texto))
+            return
+        self._meta[texto] = {"toque": True}
+        self._oferta_ate = time.monotonic() + OFERTA_S
+        self.eventos.put(e.Aviso(texto, escutar=True))
+
+    def _antes_de_avisar(self, texto: str) -> None:
+        """Começou a falar um aviso: o toque, se for de sessão, e a sessão dele em foco."""
+        m = self._meta.get(texto, {})
+        if m.get("toque"):
+            self._tocar_som(self.toque)
+        if m.get("sessao"):
+            self._ultimo_de_sessao = m
+            with contextlib.suppress(SessaoErro):
+                self.sessoes.focar(str(m["sessao"]))
+
+    def _proximo_aviso(self) -> str:
+        """ "Começa" ou "próximo": o aviso que vem, e quantos ainda esperam."""
+        fila: Fila | None = getattr(self, "fila", None)
+        aviso = fila.proximo() if fila is not None else None
+        if aviso is None:
+            self._oferta_ate = 0.0
+            return "Nenhum aviso esperando."
+        if aviso.sessao:
+            self._ultimo_de_sessao = {"sessao": aviso.sessao, "detalhe": aviso.detalhe}
+            with contextlib.suppress(SessaoErro):
+                self.sessoes.focar(aviso.sessao)
+        resto = len(fila.validos()) if fila is not None else 0
+        self._oferta_ate = time.monotonic() + OFERTA_S if resto else 0.0
+        mais = {1: " Mais um.", 2: " Mais dois.", 3: " Mais três."}.get(resto, f" Mais {resto}.")
+        return aviso.texto + (mais if resto else "")
+
+    def _detalhe_do_aviso(self) -> str:
+        """ "O que ela disse?": o que a sessão do último aviso respondeu, pronto para ouvir."""
+        m = getattr(self, "_ultimo_de_sessao", None)
+        if m and m.get("detalhe"):
+            return str(m["detalhe"])
+        return "Não tenho mais detalhe desse aviso; a resposta inteira está na sessão."
 
     def _no_proprio_pc(self) -> bool:
         """O pedido em curso veio do microfone do próprio PC (não do celular nem digitado)."""
@@ -1119,6 +1261,13 @@ class Nucleo:
             return self.trocar_cerebro(argumento)
         if nome in ("modo_silencioso", "modo_avisos", "modo_maos_livres"):
             return self.mudar_modo_fala(nome.removeprefix("modo_"))
+        if nome == "avisos_proximo":
+            return self._proximo_aviso()
+        if nome == "avisos_depois":
+            self._oferta_ate = 0.0
+            return "Certo. Ficam na Conversa."
+        if nome == "aviso_detalhe":
+            return self._detalhe_do_aviso()
         if nome == "manutencao_sair":
             self._aplicar_depois = None
             return self.manutencao.sair()
@@ -1314,10 +1463,14 @@ class Nucleo:
         }
 
     def _tocar_bip(self) -> None:
+        self._tocar_som(self.bip)
+        self._descartar_escuta()
+
+    def _tocar_som(self, som: Path) -> None:
         remota = self._fonte
         if remota is not None and remota.conectada:
             try:
-                remota.tocar_wav(self.bip)
+                remota.tocar_wav(som)
             except Exception as erro:
                 self._erro(f"bip remoto: {erro}")
             # O navegador cancela o eco do bip: o que chegou enquanto ele tocava é a pessoa já
@@ -1333,15 +1486,14 @@ class Nucleo:
                     SERVIDOR,
                     "--device",
                     "@DEFAULT_SINK@",
-                    str(self.bip),
+                    str(som),
                 ],
                 timeout=3,
                 check=True,
                 capture_output=True,
             )
         except (OSError, subprocess.SubprocessError) as erro:
-            self._erro(f"bip: {erro}")
-        self._descartar_escuta()
+            self._erro(f"{som.stem}: {erro}")
 
     def _descartar_escuta(self) -> None:
         """O bip e a cauda da própria voz não podem virar começo do próximo pedido."""
@@ -1364,7 +1516,7 @@ class Nucleo:
                 return
             evento = permitido
         if isinstance(evento, e.Aviso) and self._pessoa_falando():
-            self.fila.guardar(evento.texto)  # ao vivo: o aviso espera a pausa, não atropela
+            self._guardar(evento.texto)  # ao vivo: o aviso espera a pausa, não atropela
             return
         antes = self.maquina.estado
         agora = time.monotonic()
@@ -1409,8 +1561,7 @@ class Nucleo:
                 self.detector.reiniciar()
                 if not self.maquina.em_conversa:
                     self._fim_da_conversa()
-                if (pendente := self.fila.tirar_tudo()) is not None:
-                    self.eventos.put(e.Aviso(pendente))
+                self._sair_da_fila()
             if depois is e.Estado.OUVINDO and antes is e.Estado.FALANDO:
                 self._descartar_escuta()  # conversa contínua: próxima pergunta sem "Hey Orca"
 
@@ -1511,6 +1662,8 @@ class Nucleo:
         if curto != texto:
             if texto not in self._na_tela:
                 self._na_linha("aviso", texto)  # o texto inteiro fica na tela
+            if texto in self._meta:
+                self._meta[curto] = self._meta[texto]
             return e.Aviso(curto, escutar=aviso.escutar)
         return aviso
 
@@ -1529,9 +1682,8 @@ class Nucleo:
             and self.maquina.estado is e.Estado.OUVINDO
             and not self.maquina.segurando
             and not self._pessoa_falando()
-            and (pendente := self.fila.tirar_tudo()) is not None
         ):
-            self.eventos.put(e.Aviso(pendente))
+            self._sair_da_fila()
 
     def _fechar_escuta(self) -> None:
         """Parou de ouvir sem pedido (silêncio, janela fechada): a conexão fecha na hora."""
@@ -1852,7 +2004,12 @@ class Nucleo:
                 log.info("automação %s: lembrete", job.id)
                 self._na_linha("lembrete", job.texto)
                 self.jobs.registrar(job.id, "ok", momento)
-                self.eventos.put(e.Aviso(f"Lembrete: {job.texto}"))
+                lembrete = f"Lembrete: {job.texto}"
+                self._meta[lembrete] = {
+                    "prioridade": PRIORIDADES["lembrete"],
+                    "titulo": "um lembrete",
+                }
+                self.eventos.put(e.Aviso(lembrete))
             else:
                 self._rodando.add(job.id)
                 asyncio.run_coroutine_threadsafe(self._rodar_pergunta(job), self.ponte.laco)

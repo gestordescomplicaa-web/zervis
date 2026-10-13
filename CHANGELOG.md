@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Central de avisos (ADR 0029): o Zé narra as sessões em vez de ler a resposta delas ("A sessão
+  Loja terminou. Ela corrigiu o login."), com um toque antes; aprovação e falha passam na frente;
+  vários avisos viram uma oferta ("Duas novidades… Começo pela Site?") e a pessoa conduz com
+  "começa", "próximo", "depois" e "o que ela disse?". A Conversa mostra o que espera.
 - Conversa no painel: o fio do dia com o Zé (pedidos, respostas e avisos) e o campo para escrever.
   No Silencioso, o que o Zé não falou aparece também como notificação em qualquer página.
   Conectores passa a carregar só quando aberto.

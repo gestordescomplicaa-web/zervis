@@ -82,7 +82,9 @@ class _Nucleo:
     def _ultima_resposta(self, id_: str) -> str:
         return "Corrigi o login em `src/a.ts`. Os testes passaram."
 
-    def _aviso_da_oficina(self, texto: str, tipo: str, id_: str = "") -> None:
+    def _aviso_da_oficina(
+        self, texto: str, tipo: str, id_: str = "", titulo: str = "", detalhe: str = ""
+    ) -> None:
         self.ditos.append((tipo, texto))
 
 
@@ -100,10 +102,10 @@ def test_fim_de_sessao_em_avisos_e_uma_frase() -> None:
     assert _fim("avisos") == [("notificacao", "A sessão Loja terminou.")]
 
 
-def test_fim_de_sessao_em_maos_livres_leva_a_resposta_para_ouvir() -> None:
-    [(tipo, texto)] = _fim("maos_livres")
+def test_fim_de_sessao_em_maos_livres_narra_sem_falar_pela_sessao() -> None:
+    [(tipo, texto)] = _fim("maos_livres")  # sem o modelo do resumo: a citação marcada
     assert tipo == "notificacao"
-    assert texto == "A sessão Loja terminou. Corrigi o login em a.ts. Os testes passaram."
+    assert texto == "A sessão Loja terminou. Ela respondeu: Corrigi o login em a.ts."
 
 
 def test_creditos_esgotados_sao_urgentes() -> None:

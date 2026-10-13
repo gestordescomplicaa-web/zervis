@@ -47,6 +47,10 @@ class _Nucleo:
         self._na_tela: dict[str, None] = {}
         self.linha: list[tuple[str, str]] = []
         self.fila = _Fila()
+        self._meta: dict[str, dict[str, Any]] = {}
+
+    def _guardar(self, texto: str) -> None:
+        self.fila.guardar(texto)
 
     def _na_linha(self, tipo: str, texto: str) -> None:
         self.linha.append((tipo, texto))
