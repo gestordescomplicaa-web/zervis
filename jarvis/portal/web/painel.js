@@ -1025,6 +1025,12 @@ function desligarImersao() {
   $("ponto-imersao").hidden = true;
 }
 
+// A Imersão só roda à vista: sair dela ou esconder o painel desliga a câmera e o holograma.
+document.addEventListener("visibilitychange", () => {
+  if (location.hash !== "#imersao" || !NO_PC) return;
+  if (document.visibilityState === "hidden") desligarImersao(); else ligarImersao();
+});
+
 // --- o despachante: cada data-acao faz uma coisa ----------------------------------------------------
 
 const recarregar = () => abrir();
@@ -1377,6 +1383,7 @@ async function abrir() {
   conteudo.classList.toggle("cheio", CHEIAS.includes(secao));
   clearInterval(relogioSessoes);
   fecharTerminalTela();
+  if (secao !== "imersao" && imersaoLigada()) desligarImersao();
   if (secao === "imersao" && !NO_PC) {
     imersao.hidden = true; conteudo.hidden = false;
     conteudo.innerHTML = telaHolograma(); desenharVozRemota();

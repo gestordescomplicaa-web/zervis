@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- Imersão no PC só roda à vista: sair dela ou esconder o painel desliga a câmera e o holograma.
 - Diagnóstico de uso: o túnel do acesso de fora sobe de novo sozinho quando cai e revoga o
   endereço antigo; a voz do navegador reconecta após queda de rede e separa "desligou" de "caiu";
   o modo imersivo guarda a própria saída e o vigia mostra o código de saída, sem chamar de queda
