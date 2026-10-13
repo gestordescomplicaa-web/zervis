@@ -42,9 +42,11 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 
 - **Como:** ainda em Avisos, "Ei Zé, me lembra daqui a dois minutos de alongar." Com o painel em
   foco, Alt+M até "Silencioso". Dizer "Ei Zé" e esperar o lembrete.
-- **Esperado:** Alt+M troca o modo e o menu lateral mostra "Fala: Silencioso"; o "Ei Zé" não
-  responde; o lembrete chega só na tela, sem voz.
-- **Resultado:** ⬜
+- **Esperado:** Alt+M troca o modo e o menu lateral mostra "Fala: Silencioso"; o "Ei Zé" ainda
+  funciona (ADR 0022), mas a resposta vem só na tela; o lembrete chega só na tela, sem voz.
+- **Resultado:** ❌ 13/10/2026. Alt+M ✅. O lembrete disparou sem voz ✅, e a resposta ao "Ei Zé"
+  saiu muda ✅, mas **nenhum dos dois aparece no painel** (achado 2): o Silencioso hoje é um
+  buraco. Para refazer depois da correção.
 
 ### Passo 3. Modo Mãos livres e as regras de fala
 
@@ -96,3 +98,8 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
 1. **Sem conversa por texto no painel.** O conceito Conversa diz "por voz ou texto", mas o painel
    não tem onde escrever ao Zé (o texto só existe pelo teclado no terminal do serviço). Afeta quem
    está em silêncio ou sem microfone. A decidir ao fim desta auditoria.
+2. **"Fica na tela" não tem tela.** No Silencioso, avisos e respostas vão para a linha do tempo e
+   para a conversa gravada, mas o painel não mostra nenhuma das duas: não há onde ler o que o Zé
+   respondeu nem os avisos que chegaram. Junto com o achado 1, falta a **Conversa** no painel.
+3. **Lembrete que já tocou aparece como "desligado"** em Automações, como se a pessoa o tivesse
+   desligado. É da área 7 (Automações); anotado para lá.
