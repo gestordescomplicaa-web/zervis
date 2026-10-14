@@ -688,3 +688,15 @@ def test_acha_a_sessao_pelo_nome_sem_pontuacao(tmp_path: Path, raiz: Path) -> No
     sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
     s = sessoes.criar("Universo - Teste", str(raiz / "projetos/loja"), "claude")
     assert sessoes.achar("universo teste").id == s.id
+
+
+def test_modelo_da_sessao_pela_lista_da_conta(tmp_path: Path, raiz: Path) -> None:
+    """Auditoria 5, achado 1: o modelo da sessão se escolhe no painel, da lista da conta dela."""
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "claude")
+    ids = [m["id"] for m in sessoes.modelos_da_sessao(s)]
+    assert "claude-opus-5-5" in ids
+    assert sessoes.ajustar_modelo(s.id, "claude-opus-5-5").modelo == "claude-opus-5-5"
+    with pytest.raises(SessaoErro, match="não está disponível"):
+        sessoes.ajustar_modelo(s.id, "gpt-qualquer")
+    assert sessoes.ajustar_modelo(s.id, "").modelo == ""  # volta ao padrão da conta

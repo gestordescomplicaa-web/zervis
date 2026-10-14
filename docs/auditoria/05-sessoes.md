@@ -14,7 +14,9 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 ## Achados
 
 1. **O modelo da sessão não se escolhe no painel.** A função existe (`ajustar_modelo`), mas nada
-   a chama; o cabeçalho só tem agente e conta.
+   a chama; o cabeçalho só tem agente e conta. **Corrigido em 13/10/2026:** seletor de modelo no cabeçalho, com
+   a lista da conta da sessão (com a versão) e "Padrão da conta"; o agente reabre no modelo novo,
+   e a conversa continua.
 2. **A cópia isolada não tem aprovar nem descartar.** Dá para criar a sessão com "Cópia isolada",
    mas as mudanças ficam presas na cópia: não há como juntá-las ao projeto pelo painel.
 

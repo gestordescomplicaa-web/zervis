@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- Sessões: o modelo de cada sessão se escolhe no cabeçalho dela, com a versão; a conversa continua.
 - Skills: só as marcadas "Também nas sessões de código" vão para os agentes de código; as outras
   valem só para o Zé.
 - Skills: o editor virou formulário (Nome, Quando usar, Do meu jeito, Passos, Pronto quando); o

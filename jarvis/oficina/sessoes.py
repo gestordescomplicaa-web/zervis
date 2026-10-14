@@ -532,6 +532,14 @@ class Sessoes:
         self.anotar(id_, "sistema", aviso)
         return s, aviso
 
+    def modelos_da_sessao(self, s: Sessao) -> list[dict[str, Any]]:
+        """Os modelos que a conta da sessão oferece (com a versão), para a escolha no painel."""
+        try:
+            conta = contas.Contas().achar(s.conta) if s.conta else contas.Contas().em_uso(s.motor)
+        except contas.ContaErro:
+            return []
+        return modelos.da_conta(conta)
+
     def ajustar_modelo(self, id_: str, modelo: str, esforco: str = "") -> Sessao:
         """O modelo (e o esforço, no Codex) dos próximos pedidos; a conversa continua."""
         s = self.ler(id_)
@@ -547,6 +555,8 @@ class Sessoes:
         if esforco and esforco not in (opcoes.get(modelo, {}).get("esforcos") or modelos.ESFORCOS):
             raise SessaoErro("esse esforço não vale para este modelo")
         s = self._mudar(id_, modelo=modelo, esforco=esforco if s.motor == "codex" else "")
+        if (terminal := self.terminais.pop(id_, None)) is not None:
+            terminal.encerrar()  # reabre no modelo novo, com resume: a conversa continua
         nome = opcoes[modelo]["nome"] if modelo else "o padrão da conta"
         extra = f", esforço {modelos.ESFORCOS[esforco].lower()}" if s.esforco else ""
         self.anotar(id_, "sistema", f"Modelo: {nome}{extra}.")

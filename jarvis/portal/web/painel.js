@@ -726,6 +726,14 @@ function seletorConta(sessao) {
   return escolha("conta-sessao", rotulo, grupos, `${sessao.motor}|${sessao.conta_id}`, "Agente e conta: a conversa continua na troca");
 }
 
+// O modelo da sessão, da lista da conta dela (com a versão); vazio é o padrão da conta.
+function seletorModeloSessao(sessao) {
+  if (!sessao.modelos?.length) return "";
+  const itens = [{ valor: "", nome: "Padrão da conta" }, ...sessao.modelos.map((m) => ({ valor: m.id, nome: m.nome }))];
+  const rotulo = sessao.modelos.find((m) => m.id === sessao.modelo)?.nome || "Padrão da conta";
+  return escolha("modelo-sessao", rotulo, [{ titulo: "", itens }], sessao.modelo || "", "Modelo: a conversa continua na troca");
+}
+
 function faixaLimite(sessao) {
   if (!sessao.limite) return "";
   const outras = contasComLogin().filter((c) => c.id !== sessao.conta_id)
@@ -763,7 +771,7 @@ async function abrirSessao(id) {
   lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
       <div class="titulo-sessao"><h2>${esc(sessao.nome)}</h2><small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}</small></div>
-      <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}</div>
+      <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}${seletorModeloSessao(sessao)}</div>
       <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
         ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
@@ -1202,6 +1210,10 @@ const ACOES = {
 // O que cada menu de escolha faz com o valor escolhido.
 const ESCOLHAS = {
   "modo-fala": mudarModoFala,
+  "modelo-sessao": async (valor) => {
+    const r = await api("sessao/modelo", { id: sessaoAberta, modelo: valor });
+    toast(r.aviso); await abrirSessao(sessaoAberta);
+  },
   "conta-sessao": async (valor) => {
     const [motor, conta] = valor.split("|");
     await trocarSessao(motor, conta, !!document.querySelector(".faixa.limite"));

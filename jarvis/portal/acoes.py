@@ -214,6 +214,7 @@ class Acoes:
             "sessao/criar": self.criar_sessao,
             "sessao/ler": self.ler_sessao,
             "sessao/trocar": self.trocar_sessao,
+            "sessao/modelo": self.modelo_da_sessao,
             "terminal/abrir": self.abrir_terminal,
             "terminal/ler": self.ler_terminal,
             "terminal/escrever": self.escrever_terminal,
@@ -870,6 +871,9 @@ class Acoes:
             "agente": contas.NOMES.get(s.motor, s.motor),
             "conta": self._nome_da_conta(s.conta),
             "modelo": s.modelo,
+            "modelos": [
+                {"id": m["id"], "nome": m["nome"]} for m in self.n.sessoes.modelos_da_sessao(s)
+            ],
             "esforco": s.esforco,
             "isolada": s.isolada,
             "branch": s.branch,
@@ -971,6 +975,13 @@ class Acoes:
             )
         )
         return {"arquivo": relativo}
+
+    def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O modelo dos próximos pedidos da sessão; o agente reabre nele e a conversa continua."""
+        id_, modelo = str(dados.get("id", "")), str(dados.get("modelo", ""))
+        s = self._chamar(lambda: self.n.sessoes.ajustar_modelo(id_, modelo))
+        nomes = {m["id"]: m["nome"] for m in self.n.sessoes.modelos_da_sessao(s)}
+        return {**self._sessao(s), "aviso": f"Modelo: {nomes.get(modelo, 'padrão da conta')}."}
 
     def trocar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Troca agente ou conta; com `continuar`, manda de novo o pedido que bateu no limite."""
