@@ -60,8 +60,10 @@ memória, não skill.
 - ⬜ O Zé lê a skill antes de uma tarefa que ela cobre
 - 🟡 Sessões no terminal recebem as skills (corrigido em 13/10/2026)
 - 🟡 Curadoria: sem uso há 30 dias, vai para o arquivo
-- ❌ As skills que a pessoa já tem nos agentes (`~/.claude/skills`, `~/.codex/skills`) não
-  aparecem nem valem para o Zé. Falta decidir: importar, mostrar ou ignorar.
+- Em andamento na auditoria 4 (`docs/auditoria/04-skills.md`).
+- Ideia para depois: "Instalar skill" a partir de um link do GitHub ou de um registro
+  (anthropics/skills, skills.sh), mostrando o conteúdo, verificando e pedindo aprovação; nunca
+  rodar script sozinho.
 
 ## 5. Sessões
 
@@ -107,6 +109,14 @@ Conceito: a porta do Zé para outros sistemas, por MCP. Encanamento, não um con
 - ⬜ Adicionar local e remoto; guardar segredo
 - ⬜ Ferramentas: ver, e para cada uma livre, com aprovação ou bloqueada
 - ⬜ Aplicar agora (o cérebro passa a usar)
+
+Ideias para avaliar nesta área:
+- **Navegador** (Playwright MCP num Chromium separado; o código existe, nunca foi ligado nesta
+  instalação): ligar, testar e medir o gasto de tokens antes de decidir.
+- **Aprender uma vez, repetir sem modelo:** na primeira vez o Zé faz o fluxo no site com o modelo e
+  grava os passos como roteiro; nas próximas, repete o roteiro sem gastar tokens e só chama o
+  modelo se a tela mudar. Bom para sistemas legados sem API.
+- **Visão da tela** (ver um print e entender onde está cada coisa): depois, é bem mais caro.
 
 ## 9. Acesso pelo celular
 
