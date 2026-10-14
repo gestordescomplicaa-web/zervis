@@ -22,6 +22,10 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
    engraçadas", perguntou, e o Zé disse que a memória estava vazia. **Corrigido:** quando a memória
    muda no meio da conversa, o próximo pedido leva a versão nova. A página não fala mais em
    "próxima conversa".
+3. **Trocar uma entrada deixava a antiga valendo na conversa.** A pessoa trocou "banana" por
+   "morango" e o Zé disse que ela gostava das duas: a banana continuava na foto do começo.
+   **Corrigido:** a atualização diz o que saiu ("não vale mais"). O histórico das conversas segue
+   guardando o que foi dito, como diário; quem vale é a memória atual.
 
 ## Passos
 
@@ -38,6 +42,7 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 - **Esperado:** a resposta já usa o que foi adicionado; removida, deixa de valer no pedido seguinte.
 - **Resultado:** ❌ 13/10/2026, primeira tentativa: a memória gravou, mas o Zé não a via na
   conversa em andamento (achado 2). Corrigido; para refazer.
+  Refeito: ✅ a memória nova chegou na hora; a troca banana → morango expôs o achado 3 (corrigido).
 
 ### Passo 3. Guardar pela voz
 

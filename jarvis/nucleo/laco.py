@@ -1201,9 +1201,23 @@ class Nucleo:
         vista, self._memoria_vista = getattr(self, "_memoria_vista", None), atual
         if vista is None or vista == atual:
             return pedido
+
+        # O que saiu precisa ser dito: sem isso, o cérebro junta o velho e o novo (13/10/2026:
+        # trocou "banana" por "morango" e o Zé disse que a pessoa gostava das duas).
+        def itens(foto: str) -> set[str]:
+            return {linha for linha in foto.splitlines() if linha.startswith("- ")}
+
+        saiu = sorted(itens(vista) - itens(atual))
+        aviso = (
+            "Saiu da memória (não vale mais, mesmo que apareça antes nesta conversa):\n"
+            + "\n".join(saiu)
+            + "\n\n"
+            if saiu
+            else ""
+        )
         return (
             "[Memória atualizada agora: vale no lugar da foto do começo da conversa]\n"
-            f"{atual}\n\n{pedido}"
+            f"{aviso}{atual}\n\n{pedido}"
         )
 
     def _no_proprio_pc(self) -> bool:

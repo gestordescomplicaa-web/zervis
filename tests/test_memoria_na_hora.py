@@ -22,3 +22,16 @@ def test_sessao_nova_le_a_foto_sem_repetir(tmp_path: Path) -> None:
     n = SimpleNamespace(memoria=memoria, _memoria_vista="foto velha")
     n._memoria_vista = None  # o que acontece depois de reiniciar ou trocar o cérebro
     assert Nucleo._com_memoria(n, "oi") == "oi"  # type: ignore[arg-type]
+
+
+def test_o_que_saiu_e_dito_para_nao_juntar_o_velho_e_o_novo(tmp_path: Path) -> None:
+    memoria = Memoria(tmp_path, {"usuario": 2000, "jarvis": 2000})
+    memoria.aplicar(Mudanca("adicionar", "usuario", texto="Minha fruta preferida é banana."))
+    n = SimpleNamespace(memoria=memoria, _memoria_vista=None)
+    Nucleo._com_memoria(n, "oi")  # type: ignore[arg-type]
+    memoria.aplicar(Mudanca("remover", "usuario", antigo="Minha fruta preferida é banana."))
+    memoria.aplicar(Mudanca("adicionar", "usuario", texto="Minha fruta preferida é morango."))
+    pedido = Nucleo._com_memoria(n, "qual minha fruta?")  # type: ignore[arg-type]
+    saiu, _, depois = pedido.partition("### ")
+    assert "Saiu da memória" in saiu and "banana" in saiu
+    assert "morango" in depois and "banana" not in depois
