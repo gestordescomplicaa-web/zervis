@@ -59,7 +59,7 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
 
 - **Como:** depois de ensinar algo ao Zé numa conversa: "Ei Zé, transforma isso numa skill."
 - **Esperado:** ele mostra a skill e pede aprovação; aprovada, aparece na página.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026 (pela voz do celular): criou "preparar-meu-dia" com aprovação.
 
 ### Passo 4. As sessões recebem as skills do Zé
 
