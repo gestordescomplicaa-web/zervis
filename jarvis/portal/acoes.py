@@ -574,11 +574,13 @@ class Acoes:
     def skills(self) -> list[dict[str, Any]]:
         sk = self.n.skills
         uso = sk.uso()
+        sessoes = {nome for nome, _ in sk.para_sessoes()}
         ligadas = [
             {
                 "nome": nome,
                 "descricao": descricao,
                 "ligada": True,
+                "sessoes": nome in sessoes,
                 "usos": (uso.get(nome) or {}).get("usos", 0),
             }
             for nome, descricao in sk.listar()

@@ -561,10 +561,19 @@ def test_sessoes_no_terminal_recebem_as_skills_do_usuario(tmp_path: Path) -> Non
     skills = Skills(tmp_path / "skills")
     assert regras_de_skills(skills) == ("", None)  # sem skills, nada muda
     (tmp_path / "skills/deploy").mkdir(parents=True)
+    (tmp_path / "skills/resumo").mkdir(parents=True)
+    (tmp_path / "skills/resumo/SKILL.md").write_text(
+        "---\nname: resumo\ndescription: Resumo do meu dia\n---\n"
+    )
     (tmp_path / "skills/deploy/SKILL.md").write_text(
         "---\nname: deploy\ndescription: Como publicar o site\n---\n\nPasso a passo.\n"
     )
+    assert regras_de_skills(skills) == ("", None)  # só para o Zé: não vai às sessões
+    (tmp_path / "skills/deploy/SKILL.md").write_text(
+        "---\nname: deploy\ndescription: Como publicar o site\nsessoes: sim\n---\n\nPasso.\n"
+    )
     regras = regras_de_skills(skills)
+    assert "resumo" not in regras[0]  # a pessoal continua fora
     eventos = tmp_path / "eventos.jsonl"
     cmd = comando_terminal(
         Sessao("s1", "Loja", str(tmp_path), "claude"), "faz", eventos, None, regras

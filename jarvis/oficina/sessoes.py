@@ -1235,11 +1235,12 @@ def conversa_claude_existe(s: Sessao) -> bool:
 def regras_de_skills(skills: Any) -> tuple[str, Path | None]:
     """O que as sessões recebem das skills do usuário: o aviso com o catálogo e a pasta para ler
     (vazio sem skills). O mesmo para o terminal e para o agente sem tela."""
-    if skills is None or not skills.listar():
+    marcadas = skills.para_sessoes() if skills is not None else []
+    if not marcadas:
         return "", None
     texto = (
         "\nO usuário tem skills: procedimentos do jeito dele. Antes de uma tarefa que uma "
-        f"delas cobre, leia {skills.pasta}/<nome>/SKILL.md e siga.\n" + skills.catalogo()
+        f"delas cobre, leia {skills.pasta}/<nome>/SKILL.md e siga.\n" + skills.catalogo(marcadas)
     )
     return texto, Path(skills.pasta)
 

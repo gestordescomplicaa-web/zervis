@@ -14,6 +14,7 @@ catálogo para `.arquivo/`, onde nada se perde; voltar é mover a pasta de volta
 que vai em toda conversa só carrega o que o usuário de fato usa.
 """
 
+import contextlib
 import difflib
 import json
 import re
@@ -47,6 +48,10 @@ def frente(conteudo: str) -> dict[str, str]:
     return campos
 
 
+def e_para_sessoes(campos: dict[str, str]) -> bool:
+    return campos.get("sessoes", "").strip().lower() in ("sim", "true", "yes")
+
+
 class Skills:
     def __init__(self, pasta: Path) -> None:
         self.pasta = pasta
@@ -71,10 +76,21 @@ class Skills:
             skills.append((arquivo.parent.name, descricao[:LIMITE_LINHA]))
         return skills
 
-    def catalogo(self) -> str:
+    def para_sessoes(self) -> list[tuple[str, str]]:
+        """As skills marcadas "Também nas sessões de código" (`sessoes: sim` no cabeçalho): só
+        elas vão para os agentes de código; uma skill pessoal ("resumo do dia") não tem nada a
+        fazer numa sessão de programação (13/10/2026)."""
+        marcadas = []
+        for nome, descricao in self.listar():
+            with contextlib.suppress(OSError):
+                if e_para_sessoes(frente((self.pasta / nome / "SKILL.md").read_text())):
+                    marcadas.append((nome, descricao))
+        return marcadas
+
+    def catalogo(self, lista: list[tuple[str, str]] | None = None) -> str:
         linhas = ["## Skills (leia a skill antes de uma tarefa que ela cobre)"]
         tamanho = 0
-        for nome, descricao in self.listar():
+        for nome, descricao in self.listar() if lista is None else lista:
             linha = f"- {nome}: {descricao}"
             if tamanho + len(linha) > LIMITE_CATALOGO:
                 linhas.append("- (há mais skills; liste com a ferramenta de skills)")

@@ -4,7 +4,7 @@
 
 PAGINAS.skills = async () => {
   const [s, dosAgentes] = await Promise.all([api("skills"), api("skills/agentes")]);
-  const linhas = s.map((k) => item(esc(k.nome), esc(k.descricao),
+  const linhas = s.map((k) => item(`${esc(k.nome)}${k.sessoes ? ' <span class="etiqueta">Sessões</span>' : ""}`, esc(k.descricao),
     liga(k.ligada, "skill", `data-nome="${esc(k.nome)}"`, "Ligada") + botao("Editar", "skill-editar", `data-nome="${esc(k.nome)}"`, "discreta") + xis("skill-excluir", `data-nome="${esc(k.nome)}"`, "Excluir"), !k.ligada));
   return `${cabeca("Skills", botao("Nova skill", "skill-nova", "", "principal"))}${sub("Procedimentos do seu jeito: o Zé e as sessões seguem antes de agir.")}
     <section class="cartao" id="editor-skill" hidden></section>
@@ -25,7 +25,7 @@ function lerSkill(texto) {
   const campo = (k) => (m[1].match(new RegExp(`^${k}:\\s*(.*)$`, "m")) || [, ""])[1].trim();
   const titulo = (m[2].match(/^#\s+(.*)$/m) || [, ""])[1].trim();
   const corpo = m[2].replace(/^#\s+.*\n+/, "");
-  const campos = { nome: campo("name"), titulo, quando: campo("description"), jeito: "", passos: "", pronto: "" };
+  const campos = { nome: campo("name"), titulo, quando: campo("description"), sessoes: /^(sim|true|yes)$/i.test(campo("sessoes")), jeito: "", passos: "", pronto: "" };
   const partes = corpo.split(/^## /m).filter((p) => p.trim());
   for (const parte of partes) {
     const [titulo, ...resto] = parte.split("\n");
@@ -38,7 +38,7 @@ function lerSkill(texto) {
 
 function montarSkill(c) {
   const lista = (t, numerada) => t.split("\n").map((l) => l.trim()).filter(Boolean).map((l, i) => `${numerada ? `${i + 1}.` : "-"} ${l}`).join("\n");
-  return `---\nname: ${c.nome}\ndescription: ${c.quando.replace(/\s+/g, " ").trim()}\n---\n# ${c.titulo || c.nome}\n\n`
+  return `---\nname: ${c.nome}\ndescription: ${c.quando.replace(/\s+/g, " ").trim()}\n${c.sessoes ? "sessoes: sim\n" : ""}---\n# ${c.titulo || c.nome}\n\n`
     + `## ${SECOES_SKILL.jeito}\n${lista(c.jeito)}\n\n## ${SECOES_SKILL.passos}\n${lista(c.passos, true)}\n\n## ${SECOES_SKILL.pronto}\n${lista(c.pronto)}\n`;
 }
 
@@ -54,7 +54,8 @@ function editorSkill(nome, conteudo, nova) {
       <label>Quando usar<input id="sk-quando" value="${esc(campos.quando)}" placeholder="Quando eu pedir o resumo do dia" autocomplete="off"></label>
       <label>Do meu jeito<textarea id="sk-jeito" rows="3" placeholder="Uma preferência por linha">${esc(campos.jeito)}</textarea></label>
       <label>Passos<textarea id="sk-passos" rows="4" placeholder="Um passo por linha">${esc(campos.passos)}</textarea></label>
-      <label>Pronto quando<textarea id="sk-pronto" rows="2" placeholder="Como saber que terminou">${esc(campos.pronto)}</textarea></label>`
+      <label>Pronto quando<textarea id="sk-pronto" rows="2" placeholder="Como saber que terminou">${esc(campos.pronto)}</textarea></label>
+      <label class="interruptor"><input type="checkbox" id="sk-sessoes" ${campos.sessoes ? "checked" : ""}> Também nas sessões de código</label>`
     : `${nova ? '<label>Nome<input id="sk-titulo" autocomplete="off"></label>' : ""}<textarea id="sk-texto" class="mono editor-texto" rows="16" spellcheck="false">${esc(conteudo)}</textarea>`;
   ed.innerHTML = `<h2>${nova ? "Nova skill" : esc(nome)}</h2>${corpo}
     <div class="linha">${botao("Salvar", "skill-salvar", "", "principal")}${botao("Fechar", "skill-fechar", "", "discreta")}
@@ -64,7 +65,7 @@ function editorSkill(nome, conteudo, nova) {
 
 function conteudoDoEditor(nome) {
   if (skillEditada.texto) return $("sk-texto").value.replace(/^name: .*$/m, `name: ${nome}`);
-  return montarSkill({ nome, titulo: $("sk-titulo")?.value.trim() || skillEditada.titulo, quando: $("sk-quando").value, jeito: $("sk-jeito").value, passos: $("sk-passos").value, pronto: $("sk-pronto").value });
+  return montarSkill({ nome, titulo: $("sk-titulo")?.value.trim() || skillEditada.titulo, quando: $("sk-quando").value, sessoes: $("sk-sessoes")?.checked, jeito: $("sk-jeito").value, passos: $("sk-passos").value, pronto: $("sk-pronto").value });
 }
 
 Object.assign(ACOES, {

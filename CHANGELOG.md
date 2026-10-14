@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Skills: só as marcadas "Também nas sessões de código" vão para os agentes de código; as outras
+  valem só para o Zé.
 - Skills: o editor virou formulário (Nome, Quando usar, Do meu jeito, Passos, Pronto quando); o
   arquivo é montado por trás, e "Editar como texto" continua disponível.
 - Skills: a página mostra também as skills já instaladas no Claude Code e no Codex (só leitura).

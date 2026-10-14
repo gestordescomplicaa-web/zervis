@@ -8,7 +8,7 @@ uma tarefa que uma skill cobre, quem vai fazer lê a skill e segue. Um fato é m
 
 | | Onde fica | Quem usa |
 |---|---|---|
-| **Skills do Zé** | `<dados>/skills/` (página Skills: criar, editar, ligar, excluir) | o cérebro do Zé **e** as sessões de código |
+| **Skills do Zé** | `<dados>/skills/` (página Skills: criar, editar, ligar, excluir) | o cérebro do Zé; as sessões de código só as marcadas "Também nas sessões de código" |
 | **Skills dos agentes** | as pastas `skills` do Claude Code e do Codex da conta em uso | só as sessões daquele agente (o próprio agente as lê); gerenciadas no agente |
 
 No prompt vai só uma linha por skill (nome e descrição); o corpo é lido quando precisa. Skill sem
@@ -33,6 +33,10 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
    skill editada gera o aviso "mudou, leia de novo antes de usar"; desligada, sai da lista com o
    aviso de que não vale mais. Desligar funcionava (o Zé não leu a skill), mas um resumo do dia ele
    sabe fazer sem skill, então o resultado parecia igual.
+5. **Todas as skills do Zé iam para todas as sessões**, inclusive as pessoais ("resumo do dia"), que
+   só ocupam espaço numa sessão de programação. **Corrigido:** opção "Também nas sessões de
+   código" em cada skill (`sessoes: sim` no cabeçalho), desligada por padrão; a lista mostra a
+   etiqueta "Sessões" nas marcadas.
 
 ## Passos
 
@@ -63,8 +67,9 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
 
 ### Passo 4. As sessões recebem as skills do Zé
 
-- **Como:** numa sessão de código, perguntar ao agente "quais skills do usuário você tem?".
-- **Esperado:** ele lista as skills do Zé (e as do próprio agente).
+- **Como:** marcar uma skill "Também nas sessões de código"; numa sessão (reaberta), perguntar ao
+  agente "quais skills do usuário você tem?".
+- **Esperado:** ele lista só a skill marcada (e as do próprio agente), não as pessoais.
 - **Resultado:** ⬜
 
 ### Passo 5. Skills dos agentes
