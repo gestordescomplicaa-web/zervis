@@ -22,7 +22,7 @@ respostas faladas trazem uma coisa só (ou no máximo três), nunca a lista inte
 - **Como:** "Ei Zé, comecei a escrever o post do blog sobre o Zérvis."
 - **Esperado:** a frente aparece em Foco como **Agora**, e o Zé pergunta (ou registra) o próximo
   passo.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026. A frente "Escrever um blog sobre o Zé" ficou ativa.
 
 ### Passo 2. Próximo passo e "feito"
 - **Como:** "O próximo passo é escrever a introdução." Depois: "Ei Zé, fiz a introdução."
