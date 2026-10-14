@@ -140,6 +140,8 @@ def test_essencia_e_seguranca_na_zona_protegida() -> None:
         "jarvis/atividade.py",
         "jarvis/transporte/websocket.py",
         "jarvis/cerebro/codex_rpc.py",
+        "jarvis/cerebro/codex.py",
+        "jarvis/cerebro/codex_mcp.py",
     ):
         assert arquivo in PROTEGIDOS and (raiz / arquivo).is_file(), arquivo
     for pasta in ("jarvis/persona/", "systemd/"):

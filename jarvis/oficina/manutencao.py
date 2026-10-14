@@ -40,6 +40,7 @@ ORIGEM = "manutencao"
 PROTEGIDOS = (
     "jarvis/cerebro/ferramentas/__init__.py",  # LEITURA: o que passa sem aprovação
     "jarvis/cerebro/claude.py",  # can_use_tool: a aprovação falada
+    "jarvis/cerebro/codex.py",  # decide autorizar e executar as ferramentas do Codex
     "jarvis/sistema/politica.py",
     "jarvis/sistema/catalogo.py",  # níveis de risco do Omarchy
     "jarvis/imersivo/servidor.py",  # fronteira HTTP dos pedidos do usuário
