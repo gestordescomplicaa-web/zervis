@@ -33,7 +33,7 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 - **Como:** + → Nome "Teste novo", Projeto novo, pasta `teste-novo`, Claude. Criar; pedir ao
   agente "crie um README dizendo oi".
 - **Esperado:** a pasta nasce na raiz de projetos, o agente trabalha nela.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026. Nasceu `~/projetos/Teste-novo` com o README.
 
 ### Passo 2. Modelo da sessão
 - **Como:** no cabeçalho da sessão, escolher o modelo; pedir algo.
