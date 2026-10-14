@@ -24,6 +24,7 @@ from jarvis.cerebro import acesso, conectores, contas, modelos, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades import revisao
 from jarvis.habilidades.skills import SkillErro, frente
+from jarvis.memoria import aimemory
 from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
 from jarvis.oficina.sessoes import Sessao, SessaoErro
@@ -598,6 +599,7 @@ class Acoes:
             "limites": dict(m.limites),
             # O que o Zé aprendeu sozinho numa conversa e espera a pessoa (memória e skill).
             "sugestoes": [revisao.resumo_dict(p) for p in self.n.pendencias.listar()],
+            "projetos": aimemory.situacao(),  # a memória das sessões, por projeto (ai-memory)
         }
 
     def decidir_sugestao(self, dados: dict[str, Any]) -> dict[str, Any]:

@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- Memória: cartão "Memória dos projetos" com o estado do ai-memory e quantas páginas ele guarda.
 - Memória: o que muda no meio da conversa (painel, aprovação, voz) vale já no próximo pedido.
 - Memória: as sugestões que o Zé aprende numa conversa aparecem no painel, com Aprovar e Descartar.
 - OmniRoute no painel: Cérebro → OmniRoute, com o endereço e a chave do OmniRoute de quem usa

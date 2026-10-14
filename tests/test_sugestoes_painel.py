@@ -47,3 +47,17 @@ def test_descartar_tira_sem_gravar(tmp_path: Path) -> None:
     assert r["aviso"] == "Descartada." and r["usuario"] == [] and r["sugestoes"] == []
     with pytest.raises(PedidoInvalido):
         a.decidir_sugestao({"id": id_, "aprovar": True})
+
+
+def test_memoria_dos_projetos_conta_as_paginas(tmp_path: Path) -> None:
+    import sqlite3
+
+    from jarvis.memoria import aimemory
+
+    (tmp_path / "db").mkdir()
+    with sqlite3.connect(tmp_path / "db" / "memory.sqlite") as con:
+        con.execute("create table pages (id integer, is_latest integer)")
+        con.executemany("insert into pages values (?, ?)", [(1, 1), (2, 1), (3, 0)])
+    s = aimemory.situacao("http://127.0.0.1:1", tmp_path)
+    assert s == {"ativa": False, "paginas": 2}
+    assert aimemory.situacao("http://127.0.0.1:1", tmp_path / "nada")["paginas"] is None

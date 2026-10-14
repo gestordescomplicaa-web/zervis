@@ -8,6 +8,7 @@
 |---|---|---|
 | **Memória curta** | Fatos curtos e aprovados, que vão em **toda** conversa: "Sobre você" (preferências, jeito de trabalhar) e "Sobre a máquina e o Zé" (notas do ambiente). Tem limite de tamanho: cheia, o Zé resume antes de gravar | Página Memória |
 | **Memória longa** | Tudo o que já foi conversado: conversas por dia, linha do tempo, notas do dia e o ai-memory dos projetos. Não vai em toda conversa: o Zé **busca** quando precisa | Conversa (o dia de hoje); por voz ("o que conversamos ontem?") |
+| **Memória dos projetos** | O que cada sessão de código fez, guardado por projeto pelo ai-memory: volta na próxima sessão daquele projeto. Cada sessão também mantém a própria conversa (retomada depois de reiniciar) e lê o `CLAUDE.md`/`AGENTS.md` do projeto | Página Memória (estado e páginas guardadas); a conversa, em cada sessão |
 | **Sugestões** | O que o Zé percebeu numa conversa (uma correção, uma preferência) e propõe guardar como memória ou skill. Só entra com a aprovação da pessoa | Página Memória |
 
 Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (área 4).
@@ -29,6 +30,8 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 4. **Apagar logo depois de reiniciar não chegava.** O cérebro conecta assim que o Zé sobe e tira a
    foto da memória ali; a pessoa apagou tudo depois e o Zé ainda dizia "morango". **Corrigido:** o
    Zé guarda a foto exata que o cérebro recebeu, no momento em que recebe, e compara a cada pedido.
+5. **A memória das sessões não aparecia em lugar nenhum** (o ai-memory funciona: 427 páginas em
+   13/10/2026). **Feito:** cartão "Memória dos projetos" na página, com o estado e quantas páginas.
 
 ## Passos
 
@@ -57,4 +60,5 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 
 - **Como:** "Ei Zé, o que conversamos hoje sobre o OmniRoute?"
 - **Esperado:** ele acha a conversa de hoje e resume.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026 (no uso): "e ontem, você tem algum registro do que conversamos?"
+  trouxe o resumo certo de segunda; "antes de ontem" disse que não havia conversa nesse dia.

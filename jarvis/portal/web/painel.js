@@ -130,8 +130,11 @@ const PAGINAS = {
     const sugestoes = m.sugestoes.length ? cartao("Sugestões", `${sub("O que o Zé aprendeu numa conversa e espera a sua aprovação.")}
       <div class="itens">${m.sugestoes.map((s) => item(s.tipo === "skill" ? "Skill" : "Memória", esc(s.resumo),
         botao("Aprovar", "sugestao", `data-id="${esc(s.id)}" data-aprovar="1"`, "principal") + botao("Descartar", "sugestao", `data-id="${esc(s.id)}"`, "discreta"))).join("")}</div>`) : "";
+    const p = m.projetos || {};
+    const projetos = cartao(`Memória dos projetos <span class="etiqueta ${p.ativa ? "bom" : "alerta"}">${p.ativa ? "Conectada" : "Desligada"}</span>`,
+      `${sub("O que as sessões de código fazem fica guardado por projeto e volta na próxima sessão (ai-memory).")}${p.paginas != null ? `<p class="nota">${p.paginas} páginas guardadas.</p>` : ""}`);
     return `${cabeca("Memória")}${sub("O que o Zé sabe em toda conversa.")}
-      ${sugestoes}${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}`;
+      ${sugestoes}${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}${projetos}`;
   },
 
   async skills() {

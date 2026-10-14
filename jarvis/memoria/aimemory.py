@@ -150,6 +150,24 @@ class AiMemory:
             self.filho.parar()
 
 
+def situacao(url: str = URL, dados: Path = DADOS) -> dict[str, Any]:
+    """Para a página Memória: se a memória dos projetos está no ar e quantas páginas guarda
+    (lido só para contar, sem mexer no banco do ai-memory)."""
+    import sqlite3
+
+    paginas = None
+    banco = dados / "db" / "memory.sqlite"
+    if banco.is_file():
+        try:
+            with sqlite3.connect(f"file:{banco}?mode=ro", uri=True, timeout=1) as con:
+                paginas = int(
+                    con.execute("select count(*) from pages where is_latest").fetchone()[0]
+                )
+        except sqlite3.Error:
+            paginas = None
+    return {"ativa": no_ar(url), "paginas": paginas}
+
+
 def hooks_claude(url: str = URL, dados: Path = DADOS) -> dict[str, Any]:
     """As configurações que ligam o ai-memory numa sessão do Claude (o `settings` do Agent SDK);
     vazio sem o ai-memory no ar, e a sessão segue sem memória longa."""
