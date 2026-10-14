@@ -50,17 +50,17 @@ quando precisa), memória dos projetos (ai-memory, por sessão) e sugestões (s�
 - ✅ Sugestões no painel, com Aprovar e Descartar
 - ✅ Memória dos projetos (ai-memory) com estado e páginas na página
 
-## 4. Skills
+## 4. Skills — **Pronta** (13/10/2026, `docs/auditoria/04-skills.md`)
 
-Conceito: um procedimento do jeito do usuário que o Zé (ou uma sessão) lê antes de agir. Um fato é
-memória, não skill.
+Conceito: um procedimento do seu jeito, lido antes de agir. Skills do Zé (página Skills) valem
+para o cérebro; só as marcadas "Também nas sessões de código" vão para os agentes. Skills dos
+agentes (Claude Code, Codex) aparecem na página só para leitura.
 
-- ⬜ Nova skill pelo painel; editar, ligar/desligar, excluir
-- ⬜ "Zé, transforma isso numa skill" (com aprovação falada)
-- ⬜ O Zé lê a skill antes de uma tarefa que ela cobre
-- 🟡 Sessões no terminal recebem as skills (corrigido em 13/10/2026)
-- 🟡 Curadoria: sem uso há 30 dias, vai para o arquivo
-- Em andamento na auditoria 4 (`docs/auditoria/04-skills.md`).
+- ✅ Criar pelo formulário e pela voz; o Zé lê a skill antes de agir
+- ✅ Editar, desligar e excluir valem já na conversa em andamento
+- ✅ Só as marcadas chegam às sessões, como skill nativa do agente (`.claude/skills`,
+  `.agents/skills`), mesmo ao retomar a conversa
+- ✅ Skills dos agentes visíveis na página
 - Ideia para depois: "Instalar skill" a partir de um link do GitHub ou de um registro
   (anthropics/skills, skills.sh), mostrando o conteúdo, verificando e pedindo aprovação; nunca
   rodar script sozinho.

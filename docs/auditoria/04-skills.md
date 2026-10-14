@@ -77,10 +77,13 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
 - **Como:** marcar uma skill "Também nas sessões de código"; numa sessão (reaberta), perguntar ao
   agente "quais skills do usuário você tem?".
 - **Esperado:** ele lista só a skill marcada (e as do próprio agente), não as pessoais.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026, depois do achado 6: o Codex confirmou "Tenho a skill
+  padrao-de-commit"; as pessoais não aparecem.
 
 ### Passo 5. Skills dos agentes
 
 - **Como:** abrir Skills e conferir o cartão "Skills dos agentes".
 - **Esperado:** aparecem as skills do Claude Code (e do Codex, se houver) da conta em uso.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026: as 14 do Claude Code aparecem, com a etiqueta do agente.
+
+**Área fechada em 13/10/2026.**
