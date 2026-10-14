@@ -28,6 +28,11 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
    do começo da conversa: a pessoa criou "resumo-do-dia", pediu o resumo, e o Zé respondeu pelo
    histórico, sem ler a skill. **Corrigido:** a mesma atualização da memória agora leva a lista de
    skills nova (e diz o que saiu).
+4. **Editar uma skill não valia na conversa em andamento.** A pessoa mudou o "Pronto quando" e o Zé
+   seguiu a versão que já tinha lido, porque a lista só mostra nome e descrição. **Corrigido:**
+   skill editada gera o aviso "mudou, leia de novo antes de usar"; desligada, sai da lista com o
+   aviso de que não vale mais. Desligar funcionava (o Zé não leu a skill), mas um resumo do dia ele
+   sabe fazer sem skill, então o resultado parecia igual.
 
 ## Passos
 
@@ -45,7 +50,8 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
 
 - **Como:** editar uma regra da skill e pedir de novo; desligar e pedir de novo; excluir.
 - **Esperado:** a edição vale; desligada, o Zé não usa; excluída, some.
-- **Resultado:** ⬜
+- **Resultado:** ❌ 13/10/2026, primeira tentativa: a edição não valeu (achado 4); desligada, não
+  leu a skill, mas a resposta pareceu igual. Corrigido; para refazer.
 
 ### Passo 3. Criar pela voz
 

@@ -225,6 +225,18 @@ def foto_da_memoria(memoria: Any, skills: Any = None) -> str:
     return texto + ("\n\n" + str(skills.catalogo()) if skills is not None else "")
 
 
+def versoes_das_skills(skills: Any) -> dict[str, float]:
+    """Quando cada skill ligada mudou pela última vez (o SKILL.md): para saber se o cérebro tem
+    uma versão velha na conversa."""
+    if skills is None or not hasattr(skills, "listar"):
+        return {}
+    versoes = {}
+    for nome, _ in skills.listar():
+        with contextlib.suppress(OSError):
+            versoes[nome] = (Path(skills.pasta) / nome / "SKILL.md").stat().st_mtime
+    return versoes
+
+
 def nivel_de_pico(audio: bytes, janela: int = 1600, segundos: float = 1.2) -> float:
     """O volume mais alto (dBFS) em janelas de 100 ms no fim do trecho: o chamado de verdade é
     alguém falando ao microfone; silêncio e som de fundo ficam bem abaixo."""
@@ -341,6 +353,7 @@ class Nucleo:
         self._meta: dict[str, dict[str, Any]] = {}
         self._ultimo_dito = ""  # a última fala inteira, para "repete"
         self._memoria_vista: str | None = None  # a memória que o cérebro já tem nesta conversa
+        self._skills_vistas: dict[str, float] = {}  # e a versão de cada skill
         self._dito_marca: int | None = None
         self._oferta_ate = 0.0
         self._ultimo_de_sessao: dict[str, Any] | None = None
@@ -1204,6 +1217,7 @@ class Nucleo:
         cérebro conecta ao subir, antes do primeiro pedido (13/10/2026: a pessoa apagou a memória
         depois do reinício e o Zé ainda respondia com o que estava lá)."""
         self._memoria_vista = self._foto_simples()
+        self._skills_vistas = versoes_das_skills(getattr(self, "skills", None))
         return self._memoria_vista
 
     def _com_memoria(self, pedido: str) -> str:
@@ -1216,7 +1230,11 @@ class Nucleo:
             return pedido
         atual = foto_da_memoria(memoria, getattr(self, "skills", None))
         vista, self._memoria_vista = getattr(self, "_memoria_vista", None), atual
-        if vista is None or vista == atual:
+        # Skill editada (o conteúdo, não só a descrição): o que o cérebro leu antes ficou velho.
+        versoes = versoes_das_skills(getattr(self, "skills", None))
+        antes, self._skills_vistas = getattr(self, "_skills_vistas", None) or {}, versoes
+        mudou = sorted(n for n, v in versoes.items() if n in antes and antes[n] != v)
+        if vista is None or (vista == atual and not mudou):
             return pedido
 
         # O que saiu precisa ser dito: sem isso, o cérebro junta o velho e o novo (13/10/2026:
@@ -1232,6 +1250,12 @@ class Nucleo:
             if saiu
             else ""
         )
+        if mudou:
+            aviso += (
+                "Skills que mudaram desde o começo da conversa (leia de novo antes de usar): "
+                + ", ".join(mudou)
+                + "\n\n"
+            )
         return (
             "[Memória e skills atualizadas agora: valem no lugar da foto do começo da conversa]\n"
             f"{aviso}{atual}\n\n{pedido}"

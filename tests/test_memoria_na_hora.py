@@ -67,3 +67,24 @@ def test_skill_criada_no_meio_da_conversa_chega_ao_cerebro(tmp_path: Path) -> No
     )
     pedido = Nucleo._com_memoria(n, "faz meu resumo do dia")  # type: ignore[arg-type]
     assert "resumo-do-dia: Quando eu pedir o resumo do dia" in pedido
+
+
+def test_skill_editada_avisa_para_ler_de_novo(tmp_path: Path) -> None:
+    """13/10/2026: a pessoa mudou o "Pronto quando" e o Zé seguiu a versão que já tinha lido."""
+    import os
+
+    from jarvis.habilidades.skills import Skills
+
+    skills = Skills(tmp_path / "skills")
+    (tmp_path / "skills/resumo-do-dia").mkdir(parents=True)
+    arquivo = tmp_path / "skills/resumo-do-dia/SKILL.md"
+    arquivo.write_text("---\nname: resumo-do-dia\ndescription: Quando eu pedir o resumo\n---\nA\n")
+    memoria = Memoria(tmp_path / "m", {"usuario": 2000, "jarvis": 2000})
+    n = SimpleNamespace(memoria=memoria, skills=skills, _memoria_vista=None, _skills_vistas={})
+    n._foto_simples = lambda: Nucleo._foto_simples(n)  # type: ignore[arg-type]
+    Nucleo._foto_do_cerebro(n)  # type: ignore[arg-type]
+    arquivo.write_text("---\nname: resumo-do-dia\ndescription: Quando eu pedir o resumo\n---\nB\n")
+    os.utime(arquivo, (arquivo.stat().st_atime, arquivo.stat().st_mtime + 5))
+    pedido = Nucleo._com_memoria(n, "faz meu resumo")  # type: ignore[arg-type]
+    assert "leia de novo antes de usar): resumo-do-dia" in pedido
+    assert Nucleo._com_memoria(n, "de novo") == "de novo"  # type: ignore[arg-type]  # avisa uma vez
