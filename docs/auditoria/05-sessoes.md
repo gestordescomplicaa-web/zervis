@@ -34,7 +34,7 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 ### Passo 2. Modelo da sessão
 - **Como:** no cabeçalho da sessão, escolher o modelo; pedir algo.
 - **Esperado:** a sessão passa a usar o modelo escolhido, com a versão no nome.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026. Haiku 4.5 escolhido no cabeçalho; o agente reabriu nele.
 
 ### Passo 3. Anexos, Arquivos e Mencionar
 - **Como:** anexar uma imagem (+, arrastar ou colar); abrir Arquivos, ver um arquivo, Mencionar.
