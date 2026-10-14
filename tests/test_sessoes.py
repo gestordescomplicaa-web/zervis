@@ -554,34 +554,20 @@ def test_a_passagem_entra_como_contexto_sem_gastar_um_turno(tmp_path: Path) -> N
     assert not any(c.startswith("[Passagem") for c in cmd)
 
 
-def test_sessoes_no_terminal_recebem_as_skills_do_usuario(tmp_path: Path) -> None:
+def test_so_as_skills_marcadas_vao_para_as_sessoes(tmp_path: Path) -> None:
+    """Uma skill pessoal ("resumo do dia") não vai para as sessões de código (13/10/2026)."""
     from jarvis.habilidades.skills import Skills
-    from jarvis.oficina.sessoes import comando_terminal, regras_de_skills
+    from jarvis.oficina.sessoes import regras_de_skills
 
     skills = Skills(tmp_path / "skills")
     assert regras_de_skills(skills) == ("", None)  # sem skills, nada muda
-    (tmp_path / "skills/deploy").mkdir(parents=True)
-    (tmp_path / "skills/resumo").mkdir(parents=True)
-    (tmp_path / "skills/resumo/SKILL.md").write_text(
-        "---\nname: resumo\ndescription: Resumo do meu dia\n---\n"
-    )
-    (tmp_path / "skills/deploy/SKILL.md").write_text(
-        "---\nname: deploy\ndescription: Como publicar o site\n---\n\nPasso a passo.\n"
-    )
-    assert regras_de_skills(skills) == ("", None)  # só para o Zé: não vai às sessões
-    (tmp_path / "skills/deploy/SKILL.md").write_text(
-        "---\nname: deploy\ndescription: Como publicar o site\nsessoes: sim\n---\n\nPasso.\n"
-    )
-    regras = regras_de_skills(skills)
-    assert "resumo" not in regras[0]  # a pessoal continua fora
-    eventos = tmp_path / "eventos.jsonl"
-    cmd = comando_terminal(
-        Sessao("s1", "Loja", str(tmp_path), "claude"), "faz", eventos, None, regras
-    )
-    assert cmd[1:3] == ["--add-dir", str(tmp_path / "skills")] and cmd[-1] == "faz"
-    assert "Como publicar o site" in cmd[cmd.index("--append-system-prompt") + 1]
-    cmd = comando_terminal(Sessao("s2", "Loja", str(tmp_path), "codex"), "", eventos, None, regras)
-    assert not any(c.startswith("developer_instructions=") for c in cmd)  # vão pela pasta
+    for nome, marca in (("resumo", ""), ("deploy", "sessoes: sim\n")):
+        (tmp_path / f"skills/{nome}").mkdir(parents=True)
+        (tmp_path / f"skills/{nome}/SKILL.md").write_text(
+            f"---\nname: {nome}\ndescription: Skill {nome}\n{marca}---\n"
+        )
+    texto, _ = regras_de_skills(skills)
+    assert "deploy" in texto and "resumo" not in texto
 
 
 def test_codex_acha_as_skills_marcadas_na_pasta_do_projeto(tmp_path: Path) -> None:
@@ -601,9 +587,10 @@ def test_codex_acha_as_skills_marcadas_na_pasta_do_projeto(tmp_path: Path) -> No
     projeto.mkdir()
     subprocess.run(["git", "init", "-q", str(projeto)], check=True)  # noqa: S603, S607
     ligar_skills_no_projeto(projeto, skills)
-    atalho = projeto / ".agents/skills/zervis-deploy"
-    assert atalho.is_symlink() and (atalho / "SKILL.md").is_file()
-    assert "/.agents/skills/zervis-*" in (projeto / ".git/info/exclude").read_text()
+    for pasta in (".claude/skills", ".agents/skills"):  # o Claude Code e o Codex
+        atalho = projeto / pasta / "zervis-deploy"
+        assert atalho.is_symlink() and (atalho / "SKILL.md").is_file()
+        assert f"/{pasta}/zervis-*" in (projeto / ".git/info/exclude").read_text()
     status = subprocess.run(  # noqa: S603
         ["git", "-C", str(projeto), "status", "--porcelain"],  # noqa: S607
         capture_output=True,
@@ -612,7 +599,7 @@ def test_codex_acha_as_skills_marcadas_na_pasta_do_projeto(tmp_path: Path) -> No
     assert status.stdout == ""  # nada para commit
     (tmp_path / "skills/deploy/SKILL.md").write_text("---\nname: deploy\ndescription: x\n---\n")
     ligar_skills_no_projeto(projeto, skills)  # desmarcada: o atalho sai, e as pastas vazias
-    assert not (projeto / ".agents").exists()
+    assert not (projeto / ".agents").exists() and not (projeto / ".claude").exists()
 
 
 def test_passagem_sem_as_notas_do_ze(tmp_path: Path, raiz: Path) -> None:

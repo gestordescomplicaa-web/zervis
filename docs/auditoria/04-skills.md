@@ -41,7 +41,9 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
    Codex mantém as instruções do começo e ignora as novas; mas acha skills em
    `<projeto>/.agents/skills` a cada abertura, inclusive por atalho. **Corrigido:** ao abrir uma
    sessão do Codex, o Zé mantém atalhos `zervis-<nome>` para as skills marcadas (e tira os que
-   sobraram), fora do Git do projeto pela exclusão local (`info/exclude`).
+   sobraram), fora do Git do projeto pela exclusão local (`info/exclude`). O mesmo vale para o
+   Claude Code (`.claude/skills`): nas instruções, ele recebia a skill mas não a contava como
+   skill; com o atalho, ela aparece entre as dele (testado).
 
 ## Passos
 
