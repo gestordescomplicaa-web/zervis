@@ -37,7 +37,9 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
   Passos "O que ficou pendente" e "Lembretes de amanhã"; Pronto quando "No máximo 4 frases". Salvar.
   Depois: "Ei Zé, faz meu resumo do dia."
 - **Esperado:** o Zé lê a skill antes de responder (o registro mostra) e segue o passo a passo.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026, depois do achado 3. A primeira vez (22:04) respondeu pelo
+  histórico, sem ler; depois da correção, a Atividade registra "skills_ver: resumo-do-dia" e o
+  contador de uso marcou 1.
 
 ### Passo 2. Editar, desligar e excluir
 
