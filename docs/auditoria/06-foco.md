@@ -27,7 +27,7 @@ respostas faladas trazem uma coisa só (ou no máximo três), nunca a lista inte
 ### Passo 2. Próximo passo e "feito"
 - **Como:** "O próximo passo é escrever a introdução." Depois: "Ei Zé, fiz a introdução."
 - **Esperado:** o próximo passo aparece na frente; "feito" o marca e pede o seguinte.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026.
 
 ### Passo 3. Onde eu estava
 - **Como:** "Ei Zé, onde eu estava?"
