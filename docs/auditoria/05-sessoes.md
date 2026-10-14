@@ -44,7 +44,8 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 ### Passo 4. Cópia isolada
 - **Como:** criar uma sessão com Cópia isolada num projeto com Git; pedir uma mudança; aprovar.
 - **Esperado:** o projeto só muda depois de aprovar; descartar joga a mudança fora.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026. "Adiciona NOTAS.md" (f4bf0f1) entrou no projeto ao aplicar; o
+  segundo commit (9d1baaa) foi descartado e não está nem na cópia nem no projeto.
 
 ### Passo 5. Três trabalhando
 - **Como:** pedir trabalho a três sessões e tentar uma quarta.
