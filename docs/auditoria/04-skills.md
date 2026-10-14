@@ -19,13 +19,18 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
 1. **As skills que a pessoa já tinha nos agentes não apareciam** (15 no Claude Code). As sessões
    já as usavam, mas o painel não mostrava, e parecia que não havia skill nenhuma. **Feito em
    13/10/2026:** cartão "Skills dos agentes" na página, só leitura, com o agente de cada uma.
+2. **O editor mostrava o arquivo cru** (cabeçalho `---`, `name:`, `##`), coisa de programador.
+   **Corrigido:** formulário com Nome, Quando usar, Do meu jeito, Passos e Pronto quando; o
+   `SKILL.md` é montado por trás. "Editar como texto" continua para quem quiser; uma skill fora do
+   modelo abre direto como texto, para não perder nada. A página Skills passou a carregar só quando
+   aberta.
 
 ## Passos
 
 ### Passo 1. Criar uma skill pelo painel e o Zé usar
 
-- **Como:** Nova skill → nome `resumo-do-dia`, com o passo a passo do seu resumo (por exemplo:
-  "comece pelo que ficou pendente, depois os lembretes de amanhã, no máximo 4 frases"). Salvar.
+- **Como:** Nova skill → Nome "Resumo do dia"; Quando usar "Quando eu pedir o resumo do dia";
+  Passos "O que ficou pendente" e "Lembretes de amanhã"; Pronto quando "No máximo 4 frases". Salvar.
   Depois: "Ei Zé, faz meu resumo do dia."
 - **Esperado:** o Zé lê a skill antes de responder (o registro mostra) e segue o passo a passo.
 - **Resultado:** ⬜

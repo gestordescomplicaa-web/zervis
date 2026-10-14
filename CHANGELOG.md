@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Skills: o editor virou formulário (Nome, Quando usar, Do meu jeito, Passos, Pronto quando); o
+  arquivo é montado por trás, e "Editar como texto" continua disponível.
 - Skills: a página mostra também as skills já instaladas no Claude Code e no Codex (só leitura).
 - Memória: cartão "Memória dos projetos" com o estado do ai-memory e quantas páginas ele guarda.
 - Memória: o que muda no meio da conversa (painel, aprovação, voz) vale já no próximo pedido.

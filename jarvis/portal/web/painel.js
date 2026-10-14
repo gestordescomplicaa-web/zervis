@@ -137,16 +137,6 @@ const PAGINAS = {
       ${sugestoes}${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}${projetos}`;
   },
 
-  async skills() {
-    const [s, dosAgentes] = await Promise.all([api("skills"), api("skills/agentes")]);
-    const linhas = s.map((k) => item(esc(k.nome), esc(k.descricao),
-      liga(k.ligada, "skill", `data-nome="${esc(k.nome)}"`, "Ligada") + botao("Editar", "skill-editar", `data-nome="${esc(k.nome)}"`, "discreta") + xis("skill-excluir", `data-nome="${esc(k.nome)}"`, "Excluir"), !k.ligada));
-    return `${cabeca("Skills", botao("Nova skill", "skill-nova", "", "principal"))}${sub("Procedimentos do seu jeito: o Zé e as sessões seguem antes de agir.")}
-      <section class="cartao" id="editor-skill" hidden></section>
-      ${s.length ? `<div class="itens">${linhas.join("")}</div>` : vazio("Nenhuma skill ainda.")}
-      ${dosAgentes.length ? cartao("Skills dos agentes", `${sub("Instaladas no Claude Code e no Codex. Valem nas sessões de código daquele agente; gerenciadas no próprio agente.")}
-        <div class="itens">${dosAgentes.map((k) => item(`${esc(k.nome)} <span class="etiqueta">${k.agente === "codex" ? "Codex" : "Claude"}</span>`, esc(k.descricao))).join("")}</div>`) : ""}`;
-  },
 
 
   async modelos() {
@@ -649,34 +639,6 @@ function desenharEscuta() {
 
 const lerModelo = () => ({ ligada: document.querySelector('[data-mudar="via-ligada"]').checked, motor: modelo.motor, modelo: $("modelo").value.trim(), endereco: $("endereco").value.trim() });
 
-// --- Skills ---
-
-const MODELO_SKILL = (nome) => `---
-name: ${nome}
-description: Quando usar (uma linha).
----
-# ${nome}
-
-## Do meu jeito
--
-
-## Passos
-1.
-
-## Pronto quando
--
-`;
-
-function editorSkill(nome, texto, nova) {
-  const ed = $("editor-skill");
-  ed.hidden = false;
-  ed.innerHTML = `<h2>${nova ? "Nova skill" : esc(nome)}</h2>
-    ${nova ? '<label>Nome<input id="sk-nome" class="mono" placeholder="publicar-no-site" autocomplete="off" spellcheck="false"></label>' : ""}
-    <textarea id="sk-texto" class="mono editor-texto" rows="16" spellcheck="false">${esc(texto)}</textarea>
-    <div class="linha">${botao("Salvar", "skill-salvar", `data-nome="${esc(nome)}"`, "principal")}${botao("Fechar", "skill-fechar", "", "discreta")}<span class="resultado" id="sk-resultado"></span></div>`;
-  ed.scrollIntoView({ block: "nearest" });
-}
-
 // --- Sessões: o terminal do agente, com pasta, anexos e explorador ---
 
 let sessaoAberta = null;
@@ -1071,17 +1033,6 @@ const ACOES = {
     toast("Guardado."); await recarregar();
   },
   // skills
-  "skill-nova": () => editorSkill("", MODELO_SKILL("nome-da-skill"), true),
-  "skill-editar": async (b) => { const k = await api("skill/ver", { nome: b.dataset.nome }); editorSkill(k.nome, k.conteudo, false); },
-  "skill-fechar": () => { $("editor-skill").hidden = true; },
-  "skill-salvar": async (b) => {
-    const nome = b.dataset.nome || $("sk-nome").value.trim();
-    let texto = $("sk-texto").value;
-    if (!b.dataset.nome) texto = texto.replace(/^name: .*$/m, "name: " + nome).replace(/^# nome-da-skill$/m, "# " + nome);
-    await ocupado(b, () => api("skill/salvar", { nome, conteudo: texto }));
-    toast("Skill salva."); await recarregar();
-  },
-  "skill-excluir": (b) => confirmar(b, "Excluir?", async () => { await api("skill/excluir", { nome: b.dataset.nome }); toast("Excluída."); await recarregar(); }),
   // modelos
   motor: (b) => {
     modelo.motor = b.dataset.motor;
@@ -1259,7 +1210,6 @@ const ESCOLHAS = {
 
 const MUDAR = {
   automacao: async (el) => { await api("automacao/ativar", { id: el.dataset.id, ativo: el.checked }); await recarregar(); },
-  skill: async (el) => { await api("skill/ligar", { nome: el.dataset.nome, ligada: el.checked }); toast(el.checked ? "Ligada." : "Desligada."); await recarregar(); },
   "via-ligada": () => {},
   "cerebro-modelo": async (el) => {
     el.disabled = true; toast("Testando o modelo…");
@@ -1333,7 +1283,7 @@ conteudo.addEventListener("drop", (ev) => {
 // --- navegação e batimento ---
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
-const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js", conectores: "/paginas/conectores.js", conversa: "/paginas/conversa.js" };
+const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js", conectores: "/paginas/conectores.js", conversa: "/paginas/conversa.js", skills: "/paginas/skills.js" };
 const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que ocupam a tela
 const carregados = {};
 const carregarPagina = (nome) => (carregados[nome] ??= new Promise((ok, erro) => {
