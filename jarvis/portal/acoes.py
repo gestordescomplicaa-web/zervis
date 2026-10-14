@@ -24,6 +24,7 @@ from jarvis.cerebro import acesso, conectores, contas, modelos, rapido
 from jarvis.cerebro.mcp_externo import McpInvalido
 from jarvis.habilidades import revisao
 from jarvis.habilidades.skills import SkillErro, frente
+from jarvis.habilidades.skills import dos_agentes as skills_dos_agentes
 from jarvis.memoria import aimemory
 from jarvis.memoria.curta import MemoriaErro, Mudanca
 from jarvis.oficina import arquivos
@@ -158,6 +159,7 @@ class Acoes:
             "escuta": self.escuta,
             "skills": self.skills,
             "memoria": self.memoria,
+            "skills/agentes": skills_dos_agentes,
             "automacoes": self.automacoes,
             "foco": self.foco,
             "sessoes": self.sessoes,

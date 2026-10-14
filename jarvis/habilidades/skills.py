@@ -210,3 +210,51 @@ class Skills:
         temporario = base / "SKILL.md.next"
         temporario.write_text(conteudo)
         temporario.replace(base / "SKILL.md")
+
+
+def _descricao(conteudo: str) -> tuple[str, str]:
+    """Nome e descrição do front matter de uma skill de agente, inclusive a descrição em várias
+    linhas (`description: >`), que o padrão permite."""
+    achado = FRENTE.match(conteudo)
+    if not achado:
+        return "", ""
+    nome, descricao, juntando = "", "", False
+    for linha in achado.group(1).splitlines():
+        if juntando and linha.startswith((" ", "\t")):
+            descricao = f"{descricao} {linha.strip()}".strip()
+            continue
+        juntando = False
+        chave, _, valor = linha.partition(":")
+        valor = valor.strip().strip("\"'")
+        if chave.strip() == "name":
+            nome = valor
+        elif chave.strip() == "description":
+            juntando = valor in (">", "|", ">-", "|-")
+            descricao = "" if juntando else valor
+    return nome, descricao
+
+
+def dos_agentes() -> list[dict[str, str]]:
+    """As skills que a pessoa já tem nos agentes (as pastas `skills` do Claude Code e do Codex da
+    conta em uso): as sessões de código daquele agente já as usam sozinhas. Só leitura."""
+    from jarvis.cerebro import contas
+
+    saida = []
+    for agente in ("claude", "codex"):
+        try:
+            pasta = contas.Contas().em_uso(agente).onde / "skills"
+        except contas.ContaErro:
+            continue
+        for arquivo in sorted(pasta.glob("*/SKILL.md")) if pasta.is_dir() else []:
+            try:
+                nome, descricao = _descricao(arquivo.read_text(errors="replace")[:LIMITE_SKILL])
+            except OSError:
+                continue
+            saida.append(
+                {
+                    "agente": agente,
+                    "nome": nome or arquivo.parent.name,
+                    "descricao": descricao[:LIMITE_LINHA],
+                }
+            )
+    return saida

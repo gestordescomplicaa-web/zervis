@@ -138,12 +138,14 @@ const PAGINAS = {
   },
 
   async skills() {
-    const s = await api("skills");
+    const [s, dosAgentes] = await Promise.all([api("skills"), api("skills/agentes")]);
     const linhas = s.map((k) => item(esc(k.nome), esc(k.descricao),
       liga(k.ligada, "skill", `data-nome="${esc(k.nome)}"`, "Ligada") + botao("Editar", "skill-editar", `data-nome="${esc(k.nome)}"`, "discreta") + xis("skill-excluir", `data-nome="${esc(k.nome)}"`, "Excluir"), !k.ligada));
-    return `${cabeca("Skills", botao("Nova skill", "skill-nova", "", "principal"))}${sub("Do seu jeito: o Zé e as sessões seguem antes de agir.")}
+    return `${cabeca("Skills", botao("Nova skill", "skill-nova", "", "principal"))}${sub("Procedimentos do seu jeito: o Zé e as sessões seguem antes de agir.")}
       <section class="cartao" id="editor-skill" hidden></section>
-      ${s.length ? `<div class="itens">${linhas.join("")}</div>` : vazio("Nenhuma skill ainda.")}`;
+      ${s.length ? `<div class="itens">${linhas.join("")}</div>` : vazio("Nenhuma skill ainda.")}
+      ${dosAgentes.length ? cartao("Skills dos agentes", `${sub("Instaladas no Claude Code e no Codex. Valem nas sessões de código daquele agente; gerenciadas no próprio agente.")}
+        <div class="itens">${dosAgentes.map((k) => item(`${esc(k.nome)} <span class="etiqueta">${k.agente === "codex" ? "Codex" : "Claude"}</span>`, esc(k.descricao))).join("")}</div>`) : ""}`;
   },
 
 

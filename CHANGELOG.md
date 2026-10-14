@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- Skills: a página mostra também as skills já instaladas no Claude Code e no Codex (só leitura).
 - Memória: cartão "Memória dos projetos" com o estado do ai-memory e quantas páginas ele guarda.
 - Memória: o que muda no meio da conversa (painel, aprovação, voz) vale já no próximo pedido.
 - Memória: as sugestões que o Zé aprende numa conversa aparecem no painel, com Aprovar e Descartar.
