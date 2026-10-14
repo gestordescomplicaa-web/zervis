@@ -88,28 +88,127 @@ def escolher(ativo: bool, arquivo: Path = ESCOLHA) -> None:
     temporario.replace(arquivo)
 
 
+UNIDADE = "zervis-tunel"  # o serviço do usuário que roda o cloudflared, fora do Zé
+REGISTRO = lugares.ESTADO / "cloudflared.log"  # a saída do cloudflared, onde vem o endereço
+
+
+class Direto:
+    """O cloudflared como processo filho do Zé: morre junto com ele (testes e máquinas sem
+    systemd)."""
+
+    def __init__(self) -> None:
+        self.processo: subprocess.Popen[bytes] | None = None
+
+    def ativo(self) -> bool:
+        return self.processo is not None and self.processo.poll() is None
+
+    def codigo(self) -> int | None:
+        return self.processo.poll() if self.processo is not None else None
+
+    def iniciar(self, comando: list[str], registro: Path) -> None:
+        with registro.open("ab") as saida:
+            self.processo = subprocess.Popen(  # noqa: S603 (binário conferido, argumentos fixos)
+                comando, stdout=subprocess.DEVNULL, stderr=saida
+            )
+
+    def parar(self) -> None:
+        processo, self.processo = self.processo, None
+        if processo is not None and processo.poll() is None:
+            processo.terminate()
+            try:
+                processo.wait(5)
+            except subprocess.TimeoutExpired:
+                processo.kill()
+
+
+class Systemd:
+    """O cloudflared num serviço próprio do usuário (`zervis-tunel`): reiniciar o Zé não o
+    derruba, então o endereço (e o login do celular, que é por endereço) continua o mesmo até o
+    computador reiniciar (14/10/2026)."""
+
+    def _systemctl(self, *args: str) -> int:
+        return subprocess.run(  # noqa: S603
+            ["systemctl", "--user", *args],  # noqa: S607
+            capture_output=True,
+            check=False,
+            timeout=10,
+        ).returncode
+
+    def ativo(self) -> bool:
+        return self._systemctl("is-active", "--quiet", UNIDADE) == 0
+
+    def codigo(self) -> int | None:
+        return None  # o systemd não diz: qualquer saída sem pedido é queda
+
+    def iniciar(self, comando: list[str], registro: Path) -> None:
+        self._systemctl("reset-failed", UNIDADE)
+        subprocess.run(  # noqa: S603
+            [  # noqa: S607
+                "systemd-run",
+                "--user",
+                "--collect",
+                f"--unit={UNIDADE}",
+                "-p",
+                "StandardOutput=null",
+                "-p",
+                f"StandardError=append:{registro}",
+                "--",
+                *comando,
+            ],
+            capture_output=True,
+            check=True,
+            timeout=15,
+        )
+
+    def parar(self) -> None:
+        self._systemctl("stop", UNIDADE)
+
+
+def lancador_padrao() -> "Direto | Systemd":
+    usuario = shutil.which("systemd-run") and subprocess.run(
+        ["systemctl", "--user", "is-system-running"],  # noqa: S607
+        capture_output=True,
+        check=False,
+        timeout=5,
+    ).stdout.strip() not in (b"", b"offline")
+    return Systemd() if usuario else Direto()
+
+
+def ultimo_endereco(registro: Path) -> str:
+    try:
+        achados = ENDERECO.findall(registro.read_text(errors="replace"))
+    except OSError:
+        return ""
+    return achados[-1] if achados else ""
+
+
 class Tunel:
-    """O `cloudflared` rodando para o painel; avisa o endereço quando o túnel fica pronto e sobe
-    de novo sozinho se cair sem ninguém pedir (com espera crescente, e o endereço novo no painel).
+    """O `cloudflared` para o painel: avisa o endereço quando fica pronto, sobe de novo sozinho
+    se cair sem ninguém pedir (espera crescente, endereço novo no painel) e, rodando num serviço
+    próprio, continua de pé quando o Zé reinicia: ao subir, o Zé o reencontra.
     """
 
     def __init__(
         self,
         ao_endereco: Callable[[str], None],
         ao_cair: Callable[[str], None] | None = None,
+        lancador: "Direto | Systemd | None" = None,
+        registro: Path = REGISTRO,
     ) -> None:
         self.ao_endereco = ao_endereco
         self.ao_cair = ao_cair  # recebe o endereço que deixou de valer
+        self.lancador = lancador if lancador is not None else lancador_padrao()
+        self.registro = registro
         self.endereco = ""
-        self.processo: subprocess.Popen[str] | None = None
         self._trava = threading.Lock()
         self._parado = threading.Event()
         self._comando: list[str] = []
         self._quedas = 0
+        self._vigia: threading.Thread | None = None
 
     @property
     def ativo(self) -> bool:
-        return self.processo is not None and self.processo.poll() is None
+        return self.lancador.ativo()
 
     def iniciar(self, porta: int, programa: Path) -> None:
         with self._trava:
@@ -121,64 +220,64 @@ class Tunel:
                 "--url",
                 f"http://127.0.0.1:{porta}",
             ]
-            if self.ativo:
-                return
-            self._quedas = 0
-            self._subir()
+            self.registro.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if self.lancador.ativo() and (antes := ultimo_endereco(self.registro)):
+                self.endereco = antes  # o túnel sobreviveu ao reinício do Zé: o mesmo endereço
+                log.info("túnel: já estava no ar em %s", antes)
+                self.ao_endereco(antes)
+            else:
+                self._quedas = 0
+                self._subir()
+            if self._vigia is None or not self._vigia.is_alive():
+                self._vigia = threading.Thread(target=self._vigiar, name="tunel", daemon=True)
+                self._vigia.start()
 
     def _subir(self) -> None:
         self.endereco = ""
-        self.processo = subprocess.Popen(  # noqa: S603 (o binário conferido, argumentos fixos)
-            self._comando,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        threading.Thread(target=self._ler, args=(self.processo,), daemon=True).start()
+        self.registro.write_bytes(b"")  # endereço novo: o anterior não vale mais
+        self.lancador.iniciar(self._comando, self.registro)
         log.info("túnel: subindo")
 
-    def _ler(self, processo: subprocess.Popen[str]) -> None:
-        assert processo.stderr is not None  # noqa: S101 (criado com PIPE)
-        for linha in processo.stderr:
-            novo = processo is self.processo and not self.endereco
-            if novo and (achado := ENDERECO.search(linha)):
-                self.endereco = achado.group(0)
-                self._quedas = 0
-                log.info("túnel: pronto em %s", self.endereco)
-                self.ao_endereco(self.endereco)
-        processo.wait()
-        if processo is not self.processo:  # parado ou trocado de propósito
-            return
-        if processo.returncode in ENCERRADO:
-            # Término pedido de fora (o serviço parando: o systemd encerra todos os processos
-            # juntos), não uma queda: sem falha na atividade e sem subir de novo.
-            log.info("túnel: o cloudflared foi encerrado (código %s)", processo.returncode)
-            self.endereco = ""
-            return
-        log.warning("túnel: o cloudflared saiu (código %s)", processo.returncode)
-        atividade.PADRAO.registrar(
-            "falha", "O túnel do acesso de fora caiu", origem="sistema", codigo=processo.returncode
-        )
-        antigo, self.endereco = self.endereco, ""
-        if antigo and self.ao_cair is not None:
-            self.ao_cair(antigo)
-        espera = ESPERA_S[min(self._quedas, len(ESPERA_S) - 1)]
-        self._quedas += 1
-        log.warning("túnel: de novo em %.0f s", espera)
-        if self._parado.wait(espera):
-            return
-        with self._trava:
-            if processo is self.processo and not self._parado.is_set():
-                self._subir()
+    def _vigiar(self) -> None:
+        """Lê o endereço que o cloudflared escreve e percebe quando ele cai."""
+        while not self._parado.wait(1.0):
+            atual = ultimo_endereco(self.registro)
+            if atual and atual != self.endereco:
+                self.endereco, self._quedas = atual, 0
+                log.info("túnel: pronto em %s", atual)
+                self.ao_endereco(atual)
+            if self.lancador.ativo():
+                continue
+            codigo = self.lancador.codigo()
+            if self._parado.is_set():
+                return
+            if codigo in ENCERRADO:
+                log.info("túnel: o cloudflared foi encerrado (código %s)", codigo)
+                self.endereco = ""
+                return
+            log.warning("túnel: o cloudflared saiu (código %s)", codigo)
+            atividade.PADRAO.registrar(
+                "falha", "O túnel do acesso de fora caiu", origem="sistema", codigo=codigo
+            )
+            antigo, self.endereco = self.endereco, ""
+            if antigo and self.ao_cair is not None:
+                self.ao_cair(antigo)
+            espera = ESPERA_S[min(self._quedas, len(ESPERA_S) - 1)]
+            self._quedas += 1
+            log.warning("túnel: de novo em %.0f s", espera)
+            if self._parado.wait(espera):
+                return
+            with self._trava:
+                if not self._parado.is_set():
+                    self._subir()
+
+    def soltar(self) -> None:
+        """O Zé vai parar: deixa de vigiar, mas o túnel continua (no serviço próprio)."""
+        self._parado.set()
 
     def parar(self) -> None:
+        """A pessoa desligou o acesso de fora: o túnel sai de verdade."""
         self._parado.set()
         with self._trava:
-            processo, self.processo = self.processo, None
             self.endereco = ""
-        if processo is not None and processo.poll() is None:
-            processo.terminate()
-            try:
-                processo.wait(5)
-            except subprocess.TimeoutExpired:
-                processo.kill()
+            self.lancador.parar()

@@ -2588,7 +2588,7 @@ class Nucleo:
         if self.remota is not None:
             self.remota.parar()
         self.livekit.parar()
-        self.tunel.parar()
+        self.tunel.soltar()  # o túnel continua de pé: o endereço não muda
         self.memoria_longa.parar()
         self.transcricoes.shutdown(wait=False, cancel_futures=True)
         self._pasta_exec.shutdown(wait=False, cancel_futures=True)

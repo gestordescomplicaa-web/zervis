@@ -50,7 +50,7 @@ def test_sobe_de_novo_sozinho_quando_cai(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr(tunel, "ESPERA_S", (0.05,))
     prontos: list[str] = []
     caidos: list[str] = []
-    t = tunel.Tunel(prontos.append, caidos.append)
+    t = tunel.Tunel(prontos.append, caidos.append, tunel.Direto(), tmp_path / "cf.log")
     t.iniciar(8795, _falso(tmp_path))
     try:
         _esperar(lambda: t.endereco == "https://tunel-2.trycloudflare.com")
@@ -67,7 +67,7 @@ def test_parado_de_proposito_nao_sobe_de_novo(
     monkeypatch.setattr(tunel, "ESPERA_S", (0.05,))
     (tmp_path / "n").write_text("1")  # já na subida que fica de pé
     caidos: list[str] = []
-    t = tunel.Tunel(lambda _: None, caidos.append)
+    t = tunel.Tunel(lambda _: None, caidos.append, tunel.Direto(), tmp_path / "cf.log")
     t.iniciar(8795, _falso(tmp_path))
     _esperar(lambda: bool(t.endereco))
     t.parar()
@@ -95,12 +95,44 @@ def test_encerrado_de_fora_nao_e_queda(tmp_path: Path, monkeypatch: pytest.Monke
     falhas: list[str] = []
     monkeypatch.setattr(atividade.PADRAO, "registrar", lambda tipo, *a, **k: falhas.append(tipo))
     (tmp_path / "n").write_text("1")
-    t = tunel.Tunel(lambda _: None)
+    t = tunel.Tunel(lambda _: None, None, tunel.Direto(), tmp_path / "cf.log")
     t.iniciar(8795, _falso(tmp_path))
     _esperar(lambda: bool(t.endereco))
-    assert t.processo is not None
-    t.processo.terminate()
+    assert isinstance(t.lancador, tunel.Direto) and t.lancador.processo is not None
+    t.lancador.processo.terminate()
     _esperar(lambda: t.endereco == "")
     time.sleep(0.3)
     assert falhas == [] and (tmp_path / "n").read_text().strip() == "2"
     t.parar()
+
+
+class _Vivo:
+    """Um lançador que diz que o cloudflared continua no ar (o serviço próprio sobreviveu)."""
+
+    def __init__(self) -> None:
+        self.iniciados = 0
+
+    def ativo(self) -> bool:
+        return True
+
+    def codigo(self) -> int | None:
+        return None
+
+    def iniciar(self, comando: list[str], registro: Path) -> None:
+        self.iniciados += 1
+
+    def parar(self) -> None:
+        pass
+
+
+def test_ze_reinicia_e_reencontra_o_tunel_no_mesmo_endereco(tmp_path: Path) -> None:
+    """14/10/2026: cada reinício do Zé trocava o endereço, e o celular pedia login de novo."""
+    registro = tmp_path / "cf.log"
+    registro.write_text("INF |  https://mesmo-endereco-de-antes.trycloudflare.com  |\n")
+    prontos: list[str] = []
+    lancador = _Vivo()
+    t = tunel.Tunel(prontos.append, None, lancador, registro)  # type: ignore[arg-type]
+    t.iniciar(8795, tmp_path / "cloudflared")
+    assert prontos == ["https://mesmo-endereco-de-antes.trycloudflare.com"]
+    assert lancador.iniciados == 0  # não subiu outro
+    t.soltar()  # o Zé parando: o túnel fica
