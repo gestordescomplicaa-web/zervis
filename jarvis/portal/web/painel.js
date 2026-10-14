@@ -785,7 +785,8 @@ async function abrirSessao(id) {
       <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}${seletorModeloSessao(sessao)}</div>
       <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
-        ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
+        ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
+    <div id="excluir-sessao"></div>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
     <section id="copia-sessao" class="cartao" hidden></section>
     <div id="melhorias-ze"></div>
@@ -1152,10 +1153,17 @@ const ACOES = {
   "copia-atualizar": () => carregarCopia(sessaoAberta),
   "copia-aplicar": (b) => confirmar(b, "Aplicar os commits ao projeto?", () => mudarCopia("aplicar")),
   "copia-descartar": (b) => confirmar(b, "Descartar commits e alterações da cópia? Arquivos ignorados ficam.", () => mudarCopia("descartar")),
-  "sessao-excluir": (b) => confirmar(b, "Excluir sessão e encerrar o agente? A pasta do projeto fica.", async () => {
-    const r = await api("sessao/excluir", { id: sessaoAberta });
+  // A confirmação numa faixa larga, abaixo do cabeçalho: no cabeçalho o texto não cabia.
+  "sessao-excluir": () => {
+    $("excluir-sessao").innerHTML = `<div class="faixa limite" role="alert"><div><strong>Excluir a sessão ${esc(sessaoAtual?.nome || "")}?</strong>
+      <span>O agente é encerrado e a conversa da sessão sai do Zé. A pasta do projeto fica.</span></div>
+      <div class="botoes">${botao("Excluir", "sessao-excluir-sim", "", "perigo")}${botao("Cancelar", "sessao-excluir-nao", "", "discreta")}</div></div>`;
+  },
+  "sessao-excluir-nao": () => { $("excluir-sessao").innerHTML = ""; },
+  "sessao-excluir-sim": async (b) => {
+    const r = await ocupado(b, () => api("sessao/excluir", { id: sessaoAberta }));
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();
-  }),
+  },
   "escolha-abrir": (b) => {
     const menu = b.nextElementSibling, abrir = menu.hidden;
     fecharEscolhas(menu);

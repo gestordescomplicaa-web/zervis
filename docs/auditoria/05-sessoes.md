@@ -23,6 +23,10 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
    e preservação de arquivos ignorados. Falha Git impede uma mensagem de sucesso.
    Prova no Chromium com API e projetos temporários; a prova no projeto do usuário continua pendente.
 
+3. **O × no topo da sessão excluía a sessão** (em quase todo programa, × quer dizer fechar), e a
+   confirmação, escrita dentro do cabeçalho, quebrava o layout do terminal. **Corrigido em
+   14/10/2026:** botão "Excluir" e confirmação numa faixa larga abaixo do cabeçalho.
+
 ## Passos
 
 ### Passo 1. Projeto novo
@@ -39,7 +43,7 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 ### Passo 3. Anexos, Arquivos e Mencionar
 - **Como:** anexar uma imagem (+, arrastar ou colar); abrir Arquivos, ver um arquivo, Mencionar.
 - **Esperado:** o agente recebe o anexo e o caminho mencionado.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026. Descreveu a imagem anexada e leu o arquivo mencionado. Achado 3.
 
 ### Passo 4. Cópia isolada
 - **Como:** criar uma sessão com Cópia isolada num projeto com Git; pedir uma mudança; aprovar.

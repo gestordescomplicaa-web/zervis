@@ -2,6 +2,7 @@
 
 ## Não lançado
 
+- Sessões: o × do topo virou o botão "Excluir", com a confirmação numa faixa abaixo do cabeçalho.
 - Autodesenvolvimento: a autorização de ferramentas do Codex também é zona protegida.
 - Automações: criação e alteração simultâneas preservam os agendamentos; temporários exclusivos.
 - Sessões: Aplicar e Descartar para cópias isoladas, com prévia, confirmação e falhas Git verificadas.
