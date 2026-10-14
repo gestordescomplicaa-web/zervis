@@ -12,6 +12,8 @@ Atrasado por o `jarvisd` estar parado: roda uma vez ao subir, sem repetir as per
 """
 
 import json
+import tempfile
+import threading
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -22,6 +24,8 @@ from jarvis.automacoes.agenda import FUSO, interpretar
 TIPOS = ("lembrete", "pergunta")
 STATUS = ("nunca", "ok", "erro", "bloqueado")
 LIMITE_TEXTO = 600
+_TRAVAS: dict[Path, threading.RLock] = {}
+_CRIAR_TRAVA = threading.Lock()
 
 
 class JobErro(ValueError):
@@ -53,68 +57,91 @@ class Job:
 class Jobs:
     def __init__(self, arquivo: Path) -> None:
         self.arquivo = arquivo
+        # Um processo é dono do estado, mas painel e agendador têm várias threads.
+        # Instâncias que apontam ao mesmo arquivo também precisam da mesma transação.
+        with _CRIAR_TRAVA:
+            self._trava = _TRAVAS.setdefault(arquivo.resolve(), threading.RLock())
 
     def listar(self) -> list[Job]:
-        try:
-            brutos = json.loads(self.arquivo.read_text())
-        except (OSError, ValueError):
-            return []
-        return [Job(**j) for j in brutos if isinstance(j, dict)]
+        with self._trava:
+            try:
+                brutos = json.loads(self.arquivo.read_text())
+            except (OSError, ValueError):
+                return []
+            return [Job(**j) for j in brutos if isinstance(j, dict)]
 
     def _gravar(self, jobs: list[Job]) -> None:
         self.arquivo.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        temporario = self.arquivo.with_suffix(".next")
-        temporario.write_text(json.dumps([asdict(j) for j in jobs], ensure_ascii=False, indent=1))
-        temporario.chmod(0o600)
-        temporario.replace(self.arquivo)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=self.arquivo.parent,
+            prefix=f".{self.arquivo.name}-",
+            delete=False,
+        ) as f:
+            temporario = Path(f.name)  # já nasce 0600; não reutiliza um .next de outra escrita
+            try:
+                json.dump([asdict(j) for j in jobs], f, ensure_ascii=False, indent=1)
+                f.flush()
+                temporario.replace(self.arquivo)
+            finally:
+                temporario.unlink(missing_ok=True)
 
     def criar(self, nome: str, agenda: str, tipo: str, texto: str, agora: datetime) -> Job:
-        if tipo not in TIPOS:
-            raise JobErro(f"tipo deve ser {' ou '.join(TIPOS)}")
-        texto = " ".join(texto.split())
-        if not texto or len(texto) > LIMITE_TEXTO:
-            raise JobErro("texto vazio ou longo demais")
-        try:
-            a = interpretar(agenda)
-            primeira = a.primeira(agora)
-        except ValueError as erro:
-            raise JobErro(str(erro)) from None
-        job = Job(
-            " ".join(nome.split())[:60] or texto[:40], a.texto, tipo, texto, primeira.isoformat()
-        )
-        self._gravar([*self.listar(), job])
-        return job
+        with self._trava:
+            if tipo not in TIPOS:
+                raise JobErro(f"tipo deve ser {' ou '.join(TIPOS)}")
+            texto = " ".join(texto.split())
+            if not texto or len(texto) > LIMITE_TEXTO:
+                raise JobErro("texto vazio ou longo demais")
+            try:
+                a = interpretar(agenda)
+                primeira = a.primeira(agora)
+            except ValueError as erro:
+                raise JobErro(str(erro)) from None
+            job = Job(
+                " ".join(nome.split())[:60] or texto[:40],
+                a.texto,
+                tipo,
+                texto,
+                primeira.isoformat(),
+            )
+            self._gravar([*self.listar(), job])
+            return job
 
     def _mudar(self, id_: str, **mudancas: object) -> Job:
-        jobs = self.listar()
-        for j in jobs:
-            if j.id == id_:
-                for chave, valor in mudancas.items():
-                    setattr(j, chave, valor)
-                self._gravar(jobs)
-                return j
-        raise JobErro(f"automação {id_} não encontrada")
+        with self._trava:
+            jobs = self.listar()
+            for j in jobs:
+                if j.id == id_:
+                    for chave, valor in mudancas.items():
+                        setattr(j, chave, valor)
+                    self._gravar(jobs)
+                    return j
+            raise JobErro(f"automação {id_} não encontrada")
 
     def pausar(self, id_: str) -> Job:
         return self._mudar(id_, ativo=False)
 
     def retomar(self, id_: str, agora: datetime) -> Job:
-        job = next((j for j in self.listar() if j.id == id_), None)
-        if job is None:
-            raise JobErro(f"automação {id_} não encontrada")
-        a = interpretar(job.agenda)
-        proxima = job.proxima
-        if not proxima or datetime.fromisoformat(proxima) <= agora:
-            proxima = a.primeira(agora).isoformat() if a.repete else ""
-        return self._mudar(id_, ativo=True, proxima=proxima)
+        with self._trava:
+            job = next((j for j in self.listar() if j.id == id_), None)
+            if job is None:
+                raise JobErro(f"automação {id_} não encontrada")
+            a = interpretar(job.agenda)
+            proxima = job.proxima
+            if not proxima or datetime.fromisoformat(proxima) <= agora:
+                proxima = a.primeira(agora).isoformat() if a.repete else ""
+            return self._mudar(id_, ativo=True, proxima=proxima)
 
     def remover(self, id_: str) -> Job:
-        jobs = self.listar()
-        achado = next((j for j in jobs if j.id == id_), None)
-        if achado is None:
-            raise JobErro(f"automação {id_} não encontrada")
-        self._gravar([j for j in jobs if j.id != id_])
-        return achado
+        with self._trava:
+            jobs = self.listar()
+            achado = next((j for j in jobs if j.id == id_), None)
+            if achado is None:
+                raise JobErro(f"automação {id_} não encontrada")
+            self._gravar([j for j in jobs if j.id != id_])
+            return achado
 
     def vencidos(self, agora: datetime) -> list[Job]:
         return [
@@ -125,17 +152,18 @@ class Jobs:
 
     def registrar(self, id_: str, status: str, agora: datetime, erro: str = "") -> Job:
         """Depois de rodar: status fechado e a próxima vez (a partir de agora, sem repor)."""
-        if status not in STATUS:
-            raise JobErro(f"status desconhecido: {status}")
-        job = next((j for j in self.listar() if j.id == id_), None)
-        if job is None:
-            raise JobErro(f"automação {id_} não encontrada")
-        seguinte = interpretar(job.agenda).seguinte(agora)
-        return self._mudar(
-            id_,
-            ultima=agora.isoformat(timespec="seconds"),
-            ultimo_status=status,
-            ultimo_erro=erro[:200],
-            proxima=seguinte.isoformat() if seguinte else "",
-            ativo=job.ativo and seguinte is not None,
-        )
+        with self._trava:
+            if status not in STATUS:
+                raise JobErro(f"status desconhecido: {status}")
+            job = next((j for j in self.listar() if j.id == id_), None)
+            if job is None:
+                raise JobErro(f"automação {id_} não encontrada")
+            seguinte = interpretar(job.agenda).seguinte(agora)
+            return self._mudar(
+                id_,
+                ultima=agora.isoformat(timespec="seconds"),
+                ultimo_status=status,
+                ultimo_erro=erro[:200],
+                proxima=seguinte.isoformat() if seguinte else "",
+                ativo=job.ativo and seguinte is not None,
+            )

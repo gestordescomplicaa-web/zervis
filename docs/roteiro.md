@@ -128,3 +128,23 @@ continuou acessível e o status confirmou um processo novo, batimento recente e 
   em 3,44 s, primeiro texto em 3,30 s. Chromium confirmou Automático selecionado e Codex habilitado.
 - Pedido pelo teclado do imersivo foi recusado pelo estado Inativo. A reprodução de voz e o
   microfone continuam pendentes de uma prova com a sessão ativa; não se contornou essa proteção.
+
+### Correções prioritárias da auditoria de maturidade
+
+- A autorização de ferramentas do Codex agora faz parte da zona protegida do autodesenvolvimento.
+- Agendamentos serializam a leitura, alteração e publicação, inclusive entre instâncias do mesmo
+  arquivo no processo. Cada escrita usa um temporário exclusivo, que já nasce com permissão 0600.
+- Sessões comuns com cópia isolada têm prévia, Aplicar e Descartar no painel, com confirmação.
+  Erro de consulta ou comando Git interrompe a operação; o descarte preserva arquivos ignorados
+  e recusa colisões com a versão do projeto. O terminal ocioso fecha antes de alterar a cópia.
+- Sessão trabalhando, operação Git em andamento e alterações locais no projeto impedem aplicar.
+  Cópias do autodesenvolvimento continuam passando pelo fluxo próprio de revisão.
+
+Provas: regressões com agendamentos simultâneos; Git real em projetos temporários, com conflitos,
+ponteiro inválido, falha no reset e na limpeza, colisões de arquivos ignorados e terminal real.
+No Chromium, os botões só alteraram os arquivos depois da confirmação; aplicar mudou o projeto,
+mas descartar mudou somente a cópia. Instalação e dados pessoais preservados.
+
+Verificação final: `make check` aprovado com **781 testes**; teste da interface de cópias no
+Chromium aprovado. Serviço reiniciado com duas sessões paradas; painel e imersivo HTTP 200,
+sessões preservadas e endpoints novos recusando operações sem confirmação (HTTP 400).

@@ -132,3 +132,61 @@ def test_agenda_velha_nao_avisa(tmp_path: Path) -> None:
     ev = {"id": "r1", "start": reuniao.isoformat(), "title": "Reunião"}
     cache = _cache(tmp_path, AGORA - timedelta(hours=1), [ev])
     assert Calendario(tmp_path / "enviados.json", cache).vencidos(AGORA.timestamp()) == []
+
+
+def test_criacoes_simultaneas_preservam_todos_os_lembretes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import threading
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    jobs = Jobs(tmp_path / "jobs.json")
+    listar = jobs.listar
+    inicio = threading.Barrier(8)
+
+    def leitura_lenta() -> list[Any]:
+        lista = listar()
+        time.sleep(0.01)  # amplia a janela real entre leitura e escrita
+        return lista
+
+    monkeypatch.setattr(jobs, "listar", leitura_lenta)
+
+    def criar(i: int) -> str:
+        inicio.wait(timeout=5)
+        return jobs.criar(str(i), "em 2m", "lembrete", "Teste.", AGORA).id
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        ids = list(pool.map(criar, range(8)))
+    assert {j.id for j in Jobs(jobs.arquivo).listar()} == set(ids)
+    assert jobs.arquivo.stat().st_mode & 0o777 == 0o600
+
+
+def test_falha_na_publicacao_preserva_agendamentos(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    jobs = Jobs(tmp_path / "jobs.json")
+    jobs.criar("Existente", "em 2m", "lembrete", "Teste.", AGORA)
+    antes = jobs.arquivo.read_bytes()
+
+    def falhar(self: Path, destino: Path) -> Path:
+        raise OSError("falha sintética")
+
+    monkeypatch.setattr(Path, "replace", falhar)
+    with pytest.raises(OSError):
+        jobs.criar("Nova", "em 2m", "lembrete", "Teste.", AGORA)
+    assert jobs.arquivo.read_bytes() == antes
+    assert list(tmp_path.iterdir()) == [jobs.arquivo]
+
+
+def test_instancias_do_mesmo_arquivo_compartilham_a_transacao(tmp_path: Path) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    arquivo = tmp_path / "jobs.json"
+
+    def criar(i: int) -> str:
+        return Jobs(arquivo).criar(str(i), "em 2m", "lembrete", "Teste.", AGORA).id
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        ids = list(pool.map(criar, range(16)))
+    assert {j.id for j in Jobs(arquivo).listar()} == set(ids)
