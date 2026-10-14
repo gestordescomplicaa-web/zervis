@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Acesso pelo celular: o túnel roda num serviço próprio; reiniciar o Zé não troca mais o endereço
+  (e o celular não pede login de novo). O endereço só muda quando o computador reinicia.
 - Confirmação por voz: uma pergunta que demora a tocar (pelo celular) não expira antes de dar
   tempo de responder, e um "sim" atrasado não trava mais o Zé.
 - Tarefa interrompida: se o Zé reinicia no meio de um pedido a uma sessão, ele avisa e oferece

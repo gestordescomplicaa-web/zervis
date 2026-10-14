@@ -123,7 +123,9 @@ Ideias para avaliar nesta área:
 Conceito: o Zé no navegador do celular, em casa ou fora, com senha e autenticador.
 
 - ✅ Senha, código do autenticador, bloqueio por tentativas
-- ✅ Túnel (Cloudflare) com QR; endereço novo a cada subida
+- ✅ Túnel (Cloudflare) com QR; num serviço próprio, o endereço só muda quando o computador
+  reinicia (antes, a cada reinício do Zé, e o celular pedia login de novo)
+- ⬜ Endereço fixo (domínio próprio no Cloudflare): para quem tem domínio
 - ✅ Aviso de aparelho novo; lista de aparelhos; desconectar
 - ⬜ Ícone na tela inicial (PWA)
 - ❌ A seção "Rede privada (Tailscale)" continua no painel, mas o caminho escolhido é o túnel.
