@@ -52,6 +52,8 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
 - **Esperado:** a edição vale; desligada, o Zé não usa; excluída, some.
 - **Resultado:** ❌ 13/10/2026, primeira tentativa: a edição não valeu (achado 4); desligada, não
   leu a skill, mas a resposta pareceu igual. Corrigido; para refazer.
+  Refeito: ✅ desligada (22:29), o Zé não leu a skill e fez um resumo comum; ligada de novo
+  (22:31), leu a versão editada e terminou com a frase motivadora, no jeito narrador de futebol.
 
 ### Passo 3. Criar pela voz
 
