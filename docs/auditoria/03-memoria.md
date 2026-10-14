@@ -26,6 +26,9 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
    "morango" e o Zé disse que ela gostava das duas: a banana continuava na foto do começo.
    **Corrigido:** a atualização diz o que saiu ("não vale mais"). O histórico das conversas segue
    guardando o que foi dito, como diário; quem vale é a memória atual.
+4. **Apagar logo depois de reiniciar não chegava.** O cérebro conecta assim que o Zé sobe e tira a
+   foto da memória ali; a pessoa apagou tudo depois e o Zé ainda dizia "morango". **Corrigido:** o
+   Zé guarda a foto exata que o cérebro recebeu, no momento em que recebe, e compara a cada pedido.
 
 ## Passos
 
