@@ -46,7 +46,10 @@ class Resposta:
 
 
 Aprovar = Callable[[str], Awaitable[Resposta]]
-PRAZO_APROVACAO_S = 60.0  # a máquina nega aos 40 s de silêncio; isto é a rede de segurança
+# Quem decide o prazo é a máquina de voz: 40 s depois de a pergunta terminar de tocar. Isto é só a
+# rede de segurança; com 60 s, uma pergunta que demorou a tocar pelo celular expirava antes de a
+# pessoa poder responder, e o "sim" atrasado travava o Zé (14/10/2026).
+PRAZO_APROVACAO_S = 300.0
 
 
 class Brain(Protocol):
@@ -95,6 +98,7 @@ class Ponte:
         self.tarefa: asyncio.Task[None] | None = None
         self.marca = 0
         self.aprovacao: asyncio.Future[Resposta] | None = None
+        self.ao_expirar_aprovacao: Callable[[], None] | None = None  # avisa a máquina de voz
         self.troca: asyncio.Lock | None = None  # criado no laço do cérebro
         threading.Thread(target=self.laco.run_forever, name="cerebro", daemon=True).start()
         asyncio.run_coroutine_threadsafe(
@@ -110,9 +114,15 @@ class Ponte:
         try:
             return await asyncio.wait_for(self.aprovacao, PRAZO_APROVACAO_S)
         except TimeoutError:
+            if self.ao_expirar_aprovacao is not None:
+                self.ao_expirar_aprovacao()  # a máquina sai da confirmação, não fica presa
             return Resposta(False)
         finally:
             self.aprovacao = None
+
+    @property
+    def aprovacao_pendente(self) -> bool:
+        return self.aprovacao is not None and not self.aprovacao.done()
 
     def responder_aprovacao(self, aprovado: bool, fala: str = "") -> None:
         def _responder() -> None:

@@ -160,3 +160,12 @@ Estado inicial: Ativação "Ei Zé", Escuta Com a janela aberta, Fala Avisos.
     teste dos detectores pulava o último quadro de áudio. O filtro de volume ficou em -45 dBFS
     (chamados reais medidos entre -21 e -25; "pois é" de perto a -24: volume não separa isso).
     Conferido no uso ✅ 13/10/2026: atende o chamado e acorda menos sozinho.
+
+## Achado depois do fechamento
+
+12. **Confirmação pelo celular travava o Zé** (14/10/2026). A pergunta ("Vou mandar para a
+    sessão… Posso?") demorou a tocar; o cérebro desistiu aos 60 s contados do pedido, o "sim"
+    chegou 10 s depois e o Zé ficou pensando para sempre, sem ouvir. **Corrigido:** o prazo que
+    vale é o da máquina de voz (40 s depois de a pergunta terminar); o do cérebro virou rede de
+    segurança (300 s) e, se vencer, tira a máquina da pergunta; uma resposta depois de expirar
+    ouve "Essa pergunta já tinha expirado. Peça de novo." e o Zé volta a ouvir.

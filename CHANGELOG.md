@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Confirmação por voz: uma pergunta que demora a tocar (pelo celular) não expira antes de dar
+  tempo de responder, e um "sim" atrasado não trava mais o Zé.
 - Tarefa interrompida: se o Zé reinicia no meio de um pedido a uma sessão, ele avisa e oferece
   continuar de onde parou (pela voz ou pela faixa na sessão).
 - Sessões: o × do topo virou o botão "Excluir", com a confirmação numa faixa abaixo do cabeçalho.

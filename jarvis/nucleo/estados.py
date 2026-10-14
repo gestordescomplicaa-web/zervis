@@ -83,6 +83,11 @@ class PedidoAprovacao:
 
 
 @dataclass(frozen=True)
+class AprovacaoExpirou:
+    """O cérebro desistiu de esperar a confirmação (rede de segurança): sai da pergunta."""
+
+
+@dataclass(frozen=True)
 class Aviso:
     texto: str
     escutar: bool = False  # mãos livres: depois do aviso, ouve a resposta sem o chamado
@@ -120,6 +125,7 @@ Evento = (
     | RespostaFim
     | FalaOcioso
     | PedidoAprovacao
+    | AprovacaoExpirou
     | Aviso
     | Tempo
     | Apertou
@@ -1095,6 +1101,12 @@ class Maquina:
                 return self._fala_ociosa(agora)
             case PedidoAprovacao(descricao):
                 return self._pedido_aprovacao(descricao)
+            case AprovacaoExpirou():
+                if self.estado is not Estado.CONFIRMANDO:
+                    return []
+                self.pergunta_falando = False
+                self._ir(Estado.PENSANDO)  # o cérebro segue com a negativa: a resposta dele vem
+                return [CortarFala()]
             case Aviso(texto, escutar):
                 if self.estado is Estado.ATIVO or (
                     self.ao_vivo and self.estado is Estado.OUVINDO and not self.segurando

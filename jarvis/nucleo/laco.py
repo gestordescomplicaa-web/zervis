@@ -513,6 +513,7 @@ class Nucleo:
             self._pedido_de_aprovacao,
             self._primeiro_texto_do_cerebro,
         )
+        self.ponte.ao_expirar_aprovacao = lambda: self.eventos.put(e.AprovacaoExpirou())
         self.portal: Portal | None = None
         self.acesso = Acesso(ao_entrar=self._aparelho_entrou)  # quem entra de outro aparelho
         self.tunel = tunel.Tunel(self._tunel_pronto, self._tunel_caiu)  # acesso de qualquer lugar
@@ -743,6 +744,15 @@ class Nucleo:
                 )
             case e.ResponderAprovacao(aprovado, fala):
                 log.info("aprovação respondida: %s", "sim" if aprovado else "não")
+                if not getattr(self.ponte, "aprovacao_pendente", True):
+                    # A pergunta já tinha expirado: o cérebro seguiu sem ela. Sem isto, o "sim"
+                    # atrasado deixava o Zé pensando para sempre, sem ouvir (14/10/2026).
+                    log.info("resposta depois de a pergunta expirar")
+                    self.eventos.put(
+                        e.Frase("Essa pergunta já tinha expirado. Peça de novo, por favor.")
+                    )
+                    self.eventos.put(e.RespostaFim())
+                    return
                 if aprovado and self.pergunta:
                     self._na_linha("aprovado", self.pergunta)
                 self.ponte.responder_aprovacao(aprovado, fala)
