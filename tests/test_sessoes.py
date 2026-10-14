@@ -581,7 +581,38 @@ def test_sessoes_no_terminal_recebem_as_skills_do_usuario(tmp_path: Path) -> Non
     assert cmd[1:3] == ["--add-dir", str(tmp_path / "skills")] and cmd[-1] == "faz"
     assert "Como publicar o site" in cmd[cmd.index("--append-system-prompt") + 1]
     cmd = comando_terminal(Sessao("s2", "Loja", str(tmp_path), "codex"), "", eventos, None, regras)
-    assert any(c.startswith("developer_instructions=") and "deploy" in c for c in cmd)
+    assert not any(c.startswith("developer_instructions=") for c in cmd)  # vão pela pasta
+
+
+def test_codex_acha_as_skills_marcadas_na_pasta_do_projeto(tmp_path: Path) -> None:
+    """O Codex retomado não vê instruções novas, mas acha skills em .agents/skills a cada
+    abertura (13/10/2026). Os atalhos ficam fora do Git do projeto."""
+    import subprocess
+
+    from jarvis.habilidades.skills import Skills
+    from jarvis.oficina.sessoes import ligar_skills_no_projeto
+
+    skills = Skills(tmp_path / "skills")
+    (tmp_path / "skills/deploy").mkdir(parents=True)
+    (tmp_path / "skills/deploy/SKILL.md").write_text(
+        "---\nname: deploy\ndescription: Como publicar\nsessoes: sim\n---\n"
+    )
+    projeto = tmp_path / "loja"
+    projeto.mkdir()
+    subprocess.run(["git", "init", "-q", str(projeto)], check=True)  # noqa: S603, S607
+    ligar_skills_no_projeto(projeto, skills)
+    atalho = projeto / ".agents/skills/zervis-deploy"
+    assert atalho.is_symlink() and (atalho / "SKILL.md").is_file()
+    assert "/.agents/skills/zervis-*" in (projeto / ".git/info/exclude").read_text()
+    status = subprocess.run(  # noqa: S603
+        ["git", "-C", str(projeto), "status", "--porcelain"],  # noqa: S607
+        capture_output=True,
+        text=True,
+    )
+    assert status.stdout == ""  # nada para commit
+    (tmp_path / "skills/deploy/SKILL.md").write_text("---\nname: deploy\ndescription: x\n---\n")
+    ligar_skills_no_projeto(projeto, skills)  # desmarcada: o atalho sai, e as pastas vazias
+    assert not (projeto / ".agents").exists()
 
 
 def test_passagem_sem_as_notas_do_ze(tmp_path: Path, raiz: Path) -> None:

@@ -629,6 +629,10 @@ class Sessoes:
                 s = self._mudar(id_, sdk_sessao="")
         else:
             confiar_pasta_codex(s)
+            # O Codex acha skills na pasta do projeto a cada abertura, mesmo ao retomar uma
+            # conversa (as instruções do começo, não: teste de 13/10/2026).
+            with contextlib.suppress(OSError):
+                ligar_skills_no_projeto(Path(s.onde), self.skills)
         self.eventos(id_).touch(mode=0o600)
         self._lidos[id_] = self.eventos(id_).stat().st_size
         try:
@@ -1232,6 +1236,58 @@ def conversa_claude_existe(s: Sessao) -> bool:
     return any((onde / "projects").glob(f"*/{s.sdk_sessao}.jsonl"))
 
 
+PREFIXO_SKILL = "zervis-"  # os atalhos que o Zé põe no projeto, para reconhecer e limpar
+
+
+def ligar_skills_no_projeto(pasta: Path, skills: Any) -> None:
+    """Atalhos em `<projeto>/.agents/skills/zervis-<nome>` para as skills do Zé marcadas para as
+    sessões (o lugar onde o Codex procura skills do projeto); tira os que sobraram. Os atalhos
+    ficam fora do Git do projeto pela exclusão local (`info/exclude`), nunca num commit."""
+    marcadas = {nome for nome, _ in skills.para_sessoes()} if skills is not None else set()
+    destino = pasta / ".agents" / "skills"
+    existentes = (
+        {p.name for p in destino.iterdir() if p.name.startswith(PREFIXO_SKILL) and p.is_symlink()}
+        if destino.is_dir()
+        else set()
+    )
+    if not marcadas and not existentes:
+        return
+    destino.mkdir(parents=True, exist_ok=True)
+    for nome in marcadas:
+        atalho, alvo = destino / f"{PREFIXO_SKILL}{nome}", Path(skills.pasta) / nome
+        if atalho.is_symlink() and atalho.resolve() == alvo.resolve():
+            continue
+        atalho.unlink(missing_ok=True)
+        atalho.symlink_to(alvo, target_is_directory=True)
+    for nome in existentes - {f"{PREFIXO_SKILL}{n}" for n in marcadas}:
+        (destino / nome).unlink(missing_ok=True)
+    for vazia in (destino, destino.parent):
+        with contextlib.suppress(OSError):
+            vazia.rmdir()  # só sai se ficou vazia
+    _fora_do_git(pasta, f"/.agents/skills/{PREFIXO_SKILL}*")
+
+
+def _fora_do_git(pasta: Path, padrao: str) -> None:
+    """Acrescenta o padrão à exclusão local do Git do projeto, se for um repositório."""
+    r = subprocess.run(  # noqa: S603 (git com argumentos fixos)
+        ["git", "-C", str(pasta), "rev-parse", "--git-path", "info/exclude"],  # noqa: S607
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if r.returncode != 0 or not r.stdout.strip():
+        return
+    exclude = Path(r.stdout.strip())
+    if not exclude.is_absolute():
+        exclude = pasta / exclude
+    atual = exclude.read_text() if exclude.exists() else ""
+    if padrao not in atual.splitlines():
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        exclude.write_text(
+            atual + ("" if atual.endswith("\n") or not atual else "\n") + padrao + "\n"
+        )
+
+
 def regras_de_skills(skills: Any) -> tuple[str, Path | None]:
     """O que as sessões recebem das skills do usuário: o aviso com o catálogo e a pasta para ler
     (vazio sem skills). O mesmo para o terminal e para o agente sem tela."""
@@ -1258,7 +1314,7 @@ def comando_terminal(
     if s.motor == "codex":
         avisar = ["sh", "-c", 'printf "%s\\n" "$1" >> "$0"', str(eventos)]  # + o JSON do Codex
         cmd = ["codex", "-c", f"notify={json.dumps(avisar)}", "--sandbox", "workspace-write"]
-        texto = extra.strip()
+        texto = ""  # as skills do Zé chegam pela pasta do projeto (ligar_skills_no_projeto)
         if contexto is not None:  # conversa nova: instruções do desenvolvedor (TOML aceita JSON)
             passagem = json.loads(contexto.read_text())["hookSpecificOutput"]["additionalContext"]
             texto = f"{passagem}\n{texto}".strip()

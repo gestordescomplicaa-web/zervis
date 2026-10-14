@@ -37,6 +37,11 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
    só ocupam espaço numa sessão de programação. **Corrigido:** opção "Também nas sessões de
    código" em cada skill (`sessoes: sim` no cabeçalho), desligada por padrão; a lista mostra a
    etiqueta "Sessões" nas marcadas.
+6. **O Codex retomado não via a skill nova.** Testado em 13/10/2026: numa conversa retomada, o
+   Codex mantém as instruções do começo e ignora as novas; mas acha skills em
+   `<projeto>/.agents/skills` a cada abertura, inclusive por atalho. **Corrigido:** ao abrir uma
+   sessão do Codex, o Zé mantém atalhos `zervis-<nome>` para as skills marcadas (e tira os que
+   sobraram), fora do Git do projeto pela exclusão local (`info/exclude`).
 
 ## Passos
 
