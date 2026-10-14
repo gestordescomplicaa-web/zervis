@@ -19,6 +19,9 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
    e a conversa continua.
 2. **A cópia isolada não tem aprovar nem descartar.** Dá para criar a sessão com "Cópia isolada",
    mas as mudanças ficam presas na cópia: não há como juntá-las ao projeto pelo painel.
+   **Corrigido:** prévia, Aplicar e Descartar no painel, com confirmação, bloqueio durante execução
+   e preservação de arquivos ignorados. Falha Git impede uma mensagem de sucesso.
+   Prova no Chromium com API e projetos temporários; a prova no projeto do usuário continua pendente.
 
 ## Passos
 

@@ -215,6 +215,11 @@ class Acoes:
             "sessao/ler": self.ler_sessao,
             "sessao/trocar": self.trocar_sessao,
             "sessao/modelo": self.modelo_da_sessao,
+            "sessao/copia": lambda d: self._chamar(
+                lambda: self.n.sessoes.copia(str(d.get("id", "")))
+            ),
+            "sessao/copia/aplicar": self.aplicar_copia,
+            "sessao/copia/descartar": self.descartar_copia,
             "terminal/abrir": self.abrir_terminal,
             "terminal/ler": self.ler_terminal,
             "terminal/escrever": self.escrever_terminal,
@@ -976,6 +981,24 @@ class Acoes:
         )
         return {"arquivo": relativo}
 
+    def aplicar_copia(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if dados.get("confirmado") is not True:
+            raise PedidoInvalido("Confirme a aplicação das mudanças.")
+        id_ = str(dados.get("id", ""))
+        atividade.PADRAO.origem = "painel"
+        aviso = self._chamar(lambda: self.n.sessoes.aplicar_copia(id_))
+        atividade.PADRAO.registrar("execucao", f"Juntou a cópia da sessão ao projeto ({id_})")
+        return {**self.n.sessoes.copia(id_), "aviso": aviso}
+
+    def descartar_copia(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if dados.get("confirmado") is not True:
+            raise PedidoInvalido("Confirme o descarte das mudanças.")
+        id_ = str(dados.get("id", ""))
+        atividade.PADRAO.origem = "painel"
+        aviso = self._chamar(lambda: self.n.sessoes.descartar_copia(id_))
+        atividade.PADRAO.registrar("execucao", f"Descartou a cópia da sessão ({id_})")
+        return {**self.n.sessoes.copia(id_), "aviso": aviso}
+
     def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O modelo dos próximos pedidos da sessão; o agente reabre nele e a conversa continua."""
         id_, modelo = str(dados.get("id", "")), str(dados.get("modelo", ""))
@@ -1018,11 +1041,12 @@ class Acoes:
         return {"posicao": posicao, "dados": base64.b64encode(saida).decode(), "vivo": vivo}
 
     def escrever_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
-        t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
-        if t is None or not t.vivo:
-            raise PedidoInvalido("o terminal desta sessão está fechado")
-        t.escrever(str(dados.get("dados", "")).encode())
-        return {}
+        with self.n.sessoes._operacoes:
+            t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
+            if t is None or not t.vivo:
+                raise PedidoInvalido("o terminal desta sessão está fechado")
+            t.escrever(str(dados.get("dados", "")).encode())
+            return {}
 
     def tamanho_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
         t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
@@ -1031,12 +1055,13 @@ class Acoes:
         return {}
 
     def fechar_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
-        t = self.n.sessoes.terminais.pop(str(dados.get("id", "")), None)
-        if t is not None:
-            t.encerrar()
-        return {"aviso": "Terminal fechado. A conversa continua ao reabrir."}
+        with self.n.sessoes._operacoes:
+            t = self.n.sessoes.terminais.pop(str(dados.get("id", "")), None)
+            if t is not None:
+                t.encerrar()
+            return {"aviso": "Terminal fechado. A conversa continua ao reabrir."}
 
-    # --- skills do jeito do usuário ----------------------------------------------------------
+        # --- skills do jeito do usuário ----------------------------------------------------------
 
     def ver_skill(self, dados: dict[str, Any]) -> dict[str, Any]:
         nome = str(dados.get("nome", ""))

@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Autodesenvolvimento: a autorização de ferramentas do Codex também é zona protegida.
+- Automações: criação e alteração simultâneas preservam os agendamentos; temporários exclusivos.
+- Sessões: Aplicar e Descartar para cópias isoladas, com prévia, confirmação e falhas Git verificadas.
 - Sessões: o modelo de cada sessão se escolhe no cabeçalho dela, com a versão; a conversa continua.
 - Skills: só as marcadas "Também nas sessões de código" vão para os agentes de código; as outras
   valem só para o Zé.

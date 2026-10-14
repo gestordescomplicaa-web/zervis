@@ -759,6 +759,35 @@ async function trocarSessao(motor, conta, continuar) {
   await abrirSessao(sessaoAberta);
 }
 
+async function carregarCopia(id) {
+  const area = $("copia-sessao");
+  if (!area || id !== sessaoAberta) return;
+  try {
+    const c = await api("sessao/copia", { id });
+    if (id !== sessaoAberta || !area.isConnected) return;
+    if (!c.copia) { area.hidden = true; return; }
+    area.hidden = false;
+    const trabalhando = sessaoAtual?.estado === "trabalhando";
+    const aplicar = c.commits.length && !c.sem_commit && !trabalhando;
+    const descartar = (c.commits.length || c.sem_commit) && !trabalhando;
+    area.innerHTML = `<div class="cabeca"><h3>Cópia isolada</h3><span class="etiqueta">${c.sem_commit ? "Sem commit" : c.commits.length ? "Com mudanças" : "Sem mudanças"}</span></div>
+      ${c.arquivos.length ? `<details><summary>Arquivos alterados (${c.arquivos.length})</summary><pre>${c.arquivos.map(esc).join("\n")}</pre></details>` : ""}
+      ${c.commits.length ? `<details><summary>Commits (${c.commits.length})</summary><pre>${c.commits.map(esc).join("\n")}</pre></details>` : ""}
+      <div class="botoes">${botao("Aplicar", "copia-aplicar", aplicar ? "" : "disabled", "principal")}${botao("Descartar", "copia-descartar", descartar ? "" : "disabled", "discreta")}${botao("Atualizar", "copia-atualizar", "", "discreta")}</div>`;
+  } catch (erro) {
+    if (id !== sessaoAberta || !area.isConnected) return;
+    area.hidden = false;
+    area.innerHTML = `<p class="resultado erro">${esc(erro.message)}</p>${botao("Atualizar", "copia-atualizar", "", "discreta")}`;
+  }
+}
+
+async function mudarCopia(acao) {
+  const id = sessaoAberta;
+  const r = await api(`sessao/copia/${acao}`, { id, confirmado: true });
+  toast(r.aviso);
+  if (id === sessaoAberta) await carregarCopia(id);
+}
+
 async function abrirSessao(id) {
   mostrarLado(true);
   sessaoAberta = id;
@@ -776,6 +805,7 @@ async function abrirSessao(id) {
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
         ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${xis("sessao-excluir", "", "Excluir sessão")}</div></header>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
+    <section id="copia-sessao" class="cartao" hidden></section>
     <div id="melhorias-ze"></div>
     <section class="editor-md" id="editor-md" hidden>
       <div class="linha"><label>Arquivo<input id="md-nome" class="mono" placeholder="NOTAS.md" autocomplete="off" spellcheck="false"></label>
@@ -804,6 +834,7 @@ async function abrirSessao(id) {
   if (sessao.melhorias) carregarPagina("melhorias").then(() => desenharMelhorias()).catch(() => {});
   await abrirTerminal(id);
   await carregarPasta("", $("arvore"));
+  if (sessao.isolada && !sessao.melhorias) await carregarCopia(id);
 }
 
 // --- o terminal real da sessão (xterm.js): o agente com todos os comandos dele ---
@@ -880,6 +911,10 @@ async function acompanharSessao() {
   etiqueta.classList.toggle("alerta", !!sessao.limite);
   etiqueta.classList.toggle("bom", sessao.estado === "trabalhando");
   travarAjustes(sessao.estado === "trabalhando");
+  if (sessao.isolada && !sessao.melhorias && etiqueta.dataset.copiaEstado !== sessao.estado) {
+    etiqueta.dataset.copiaEstado = sessao.estado;
+    carregarCopia(sessao.id);
+  }
   const faixa = $("limite-sessao");
   if (faixa.dataset.limite !== String(sessao.limite)) {
     faixa.dataset.limite = String(sessao.limite);
@@ -1140,6 +1175,9 @@ const ACOES = {
     const s = await ocupado(b, () => api("sessao/criar", { nome: $("ns-nome").value, pasta: $("ns-pasta").value, motor, novo, projeto: $("ns-projeto").value, isolada: !novo && $("ns-isolada").checked }));
     await listaSessoes(); await abrirSessao(s.id);
   },
+  "copia-atualizar": () => carregarCopia(sessaoAberta),
+  "copia-aplicar": (b) => confirmar(b, "Aplicar os commits ao projeto?", () => mudarCopia("aplicar")),
+  "copia-descartar": (b) => confirmar(b, "Descartar commits e alterações da cópia? Arquivos ignorados ficam.", () => mudarCopia("descartar")),
   "sessao-excluir": (b) => confirmar(b, "Excluir sessão e encerrar o agente? A pasta do projeto fica.", async () => {
     const r = await api("sessao/excluir", { id: sessaoAberta });
     sessaoAberta = null; toast(r.aviso || "Sessão excluída."); await recarregar();

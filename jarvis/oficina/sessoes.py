@@ -134,6 +134,51 @@ def _git(pasta: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _git_verificado(pasta: Path, *args: str) -> str:
+    feito = _git_resultado(pasta, *args)
+    if feito.returncode:
+        raise SessaoErro("Não foi possível concluir a operação com o Git.")
+    return feito.stdout
+
+
+def _git_resultado(pasta: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    try:
+        return _git(pasta, *args)
+    except (OSError, subprocess.SubprocessError):
+        raise SessaoErro("Não foi possível concluir a operação com o Git.") from None
+
+
+def _git_sem_operacao(pasta: Path) -> None:
+    for nome in ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply"):
+        relativo = _git_verificado(pasta, "rev-parse", "--git-path", nome).strip()
+        if (pasta / relativo).exists():
+            raise SessaoErro("Há uma operação Git em andamento. Conclua-a antes de continuar.")
+
+
+def _git_preservar_ignorados(pasta: Path, alvo: str) -> None:
+    ignorados = _git_verificado(
+        pasta, "ls-files", "--others", "--ignored", "--exclude-standard", "-z"
+    )
+    arquivos = _git_verificado(pasta, "ls-tree", "-r", "--name-only", "-z", alvo)
+    ocupados = set(filter(None, ignorados.split("\0")))
+    pastas = {
+        "/".join(partes[:i])
+        for nome in ocupados
+        if (partes := nome.split("/"))
+        for i in range(1, len(partes))
+    }
+    for arquivo in filter(None, arquivos.split("\0")):
+        partes = arquivo.split("/")
+        if (
+            arquivo in ocupados
+            or arquivo in pastas
+            or any("/".join(partes[:i]) in ocupados for i in range(1, len(partes)))
+        ):
+            raise SessaoErro(
+                "A operação substituiria um arquivo ignorado. Preserve-o antes de continuar."
+            )
+
+
 class Sessoes:
     def __init__(
         self,
@@ -899,6 +944,134 @@ class Sessoes:
         laco, tarefa = laco_tarefa
         laco.call_soon_threadsafe(tarefa.cancel)
         return self.ler(id_)
+
+    def copia(self, id_: str) -> dict[str, Any]:
+        """Mudanças da cópia; uma consulta Git que falhou nunca significa cópia limpa."""
+        with self._operacoes:
+            return self._copia(self.ler(id_))
+
+    def _copia(self, s: Sessao) -> dict[str, Any]:
+        if not s.worktree:
+            return {"copia": False}
+        onde = Path(s.worktree)
+        if not onde.is_dir() or not s.base:
+            raise SessaoErro("A cópia isolada está indisponível.")
+        raiz = _git_verificado(onde, "rev-parse", "--show-toplevel").strip()
+        if Path(raiz).resolve() != onde.resolve():
+            raise SessaoErro("A pasta da cópia não corresponde ao repositório Git.")
+        if _git_verificado(onde, "branch", "--show-current").strip() != s.branch:
+            raise SessaoErro("A cópia está em outra branch. Volte à branch da sessão.")
+        commits = _git_verificado(onde, "log", "--oneline", f"{s.base}..HEAD").splitlines()
+        arquivos = _git_verificado(onde, "diff", "--name-only", "-z", s.base).split("\0")
+        novos = _git_verificado(onde, "ls-files", "--others", "--exclude-standard", "-z")
+        return {
+            "copia": True,
+            "branch": s.branch,
+            "commits": commits,
+            "arquivos": sorted({a for a in [*arquivos, *novos.split("\0")] if a}),
+            "sem_commit": bool(
+                _git_verificado(onde, "status", "--porcelain", "--untracked-files=all").strip()
+            ),
+            "ignorados_preservados": bool(
+                _git_verificado(onde, "ls-files", "--others", "--ignored", "--exclude-standard")
+            ),
+            "resumo": _git_verificado(onde, "diff", "--stat", s.base).strip()[:2000],
+        }
+
+    def _copia_parada(self, id_: str) -> Sessao:
+        self._consumir_eventos(id_)  # o pedido no terminal pode ter chegado antes do próximo tick
+        s = self.ler(id_)
+        if s.origem == "manutencao":
+            raise SessaoErro("Use Autodesenvolvimento para alterar esta cópia.")
+        if id_ in self.trabalhando():
+            raise SessaoErro("Essa sessão está trabalhando. Espere ela terminar.")
+        if not self._copia(s)["copia"]:
+            raise SessaoErro("Esta sessão não tem cópia isolada.")
+        _git_sem_operacao(Path(s.pasta))
+        _git_sem_operacao(Path(s.worktree))
+        projeto = Path(s.pasta).resolve()
+        for trabalhando in self.trabalhando():
+            if trabalhando != id_ and self.ler(trabalhando).onde.resolve() == projeto:
+                raise SessaoErro("Há uma sessão trabalhando no projeto. Espere ela terminar.")
+        return s
+
+    def aplicar_copia(self, id_: str) -> str:
+        """A aprovação junta commits; fecha o agente ocioso antes de mudar as duas pastas."""
+        with self._operacoes:
+            s = self._copia_parada(id_)
+            self._encerrar_agente(id_)
+            c = self._copia(s)
+            if not c["commits"]:
+                raise SessaoErro("Não há commits na cópia para aplicar.")
+            if c["sem_commit"]:
+                raise SessaoErro(
+                    "A cópia tem alterações sem commit. Faça o commit antes de aplicar."
+                )
+            projeto, onde = Path(s.pasta), Path(s.worktree)
+            if _git_verificado(projeto, "status", "--porcelain", "--untracked-files=all").strip():
+                raise SessaoErro("O projeto tem alterações locais. Preserve-as antes de aplicar.")
+            alvo = _git_verificado(onde, "rev-parse", "--verify", "HEAD").strip()
+            atual = _git_verificado(projeto, "rev-parse", "--verify", "HEAD").strip()
+            _git_preservar_ignorados(projeto, alvo)
+            _git_preservar_ignorados(onde, atual)
+            if _git_resultado(
+                projeto, "merge", "--ff-only", "--no-overwrite-ignore", alvo
+            ).returncode:
+                junta = _git_resultado(
+                    projeto,
+                    "merge",
+                    "--no-ff",
+                    "--no-overwrite-ignore",
+                    "-m",
+                    f"Sessão {s.nome} ({s.branch})",
+                    alvo,
+                )
+                if junta.returncode:
+                    merge_head = _git_verificado(
+                        projeto, "rev-parse", "--git-path", "MERGE_HEAD"
+                    ).strip()
+                    if (projeto / merge_head).exists():
+                        _git_verificado(projeto, "merge", "--abort")
+                        raise SessaoErro(
+                            "Há conflito ao aplicar. Atualize a cópia antes de tentar novamente."
+                        )
+                    raise SessaoErro("Não foi possível aplicar as mudanças pelo Git.")
+            novo = _git_verificado(projeto, "rev-parse", "--verify", "HEAD").strip()
+            try:
+                _git_preservar_ignorados(onde, novo)
+                _git_verificado(onde, "merge", "--ff-only", "--no-overwrite-ignore", novo)
+            except SessaoErro:
+                self.anotar(
+                    id_,
+                    "sistema",
+                    "Mudanças aplicadas no projeto; sincronização da cópia pendente.",
+                )
+                raise SessaoErro(
+                    "Mudanças aplicadas no projeto. Falhou a atualização da cópia."
+                ) from None
+            self._mudar(id_, base=novo)
+            self.anotar(id_, "sistema", f"Juntei ao projeto {len(c['commits'])} commit(s).")
+            return "Mudanças juntadas ao projeto."
+
+    def descartar_copia(self, id_: str) -> str:
+        """Descarta só na cópia; arquivos ignorados são preservados, inclusive em colisões."""
+        with self._operacoes:
+            s = self._copia_parada(id_)
+            self._encerrar_agente(id_)
+            onde = Path(s.worktree)
+            atual = _git_verificado(Path(s.pasta), "rev-parse", "--verify", "HEAD").strip()
+            _git_preservar_ignorados(onde, atual)
+            _git_verificado(onde, "reset", "--hard", atual)
+            _git_verificado(onde, "clean", "-fd")  # sem -x: arquivos ignorados não são apagados
+            if _git_verificado(onde, "status", "--porcelain", "--untracked-files=all").strip():
+                raise SessaoErro("O descarte não foi concluído. Confira as alterações da cópia.")
+            if _git_verificado(onde, "rev-parse", "--verify", "HEAD").strip() != atual:
+                raise SessaoErro("O descarte não foi concluído. Confira a versão da cópia.")
+            self._mudar(id_, base=atual)
+            self.anotar(
+                id_, "sistema", "Descartei as mudanças da cópia; arquivos ignorados preservados."
+            )
+            return "Mudanças descartadas."
 
     def mudancas(self, s: Sessao) -> str:
         """O que a sessão mudou na pasta dela (commits novos e o que ainda não foi commitado)."""

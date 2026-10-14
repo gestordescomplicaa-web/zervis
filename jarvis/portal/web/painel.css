@@ -218,6 +218,9 @@ main.cheio { padding: 0; overflow: hidden; }
 .terminal-sessao[hidden] { display: none; }
 .terminal-sessao .xterm { height: 100%; padding: 10px 6px 6px 14px; }
 .terminal-sessao .xterm-viewport { scrollbar-width: thin; }
+#copia-sessao { flex: none; max-height: 240px; overflow: auto; margin: 10px 14px; }
+#copia-sessao h3 { margin: 0; font-size: 14px; }
+#copia-sessao pre { max-height: 130px; overflow: auto; font: 12px/1.5 var(--mono); }
 .conversa.soltando .terminal-sessao { outline: 2px dashed var(--acento); outline-offset: -6px; }
 .terminal-fechado { display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--borda); font-size: 13px; }
 .terminal-fechado[hidden] { display: none; }
