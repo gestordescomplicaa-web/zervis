@@ -5,17 +5,46 @@ Regras herdadas do JARVIS antigo (core.py, 06/10/2026): 0,4 s de áudio antes da
 dois quadros de voz são descartados (estalo, tosse). O fim fixo subiu de 2 s para 3 s de
 silêncio: o usuário pausa para formular o pedido e era cortado no meio.
 
-Com o detector de fim de turno, depois de 0,64 s de pausa o modelo olha o que foi dito, uma
-vez por pausa; se ele achar que a frase terminou, o pedido fecha na hora, sem esperar os 3 s.
-Consultar de novo a cada pedaço da mesma pausa dava ao modelo várias chances de errar
-enquanto o usuário pensava.
+Com o detector de fim de turno, depois de uma pausa curta o modelo olha o que foi dito, uma
+vez por pausa; se ele achar que a frase terminou, o pedido fecha na hora, sem esperar o silêncio
+longo. Consultar de novo a cada pedaço da mesma pausa dava ao modelo várias chances de errar
+enquanto o usuário pensava. As duas durações vêm da escolha "Espera" (`jarvis/voz/espera.py`).
+
+O modelo ouve só a entonação e foi treinado sobretudo em inglês: numa pausa para pensar em
+português ("quero uma automação que... toda segunda") ele dava nota 0,95. Por isso, se o texto
+reconhecido até ali termina numa palavra que pede continuação ("e", "que", "pra", "tipo") ou numa
+vírgula, a frase está pela metade e o pedido só fecha pelo silêncio longo (14/10/2026).
 """
 
+import re
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
 DURACAO_QUADRO_S = 0.08
+
+# Palavras que, no fim do que foi dito, pedem continuação: conjunções, preposições, artigos e
+# vacilos. "isso", "né" e "aí" ficam de fora: fecham frase com frequência.
+_CONTINUACAO = """e ou mas que porque pois então entao tipo quando como onde se também tambem
+    de do da dos das pra pro para com sem em no na nos nas num numa por pelo pela pelos pelas
+    o a os as um uma uns umas ao à meu minha seu sua teu tua nosso nossa esse essa este esta
+    aquele aquela sobre até ate entre mais menos muito assim é eh hum hm ahn ã
+    eu você voce ele ela gente quero queria preciso"""
+PEDEM_CONTINUACAO = frozenset(_CONTINUACAO.split())
+
+
+def ficou_no_meio(texto: str) -> bool:
+    """O texto reconhecido até a pausa termina pela metade (vírgula ou palavra que pede
+    continuação)?"""
+    texto = texto.strip().lower()
+    if not texto:
+        return False
+    if texto.endswith((",", "...", "…", "-", ":")):
+        return True
+    if texto.endswith((".", "?", "!")):
+        return False
+    ultima = re.findall(r"[\wà-ú]+", texto)
+    return bool(ultima) and ultima[-1] in PEDEM_CONTINUACAO
 
 
 @dataclass
@@ -29,6 +58,8 @@ class Segmentador:
     # o usuário fechava na primeira respiração com nota 0,93 a 0,99 (supressão de ruído deixa o
     # silêncio abrupto; 60 pedidos em 06/10/2026), e ele era atropelado no meio da frase.
     pausa_consulta: int = 8
+    # O texto reconhecido até agora (parcial do Deepgram): frase pela metade não fecha no modelo.
+    fala_ate_agora: Callable[[], str] | None = None
     coletados: list[bytes] = field(default_factory=list)
     antes: deque[bytes] = field(default_factory=deque)
     silencio: int = 0
@@ -73,6 +104,13 @@ class Segmentador:
         ):
             self.notas.append(self.fim_de_turno(b"".join(self.coletados)))
             pelo_modelo = self.notas[-1] >= self.limiar_fim_de_turno
+            if (
+                pelo_modelo
+                and self.fala_ate_agora is not None
+                and ficou_no_meio(self.fala_ate_agora())
+            ):
+                pelo_modelo = False
+                self.notas[-1] = -self.notas[-1]  # no log, nota negativa: frase pela metade
         if not (terminou or pelo_modelo) and len(self.coletados) < self.maximo_quadros:
             return None
         self.fechou_pelo_modelo = pelo_modelo

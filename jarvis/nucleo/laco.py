@@ -90,7 +90,7 @@ from jarvis.transporte.local import SERVIDOR, Captura
 from jarvis.transporte.navegador import VozNavegador
 from jarvis.transporte.remoto import SalaRemota
 from jarvis.transporte.websocket import Conexao
-from jarvis.voz import chamado, piper
+from jarvis.voz import chamado, espera, piper
 from jarvis.voz.ativacao import VAD, Detector, Features, SemAtivacao, carregar_modelo
 from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro
 from jarvis.voz.escuta import DURACAO_QUADRO_S, Segmentador
@@ -308,11 +308,12 @@ class Nucleo:
         )
         limiar = cfg["escuta"]["limiar_fim_de_turno"]
         self.segmentador = Segmentador(
-            fim_silencio_s=cfg["escuta"]["fim_silencio_s"],
             fim_de_turno=FimDeTurno(modelos / "smart-turn-v3.2-cpu.onnx") if limiar > 0 else None,
             limiar_fim_de_turno=limiar,
-            pausa_consulta=max(1, round(cfg["escuta"]["pausa_fim_de_turno_s"] / DURACAO_QUADRO_S)),
+            fala_ate_agora=lambda: self.escuta.ate_agora() if self.escuta is not None else "",
         )
+        self.espera = espera.ler()  # quanto esperar antes de achar que a pessoa terminou
+        self._aplicar_espera()
         self.transcricoes = concurrent.futures.ThreadPoolExecutor(1, "transcricao")
         # Só Deepgram (decisão de 09/10/2026): sem a chave o Zé não escuta; painel e teclado
         # continuam. Nada de modelo local de transcrição ocupando a máquina.
@@ -1834,6 +1835,18 @@ class Nucleo:
 
     def soltar(self) -> None:
         self.eventos.put(e.Soltou())
+
+    def _aplicar_espera(self) -> None:
+        pausa, silencio = espera.TEMPOS[self.espera]
+        self.segmentador.pausa_consulta = max(1, round(pausa / DURACAO_QUADRO_S))
+        self.segmentador.fim_silencio_s = silencio
+
+    def mudar_espera(self, modo: str) -> str:
+        """Troca quanto o Zé espera antes de responder: Rápida, Normal ou Longa."""
+        self.espera = espera.gravar(modo)
+        self._aplicar_espera()
+        log.info("espera: %s", modo)
+        return f"Espera: {espera.NOMES[modo]}."
 
     def mudar_chamado(self, modo: str) -> str:
         """Troca como a pessoa chama o Zé: "Ei Zé" ou só o botão (ADR 0022)."""

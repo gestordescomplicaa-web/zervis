@@ -186,6 +186,9 @@ const PAGINAS = {
       ${cartao("", `<div class="cabeca"><h2>Ativação</h2><span class="etiqueta bom">${e.chamado === "botao" ? "Só o botão" : "“Ei Zé”"}</span></div>
         ${sub("Como chamar o Zé no microfone deste computador. O botão vale nos dois.")}
         <div class="modos-fala" role="radiogroup" aria-label="Ativação">${[["voz", "“Ei Zé”", "O chamado falado ou o botão."], ["botao", "Só o botão", "Ouve só com o botão apertado. A voz conectada continua ao vivo."]].map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="chamado-modo" data-modo="${v}" aria-checked="${v === e.chamado}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
+      ${cartao("", `<div class="cabeca"><h2>Espera</h2><span class="etiqueta bom">${ESPERAS.find((m) => m[0] === e.espera)?.[1] || "Normal"}</span></div>
+        ${sub("Quanto o Zé espera, depois de uma pausa, para responder.")}
+        <div class="modos-fala" role="radiogroup" aria-label="Espera">${ESPERAS.map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="espera-modo" data-modo="${v}" aria-checked="${v === e.espera}"><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`)}
       ${cartao("", `<div class="cabeca"><h2>Acesso pelo celular</h2></div>
         ${sub("O Zé no navegador do celular, em casa ou fora. Exige senha e código do autenticador.")}
         <div class="linha"><label>Senha de acesso${r.senha ? " (definida)" : ""}<input id="senha-acesso" type="password" autocomplete="new-password" placeholder="${r.senha ? "Nova senha" : "Mínimo de 8 caracteres"}"></label>${botao("Salvar senha", "senha-salvar")}</div>
@@ -194,7 +197,7 @@ const PAGINAS = {
             <div class="linha"><label>Código de 6 dígitos<input id="codigo-confirmar" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>${botao("Confirmar", "codigo-confirmar", "", "principal")}</div></div></div>`
             : `<div class="linha">${r.codigo ? botao("Desligar", "codigo-desligar", "", "discreta") : botao("Ligar", "codigo-preparar", r.senha ? "" : "disabled")}</div>`}</div>
         <div class="parte"><div class="cabeca"><h3 class="subtitulo">Acesso de qualquer lugar</h3>${etiqueta(!!r.tunel.endereco, "Ativo", "Inativo")}</div>
-          ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div class="campos"><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">O endereço muda quando o Zé reinicia.</p></div></div>`
+          ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div class="campos"><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">O endereço muda quando o computador reinicia.</p></div></div>`
             : `<p class="nota">${r.senha && r.codigo ? "Abre um endereço seguro pelo Cloudflare, para o Wi-Fi e o 4G." : "Requer a senha e o código do autenticador ligados."}</p>`}
           <div class="linha">${r.tunel.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.tunel.endereco)}"`) + botao("Desativar", "tunel-desativar", "", "discreta") : botao("Ativar", "tunel-ativar", r.senha && r.codigo ? "" : "disabled", "principal")}</div></div>
         ${r.lista.length ? `<div class="parte"><h3 class="subtitulo">Aparelhos conectados</h3>${r.lista.map((a) => `<div class="linha aparelho"><span>${esc(a.aparelho)}</span><small>${new Date(a.desde * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}${a.origem ? ` · ${esc(a.origem)}` : ""}</small>${botao("Desconectar", "aparelho-desconectar", `data-id="${esc(a.id)}"`, "discreta")}</div>`).join("")}</div>` : ""}
@@ -206,6 +209,8 @@ const PAGINAS = {
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;
   },
 };
+
+const ESPERAS = [["rapida", "Rápida", "Para pedidos curtos."], ["normal", "Normal", "Para a maioria das conversas."], ["longa", "Longa", "Para pensar enquanto fala."]];
 
 // --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ---
 
@@ -1227,6 +1232,7 @@ const ACOES = {
     const aberto = document.body.classList.toggle("menu-aberto");
     document.querySelector(".botao-menu").setAttribute("aria-expanded", String(aberto));
   },
+  "espera-modo": async (b) => { const r = await api("voz/espera", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
   "chamado-modo": async (b) => { const r = await api("voz/chamado", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
   "escuta-modo": async (b) => { const r = await api("escuta/modo", { modo: b.dataset.modo }); toast(r.aviso); await recarregar(); },
 };

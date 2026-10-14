@@ -24,9 +24,9 @@ def test_omniroute_em_loopback_e_aceito(tmp_path: Path) -> None:
 
 def test_arquivo_sobrescreve_so_o_que_traz(tmp_path: Path) -> None:
     arquivo = tmp_path / "c.toml"
-    arquivo.write_text("versao = 1\n[escuta]\nfim_silencio_s = 1\n")
+    arquivo.write_text("versao = 1\n[escuta]\nconversa_s = 5\n")
     cfg = carregar(arquivo)
-    assert cfg["escuta"]["fim_silencio_s"] == 1.0
+    assert cfg["escuta"]["conversa_s"] == 5.0
     assert cfg["escuta"]["limiar_vad"] == 0.35
 
 
@@ -35,7 +35,7 @@ def test_arquivo_sobrescreve_so_o_que_traz(tmp_path: Path) -> None:
     [
         ("[vozes]\nx = 1\n", "seção desconhecida"),
         ("[escuta]\nfim_silencio = 1\n", "chave desconhecida"),
-        ('[escuta]\nfim_silencio_s = "2"\n', "precisa ser float"),
+        ('[escuta]\nconversa_s = "2"\n', "precisa ser float"),
         ("[ativacao]\npaciencia = true\n", "precisa ser int"),
         ('[cerebro]\nprovedor = "gemini"\n', "cerebro.provedor"),
         ("[cerebro]\nferramentas = [1]\n", "lista de textos"),

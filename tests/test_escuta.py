@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from jarvis.voz.escuta import Segmentador
+from jarvis.voz.escuta import Segmentador, ficou_no_meio
 
 Q = b"\x00" * 2560
 
@@ -98,3 +98,26 @@ def test_fim_de_turno_consulta_uma_vez_por_pausa() -> None:
 def test_nota_abaixo_do_limiar_nao_fecha() -> None:
     s = Segmentador(fim_de_turno=lambda pcm: 0.65)  # fechava com o limiar antigo de 0,6
     assert _alimentar(s, "vvvv" + "." * 8) == []
+
+
+def test_frase_pela_metade_nao_fecha_no_modelo() -> None:
+    """Pedido "quero uma automação que..." + pausa para pensar: o modelo dava 0,95 e cortava
+    (14/10/2026). Com o texto terminando em "que", só o silêncio longo fecha."""
+    dito = ["quero uma automação que"]
+    s = Segmentador(fim_de_turno=lambda pcm: 0.95, fala_ate_agora=lambda: dito[0])
+    assert _alimentar(s, "vvvv" + "." * 12) == []
+    assert s.notas == [-0.95]  # no log, negativa: frase pela metade
+    dito[0] = "quero uma automação que toda segunda me mande o resumo."
+    trechos = _alimentar(s, "vvvv" + "." * 8)
+    assert len(trechos) == 1 and s.fechou_pelo_modelo
+
+
+def test_o_que_pede_continuacao() -> None:
+    assert ficou_no_meio("cria um lembrete pra")
+    assert ficou_no_meio("Abre o projeto e")
+    assert ficou_no_meio("o problema é,")
+    assert ficou_no_meio("Quero, tipo")
+    assert not ficou_no_meio("que horas são?")
+    assert not ficou_no_meio("Liga a luz")
+    assert not ficou_no_meio("Faz isso")
+    assert not ficou_no_meio("")

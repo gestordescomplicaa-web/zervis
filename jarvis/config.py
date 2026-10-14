@@ -36,14 +36,12 @@ PADRAO: dict[str, dict[str, Any]] = {
     # pausar_midia: enquanto o Zé ouve ou fala, pausa vídeo e música (MPRIS) e depois retoma.
     "escuta": {
         "pausar_midia": True,
-        "fim_silencio_s": 3.0,
         "limiar_vad": 0.35,
         "conversa_s": 8.0,
         "registrar_texto": False,
-        # Smart Turn: fecha o pedido pela entonação antes dos fim_silencio_s (0 desliga).
+        # Smart Turn: fecha o pedido pela entonação antes do silêncio longo (0 desliga). As
+        # durações da pausa e do silêncio vêm da escolha "Espera" da página Voz (voz/espera.py).
         "limiar_fim_de_turno": 0.7,
-        # Pausa que o Smart Turn espera antes de opinar (mais curta = responde antes e corta mais).
-        "pausa_fim_de_turno_s": 0.64,
         # Escuta só pelo Deepgram (streaming, ADR 0012; decisão de 09/10/2026): sem a chave, a
         # voz fica desligada. A chave fica num arquivo fora do repositório (600).
         "chave_deepgram": str(lugares.CONFIG / "deepgram.key"),

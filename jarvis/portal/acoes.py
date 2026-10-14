@@ -33,7 +33,7 @@ from jarvis.portal import remoto
 from jarvis.portal.senha import SenhaErro
 from jarvis.portal.servidor import Escrita, Leitura, PedidoInvalido
 from jarvis.presenca import modo as modo_escuta
-from jarvis.voz import chamado, deepgram
+from jarvis.voz import chamado, deepgram, espera
 
 log = logging.getLogger(__name__)
 DIAGNOSTICO = lugares.ESTADO / "diagnostico.md"  # o último diagnóstico, para rever na página
@@ -176,6 +176,7 @@ class Acoes:
             "voz/apertar": self.apertar,
             "voz/soltar": self.soltar,
             "voz/chamado": self.mudar_chamado,
+            "voz/espera": self.mudar_espera,
             "remoto/ativar": self.ativar_remoto,
             "voz/evento": self.evento_voz,
             "atividade/registro": self.registro_tecnico,
@@ -279,6 +280,7 @@ class Acoes:
             "modo_fala": self.n.modo_fala,
             "escuta": {"modo": self.n.modo_escuta, "janela": self.n.tem_janela},
             "chamado": self.n.chamado,
+            "espera": self.n.espera,
             "voz_remota": {"conectada": self.n._fonte is not None},
             "manutencao": {
                 "ligada": self.n.manutencao.ligado,
@@ -481,6 +483,12 @@ class Acoes:
         if modo not in chamado.MODOS:
             raise PedidoInvalido("ativação desconhecida")
         return {"modo": modo, "aviso": self.n.mudar_chamado(modo)}
+
+    def mudar_espera(self, dados: dict[str, Any]) -> dict[str, Any]:
+        modo = str(dados.get("modo", ""))
+        if modo not in espera.MODOS:
+            raise PedidoInvalido("espera desconhecida")
+        return {"modo": modo, "aviso": self.n.mudar_espera(modo)}
 
     def token_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Entrar na sala da voz remota pelo navegador (token curto, só microfone)."""

@@ -114,6 +114,10 @@ class EscutaDeepgram:
         self.segundos += len(pcm) / 32000
         self.saida.put(pcm)
 
+    def ate_agora(self) -> str:
+        """O que já foi reconhecido neste pedido, com o trecho ainda provisório."""
+        return " ".join(t for t in (*self.finais, self.parcial) if t).strip()
+
     def terminar(self, limite_s: float = 3.0) -> str:
         """Pede o resto ao Deepgram e devolve o texto do pedido; `EscutaErro` se não vier."""
         self.saida.put(FINALIZAR)

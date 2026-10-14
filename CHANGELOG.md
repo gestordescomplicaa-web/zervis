@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Voz: o Zé não corta mais quem pausa para pensar. Frase que termina pela metade ("e", "que",
+  "pra", vírgula) espera o silêncio longo, e a nova escolha Espera (Rápida, Normal, Longa) na
+  página Voz define as pausas; Normal espera 1 s em vez de 0,64 s.
 - Acesso pelo celular: o túnel roda num serviço próprio; reiniciar o Zé não troca mais o endereço
   (e o celular não pede login de novo). O endereço só muda quando o computador reinicia.
 - Confirmação por voz: uma pergunta que demora a tocar (pelo celular) não expira antes de dar
