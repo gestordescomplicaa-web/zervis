@@ -68,4 +68,8 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 - **Como:** pedir a uma sessão algo demorado; reiniciar o Zé no meio.
 - **Esperado:** ao voltar, o aviso de tarefa interrompida; "continua" (ou Continuar na faixa)
   retoma de onde parou.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 14/10/2026. Reinício às 00:54:42 depois do nota-2; retomada às 00:54:59; o
+  agente conferiu os arquivos existentes (`ls nota-*.md`) e seguiu do nota-3.
+
+**Área fechada em 14/10/2026.** Fica para depois: a etapa 2 (agentes fora do processo do Zé) e
+as ideias de sessões conversando entre si e de caixa de perguntas.

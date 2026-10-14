@@ -65,19 +65,19 @@ agentes (Claude Code, Codex) aparecem na página só para leitura.
   (anthropics/skills, skills.sh), mostrando o conteúdo, verificando e pedindo aprovação; nunca
   rodar script sozinho.
 
-## 5. Sessões
+## 5. Sessões — **Pronta** (14/10/2026, `docs/auditoria/05-sessoes.md`)
 
-Conceito: um agente de código com uma pasta e a sua conversa. Cada pedido é uma tarefa.
+Conceito: um agente de código (Claude Code ou Codex) numa pasta de projeto, com a conversa dele;
+cada sessão escolhe agente, conta e modelo. O cérebro delega; as sessões programam.
 
-- ✅ Criar sessão (pasta existente), Claude, no terminal
-- ⬜ Projeto novo
-- ⬜ Sessão Codex
-- ⬜ Anexos, Arquivos (explorador), Mencionar
-- ⬜ Cópia isolada (git worktree) numa sessão comum
-- ✅ Aviso de fim de sessão e de aprovação pedida
-- ⬜ Pedido por voz a uma sessão ("manda a sessão X rodar os testes")
-- 🟡 No máximo 3 trabalhando
-- ⬜ Trocar de conta no meio, quando a conta bate o limite
+- ✅ Criar (pasta existente e projeto novo); Claude e Codex; trocar de agente com a conversa
+- ✅ Modelo da sessão no cabeçalho, com a versão
+- ✅ Anexos, Arquivos e Mencionar
+- ✅ Cópia isolada com Aplicar e Descartar
+- ✅ Pedido por voz; aviso de fim e de aprovação (Central de avisos)
+- ✅ Tarefa interrompida por reinício: avisada e retomada de onde parou
+- 🟡 No máximo 3 trabalhando (testes automáticos)
+- Para depois: agentes fora do processo do Zé (nem serem interrompidos)
 
 Ideias para avaliar nesta área (do Botloft, github.com/httpsphl/botloft; licença FSL-1.1, que não
 permite copiar código para o Zé: só ideias, escritas do zero):
