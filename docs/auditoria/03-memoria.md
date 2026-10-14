@@ -24,7 +24,7 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 
 - **Como:** abrir Memória; ver a sugestão pendente; Aprovar (ou Descartar).
 - **Esperado:** aprovada, ela vai para "Sobre você" e some das sugestões; descartada, só some.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026. Aprovada pelo painel; foi para "Sobre você".
 
 ### Passo 2. Adicionar e remover pelo painel
 

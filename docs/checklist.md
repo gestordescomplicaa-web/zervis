@@ -77,6 +77,13 @@ Conceito: um agente de código com uma pasta e a sua conversa. Cada pedido é um
 - 🟡 No máximo 3 trabalhando
 - ⬜ Trocar de conta no meio, quando a conta bate o limite
 
+Ideias para avaliar nesta área (do Botloft, github.com/httpsphl/botloft; licença FSL-1.1, que não
+permite copiar código para o Zé: só ideias, escritas do zero):
+- tarefa com prazo e resultado (`complete_task`), e fila por sessão em vez de recusar quando ocupada;
+- sessões mandando mensagens e tarefas umas às outras, com o Zé no meio e só com permissão;
+- o cérebro sugerindo uma sessão nova (papel, modelo pelo custo do trabalho) e a pessoa aprovando;
+- perguntas das sessões guardadas numa caixa, respondidas quando a pessoa puder.
+
 ## 6. Foco
 
 Conceito: no que **você** está. No máximo três frentes ativas, cada uma com o próximo passo.
