@@ -334,6 +334,7 @@ class Nucleo:
         # manchete, detalhe), até quando vale responder a uma oferta e o último aviso de sessão.
         self._meta: dict[str, dict[str, Any]] = {}
         self._ultimo_dito = ""  # a última fala inteira, para "repete"
+        self._memoria_vista: str | None = None  # a memória que o cérebro já tem nesta conversa
         self._dito_marca: int | None = None
         self._oferta_ate = 0.0
         self._ultimo_de_sessao: dict[str, Any] | None = None
@@ -674,7 +675,9 @@ class Nucleo:
                 self._conversa_suja = True
                 self.turnos.append({"gabriel": texto, "jarvis": ""})
                 self._pedido_quando = datetime.now(FUSO)
-                pedido = self._com_foco(self._com_avisos(self._com_nucleo(texto)))
+                pedido = self._com_memoria(
+                    self._com_foco(self._com_avisos(self._com_nucleo(texto)))
+                )
                 self._turno_cerebro = (self.marca, self._turno_atual)
                 self.latencias.contexto(
                     self._turno_atual,
@@ -1187,6 +1190,22 @@ class Nucleo:
             return str(m["detalhe"])
         return "Não tenho mais detalhe desse aviso; a resposta inteira está na sessão."
 
+    def _com_memoria(self, pedido: str) -> str:
+        """A memória curta mudou no meio da conversa (painel, aprovação, voz): o pedido leva a
+        versão nova, porque a foto do começo da conversa ficou velha (13/10/2026: a pessoa
+        adicionou uma preferência e o Zé disse que a memória estava vazia)."""
+        memoria = getattr(self, "memoria", None)
+        if memoria is None:
+            return pedido
+        atual = memoria.foto()
+        vista, self._memoria_vista = getattr(self, "_memoria_vista", None), atual
+        if vista is None or vista == atual:
+            return pedido
+        return (
+            "[Memória atualizada agora: vale no lugar da foto do começo da conversa]\n"
+            f"{atual}\n\n{pedido}"
+        )
+
     def _no_proprio_pc(self) -> bool:
         """O pedido em curso veio do microfone do próprio PC (não do celular nem digitado)."""
         return getattr(self, "_digitado_em", None) is None and getattr(self, "_fonte", None) is None
@@ -1295,6 +1314,7 @@ class Nucleo:
             )
         if nome == "nova_conversa":
             self.ponte.reiniciar()
+            self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
             return "Certo, começando uma conversa nova."
         if nome == "mostrar_mapa":
             self.hud.abrir_mapa()
@@ -1860,6 +1880,7 @@ class Nucleo:
             return f"Não remontei o cérebro: {motivo}."
         cerebro = self._com_via_rapida(novo)
         self.ponte.trocar(cerebro)
+        self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
         self.cerebro = cerebro
         ligados = ", ".join(novos.servidores) or "nenhum"
         log.info("conectores MCP recarregados: %s", ligados)
@@ -1908,6 +1929,7 @@ class Nucleo:
             return f"Cérebro indisponível: {motivo}."
         cerebro = self._com_via_rapida(novo)
         self.ponte.trocar(cerebro)
+        self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
         self.cerebro = cerebro
         return ""
 
@@ -1965,6 +1987,7 @@ class Nucleo:
         log.info("cérebro: %s -> %s", self.provedor, id_)
         cerebro = self._com_via_rapida(novo)
         self.ponte.trocar(cerebro)
+        self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
         self.cerebro, self.provedor = cerebro, id_
         with contextlib.suppress(OSError):
             catalogo.gravar_escolha(self.escolhido, id_)
@@ -2015,6 +2038,7 @@ class Nucleo:
                 return f"Modelo guardado, mas o cérebro não trocou: {motivo}."
             cerebro = self._com_via_rapida(novo)
             self.ponte.trocar(cerebro)
+            self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
             self.cerebro = cerebro
         log.info("cérebro: modelo do %s agora é %s", agente, modelo)
         nomes = {m["id"]: m["nome"] for m in modelos_dos_agentes.do_cerebro(agente)}
@@ -2044,6 +2068,7 @@ class Nucleo:
                 novo = catalogo.com_reserva("auto", self.cfg, DADOS / "cerebro", self.extras)
                 self.cerebro = self._com_via_rapida(novo)
                 self.ponte.trocar(self.cerebro)
+                self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
         return "OmniRoute salvo."
 
     def testar_omniroute(self) -> tuple[bool, str]:
@@ -2260,6 +2285,7 @@ class Nucleo:
             log.info("conversa parada há %.0f min: a próxima começa do zero", parado / 60)
             self._fim_da_conversa()
             self.ponte.reiniciar()
+            self._memoria_vista = None  # sessão nova: o cérebro lê a foto de novo
             self._conversa_suja = False
 
     # --- a pasta do JARVIS no Barehands e a curadoria das skills ----------------------------

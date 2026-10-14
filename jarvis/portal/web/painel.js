@@ -130,7 +130,7 @@ const PAGINAS = {
     const sugestoes = m.sugestoes.length ? cartao("Sugestões", `${sub("O que o Zé aprendeu numa conversa e espera a sua aprovação.")}
       <div class="itens">${m.sugestoes.map((s) => item(s.tipo === "skill" ? "Skill" : "Memória", esc(s.resumo),
         botao("Aprovar", "sugestao", `data-id="${esc(s.id)}" data-aprovar="1"`, "principal") + botao("Descartar", "sugestao", `data-id="${esc(s.id)}"`, "discreta"))).join("")}</div>`) : "";
-    return `${cabeca("Memória")}${sub("O que o Zé sabe em toda conversa. Mudanças valem a partir da próxima conversa.")}
+    return `${cabeca("Memória")}${sub("O que o Zé sabe em toda conversa.")}
       ${sugestoes}${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}`;
   },
 

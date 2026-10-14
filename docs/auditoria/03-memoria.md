@@ -17,6 +17,11 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 1. **As sugestões não apareciam no painel** (só por voz): havia uma esperando e a página dizia
    "Vazia". **Corrigido em 13/10/2026:** cartão **Sugestões** no topo da Memória, com Aprovar e
    Descartar, pelo mesmo caminho da voz (e registradas no diário de aprendizado).
+2. **O que se adicionava à memória só valia na próxima conversa.** O cérebro recebe a memória como
+   uma foto no começo da conversa; a pessoa adicionou "Prefiro respostas curtas e diretas e
+   engraçadas", perguntou, e o Zé disse que a memória estava vazia. **Corrigido:** quando a memória
+   muda no meio da conversa, o próximo pedido leva a versão nova. A página não fala mais em
+   "próxima conversa".
 
 ## Passos
 
@@ -28,10 +33,11 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 
 ### Passo 2. Adicionar e remover pelo painel
 
-- **Como:** em "Sobre você", adicionar "Prefiro respostas curtas e diretas."; dizer "Ei Zé, nova
-  conversa" e depois "Ei Zé, o que você sabe sobre mim?". Depois remover a entrada.
-- **Esperado:** a resposta usa o que foi adicionado; removida, deixa de aparecer na próxima conversa.
-- **Resultado:** ⬜
+- **Como:** perguntar algo ao Zé (a conversa começa); em "Sobre você", adicionar uma preferência;
+  sem começar conversa nova, "Ei Zé, o que você sabe sobre mim?". Depois remover a entrada.
+- **Esperado:** a resposta já usa o que foi adicionado; removida, deixa de valer no pedido seguinte.
+- **Resultado:** ❌ 13/10/2026, primeira tentativa: a memória gravou, mas o Zé não a via na
+  conversa em andamento (achado 2). Corrigido; para refazer.
 
 ### Passo 3. Guardar pela voz
 
