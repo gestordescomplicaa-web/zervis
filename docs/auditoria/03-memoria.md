@@ -54,7 +54,9 @@ Um fato é memória; um procedimento ("como faço X do meu jeito") é skill (ár
 
 - **Como:** "Ei Zé, lembra que eu uso o Omarchy com Hyprland."
 - **Esperado:** o Zé confirma (ou pede aprovação) e a entrada aparece na Memória.
-- **Resultado:** ⬜
+- **Resultado:** ✅ 13/10/2026.
+
+**Área fechada em 13/10/2026.**
 
 ### Passo 4. Memória longa
 

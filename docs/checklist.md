@@ -39,16 +39,16 @@ rápidas como atalho para conversa simples; as sessões de código são outra co
 - ⬜ OmniRoute (endereço e chave de quem usa): feito, falta o teste com uma chave real
 - Não se aplica aqui: chave de API da Anthropic (a pessoa usa a assinatura)
 
-## 3. Memória
+## 3. Memória — **Pronta** (13/10/2026, `docs/auditoria/03-memoria.md`)
 
-Conceito: o que o Zé sabe. Curta (fatos aprovados, em toda conversa) e longa (conversas, linha do
-tempo, notas do dia, ai-memory, buscadas quando precisa).
+Conceito: memória curta (o que vale agora, em toda conversa), memória longa (o histórico, buscado
+quando precisa), memória dos projetos (ai-memory, por sessão) e sugestões (só com aprovação).
 
-- ⬜ Adicionar e remover em "Sobre você" e "Sobre a máquina e o Zé"
-- ⬜ "Zé, lembra que…" grava na memória curta
-- ⬜ Memória longa: "o que conversamos ontem?" acha a conversa
-- ❌ Sugestões que o Zé aprende sozinho (memória e skill) não aparecem no painel: só por voz.
-  Hoje há sugestão esperando e a página diz "Vazia".
+- ✅ Adicionar e remover pelo painel; vale já no próximo pedido, e o que saiu deixa de valer
+- ✅ Guardar pela voz
+- ✅ Memória longa: "o que conversamos ontem?"
+- ✅ Sugestões no painel, com Aprovar e Descartar
+- ✅ Memória dos projetos (ai-memory) com estado e páginas na página
 
 ## 4. Skills
 
