@@ -788,6 +788,8 @@ async function abrirSessao(id) {
         ${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
     <div id="excluir-sessao"></div>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
+    ${sessao.interrompida ? `<div id="interrompida-sessao" class="faixa limite" role="alert"><div><strong>Tarefa interrompida</strong>
+      <span>${esc(sessao.interrompida)}</span></div><div class="botoes">${botao("Continuar", "interrompida-continuar", "", "principal")}${botao("Dispensar", "interrompida-dispensar", "", "discreta")}</div></div>` : ""}
     <section id="copia-sessao" class="cartao" hidden></section>
     <div id="melhorias-ze"></div>
     <section class="editor-md" id="editor-md" hidden>
@@ -1159,6 +1161,8 @@ const ACOES = {
       <span>O agente é encerrado e a conversa da sessão sai do Zé. A pasta do projeto fica.</span></div>
       <div class="botoes">${botao("Excluir", "sessao-excluir-sim", "", "perigo")}${botao("Cancelar", "sessao-excluir-nao", "", "discreta")}</div></div>`;
   },
+  "interrompida-continuar": async (b) => { const r = await ocupado(b, () => api("sessao/interrompida", { id: sessaoAberta, continuar: true })); toast(r.aviso); await abrirSessao(sessaoAberta); },
+  "interrompida-dispensar": async () => { const r = await api("sessao/interrompida", { id: sessaoAberta }); toast(r.aviso); $("interrompida-sessao")?.remove(); },
   "sessao-excluir-nao": () => { $("excluir-sessao").innerHTML = ""; },
   "sessao-excluir-sim": async (b) => {
     const r = await ocupado(b, () => api("sessao/excluir", { id: sessaoAberta }));

@@ -215,6 +215,7 @@ class Acoes:
             "sessao/ler": self.ler_sessao,
             "sessao/trocar": self.trocar_sessao,
             "sessao/modelo": self.modelo_da_sessao,
+            "sessao/interrompida": self.tarefa_interrompida,
             "sessao/copia": lambda d: self._chamar(
                 lambda: self.n.sessoes.copia(str(d.get("id", "")))
             ),
@@ -886,6 +887,7 @@ class Acoes:
             "estado": "trabalhando" if s.id in self.n.sessoes.trabalhando() else s.estado,
             "conta_id": s.conta,
             "limite": s.limite,
+            "interrompida": s.interrompida[:300],
             "resumo": s.resumo,
             "atualizada": s.atualizada,
         }
@@ -998,6 +1000,15 @@ class Acoes:
         aviso = self._chamar(lambda: self.n.sessoes.descartar_copia(id_))
         atividade.PADRAO.registrar("execucao", f"Descartou a cópia da sessão ({id_})")
         return {**self.n.sessoes.copia(id_), "aviso": aviso}
+
+    def tarefa_interrompida(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Continuar (de onde parou) ou dispensar a tarefa que o reinício interrompeu."""
+        id_ = str(dados.get("id", ""))
+        if dados.get("continuar"):
+            s = self._chamar(lambda: self.n.sessoes.continuar_interrompida(id_))
+            return {**self._sessao(s), "aviso": "Continuando de onde parou."}
+        s = self._chamar(lambda: self.n.sessoes.dispensar_interrompida(id_))
+        return {**self._sessao(s), "aviso": "Dispensada."}
 
     def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O modelo dos próximos pedidos da sessão; o agente reabre nele e a conversa continua."""

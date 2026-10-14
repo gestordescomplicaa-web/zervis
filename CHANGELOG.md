@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Tarefa interrompida: se o Zé reinicia no meio de um pedido a uma sessão, ele avisa e oferece
+  continuar de onde parou (pela voz ou pela faixa na sessão).
 - Sessões: o × do topo virou o botão "Excluir", com a confirmação numa faixa abaixo do cabeçalho.
 - Autodesenvolvimento: a autorização de ferramentas do Codex também é zona protegida.
 - Automações: criação e alteração simultâneas preservam os agendamentos; temporários exclusivos.

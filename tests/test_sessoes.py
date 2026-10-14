@@ -700,3 +700,38 @@ def test_modelo_da_sessao_pela_lista_da_conta(tmp_path: Path, raiz: Path) -> Non
     with pytest.raises(SessaoErro, match="não está disponível"):
         sessoes.ajustar_modelo(s.id, "gpt-qualquer")
     assert sessoes.ajustar_modelo(s.id, "").modelo == ""  # volta ao padrão da conta
+
+
+def test_tarefa_interrompida_pelo_reinicio_fica_guardada_e_continua(
+    tmp_path: Path, raiz: Path
+) -> None:
+    """Relatório de 14/10/2026: o pedido em andamento não some num reinício."""
+    pedidos: list[str] = []
+
+    async def agente(sessoes: Sessoes, s: Sessao, texto: str) -> str:
+        pedidos.append(texto)
+        return "feito"
+
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), rodar=agente)
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "claude")
+    sessoes._mudar(s.id, estado="trabalhando", ultimo_pedido="rode os testes e corrija")
+    depois = Sessoes(tmp_path / "sessoes", (raiz,), rodar=agente)  # o Zé subiu de novo
+    [interrompida] = depois.interrompidas_ao_subir
+    assert interrompida.id == s.id and depois.ler(s.id).estado == "parada"
+    assert depois.ler(s.id).interrompida == "rode os testes e corrija"
+    depois.continuar_interrompida(s.id)
+    esperar(lambda: pedidos)
+    assert "continue de onde parou" in pedidos[0] and "rode os testes e corrija" in pedidos[0]
+    assert depois.ler(s.id).interrompida == ""
+    with pytest.raises(SessaoErro, match="não há tarefa interrompida"):
+        depois.continuar_interrompida(s.id)
+
+
+def test_pedido_novo_dispensa_a_tarefa_interrompida(tmp_path: Path, raiz: Path) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: None)
+    s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "claude")
+    sessoes._mudar(s.id, interrompida="pedido velho")
+    sessoes._evento(s.id, {"hook_event_name": "UserPromptSubmit", "prompt": "outra coisa"})
+    assert sessoes.ler(s.id).interrompida == ""
+    sessoes._mudar(s.id, interrompida="de novo")
+    assert sessoes.dispensar_interrompida(s.id).interrompida == ""

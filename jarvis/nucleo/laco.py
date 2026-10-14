@@ -2467,8 +2467,26 @@ class Nucleo:
             },
         )
 
+    def _avisar_interrompidas(self) -> None:
+        """Depois de um reinício: cada sessão que estava no meio de um pedido vira um aviso, com
+        a oferta de continuar (a conversa dela está intacta)."""
+        for s in getattr(self.sessoes, "interrompidas_ao_subir", []):
+            if s.origem == ORIGEM_MANUTENCAO:
+                continue
+            texto = (
+                f"A sessão {s.nome} foi interrompida pelo reinício no meio de um pedido. "
+                "Posso mandá-la continuar de onde parou."
+            )
+            atividade.PADRAO.registrar("falha", f"Tarefa interrompida: sessão {s.nome}",
+                                       origem="sistema", pedido=s.interrompida[:300])  # fmt: skip
+            self._aviso_da_oficina(
+                texto, "notificacao", s.id, f"a sessão {s.nome} foi interrompida"
+            )
+        self.sessoes.interrompidas_ao_subir = []
+
     def rodar(self) -> None:
         self.memoria_longa.iniciar()
+        self._avisar_interrompidas()
         self._ligar_voz_remota()
         if tunel.escolhido():  # o acesso de qualquer lugar continua depois de um reinício
             if self.acesso.tem_senha and self.acesso.tem_codigo:

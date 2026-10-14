@@ -118,6 +118,9 @@ class Sessao:
     # o manda de novo e o trabalho continua de onde parou.
     ultimo_pedido: str = ""
     limite: bool = False
+    # O pedido que estava em andamento quando o agente parou sem terminar (o Zé reiniciou, o
+    # terminal fechou no meio): fica até a pessoa continuar ou dispensar.
+    interrompida: str = ""
 
     @property
     def onde(self) -> Path:
@@ -216,12 +219,16 @@ class Sessoes:
             threading.Thread(
                 target=self._vigiar_eventos, name="sessoes-eventos", daemon=True
             ).start()
-        # Uma sessão que estava trabalhando quando o Zé caiu não está mais.
+        # Uma sessão que estava trabalhando quando o Zé caiu não está mais: o pedido fica guardado
+        # como interrompido, para o Zé avisar e oferecer continuar.
+        self.interrompidas_ao_subir: list[Sessao] = []
         for s in self.listar():
             if s.estado == "trabalhando":
                 s.estado = "parada"
+                s.interrompida = s.ultimo_pedido or s.interrompida or "(pedido sem registro)"
                 self._gravar(s)
-                self.anotar(s.id, "sistema", "O Zé reiniciou no meio do trabalho; peça de novo.")
+                self.anotar(s.id, "sistema", "O Zé reiniciou no meio do trabalho.")
+                self.interrompidas_ao_subir.append(s)
 
     # --- disco ---------------------------------------------------------------------------
 
@@ -607,6 +614,23 @@ class Sessoes:
         self.anotar(id_, "sistema", f"Modelo: {nome}{extra}.")
         return s
 
+    def continuar_interrompida(self, id_: str) -> Sessao:
+        """Retoma o pedido interrompido: a conversa do agente continua, e ele recebe o pedido de
+        novo com o aviso de que pode ter feito parte antes."""
+        s = self.ler(id_)
+        if not s.interrompida:
+            raise SessaoErro("não há tarefa interrompida nesta sessão")
+        texto = (
+            "O trabalho anterior foi interrompido no meio (o Zé reiniciou ou o terminal fechou). "
+            "Confira o que já ficou feito e continue de onde parou. O pedido era:\n\n"
+            + s.interrompida
+        )
+        self._mudar(id_, interrompida="")
+        return self.enviar(id_, texto, quem="continuacao")
+
+    def dispensar_interrompida(self, id_: str) -> Sessao:
+        return self._mudar(id_, interrompida="")
+
     def continuar(self, id_: str) -> Sessao:
         """Manda de novo o pedido que bateu no limite (depois de trocar de conta ou de agente)."""
         s = self.ler(id_)
@@ -732,8 +756,9 @@ class Sessoes:
         with contextlib.suppress(SessaoErro):
             if codigo not in SAIDAS_NORMAIS:  # fechar o terminal é normal; erro fica na conversa
                 self.anotar(id_, "sistema", f"O agente saiu ({codigo}).")
-            if self.ler(id_).estado == "trabalhando":
-                self._mudar(id_, estado="parada")
+            s = self.ler(id_)
+            if s.estado == "trabalhando":  # fechou no meio de um pedido
+                self._mudar(id_, estado="parada", interrompida=s.ultimo_pedido)
 
     def _olhar_saida(self, id_: str, dados: bytes) -> None:
         """Créditos esgotados aparecem na tela do agente: a sessão avisa e oferece outra conta."""
@@ -806,6 +831,7 @@ class Sessoes:
                 estado="trabalhando",
                 limite=False,
                 ultimo_pedido=str(e.get("prompt", ""))[:8000],
+                interrompida="",  # um pedido novo: o interrompido ficou para trás
             )
         elif nome == "PostToolUse":
             if acao := _acao_do_claude(e):

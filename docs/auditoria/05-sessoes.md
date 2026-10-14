@@ -27,6 +27,14 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
    confirmação, escrita dentro do cabeçalho, quebrava o layout do terminal. **Corrigido em
    14/10/2026:** botão "Excluir" e confirmação numa faixa larga abaixo do cabeçalho.
 
+4. **Um reinício apagava o pedido em andamento** (relatório de 14/10/2026, item 2). A sessão
+   aparecia só como "parada", e ninguém avisava que o pedido não terminou. **Feito (etapa 1):** o
+   pedido interrompido fica guardado na sessão; ao subir, o Zé avisa pela Central de avisos e
+   oferece continuar; "continua" pela voz (ferramenta `sessao_continuar`) ou a faixa "Tarefa
+   interrompida" com Continuar e Dispensar. O agente recebe o pedido de novo com o aviso de
+   conferir o que já ficou feito. Vale também quando o terminal fecha no meio. **Etapa 2, depois:**
+   os agentes rodarem fora do processo do Zé, para nem serem interrompidos.
+
 ## Passos
 
 ### Passo 1. Projeto novo
@@ -54,4 +62,10 @@ passando de um para o outro, pedido por voz a uma sessão, aviso de fim e de apr
 ### Passo 5. Três trabalhando
 - **Como:** pedir trabalho a três sessões e tentar uma quarta.
 - **Esperado:** a quarta é recusada com uma mensagem clara (ou espera, se houver fila).
+- **Resultado:** 🟡 só nos testes automáticos (difícil de provocar à mão).
+
+### Passo 6. Tarefa interrompida pelo reinício
+- **Como:** pedir a uma sessão algo demorado; reiniciar o Zé no meio.
+- **Esperado:** ao voltar, o aviso de tarefa interrompida; "continua" (ou Continuar na faixa)
+  retoma de onde parou.
 - **Resultado:** ⬜

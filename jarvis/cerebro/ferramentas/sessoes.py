@@ -183,4 +183,22 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
             return _erro(erro)
         return _texto({"parada": True, **_resumo(s)})
 
-    return [listar, criar, enviar, ler, trocar, parar]
+    @tool(
+        "sessao_continuar",
+        "Retoma a tarefa que um reinício do Zé (ou o terminal fechando) interrompeu numa sessão: o "
+        "agente recebe o pedido de novo e continua de onde parou. Use quando a pessoa disser "
+        '"continua" depois do aviso de tarefa interrompida. Sessão: id ou nome; vazio é a em foco.',
+        SESSAO,
+    )
+    async def continuar(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            s = await asyncio.to_thread(
+                lambda: sessoes.continuar_interrompida(
+                    sessoes.achar(str(args.get("sessao", ""))).id
+                )
+            )
+        except SessaoErro as erro:
+            return _erro(erro)
+        return _texto({"continuando": True, **_resumo(s)})
+
+    return [listar, criar, enviar, ler, trocar, parar, continuar]
