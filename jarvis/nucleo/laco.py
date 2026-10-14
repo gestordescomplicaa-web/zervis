@@ -219,6 +219,12 @@ def criar_bip(caminho: Path) -> None:
         )
 
 
+def foto_da_memoria(memoria: Any, skills: Any = None) -> str:
+    """O que o cérebro recebe no começo da conversa: a memória curta e a lista de skills."""
+    texto = str(memoria.foto())
+    return texto + ("\n\n" + str(skills.catalogo()) if skills is not None else "")
+
+
 def nivel_de_pico(audio: bytes, janela: int = 1600, segundos: float = 1.2) -> float:
     """O volume mais alto (dBFS) em janelas de 100 ms no fim do trecho: o chamado de verdade é
     alguém falando ao microfone; silêncio e som de fundo ficam bem abaixo."""
@@ -1191,23 +1197,24 @@ class Nucleo:
         return "Não tenho mais detalhe desse aviso; a resposta inteira está na sessão."
 
     def _foto_simples(self) -> str:
-        return self.memoria.foto() + "\n\n" + self.skills.catalogo()
+        return foto_da_memoria(self.memoria, getattr(self, "skills", None))
 
     def _foto_do_cerebro(self) -> str:
         """A foto que o cérebro põe no começo de cada sessão dele, guardada para comparar: o
         cérebro conecta ao subir, antes do primeiro pedido (13/10/2026: a pessoa apagou a memória
         depois do reinício e o Zé ainda respondia com o que estava lá)."""
-        self._memoria_vista = self.memoria.foto()
-        return self._foto_simples()
+        self._memoria_vista = self._foto_simples()
+        return self._memoria_vista
 
     def _com_memoria(self, pedido: str) -> str:
-        """A memória curta mudou no meio da conversa (painel, aprovação, voz): o pedido leva a
-        versão nova, porque a foto do começo da conversa ficou velha (13/10/2026: a pessoa
-        adicionou uma preferência e o Zé disse que a memória estava vazia)."""
+        """A memória curta ou as skills mudaram no meio da conversa (painel, aprovação, voz): o
+        pedido leva a versão nova, porque a foto do começo da conversa ficou velha (13/10/2026: a
+        pessoa adicionou uma preferência e o Zé disse que a memória estava vazia; criou uma skill e
+        ele não a leu)."""
         memoria = getattr(self, "memoria", None)
         if memoria is None:
             return pedido
-        atual = memoria.foto()
+        atual = foto_da_memoria(memoria, getattr(self, "skills", None))
         vista, self._memoria_vista = getattr(self, "_memoria_vista", None), atual
         if vista is None or vista == atual:
             return pedido
@@ -1219,14 +1226,14 @@ class Nucleo:
 
         saiu = sorted(itens(vista) - itens(atual))
         aviso = (
-            "Saiu da memória (não vale mais, mesmo que apareça antes nesta conversa):\n"
+            "Saiu (não vale mais, mesmo que apareça antes nesta conversa):\n"
             + "\n".join(saiu)
             + "\n\n"
             if saiu
             else ""
         )
         return (
-            "[Memória atualizada agora: vale no lugar da foto do começo da conversa]\n"
+            "[Memória e skills atualizadas agora: valem no lugar da foto do começo da conversa]\n"
             f"{aviso}{atual}\n\n{pedido}"
         )
 

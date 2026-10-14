@@ -24,6 +24,10 @@ uso há 30 dias sai da lista para o arquivo, sem apagar nada.
    `SKILL.md` é montado por trás. "Editar como texto" continua para quem quiser; uma skill fora do
    modelo abre direto como texto, para não perder nada. A página Skills passou a carregar só quando
    aberta.
+3. **Skill criada no meio da conversa não chegava ao cérebro.** A lista de skills também ia na foto
+   do começo da conversa: a pessoa criou "resumo-do-dia", pediu o resumo, e o Zé respondeu pelo
+   histórico, sem ler a skill. **Corrigido:** a mesma atualização da memória agora leva a lista de
+   skills nova (e diz o que saiu).
 
 ## Passos
 
