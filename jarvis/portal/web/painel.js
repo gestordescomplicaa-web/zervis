@@ -118,24 +118,6 @@ const PAGINAS = {
       ${a.length ? `<div class="itens">${linhas.join("")}</div>` : vazio("Nada agendado.")}`;
   },
 
-  async memoria() {
-    const m = await api("memoria");
-    const bloco = (titulo, alvo, entradas) => {
-      const cheio = Math.min(100, Math.round((100 * entradas.join(" § ").length) / m.limites[alvo]));
-      const barra = `<span class="cheio" title="Quanto do espaço desta memória já foi usado"><span class="barra"><span data-cheio="${cheio}"></span></span>${cheio}% cheio</span>`;
-      return cartao(`${titulo} ${barra}`,
-        `<div class="itens">${entradas.map((t) => item("", esc(t), xis("memoria-remover", `data-alvo="${alvo}" data-texto="${esc(t)}"`, "Remover"))).join("") || vazio("Vazia.")}</div>
-         <div class="add"><input data-nova="${alvo}" placeholder="Algo para o Zé lembrar sempre" autocomplete="off">${botao("Adicionar", "memoria-adicionar", `data-alvo="${alvo}"`)}</div>`);
-    };
-    const sugestoes = m.sugestoes.length ? cartao("Sugestões", `${sub("O que o Zé aprendeu numa conversa e espera a sua aprovação.")}
-      <div class="itens">${m.sugestoes.map((s) => item(s.tipo === "skill" ? "Skill" : "Memória", esc(s.resumo),
-        botao("Aprovar", "sugestao", `data-id="${esc(s.id)}" data-aprovar="1"`, "principal") + botao("Descartar", "sugestao", `data-id="${esc(s.id)}"`, "discreta"))).join("")}</div>`) : "";
-    const p = m.projetos || {};
-    const projetos = cartao(`Memória dos projetos <span class="etiqueta ${p.ativa ? "bom" : "alerta"}">${p.ativa ? "Conectada" : "Desligada"}</span>`,
-      `${sub("O que as sessões de código fazem fica guardado por projeto e volta na próxima sessão (ai-memory).")}${p.paginas != null ? `<p class="nota">${p.paginas} páginas guardadas.</p>` : ""}`);
-    return `${cabeca("Memória")}${sub("O que o Zé sabe em toda conversa.")}
-      ${sugestoes}${bloco("Sobre você", "usuario", m.usuario)}${bloco("Sobre a máquina e o Zé", "jarvis", m.jarvis)}${projetos}`;
-  },
 
 
 
@@ -1040,7 +1022,6 @@ document.addEventListener("visibilitychange", () => {
 const recarregar = () => abrir();
 
 const ACOES = {
-  sugestao: async (b) => { const r = await ocupado(b, () => api("sugestao/decidir", { id: b.dataset.id, aprovar: !!b.dataset.aprovar })); toast(r.aviso); await recarregar(); },
   "cerebro-escolher": async (b) => {
     const pedido = b.dataset.agente;
     const c = await ocupado(b, () => api("cerebro/escolher", { agente: pedido }));
@@ -1069,13 +1050,6 @@ const ACOES = {
   // automações
   "automacao-remover": (b) => confirmar(b, "Remover?", async () => { await api("automacao/remover", { id: b.dataset.id }); await recarregar(); }),
   // memória
-  "memoria-remover": (b) => confirmar(b, "Remover?", async () => { await api("memoria/mudar", { acao: "remover", alvo: b.dataset.alvo, texto: b.dataset.texto }); await recarregar(); }),
-  "memoria-adicionar": async (b) => {
-    const campo = document.querySelector(`[data-nova="${b.dataset.alvo}"]`);
-    await ocupado(b, () => api("memoria/mudar", { acao: "adicionar", alvo: b.dataset.alvo, texto: campo.value }));
-    toast("Guardado."); await recarregar();
-  },
-  // skills
   // modelos
   motor: (b) => {
     modelo.motor = b.dataset.motor;
@@ -1333,7 +1307,7 @@ conteudo.addEventListener("drop", (ev) => {
 // --- navegação e batimento ---
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
-const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js", conectores: "/paginas/conectores.js", conversa: "/paginas/conversa.js", skills: "/paginas/skills.js" };
+const SOB_DEMANDA = { atividade: "/paginas/atividade.js", melhorias: "/paginas/melhorias.js", conectores: "/paginas/conectores.js", conversa: "/paginas/conversa.js", skills: "/paginas/skills.js", memoria: "/paginas/memoria.js" };
 const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que ocupam a tela
 const carregados = {};
 const carregarPagina = (nome) => (carregados[nome] ??= new Promise((ok, erro) => {
