@@ -36,3 +36,12 @@ arquivo copiado leva um cabeçalho citando a origem.
 - **Barehands**: AGPL-3.0, compatível com o Zé (ADR 0013); embutido em `jarvis/imersivo/` (ADR 0014), com os avisos de autoria nos arquivos.
 - **backtalk**, **ai-visualizer**: AGPL-3.0. Entram só com aviso de autoria, como o Barehands.
 - **ai-memory-vault**: CC BY-SA 4.0. Texto copiado mantém a atribuição e a licença.
+| `jarvis/atendimento/wacalls/` (servidor em Go; licença em `LICENSE`), sem o cliente React e sem os vetores de referência do codec | WaCalls (github.com/JotaDev66/WaCalls), na versão modificada no Ligatia por gdautomacao.ia (captura passiva de mensagens, envio transacional, PCM por WebSocket, autenticação interna); no Zé: nome do aparelho, QR na lista de sessões e sem QR no terminal | MIT (original); AGPL-3.0-or-later (modificações) | jotadev66 (obra original); gdautomacao.ia (modificações) |
+| `jarvis/atendimento/wacalls/internal/voip/media/mlow/` (codec MLow do WhatsApp em Go puro; licença em `LICENSE` da pasta) | meowcaller, pacote `mlow` (github.com/purpshell/meowcaller), portado de whatsapp-rust (github.com/oxidezap/whatsapp-rust) | MIT | Rajeh Taher |
+| Módulos Go baixados na compilação do WaCalls (fora do repositório; versões em `jarvis/atendimento/wacalls/go.sum`): whatsmeow, pion/webrtc, modernc.org/sqlite, zerolog, protobuf | tulir/whatsmeow; pion/webrtc; modernc.org/sqlite; rs/zerolog; protocolbuffers/protobuf-go | MPL-2.0 (whatsmeow); MIT (pion, zerolog); BSD-3-Clause (sqlite, protobuf) | Tulir Asokan; The Pion community; The Sqlite Authors / Jan Mercl; Olivier Poitrey; The Go Authors |
+
+## TypeScript — ferramenta de desenvolvimento
+
+[TypeScript](https://github.com/microsoft/TypeScript), Microsoft e colaboradores, Apache-2.0.
+Verifica os comentários JSDoc do painel com `checkJs` e `noEmit`; não entra na página nem exige
+compilação na instalação do usuário. Dependência de desenvolvimento fixada em `package-lock.json`.

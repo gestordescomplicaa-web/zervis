@@ -1,7 +1,9 @@
 # 0030 — Assistente de mensagens do WhatsApp: o Zé avisa o que é importante para você
 
 - Data: 13/10/2026
-- Status: **Proposta**, para depois da auditoria (depende das áreas de Conectores e Sessões)
+- Status: **Proposta**, para depois da auditoria (depende das áreas de Conectores e Sessões). A
+  fonte das mensagens passou a ser o WaCalls, no lugar do WuzAPI
+  ([ADR 0031](0031-atendimento-whatsapp-e-telefonia.md)).
 
 ## Contexto
 Operando o Zé por voz (Mãos livres, fone), a pessoa não quer olhar o WhatsApp a toda hora, mas

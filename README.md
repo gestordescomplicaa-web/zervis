@@ -33,10 +33,11 @@ três dentro de uma pasta só. O fuso vem do sistema (ou de `JARVIS_FUSO`).
 
 ## Rodar (desenvolvimento)
 
-Precisa de Linux, Python 3.12+ e [uv](https://docs.astral.sh/uv/).
+Para desenvolvimento: Linux, Python 3.12+, Node.js 22+ e [uv](https://docs.astral.sh/uv/).
 
 ```sh
 uv sync
+npm ci
 make check                 # formatação, lint, tipos e testes
 uv run python -m jarvis    # sobe o Zé; o painel abre em http://127.0.0.1:8795/
 ```

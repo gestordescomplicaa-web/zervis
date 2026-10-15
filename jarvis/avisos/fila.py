@@ -5,13 +5,13 @@ espera aqui, em disco: um reinício do `jarvisd` não perde nada. Cada aviso tem
 (urgente, lembrete, fim de tarefa) e, se vier de uma sessão, o nome dela, uma manchete curta
 ("a sessão Loja terminou") e o detalhe para quando a pessoa pedir.
 
-Ao ficar livre, o Zé oferece: com um aviso só, fala ele; com vários, uma frase que resume e
-pergunta por onde começar ("Duas novidades: a sessão Site pede aprovação e a sessão Loja
-terminou. Começo pela Site?"), e a pessoa conduz ("começa", "próximo", "depois"). Avisos velhos
-expiram (um lembrete de reunião que já passou não serve mais).
+Avisos de sessão saem um por vez, automaticamente, na ordem de prioridade. Outros avisos
+acumulados podem virar uma oferta. Avisos velhos expiram (um lembrete que passou não serve).
 """
 
 import json
+import tempfile
+import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -21,6 +21,8 @@ from typing import Any
 VALIDADE_S = 12 * 3600
 PRIORIDADES = {"urgente": 0, "lembrete": 1, "notificacao": 2}
 NUMEROS = {2: "Duas", 3: "Três", 4: "Quatro", 5: "Cinco"}
+_TRAVAS: dict[Path, threading.RLock] = {}
+_CRIAR_TRAVA = threading.Lock()
 
 
 @dataclass
@@ -49,6 +51,8 @@ def _da_lista(brutos: Any) -> list[Aviso]:
 class Fila:
     def __init__(self, arquivo: Path) -> None:
         self.arquivo = arquivo
+        with _CRIAR_TRAVA:
+            self._trava = _TRAVAS.setdefault(arquivo.resolve(), threading.RLock())
 
     def _ler(self) -> list[Aviso]:
         try:
@@ -58,10 +62,16 @@ class Fila:
 
     def _gravar(self, avisos: list[Aviso]) -> None:
         self.arquivo.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        temporario = self.arquivo.with_suffix(".next")
-        temporario.write_text(json.dumps([asdict(a) for a in avisos], ensure_ascii=False))
-        temporario.chmod(0o600)
-        temporario.replace(self.arquivo)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=self.arquivo.parent, delete=False
+        ) as arquivo:
+            temporario = Path(arquivo.name)  # nasce privado, antes de receber os avisos
+            try:
+                json.dump([asdict(a) for a in avisos], arquivo, ensure_ascii=False)
+                arquivo.flush()
+                temporario.replace(self.arquivo)
+            finally:
+                temporario.unlink(missing_ok=True)
 
     def guardar(
         self,
@@ -73,49 +83,56 @@ class Fila:
         sessao: str = "",
         detalhe: str = "",
     ) -> None:
-        avisos = [a for a in self._ler() if a.texto != texto]  # o mesmo aviso, uma vez só
-        avisos.append(
-            Aviso(
-                texto,
-                origem,
-                expira,
-                prioridade=prioridade,
-                titulo=titulo,
-                sessao=sessao,
-                detalhe=detalhe,
+        with self._trava:
+            avisos = [a for a in self._ler() if (a.texto, a.sessao) != (texto, sessao)]
+            avisos.append(
+                Aviso(
+                    texto,
+                    origem,
+                    expira,
+                    prioridade=prioridade,
+                    titulo=titulo,
+                    sessao=sessao,
+                    detalhe=detalhe,
+                )
             )
-        )
-        self._gravar(avisos)
+            self._gravar(avisos)
 
     def validos(self, agora: float | None = None) -> list[Aviso]:
         """Os que ainda valem, na ordem de fala: prioridade, depois o mais antigo."""
-        agora = time.time() if agora is None else agora
-        vivos = [a for a in self._ler() if (a.expira or a.criado + VALIDADE_S) > agora]
-        return sorted(vivos, key=lambda a: (a.prioridade, a.criado))
+        with self._trava:
+            agora = time.time() if agora is None else agora
+            vivos = [a for a in self._ler() if (a.expira or a.criado + VALIDADE_S) > agora]
+            return sorted(vivos, key=lambda a: (a.prioridade, a.criado))
 
     def proximo(self, agora: float | None = None) -> Aviso | None:
         """Tira o próximo a ser ouvido (o mais urgente; entre iguais, o mais antigo)."""
-        avisos = self.validos(agora)
-        if not avisos:
-            self._gravar([])
-            return None
-        self._gravar(avisos[1:])
-        return avisos[0]
+        with self._trava:
+            avisos = self.validos(agora)
+            if not avisos:
+                self._gravar([])
+                return None
+            self._gravar(avisos[1:])
+            return avisos[0]
 
     def oferecer(self, agora: float | None = None) -> tuple[str, Aviso | None] | None:
-        """O que dizer ao ficar livre, se houver novidade ainda não oferecida: com um aviso só,
-        ele mesmo (já tirado da fila); com vários, a oferta que resume e pergunta (ficam na
-        fila, marcados). None se não há nada novo."""
-        avisos = self.validos(agora)
-        if not avisos or all(a.oferecido for a in avisos):
-            return None
-        if len(avisos) == 1:
-            self._gravar([])
-            return avisos[0].texto, avisos[0]
-        for a in avisos:
-            a.oferecido = True
-        self._gravar(avisos)
-        return oferta(avisos), None
+        """Sessões saem individualmente; não dependem de 'começa' ou 'próximo'."""
+        with self._trava:
+            avisos = self.validos(agora)
+            if not avisos:
+                return None
+            if any(a.sessao for a in avisos):
+                self._gravar(avisos[1:])
+                return avisos[0].texto, avisos[0]
+            if all(a.oferecido for a in avisos):
+                return None
+            if len(avisos) == 1:
+                self._gravar([])
+                return avisos[0].texto, avisos[0]
+            for a in avisos:
+                a.oferecido = True
+            self._gravar(avisos)
+            return oferta(avisos), None
 
 
 def oferta(avisos: list[Aviso]) -> str:

@@ -64,8 +64,8 @@ function editorSkill(nome, conteudo, nova) {
 }
 
 function conteudoDoEditor(nome) {
-  if (skillEditada.texto) return $("sk-texto").value.replace(/^name: .*$/m, `name: ${nome}`);
-  return montarSkill({ nome, titulo: $("sk-titulo")?.value.trim() || skillEditada.titulo, quando: $("sk-quando").value, sessoes: $("sk-sessoes")?.checked, jeito: $("sk-jeito").value, passos: $("sk-passos").value, pronto: $("sk-pronto").value });
+  if (skillEditada.texto) return valorCampo("sk-texto").value.replace(/^name: .*$/m, `name: ${nome}`);
+  return montarSkill({ nome, titulo: valorCampo("sk-titulo")?.value.trim() || skillEditada.titulo, quando: valorCampo("sk-quando").value, sessoes: entradaCampo("sk-sessoes")?.checked, jeito: valorCampo("sk-jeito").value, passos: valorCampo("sk-passos").value, pronto: valorCampo("sk-pronto").value });
 }
 
 Object.assign(ACOES, {
@@ -73,8 +73,8 @@ Object.assign(ACOES, {
   "skill-editar": async (b) => { const k = await api("skill/ver", { nome: b.dataset.nome }); editorSkill(k.nome, k.conteudo, false); },
   "skill-fechar": () => { $("editor-skill").hidden = true; },
   "skill-texto": () => {
-    const nome = skillEditada.nome || nomeDaSkill($("sk-titulo")?.value || "") || "nova-skill";
-    const texto = conteudoDoEditor(nome), titulo = $("sk-titulo")?.value || "";
+    const nome = skillEditada.nome || nomeDaSkill(valorCampo("sk-titulo")?.value || "") || "nova-skill";
+    const texto = conteudoDoEditor(nome), titulo = valorCampo("sk-titulo")?.value || "";
     skillEditada.texto = true;
     $("editor-skill").innerHTML = `<h2>${skillEditada.nova ? "Nova skill" : esc(skillEditada.nome)}</h2>
       ${skillEditada.nova ? `<label>Nome<input id="sk-titulo" value="${esc(titulo)}" autocomplete="off"></label>` : ""}
@@ -82,9 +82,9 @@ Object.assign(ACOES, {
       <div class="linha">${botao("Salvar", "skill-salvar", "", "principal")}${botao("Fechar", "skill-fechar", "", "discreta")}<span class="resultado" id="sk-resultado"></span></div>`;
   },
   "skill-salvar": async (b) => {
-    const nome = skillEditada.nome || nomeDaSkill($("sk-titulo")?.value || "");
+    const nome = skillEditada.nome || nomeDaSkill(valorCampo("sk-titulo")?.value || "");
     if (!nome) return mostrar("sk-resultado", false, "Dê um nome à skill.");
-    if (!skillEditada.texto && !$("sk-quando").value.trim()) return mostrar("sk-resultado", false, "Diga quando usar.");
+    if (!skillEditada.texto && !valorCampo("sk-quando").value.trim()) return mostrar("sk-resultado", false, "Diga quando usar.");
     await ocupado(b, () => api("skill/salvar", { nome, conteudo: conteudoDoEditor(nome) }));
     toast("Skill salva."); await recarregar();
   },

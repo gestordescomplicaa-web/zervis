@@ -1,7 +1,7 @@
 # Porta única de qualidade (docs/06-qualidade.md): formatação, lint, tipos e testes.
-.PHONY: check fmt lint tipos testes check-imersivo
+.PHONY: check fmt lint tipos testes check-imersivo check-instalacao wacalls
 
-check: lint tipos testes
+check: lint tipos testes wacalls
 
 fmt:
 	uv run ruff format .
@@ -11,11 +11,26 @@ lint:
 	uv run ruff format --check .
 	uv run ruff check .
 
-tipos:
+tipos: node_modules/.package-lock.json
 	uv run mypy
+	npm run check
+
+# O TypeScript do painel (só verificação), instalado ou atualizado quando o lock muda.
+node_modules/.package-lock.json: package.json package-lock.json
+	npm ci --no-audit --no-fund
 
 testes:
 	uv run pytest
+
+# O WaCalls (Go) do atendimento; sem o Go na máquina, fica de fora (o Zé também não o usa).
+wacalls:
+	@if command -v go >/dev/null; then cd jarvis/atendimento/wacalls && go vet ./... && go test ./...; \
+	else echo "wacalls: sem Go, testes do Go pulados"; fi
+
+# O último commit numa pasta limpa, com HOME vazio, instala e passa no make check (uns minutos):
+# antes de liberar uma versão e sempre que mudar dependência ou instalação.
+check-instalacao:
+	deploy/check-instalacao.sh
 
 # O modo imersivo num Chromium de verdade, sem tela (uns minutos): antes de mexer na página.
 check-imersivo:

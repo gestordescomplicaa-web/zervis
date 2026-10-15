@@ -78,7 +78,8 @@ async def verificar(tmp_path):
                 for _ in range(80):
                     if await avaliar(texto): return
                     await asyncio.sleep(.1)
-                raise AssertionError(texto)
+                tela = await avaliar('document.body.innerText.slice(-1200)')
+                raise AssertionError(f'{texto}: {tela}')
             await esperar("!!document.querySelector('[data-acao=sessao-abrir]')")
             await avaliar("document.querySelector('[data-acao=sessao-abrir]').click()")
             await esperar("!!document.querySelector('[data-acao=copia-aplicar]:not(:disabled)')")
@@ -98,6 +99,11 @@ async def verificar(tmp_path):
             await esperar("!!document.querySelector('[data-acao=copia-descartar]:disabled')")
             assert (onde / 'a.txt').read_text() == 'aplicado\n'
             assert (projeto / 'a.txt').read_text() == 'aplicado\n'
+            # A configuração inicial não tem entrada no menu lateral.
+            await avaliar('carregarPagina("configurar")')  # sob demanda; depois troca o conteúdo
+            await avaliar('PAGINAS.configurar = async () => "<h1>Configuração</h1>"')
+            await avaliar('(async () => { location.hash = "#configurar"; await abrir(); })()')
+            assert await avaliar('document.querySelector("#conteudo h1").textContent') == 'Configuração'
     finally:
         processo.terminate()
         try: processo.wait(timeout=5)

@@ -27,7 +27,7 @@ def test_nada_de_quem_escreveu_o_ze_no_codigo() -> None:
     ("gdautomacao" sem o ".ia", em caminhos) não pode aparecer.
     """
     pessoais = ("Gabriel", "Recife", "/home/", "~/Work", "orca/projects", ".hermes", "3D-NOVO")
-    extensoes = ("py", "js", "html", "md", "json")
+    extensoes = ("py", "js", "html", "md", "json", "go")
     arquivos = [a for ext in extensoes for a in (RAIZ / "jarvis").rglob(f"*.{ext}")]
     for arquivo in arquivos:
         texto = arquivo.read_text()

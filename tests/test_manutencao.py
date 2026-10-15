@@ -1,12 +1,14 @@
 """O modo manutenção: encaminhar à sessão de código, ler a resposta e guardar a zona protegida."""
 
 import subprocess
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from jarvis.dados.documentos import Documentos
 from jarvis.nucleo import estados as e
 from jarvis.oficina import manutencao as mod
 from jarvis.oficina.manutencao import Manutencao
@@ -21,6 +23,10 @@ class SessoesFalsas:
     enviados: list[tuple[str, str]] = field(default_factory=list)
     ocupada: bool = False
     gravadas: list[str] = field(default_factory=list)
+    _dados: Documentos = field(init=False)
+    pasta: Path = field(init=False)
+    _operacoes: threading.RLock = field(default_factory=threading.RLock)
+    _centralizando: set[str] = field(default_factory=set)
 
     def listar(self) -> list[Sessao]:
         return list(self.criadas)
@@ -50,6 +56,9 @@ class SessoesFalsas:
     def _gravar(self, s: Sessao) -> None:
         self.gravadas.append(s.nome)
 
+    def arquivada_em(self, id_: str) -> str:
+        return ""
+
     def ler(self, id_: str) -> Sessao:
         for s in self.criadas:
             if s.id == id_:
@@ -61,6 +70,13 @@ class SessoesFalsas:
             raise SessaoErro("essa sessão ainda está trabalhando; espere ou pare")
         self.enviados.append((id_, texto))
         return next(s for s in self.criadas if s.id == id_)
+
+    def trocar(self, id_: str, agente: str, conta: str = "") -> tuple[Sessao, str]:
+        s = self.ler(id_)
+        if self.ocupada:
+            raise SessaoErro("essa sessão está trabalhando")
+        s.motor, s.conta = agente, conta
+        return s, "Agente alterado."
 
 
 def git(repo: Path, *args: str) -> None:
@@ -85,6 +101,8 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def nova(repo: Path, sessoes: SessoesFalsas) -> Manutencao:
+    sessoes._dados = Documentos(repo.parent / "sessoes.db")
+    sessoes.pasta = repo.parent / "sessoes"
     return Manutencao(sessoes, repo.parent / "manutencao", repo=repo)  # type: ignore[arg-type]
 
 
@@ -94,7 +112,7 @@ def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) 
     assert m.entrar("gemini").startswith("Modo manutenção ligado, com o Claude.")  # desconhecido
     m.sair()
     assert m.entrar("codex").startswith("Modo manutenção ligado, com o Codex.")
-    assert [s.motor for s in sessoes.criadas] == ["claude", "codex"]  # uma sessão por agente
+    assert len(sessoes.criadas) == 1 and sessoes.criadas[0].motor == "codex"
     assert m.entrar("claude").startswith("Modo manutenção ligado, com o Claude.")
     sessao = sessoes.criadas[0]
     assert (sessao.nome, sessao.pasta, sessao.origem) == (
@@ -105,7 +123,7 @@ def test_entrar_abre_a_sessao_do_ze_uma_vez_e_sobrevive_ao_reinicio(repo: Path) 
     assert nova(repo, sessoes).ligado  # o estado fica gravado: o reinício faz parte
     assert m.sair() == "Saí do modo manutenção."
     m.entrar("claude")
-    assert len(sessoes.criadas) == 2  # a mesma sessão de cada agente: a conversa continua
+    assert len(sessoes.criadas) == 1  # a mesma sessão e a mesma cópia para os dois agentes
     m.sair()
     assert not nova(repo, sessoes).ligado
 
@@ -215,7 +233,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
     ok, fala = m.reiniciar()
     assert not ok and "pelo painel" in fala and not rodou
     ok, fala = m.reiniciar(revisado=True)
-    assert ok and "Reiniciando" in fala
+    assert ok and fala == "Atualização aprovada, reiniciando automaticamente."
     assert rodou[0][0][:2] == ["/usr/bin/make", "-s"]  # os testes antes
     assert "deploy/reinicio-seguro.sh" in rodou[1][0][4] and rodou[1][0][6] == "abc"
 
@@ -225,6 +243,59 @@ def test_resultado_do_reinicio_e_dito_uma_vez(repo: Path) -> None:
     (m.pasta / "reinicio.json").write_text('{"resultado": "voltou"}')
     assert "Voltei para a anterior" in (m.resultado_do_reinicio() or "")
     assert m.resultado_do_reinicio() is None
+
+
+def test_etapas_acompanham_o_git_e_so_confirmam_depois_do_reinicio(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from jarvis.oficina.progresso import Progresso
+
+    m = nova(repo, SessoesFalsas())
+    m.entrar()
+    s = m.copia()
+    assert s is not None
+    _commit(Path(s.worktree), "docs/novo.md", "novo\n")
+    m.testar = lambda pasta: True
+    progresso = Progresso(m.pasta)
+    etapas: list[str] = []
+
+    def etapa(nome: str) -> None:
+        etapas.append(nome)
+        progresso.etapa(nome)
+
+    m.ao_etapa = etapa
+    original = subprocess.run
+
+    def executar(args: Any, **kw: Any) -> Any:
+        if args[0] in ("/usr/bin/make", "/usr/bin/systemd-run"):
+            return subprocess.CompletedProcess(args, 0)
+        return original(args, **kw)
+
+    monkeypatch.setattr(subprocess, "run", executar)
+    assert m.aplicar()[0]
+    assert etapas == ["testes_copia", "juntando", "testes_ze", "reiniciando"]
+    assert (repo / "docs/novo.md").read_text() == "novo\n"
+    f = progresso.foto()
+    assert f is not None and f["estado"] == "aplicando"
+    m.ao_etapa = Progresso(m.pasta).etapa  # o processo que voltou lê o andamento persistido
+    (m.pasta / "reinicio.json").write_text('{"resultado":"ok"}')
+    assert m.resultado_do_reinicio() == "Atualização aplicada."
+    f = Progresso(m.pasta).foto()
+    assert f is not None and f["estado"] == "pronto"
+
+
+def test_falha_ao_agendar_reinicio_nao_e_anunciada_como_reiniciando(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    m = nova(repo, SessoesFalsas())
+    monkeypatch.setattr(m, "guarda", lambda _: (False, ()))
+
+    def executar(args: Any, **kw: Any) -> Any:
+        return subprocess.CompletedProcess(args, 1 if args[0] == "/usr/bin/systemd-run" else 0)
+
+    monkeypatch.setattr(subprocess, "run", executar)
+    ok, texto = m.reiniciar()
+    assert not ok and "Não foi possível iniciar" in texto
 
 
 @pytest.mark.parametrize(
@@ -348,3 +419,107 @@ def test_melhorias_numa_copia_isolada_aplicar_e_descartar(
     assert m.descartar() == "Mudanças descartadas."
     assert m.mudancas()["commits"] == [] and not (copia / "docs/rascunho.md").exists()
     assert not (copia / "solto.txt").exists()
+
+
+def test_troca_manutencao_preserva_copia_pedidos_e_agente_ao_reabrir(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    from jarvis.cerebro import contas
+    from jarvis.oficina.sessoes import Sessoes
+    from jarvis.portal.acoes import Acoes
+
+    cs = contas.Contas(repo.parent / "contas.json", repo.parent / "contas")
+    monkeypatch.setattr(contas, "Contas", lambda: cs)
+    codex = cs.adicionar("codex", "Trabalho")
+    outra = cs.adicionar("codex", "Outra")
+    sessoes = Sessoes(repo.parent / "sessoes", (repo.parent,), rodar=lambda *_: "ok")
+    m = Manutencao(sessoes, repo.parent / "manutencao", repo)
+    m.entrar()
+    s = sessoes.ler(m.estado.sessao)
+    id_, copia = s.id, Path(s.worktree)
+    _commit(copia, "docs/pronto.md", "feito pelo Claude\n")
+    (copia / "pendente.txt").write_text("rascunho sem commit")
+    sessoes.anotar(id_, "usuario", "Crie o relatório")
+    sessoes.anotar(id_, "agente", "O relatório está pronto; falta revisar.")
+    m.estado.pendentes.append(mod.Pedido("pedido1", "revisar relatório", 10, "base"))
+    m._gravar()
+    a = Acoes(SimpleNamespace(sessoes=sessoes, manutencao=m), repo.parent, repo.parent)
+    resposta = a.trocar_sessao({"id": id_, "motor": "codex", "conta": codex.id})
+    assert resposta["id"] == id_ and resposta["motor"] == "codex"
+    assert resposta["conta_id"] == codex.id
+    s = sessoes.ler(id_)
+    assert "Crie o relatório" in s.passagem and "falta revisar" in s.passagem
+    assert (copia / "pendente.txt").read_text() == "rascunho sem commit"
+    assert (copia / "docs/pronto.md").read_text() == "feito pelo Claude\n"
+    recarregada = Manutencao(sessoes, m.pasta, repo)
+    assert recarregada.estado.agente == "codex"
+    assert recarregada.abrir_sessao() == id_
+    assert len(sessoes.listar()) == 1
+    assert sessoes.ler(id_).worktree == str(copia)
+    assert recarregada.estado.pendentes[0].id == "pedido1"
+    recarregada.trocar(id_, "codex", outra.id)
+    assert sessoes.ler(id_).conta == outra.id
+    assert recarregada.entrar("claude").startswith("Modo manutenção ligado, com o Claude")
+    assert recarregada.estado.sessao == id_ and len(sessoes.listar()) == 1
+    assert sessoes.ler(id_).motor == "claude"
+    assert not (repo / "docs/pronto.md").exists()  # a troca nunca aplica a cópia
+
+
+def test_manutencao_nao_troca_durante_a_atualizacao(repo: Path) -> None:
+    m = nova(repo, SessoesFalsas())
+    m.entrar()
+    m.atualizando = lambda: True
+    with pytest.raises(SessaoErro, match="Aguarde a atualização"):
+        m.trocar(m.estado.sessao, "codex")
+    assert m.estado.agente == "claude"
+
+
+@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+def test_interromper_confirma_fim_do_agente_e_preserva_a_copia(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    from jarvis.cerebro import contas
+    from jarvis.oficina.sessoes import Sessoes
+    from jarvis.oficina.terminal import Terminal
+    from jarvis.portal.acoes import Acoes
+    from jarvis.portal.servidor import PedidoInvalido
+
+    cs = contas.Contas(repo.parent / "contas.json", repo.parent / "contas")
+    monkeypatch.setattr(contas, "Contas", lambda: cs)
+    sessoes = Sessoes(repo.parent / "sessoes", (repo.parent,))
+    m = Manutencao(sessoes, repo.parent / "manutencao", repo)
+    m.entrar()
+    s = sessoes.ler(m.estado.sessao)
+    arquivo = Path(s.worktree) / "nao-perder.txt"
+    arquivo.write_text("rascunho")
+    terminal = Terminal(
+        ["sleep", "30"],
+        Path(s.worktree),
+        {},
+        ao_sair=lambda codigo: sessoes._terminal_saiu(s.id, codigo),
+    )
+    sessoes.terminais[s.id] = terminal
+    sessoes._mudar(s.id, estado="trabalhando", ultimo_pedido="revisar")
+    a = Acoes(SimpleNamespace(sessoes=sessoes, manutencao=m), repo.parent, repo.parent)
+    try:
+        with pytest.raises(SessaoErro, match="pare antes de trocar"):
+            m.trocar(s.id, "codex")
+        m.atualizando = lambda: True
+        with pytest.raises(PedidoInvalido, match="Aguarde a atualização"):
+            a.fechar_terminal({"id": s.id})
+        assert terminal.vivo
+        m.atualizando = lambda: False
+        a.fechar_terminal({"id": s.id})
+        assert not terminal.vivo and not terminal.leitor.is_alive()
+        assert s.id not in sessoes.trabalhando()
+        assert sessoes.ler(s.id).interrompida == "revisar"
+        assert arquivo.read_text() == "rascunho"
+        m.trocar(s.id, "codex")
+        assert sessoes.ler(s.id).motor == "codex"
+        assert arquivo.read_text() == "rascunho"
+    finally:
+        terminal.encerrar()

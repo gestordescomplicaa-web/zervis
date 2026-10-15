@@ -10,7 +10,7 @@ from jarvis.nucleo import estados as e
 from jarvis.nucleo.laco import Nucleo
 
 
-def test_urgente_passa_na_frente_e_a_oferta_resume(tmp_path: Path) -> None:
+def test_urgente_passa_na_frente_e_as_sessoes_saem_separadas(tmp_path: Path) -> None:
     fila = Fila(tmp_path / "avisos.json")
     fila.guardar("A sessão Loja terminou.", titulo="a sessão Loja terminou", sessao="s1")
     fila.guardar(
@@ -19,19 +19,18 @@ def test_urgente_passa_na_frente_e_a_oferta_resume(tmp_path: Path) -> None:
         titulo="a sessão Site pede aprovação",
         sessao="s2",
     )
-    texto, _ = fila.oferecer() or ("", None)
-    assert texto == (
-        "Duas novidades: a sessão Site pede aprovação e a sessão Loja terminou. Começo pela Site?"
-    )
-    assert [a.sessao for a in fila.validos()] == ["s2", "s1"]
+    texto, aviso = fila.oferecer() or ("", None)
+    assert texto == "A sessão Site está esperando sua aprovação."
+    assert aviso is not None and aviso.sessao == "s2"
+    assert [a.sessao for a in fila.validos()] == ["s1"]
 
 
 def test_o_ze_narra_nunca_le_a_sessao_como_se_fosse_ele() -> None:
     assert central.narrar("Universo", "Ela cumprimentou você.", "Oi, Kiko!") == (
-        "A sessão Universo terminou. Ela cumprimentou você."
+        "Resultado da sessão Universo. Ela cumprimentou você."
     )
     assert central.narrar("Universo", None, "Oi, Kiko! Como você está?") == (
-        "A sessão Universo terminou. Ela respondeu: Oi, Kiko!"
+        "Resultado da sessão Universo. Ela informou: Oi, Kiko!"
     )
     assert central.limpar_resumo('"Ela corrigiu o login e os testes passaram"') == (
         "Ela corrigiu o login e os testes passaram."

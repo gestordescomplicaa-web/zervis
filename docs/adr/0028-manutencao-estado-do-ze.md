@@ -22,6 +22,11 @@ outros projetos no meio do trabalho (visto no registro de 13/10/2026).
 4. **Aplicar não interrompe ninguém**: com sessões de outros projetos trabalhando, o Zé espera
    ("Aplico quando terminarem") e aplica sozinho quando ficarem livres; enquanto espera, não
    aceita trabalho novo nelas. Sair da manutenção cancela a espera.
+   A reserva começa ao aprovar a aplicação e continua nos testes e no reinício, inclusive no
+   terminal e na sessão de autodesenvolvimento. Envios e início da aplicação usam a mesma trava
+   para evitar um pedido novo entre a conferência das sessões e a reserva. As saídas e conversas
+   continuam disponíveis para leitura; uma recusa preserva a tarefa interrompida. Falha, volta à
+   versão anterior ou cancelamento da espera liberam os comandos, sem reenviar teclas recusadas.
 5. **Aplicar e reiniciar, só do próprio PC.** Pela voz, só o microfone do PC aplica, e nunca a
    zona protegida: "eu revisei" falado não vale como revisão. Voz do celular ou texto digitado
    recebem "Aplique no computador." A zona protegida só entra pelo painel, no PC, com a revisão

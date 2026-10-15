@@ -26,15 +26,20 @@ precisa de **quê**, e decidir o que fazer, uma coisa por vez.
      termina a frase em curso.
    - **Lembrete:** tem hora marcada; sai em seguida.
    - **Fim de tarefa:** espera a vez.
-3. **Agrupar quando acumula.** Com dois ou mais avisos esperando, o Zé não lê um atrás do outro:
-   resume e pergunta. "Duas novidades: a Site pede aprovação e a Loja terminou. Começo pela Site?"
+3. **Revisão de 15/10/2026, pedida pelo usuário:** avisos de sessões saem individualmente,
+   automaticamente, por prioridade e ordem de chegada. Três sessões concluídas geram três
+   resultados, sem exigir "começa" ou "próximo". Outros avisos acumulados ainda podem formar
+   uma oferta. A escrita da fila é serializada, inclusive entre instâncias do mesmo arquivo.
 4. **Quem usa conduz, por voz:** "sim" ou "começa" (o primeiro), "próximo", "o que a Loja
    disse?" (o resumo maior), "depois" (guarda para mais tarde), "responde que sim" ou "manda
    continuar" (vai para a sessão do aviso, que fica em foco).
 5. **Um som curto antes de cada aviso de sessão**, diferente do bip de ouvir: dá para saber,
    sem prestar atenção nas palavras, que é uma novidade e não uma resposta.
-6. **Por modo de fala** (ADR 0018): em Avisos, só a manchete ("A Loja terminou."); em Mãos
-   livres, a manchete e o resumo de uma frase; o detalhe, sempre que pedir, e sempre na tela.
+6. **Por modo de fala** (ADR 0018, revisto em 15/10/2026): Normal e Mãos livres anunciam o nome
+   e um resumo do resultado, mesmo com a sessão aberta. A narração considera o pedido original
+   e a resposta e preserva impedimentos, trabalho parcial e verificações pendentes. Sem o
+   modelo, cita uma frase da resposta com preferência por ressalvas; não trata o fim do turno
+   como prova de que o pedido foi cumprido. Silencioso continua só na tela.
 7. **Na tela**, cada aviso aparece na Conversa com o nome da sessão, e o que ainda espera fica
    marcado até ser ouvido ou dispensado.
 
@@ -45,16 +50,14 @@ precisa de **quê**, e decidir o que fazer, uma coisa por vez.
 > Zé: "Ela quer executar o comando de migração na base de testes."
 > Você: "Pode."
 > *(a Loja e o Blog terminam enquanto isso)*
-> *(toque)* Zé: "Duas sessões terminaram: Loja e Blog. Começo pela Loja?"
-> Você: "Começa."
-> Zé: "A Loja corrigiu o login; os testes passaram."
-> Você: "Próximo."
-> Zé: "O Blog publicou o rascunho do post de terça."
+> *(toque)* Zé: "Resultado da sessão Loja. Ela corrigiu o login e os testes passaram."
+> *(toque, depois da primeira fala)* Zé: "Resultado da sessão Blog. Ela preparou o rascunho;
+> a publicação ficou pendente."
 
 ## Como foi feito
 - Sem serviço externo: a fila é a de sempre (`jarvis/avisos/fila.py`, um JSON em disco), agora
   com prioridade, manchete, sessão e detalhe; o resumo de uma frase sai do mesmo modelo pequeno da
-  revisão (`jarvis/avisos/central.py`), em uns 3 s; sem ele, a citação marcada ("Ela respondeu:").
+  revisão (`jarvis/avisos/central.py`); sem ele, a citação marcada ("Ela informou:").
 - "sim", "começa", "próximo" e "depois" só valem por 45 s depois de uma oferta; "próximo aviso",
   "quais são os avisos" e "o que ela disse?" valem sempre.
 

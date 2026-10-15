@@ -89,7 +89,15 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 ## Fora do escopo agora
 
 - Ligação telefônica comum (SIP); o celular entra pelo app, não por chamada.
-- Plataformas de mensagem (Telegram, WhatsApp etc.). O coletor de WhatsApp do Hermes segue
-  separado, a serviço do projeto JEV.
+- Plataformas de mensagem (Telegram, WhatsApp etc.) como canal de conversa. O coletor de
+  WhatsApp do Hermes segue separado, a serviço do projeto JEV. Exceção (14/10/2026): o Zé lê as
+  notificações do WhatsApp deste computador (quem mandou e o começo da mensagem), um modelo sem
+  ferramentas julga se é um lead quente (quer comprar ou mostra interesse real: preço, pagamento,
+  proposta, orçamento, quer fechar) e, se for, ele avisa com uma frase fixa ("Lead quente no
+  WhatsApp: Ana."), no máximo uma vez por contato a cada 15 minutos. Desligado por padrão (Voz >
+  WhatsApp, ou "liga os avisos do WhatsApp"). O trecho da mensagem vai ao modelo das respostas
+  rápidas (ou ao Claude da assinatura) só para o julgamento; não vira fala, não entra na conversa
+  do cérebro e não é registrado. O Zé nunca responde nem abre a conversa. Requer o `busctl`
+  (systemd).
 - Uso por mais de uma pessoa.
 - Modelos locais como cérebro principal (podem entrar depois como provedor extra).

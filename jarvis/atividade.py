@@ -1,7 +1,7 @@
 """O que o Zé fez e onde tropeçou: a atividade (ADR 0025, camada 1 do auto-aperfeiçoamento).
 
-Separada da conversa: uma linha por acontecimento, em `<estado>/atividade.jsonl` (0600), só para
-ler. Tipos:
+Separada da conversa: um registro por acontecimento, em `<dados>/atividade.db` (0600), com
+busca de texto. Os JSONL anteriores são importados e preservados. Tipos:
 
 - **execucao**: uma ferramenta rodou (o comando, como foi autorizada, o resultado);
 - **negada**: uma ferramenta foi recusada (pela política, pela pessoa, sem a frase exata);
@@ -10,12 +10,12 @@ ler. Tipos:
 - **correcao**: a pessoa corrigiu o Zé ("não, eu disse...");
 - **pedido**: um pedido atendido (o que deu certo também conta, para comparar depois).
 
-O diagnóstico (camada 2) lê daqui. Segredos não entram: chaves com nome de senha, token ou chave
-viram "•••", e textos longos são cortados. Passou de 5 MB, o arquivo vira `.1` e recomeça.
+O diagnóstico (camada 2) lê daqui. Segredos não entram: chaves com nome de senha, token ou
+chave
+viram "•••", e textos longos são cortados. O histórico permanece no banco, sem rotação que
+descarte eventos.
 """
 
-import json
-import os
 import re
 import threading
 import time
@@ -23,8 +23,10 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import lugares
+from jarvis.dados.documentos import Documentos, linhas_json
 
-ARQUIVO = lugares.ESTADO / "atividade.jsonl"
+ARQUIVO = lugares.DADOS / "atividade.db"
+LEGADO = lugares.ESTADO / "atividade.jsonl"
 LIMITE_BYTES = 5 * 1024 * 1024
 TIPOS = ("execucao", "negada", "falha", "nao_entendi", "correcao", "pedido")
 SEGREDO = re.compile(r"senha|password|token|segredo|secret|chave|key|cookie|codigo", re.I)
@@ -59,7 +61,11 @@ def e_correcao(texto: str) -> bool:
 
 class Atividade:
     def __init__(self, arquivo: Path = ARQUIVO) -> None:
-        self.arquivo = arquivo
+        self._dados = Documentos(arquivo)
+        self.arquivo = self._dados.banco.arquivo
+        antigo = LEGADO if arquivo == ARQUIVO else arquivo
+        self._dados.importar(antigo.with_suffix(".jsonl.1"), linhas_json, "atividade")
+        self._dados.importar(antigo, linhas_json, "atividade")
         self.origem = "voz"  # de onde vem o pedido em curso: voz, celular, texto, automação
         self._autorizacoes: dict[str, str] = {}
         self._trava = threading.Lock()
@@ -81,34 +87,15 @@ class Atividade:
             "origem": detalhes.pop("origem", self.origem),
             **{k: limpar(v, k) for k, v in detalhes.items() if v not in (None, "", {}, [])},
         }
-        with self._trava:
-            self.arquivo.parent.mkdir(parents=True, exist_ok=True)
-            if self.arquivo.exists() and self.arquivo.stat().st_size > LIMITE_BYTES:
-                self.arquivo.replace(self.arquivo.with_suffix(".jsonl.1"))
-            novo = not self.arquivo.exists()
-            with self.arquivo.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(linha, ensure_ascii=False) + "\n")
-            if novo:
-                os.chmod(self.arquivo, 0o600)
+        self._dados.guardar("atividade", linha)
         return linha
 
     def listar(self, limite: int = 300, tipos: tuple[str, ...] = TIPOS) -> list[dict[str, Any]]:
-        """As mais recentes primeiro."""
-        try:
-            linhas = self.arquivo.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            return []
-        saida: list[dict[str, Any]] = []
-        for bruta in reversed(linhas):
-            try:
-                item = json.loads(bruta)
-            except ValueError:
-                continue
-            if item.get("tipo") in tipos:
-                saida.append(item)
-                if len(saida) >= limite:
-                    break
-        return saida
+        """As mais recentes primeiro, filtradas no banco."""
+        return self._dados.filtrar("atividade", "tipo", list(tipos), limite)
+
+    def buscar(self, texto: str, limite: int = 50) -> list[dict[str, Any]]:
+        return self._dados.buscar(texto, "atividade", limite)
 
     def resumo(self, desde_s: float = 7 * 86400) -> dict[str, int]:
         """Quantos de cada tipo nos últimos dias (para o diagnóstico comparar)."""

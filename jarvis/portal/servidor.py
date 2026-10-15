@@ -46,6 +46,20 @@ ARQUIVOS = {
     "/": "index.html",
     "/painel.css": "painel.css",
     "/painel.js": "painel.js",
+    "/modulos/acoes.js": "modulos/acoes.js",
+    "/modulos/imersao.js": "modulos/imersao.js",
+    "/modulos/modelos.js": "modulos/modelos.js",
+    "/modulos/navegacao.js": "modulos/navegacao.js",
+    "/modulos/terminal.js": "modulos/terminal.js",
+    "/modulos/voz.js": "modulos/voz.js",
+    "/paginas/automacoes.js": "paginas/automacoes.js",
+    "/paginas/configurar.js": "paginas/configurar.js",
+    "/paginas/foco.js": "paginas/foco.js",
+    "/paginas/inicio.js": "paginas/inicio.js",
+    "/paginas/modelos.js": "paginas/modelos.js",
+    "/paginas/perfil.js": "paginas/perfil.js",
+    "/paginas/sessoes.js": "paginas/sessoes.js",
+    "/paginas/voz.js": "paginas/voz.js",
     "/ze.webp": "ze.webp",  # o ícone do Zé (menu lateral e aba)
     # O terminal das sessões (xterm.js, MIT; ver THIRD_PARTY.md), servido daqui, sem CDN.
     "/vendor/xterm/xterm.js": "vendor/xterm/xterm.js",
@@ -61,6 +75,7 @@ ARQUIVOS = {
     "/paginas/conversa.js": "paginas/conversa.js",
     "/paginas/skills.js": "paginas/skills.js",
     "/paginas/memoria.js": "paginas/memoria.js",
+    "/paginas/atendimento.js": "paginas/atendimento.js",
     # O ícone na tela inicial do celular (instalar como app).
     "/manifest.webmanifest": "manifest.webmanifest",
     "/icones/ze-192.webp": "icones/ze-192.webp",

@@ -167,16 +167,19 @@ def test_falha_na_publicacao_preserva_agendamentos(
 ) -> None:
     jobs = Jobs(tmp_path / "jobs.json")
     jobs.criar("Existente", "em 2m", "lembrete", "Teste.", AGORA)
-    antes = jobs.arquivo.read_bytes()
+    antes = jobs.listar()
+    guardar = jobs._dados.guardar
 
-    def falhar(self: Path, destino: Path) -> Path:
-        raise OSError("falha sintética")
+    def falhar(colecao: str, dados: dict[str, Any], chave: str = "") -> None:
+        guardar(colecao, dados, chave)
+        raise OSError("falha sintética depois da escrita")
 
-    monkeypatch.setattr(Path, "replace", falhar)
+    monkeypatch.setattr(jobs._dados, "guardar", falhar)
     with pytest.raises(OSError):
         jobs.criar("Nova", "em 2m", "lembrete", "Teste.", AGORA)
-    assert jobs.arquivo.read_bytes() == antes
-    assert list(tmp_path.iterdir()) == [jobs.arquivo]
+    assert jobs.listar() == antes
+    with jobs._dados.banco.conexao() as db:
+        assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
 
 def test_instancias_do_mesmo_arquivo_compartilham_a_transacao(tmp_path: Path) -> None:

@@ -10,6 +10,7 @@ import re
 import time
 from collections import Counter
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 
 from jarvis.atividade import TIPOS
@@ -82,19 +83,36 @@ def _exemplos(itens: Iterable[dict[str, Any]], campo: str, maximo: int = 3) -> l
     return [v for v in vistos if v][:maximo]
 
 
+def _momento(linha: str) -> float | None:
+    """A hora de uma linha do journal (`short-iso`); None se ela não começa com uma."""
+    try:
+        return datetime.fromisoformat(linha.split(" ", 1)[0]).timestamp()
+    except ValueError:
+        return None
+
+
 def montar(
     itens: list[dict[str, Any]],
     registro: list[str],
     dias: int = 7,
     agora: float | None = None,
+    desde: float = 0.0,
 ) -> str:
-    """O relatório dos últimos `dias` a partir da atividade e do registro técnico."""
+    """O relatório dos últimos `dias` a partir da atividade e do registro técnico. `desde` é o
+    recomeço que a pessoa marcou: o que veio antes dele não conta (e continua guardado)."""
     agora = agora if agora is not None else time.time()
-    recentes = [i for i in itens if float(i.get("quando", 0)) >= agora - dias * 86400]
+    inicio = max(agora - dias * 86400, desde)
+    recentes = [i for i in itens if float(i.get("quando", 0)) >= inicio]
+    registro = [x for x in registro if (m := _momento(x)) is None or m >= inicio]
     por_tipo = {t: [i for i in recentes if i.get("tipo") == t] for t in TIPOS}
     data = time.strftime("%d/%m/%Y %H:%M", time.localtime(agora))
+    periodo = (
+        f"desde {time.strftime('%d/%m/%Y %H:%M', time.localtime(desde))}"
+        if desde > agora - dias * 86400
+        else f"últimos {dias} dias"
+    )
     linhas = [
-        f"# Diagnóstico do Zé ({data}, últimos {dias} dias)",
+        f"# Diagnóstico do Zé ({data}, {periodo})",
         "",
         " · ".join(f"{ROTULOS[t]}: {len(por_tipo[t])}" for t in TIPOS),
     ]

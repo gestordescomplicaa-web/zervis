@@ -1,0 +1,47 @@
+package call
+
+import (
+	"wacalls/internal/voip/core"
+	"wacalls/internal/voip/media"
+	"wacalls/internal/voip/wanode"
+)
+
+func (m *CallManager) initSrtpKeysLocked() {
+	call := m.currentCall
+	if call == nil || call.EncryptionKey == nil {
+		return
+	}
+	ourBase := wanode.CleanJID(m.ownCredJid())
+	var participants []string
+	if call.RelayData != nil {
+		participants = call.RelayData.ParticipantJids
+	}
+	ourDeviceJid := ensureDeviceJid(findOurDevice(participants, ourBase, m.ownCredJid()))
+
+	rawPeer := m.acceptedByJid
+	if rawPeer == "" {
+		rawPeer = call.PeerJid
+		if p := firstPeerDevice(participants, ourBase); p != "" {
+			rawPeer = p
+		}
+	}
+	peerDeviceJid := ensureDeviceJid(rawPeer)
+
+	recvKey := call.EncryptionKey
+	if len(m.peerEncryptionKey) > 0 {
+		recvKey = m.peerEncryptionKey
+	}
+	sendKM, err1 := media.DerivePerJidSrtpKey(call.EncryptionKey, ourDeviceJid)
+	recvKM, err2 := media.DerivePerJidSrtpKey(recvKey, peerDeviceJid)
+	if err1 != nil || err2 != nil {
+		m.log.Error("srtp key derivation failed", "err1", err1, "err2", err2)
+		return
+	}
+	sess, err := media.NewSrtpSession(sendKM, recvKM, core.SRTPSendAuthTagLen, core.SRTPRecvAuthTagLen)
+	if err != nil {
+		m.log.Error("srtp session failed", "err", err)
+		return
+	}
+	m.srtpSession = sess
+	m.log.Debug("srtp per-jid keys set", "send", ourDeviceJid, "recv", peerDeviceJid)
+}

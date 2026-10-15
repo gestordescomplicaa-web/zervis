@@ -20,13 +20,16 @@ import contextlib
 import json
 import logging
 import subprocess
+import tempfile
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from jarvis import atividade, lugares
+from jarvis.oficina.central import Central
 from jarvis.oficina.sessoes import MOTORES, Sessao, SessaoErro, Sessoes
 
 log = logging.getLogger(__name__)
@@ -141,11 +144,21 @@ class Manutencao:
         self.repo = repo
         self.pasta.mkdir(parents=True, exist_ok=True)
         self.estado = self._carregar()
+        self.central = Central(sessoes, repo, pasta)
+        if self.estado.sessao and not self.central.registro().get("sessao"):
+            try:
+                self.central.resolver(self.estado.sessao, self.estado.agente)
+            except SessaoErro:
+                # Uma cópia ausente não derruba a voz; a recuperação continua no painel.
+                log.warning("A sessão central precisa de recuperação pelo painel.")
         self._config_mtime = self._mtime_config()
         # A versão que este processo carregou: a guarda e o reinício comparam a partir dela, e é
         # para ela que o reinício volta se a nova não subir (commits fora de um pedido contam).
         self.rodando = _git("rev-parse", "HEAD", repo=self.repo).strip()
         self.testar = _make_check  # os testes da cópia antes de aplicar (os testes trocam)
+        # Cada etapa de aplicar, para o painel mostrar o andamento (jarvis/oficina/progresso.py).
+        self.ao_etapa: Callable[[str], None] = lambda _etapa: None
+        self.atualizando: Callable[[], bool] = lambda: False
 
     # --- estado (sobrevive ao reinício, que faz parte da manutenção) -----------------------
 
@@ -163,9 +176,14 @@ class Manutencao:
 
     def _gravar(self) -> None:
         arquivo = self.pasta / "estado.json"
-        temporario = arquivo.with_suffix(".next")
-        temporario.write_text(json.dumps(asdict(self.estado), ensure_ascii=False))
-        temporario.replace(arquivo)
+        with tempfile.NamedTemporaryFile(mode="w", dir=self.pasta, delete=False) as temporario:
+            nome = Path(temporario.name)
+            try:
+                json.dump(asdict(self.estado), temporario, ensure_ascii=False)
+                temporario.flush()
+                nome.replace(arquivo)
+            finally:
+                nome.unlink(missing_ok=True)
 
     @property
     def ligado(self) -> bool:
@@ -180,17 +198,17 @@ class Manutencao:
     def abrir_sessao(self, agente: str = "") -> str:
         """A sessão de melhorias (a mesma de antes, ou nova, na cópia isolada), sem ligar o modo
         manutenção: a voz continua indo ao Zé; o painel abre a sessão para trabalhar nela."""
-        agente = agente if agente in AGENTES else self.estado.agente
-        self.estado.sessao, self.estado.agente = self._sessao(agente), agente
+        self.estado.sessao = self._sessao(agente)
+        self.estado.agente = self.sessoes.ler(self.estado.sessao).motor
         self._gravar()
         return self.estado.sessao
 
     def entrar(self, agente: str = "") -> str:
-        agente = agente if agente in AGENTES else self.estado.agente
         try:
             self.estado.sessao = self._sessao(agente)
         except SessaoErro as erro:
             return f"Não entrei no modo manutenção: {erro}."
+        agente = self.sessoes.ler(self.estado.sessao).motor
         self.estado.ligado, self.estado.agente = True, agente
         self._gravar()
         log.info("manutenção ligada com %s (sessão %s)", agente, self.estado.sessao)
@@ -226,27 +244,39 @@ class Manutencao:
         return " ".join(partes)
 
     def _sessao(self, agente: str) -> str:
-        """A sessão de manutenção daquele agente no repositório do Zé: a mesma de antes, ou nova."""
-        if agente not in MOTORES:
+        """Uma sessão e uma cópia; trocar agente usa a passagem e os fios nativos da oficina."""
+        escolhido = agente if agente in AGENTES else self.estado.agente
+        if escolhido not in MOTORES:
             raise SessaoErro(
-                f"o {AGENTES.get(agente, agente)} ainda não está disponível nas sessões"
+                f"o {AGENTES.get(escolhido, escolhido)} ainda não está disponível nas sessões"
             )
-        # Só a cópia isolada (ADR 0026): sessões antigas, direto no repositório, ficam como estão.
-        minhas = [
-            s
-            for s in self.sessoes.listar()
-            if s.origem == ORIGEM
-            and s.motor == agente
-            and Path(s.pasta) == self.repo.resolve()
-            and s.worktree
-        ]
-        escolhida = next((s for s in minhas if s.id == self.estado.sessao), None)
-        if escolhida or minhas:
-            return (escolhida or minhas[0]).id
-        nova = self.sessoes.criar(
-            NOME_DA_SESSAO, str(self.repo), motor=agente, origem=ORIGEM, isolada=True
-        )
-        return nova.id
+        id_ = self.central.resolver(self.estado.sessao, escolhido)
+        self.estado.sessao = id_
+        atual = self.sessoes.ler(id_)
+        if agente in AGENTES and atual.motor != agente:
+            self.trocar(id_, agente)
+        return id_
+
+    def unificar_sessoes(self, principal: str = "") -> str:
+        if self.atualizando():
+            raise SessaoErro("Aguarde a atualização terminar para unificar as sessões.")
+        aviso = self.central.iniciar(principal, self.estado.sessao, self.estado.agente)
+        self.estado.sessao = str(self.central.registro().get("sessao", self.estado.sessao))
+        if self.estado.sessao:
+            self.estado.agente = self.sessoes.ler(self.estado.sessao).motor
+        self._gravar()
+        return aviso
+
+    def trocar(self, id_: str, agente: str, conta: str = "") -> tuple[Sessao, str]:
+        """Troca conta ou agente na mesma cópia, preservando também os pedidos da manutenção."""
+        if id_ != self.estado.sessao:
+            raise SessaoErro("Abra a sessão atual de autodesenvolvimento para trocar o agente.")
+        if self.atualizando():
+            raise SessaoErro("Aguarde a atualização terminar para trocar o agente.")
+        sessao, aviso = self.sessoes.trocar(id_, agente, conta)
+        self.estado.agente = sessao.motor
+        self._gravar()
+        return sessao, aviso
 
     def encaminhar(self, texto: str, contexto: str, agora: float, rodada: str = "") -> str:
         """Manda o pedido à sessão e devolve a frase para falar já. Com uma pergunta do agente
@@ -342,10 +372,11 @@ class Manutencao:
 
     def copia(self) -> Sessao | None:
         """A sessão de autodesenvolvimento com a cópia isolada dela, se existir."""
-        if not self.estado.sessao:
+        id_ = str(self.central.registro().get("sessao") or self.estado.sessao)
+        if not id_:
             return None
         try:
-            s = self.sessoes.ler(self.estado.sessao)
+            s = self.sessoes.ler(id_)
         except SessaoErro:
             return None
         if not (s.worktree and Path(s.worktree).is_dir()):
@@ -383,6 +414,8 @@ class Manutencao:
 
     def aplicar(self, revisado: bool = False) -> tuple[bool, str]:
         """Junta as melhorias da cópia ao Zé em uso, com os testes da cópia verdes, e reinicia."""
+        if self.central.em_andamento():
+            return False, "Aguarde a unificação terminar antes de aplicar."
         s = self.copia()
         m = self.mudancas()
         if s is None or not m.get("commits"):
@@ -396,8 +429,10 @@ class Manutencao:
                 "As melhorias mexem na zona protegida (essência, segurança ou o que eu faço sem "
                 "perguntar). Revise no painel e confirme a revisão para aplicar."
             )
+        self.ao_etapa("testes_copia")
         if not self.testar(Path(s.worktree)):
             return False, "Os testes falharam na cópia. Peça para a sessão corrigir antes."
+        self.ao_etapa("juntando")
         if _git("status", "--porcelain", "--untracked-files=no", repo=self.repo).strip():
             return False, "O repositório do Zé tem alterações sem commit. Resolva antes de aplicar."
         if _git_ok("merge", "--ff-only", s.branch, repo=self.repo) != 0:
@@ -421,6 +456,8 @@ class Manutencao:
 
     def descartar(self) -> str:
         """Joga fora o que a cópia tem a mais: ela volta a ser igual ao Zé em uso."""
+        if self.central.em_andamento():
+            raise SessaoErro("Aguarde a unificação terminar antes de descartar.")
         s = self.copia()
         if s is None:
             return "Não há cópia de melhorias."
@@ -438,12 +475,15 @@ class Manutencao:
 
     def reiniciar(self, revisado: bool = False) -> tuple[bool, str]:
         """Confere a guarda e os testes e entrega o reinício ao script (fora deste processo)."""
+        if self.central.em_andamento():
+            return False, "Aguarde a unificação terminar antes de reiniciar."
         _, protegidos = self.guarda(self.rodando)
         if protegidos and not revisado:
             return False, (
                 "Não reiniciei: a mudança mexeu na zona protegida, nas regras do que eu faço sem "
                 "perguntar. Revise e aplique pelo painel, no computador."
             )
+        self.ao_etapa("testes_ze")
         testes = subprocess.run(
             ["/usr/bin/make", "-s", "check"],
             cwd=self.repo,
@@ -454,7 +494,8 @@ class Manutencao:
         )
         if testes.returncode != 0:
             return False, "Não reiniciei: os testes falharam. Peça para a sessão corrigir antes."
-        subprocess.run(  # noqa: S603 (script nosso, fora do cgroup do jarvisd)
+        self.ao_etapa("reiniciando")
+        reinicio = subprocess.run(  # noqa: S603 (script nosso, fora do cgroup do jarvisd)
             [
                 "/usr/bin/systemd-run",
                 "--user",
@@ -469,7 +510,9 @@ class Manutencao:
             timeout=15,
             check=False,
         )
-        return True, "Testes aprovados. Reiniciando; o painel recarrega sozinho."
+        if reinicio.returncode:
+            return False, "Não foi possível iniciar o reinício. Consulte o registro técnico."
+        return True, "Atualização aprovada, reiniciando automaticamente."
 
     def resultado_do_reinicio(self) -> str | None:
         """O que o script deixou dito sobre o último reinício (uma vez só)."""
@@ -480,8 +523,10 @@ class Manutencao:
             return None
         arquivo.unlink(missing_ok=True)
         if d.get("resultado") == "ok":
+            self.ao_etapa("pronto")
             return "Atualização aplicada."
         if d.get("resultado") == "voltou":
+            self.ao_etapa("voltou")
             # A cópia volta a ser igual ao Zé em uso; a versão que falhou fica no histórico.
             with contextlib.suppress(OSError, subprocess.SubprocessError):
                 self.descartar()

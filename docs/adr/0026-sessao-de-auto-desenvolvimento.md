@@ -25,6 +25,44 @@ trabalho numa cópia isolada, com aprovar ou descartar no painel; e a ligação 
    verde na cópia e, se a zona protegida mudou, a revisão explícita pelo próprio PC) ou
    **Descartar**. Aplicar usa o reinício seguro.
 5. **Diagnóstico** (passo 3): o botão Diagnosticar entrega as propostas a essa sessão.
+6. **Continuidade entre agentes e contas** (15/10/2026): o autodesenvolvimento tem uma sessão e
+   uma cópia ativas. Trocar Claude, Codex ou conta usa o mecanismo das sessões comuns: os fios
+   nativos são preservados, o outro agente recebe a passagem e os arquivos continuam na mesma
+   branch. O estado da manutenção acompanha a escolha, inclusive ao reabrir a página ou entrar
+   por voz. Pedidos pendentes e aprovações continuam associados à sessão. Cópias antigas separadas
+   por agente não são removidas automaticamente.
+   A troca exige trabalho encerrado; **Interromper** pede confirmação e espera o processo sair,
+   preservando a conversa e os arquivos. Limite de uso deixa a sessão em erro, disponível para
+   troca. Durante a aplicação de uma atualização, nem a troca nem a interrupção são permitidas.
+
+7. **Sessão central persistente** (15/10/2026): o vínculo entre projeto e sessão fica no banco
+   das sessões, independente de agente, conta e modelo. O estado JSON da manutenção é uma
+   referência auxiliar. Recuperar a manutenção consulta esse vínculo; uma única cópia legada
+   pode ser adotada independente do agente. Várias sem referência exigem escolha explícita;
+   registro ou pasta ausentes e cópias órfãs impedem a criação silenciosa de outra sessão.
+   A criação e a escolha são serializadas. As rotas antigas de envio, terminal e troca recusam
+   sessões substituídas, preservando a consulta ao histórico.
+8. **Unificação das cópias legadas:** no próprio PC, o painel mostra as candidatas e oferece
+   Unificar sessões, com confirmação. A sessão atual é mantida; só quando não há referência é
+   preciso escolher. Nenhuma candidata pode estar trabalhando e a central precisa estar sem
+   alterações locais. A migração roda em segundo plano, reservando os comandos dessas sessões.
+   Antes de publicar, faz backup privado do banco, preserva fotografias Git das origens em refs
+   próprias e verifica a combinação das árvores sem alterar pastas ou índices. Os rascunhos
+   versionáveis das origens entram na central; arquivos ignorados continuam nas pastas originais,
+   e uma colisão com ignorados da central interrompe a operação. Conflitos deixam todas as cópias
+   intactas para resolução na central. As origens e suas branches nunca são apagadas.
+   Depois da integração Git, importa mensagens com origem identificada, registra pendências e
+   arquiva as referências antigas numa transação. Chaves estáveis permitem retomar uma queda
+   depois da integração sem duplicar histórico. O contexto acompanha a próxima abertura/troca,
+   inclusive se a conta mudar antes da entrega. Conversas nativas distintas permanecem nas
+   origens; a central continua com seus próprios fios nativos e a passagem compartilhada.
+   A unificação não aplica código ao Zé em uso: os testes, a revisão da zona protegida e a
+   aprovação continuam no fluxo Aplicar. Fallback automático por limite de uso fica para depois.
+   Fotografias de rascunhos iguais (árvore e commit de origem) são reutilizadas; uma fotografia
+   já reconciliada no histórico da central tem prioridade. Assim uma resolução manual não
+   reaparece como conflito só porque uma nova tentativa recebeu outra data de commit. Resolver
+   uma cópia antiga preserva as decisões mais recentes: trabalho adiado pode ficar no histórico
+   do merge, com essa escolha documentada, sem voltar à versão ativa.
 
 ## Consequências
 - Para o público: o auto-desenvolvimento precisa de uma cópia git do Zé (a instalação de um

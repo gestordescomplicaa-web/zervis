@@ -24,7 +24,7 @@ Object.assign(ACOES, {
   sugestao: async (b) => { const r = await ocupado(b, () => api("sugestao/decidir", { id: b.dataset.id, aprovar: !!b.dataset.aprovar })); toast(r.aviso); await recarregar(); },
   "memoria-remover": (b) => confirmar(b, "Remover?", async () => { await api("memoria/mudar", { acao: "remover", alvo: b.dataset.alvo, texto: b.dataset.texto }); await recarregar(); }),
   "memoria-adicionar": async (b) => {
-    const campo = document.querySelector(`[data-nova="${b.dataset.alvo}"]`);
+    const campo = /** @type {HTMLInputElement} */ (document.querySelector(`[data-nova="${b.dataset.alvo}"]`));
     await ocupado(b, () => api("memoria/mudar", { acao: "adicionar", alvo: b.dataset.alvo, texto: campo.value }));
     toast("Guardado."); await recarregar();
   },

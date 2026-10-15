@@ -1,5 +1,6 @@
 """O painel do Zé: só local, com token, e a chave colada nunca volta para a tela."""
 
+import base64
 import http.client
 import json
 import os
@@ -13,6 +14,7 @@ import pytest
 
 from jarvis import config, usuario
 from jarvis.cerebro import acesso, rapido
+from jarvis.oficina.progresso import ETAPAS, Progresso
 from jarvis.oficina.sessoes import Sessoes
 from jarvis.oficina.terminal import Terminal
 from jarvis.portal.acoes import Acoes
@@ -106,6 +108,80 @@ def test_painel_exclui_sessao_com_agente_ativo_e_preserva_projeto(tmp_path: Path
     finally:
         p.parar()
         t.encerrar()
+
+
+@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+@pytest.mark.parametrize("origem", ["painel", "manutencao"])
+@pytest.mark.parametrize("resultado", ["falhou", "pronto", "voltou"])
+def test_atualizacao_bloqueia_comandos_mas_preserva_leitura_e_libera_no_fim(
+    tmp_path: Path, origem: str, resultado: str
+) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (tmp_path,))
+    s = sessoes.criar("Sessão", str(tmp_path), origem=origem)
+    outro_projeto = tmp_path / "outro-projeto"
+    outro_projeto.mkdir()
+    fechada = sessoes.criar("Fechada", str(outro_projeto), origem=origem)
+    progresso = Progresso(tmp_path / "atualizacao")
+    sessoes.reservada = progresso.reserva
+    terminal = Terminal(["cat"], tmp_path, {})
+    sessoes.terminais[s.id] = terminal
+    sessoes._mudar(s.id, interrompida="pedido preservado")
+    acoes = Acoes(SimpleNamespace(sessoes=sessoes), tmp_path, tmp_path)
+    p = Portal(
+        {},
+        {
+            "sessao/ler": acoes.ler_sessao,
+            "sessao/interrompida": acoes.tarefa_interrompida,
+            "terminal/abrir": acoes.abrir_terminal,
+            "terminal/ler": acoes.ler_terminal,
+            "terminal/escrever": acoes.escrever_terminal,
+        },
+        porta=0,
+    )
+    p.iniciar()
+    try:
+        terminal.escrever(b"historia preservada\n")
+        terminal.ler(0, 2)
+        progresso.aguardar()
+        estados = ["aguardando", *(e[0] for e in ETAPAS)]
+        for estado in estados:
+            if estado != "aguardando":
+                if estado == "testes_copia":
+                    progresso.comecar()
+                progresso.etapa(estado)
+            status, resposta = pedir(
+                p, "POST", "/api/sessao/interrompida", {"id": s.id, "continuar": True}
+            )
+            assert status == 400 and "Atualização em andamento" in resposta["erro"]
+            assert sessoes.ler(s.id).interrompida == "pedido preservado"
+            status, resposta = pedir(
+                p, "POST", "/api/terminal/escrever", {"id": s.id, "dados": "novo\r"}
+            )
+            assert status == 400 and "Atualização em andamento" in resposta["erro"]
+            status, resposta = pedir(p, "POST", "/api/terminal/abrir", {"id": fechada.id})
+            assert status == 400 and "Atualização em andamento" in resposta["erro"]
+            assert fechada.id not in sessoes.terminais
+            assert pedir(p, "POST", "/api/terminal/abrir", {"id": s.id})[0] == 200
+            assert pedir(p, "POST", "/api/sessao/ler", {"id": s.id})[0] == 200
+            status, leitura = pedir(
+                p, "POST", "/api/terminal/ler", {"id": s.id, "desde": 0, "espera": 0}
+            )
+            assert status == 200
+            texto = base64.b64decode(leitura["dados"])
+            assert b"historia preservada" in texto and b"novo" not in texto
+        if resultado == "falhou":
+            progresso.falhou("Falha simulada.")
+        else:
+            progresso.etapa(resultado)
+        assert (
+            pedir(p, "POST", "/api/terminal/escrever", {"id": s.id, "dados": "liberado\r"})[0]
+            == 200
+        )
+        assert progresso.reserva() is None
+        assert terminal.vivo
+    finally:
+        p.parar()
+        terminal.encerrar()
 
 
 # --- a via rápida pelo painel ---------------------------------------------------------------
@@ -258,7 +334,11 @@ def test_conferir_a_chave_do_deepgram_distingue_recusa_de_rede() -> None:
 
 def test_os_arquivos_da_pagina_sao_leves() -> None:
     web = Path(__file__).resolve().parents[1] / "jarvis/portal/web"
-    abertura = sum((web / f).stat().st_size for f in ("index.html", "painel.css", "painel.js"))
+    import re
+
+    html = (web / "index.html").read_text()
+    scripts = re.findall(r'<script src="/([^"\n]+)"', html)
+    abertura = sum((web / f).stat().st_size for f in ("index.html", "painel.css", *scripts))
     assert abertura < 130_000, abertura  # docs/plano-painel.md: o que carrega ao abrir
     for pagina in (web / "paginas").glob("*.js"):  # páginas sob demanda, cada uma pequena
         assert pagina.stat().st_size < 20_000, pagina
@@ -330,3 +410,14 @@ def test_conexao_codex_usa_a_conta_do_codex(
     assert a.testar_acesso({}) == {"ok": True, "mensagem": "Conectado."}
     assert chamados == [""]
     assert any(x["id"] == "codex" and x["disponivel"] for x in a.cerebro()["agentes"])
+
+
+def test_terminal_e_paginas_carregam_sob_demanda() -> None:
+    from jarvis.portal.servidor import ARQUIVOS, WEB
+
+    html = (WEB / "index.html").read_text()
+    assert "/vendor/xterm/" not in html
+    assert "/paginas/" not in html
+    for rota, arquivo in ARQUIVOS.items():
+        if rota.startswith(("/modulos/", "/paginas/")):
+            assert (WEB / arquivo).is_file(), rota

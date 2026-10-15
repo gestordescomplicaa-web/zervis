@@ -10,6 +10,10 @@ import tempfile
 os.environ["JARVIS_RAIZ"] = tempfile.mkdtemp(prefix="ze-testes-")
 os.environ.pop("JARVIS_PERFIL", None)
 os.environ["JARVIS_FUSO"] = "America/Recife"  # as datas dos testes foram escritas nesse fuso
+# A captura das sessões não pode alcançar a memória da pessoa que roda os testes.
+os.environ["AI_MEMORY_DATA_DIR"] = os.path.join(os.environ["JARVIS_RAIZ"], "ai-memory")
+os.environ["AI_MEMORY_SERVER_URL"] = "http://127.0.0.1:1"
+os.environ.pop("AI_MEMORY_AUTH_TOKEN", None)
 # Nem as contas dos agentes desta máquina: pastas de login vazias, sem ninguém logado.
 for _variavel in ("CLAUDE_CONFIG_DIR", "CODEX_HOME"):
     os.environ[_variavel] = os.path.join(os.environ["JARVIS_RAIZ"], "contas-vazias", _variavel)

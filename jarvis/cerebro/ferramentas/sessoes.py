@@ -6,6 +6,9 @@ avisa sozinho quando uma sessão termina. Ler é livre; criar, mandar e parar pe
 """
 
 import asyncio
+import re
+from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from claude_agent_sdk import SdkMcpTool, tool
@@ -22,6 +25,39 @@ SESSAO_E_TEXTO: dict[str, Any] = {
     "properties": {"sessao": _REF, "texto": {"type": "string"}},
     "required": ["texto"],
 }
+
+
+def preparador(sessoes: Sessoes) -> Callable[[str, dict[str, Any]], str | None]:
+    def preparar(nome: str, entrada: dict[str, Any]) -> str | None:
+        if nome not in ("mcp__jarvis__sessao_enviar", "mcp__jarvis__sessao_continuar"):
+            return None
+        try:
+            # Um aviso pode trocar o foco enquanto a pessoa confirma. A aprovação pertence
+            # à sessão nomeada aqui, mesmo quando o modelo usou uma referência vazia.
+            entrada["sessao"] = sessoes.achar(str(entrada.get("sessao", ""))).id
+        except SessaoErro as erro:
+            return str(erro)
+        return None
+
+    return preparar
+
+
+def descritor(sessoes: Sessoes) -> Callable[[str, dict[str, Any]], str | None]:
+    def descrever(nome: str, entrada: dict[str, Any]) -> str | None:
+        if nome == "mcp__jarvis__sessao_criar" and str(entrada.get("tarefa", "")).strip():
+            nome_sessao = " ".join(str(entrada.get("nome", "")).split())[:60]
+            if not nome_sessao:
+                if projeto_novo := " ".join(str(entrada.get("projeto_novo", "")).split()):
+                    nome_sessao = re.sub(r"[^\w.-]+", "-", projeto_novo).strip("-.")[:60]
+                else:
+                    nome_sessao = Path(str(entrada.get("pasta", ""))).name or "nova"
+            return f"Estou enviando sua solicitação à sessão {nome_sessao}, confirma?"
+        if nome not in ("mcp__jarvis__sessao_enviar", "mcp__jarvis__sessao_continuar"):
+            return None
+        sessao = sessoes.achar(str(entrada.get("sessao", "")))
+        return f"Estou enviando sua solicitação à sessão {sessao.nome}, confirma?"
+
+    return descrever
 
 
 def _resumo(s: Sessao) -> dict[str, Any]:

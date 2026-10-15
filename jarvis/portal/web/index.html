@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="ze-token" content="__TOKEN__">
 <title>Zé</title>
-<link rel="stylesheet" href="/vendor/xterm/xterm.css">
 <link rel="stylesheet" href="/painel.css">
 <link rel="icon" type="image/webp" href="/ze.webp">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#070c11">
-<script src="/vendor/xterm/xterm.js" defer></script>
-<script src="/vendor/xterm/addon-fit.js" defer></script>
 <script src="/painel.js" defer></script>
+<script src="/modulos/voz.js" defer></script>
+<script src="/modulos/imersao.js" defer></script>
+<script src="/modulos/acoes.js" defer></script>
+<script src="/modulos/navegacao.js" defer></script>
 </head>
 <body>
 <div class="app">
@@ -32,6 +33,7 @@
           <a href="#foco" data-secao="foco"><i>◇</i>Foco</a>
           <a href="#sessoes" data-secao="sessoes"><i>▤</i>Sessões <span class="ponto" id="ponto-sessoes" hidden></span></a>
           <a href="#automacoes" data-secao="automacoes"><i>↻</i>Automações</a>
+          <a href="#atendimento" data-secao="atendimento"><i>☏</i>Atendimento</a>
         </div>
       </div>
       <div class="grupo" data-grupo="ze">

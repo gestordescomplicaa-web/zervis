@@ -58,6 +58,8 @@ SO_NO_PC = {
     "remoto/desativar",
     "ze/aplicar",
     "ze/sessao",
+    "ze/central",
+    "ze/unificar",
     "ze/diagnosticar",
     "ze/manutencao",
     "omniroute/salvar",

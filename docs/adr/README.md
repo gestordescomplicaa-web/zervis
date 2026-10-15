@@ -34,4 +34,7 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0027](0027-regras-de-fala.md) | Regras de fala: quando o Zé fala sozinho, sobre o quê e quantas vezes | Aceito |
 | [0028](0028-manutencao-estado-do-ze.md) | Manutenção, um estado do Zé: o centro do próprio código | Aceito |
 | [0029](0029-central-de-avisos.md) | Central de avisos: como o Zé narra várias sessões pela voz | Aceito |
-| [0030](0030-assistente-de-mensagens-whatsapp.md) | Assistente de mensagens do WhatsApp: o Zé avisa o que é importante para você | Proposta |
+| [0030](0030-assistente-de-mensagens-whatsapp.md) | Assistente de mensagens do WhatsApp: o Zé avisa o que é importante para você | Proposta (fonte substituída pelo 0031) |
+| [0031](0031-atendimento-whatsapp-e-telefonia.md) | Atendimento: o Zé atende clientes no WhatsApp e no telefone | Aceito |
+| [0032](0032-arquitetura-para-crescer.md) | Arquitetura para crescer: linguagem por papel, núcleo dividido, SQLite e pacotes | Aceito como direção (plano E1 a E7) |
+| [0033](0033-pacotes-de-extensao.md) | Pacotes de extensão: o Zé ganha capacidades sem mudar o próprio código | Proposta |

@@ -22,11 +22,35 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
 - **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `jarvis/imersivo/`, subido
   pelo próprio Zé, com estado e manifesto nas pastas de dados.
 - **Memória longa pelo ai-memory embutido** (MIT, ADR 0016): o da máquina, ou o binário oficial
-  baixado e conferido pelo Zé; as sessões de código alimentam e recebem a passagem dele.
+  baixado e conferido pelo Zé; as sessões de código alimentam e consultam a memória comum.
+  A passagem do trabalho atual é produzida pelo Zérvis a partir dos registros da sessão e Git.
 - **Registros de funcionamento em SQLite** (`ze.db`): sessões, Foco, automações e tempos. O que o
   usuário edita (memória curta, skills no padrão `SKILL.md`) continua em arquivo.
 
+## MVP: pronto para liberar (decidido em 15/10/2026)
+
+O Zérvis ainda não está pronto. O caminho até a primeira versão pública é deixá-lo eficiente,
+estável e instalável, e não somar funções. Função nova só entra se fechar uma lacuna do papel de
+assistente de trabalho na [matriz comparativa](matriz-comparativa.md); o resto fica para depois
+da liberação. Cada etapa tem um critério que se comprova, e só conta como feita com a prova.
+
+| # | Etapa | Pronto quando | Estado |
+|---|---|---|---|
+| 1 | Filtro de qualidade | O painel abre num Chromium de verdade dentro do `make check` (todas as páginas, sem erro no console) e `make check-instalacao` passa numa pasta limpa | Feito em 15/10/2026 |
+| 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `jarvis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
+| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node; WaCalls por binário conferido por SHA-256 | ⬜ |
+| 4 | Eficiência medida | Latência da voz, memória, processos ociosos e tokens por tarefa medidos numa rotina repetível; README com números no lugar de "mais enxuto" | ⬜ |
+| 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | ⬜ |
+
+Depois da liberação: pacotes de extensão (ADR 0033, etapa E6), mais canais, isolamento em
+contêiner e outras plataformas. A exceção a avaliar é conversar com o Zé pelo WhatsApp, que já
+está pareado.
+
 ## Próximos passos, em ordem
+
+**Antes dos próximos passos:** a reorganização do [ADR 0032](adr/0032-arquitetura-para-crescer.md)
+(etapas E1 a E7: SQLite, núcleo dividido, painel tipado, pacotes e pronto para o público), uma
+etapa por vez. Ela absorve os itens 5 (instalação), 6 (SQLite) e 8 (revisão final) abaixo.
 
 1. **Configuração da primeira vez no painel.** Feito: sem perfil, o painel abre nela (perfil com
    nome, sobre e fuso; acesso ao Claude por assinatura ou chave; chave do Deepgram). Falta:
@@ -36,8 +60,8 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
    ai-memory e pasta dos projetos.
 2. **Três camadas de modelos, sem o Orca (ADR 0015):** feito: a página Modelos com um cartão
    por camada (voz rápida, cérebro, sessões de código) e o modo manutenção sobre as sessões
-   próprias, e o Orca fora do núcleo (o cérebro delega pelas ferramentas `sessao_*`). Feito também: contas por agente e o Codex nas sessões. Feito também: troca de conta ou de agente na mesma sessão. Falta: captura do Codex no
-   ai-memory; a conversa continua na troca manual de cérebro, com o ai-memory comum aos dois.
+   próprias, e o Orca fora do núcleo (o cérebro delega pelas ferramentas `sessao_*`). Feito também: contas por agente e o Codex nas sessões. Feito também: troca de conta ou de agente na mesma sessão, captura dos turnos concluídos do Codex no
+   ai-memory e orientação de busca na memória comum aos dois agentes.
    Feito: Codex na voz e no cérebro, com alternativas entre contas antes de texto ou ação (ADR 0020).
 3. **Padrões que ainda supõem uma máquina:** microfone `omarchy_mic_fx` e o OmniRoute (baterias) como
    opcionais que se desligam sozinhos quando não
@@ -61,13 +85,185 @@ tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora po
 5. **Instalação de um comando** (Linux): o Zé e o painel como serviço do usuário (a voz já vem
    junto), o ai-memory e o imersivo; README de quem chega; o modo servidor (VPS).
 6. **SQLite** para os registros, com migração automática dos arquivos.
-7. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
+7. **Atendimento** ([plano](plano-atendente.md), ADR 0031): o Zé atende clientes no WhatsApp e
+   no telefone, separado do Zé principal, com handoff para quem usa. Feito: o WhatsApp pareado
+   pelo QR (WaCalls) e as mensagens como fonte dos avisos de lead quente. Falta: a recepcionista
+   por ligação, o atendente no texto, montar o agente, assumir ao vivo e a telefonia SIP.
+8. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
    falam do Orca e do JARVIS: visão, conceitos, reaproveitamento, plano da oficina).
 
 ## Em aberto
 
 - Nome do pacote e das variáveis: o código ainda é o pacote `jarvis` e usa `JARVIS_*`; as pastas
   de dados e os serviços já se chamam `zervis`.
+
+## Andamento da atualização (15/10/2026)
+
+### Continuidade e espaço do terminal
+
+A passagem entre agentes usa o último pedido e sua resposta literal, conserva ressalvas finais
+e distingue o relato do agente do estado registrado. O delta continua limitado; cortes são
+indicados e o histórico registrado da sessão fica disponível num arquivo privado para consulta.
+O prompt de passagem é retirado antes de guardar o pedido e oferecer retomada, inclusive no
+Claude. Históricos importados não substituem o pedido da central. Ver ADR 0016.
+
+Captura dos turnos concluídos do Codex pelo ai-memory, respeitando sua política e sanitização;
+fila limitada fora do laço das sessões, sem impedir trabalho quando a memória falha. Ambas as
+ferramentas recebem, nas novas conversas e passagens, orientação de busca na mesma memória e
+no projeto original. Não há troca automática de conta, migração de memórias antigas nem
+alteração de configurações globais.
+
+O cartão Sessão central só aparece quando há unificação a fazer, em andamento ou pendente.
+Concluir mostra um aviso temporário e libera o espaço do terminal, inclusive ao reabrir a página.
+O Codex abre com `--no-alt-screen`, preservando a saída na rolagem. O painel oculta a barra
+nativa vazia da viewport antiga do xterm 6 e mantém a barra da biblioteca, com contraste no tema.
+Provas com dados sintéticos: roda do mouse e clique na barra no Chromium, leitura de histórico
+sem saltar para a saída nova, confirmação da unificação e reabertura da central; regressões de
+pedido recente, ressalvas, importações, privacidade e falha da memória. Aplicação em uso depende
+da aprovação no painel; agentes já abertos precisam reabrir para receber os novos argumentos.
+
+Validação: `make check` aprovado com 973 testes, estilo, tipos Python e JavaScript, `go vet`
+e testes do Go. Prévia conferida no Chromium com dados sintéticos. Prova adicional com o
+ai-memory real em uma raiz temporária: duas cópias, um projeto e uma conversa nativa, com
+pedidos, respostas permitidas pela configuração de captura e encerramento registrados.
+Nenhuma conta ou configuração do Zérvis em uso foi alterada.
+
+### Sessão central de autodesenvolvimento
+
+#### Resolução de cópias antigas
+
+Na consolidação, uma cópia antiga trazia a implementação de pacotes de extensão, adiada pelo
+roteiro mais recente, e um rascunho que renomeava a pasta Python sem ajustar os imports.
+A resolução preserva a estrutura e as decisões da central. Os commits e o rascunho completos
+ficam alcançáveis pelo histórico Git da central, para retomada posterior, sem reativar trabalho
+adiado nem substituir correções recentes.
+
+Corrigida a repetição do conflito após a resolução manual: um rascunho com a mesma árvore e
+mesmo commit de origem reutiliza sua fotografia Git. Se já há uma fotografia reconciliada no
+histórico da central, ela tem preferência. Alterações novas de conteúdo ou de base continuam
+sujeitas à conferência. Regressões com datas diferentes, fotografias irmãs, renomeação resolvida
+na central, importação do histórico e preservação das origens. Aplicar a correção antes de
+repetir Unificar sessões permite concluir a importação dos históricos.
+Validação: `make check` aprovado com 962 testes, tipos, estilo e Go. A regressão da
+renomeação falhou com o código anterior e passou com a correção. O histórico real da cópia
+antiga foi reconciliado na branch central; a importação dos registros aguarda aplicar e
+repetir Unificar sessões no painel.
+
+#### Funcionamento
+
+Uma sessão por projeto e perfil, com a mesma cópia e branch em Claude, Codex, contas e modelos.
+O vínculo no SQLite sobrevive à perda do estado JSON. Recuperação não filtra pelo agente;
+referência ausente com várias candidatas exige escolha, e pasta ou registro perdidos não
+autorizam criar outra cópia. As aberturas concorrentes compartilham a mesma central.
+
+No próprio PC, Unificar sessões reúne as cópias legadas na atual, com confirmação e sem trabalho
+em andamento. A central precisa estar sem alterações locais; rascunhos das outras cópias são
+preservados em fotografias Git e integrados quando não há conflito. O banco recebe backup
+privado; conversas e pendências entram com a origem identificada. Pastas, arquivos ignorados,
+branches e conversas nativas antigas continuam preservados. As sessões substituídas recusam
+novos comandos. Atualizar, descartar e reiniciar aguardam a migração. Ver ADR 0026.
+
+Provas sintéticas: três cópias com commits e rascunhos, índice original preservado, conflitos,
+colisão com ignorados, interrupção após Git e retomada sem duplicar mensagens, recuperação do
+vínculo e aberturas simultâneas, Claude e duas contas Codex com passagem ainda pendente.
+Chromium confere a escolha da central, confirmação persistente entre consultas, reserva do
+terminal, reabertura após concluir e altura da tela. A migração dos dados reais é acionada no
+painel depois de aplicar esta versão; os dados pessoais não foram migrados durante os testes.
+Fallback automático de contas e modelos fica para uma etapa futura.
+Validação local: `make check` aprovado com 960 testes, formatação, lint, tipos Python e
+JavaScript, `go vet` e testes do Go. Os testes usam contas e dados temporários.
+
+### Delegação por voz e resultados de sessões
+
+O envio mantém a especificação completa na ferramenta, mas a confirmação falada usa apenas
+"Estou enviando sua solicitação à sessão X, confirma?". O nome vem da sessão resolvida e seu
+identificador fica fixado antes de perguntar, inclusive quando o pedido usou a sessão em foco.
+Um aviso de outro projeto durante a confirmação não redireciona a solicitação. Negar continua
+impedindo o envio. A criação de sessão com tarefa também usa a confirmação curta.
+
+Cada resultado é anunciado pelo nome em Normal e Mãos livres, inclusive com a sessão aberta;
+Silencioso continua só na tela. O resumo compara o pedido com a resposta e preserva pendências
+e impedimentos. Se o modelo falhar, há uma citação curta da resposta. Três sessões concluídas
+geram três falas sequenciais, sem pedir "próximo", sem sobrepor falas e esperando a pessoa
+terminar de falar. A fila preserva os avisos concorrentes e grava com permissão privada.
+
+Provas com dados sintéticos: aprovação e negativa em Claude e Codex, chamada MCP real, prompt
+completo preservado e mudança de foco durante a confirmação; três resultados guardados e
+anunciados separadamente; pessoa falando, Silencioso, gravações simultâneas e falha do resumo.
+A escuta na máquina em uso depende de aplicar a versão pelo painel e conferir um pedido real.
+
+### Aviso antes do reinício
+
+O aviso passa a ser "Atualização aprovada, reiniciando automaticamente.", a pedido de quem usa,
+para reduzir a fala que estava sendo cortada pelo reinício. O teste existente confere a frase
+exata; a confirmação audível depende de aplicar esta versão pelo painel e acompanhar o próximo
+reinício.
+Validação local: `make check` aprovado com 922 testes, estilo, tipos e Go.
+
+### Reserva das sessões durante a aplicação
+
+Do clique em Aplicar até o resultado da atualização, novos pedidos, teclas do terminal e a
+abertura de novos agentes ficam bloqueados, inclusive no autodesenvolvimento. Trabalhos que já
+estavam em curso podem terminar; a leitura de saídas e conversas continua disponível. O painel
+mostra a reserva junto ao terminal. Falha ou cancelamento da espera liberam o envio, preservando
+o pedido interrompido e descartando teclas recusadas. A conferência das sessões e a reserva
+compartilham a trava do envio para não admitir um pedido durante essa transição (ADR 0028).
+
+Provas: pedido concorrente com Aplicar; espera sem bloquear o laço da voz; terminal real via
+HTTP recusando teclas, novos agentes e retomadas, com leitura preservada em todas as etapas;
+Chromium mostrando a reserva e descartando teclas em fila, inclusive após cancelar a espera.
+Sucesso, falha e volta liberam o envio. `make check` aprovado com 922 testes, além de estilo,
+tipos e Go. A aplicação no Zérvis em uso permanece sujeita à aprovação pelo painel.
+
+### Recuperação da sessão de autodesenvolvimento
+
+Corrigido o caso do Claude parado no limite semanal enquanto a sessão permanecia trabalhando:
+o aviso passa a reconhecer limites semanal, diário e de sessão, inclusive com ANSI ou dividido
+entre quadros. A troca de agente ou conta usa a mesma sessão e cópia; o estado da manutenção
+acompanha a escolha e não abre outra cópia ao voltar à página. O painel oferece Interromper com
+confirmação para encerrar o agente, preservando arquivos e conversa, e explica quando é preciso
+entrar em manutenção para aplicar. A troca e a interrupção ficam bloqueadas durante a atualização.
+
+Provas: limite em vários quadros; troca com Git real mantendo commits, rascunho e pedidos;
+terminal real encerrado antes de liberar a troca; Chromium interrompendo com confirmação,
+escolhendo Codex, reabrindo a página e marcando a revisão antes de aplicar. Testes sem agentes
+ou contas reais. A passagem entre agentes é limitada, como nas sessões comuns (ADR 0016).
+`make check` aprovado: 912 testes, além das verificações de estilo, tipos e Go.
+
+### Etapas visíveis
+
+A aplicação de melhorias informa as etapas reais pelo painel: verificar a cópia, juntar,
+verificar a atualização e reiniciar. O cartão permanece ao navegar, mostra tempo decorrido e
+uma estimativa baseada nas durações anteriores. O percentual fica abaixo de cem até o script
+confirmar que o processo novo iniciou. Falha e retorno à versão anterior têm resultado próprio.
+
+O andamento é publicado atomicamente em `manutencao/progresso.json` (0600), na raiz de estado,
+e sobrevive à troca de processo. O resultado permanece por dez minutos, ou até ser fechado na
+aba. A gravação desse indicador nunca impede a atualização; uma falha de disco aparece no log.
+Reinício sem confirmação expira; uma interrupção nos testes não vira sucesso. O serviço impede
+duas aplicações simultâneas, inclusive com dois painéis. Sair da manutenção cancela a espera.
+
+Provas: regressões de recuperação, falha, expiração, gravação privada e pedidos simultâneos;
+Git real em projeto temporário com as etapas da manutenção; Chromium com API HTTP e o módulo
+real de progresso, navegando durante a atualização, recarregando após a troca de processo,
+mostrando sucesso, falha e volta. A desconexão é esperada somente na etapa de reinício e por
+tempo limitado. A instalação em uso continua passando pela revisão e aplicação no painel.
+
+Validação local: `make check` com **905 testes** aprovados, incluindo os três cenários de
+andamento no Chromium; formatação, lint, mypy, TypeScript e testes do Go aprovados. Prévia
+conferida visualmente em uma instância com dados sintéticos.
+
+Na primeira instalação deste recurso, a versão anterior só exibe o aviso de atualização que já
+possuía. O acompanhamento das etapas começa nas aplicações seguintes, com a versão nova no ar.
+
+### Atualização pequena para conferir o andamento
+
+A descrição de Autodesenvolvimento passa a ser "Revise e aplique melhorias. Acompanhe a
+atualização até o reinício." É uma mudança de texto para exercitar a aplicação pelo painel e
+conferir a versão nova depois do reinício. Não exige teste dedicado de lógica; a abertura da
+página e o fluxo de progresso já são cobertos pelos testes de navegador do `make check`.
+Validação local: `make check` aprovado, com 912 testes, verificações de estilo e tipos e Go.
+O acompanhamento da aplicação real depende de aprovar esta atualização no painel.
 
 ## Confiabilidade antes da distribuição (12/10/2026)
 

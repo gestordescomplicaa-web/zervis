@@ -2,6 +2,59 @@
 
 ## Não lançado
 
+- Autodesenvolvimento: a unificação reconhece rascunhos já reconciliados na central e evita
+  repetir o mesmo conflito a cada tentativa; conteúdo ou base novos continuam sendo conferidos.
+
+- Autodesenvolvimento: sessão central independente de conta, agente e modelo, com recuperação
+  persistente e bloqueio de duplicações. O painel unifica cópias antigas preservando commits,
+  rascunhos, histórico e pendências; conflitos interrompem a migração e as origens ficam guardadas.
+
+- Sessões: um evento de conclusão repetido não registra outra resposta nem dispara um segundo aviso.
+
+- Sessões por voz: confirmação curta pelo nome, com o prompt completo no envio e destino fixado
+  antes do sim. Cada resultado inclui um resumo em Normal e Mãos livres; várias sessões avisam
+  separadamente, sem exigir "próximo". O resumo preserva pendências e tem alternativa sem modelo.
+
+- Atualização: novos pedidos e teclas do terminal ficam bloqueados desde a aprovação até o
+  resultado, inclusive no autodesenvolvimento. Conversas e saídas continuam disponíveis para
+  leitura; falha ou cancelamento liberam o envio e preservam tarefas pendentes.
+
+- Autodesenvolvimento: trocar Claude, Codex ou conta mantém a mesma sessão, a cópia e os pedidos.
+  O limite semanal é reconhecido mesmo quando o aviso chega em partes. Interromper, com
+  confirmação, encerra o agente preservando a conversa e libera a troca; a atualização bloqueia
+  essas operações enquanto estiver em andamento.
+
+- Atualização: andamento visível em todas as páginas, com etapas, tempo decorrido e estimativa.
+  O resultado continua visível depois do reinício; falhas e retorno à versão anterior aparecem
+  na tela. Pedidos repetidos não iniciam outra aplicação.
+
+- Atendimento (ADR 0031): página nova para conectar um número de WhatsApp ao Zé pelo QR. Com os
+  avisos de lead quente ligados, as mensagens desse número passam a ser a fonte dos avisos, sem
+  precisar do WhatsApp aberto no computador. É a base do atendente no WhatsApp e nas ligações
+  (docs/plano-atendente.md). Requer o Go na primeira conexão.
+- Atendimento: o agente que responde clientes no WhatsApp, separado do Zé, com persona própria
+  (nome, empresa, como atender, o que sabe, quando passar para você), Testar sem enviar, modo
+  teste só para números escolhidos e a lista "Com você" das conversas passadas para você.
+- Atendimento: o agente virou um projeto (`~/projetos/agente-de-atendimento`) com README,
+  persona, conhecimento e testes de conversa. "Abrir sessão" cria uma sessão de código nele, e
+  "Publicar" só coloca a versão nova para os clientes com todos os testes passando.
+- Atendimento: página revista, com um cartão por função. Interruptores claros para responder no
+  WhatsApp e atender ligações; o cérebro em destaque, com as chaves de API (Salvar, Testar,
+  Remover) na própria página; e o cartão Memória, que mostra o que o agente guarda e apaga.
+- Atendimento: nas ligações, o agente fala como numa ligação (as regras de fala do Ligatia),
+  sem abreviação ("oito horas", "cento e cinquenta reais") e sem frase de bastidor. Pré-aquecimento,
+  geração antecipada e uma reação curta ("Uhum.") enquanto o modelo pensa. A página Atendimento
+  mostra e deixa escolher o cérebro do agente; com chave de API, as ligações respondem mais rápido.
+- Atendimento: o agente atende ligações do WhatsApp em tempo real (opção "Ligações do WhatsApp"
+  no cartão Agente): ouve pelo Deepgram, responde com a mesma persona e fala com a voz do Cadu.
+  O cliente pode interromper; quando precisa de você, ele avisa que alguém retorna e encerra.
+- Atendimento: o agente só responde em conversa privada. Grupos, status e canais ficam de fora,
+  com três travas independentes.
+- Atendimento: a Central de Atendimento roda num serviço próprio (`zervis-atendimento`).
+  Reiniciar o Zé, inclusive para aplicar melhorias, não derruba mais o WhatsApp nem o agente.
+- Avisos do WhatsApp: o Zé lê as notificações do WhatsApp deste computador e avisa só de lead
+  quente (quem quer comprar ou mostra interesse real). Desligado por padrão; liga em Voz > WhatsApp ou dizendo
+  "liga os avisos do WhatsApp". Nunca responde nem abre a conversa.
 - Voz: o Zé não corta mais quem pausa para pensar. Frase que termina pela metade ("e", "que",
   "pra", vírgula) espera o silêncio longo, e a nova escolha Espera (Rápida, Normal, Longa) na
   página Voz define as pausas; Normal espera 1 s em vez de 0,64 s.

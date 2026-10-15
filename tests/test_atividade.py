@@ -1,7 +1,6 @@
 """A atividade do Zé (ADR 0025): o que ele executou, como foi autorizado e onde tropeçou."""
 
 import asyncio
-import json
 import stat
 from pathlib import Path
 from typing import Any
@@ -41,17 +40,18 @@ def test_registra_lista_resume_e_guarda_so_para_quem_usa(tmp_path: Path) -> None
     assert itens[1]["origem"] == "voz remota" and itens[2]["origem"] == "voz"
     assert a.listar(tipos=("execucao",))[0]["autorizacao"] == "livre (risco baixo)"
     assert a.resumo()["negada"] == 1
-    assert stat.S_IMODE((tmp_path / "atividade.jsonl").stat().st_mode) == 0o600
+    assert stat.S_IMODE(a.arquivo.stat().st_mode) == 0o600
 
 
-def test_arquivo_grande_vira_copia_e_recomeca(
+def test_historico_crescente_continua_busca_sem_perder_registros(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(atividade, "LIMITE_BYTES", 200)
     a = Atividade(tmp_path / "atividade.jsonl")
     for n in range(10):
         a.registrar("pedido", f"pedido número {n}")
-    assert (tmp_path / "atividade.jsonl.1").exists() and len(a.listar()) < 10
+    assert len(a.listar()) == 10
+    assert a.buscar("pedido número 0")[0]["titulo"] == "pedido número 0"
 
 
 def test_correcao_da_pessoa() -> None:
@@ -108,7 +108,7 @@ def test_cada_execucao_registrada_com_a_autorizacao(
         falha["tipo"] == "falha" and falha["autorizacao"] == "livre"
     )  # a autorização é de uma vez
     assert falha_dura["erro"] == "RuntimeError: caiu"
-    assert json.loads((tmp_path / "atividade.jsonl").read_text().splitlines()[0])["entrada"]
+    assert a.listar()[-1]["entrada"]
 
 
 def test_suspender_existe_com_confirmacao_falada(tmp_path: Path) -> None:

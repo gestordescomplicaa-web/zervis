@@ -1,9 +1,10 @@
 """O registro das conversas do Zé, com data e hora de cada fala (08/10/2026).
 
-As conversas de voz não entravam no ai-memory: os ganchos dele são do Claude Code de terminal e o
+As conversas de voz não entravam no ai-memory: os ganchos dele são do Claude Code de terminal e
+o
 cérebro do Zé roda pelo Agent SDK, sem ganchos. Agora o próprio Zé registra cada pedido e a
-resposta em `~/.local/share/zervis/conversas/AAAA-MM-DD.jsonl` (a fonte da verdade, com a hora
-local) e publica uma página por dia no ai-memory (projeto "Zé", camada episódica), onde a
+resposta em `<dados>/conversas/conversas.db` (a fonte da verdade, com a hora local) e publica
+uma página por dia no ai-memory (projeto "Zé", camada episódica), onde a
 busca por texto e por significado acha. As conversas anteriores a isto vêm das transcrições do
 Agent SDK pela `importar_sdk`, uma vez.
 """
@@ -16,8 +17,10 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
 from jarvis import fuso, usuario
+from jarvis.dados.documentos import Documentos, linhas_json
 from jarvis.memoria import aimemory
 
 log = logging.getLogger(__name__)
@@ -50,59 +53,62 @@ def nome_do_dia(dia: date) -> str:
 class Conversas:
     def __init__(self, pasta: Path) -> None:
         self.pasta = pasta
+        self._dados = Documentos(pasta / "conversas.db")
+        for arquivo in sorted(pasta.glob("????-??-??.jsonl")):
+            try:
+                date.fromisoformat(arquivo.stem)
+            except ValueError:
+                continue
+
+            def ler(texto: str, dia: str = arquivo.stem) -> list[dict[str, Any]]:
+                return [{**dado, "dia": dia} for dado in linhas_json(texto)]
+
+            self._dados.importar(arquivo, ler, "conversas")
 
     def _arquivo(self, dia: date) -> Path:
         return self.pasta / f"{dia:%Y-%m-%d}.jsonl"
 
     def registrar(self, gabriel: str, ze: str, em: datetime | None = None) -> Turno:
         turno = Turno((em or datetime.now(FUSO)).astimezone(FUSO), gabriel.strip(), ze.strip())
-        self.pasta.mkdir(parents=True, exist_ok=True)
-        with self._arquivo(turno.em.date()).open("a") as f:
-            f.write(turno.para_json() + "\n")
+        self._dados.guardar(
+            "conversas", {**json.loads(turno.para_json()), "dia": turno.em.date().isoformat()}
+        )
         return turno
 
     def do_dia(self, dia: date) -> list[Turno]:
-        try:
-            linhas = self._arquivo(dia).read_text().splitlines()
-        except OSError:
-            return []
-        turnos = []
-        for linha in linhas:
-            try:
-                d = json.loads(linha)
-                turnos.append(
-                    Turno(datetime.fromisoformat(d["em"]), str(d["gabriel"]), str(d["ze"]))
-                )
-            except (ValueError, KeyError, TypeError):
-                continue
-        return sorted(turnos, key=lambda t: t.em)
+        dados = self._dados.filtrar("conversas", "dia", [dia.isoformat()], -1)
+        return sorted(
+            (
+                Turno(datetime.fromisoformat(d["em"]), str(d["gabriel"]), str(d["ze"]))
+                for d in dados
+            ),
+            key=lambda t: t.em,
+        )
 
     def dias(self) -> list[date]:
-        achados = []
-        for arquivo in self.pasta.glob("????-??-??.jsonl"):
-            try:
-                achados.append(date.fromisoformat(arquivo.stem))
-            except ValueError:
-                continue
-        return sorted(achados)
+        return sorted({date.fromisoformat(d["dia"]) for d in self._dados.listar("conversas")})
+
+    def buscar(self, texto: str, limite: int = 50) -> list[Turno]:
+        return [
+            Turno(datetime.fromisoformat(d["em"]), str(d["gabriel"]), str(d["ze"]))
+            for d in self._dados.buscar(texto, "conversas", limite)
+        ]
 
     def juntar(self, turnos: Iterable[Turno]) -> int:
-        """Acrescenta os que ainda não estão (mesma hora e mesma fala); devolve quantos entraram."""
+        """Importa só os turnos novos dentro de uma transação entre processos."""
         novos = 0
         por_dia: dict[date, list[Turno]] = {}
         for t in turnos:
             por_dia.setdefault(t.em.date(), []).append(t)
-        for dia, lista in por_dia.items():
-            vistos = {(t.em.isoformat(timespec="minutes"), t.gabriel) for t in self.do_dia(dia)}
-            for t in sorted(lista, key=lambda x: x.em):
-                chave = (t.em.isoformat(timespec="minutes"), t.gabriel)
-                if chave in vistos:
-                    continue
-                vistos.add(chave)
-                self.pasta.mkdir(parents=True, exist_ok=True)
-                with self._arquivo(dia).open("a") as f:
-                    f.write(t.para_json() + "\n")
-                novos += 1
+        with self._dados.banco.transacao():
+            for dia, lista in por_dia.items():
+                vistos = {(t.em.isoformat(timespec="minutes"), t.gabriel) for t in self.do_dia(dia)}
+                for t in sorted(lista, key=lambda x: x.em):
+                    chave = (t.em.isoformat(timespec="minutes"), t.gabriel)
+                    if chave not in vistos:
+                        vistos.add(chave)
+                        self.registrar(t.gabriel, t.ze, t.em)
+                        novos += 1
         return novos
 
     def pagina(self, dia: date) -> str:

@@ -110,6 +110,7 @@ def rodar(nome: str, janela_aberta: bool = True) -> tuple[str, list[tuple[str, A
     n.status = Status()
     n.trocar_cerebro = lambda id_: f"trocado para {id_}"  # type: ignore[method-assign]
     n.relatorio_de_baterias = lambda: "baterias"  # type: ignore[method-assign]
+    n.ligar_mensagens = lambda ativo: f"whatsapp {ativo}"  # type: ignore[method-assign]
     n.voz = SimpleNamespace(muda=False, parar=lambda: None)  # type: ignore[assignment]
     n._ligar_ativacao = lambda: None  # type: ignore[method-assign]
     n._comando(nome)

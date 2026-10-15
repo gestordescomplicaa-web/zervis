@@ -23,10 +23,11 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
 
 ## Estado e dados
 
-- Um único processo dono do estado (lock exclusivo); nenhum outro escreve no banco.
+- Um único processo dono do estado volátil (lock exclusivo). Registros em SQLite podem ter
+  vários escritores com transações curtas, WAL e espera limitada (ADR 0032).
 - SQLite em modo WAL, migrações numeradas e testadas a partir de um banco vazio e de um banco da
   versão anterior.
-- Arquivos editáveis pelo usuário (`jobs.json`, memória, skills) com escrita atômica
+- Arquivos editáveis pelo usuário (memória curta, skills) com escrita atômica
   (temporário + `rename`) e permissão 0600 quando sensível.
 - Configuração validada por esquema na carga; erro de config = mensagem clara e serviço não sobe
   meio configurado.
@@ -45,6 +46,14 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
   por arquivo (lição de 06/10/2026: um `FakeOrca` duplicado sobrescreveu outro e quebrou sete testes).
 - Teste de regressão para cada bug corrigido, com o caso real que o revelou.
 - Provas na máquina real descritas passo a passo no roadmap, com o resultado anotado.
+- O painel abre num Chromium de verdade dentro do `make check`
+  (`tests/test_painel_no_navegador.py`): todas as páginas, sem erro no console, com as respostas
+  de `tests/painel_respostas.json`. Rota de leitura nova exige resposta de exemplo nesse arquivo,
+  no formato real e sem dado de ninguém. Lição de 14/10/2026: o `tsc` aprovou um painel com todos
+  os botões quebrados por ordem de carregamento.
+- `make check-instalacao`: o último commit numa pasta limpa, com `HOME` vazio, instala e passa no
+  `make check`. Obrigatório antes de liberar uma versão e ao mudar dependência ou instalação.
+  Lição de 14/10/2026: o TypeScript só existia na cópia de trabalho, e o reinício falhou.
 
 ## Observabilidade
 
@@ -58,3 +67,11 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
   (`aviso`, `pendencia`) e inglês em termos técnicos consagrados (`lock`, `timeout`).
 - Comentários explicam o porquê e as lições aprendidas; não repetem o código.
 - Dependências fixadas por versão exata; atualização é um commit próprio.
+
+## Linguagem por papel (ADR 0032)
+
+Python no núcleo e nos agentes, Go em mídia e conexões, JavaScript com JSDoc no painel.
+Reescrever uma peça em outra linguagem só depois de medir e comprovar que ela é o gargalo.
+
+O painel usa JSDoc e `tsc --noEmit` no `make check`, sem compilação para o navegador.
+A abertura contabiliza todos os scripts iniciais; páginas e terminal carregam sob demanda.

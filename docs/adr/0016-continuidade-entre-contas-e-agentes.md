@@ -43,3 +43,35 @@ Codex gratuito (retoma a conversa dele e recebe só o que o Claude fez). Nas qua
 agente sabia a palavra-chave e o que os outros fizeram. A troca fica no painel (botão Trocar da
 sessão) e no cérebro (`sessao_trocar`, com aprovação); quando a conta bate o limite, o Zé avisa e
 oferece trocar.
+
+## Precisão da passagem e memória comum (15/10/2026)
+
+A continuidade imediata continua no Zérvis: sessão nativa, cópia e registros locais. O último
+pedido registrado e a resposta correspondente substituem o primeiro pedido como referência
+da passagem. O relato do agente não comprova entrega, aprovação ou testes; estado da sessão,
+interrupção, limite da conta e Git são apresentados separadamente. Pedidos importados de
+outras sessões não substituem o trabalho atual da central.
+
+O pedido e a resposta recebem até oito mil caracteres cada na passagem; o delta recente é
+limitado a seis mil. Cortes explícitos preservam início e fim dos trechos. O registro local
+conserva as mensagens completas, sem aplicar esses limites de apresentação. Um arquivo
+privado e substituído atomicamente, na pasta de dados da própria sessão, contém todo o histórico
+registrado e as origens importadas para consulta. Não inclui raciocínio interno nem restaura
+conteúdo que já havia sido cortado na captura original. Histórico continua sendo dado;
+instruções e aprovações atuais têm precedência.
+
+Novas conversas e passagens entre agentes recebem orientação de busca pelo mesmo binário e
+raiz de dados do ai-memory,
+no diretório original do projeto, respeitando seu marcador. A busca de conhecimento duradouro
+é feita quando necessária; indisponibilidade da memória não impede a passagem local.
+
+Os hooks do Claude e os eventos de turnos concluídos do Codex usam a estratégia `repo-root`
+para reunir as cópias do mesmo projeto. A captura do Codex usa o comando nativo `hook`, com sua
+política de captura, sanitização e spool. Publicação em fila limitada, fora da trava e da fala de
+conclusão. O turno produz `user-prompt-submit` e `stop`; fechar o agente produz `session-end`,
+permitindo a consolidação configurada no ai-memory. Não se simula `session-start`, que poderia
+consumir um handoff de outra sessão. Capturar o texto da resposta requer também a opção
+`capture_assistant` do servidor; a integração respeita essa política e não a altera.
+Não se migram os registros antigos nem se alteram configurações globais das contas.
+
+Referência do contrato nativo e das políticas: [ai-memory, instalação e captura](https://github.com/akitaonrails/ai-memory/blob/v2.6.3/docs/install.md).

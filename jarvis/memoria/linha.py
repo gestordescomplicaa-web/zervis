@@ -1,6 +1,6 @@
 """A linha do tempo do Zé: o que aconteceu, e quando, fora das conversas (08/10/2026).
 
-Um evento por linha em `~/.local/share/zervis/linha-do-tempo.jsonl`, com `quando` (a hora do
+Um registro por evento em `<dados>/linha-do-tempo.db`, com `quando` (a hora do
 fato, no fuso local) e `registrado` (a hora em que o Zé soube). O jarvisd registra sozinho o que
 passa por ele (aprovações, avisos de agentes, lembretes, pedidos de manutenção, notas do dia); o
 o usuário registra marcos falando ("o lançamento é dia 20", "fechei o contrato ontem"): fatos com
@@ -9,12 +9,12 @@ data, passados ou futuros, que não são lembretes. Com isso o Zé responde "o q
 evento novo.
 """
 
-import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from jarvis import fuso
+from jarvis.dados.documentos import Documentos, linhas_json
 
 FUSO = fuso.local()
 TIPOS = {
@@ -57,7 +57,9 @@ def interpretar_data(texto: str) -> datetime:
 
 class LinhaDoTempo:
     def __init__(self, arquivo: Path) -> None:
-        self.arquivo = arquivo
+        self._dados = Documentos(arquivo)
+        self.arquivo = self._dados.banco.arquivo
+        self._dados.importar(arquivo, linhas_json, "linha")
 
     def registrar(self, tipo: str, texto: str, quando: datetime | None = None) -> Evento:
         if tipo not in TIPOS:
@@ -66,42 +68,41 @@ class LinhaDoTempo:
         if not texto:
             raise ValueError("evento sem texto")
         evento = Evento((quando or agora()).astimezone(FUSO), tipo, texto, agora())
-        self.arquivo.parent.mkdir(parents=True, exist_ok=True)
-        with self.arquivo.open("a") as f:
-            f.write(
-                json.dumps(
-                    {
-                        "quando": evento.quando.isoformat(timespec="minutes"),
-                        "tipo": tipo,
-                        "texto": texto,
-                        "registrado": evento.registrado.isoformat(timespec="seconds"),
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n"
-            )
+        self._dados.guardar(
+            "linha",
+            {
+                "quando": evento.quando.isoformat(timespec="minutes"),
+                "tipo": tipo,
+                "texto": texto,
+                "registrado": evento.registrado.isoformat(timespec="seconds"),
+            },
+        )
         return evento
 
     def todos(self) -> list[Evento]:
-        try:
-            linhas = self.arquivo.read_text().splitlines()
-        except OSError:
-            return []
-        eventos = []
-        for linha in linhas:
-            try:
-                d = json.loads(linha)
-                eventos.append(
-                    Evento(
-                        datetime.fromisoformat(d["quando"]),
-                        str(d["tipo"]),
-                        str(d["texto"]),
-                        datetime.fromisoformat(d["registrado"]),
-                    )
+        return sorted(
+            (
+                Evento(
+                    datetime.fromisoformat(d["quando"]),
+                    str(d["tipo"]),
+                    str(d["texto"]),
+                    datetime.fromisoformat(d["registrado"]),
                 )
-            except (ValueError, KeyError, TypeError):
-                continue
-        return sorted(eventos, key=lambda e: e.quando)
+                for d in self._dados.listar("linha")
+            ),
+            key=lambda e: e.quando,
+        )
+
+    def buscar(self, texto: str, limite: int = 50) -> list[Evento]:
+        return [
+            Evento(
+                datetime.fromisoformat(d["quando"]),
+                str(d["tipo"]),
+                str(d["texto"]),
+                datetime.fromisoformat(d["registrado"]),
+            )
+            for d in self._dados.buscar(texto, "linha", limite)
+        ]
 
     def entre(self, de: datetime, ate: datetime, tipos: set[str] | None = None) -> list[Evento]:
         return [

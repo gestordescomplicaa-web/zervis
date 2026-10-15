@@ -34,11 +34,13 @@ async function desenharFio() {
   if (embaixo || !fio.dataset.lido) { fio.scrollTop = fio.scrollHeight; fio.dataset.lido = "1"; }
 }
 
-async function prepararConversa() {
+/** @param {number} vez */
+async function prepararConversa(vez) {
   fioVisto = "";
   await desenharFio();
-  relogioSessoes = setInterval(() => desenharFio().catch(() => {}), 1500);
-  const campo = $("escrever-texto");
+  if (vez !== navegacao) return;
+  relogio(vez, () => desenharFio().catch(() => {}));
+  const campo = /** @type {HTMLTextAreaElement} */ (valorCampo("escrever-texto"));
   const enviar = async (ev) => {
     ev?.preventDefault();
     const texto = campo.value.trim();

@@ -495,9 +495,24 @@ def test_no_terminal_os_pedidos_e_respostas_vem_dos_eventos_do_agente(
     fim: list[str] = []
     sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda s, r: fim.append(r))
     s = sessoes.criar("Loja", str(raiz / "projetos/loja"), "codex")
-    eventos = [
+    eventos: list[dict[str, Any]] = [
         {"hook_event_name": "UserPromptSubmit", "prompt": "liste as frutas"},
         {"hook_event_name": "Stop", "session_id": "c1", "last_assistant_message": "Caju."},
+    ]
+    sessoes.eventos(s.id).write_text("".join(json.dumps(e) + "\n" for e in eventos))
+    sessoes._ler_eventos(s.id)
+    assert fim == ["Caju."]
+    sessoes._mudar(s.id, estado="trabalhando", ultimo_pedido="agora o bacuri")
+    eventos = [
+        {
+            "type": "agent-turn-complete",
+            "thread-id": "t1",
+            "input-messages": [
+                "liste as frutas",
+                "[Passagem do Zé] contexto…\n\nPedido agora:\nagora o bacuri",
+            ],
+            "last-assistant-message": "Bacuri.",
+        },
         {
             "type": "agent-turn-complete",
             "thread-id": "t1",
@@ -509,7 +524,8 @@ def test_no_terminal_os_pedidos_e_respostas_vem_dos_eventos_do_agente(
         },
         {"type": "agent-turn-complete", "input-messages": ["[Passagem do Zé] só contexto"]},
     ]
-    sessoes.eventos(s.id).write_text("".join(json.dumps(e) + "\n" for e in eventos))
+    with sessoes.eventos(s.id).open("a") as arquivo:
+        arquivo.write("".join(json.dumps(e) + "\n" for e in eventos))
     sessoes._ler_eventos(s.id)
     conversa = [(m["quem"], m["texto"]) for m in sessoes.mensagens(s.id)]
     assert conversa[-4:] == [
@@ -518,10 +534,46 @@ def test_no_terminal_os_pedidos_e_respostas_vem_dos_eventos_do_agente(
         ("usuario", "agora o bacuri"),  # da passagem colada, só o pedido
         ("agente", "Bacuri."),
     ]
-    assert fim[:2] == ["Caju.", "Bacuri."]
+    assert fim == ["Caju.", "Bacuri."]
+    assert sum(quem == "agente" and texto == "Bacuri." for quem, texto in conversa) == 1
     passagem = sessoes.passagem(sessoes.ler(s.id), "claude")
-    assert "o primeiro pedido): liste as frutas" in passagem
+    assert (
+        "Último pedido registrado (referência, pode ter sido atendido):\nagora o bacuri" in passagem
+    )
+    assert sessoes.ler(s.id).ultimo_pedido == "agora o bacuri"
     assert "Terminal" not in passagem
+
+
+def test_conclusao_repetida_gera_um_so_resultado_e_novo_turno_pode_repetir(
+    tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capturas: list[tuple[Any, ...]] = []
+    monkeypatch.setattr(
+        "jarvis.memoria.aimemory.capturar_codex", lambda *args: capturas.append(args)
+    )
+    fim: list[str] = []
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda _s, r: fim.append(r))
+    sessao = sessoes.criar("Teste", str(raiz / "projetos/loja"), "codex")
+    evento = {
+        "type": "agent-turn-complete",
+        "thread-id": "fio-codex",
+        "input-messages": ["Tudo bem?"],
+        "last-assistant-message": "Tudo bem!",
+    }
+
+    sessoes._mudar(sessao.id, estado="trabalhando", ultimo_pedido="Tudo bem?")
+    sessoes._evento(sessao.id, evento)
+    sessoes._evento(sessao.id, evento)
+    assert fim == ["Tudo bem!"]
+    assert [m["quem"] for m in sessoes.mensagens(sessao.id)].count("agente") == 1
+    assert [m["quem"] for m in sessoes.mensagens(sessao.id)].count("usuario") == 1
+    assert len(capturas) == 1
+    assert capturas[0] == ("fio-codex", sessao.onde, "Tudo bem?", "Tudo bem!")
+
+    sessoes._mudar(sessao.id, estado="trabalhando", ultimo_pedido="Tudo bem?")
+    sessoes._evento(sessao.id, evento)
+    assert fim == ["Tudo bem!", "Tudo bem!"]
+    assert len(capturas) == 2
 
 
 def test_terminal_sem_o_agente_instalado_avisa(
@@ -550,6 +602,7 @@ def test_a_passagem_entra_como_contexto_sem_gastar_um_turno(tmp_path: Path) -> N
     assert not any(c.startswith("[Passagem") for c in cmd)  # nenhum pedido automático
     codex = Sessao("s2", "Loja", str(tmp_path), "codex")
     cmd = comando_terminal(codex, "", eventos, contexto)
+    assert "--no-alt-screen" in cmd
     assert any(c.startswith("developer_instructions=") and "Passagem" in c for c in cmd)
     assert not any(c.startswith("[Passagem") for c in cmd)
 
@@ -735,3 +788,23 @@ def test_pedido_novo_dispensa_a_tarefa_interrompida(tmp_path: Path, raiz: Path) 
     assert sessoes.ler(s.id).interrompida == ""
     sessoes._mudar(s.id, interrompida="de novo")
     assert sessoes.dispensar_interrompida(s.id).interrompida == ""
+
+
+@pytest.mark.parametrize("tipo", ["weekly", "daily", "session"])
+def test_limite_no_terminal_em_varios_quadros_libera_a_troca(
+    tmp_path: Path, raiz: Path, tipo: str
+) -> None:
+    sessoes, fim = nova(tmp_path, raiz, lambda *_: "ok")
+    s = sessoes.criar("Teste", str(raiz / "projetos/loja"))
+    sessoes._mudar(s.id, estado="trabalhando", ultimo_pedido="conclua")
+    sessoes._olhar_saida(s.id, b"\x1b[31mYou've hit your ")
+    sessoes._olhar_saida(s.id, (tipo + " lim").encode())
+    sessoes._olhar_saida(s.id, b"it\x1b[0m. Resets tomorrow")
+    s = sessoes.ler(s.id)
+    assert s.estado == "erro" and s.limite
+    assert len(fim) == 1
+    sessoes._olhar_saida(s.id, b"You've hit your weekly limit")
+    assert len(fim) == 1
+    sessoes._evento(s.id, {"hook_event_name": "UserPromptSubmit", "prompt": "novo pedido"})
+    sessoes._olhar_saida(s.id, b"Trabalhando no novo pedido")
+    assert not sessoes.ler(s.id).limite

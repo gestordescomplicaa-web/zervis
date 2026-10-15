@@ -56,42 +56,42 @@ Object.assign(ACOES, {
   "conector-novo": formConector,
   "cx-cancelar": () => { $("form-conector").hidden = true; },
   "cx-tipo": (b) => {
-    document.querySelectorAll('[data-acao="cx-tipo"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-acao="cx-tipo"]')).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     const remoto = b.dataset.tipo === "http";
-    document.querySelectorAll("[data-local]").forEach((x) => { x.hidden = remoto; });
-    document.querySelectorAll("[data-remoto]").forEach((x) => { x.hidden = !remoto; });
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("[data-local]")).forEach((x) => { x.hidden = remoto; });
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("[data-remoto]")).forEach((x) => { x.hidden = !remoto; });
   },
   "cx-salvar": async (b) => {
-    const remoto = document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]').dataset.tipo === "http";
-    const cab = Object.fromEntries(linhasDe($("cx-cabecalhos").value).map((l) => l.split(":").map((x) => x.trim())).filter((p) => p.length === 2));
+    const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
+    const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => l.split(":").map((x) => x.trim())).filter((p) => p.length === 2));
     await ocupado(b, () => api("conector/salvar", {
-      nome: $("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: $("cx-comando").value.trim(),
-      argumentos: linhasDe($("cx-argumentos").value), url: $("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
-      ambiente: $("cx-ambiente").value.split(",").map((v) => v.trim()).filter(Boolean),
+      nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
+      argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
+      ambiente: valorCampo("cx-ambiente").value.split(",").map((v) => v.trim()).filter(Boolean),
     }));
     toast("Conector salvo."); await recarregar();
   },
   "conector-segredo": async (b) => {
-    const campo = b.closest(".segredo").querySelector("input");
+    const campo = /** @type {HTMLInputElement} */ (/** @type {HTMLElement} */ (b.closest(".segredo")).querySelector("input"));
     await ocupado(b, () => api("conector/segredo", { nome: b.dataset.nome, variavel: b.dataset.variavel, valor: campo.value }));
     toast("Segredo guardado."); await recarregar();
   },
   "conector-testar": async (b) => {
     const nome = b.dataset.nome;
-    const saida = document.querySelector(`[data-resultado="${CSS.escape(nome)}"]`);
+    const saida = /** @type {HTMLElement} */ (document.querySelector(`[data-resultado="${CSS.escape(nome)}"]`));
     saida.className = "resultado"; saida.textContent = "Conectando…";
     const r = await ocupado(b, () => api("conector/testar", { nome }));
     saida.className = "resultado " + (r.ok ? "ok" : "erro");
     saida.textContent = r.ok ? `${r.ferramentas.length} ferramentas` : r.erro;
     if (r.ok) {
-      const area = document.querySelector(`[data-ferramentas="${CSS.escape(nome)}"]`);
+      const area = /** @type {HTMLElement} */ (document.querySelector(`[data-ferramentas="${CSS.escape(nome)}"]`));
       area.innerHTML = permissoes(nome, r.ferramentas, conectoresVistos.find((k) => k.nome === nome));
       area.hidden = false;
     }
   },
   "conector-permissoes": async (b) => {
     const k = conectoresVistos.find((x) => x.nome === b.dataset.nome);
-    const escolhas = [...b.closest(".ferramentas-mcp").querySelectorAll("[data-permissao]")];
+    const escolhas = [.../** @type {NodeListOf<HTMLSelectElement>} */ (/** @type {HTMLElement} */ (b.closest(".ferramentas-mcp")).querySelectorAll("[data-permissao]"))];
     const de = (v) => escolhas.filter((e) => e.value === v).map((e) => e.dataset.permissao);
     await ocupado(b, () => api("conector/salvar", { nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: de("livre"), bloqueadas: de("bloqueada") }));
     toast("Permissões salvas."); await recarregar();

@@ -23,6 +23,12 @@ recomeçava do início: quatro leituras completas.
    do cortado); um aviso que esperou o Zé ficar livre não conta como falado.
 5. Os modos de fala do ADR 0018 continuam valendo antes de tudo isto; respostas a pedidos da
    pessoa não mudam.
+6. **Envio a sessões (15/10/2026, pedido explícito do usuário):** a confirmação é somente
+   "Estou enviando sua solicitação à sessão X, confirma?", com o nome real. O prompt completo
+   fica no argumento da ferramenta e não é lido nem repetido depois de enviar. O destino é
+   resolvido e fixado antes da aprovação, para um aviso de outra sessão não mudar o foco no
+   meio da confirmação. Referência ambígua é recusada para esclarecimento. O sim continua
+   obrigatório; a frase pronta não recebe um segundo "Posso?".
 
 ## Consequências
 - Menos voz e mais tela: quem quer o detalhe abre a página indicada no aviso.

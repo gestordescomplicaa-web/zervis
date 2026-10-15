@@ -91,6 +91,7 @@ class AprovacaoExpirou:
 class Aviso:
     texto: str
     escutar: bool = False  # mãos livres: depois do aviso, ouve a resposta sem o chamado
+    sequencial: bool = False  # resultados de sessões saem também nas pausas da conversa
 
 
 @dataclass(frozen=True)
@@ -450,6 +451,19 @@ COMANDOS = {
             ("brilho_menos", (("diminui",), ("diminuir",), ("diminua",), ("abaixa",), ("baixa",))),
             ("brilho_liga", (("liga",), ("ligar",), ("ativa",), ("ativar",), ("acende",))),
             ("brilho_desliga", (("desliga",), ("desligar",), ("desativa",), ("desativar",))),
+        )
+    },
+    # Avisos de lead quente no WhatsApp (14/10/2026).
+    **{
+        nome: {
+            (verbo, *artigo, objeto, "do", *app)
+            for verbo in verbos
+            for artigo, objeto in ((("os",), "avisos"), ((), "avisos"), (("as",), "mensagens"))
+            for app in (("whatsapp",), ("whats", "app"), ("zap",))
+        }
+        for nome, verbos in (
+            ("whatsapp_liga", ("liga", "ligar", "ligue", "ativa", "ativar", "ative")),
+            ("whatsapp_desliga", ("desliga", "desligar", "desligue", "desativa", "desativar")),
         )
     },
     "configuracoes": {
@@ -1107,9 +1121,11 @@ class Maquina:
                 self.pergunta_falando = False
                 self._ir(Estado.PENSANDO)  # o cérebro segue com a negativa: a resposta dele vem
                 return [CortarFala()]
-            case Aviso(texto, escutar):
+            case Aviso(texto, escutar, sequencial):
                 if self.estado is Estado.ATIVO or (
-                    self.ao_vivo and self.estado is Estado.OUVINDO and not self.segurando
+                    (self.ao_vivo or sequencial)
+                    and self.estado is Estado.OUVINDO
+                    and not self.segurando
                 ):
                     self._ir(Estado.FALANDO)
                     self.aviso_falando = texto
@@ -1332,7 +1348,8 @@ class Maquina:
         self._ir(Estado.CONFIRMANDO)
         self.pergunta_falando = True
         self.reperguntou = False
-        return [Falar(f"{descricao} Posso?")]
+        pergunta = descricao.rstrip()
+        return [Falar(pergunta if pergunta.endswith("?") else f"{pergunta} Posso?")]
 
     def _responder(self, aprovado: bool, fala: str = "") -> list[Efeito]:
         self._ir(Estado.PENSANDO)

@@ -20,9 +20,11 @@ pessoa olhando a sessão na tela. Para quem digita, incomoda; para quem quer toc
    | Silencioso | tela | tela | tela | desligado |
    | Avisos (padrão) | fala | fala | se pedir | ligado |
    | Mãos livres | fala | fala | fala | ligado |
-3. **O que está na tela não é falado:** o painel avisa, a cada batida, qual sessão está aberta e à
-   vista; o fim, a aprovação e os créditos dela ficam só na tela.
-4. Aviso que chega no meio de uma conversa espera ela terminar (a fila durável de sempre). No
+3. **Revisão de 15/10/2026, pedida pelo usuário:** cada sessão anuncia o resultado também no
+   modo Normal e mesmo quando está aberta no painel. O resumo do resultado é uma notificação;
+   a coluna Resposta continua valendo para detalhe adicional. Silencioso permanece só na tela.
+4. Aviso que chega enquanto a pessoa fala espera uma pausa. Os resultados de sessões saem um
+   por vez automaticamente, inclusive durante a conversa, sem exigir "próximo" (ADR 0029). No
    Silencioso, o aviso fica só na linha do tempo e no painel, e a voz fica muda também para as
    respostas a pedidos escritos.
 5. O agente esperando aprovação passa a avisar (hook `Notification` do Claude).
@@ -38,5 +40,5 @@ pessoa olhando a sessão na tela. Para quem digita, incomoda; para quem quer toc
    avisa as ações: dele, ficam os pedidos e as respostas.
 
 ## Próximos passos
-- Resumo para ouvir escrito pelo modelo, não só limpo.
-- Aprovações por voz, sempre com confirmação.
+- Confirmação de envio curta, com o nome da sessão, preservando o prompt completo na ferramenta
+  (implementada em 15/10/2026; ADR 0027).

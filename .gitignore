@@ -15,3 +15,6 @@ KEY_*/
 *.key
 key.txt
 .coverage
+
+# Ferramentas de tipos do painel (o navegador recebe os arquivos originais).
+node_modules/

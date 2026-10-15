@@ -124,7 +124,12 @@ class Direto:
 class Systemd:
     """O cloudflared num serviço próprio do usuário (`zervis-tunel`): reiniciar o Zé não o
     derruba, então o endereço (e o login do celular, que é por endereço) continua o mesmo até o
-    computador reiniciar (14/10/2026)."""
+    computador reiniciar (14/10/2026). Serve também a outros serviços do Zé (a Central de
+    Atendimento): `unidade` e o `ambiente` repassado (o systemd não herda o de quem chama)."""
+
+    def __init__(self, unidade: str = UNIDADE, ambiente: dict[str, str] | None = None) -> None:
+        self.unidade = unidade
+        self.ambiente = ambiente or {}
 
     def _systemctl(self, *args: str) -> int:
         return subprocess.run(  # noqa: S603
@@ -135,19 +140,20 @@ class Systemd:
         ).returncode
 
     def ativo(self) -> bool:
-        return self._systemctl("is-active", "--quiet", UNIDADE) == 0
+        return self._systemctl("is-active", "--quiet", self.unidade) == 0
 
     def codigo(self) -> int | None:
         return None  # o systemd não diz: qualquer saída sem pedido é queda
 
     def iniciar(self, comando: list[str], registro: Path) -> None:
-        self._systemctl("reset-failed", UNIDADE)
+        self._systemctl("reset-failed", self.unidade)
         subprocess.run(  # noqa: S603
             [  # noqa: S607
                 "systemd-run",
                 "--user",
                 "--collect",
-                f"--unit={UNIDADE}",
+                f"--unit={self.unidade}",
+                *(f"--setenv={k}={v}" for k, v in self.ambiente.items()),
                 "-p",
                 "StandardOutput=null",
                 "-p",
@@ -161,17 +167,21 @@ class Systemd:
         )
 
     def parar(self) -> None:
-        self._systemctl("stop", UNIDADE)
+        self._systemctl("stop", self.unidade)
 
 
-def lancador_padrao() -> "Direto | Systemd":
+def tem_systemd() -> bool:
     usuario = shutil.which("systemd-run") and subprocess.run(
         ["systemctl", "--user", "is-system-running"],  # noqa: S607
         capture_output=True,
         check=False,
         timeout=5,
     ).stdout.strip() not in (b"", b"offline")
-    return Systemd() if usuario else Direto()
+    return bool(usuario)
+
+
+def lancador_padrao() -> "Direto | Systemd":
+    return Systemd() if tem_systemd() else Direto()
 
 
 def ultimo_endereco(registro: Path) -> str:

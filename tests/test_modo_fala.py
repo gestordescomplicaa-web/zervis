@@ -98,14 +98,16 @@ def _fim(m: str, estado: str = "parada", resumo: str = "ok") -> list[tuple[str, 
     return n.ditos
 
 
-def test_fim_de_sessao_em_avisos_e_uma_frase() -> None:
-    assert _fim("avisos") == [("notificacao", "A sessão Loja terminou.")]
+def test_fim_de_sessao_em_avisos_inclui_o_resultado() -> None:
+    assert _fim("avisos") == [
+        ("notificacao", "Resultado da sessão Loja. Ela informou: Corrigi o login em a.ts.")
+    ]
 
 
 def test_fim_de_sessao_em_maos_livres_narra_sem_falar_pela_sessao() -> None:
     [(tipo, texto)] = _fim("maos_livres")  # sem o modelo do resumo: a citação marcada
     assert tipo == "notificacao"
-    assert texto == "A sessão Loja terminou. Ela respondeu: Corrigi o login em a.ts."
+    assert texto == "Resultado da sessão Loja. Ela informou: Corrigi o login em a.ts."
 
 
 def test_creditos_esgotados_sao_urgentes() -> None:

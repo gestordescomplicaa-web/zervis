@@ -1,5 +1,7 @@
 """O diagnóstico do Zé (ADR 0025, camada 2): o que deu errado, agrupado por causa."""
 
+from datetime import datetime
+
 from jarvis import diagnostico
 
 
@@ -101,3 +103,31 @@ def test_reinicio_normal_nao_vira_erro() -> None:
         "with exit code 143 (exit code: 143)",
     ]
     assert "Registro técnico" not in diagnostico.montar([], registro)
+
+
+def test_recomeco_deixa_de_fora_o_que_veio_antes() -> None:
+    # Pedido de 15/10/2026: depois de uma atualização grande, começar o diagnóstico do zero,
+    # sem apagar a Atividade.
+    agora = datetime(2026, 10, 15, 12, 0).timestamp()
+    recomeco = agora - 3600
+    itens = [
+        {"quando": recomeco - 60, "tipo": "falha", "titulo": "Antes do recomeço"},
+        {"quando": recomeco + 60, "tipo": "falha", "titulo": "Depois do recomeço"},
+    ]
+    antes = datetime.fromtimestamp(recomeco - 60).astimezone().isoformat(timespec="seconds")
+    depois = datetime.fromtimestamp(recomeco + 60).astimezone().isoformat(timespec="seconds")
+    registro = [
+        f"{antes} omarchy python[1]: ERROR velho: erro de antes",
+        f"{depois} omarchy python[1]: ERROR novo: erro de depois",
+    ]
+    texto = diagnostico.montar(itens, registro, agora=agora, desde=recomeco)
+    assert "Falhas: 1" in texto and "Depois do recomeço" in texto
+    assert "Antes do recomeço" not in texto
+    assert "erro de depois" in texto and "erro de antes" not in texto
+    assert "desde 15/10/2026 11:00" in texto
+
+
+def test_recomeco_antigo_nao_encurta_a_janela() -> None:
+    agora = 1_000_000.0
+    texto = diagnostico.montar([], [], agora=agora, desde=agora - 30 * 86400)
+    assert "últimos 7 dias" in texto

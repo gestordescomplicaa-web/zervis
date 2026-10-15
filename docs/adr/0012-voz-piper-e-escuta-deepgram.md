@@ -7,7 +7,7 @@
 ## Contexto
 A voz era o gargalo: o pedido só ia ao Whisper depois de o usuário terminar (~2 s de transcrição
 na GPU integrada), o Smart Turn cortava pela entonação, e o Cadu do Pocket TTS ocupava 1,7 GB e
-levava ~1 s até o primeiro som. O LIGATIA (SaaS do usuário, `~/SAAS_RETOMADA`) roda voz em tempo
+levava ~1 s até o primeiro som. O LIGATIA (SaaS do mesmo autor, código privado) roda voz em tempo
 real numa VPS de 2 vCPU porque: transcreve em **streaming** (Deepgram nova-3, pt-BR), decide o fim
 da fala também pelo texto (turn detector do LiveKit) e fala com o **Piper** local.
 

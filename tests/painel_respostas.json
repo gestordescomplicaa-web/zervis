@@ -1,0 +1,723 @@
+{
+ "leituras": {
+  "atendimento": {
+   "whatsapp": {
+    "estado": "conectado",
+    "numero": "Exemplo"
+   },
+   "avisos": {
+    "ligado": true
+   },
+   "agente": {
+    "nome": "Exemplo",
+    "empresa": "Exemplo",
+    "persona": "Exemplo",
+    "conhecimento": "Exemplo",
+    "outros_arquivos": 0,
+    "passar": "reclamar",
+    "passar_padrao": "Exemplo",
+    "ligado": true,
+    "modo": "teste",
+    "numeros_teste": [
+     "Exemplo"
+    ],
+    "ligacoes": true,
+    "cerebro": {
+     "atual": "Exemplo",
+     "nome": "Exemplo",
+     "rapido": false,
+     "opcoes": [
+      {
+       "titulo": "Exemplo",
+       "itens": [
+        {
+         "valor": "Exemplo",
+         "nome": "Exemplo",
+         "detalhe": "Exemplo"
+        },
+        {
+         "valor": "Exemplo",
+         "nome": "Exemplo",
+         "detalhe": "Exemplo"
+        }
+       ]
+      },
+      {
+       "titulo": "Exemplo",
+       "itens": [
+        {
+         "valor": "Exemplo",
+         "nome": "Exemplo",
+         "detalhe": "Exemplo"
+        },
+        {
+         "valor": "Exemplo",
+         "nome": "Exemplo",
+         "detalhe": "Exemplo"
+        }
+       ]
+      }
+     ]
+    },
+    "ligacoes_falta": "",
+    "pasta": "/home/exemplo/projeto",
+    "criado": true,
+    "publicado": true,
+    "pendente": false,
+    "erro": ""
+   },
+   "pausados": [
+    {
+     "telefone": "Exemplo",
+     "nome": "Exemplo",
+     "motivo": "Exemplo",
+     "desde": 1792000396.2576635
+    }
+   ],
+   "chaves": [
+    {
+     "motor": "anthropic",
+     "nome": "Exemplo",
+     "tem": false,
+     "fim": "",
+     "origem": "painel",
+     "modelo": "Exemplo"
+    },
+    {
+     "motor": "openai",
+     "nome": "Exemplo",
+     "tem": false,
+     "fim": "",
+     "origem": "painel",
+     "modelo": "gpt-5.4-mini"
+    }
+   ],
+   "memoria": {
+    "contatos": 1,
+    "mensagens": 20,
+    "lembra": 20
+   }
+  },
+  "atividade": {
+   "itens": [
+    {
+     "quando": 1792011523.8813016,
+     "tipo": "pedido",
+     "titulo": "oi",
+     "origem": "texto",
+     "resposta": "Exemplo"
+    },
+    {
+     "quando": 1792006634.0029652,
+     "tipo": "execucao",
+     "titulo": "Exemplo",
+     "origem": "painel"
+    }
+   ],
+   "resumo": {
+    "execucao": 161,
+    "negada": 8,
+    "falha": 53,
+    "nao_entendi": 3,
+    "correcao": 0,
+    "pedido": 176
+   }
+  },
+  "automacoes": [],
+  "cerebro": {
+   "via": {
+    "ligada": false,
+    "motor": "plano",
+    "modelo": "claude-sonnet-5-5",
+    "endereco": "",
+    "raciocinio": "low"
+   },
+   "ativa": false,
+   "motores": [
+    {
+     "id": "contas",
+     "nome": "Exemplo",
+     "detalhe": "Exemplo",
+     "modelo": ""
+    },
+    {
+     "id": "codex",
+     "nome": "Exemplo",
+     "detalhe": "Exemplo",
+     "modelo": ""
+    }
+   ],
+   "listas": {
+    "plano": [
+     {
+      "id": "claude-fable-5-1",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "claude-opus-5-5",
+      "nome": "Exemplo"
+     }
+    ],
+    "codex": [
+     {
+      "id": "gpt-6.1-sol",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "gpt-6-astra",
+      "nome": "Exemplo"
+     }
+    ],
+    "anthropic": [
+     {
+      "id": "claude-fable-5-1",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "claude-opus-5-5",
+      "nome": "Exemplo"
+     }
+    ],
+    "omniroute": []
+   },
+   "chaves": {
+    "contas": {
+     "usa": false
+    },
+    "codex": {
+     "usa": false
+    },
+    "plano": {
+     "usa": false
+    },
+    "openai": {
+     "usa": true,
+     "tem": false,
+     "origem": "painel",
+     "fim": ""
+    },
+    "anthropic": {
+     "usa": true,
+     "tem": false,
+     "origem": "painel",
+     "fim": ""
+    },
+    "openrouter": {
+     "usa": true,
+     "tem": false,
+     "origem": "painel",
+     "fim": ""
+    },
+    "ponte": {
+     "usa": true,
+     "tem": false,
+     "origem": "painel",
+     "fim": ""
+    },
+    "omniroute": {
+     "usa": false
+    }
+   },
+   "completo": {
+    "provedor": "claude",
+    "modelo": "claude-sonnet-5-5",
+    "modelos": [
+     {
+      "id": "claude-fable-5-1",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "claude-opus-5-5",
+      "nome": "Exemplo"
+     }
+    ],
+    "omniroute": {
+     "endereco": "https://exemplo.invalid",
+     "tem_chave": false
+    }
+   },
+   "agentes": [
+    {
+     "id": "claude",
+     "nome": "Exemplo",
+     "disponivel": true
+    },
+    {
+     "id": "codex",
+     "nome": "Exemplo",
+     "disponivel": true
+    }
+   ],
+   "sessoes": {
+    "agentes": [
+     {
+      "id": "claude",
+      "nome": "Exemplo",
+      "disponivel": true
+     },
+     {
+      "id": "codex",
+      "nome": "Exemplo",
+      "disponivel": true
+     }
+    ],
+    "total": 6
+   }
+  },
+  "conectores": {
+   "conectores": [],
+   "pendente": false
+  },
+  "configuracao": {
+   "feita": true,
+   "perfil": {
+    "nome": "Exemplo",
+    "sobre": "Exemplo",
+    "fuso": ""
+   },
+   "fuso_sistema": "America/Sao_Paulo",
+   "fusos": [
+    "America/Sao_Paulo",
+    "UTC"
+   ],
+   "acesso": {
+    "metodo": "login",
+    "origem": "agente",
+    "fim": ""
+   },
+   "agentes": [
+    {
+     "id": "claude",
+     "nome": "Exemplo",
+     "instalado": true,
+     "logado": true,
+     "entrar": "claude"
+    },
+    {
+     "id": "codex",
+     "nome": "Exemplo",
+     "instalado": true,
+     "logado": true,
+     "entrar": "Exemplo"
+    }
+   ],
+   "chave_anthropic": "https://exemplo.invalid"
+  },
+  "contas": {
+   "agentes": [
+    {
+     "id": "claude",
+     "nome": "Exemplo",
+     "instalado": true,
+     "em_uso": "Exemplo",
+     "contas": [
+      {
+       "id": "Exemplo",
+       "nome": "Exemplo",
+       "padrao": true,
+       "comando": "claude",
+       "logado": true,
+       "email": "Exemplo",
+       "plano": ""
+      }
+     ]
+    },
+    {
+     "id": "codex",
+     "nome": "Exemplo",
+     "instalado": true,
+     "em_uso": "Exemplo",
+     "contas": [
+      {
+       "id": "Exemplo",
+       "nome": "Exemplo",
+       "padrao": true,
+       "comando": "Exemplo",
+       "logado": true,
+       "email": "Exemplo",
+       "plano": "plus"
+      },
+      {
+       "id": "Exemplo",
+       "nome": "Exemplo",
+       "padrao": false,
+       "comando": "Exemplo",
+       "logado": true,
+       "email": "Exemplo",
+       "plano": "free"
+      }
+     ]
+    }
+   ]
+  },
+  "conversa": {
+   "itens": [
+    {
+     "quando": "2026-10-15T09:00:00-03:00",
+     "tipo": "voce",
+     "texto": "Exemplo"
+    },
+    {
+     "quando": "2026-10-15T09:00:00-03:00",
+     "tipo": "ze",
+     "texto": "Exemplo"
+    }
+   ],
+   "esperando": []
+  },
+  "escuta": {
+   "deepgram": {
+    "tem": true,
+    "fim": "a1b2"
+   },
+   "cadastro": "https://exemplo.invalid",
+   "ativacao": true
+  },
+  "estado": {
+   "ze": "ativo",
+   "cerebro": {
+    "provedor": "claude",
+    "modelo": "claude-sonnet-5-5"
+   },
+   "via_rapida": {
+    "ativa": false,
+    "motor": "plano",
+    "modelo": "claude-sonnet-5-5"
+   },
+   "consumo": "Exemplo",
+   "latencia": [],
+   "foco": "Exemplo",
+   "tela_ts": 1791929788.8202186,
+   "modo_fala": "maos_livres",
+   "escuta": {
+    "modo": "sempre",
+    "janela": true
+   },
+   "chamado": "botao",
+   "espera": "normal",
+   "whatsapp": {
+    "ligado": true,
+    "disponivel": true
+   },
+   "voz_remota": {
+    "conectada": false
+   },
+   "manutencao": {
+    "ligada": true,
+    "aguardando": false
+   },
+   "tela": null,
+   "inicio": 1,
+   "atualizacao": null
+  },
+  "foco": {
+   "atual": {
+    "id": "frente-exemplo-2",
+    "titulo": "Exemplo",
+    "proximo_passo": "Exemplo",
+    "bloqueio": "",
+    "projeto": "",
+    "mexida": "Exemplo"
+   },
+   "ativas": [
+    {
+     "id": "frente-exemplo",
+     "titulo": "Exemplo",
+     "proximo_passo": "",
+     "bloqueio": "",
+     "projeto": "",
+     "mexida": "Exemplo"
+    }
+   ],
+   "travadas": [],
+   "pausadas": [],
+   "ideias": [
+    {
+     "id": "frente-exemplo-4",
+     "titulo": "Exemplo",
+     "proximo_passo": "",
+     "bloqueio": "",
+     "projeto": "",
+     "mexida": "Exemplo"
+    },
+    {
+     "id": "frente-exemplo-3",
+     "titulo": "Exemplo",
+     "proximo_passo": "",
+     "bloqueio": "",
+     "projeto": "",
+     "mexida": "Exemplo"
+    }
+   ],
+   "concluidas_hoje": 0,
+   "limite": 3
+  },
+  "inicio": {
+   "ze": "ativo",
+   "foco": {
+    "titulo": "Exemplo",
+    "passo": "Exemplo"
+   },
+   "sessoes": {
+    "total": 6,
+    "trabalhando": [
+     "Exemplo"
+    ]
+   },
+   "proximas": [],
+   "hoje": {
+    "respostas": 0,
+    "tokens_mil": 0,
+    "voz_s": null
+   }
+  },
+  "memoria": {
+   "usuario": [],
+   "jarvis": [
+    "Exemplo"
+   ],
+   "limites": {
+    "usuario": 2000,
+    "jarvis": 2500
+   },
+   "sugestoes": [
+    {
+     "id": "Exemplo",
+     "tipo": "memoria",
+     "resumo": "Exemplo"
+    },
+    {
+     "id": "a1b2c3",
+     "tipo": "skill",
+     "resumo": "Exemplo"
+    }
+   ],
+   "projetos": {
+    "ativa": true,
+    "paginas": 104
+   }
+  },
+  "pastas": [
+   "/home/exemplo/projeto",
+   "/home/exemplo/projeto"
+  ],
+  "remoto": {
+   "instalado": false,
+   "conectado": false,
+   "nome": "",
+   "ip": "",
+   "ativo": false,
+   "firewall": "",
+   "casa": "",
+   "endereco": "",
+   "senha": true,
+   "codigo": true,
+   "aparelhos": 2,
+   "lista": [
+    {
+     "id": "0123456789abcdef",
+     "aparelho": "Exemplo",
+     "origem": "Exemplo",
+     "desde": 1791953347.9587748
+    },
+    {
+     "id": "fedcba9876543210",
+     "aparelho": "Exemplo",
+     "origem": "Exemplo",
+     "desde": 1791952300.5785968
+    }
+   ],
+   "tunel": {
+    "ativo": true,
+    "endereco": "https://exemplo.invalid",
+    "qr": "Exemplo"
+   }
+  },
+  "sessoes": [
+   {
+    "id": "sessao1",
+    "nome": "Projeto 1",
+    "pasta": "/home/exemplo/projeto",
+    "motor": "claude",
+    "agente": "Exemplo",
+    "conta": "Principal",
+    "modelo": "",
+    "modelos": [
+     {
+      "id": "claude-fable-5-1",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "claude-opus-5-5",
+      "nome": "Exemplo"
+     }
+    ],
+    "esforco": "",
+    "isolada": false,
+    "branch": "",
+    "melhorias": false,
+    "estado": "trabalhando",
+    "conta_id": "principal",
+    "limite": false,
+    "interrompida": "",
+    "resumo": "",
+    "atualizada": "2026-10-14T13:11:42-03:00"
+   },
+   {
+    "id": "sessao2",
+    "nome": "Projeto 2",
+    "pasta": "/home/exemplo/projeto",
+    "motor": "claude",
+    "agente": "Exemplo",
+    "conta": "Principal",
+    "modelo": "",
+    "modelos": [
+     {
+      "id": "claude-fable-5-1",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "claude-opus-5-5",
+      "nome": "Exemplo"
+     }
+    ],
+    "esforco": "",
+    "isolada": false,
+    "branch": "",
+    "melhorias": false,
+    "estado": "parada",
+    "conta_id": "principal",
+    "limite": false,
+    "interrompida": "",
+    "resumo": "Exemplo",
+    "atualizada": "2026-10-14T03:01:24-03:00"
+   }
+  ],
+  "skills": [
+   {
+    "nome": "skill-exemplo",
+    "descricao": "Exemplo",
+    "ligada": true,
+    "sessoes": false,
+    "usos": 2
+   },
+   {
+    "nome": "skill-exemplo-2",
+    "descricao": "Exemplo",
+    "ligada": true,
+    "sessoes": true,
+    "usos": 0
+   }
+  ],
+  "skills/agentes": [
+   {
+    "agente": "claude",
+    "nome": "skill-exemplo-4",
+    "descricao": "Exemplo"
+   },
+   {
+    "agente": "claude",
+    "nome": "skill-exemplo-3",
+    "descricao": "Exemplo"
+   }
+  ]
+ },
+ "escritas": {
+  "ze/sessao": {
+   "id": "sessao2"
+  },
+  "ze/melhorias": {
+   "copia": true,
+   "sessao": "sessao2",
+   "branch": "ze/sessao2",
+   "commits": [
+    "a1b2c3d Exemplo"
+   ],
+   "arquivos": [
+    "docs/exemplo.md"
+   ],
+   "protegidos": [],
+   "sem_commit": false,
+   "resumo": " docs/exemplo.md | 1 +"
+  },
+  "sessao/ler": {
+   "sessao": {
+    "id": "sessao2",
+    "nome": "Projeto 2",
+    "pasta": "/home/exemplo/projeto",
+    "motor": "claude",
+    "agente": "Exemplo",
+    "conta": "Principal",
+    "modelo": "",
+    "modelos": [
+     {
+      "id": "claude-fable-5-1",
+      "nome": "Exemplo"
+     },
+     {
+      "id": "claude-opus-5-5",
+      "nome": "Exemplo"
+     }
+    ],
+    "esforco": "",
+    "isolada": true,
+    "branch": "ze/sessao2",
+    "melhorias": true,
+    "estado": "parada",
+    "conta_id": "principal",
+    "limite": false,
+    "interrompida": "",
+    "resumo": "Exemplo",
+    "atualizada": "2026-10-14T03:01:24-03:00"
+   },
+   "mensagens": []
+  },
+  "sessao/copia": {
+   "copia": true,
+   "commits": [],
+   "sem_commit": false,
+   "arquivos": [],
+   "resumo": ""
+  },
+  "terminal/abrir": {
+   "posicao": 0
+  },
+  "terminal/ler": {
+   "posicao": 0,
+   "vivo": false,
+   "dados": ""
+  },
+  "sessao/arquivos": {
+   "pasta": "",
+   "itens": [
+    {
+     "nome": "docs",
+     "caminho": "docs",
+     "pasta": true,
+     "tamanho": 0
+    },
+    {
+     "nome": "README.md",
+     "caminho": "README.md",
+     "pasta": false,
+     "tamanho": 120
+    }
+   ]
+  },
+  "ze/central": {
+   "sessao": "sessao2",
+   "estado": "disponivel",
+   "aviso": "",
+   "candidatas": [
+    {
+     "id": "sessao2",
+     "motor": "claude",
+     "conta": "",
+     "branch": "ze/sessao2",
+     "conta_nome": ""
+    }
+   ],
+   "arquivadas": []
+  }
+ }
+}
