@@ -10,6 +10,7 @@ import segno
 
 from jarvis import usuario
 from jarvis.avisos import modo as modo_fala
+from jarvis.filho import porta_ocupada
 from jarvis.nucleo import estados as e
 from jarvis.portal import remoto, tunel
 from jarvis.preparar import PrepararErro
@@ -72,6 +73,7 @@ class ServicoRemoto:
             lambda: servidor_livekit.token(chave, segredo, "ze", "Zé", validade_s=3600),
             lambda quadro: self.n._quadro_remoto(self.n.remota, quadro),
             lambda conectada: self.n._fonte_remota(self.n.remota, conectada),
+            pronto=lambda: porta_ocupada(self.n.livekit.porta),
         )
         self.n.remota.iniciar()
 

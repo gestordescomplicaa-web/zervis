@@ -1,5 +1,6 @@
 """A voz remota (plano da voz remota, etapa 1): sala, token, entrada e saída de áudio."""
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -14,6 +15,7 @@ import pytest
 from livekit import rtc
 
 from jarvis.transporte import local as local_
+from jarvis.transporte import remoto as remoto_
 from jarvis.transporte import servidor_livekit as lk
 from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.remoto import TAXA_SAIDA, TocadorRemoto
@@ -188,3 +190,10 @@ def test_ativacao_pelo_botao_guardada(tmp_path: Path) -> None:
     assert chamado.gravar("botao", arquivo) == "botao" and chamado.ler(arquivo) == "botao"
     with pytest.raises(ValueError):
         chamado.gravar("assobio", arquivo)
+
+
+def test_a_sala_espera_o_servidor_abrir_a_porta() -> None:
+    """Entrar antes de o livekit-server abrir a porta deixava três erros a cada subida."""
+    tentativas = iter([False, False, True])
+    assert asyncio.run(remoto_.esperar(lambda: next(tentativas), 1.0, passo_s=0.01))
+    assert not asyncio.run(remoto_.esperar(lambda: False, 0.05, passo_s=0.01))
