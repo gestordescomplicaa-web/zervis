@@ -38,7 +38,7 @@ da liberação. Cada etapa tem um critério que se comprova, e só conta como fe
 |---|---|---|---|
 | 1 | Filtro de qualidade | O painel abre num Chromium de verdade dentro do `make check` (todas as páginas, sem erro no console) e `make check-instalacao` passa numa pasta limpa | Feito em 15/10/2026 |
 | 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `jarvis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
-| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node; WaCalls por binário conferido por SHA-256 | ⬜ |
+| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | ⬜ |
 | 4 | Eficiência medida | Latência da voz, memória, processos ociosos e tokens por tarefa medidos numa rotina repetível; README com números no lugar de "mais enxuto" | ⬜ |
 | 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | ⬜ |
 
