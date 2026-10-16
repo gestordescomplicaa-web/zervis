@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Código aberto: CONTRIBUTING, SECURITY, CODEOWNERS, modelo de PR e o ADR 0036 (contribuições
+  por pull request, `master` protegida, atualização de quem personaliza o Zé em aberto); o guia
+  de VPS passa a clonar o repositório público e explica o acesso sem o túnel SSH.
 - Voz ao vivo: o que se diz enquanto o Zé pensa não é ouvido, e agora isso aparece na Atividade
   ("Fala não ouvida enquanto o Zé pensava"); buracos no áudio do navegador (rede, tela apagada)
   vão para o registro do serviço.

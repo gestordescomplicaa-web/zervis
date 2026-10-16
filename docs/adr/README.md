@@ -40,3 +40,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0033](0033-pacotes-de-extensao.md) | Pacotes de extensão: o Zé ganha capacidades sem mudar o próprio código | Proposta |
 | [0034](0034-central-estacoes-e-instalacao.md) | Central e estações (o Zé na VPS com as funções do PC) e a instalação de um comando | Proposta |
 | [0035](0035-agentes-prontos-na-instalacao.md) | Agentes prontos na instalação: Claude Code e Codex nativos, chaves pelo painel | Aceito |
+| [0036](0036-contribuicoes-e-atualizacoes.md) | Código aberto: como a comunidade contribui e como o Zé se atualiza | Aceito (atualização em aberto) |
