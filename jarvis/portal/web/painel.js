@@ -35,6 +35,7 @@ async function api(caminho, corpo, sinal) {
     opcoes.headers["Content-Type"] = "application/json";
     opcoes.body = JSON.stringify(corpo);
   }
+  if (corpo !== undefined) { gravacoes++; cachePaginas.clear(); } // as páginas guardadas ficam velhas
   const r = await fetch("/api/" + caminho, opcoes);
   const dados = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(dados.erro || "falha " + r.status);
@@ -84,6 +85,11 @@ function confirmar(el, pergunta, fazer) {
 
 /** @type {Record<string, () => Promise<string>>} */
 const PAGINAS = {};
+// O desenho da última vez de cada página: a troca de aba mostra isto na hora e se atualiza quando
+// o Zé responde. Longe do servidor (VPS), cada resposta custa uma ida e volta de rede.
+/** @type {Map<string, string>} */
+const cachePaginas = new Map();
+let gravacoes = 0; // quantas gravações já foram; uma página lida antes de uma gravação não é guardada
 
 const ESPERAS = [["rapida", "Rápida", "Para pedidos curtos."], ["normal", "Normal", "Para a maioria das conversas."], ["longa", "Longa", "Para pensar enquanto fala."]];
 

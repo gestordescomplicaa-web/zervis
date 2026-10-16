@@ -126,6 +126,13 @@ na ordem em que resolver:
    um comando (ADR 0034, etapa I3).
 3. **Túnel e porta:** o painel só aceita a mesma porta dos dois lados, e o PC de quem desenvolve já
    usa a 8795; foi preciso parar o Zé do PC durante o teste.
+   Latência do painel (medida em 16/10/2026): o Zé responde cada leitura em menos de 15 ms e a VPS
+   está folgada; a lentidão da troca de aba é a distância até a VPS (uma ida e volta por aba).
+   Feito: a aba aparece na hora com o desenho anterior e se atualiza depois. Uma VPS no Brasil
+   também ajudaria a voz.
+   Autodesenvolvimento na VPS: "não foi possível unificar pelo Git" vinha de o pacote enviado por
+   `git archive` não ter o `.git`. Feito: o instalador cria o histórico local e o erro diz o que
+   fazer.
 4. **Aba Imersão no servidor:** aparece vazia pelo túnel (busca a porta 8794); esconder quando o Zé
    está num servidor.
 5. **Modelos de voz faltando:** o painel não mostra; só o registro.

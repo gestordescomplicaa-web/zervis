@@ -47,6 +47,16 @@ if ! command -v uv >/dev/null; then
   command -v uv >/dev/null || falta "o uv (a instalação dele não terminou)."
 fi
 cd "$REPO"
+# O autodesenvolvimento trabalha numa cópia isolada do código (git worktree) e precisa do Git.
+# O código enviado como pacote (git archive + scp) chega sem o .git: aqui ele ganha um histórico
+# local. Cada reinstalação registra o código novo como mais um commit, e nada sai da máquina.
+GIT="git -c user.name=Zérvis -c user.email=zervis@localhost"
+[ -e .git ] || $GIT init -q
+if [ -n "$(git status --porcelain 2>/dev/null)" ] || ! git rev-parse -q --verify HEAD >/dev/null; then
+  git add -A
+  $GIT commit -qm "Zé instalado neste servidor" || echo "Aviso: o histórico Git local não foi criado; \
+o autodesenvolvimento não vai abrir."
+fi
 uv sync --frozen
 uv run python -m jarvis.preparar || echo "Aviso: os modelos de som não baixaram. O Zé sobe sem \
 voz e baixa de novo no próximo início."

@@ -59,6 +59,24 @@ class Central:
         ):
             raise SessaoErro("A cópia central está indisponível. Restaure-a antes de continuar.")
 
+    def _exigir_repositorio(self) -> None:
+        """O autodesenvolvimento vive numa cópia Git do código. Um Zé instalado de um pacote, sem o
+        `.git`, dava "não foi possível unificar pelo Git" sem dizer o que fazer (VPS, 16/10)."""
+        try:
+            feito = subprocess.run(  # noqa: S603 (Git local, sem shell; argumentos internos)
+                ["/usr/bin/git", "-C", str(self.repo), "rev-parse", "--verify", "-q", "HEAD"],
+                capture_output=True,
+                timeout=15,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            raise SessaoErro("Não foi possível verificar o Git.") from None
+        if feito.returncode:
+            raise SessaoErro(
+                "Esta instalação não tem histórico Git. "
+                "Rode deploy/instalar-servidor.sh de novo para ativar o autodesenvolvimento."
+            )
+
     def resolver(self, preferida: str, agente: str) -> str:
         # O vínculo fica no mesmo banco das sessões, além do estado volátil da manutenção.
         # A transação impede dois painéis de escolherem/criarem centrais diferentes.
@@ -79,6 +97,8 @@ class Central:
                         self._gravar(sessao=atual.id)
                     return atual.id
             candidatas = self.candidatas()
+            if not candidatas:
+                self._exigir_repositorio()
             if len(candidatas) > 1:
                 raise SessaoErro(
                     "Escolha a sessão central em Autodesenvolvimento e unifique as cópias."
