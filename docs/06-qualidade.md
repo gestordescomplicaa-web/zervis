@@ -54,6 +54,9 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
 - `make check-instalacao`: o último commit numa pasta limpa, com `HOME` vazio, instala e passa no
   `make check`. Obrigatório antes de liberar uma versão e ao mudar dependência ou instalação.
   Lição de 14/10/2026: o TypeScript só existia na cópia de trabalho, e o reinício falhou.
+- Na CI, teste pulado é falha (`ZE_SEM_PULOS=1`, em `tests/conftest.py`): sem Chromium ou sem
+  os modelos de som, a prova some sem aviso. Lição de 16/10/2026: numa máquina sem Chromium, os
+  testes do painel foram pulados e o `make check` passou assim mesmo.
 
 ## Observabilidade
 

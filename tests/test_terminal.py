@@ -3,6 +3,7 @@
 import contextlib
 import os
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -10,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.oficina.terminal import Terminal
+from jarvis.oficina.terminal import Terminal, _grupo_ativo
 
 # O Python avisa de fork com threads; o filho do Terminal só chama chdir e execve.
 pytestmark = pytest.mark.filterwarnings(
@@ -103,6 +104,26 @@ def test_encerrar_para_tambem_o_subprocesso_que_ignora_sinais(
         with contextlib.suppress(ProcessLookupError):
             os.killpg(t.pid, signal.SIGKILL)
         t.encerrar(espera_s=1)
+
+
+def test_grupo_so_com_zumbi_conta_como_encerrado() -> None:
+    """Em contêiner sem init ninguém coleta o neto órfão; o zumbi não pode prender a exclusão."""
+    vivo = subprocess.Popen(["sleep", "30"], start_new_session=True)  # noqa: S607
+    morto = subprocess.Popen(["true"], start_new_session=True)  # noqa: S607
+    try:
+        assert _grupo_ativo(vivo.pid)
+        estado = Path(f"/proc/{morto.pid}/status")
+        for _ in range(200):  # sem wait(): fica zumbi, como o neto que o init não coleta
+            if "State:\tZ" in estado.read_text():
+                break
+            time.sleep(0.01)
+        os.killpg(morto.pid, 0)  # para o sistema, o grupo ainda existe
+        assert not _grupo_ativo(morto.pid)
+    finally:
+        vivo.kill()
+        vivo.wait()
+        morto.wait()
+    assert not _grupo_ativo(vivo.pid)
 
 
 def test_encerrar_espera_o_callback_de_saida(tmp_path: Path) -> None:

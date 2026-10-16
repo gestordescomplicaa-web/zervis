@@ -62,6 +62,7 @@ ou ignorados pelo Git. A branch com os commits continua no projeto.
 | Documento | Conteúdo |
 |---|---|
 | [docs/roteiro.md](docs/roteiro.md) | Para onde o projeto vai, em ordem |
+| [docs/vps.md](docs/vps.md) | Testar o Zé numa VPS: instalação, acesso pelo túnel SSH e pelo celular |
 | [docs/conceitos.md](docs/conceitos.md) | Conversa, voz, foco, sessão, tarefa, automação, memória e skill |
 | [docs/01-visao-e-requisitos.md](docs/01-visao-e-requisitos.md) | O que o Zé deve fazer e o que fica de fora |
 | [docs/04-arquitetura.md](docs/04-arquitetura.md) | Componentes, estado, fluxos e contratos |

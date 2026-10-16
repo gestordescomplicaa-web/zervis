@@ -38,7 +38,7 @@ da liberação. Cada etapa tem um critério que se comprova, e só conta como fe
 |---|---|---|---|
 | 1 | Filtro de qualidade | O painel abre num Chromium de verdade dentro do `make check` (todas as páginas, sem erro no console) e `make check-instalacao` passa numa pasta limpa | Feito em 15/10/2026 |
 | 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `jarvis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
-| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node; WaCalls por binário conferido por SHA-256 | ⬜ |
+| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | ⬜ |
 | 4 | Eficiência medida | Latência da voz, memória, processos ociosos e tokens por tarefa medidos numa rotina repetível; README com números no lugar de "mais enxuto" | ⬜ |
 | 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | ⬜ |
 
@@ -99,6 +99,44 @@ etapa por vez. Ela absorve os itens 5 (instalação), 6 (SQLite) e 8 (revisão f
 
 ## Andamento da atualização (15/10/2026)
 
+### Correção do alerta e do reenvio ao trocar conta (16/10/2026)
+
+O texto do terminal só solicita conferência: não marca limite, não muda estado e não anuncia
+créditos esgotados. A transcrição precisa confirmar o bloqueio após a abertura do processo atual.
+Uma atualização de saldo não torna recente um erro antigo. O limite fica vinculado à conta;
+marcas legadas sem essa identificação deixam de alimentar o alerta e a retomada automática.
+
+Escolher uma conta apenas altera a conta. Reenviar o pedido exige o botão explícito Continuar
+ou o fallback após prova recente. A API recusa continuar por um aviso que já não vale, e a
+troca com envio é serializada para impedir dois reenvios por cliques concorrentes. Se a
+manutenção foi desligada, um comando enfileirado não é encaminhado à central. O seletor e a
+faixa acompanham a conta atual; respostas atrasadas de outra sessão são ignoradas.
+
+Regressões com transcrição antiga redesenhada, conta com saldo, timestamp de saldo após erro
+antigo, marca herdada de outra conta e registro legado; Chromium escolhe uma conta com alerta
+ativo sem reenviar e acompanha a mudança de conta no backend. Testes de comando enfileirado e
+API impedem o encaminhamento indevido. Os dados de uso e os saldos reais não foram alterados.
+Validação: `make check` aprovado com 991 testes, formatação, lint, tipos Python e JavaScript,
+`go vet` e testes Go. A correção entra em uso após aprovar e aplicar pelo painel.
+
+### Fallback automático de contas
+
+Sessões comuns e autodesenvolvimento tentam outra conta cadastrada do mesmo agente após limite
+confirmado, na ordem Pro, Plus e Gratuita, preservando modelo e esforço. Contas de plano
+desconhecido vêm depois. O catálogo local determina compatibilidade, sem presumir saldo.
+Sem evidência do pedido/configuração atual ou sem conta compatível, avisa e aguarda escolha.
+O trabalho continua na mesma pasta e conversa, com instrução de conferir ações já concluídas.
+
+Contas esgotadas e tentativas ficam em SQLite, impedindo ciclos. Atualizar, interromper ou agir
+manualmente impede a retomada pendente. O terminal acompanha a troca sem recarregar a página;
+o aviso de troca não é anunciado como conclusão. Ver ADR 0016.
+
+Provas: cadeia com contas sintéticas nas sessões comuns e na central; PTY real encerrado antes
+da nova conta, transcrição atual substituindo cópia antiga, modelo/esforço do turno preservados,
+texto sem erro estruturado recusado, reserva e cancelamento. Chromium confere a continuidade
+da leitura após trocar de processo. Nenhum crédito real foi consumido; aplicar e observar um
+limite real depende da atualização aprovada no painel.
+
 ### Continuidade e espaço do terminal
 
 A passagem entre agentes usa o último pedido e sua resposta literal, conserva ressalvas finais
@@ -110,8 +148,8 @@ Claude. Históricos importados não substituem o pedido da central. Ver ADR 0016
 Captura dos turnos concluídos do Codex pelo ai-memory, respeitando sua política e sanitização;
 fila limitada fora do laço das sessões, sem impedir trabalho quando a memória falha. Ambas as
 ferramentas recebem, nas novas conversas e passagens, orientação de busca na mesma memória e
-no projeto original. Não há troca automática de conta, migração de memórias antigas nem
-alteração de configurações globais.
+no projeto original. A troca automática foi acrescentada na etapa descrita acima. Não há
+migração de memórias antigas nem alteração de configurações globais.
 
 O cartão Sessão central só aparece quando há unificação a fazer, em andamento ou pendente.
 Concluir mostra um aviso temporário e libera o espaço do terminal, inclusive ao reabrir a página.
@@ -169,7 +207,8 @@ vínculo e aberturas simultâneas, Claude e duas contas Codex com passagem ainda
 Chromium confere a escolha da central, confirmação persistente entre consultas, reserva do
 terminal, reabertura após concluir e altura da tela. A migração dos dados reais é acionada no
 painel depois de aplicar esta versão; os dados pessoais não foram migrados durante os testes.
-Fallback automático de contas e modelos fica para uma etapa futura.
+Fallback de contas foi acrescentado na etapa acima. Troca automática de modelo continua fora
+do escopo, conforme a preferência explícita de quem usa.
 Validação local: `make check` aprovado com 960 testes, formatação, lint, tipos Python e
 JavaScript, `go vet` e testes do Go. Os testes usam contas e dados temporários.
 

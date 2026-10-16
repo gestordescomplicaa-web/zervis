@@ -791,20 +791,20 @@ def test_pedido_novo_dispensa_a_tarefa_interrompida(tmp_path: Path, raiz: Path) 
 
 
 @pytest.mark.parametrize("tipo", ["weekly", "daily", "session"])
-def test_limite_no_terminal_em_varios_quadros_libera_a_troca(
-    tmp_path: Path, raiz: Path, tipo: str
+def test_limite_no_terminal_em_varios_quadros_pede_confirmacao_nativa(
+    tmp_path: Path, raiz: Path, tipo: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sessoes, fim = nova(tmp_path, raiz, lambda *_: "ok")
+    conferir: list[str] = []
+    monkeypatch.setattr(sessoes.fallback, "agendar", lambda id_: conferir.append(id_))
     s = sessoes.criar("Teste", str(raiz / "projetos/loja"))
     sessoes._mudar(s.id, estado="trabalhando", ultimo_pedido="conclua")
     sessoes._olhar_saida(s.id, b"\x1b[31mYou've hit your ")
     sessoes._olhar_saida(s.id, (tipo + " lim").encode())
     sessoes._olhar_saida(s.id, b"it\x1b[0m. Resets tomorrow")
     s = sessoes.ler(s.id)
-    assert s.estado == "erro" and s.limite
-    assert len(fim) == 1
-    sessoes._olhar_saida(s.id, b"You've hit your weekly limit")
-    assert len(fim) == 1
+    assert s.estado == "trabalhando" and not s.limite
+    assert not fim and conferir == [s.id]
     sessoes._evento(s.id, {"hook_event_name": "UserPromptSubmit", "prompt": "novo pedido"})
     sessoes._olhar_saida(s.id, b"Trabalhando no novo pedido")
     assert not sessoes.ler(s.id).limite

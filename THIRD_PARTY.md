@@ -30,6 +30,10 @@ arquivo copiado leva um cabeçalho citando a origem.
 | `jarvis/transporte/remoto.py` usa o SDK de tempo real `livekit` 1.1.20 como dependência Python (nenhum código copiado) | LiveKit Python SDK (github.com/livekit/python-sdks) | Apache-2.0 | LiveKit, Inc. |
 | `~/.local/share/zervis/livekit/<versão>/` (fora do repositório; baixado por `jarvis/transporte/servidor_livekit.py` quando a máquina não tem o `livekit-server`; v1.13.9, sha256 `0b7fa208…` amd64 e `c5e4e5a6…` arm64), rodado como programa separado | LiveKit server (github.com/livekit/livekit) | Apache-2.0 | LiveKit, Inc. |
 
+Os modelos de som acima (Silero, openWakeWord, Smart Turn e a voz Cadu) também ficam, idênticos e
+conferidos pelo SHA-256, na release `modelos-1` de `gestordescomplicaa-web/zervis-modelos`, com os
+avisos de licença em `LICENCAS.md` (ADR 0034, ponto 13).
+
 ## Licenças de referência
 
 - **Hermes Agent** (Nous Research): MIT. Copiar exige manter o aviso de copyright e a licença.

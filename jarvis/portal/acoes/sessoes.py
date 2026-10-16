@@ -167,8 +167,16 @@ class AcoesSessoes(Pagina):
 
     def trocar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Troca agente ou conta; com `continuar`, manda de novo o pedido que bateu no limite."""
+        with self.n.sessoes._operacoes:
+            return self._trocar_sessao(dados)
+
+    def _trocar_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         id_ = str(dados.get("id", ""))
         atual = self.painel._chamar(lambda: self.n.sessoes.ler(id_))
+        if dados.get("continuar") and not atual.limite:
+            raise PedidoInvalido(
+                "Não há limite confirmado nesta conta. Troque a conta sem reenviar o pedido."
+            )
         trocar = self.n.manutencao.trocar if atual.origem == ORIGEM else self.n.sessoes.trocar
         s, aviso = self.painel._chamar(
             lambda: trocar(id_, str(dados.get("motor", "")), str(dados.get("conta", "")))
@@ -190,12 +198,27 @@ class AcoesSessoes(Pagina):
 
     def ler_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Long-poll: espera até 20 s por saída nova a partir de `desde`."""
-        t = self.n.sessoes.terminais.get(str(dados.get("id", "")))
+        id_ = str(dados.get("id", ""))
+        t = self.n.sessoes.terminais.get(id_)
+        trocando = id_ in self.n.sessoes.fallback.pendentes
         desde = int(dados.get("desde", 0))
         if t is None:
-            return {"posicao": desde, "dados": "", "vivo": False}
+            return {"posicao": desde, "dados": "", "vivo": False, "trocando": trocando}
+        reiniciado = bool(dados.get("geracao") and dados["geracao"] != t.pid)
+        if reiniciado:
+            desde = t.inicio
         posicao, saida, vivo = t.ler(desde, float(dados.get("espera", 20)))
-        return {"posicao": posicao, "dados": base64.b64encode(saida).decode(), "vivo": vivo}
+        trocando = id_ in self.n.sessoes.fallback.pendentes or (
+            self.n.sessoes.terminais.get(id_) is not t
+        )
+        return {
+            "posicao": posicao,
+            "dados": base64.b64encode(saida).decode(),
+            "vivo": vivo,
+            "geracao": t.pid,
+            "reiniciado": reiniciado,
+            "trocando": trocando,
+        }
 
     def escrever_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
         self.painel._chamar(
@@ -214,6 +237,7 @@ class AcoesSessoes(Pagina):
     def fechar_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
         with self.n.sessoes._operacoes:
             id_ = str(dados.get("id", ""))
+            self.n.sessoes.fallback.cancelar(id_)
             s = self.painel._chamar(lambda: self.n.sessoes.ler(id_))
             if id_ in self.n.sessoes._centralizando:
                 raise PedidoInvalido("Aguarde a unificação terminar para interromper o agente.")

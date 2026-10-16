@@ -3,10 +3,11 @@
 O `tsc` não enxerga a ordem em que os scripts carregam; uma função de página sob demanda usada
 cedo demais derruba o painel inteiro e só aparece no navegador. As leituras vêm de
 `painel_respostas.json`, no formato real e sem dados de ninguém; as escritas que as páginas fazem
-ao abrir também. Sem Chromium, o teste é pulado.
+ao abrir também. Sem Chromium, o teste é pulado; na CI (`ZE_SEM_PULOS=1`), pulado é falha.
 """
 
 import asyncio
+import base64
 import contextlib
 import copy
 import json
@@ -97,27 +98,42 @@ class _Navegador:
 
 def _chromium(perfil: Path) -> tuple[subprocess.Popen[bytes], str]:
     """Um Chromium sem tela e o endereço de depuração da aba dele."""
-    processo = subprocess.Popen(  # noqa: S603 (o Chromium da máquina, argumentos fixos)
-        [
-            str(CHROMIUM),
-            "--headless=new",
-            "--remote-debugging-port=0",
-            f"--user-data-dir={perfil}",
-            "--no-first-run",
-            "--disable-background-networking",
-            "--window-size=1400,900",
-            "about:blank",
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    perfil.mkdir(parents=True, exist_ok=True)
+    registro = perfil.with_name("chromium.log")
+    with registro.open("wb") as saida:
+        processo = subprocess.Popen(  # noqa: S603 (o Chromium da máquina, argumentos fixos)
+            [
+                str(CHROMIUM),
+                "--headless=new",
+                "--remote-debugging-port=0",
+                f"--user-data-dir={perfil}",
+                "--no-first-run",
+                "--disable-background-networking",
+                "--window-size=1400,900",
+                "about:blank",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=saida,
+        )
     porta = perfil / "DevToolsActivePort"
-    for _ in range(150):
+    # 30 s: na CI, a primeira abertura do Chromium passou de 15 s (16/10/2026).
+    for _ in range(300):
         if porta.exists() and porta.read_text().strip():
             break
+        if processo.poll() is not None:
+            break
         time.sleep(0.1)
+    else:
+        processo.kill()
+        raise RuntimeError(f"O Chromium ({CHROMIUM}) não abriu em 30 s.")
+    if not (porta.exists() and porta.read_text().strip()):
+        # Sem isso, a falha era só "DevToolsActivePort não existe" (lição de 16/10/2026). O erro
+        # do dbus aparece sempre numa máquina sem sessão e não derruba nada: o motivo é o FATAL.
+        linhas = registro.read_text(errors="replace").splitlines()
+        motivo = [x for x in linhas if "FATAL" in x] or linhas[-5:]
+        raise RuntimeError(f"O Chromium ({CHROMIUM}) saiu ao abrir: {' | '.join(motivo[:5])}")
     lista = f"http://127.0.0.1:{porta.read_text().splitlines()[0]}/json/list"
-    with urllib.request.urlopen(lista, timeout=5) as r:
+    with urllib.request.urlopen(lista, timeout=15) as r:
         alvo = next(x for x in json.load(r) if x["type"] == "page")
     return processo, alvo["webSocketDebuggerUrl"]
 
@@ -273,6 +289,52 @@ def test_trocar_de_aba_solta_a_leitura_do_terminal(tmp_path: Path) -> None:
         depois = [t for t in inicios if t > fim]
     assert espera_ms < 1000, espera_ms
     assert len(depois) <= 1, f"{len(depois)} leituras do terminal ao mesmo tempo"
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_terminal_acompanha_fallback_sem_reabrir_a_pagina(tmp_path: Path) -> None:
+    leituras: list[dict[str, Any]] = []
+
+    def ler(dados: dict[str, Any]) -> dict[str, Any]:
+        leituras.append(dados)
+        numero = len(leituras)
+        if numero == 1:
+            return {
+                "posicao": 5000,
+                "vivo": True,
+                "geracao": 11,
+                "dados": base64.b64encode(b"Conta anterior\r\n").decode(),
+            }
+        if numero == 2:
+            return {"posicao": 5000, "vivo": False, "geracao": 11, "dados": "", "trocando": True}
+        if numero == 3:
+            return {
+                "posicao": 24,
+                "vivo": True,
+                "geracao": 22,
+                "reiniciado": True,
+                "dados": base64.b64encode(b"Nova conta trabalhando\r\n").decode(),
+            }
+        time.sleep(0.2)
+        return {"posicao": 24, "vivo": True, "geracao": 22, "dados": ""}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            await _esperar(
+                nav,
+                "typeof term !== 'undefined' && !!term && "
+                "term.buffer.active.getLine(0)?.translateToString(true) "
+                "=== 'Nova conta trabalhando'",
+            )
+            assert await nav.avaliar("document.getElementById('terminal-fechado').hidden")
+            assert not nav.erros
+
+    with _painel(tmp_path, extras={"terminal/ler": ler}) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+    assert leituras[2]["geracao"] == 11
+    assert leituras[3]["geracao"] == 22 and leituras[3]["desde"] == 24
 
 
 async def _layout_do_autodesenvolvimento(depuracao: str, endereco: str) -> dict[str, Any]:
@@ -711,6 +773,70 @@ def test_autodesenvolvimento_interrompe_troca_agente_e_permite_revisar(tmp_path:
         "ze/aplicar": aplicar,
     }
     with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
+        asyncio.run(conferir(depuracao, url))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_escolher_conta_nao_reenvia_pedido_antigo_mesmo_com_alerta(tmp_path: Path) -> None:
+    respostas = json.loads(RESPOSTAS.read_text())
+    sessao = respostas["escritas"]["sessao/ler"]
+    sessao["sessao"].update(estado="erro", limite=True, conta_id="claude:padrao")
+    estado = respostas["leituras"]["estado"]
+    estado["manutencao"]["ligada"] = False
+    chamadas: list[dict[str, Any]] = []
+
+    def trocar(dados: dict[str, Any]) -> dict[str, Any]:
+        chamadas.append(dados)
+        sessao["sessao"].update(
+            limite=False,
+            estado="parada",
+            motor="codex",
+            agente="Codex",
+            conta_id=dados["conta"],
+            conta="Exemplo",
+        )
+        return {**sessao["sessao"], "aviso": "Conta alterada."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            await _esperar(nav, "!!document.querySelector('#limite-sessao .limite')")
+            await nav.avaliar(
+                "document.querySelector('[data-escolha=conta-sessao] button').click()"
+            )
+            await nav.avaliar("document.querySelector('[data-valor=\"codex|Exemplo\"]').click()")
+            await _esperar(nav, "!document.querySelector('#limite-sessao .limite')")
+            assert chamadas == [
+                {
+                    "id": sessao["sessao"]["id"],
+                    "motor": "codex",
+                    "conta": "Exemplo",
+                    "continuar": False,
+                }
+            ]
+            # Uma troca automática no backend atualiza o seletor e a faixa juntos.
+            sessao["sessao"].update(
+                conta_id="claude:padrao",
+                conta="Padrão",
+                motor="claude",
+                agente="Claude",
+                limite=True,
+            )
+            await nav.avaliar("acompanharSessao()")
+            assert await nav.avaliar(
+                "document.querySelector('[data-escolha=conta-sessao]').textContent.includes('Padrão')"
+            )
+            assert await nav.avaliar(
+                "document.querySelector('#limite-sessao').textContent.includes('Padrão')"
+            )
+            assert not nav.erros
+
+    with _painel(
+        tmp_path,
+        extras={"sessao/ler": lambda _: copy.deepcopy(sessao), "sessao/trocar": trocar},
+        estado=lambda: copy.deepcopy(estado),
+    ) as (depuracao, url):
         asyncio.run(conferir(depuracao, url))
 
 

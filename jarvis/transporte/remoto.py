@@ -13,6 +13,7 @@ import asyncio
 import contextlib
 import logging
 import threading
+import time
 import wave
 from collections.abc import Callable
 from pathlib import Path
@@ -28,6 +29,17 @@ BYTES_QUADRO = TAXA_ENTRADA * QUADRO_MS // 1000 * 2
 TAXA_SAIDA = 48000
 PESSOA = "pessoa-"  # prefixo da identidade de quem fala com o Zé (o token do painel)
 ESPERA_S = (1.0, 2.0, 5.0, 15.0, 30.0)
+PRONTO_S = 15.0  # quanto esperar o servidor da sala abrir a porta, na subida
+
+
+async def esperar(pronto: Callable[[], bool], prazo_s: float, passo_s: float = 0.2) -> bool:
+    """Espera `pronto()` ficar verdadeiro, até `prazo_s`; devolve se ficou."""
+    fim = time.monotonic() + prazo_s
+    while not pronto():
+        if time.monotonic() >= fim:
+            return False
+        await asyncio.sleep(passo_s)
+    return True
 
 
 class SalaRemota:
@@ -39,8 +51,10 @@ class SalaRemota:
         token: Callable[[], str],
         ao_quadro: Callable[[bytes], None],
         ao_conectar: Callable[[bool], None],
+        pronto: Callable[[], bool] | None = None,
     ) -> None:
         self.url = url
+        self.pronto = pronto  # o servidor da sala já aceita conexões
         self.token = token
         self.ao_quadro = ao_quadro
         self.ao_conectar = ao_conectar
@@ -73,6 +87,10 @@ class SalaRemota:
 
     async def _manter(self) -> None:
         quedas = 0
+        # O servidor sobe junto com o Zé: entrar antes de a porta abrir deixava três erros do SDK
+        # no registro a cada subida (lição de 16/10/2026, numa VPS).
+        if self.pronto is not None and not await esperar(self.pronto, PRONTO_S):
+            log.warning("voz remota: o servidor da sala não abriu em %.0f s", PRONTO_S)
         while not self._parar.is_set():
             sala = rtc.Room(loop=self.loop)
             caiu = asyncio.Event()

@@ -63,6 +63,16 @@ class VAD:
         return float(np.mean(notas)) if notas else 0.0
 
 
+class SemVAD:
+    """Sem o modelo do Silero (download que falhou): nenhum quadro conta como fala."""
+
+    def reiniciar(self) -> None:
+        pass
+
+    def prever(self, audio: Audio, tamanho: int = 640) -> float:
+        return 0.0
+
+
 class Features:
     """Embeddings de fala (speech_embedding do Google) em fluxo, um quadro de 80 ms por vez."""
 
@@ -95,6 +105,21 @@ class Features:
     def ultimas(self, n: int = JANELA) -> Floats:
         resultado: Floats = self.buffer[-n:][None,].astype(np.float32)
         return resultado
+
+
+class SemFeatures(Features):
+    """Sem os modelos do openWakeWord: o buffer nunca enche, então o chamado nunca dispara."""
+
+    def __init__(self) -> None:
+        self.reiniciar()
+
+    def __call__(self, quadro: Audio) -> None:
+        pass
+
+
+def faltando(*modelos: Path) -> list[str]:
+    """Os arquivos de modelo que não estão na máquina (o download falhou ou nunca rodou)."""
+    return [m.name for m in modelos if not m.is_file()]
 
 
 class ModeloAtivacao:

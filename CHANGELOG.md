@@ -2,6 +2,19 @@
 
 ## Não lançado
 
+- Modelos de som: o download tenta primeiro o espelho do projeto (`ZE_MODELOS_URL`) e cai para a
+  fonte original, sempre conferindo o SHA-256; `deploy/publicar-modelos.sh` publica os modelos
+  numa release do GitHub, para a voz Cadu não depender de uma única fonte.
+- Servidor (VPS): `deploy/instalar-servidor.sh` instala o Zé como serviço que continua depois
+  de sair do SSH; guia em `docs/vps.md`. O Zé sobe sem áudio na máquina (a voz chega pelo
+  navegador) e sem os modelos de som que não baixaram (painel e texto funcionam).
+- O cérebro sabe em que máquina está (Omarchy, outro Linux ou servidor) e, fora do Omarchy,
+  não oferece suspender o computador.
+- Sessões de código funcionam sem o Claude Code instalado à parte: usam o que vem com o Zé.
+- Sessões: excluir uma sessão não trava mais num contêiner sem init (Docker sem `--init`), onde
+  os processos encerrados do agente ficavam como zumbis.
+- Qualidade: a CI do GitHub roda o `make check` completo a cada envio, com o painel num Chromium
+  de verdade, os modelos de som e o Go; teste pulado conta como falha.
 - Autodesenvolvimento: a unificação reconhece rascunhos já reconciliados na central e evita
   repetir o mesmo conflito a cada tentativa; conteúdo ou base novos continuam sendo conferidos.
 

@@ -122,7 +122,15 @@ from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.local import Captura
 from jarvis.transporte.remoto import SalaRemota
 from jarvis.voz import chamado, espera, piper
-from jarvis.voz.ativacao import VAD, Detector, Features, carregar_modelo
+from jarvis.voz.ativacao import (
+    VAD,
+    Detector,
+    Features,
+    SemFeatures,
+    SemVAD,
+    carregar_modelo,
+    faltando,
+)
 from jarvis.voz.deepgram import Deepgram, EscutaDeepgram
 from jarvis.voz.escuta import Segmentador
 from jarvis.voz.fala import falavel, para_fala
@@ -208,7 +216,14 @@ class Nucleo(
         self._fim_fala_em: float | None = None
 
         modelos = cfg.caminho("ativacao", "modelos_onnx")
-        self.vad = VAD(modelos / "silero_vad.onnx")
+        # Falha por função (ADR 0034): modelo que não baixou desliga só a peça dele.
+        silero = modelos / "silero_vad.onnx"
+        mel, embedding = modelos / "melspectrogram.onnx", modelos / "embedding_model.onnx"
+        smart_turn = modelos / "smart-turn-v3.2-cpu.onnx"
+        self.modelos_faltando = faltando(silero, mel, embedding, smart_turn, piper.PADRAO.modelo)
+        if self.modelos_faltando:
+            log.warning("modelos de som faltando: %s", ", ".join(self.modelos_faltando))
+        self.vad: VAD | SemVAD = VAD(silero) if silero.is_file() else SemVAD()
         modelo_ativacao = carregar_modelo(cfg.caminho("ativacao", "modelo"))
         self.modelo_ativacao = modelo_ativacao  # volta ao detector quando a escuta liga
         if not modelo_ativacao.treinada:
@@ -217,12 +232,12 @@ class Nucleo(
             )
         self.detector = Detector(
             modelo_ativacao,
-            Features(modelos / "melspectrogram.onnx", modelos / "embedding_model.onnx"),
+            Features(mel, embedding) if mel.is_file() and embedding.is_file() else SemFeatures(),
             paciencia=cfg["ativacao"]["paciencia"],
         )
         limiar = cfg["escuta"]["limiar_fim_de_turno"]
         self.segmentador = Segmentador(
-            fim_de_turno=FimDeTurno(modelos / "smart-turn-v3.2-cpu.onnx") if limiar > 0 else None,
+            fim_de_turno=FimDeTurno(smart_turn) if limiar > 0 and smart_turn.is_file() else None,
             limiar_fim_de_turno=limiar,
             fala_ate_agora=lambda: self.escuta.ate_agora() if self.escuta is not None else "",
         )
@@ -638,8 +653,11 @@ class Nucleo(
             if nome == "manutencao_entrar":
                 resposta = m.entrar(argumento)
             elif nome == "manutencao_pedido":
-                resposta = m.encaminhar(argumento, self._contexto_da_manutencao(), time.time())
-                self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
+                if not m.ligado:
+                    resposta = "Manutenção desligada. Faça o pedido na conversa."
+                else:
+                    resposta = m.encaminhar(argumento, self._contexto_da_manutencao(), time.time())
+                    self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
             elif nome == "rodada_melhoria":
                 resposta = self._rodada_de_melhoria()
             elif not self._no_proprio_pc():

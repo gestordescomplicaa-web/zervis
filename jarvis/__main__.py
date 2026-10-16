@@ -41,8 +41,9 @@ def rodar() -> int:
         if baixados := garantir(cfg.caminho("ativacao", "modelos_onnx")):
             log.info("primeira vez: baixei %s", ", ".join(baixados))
     except PrepararErro as erro:
-        log.error("%s (rode `python -m jarvis.preparar` com internet)", erro)
-        return 69  # EX_UNAVAILABLE
+        # Falha por função (ADR 0034): o painel e o texto sobem; o que precisa do modelo que
+        # faltou fica indisponível até o próximo início com internet.
+        log.warning("%s: a voz fica limitada (rode `python -m jarvis.preparar`)", erro)
     from jarvis.memoria import aimemory
 
     try:  # opcional: sem ele, o Zé segue sem memória longa
@@ -63,8 +64,16 @@ def rodar() -> int:
         log.error("%s", erro)
         return 75
     parar = threading.Event()
-    signal.signal(signal.SIGTERM, lambda *_: parar.set())
-    signal.signal(signal.SIGINT, lambda *_: parar.set())
+
+    def encerrar(*_: object) -> None:
+        # O systemd manda o SIGTERM ao grupo inteiro: os agentes do cérebro e o servidor da sala
+        # saem junto com o Zé, e os SDKs registravam isso como erro a cada parada (16/10/2026).
+        for sdk in ("claude_agent_sdk", "livekit"):
+            logging.getLogger(sdk).setLevel(logging.CRITICAL)
+        parar.set()
+
+    signal.signal(signal.SIGTERM, encerrar)
+    signal.signal(signal.SIGINT, encerrar)
     log.info("jarvisd %s subindo", __version__)
     with trava:
         Nucleo(cfg, parar).rodar()
