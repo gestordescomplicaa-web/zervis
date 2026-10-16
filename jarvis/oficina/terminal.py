@@ -24,6 +24,29 @@ log = logging.getLogger(__name__)
 BUFFER = 512 * 1024  # o que fica guardado da saída (o painel reabre e vê o fim da conversa)
 
 
+def _grupo_ativo(grupo: int) -> bool:
+    """Algum processo do grupo ainda roda. Zumbi não conta: ele já terminou e só espera ser
+    coletado. Num contêiner sem init (Docker sem `--init`), o neto órfão vira zumbi que ninguém
+    coleta, e o `killpg(grupo, 0)` acharia o grupo vivo para sempre (lição de 16/10/2026)."""
+    try:
+        os.killpg(grupo, 0)
+    except ProcessLookupError:
+        return False
+    try:
+        pids = [p for p in os.listdir("/proc") if p.isdigit()]
+    except OSError:
+        return True  # sem /proc, vale a resposta do killpg
+    for pid in pids:
+        try:
+            # Depois do nome (entre parênteses, pode ter espaço): estado, pai e grupo.
+            campos = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+            if int(campos[2]) == grupo and campos[0] not in ("Z", "X"):
+                return True
+        except (OSError, IndexError, ValueError):
+            continue  # terminou durante a leitura
+    return False
+
+
 class Terminal:
     def __init__(
         self,
@@ -174,9 +197,7 @@ class Terminal:
         prazo = time.monotonic() + espera_s
         while grupos:
             for grupo in tuple(grupos):
-                try:
-                    os.killpg(grupo, 0)
-                except ProcessLookupError:
+                if not _grupo_ativo(grupo):
                     grupos.remove(grupo)
             if grupos:
                 if time.monotonic() >= prazo:
