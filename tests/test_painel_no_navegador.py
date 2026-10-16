@@ -3,7 +3,7 @@
 O `tsc` não enxerga a ordem em que os scripts carregam; uma função de página sob demanda usada
 cedo demais derruba o painel inteiro e só aparece no navegador. As leituras vêm de
 `painel_respostas.json`, no formato real e sem dados de ninguém; as escritas que as páginas fazem
-ao abrir também. Sem Chromium, o teste é pulado.
+ao abrir também. Sem Chromium, o teste é pulado; na CI (`ZE_SEM_PULOS=1`), pulado é falha.
 """
 
 import asyncio
