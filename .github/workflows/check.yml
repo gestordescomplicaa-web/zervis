@@ -72,6 +72,8 @@ jobs:
       - name: Instalador de PC
         run: |
           set -o pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb x11-utils
           export XDG_RUNTIME_DIR="/run/user/$(id -u)"
           export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
           sudo loginctl enable-linger "$USER"
@@ -88,14 +90,22 @@ jobs:
           systemctl --user is-enabled zervis
           systemctl --user is-active zervis
           test -f "$HOME/.local/share/applications/zervis.desktop"
-          curl --fail --retry 30 --retry-delay 1 --retry-connrefused --max-time 5 \
-            http://127.0.0.1:9336/json/list -o "$RUNNER_TEMP/abas.json"
           uv run python - <<'PY'
           import json
-          import os
-          from pathlib import Path
-          abas = json.loads((Path(os.environ["RUNNER_TEMP"]) / "abas.json").read_text())
-          assert any(a.get("url") == "http://127.0.0.1:8795/" for a in abas), abas
+          import time
+          import urllib.request
+          # A porta de depuração pode abrir antes da aba; a configuração inicial usa #configurar.
+          for tentativa in range(60):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:9336/json/list", timeout=2) as r:
+                      abas = json.load(r)
+                  if any(a.get("url", "").split("#")[0] == "http://127.0.0.1:8795/" for a in abas):
+                      break
+              except (OSError, ValueError):
+                  pass
+              time.sleep(0.5)
+          else:
+              raise RuntimeError("O instalador não abriu a aba do painel local.")
           PY
 
       - name: Registro da instalação
