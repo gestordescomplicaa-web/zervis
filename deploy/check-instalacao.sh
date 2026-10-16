@@ -25,5 +25,8 @@ unset JARVIS_RAIZ JARVIS_PERFIL VIRTUAL_ENV
 cd "$TEMP/zervis"
 echo "instalação do zero: $(git -C "$REPO" rev-parse --short "$COMMIT") em $TEMP"
 uv sync --frozen
+# Com HOME vazio, os testes reais de áudio precisam dos modelos, como numa instalação nova.
+# Sem essa preparação, ZE_SEM_PULOS=1 revela que a prova de features ONNX foi pulada.
+uv run python -m jarvis.preparar
 make check
 echo "instalação do zero: aprovada"

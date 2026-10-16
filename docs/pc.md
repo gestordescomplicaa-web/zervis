@@ -38,6 +38,9 @@ A CI acrescenta a prova em Ubuntu 24.04 com tela virtual (Xvfb), systemd do usu�
 Chromium com sandbox: executa o instalador, confere o serviço ativo e habilitado, o atalho
 instalado e a aba aberta no endereço local. Não usa contas pessoais nem simula audição.
 
+`make check-instalacao` prepara também os modelos de som no ambiente vazio, antes dos testes;
+assim `ZE_SEM_PULOS=1 make check-instalacao` não perde a prova das features ONNX por falta deles.
+
 Microfone, saída de som e controle do desktop precisam da prova num PC físico antes de declarar
 o item 1 de “Onde estamos” concluído. Na sessão gráfica de um Ubuntu 24.04 limpo:
 
