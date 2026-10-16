@@ -5,8 +5,9 @@ ou pelo painel. Ele lê e opera o computador, tem memória própria, aprende ski
 automações em segundo plano e manda agentes de código trabalharem nos seus projetos.
 Inspirado no Hermes e no OpenClaw, mas mais enxuto, rápido e eficiente.
 
-> **Estado:** em desenvolvimento, ainda sem instalação de um comando. O caminho até lá está em
-> [docs/roteiro.md](docs/roteiro.md).
+> **Estado:** em desenvolvimento, de código aberto (AGPL-3.0-or-later). Ainda sem instalação de um
+> comando; num servidor, o [guia de VPS](docs/vps.md) leva uns minutos. O caminho até lá está em
+> [docs/roteiro.md](docs/roteiro.md). Quer ajudar? Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Princípios
 
@@ -30,6 +31,18 @@ Inspirado no Hermes e no OpenClaw, mas mais enxuto, rápido e eficiente.
 
 `JARVIS_PERFIL=<nome>` usa outro conjunto de pastas (`zervis-<nome>`); `JARVIS_RAIZ=<pasta>` põe as
 três dentro de uma pasta só. O fuso vem do sistema (ou de `JARVIS_FUSO`).
+
+## Instalar num servidor (VPS)
+
+Num Ubuntu 24.04 ou parecido, com um usuário comum (não root) e Git, Make e curl instalados:
+
+```sh
+git clone https://github.com/gestordescomplicaa-web/zervis.git
+cd zervis && deploy/instalar-servidor.sh
+```
+
+O instalador prepara tudo e o Zé fica rodando como serviço. O passo a passo, o acesso ao painel e
+o login do Claude e do Codex estão em [docs/vps.md](docs/vps.md).
 
 ## Rodar (desenvolvimento)
 

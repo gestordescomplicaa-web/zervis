@@ -37,15 +37,15 @@ cd zervis
 deploy/instalar-servidor.sh
 ```
 
-O repositório é privado: no servidor, o `git clone` pede o usuário do GitHub e um token de acesso
-(github.com → Settings → Developer settings → Personal access tokens) no lugar da senha.
+O repositório é público: o `git clone` não pede usuário nem token. Para atualizar depois, entre
+na pasta, rode `git pull` e o instalador de novo.
 
 O instalador confere o que precisa, instala o uv se faltar, baixa os modelos de som, instala o
 serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do SSH e sobe com a
 máquina) e espera o painel responder. Se ele pedir, rode como root uma vez:
 `loginctl enable-linger ze`.
 
-Sem acesso ao repositório, envie o código como pacote: no seu computador,
+Sem acesso do servidor ao GitHub, envie o código como pacote: no seu computador,
 `git archive --format=tar.gz --prefix=zervis/ -o /tmp/zervis.tgz origin/master` e
 `scp /tmp/zervis.tgz ze@<servidor>:`; no servidor, `tar xzf zervis.tgz`, `cd zervis` e o instalador.
 O pacote não leva o `.git`: o instalador cria um histórico local (nada sai da máquina) e registra o
@@ -64,6 +64,14 @@ ssh -N -L 8795:127.0.0.1:8795 ze@<servidor>
 ```
 
 Abra `http://localhost:8795`. Use a mesma porta dos dois lados: o painel confere o endereço.
+
+### Sem túnel SSH
+
+Depois de ligar o acesso pelo celular (seção 4), o endereço `https://….trycloudflare.com` abre o
+painel e a voz também no navegador do computador, com a senha e o código do autenticador, sem o
+túnel SSH. Os ajustes que só valem no computador do Zé (configuração inicial, acesso ao Claude,
+chaves) continuam pelo túnel. Não abra a porta 8795 na internet: o painel fala HTTP simples, e a
+senha trafegaria sem proteção.
 
 Pelo túnel SSH, o painel trata você como o próprio computador do Zé: a configuração inicial
 (perfil, acesso ao Claude, chave do Deepgram) e os ajustes de acesso ficam liberados. Quem tem a

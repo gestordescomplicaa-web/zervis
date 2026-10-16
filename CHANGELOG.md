@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Código aberto: CONTRIBUTING, SECURITY, CODEOWNERS, modelo de PR e o ADR 0036 (contribuições
+  por pull request, `master` protegida, atualização de quem personaliza o Zé em aberto); o guia
+  de VPS passa a clonar o repositório público e explica o acesso sem o túnel SSH.
 - Painel: a troca de aba mostra na hora o que a página já tinha e se atualiza quando o Zé
   responde; longe do servidor (VPS), cada aba deixa de esperar uma ida e volta de rede. Gravar
   qualquer ajuste invalida o que estava guardado.
