@@ -59,13 +59,17 @@ function escreverNoTerminal(dados) {
 // Antes, voltar à mesma sessão revivia o laço antigo, e os dois escreviam em dobro no terminal.
 /** @param {string} id @param {AbortSignal} sinal */
 async function lerTerminal(id, sinal) {
+  let geracao = 0;
   while (!sinal.aborted) {
     try {
-      const r = await api("terminal/ler", { id, desde: termPos }, sinal);
+      const r = await api("terminal/ler", { id, desde: termPos, geracao }, sinal);
       if (sinal.aborted) return;
+      if (r.reiniciado) term.reset();
+      geracao = r.geracao || geracao;
       if (r.dados) term.write(Uint8Array.from(atob(r.dados), (c) => c.charCodeAt(0)));
       termPos = r.posicao;
-      if (!r.vivo) { $("terminal-fechado").hidden = false; return; }
+      if (!r.vivo && !r.trocando) { $("terminal-fechado").hidden = false; return; }
+      if (!r.vivo) await new Promise((ok) => setTimeout(ok, 300));
     } catch {
       if (sinal.aborted) return;
       await new Promise((ok) => setTimeout(ok, 1000));

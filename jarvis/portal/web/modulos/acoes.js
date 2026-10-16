@@ -239,7 +239,7 @@ const ESCOLHAS = {
   },
   "conta-sessao": async (valor) => {
     const [motor, conta] = valor.split("|");
-    await trocarSessao(motor, conta, !!sessaoAtual?.limite);
+    await trocarSessao(motor, conta, false);
   },
 };
 
@@ -315,4 +315,3 @@ conteudo.addEventListener("drop", (ev) => {
   if (!$("terminal") || !/** @type {DragEvent} */ (ev).dataTransfer?.files.length) return;
   ev.preventDefault(); /** @type {HTMLElement} */ (document.querySelector(".conversa"))?.classList.remove("soltando"); anexar(/** @type {DragEvent} */ (ev).dataTransfer.files);
 });
-

@@ -36,7 +36,7 @@ from jarvis import fuso
 from jarvis.cerebro import contas, modelos
 from jarvis.dados.documentos import Documentos, linhas_json, objeto_json
 from jarvis.memoria import aimemory
-from jarvis.oficina import continuidade
+from jarvis.oficina import continuidade, fallback
 from jarvis.oficina.terminal import Terminal
 
 log = logging.getLogger(__name__)
@@ -121,6 +121,7 @@ class Sessao:
     # o manda de novo e o trabalho continua de onde parou.
     ultimo_pedido: str = ""
     limite: bool = False
+    limite_conta: str = ""  # só a conta em que o limite foi confirmado
     # O pedido que estava em andamento quando o agente parou sem terminar (o Zé reiniciou, o
     # terminal fechou no meio): fica até a pessoa continuar ou dispensar.
     interrompida: str = ""
@@ -222,6 +223,7 @@ class Sessoes:
         self.trava = threading.Lock()
         # Não abre ou envia para um agente enquanto a exclusão espera ele encerrar.
         self._operacoes = threading.RLock()
+        self.fallback = fallback.Fallback(self)
         self._centralizando: set[str] = set()
         self.tarefas: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Task[None]]] = {}
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -257,7 +259,16 @@ class Sessoes:
         if dados is None:
             raise SessaoErro("sessão desconhecida")
         try:
-            return Sessao(**dados)
+            s = Sessao(**dados)
+            if s.limite and (not s.limite_conta or s.limite_conta != s.conta):
+                # Versões anteriores inferiam limite pelo texto da tela, inclusive histórico.
+                # Esse registro não comprova indisponibilidade da conta atual.
+                s.limite = False
+                s.limite_conta = ""
+                if "bateu o limite" in s.resumo:
+                    s.resumo = ""
+                    s.estado = "parada"
+            return s
         except (ValueError, TypeError):
             raise SessaoErro("sessão desconhecida") from None
 
@@ -365,8 +376,14 @@ class Sessoes:
     def _mudar(self, id_: str, **campos: Any) -> Sessao:
         with self.trava:
             s = self.ler(id_)
+            if campos.get("conta", s.conta) != s.conta or campos.get("motor", s.motor) != s.motor:
+                campos.setdefault("limite", False)
+            if campos.get("limite") is True:
+                campos["limite_conta"] = campos.get("conta", s.conta)
             for chave, valor in campos.items():
                 setattr(s, chave, valor)
+            if not s.limite:
+                s.limite_conta = ""
             s.atualizada = agora()
             self._gravar(s)
             return s
@@ -466,6 +483,9 @@ class Sessoes:
         self, id_: str, texto: str, quem: str = "usuario", anexos: list[str] | None = None
     ) -> Sessao:
         with self._operacoes:
+            self.fallback.cancelar(id_)
+            if quem == "usuario":
+                self._dados.remover("fallback-tentativas", id_)
             return self._enviar(id_, texto, quem, anexos)
 
     def _enviar(self, id_: str, texto: str, quem: str, anexos: list[str] | None) -> Sessao:
@@ -502,12 +522,13 @@ class Sessoes:
         if not self.legado:  # o terminal da sessão: cola o pedido no agente (abre se preciso)
             self._limite_visto.discard(id_)
             self._saida_limite.pop(id_, None)
+            self._mudar(id_, estado="trabalhando", limite=False)
             terminal = self.terminais.get(id_)
             if terminal is not None and terminal.vivo:
                 terminal.colar(texto)
             else:
                 self.abrir_terminal(id_, pedido=texto)
-            return self._mudar(id_, estado="trabalhando", limite=False)
+            return self.ler(id_)
         if s.passagem:  # depois de uma troca: o agente novo recebe o que perdeu
             texto = f"{s.passagem}{PEDIDO_AGORA}{texto}"
         s = self._mudar(id_, estado="trabalhando", passagem="", limite=False)
@@ -568,7 +589,9 @@ class Sessoes:
                 respostas[-1] if respostas else resumo,
                 encerrar=True,
             )
-        if self.ao_terminar is not None:
+        if final.limite and final.modelo and (final.motor != "codex" or final.esforco):
+            self.fallback.agendar(s.id, comprovado=True)
+        elif self.ao_terminar is not None:
             try:
                 self.ao_terminar(final, resumo)
             except Exception:
@@ -576,6 +599,7 @@ class Sessoes:
 
     def trocar(self, id_: str, motor: str, conta_id: str = "") -> tuple[Sessao, str]:
         with self._operacoes:
+            self.fallback.cancelar(id_)
             self._consumir_eventos(id_)
             return self._trocar(id_, motor, conta_id)
 
@@ -620,6 +644,7 @@ class Sessoes:
             esforco=s.esforco if mantem else "",
             estado="parada",
             limite=False,
+            resumo="" if s.limite or "bateu o limite" in s.resumo else s.resumo,
         )
         self._saida_limite.pop(id_, None)
         self._limite_visto.discard(id_)
@@ -645,6 +670,7 @@ class Sessoes:
     def ajustar_modelo(self, id_: str, modelo: str, esforco: str = "") -> Sessao:
         """O modelo (e o esforço, no Codex) dos próximos pedidos; a conversa continua."""
         with self._operacoes:
+            self.fallback.cancelar(id_)
             self.exigir_editavel(id_)
             s = self.ler(id_)
             if id_ in self.trabalhando():
@@ -811,6 +837,7 @@ class Sessoes:
 
     def escrever_terminal(self, id_: str, dados: bytes) -> None:
         with self._operacoes:
+            self.fallback.cancelar(id_)
             self.exigir_editavel(id_)
             self._exigir_disponivel()
             terminal = self.terminais.get(id_)
@@ -857,6 +884,7 @@ class Sessoes:
         self.eventos(id_).touch(mode=0o600)
         self._lidos[id_] = self.eventos(id_).stat().st_size
         try:
+            self.fallback.inicios[id_] = time.time()
             terminal = Terminal(
                 comando_terminal(
                     s,
@@ -905,7 +933,7 @@ class Sessoes:
                 self._mudar(id_, estado="parada", interrompida=s.ultimo_pedido)
 
     def _olhar_saida(self, id_: str, dados: bytes) -> None:
-        """Créditos esgotados aparecem na tela do agente: a sessão avisa e oferece outra conta."""
+        """A tela só dispara conferência. Histórico e prompts nunca comprovam limite."""
         if id_ in self._limite_visto:
             return
         recente = (self._saida_limite.get(id_, b"") + dados)[-8192:]
@@ -913,20 +941,8 @@ class Sessoes:
         texto = ANSI.sub("", recente.decode(errors="replace"))
         if not LIMITE_TERMINAL.search(texto):
             return
-        self._limite_visto.add(id_)
-        s = self.ler(id_)
-        conta, agente = _nome_da_conta(s), NOMES_MOTORES[s.motor]
-        final = self._mudar(
-            id_, estado="erro", limite=True, resumo=f"a conta {conta} do {agente} bateu o limite"
-        )
-        self.anotar(
-            id_,
-            "sistema",
-            f"A conta {conta} atingiu o limite de uso. Troque de conta para continuar: "
-            "a conversa segue.",
-        )
-        if self.ao_terminar is not None:
-            self.ao_terminar(final, final.resumo)
+        self._saida_limite.pop(id_, None)
+        self.fallback.agendar(id_)
 
     def _vigiar_eventos(self) -> None:
         while True:
@@ -973,6 +989,11 @@ class Sessoes:
             pedido = self._pedido(id_, str(e.get("prompt", "")))
             if not pedido:
                 return
+            if id_ in self.fallback.pendentes and self.ler(id_).limite:
+                # O hook pode chegar depois do aviso de limite do mesmo turno. Não apaga
+                # o erro nem anuncia conclusão enquanto a evidência nativa é conferida.
+                self._mudar(id_, ultimo_pedido=pedido, interrompida="")
+                return
             self._limite_visto.discard(id_)
             self._saida_limite.pop(id_, None)
             self._mudar(
@@ -1011,6 +1032,10 @@ class Sessoes:
         """O que a pessoa digitou no terminal entra na conversa do Zé (é dela que sai a passagem
         e a memória). Da passagem que o Zé colou, fica só o pedido que veio junto."""
         texto = continuidade.pedido_sem_contexto(texto)
+        if texto.startswith(fallback.RETOMADA):
+            texto = texto[len(fallback.RETOMADA) :]
+        elif texto.strip():
+            self._dados.remover("fallback-tentativas", id_)
         if texto.strip():
             texto = texto.strip()
             self.anotar(id_, "usuario", texto)
@@ -1080,6 +1105,7 @@ class Sessoes:
             raise SessaoErro("O agente ainda está encerrando. Tente excluir novamente.")
 
     def _excluir(self, id_: str) -> str:
+        self.fallback.cancelar(id_)
         s = self.ler(id_)
         self.exigir_editavel(id_)
         if s.origem == "manutencao":
@@ -1127,6 +1153,7 @@ class Sessoes:
 
     def parar(self, id_: str) -> Sessao:
         with self._operacoes:
+            self.fallback.cancelar(id_)
             if id_ in self._centralizando:
                 raise SessaoErro("Unificação em andamento. Aguarde a conclusão.")
             terminal = self.terminais.get(id_)
@@ -1749,4 +1776,6 @@ def comando_terminal(
         cmd += ["--resume", s.sdk_sessao]
     if s.modelo:
         cmd += ["--model", s.modelo]
+    if s.esforco:
+        cmd += ["--effort", s.esforco]
     return [*cmd, *([pedido] if pedido else [])]

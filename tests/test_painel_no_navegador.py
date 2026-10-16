@@ -7,6 +7,7 @@ ao abrir também. Sem Chromium, o teste é pulado.
 """
 
 import asyncio
+import base64
 import contextlib
 import copy
 import json
@@ -273,6 +274,52 @@ def test_trocar_de_aba_solta_a_leitura_do_terminal(tmp_path: Path) -> None:
         depois = [t for t in inicios if t > fim]
     assert espera_ms < 1000, espera_ms
     assert len(depois) <= 1, f"{len(depois)} leituras do terminal ao mesmo tempo"
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_terminal_acompanha_fallback_sem_reabrir_a_pagina(tmp_path: Path) -> None:
+    leituras: list[dict[str, Any]] = []
+
+    def ler(dados: dict[str, Any]) -> dict[str, Any]:
+        leituras.append(dados)
+        numero = len(leituras)
+        if numero == 1:
+            return {
+                "posicao": 5000,
+                "vivo": True,
+                "geracao": 11,
+                "dados": base64.b64encode(b"Conta anterior\r\n").decode(),
+            }
+        if numero == 2:
+            return {"posicao": 5000, "vivo": False, "geracao": 11, "dados": "", "trocando": True}
+        if numero == 3:
+            return {
+                "posicao": 24,
+                "vivo": True,
+                "geracao": 22,
+                "reiniciado": True,
+                "dados": base64.b64encode(b"Nova conta trabalhando\r\n").decode(),
+            }
+        time.sleep(0.2)
+        return {"posicao": 24, "vivo": True, "geracao": 22, "dados": ""}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            await _esperar(
+                nav,
+                "typeof term !== 'undefined' && !!term && "
+                "term.buffer.active.getLine(0)?.translateToString(true) "
+                "=== 'Nova conta trabalhando'",
+            )
+            assert await nav.avaliar("document.getElementById('terminal-fechado').hidden")
+            assert not nav.erros
+
+    with _painel(tmp_path, extras={"terminal/ler": ler}) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+    assert leituras[2]["geracao"] == 11
+    assert leituras[3]["geracao"] == 22 and leituras[3]["desde"] == 24
 
 
 async def _layout_do_autodesenvolvimento(depuracao: str, endereco: str) -> dict[str, Any]:
@@ -711,6 +758,70 @@ def test_autodesenvolvimento_interrompe_troca_agente_e_permite_revisar(tmp_path:
         "ze/aplicar": aplicar,
     }
     with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
+        asyncio.run(conferir(depuracao, url))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_escolher_conta_nao_reenvia_pedido_antigo_mesmo_com_alerta(tmp_path: Path) -> None:
+    respostas = json.loads(RESPOSTAS.read_text())
+    sessao = respostas["escritas"]["sessao/ler"]
+    sessao["sessao"].update(estado="erro", limite=True, conta_id="claude:padrao")
+    estado = respostas["leituras"]["estado"]
+    estado["manutencao"]["ligada"] = False
+    chamadas: list[dict[str, Any]] = []
+
+    def trocar(dados: dict[str, Any]) -> dict[str, Any]:
+        chamadas.append(dados)
+        sessao["sessao"].update(
+            limite=False,
+            estado="parada",
+            motor="codex",
+            agente="Codex",
+            conta_id=dados["conta"],
+            conta="Exemplo",
+        )
+        return {**sessao["sessao"], "aviso": "Conta alterada."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            await _esperar(nav, "!!document.querySelector('#limite-sessao .limite')")
+            await nav.avaliar(
+                "document.querySelector('[data-escolha=conta-sessao] button').click()"
+            )
+            await nav.avaliar("document.querySelector('[data-valor=\"codex|Exemplo\"]').click()")
+            await _esperar(nav, "!document.querySelector('#limite-sessao .limite')")
+            assert chamadas == [
+                {
+                    "id": sessao["sessao"]["id"],
+                    "motor": "codex",
+                    "conta": "Exemplo",
+                    "continuar": False,
+                }
+            ]
+            # Uma troca automática no backend atualiza o seletor e a faixa juntos.
+            sessao["sessao"].update(
+                conta_id="claude:padrao",
+                conta="Padrão",
+                motor="claude",
+                agente="Claude",
+                limite=True,
+            )
+            await nav.avaliar("acompanharSessao()")
+            assert await nav.avaliar(
+                "document.querySelector('[data-escolha=conta-sessao]').textContent.includes('Padrão')"
+            )
+            assert await nav.avaliar(
+                "document.querySelector('#limite-sessao').textContent.includes('Padrão')"
+            )
+            assert not nav.erros
+
+    with _painel(
+        tmp_path,
+        extras={"sessao/ler": lambda _: copy.deepcopy(sessao), "sessao/trocar": trocar},
+        estado=lambda: copy.deepcopy(estado),
+    ) as (depuracao, url):
         asyncio.run(conferir(depuracao, url))
 
 

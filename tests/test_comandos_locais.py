@@ -207,6 +207,18 @@ def test_todo_comando_da_tabela_tem_quem_o_execute() -> None:
         assert fala and (fala != "baterias" or nome == "relatorio_de_uso"), nome
 
 
+def test_pedido_enfileirado_nao_entra_na_sessao_depois_de_sair_da_manutencao() -> None:
+    registro = Registro()
+    n = Nucleo.__new__(Nucleo)
+    manutencao = ManutencaoFalsa(registro)
+    manutencao.ligado = False
+    n.manutencao = manutencao  # type: ignore[assignment]
+    n.eventos = registro  # type: ignore[assignment]
+    n._responder_depois("manutencao_pedido", "Diminua o brilho em cinquenta por cento")
+    assert not any(tipo == "encaminhar" for tipo, _ in registro.feito)
+    assert ("evento", e.Frase("Manutenção desligada. Faça o pedido na conversa.")) in registro.feito
+
+
 def test_com_a_janela_fechada_mostrar_abre_e_fechar_nao_faz_nada() -> None:
     assert rodar("abrir_orbe:Guia", janela_aberta=False) == (
         "Abrindo a minha janela.",
