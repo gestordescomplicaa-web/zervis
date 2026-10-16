@@ -38,6 +38,24 @@ async function carregarPagina(nome) {
  await carregarScript(SOB_DEMANDA[nome]);
 }
 
+// Sem cópia guardada: páginas com terminal ou relógio próprio, e a configuração inicial.
+const SEM_GUARDA = [...CHEIAS, "atendimento", "configurar"];
+
+/** Desenha uma página no conteúdo e liga o que depende dela.
+ * @param {string} secao @param {string} html */
+function mostrarPagina(secao, html) {
+  conteudo.innerHTML = CHEIAS.includes(secao) ? html : `<div class="secao">${html}</div>`;
+  if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); desenharContas(); }
+  if (secao === "configurar") { desenharAcesso(); desenharEscuta(); desenharContas(); }
+  encher();
+}
+
+/** A pessoa está digitando na página: trocar o desenho apagaria o que ela escreveu. */
+function editando() {
+  const a = document.activeElement;
+  return !!a && conteudo.contains(a) && a.matches("input, textarea, select, [contenteditable]");
+}
+
 async function abrir() {
   const vez = ++navegacao;
   const nome = (location.hash || "#inicio").slice(1);
@@ -61,12 +79,17 @@ async function abrir() {
   if (secao === "imersao") { ligarImersao(); return; }
   try {
     if (SOB_DEMANDA[secao]) await carregarPagina(secao);
-    const html = await PAGINAS[secao]();
+    const guardada = SEM_GUARDA.includes(secao) ? undefined : cachePaginas.get(secao);
+    if (guardada !== undefined) mostrarPagina(secao, guardada); // na hora; abaixo, a versão nova
+    const gravacoesAntes = gravacoes;
+    /** @type {string} */ let html;
+    try { html = await PAGINAS[secao](); } catch (erro) {
+      if (guardada !== undefined) return; // sem resposta: fica o que já estava; a faixa avisa a queda
+      throw erro;
+    }
     if (vez !== navegacao) return;
-    conteudo.innerHTML = CHEIAS.includes(secao) ? html : `<div class="secao">${html}</div>`;
-    if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); desenharContas(); }
-    if (secao === "configurar") { desenharAcesso(); desenharEscuta(); desenharContas(); }
-    encher();
+    if (!SEM_GUARDA.includes(secao) && gravacoes === gravacoesAntes) cachePaginas.set(secao, html);
+    if (html !== guardada && !(guardada !== undefined && editando())) mostrarPagina(secao, html);
     if (secao === "sessoes") await prepararSessoes(vez);
     if (secao === "melhorias") await prepararMelhorias(vez);
     if (secao === "conversa") await prepararConversa(vez);

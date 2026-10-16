@@ -481,3 +481,16 @@ def test_fotografia_reutilizada_exige_mesma_arvore_e_mesmo_pai(
     assert m.central._fotografar(origem, tmp_path / "alterado")[0] != foto
     commit(origem.onde, "outro.txt", "outro commit\n")
     assert m.central._fotografar(origem, tmp_path / "novo-pai")[0] != foto
+
+
+def test_instalacao_sem_historico_git_diz_o_que_fazer(tmp_path: Path) -> None:
+    """A VPS recebeu o código por `git archive`, sem o .git: o painel dizia só "não foi possível
+    unificar pelo Git". Agora diz o que falta e não cria cópia nenhuma."""
+    repo = tmp_path / "zervis"
+    repo.mkdir()
+    (repo / "a.txt").write_text("x")
+    sessoes = Sessoes(tmp_path / "sessoes", (tmp_path,))
+    central = Central(sessoes, repo, tmp_path / "manutencao")
+    with pytest.raises(SessaoErro, match=r"não tem histórico Git.*instalar-servidor"):
+        central.resolver("", "codex")
+    assert sessoes.listar() == []

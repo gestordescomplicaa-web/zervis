@@ -912,3 +912,40 @@ def test_unificacao_confirma_preserva_confirmacao_durante_poll_e_reabre_central(
     extras: dict[str, Escrita] = {"ze/central": lambda _: copy.deepcopy(c), "ze/unificar": unificar}
     with _painel(tmp_path, extras=extras) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_troca_de_aba_mostra_o_que_ja_tinha_sem_esperar_o_zé(tmp_path: Path) -> None:
+    """Longe do servidor (VPS), cada resposta custa uma ida e volta: a aba que já foi aberta
+    aparece na hora e se atualiza depois; uma gravação invalida o que estava guardado."""
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#inicio")
+            await nav.avaliar('location.hash = "#modelos"')
+            await asyncio.sleep(0.5)  # a mudança de endereço abre a página sozinha
+            modelos_antes = await nav.avaliar('document.querySelector("#conteudo").innerText')
+            await nav.avaliar('location.hash = "#inicio"')
+            await asyncio.sleep(0.5)
+            inicio = await nav.avaliar('document.querySelector("#conteudo").innerText') or ""
+            assert not _quebrada(inicio) and inicio != modelos_antes
+            # O Zé passa a responder em 2 s: a volta a "Modelos" não pode esperar por isso.
+            await nav.avaliar(
+                "(() => { const f = window.fetch; window.fetch = (...a) =>"
+                " new Promise((ok) => setTimeout(() => ok(f(...a)), 2000)); })()"
+            )
+            await nav.avaliar('location.hash = "#modelos"')
+            await asyncio.sleep(0.3)
+            modelos = await nav.avaliar('document.querySelector("#conteudo").innerText') or ""
+            assert modelos == modelos_antes, "a aba esperou pela resposta do Zé"
+            # Uma gravação deixa as páginas guardadas velhas.
+            await nav.avaliar(
+                "cachePaginas.size > 0"
+                " ? api('cerebro/escolher', {agente: 'claude'}).catch(() => 0) : 0"
+            )
+            assert await nav.avaliar("cachePaginas.size") == 0
+            assert not nav.erros, nav.erros
+
+    with _painel(tmp_path) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))

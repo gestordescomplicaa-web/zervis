@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Painel: a troca de aba mostra na hora o que a página já tinha e se atualiza quando o Zé
+  responde; longe do servidor (VPS), cada aba deixa de esperar uma ida e volta de rede. Gravar
+  qualquer ajuste invalida o que estava guardado.
+- Servidor (VPS): o autodesenvolvimento abre num Zé instalado de um pacote. O instalador cria o
+  histórico Git local que a cópia isolada exige, e sem ele o painel diz o que fazer em vez de
+  "não foi possível unificar pelo Git".
 - Escuta: quando o Deepgram recusa a conexão, o registro e a Atividade dizem o motivo (chave,
   crédito, limite, e a explicação do próprio Deepgram), e uma recusa passageira, inclusive o 401
   intermitente, tenta de novo uma vez sem perder o que foi dito.

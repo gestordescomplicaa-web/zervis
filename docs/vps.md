@@ -45,6 +45,13 @@ serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do
 máquina) e espera o painel responder. Se ele pedir, rode como root uma vez:
 `loginctl enable-linger ze`.
 
+Sem acesso ao repositório, envie o código como pacote: no seu computador,
+`git archive --format=tar.gz --prefix=zervis/ -o /tmp/zervis.tgz origin/master` e
+`scp /tmp/zervis.tgz ze@<servidor>:`; no servidor, `tar xzf zervis.tgz`, `cd zervis` e o instalador.
+O pacote não leva o `.git`: o instalador cria um histórico local (nada sai da máquina) e registra o
+código novo a cada reinstalação. O autodesenvolvimento precisa desse histórico para trabalhar numa
+cópia isolada.
+
 Entre por `ssh ze@...`, e não por `su ze` ou `sudo -u ze`: só a sessão SSH abre o systemd do
 usuário, que o serviço usa.
 
