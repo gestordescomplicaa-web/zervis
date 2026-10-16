@@ -55,10 +55,13 @@ jobs:
       # O Ubuntu 24.04 restringe namespaces de usuário sem perfil do AppArmor, e o sandbox do
       # Chromium aborta ao abrir. Liberar só na máquina da CI, sem tirar o sandbox do navegador.
       - name: Chromium
+        # Uma abertura antes dos testes: a primeira, a frio, passou de 15 s na CI (16/10/2026).
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          command -v chromium || command -v chromium-browser || command -v google-chrome \
-            || command -v google-chrome-stable
+          navegador=$(command -v chromium || command -v chromium-browser \
+            || command -v google-chrome || command -v google-chrome-stable)
+          echo "$navegador"
+          timeout 120 "$navegador" --headless=new --dump-dom about:blank > /dev/null
 
       - name: make check
         run: |
