@@ -101,7 +101,9 @@ RECUSAS = {
     403: "chave sem permissão (HTTP 403)",
     429: "limite de conexões do Deepgram (HTTP 429)",
 }
-DEFINITIVOS = {400, 401, 402, 403}
+# 401 não entra: na VPS (16/10/2026) a mesma chave levou 401 num terço dos pedidos e funcionou
+# nos outros, segundos antes e depois; uma segunda tentativa salva o pedido.
+DEFINITIVOS = {400, 402, 403}
 
 
 def _status(erro: BaseException) -> int | None:
@@ -110,11 +112,27 @@ def _status(erro: BaseException) -> int | None:
     return codigo if isinstance(codigo, int) else None
 
 
+def _detalhe(erro: BaseException) -> str:
+    """O que o próprio Deepgram explica na recusa (cabeçalho `dg-error` ou o corpo em JSON)."""
+    resposta = getattr(erro, "response", None)
+    cabecalhos = getattr(resposta, "headers", None)
+    texto = str(cabecalhos.get("dg-error", "")) if cabecalhos is not None else ""
+    if not texto:
+        try:
+            dados = json.loads(bytes(getattr(resposta, "body", b"") or b"{}"))
+            if isinstance(dados, dict):
+                texto = " ".join(str(dados.get(c, "")) for c in ("err_code", "err_msg")).strip()
+        except (ValueError, TypeError):
+            texto = ""
+    return " ".join(texto.split())[:120]
+
+
 def motivo(erro: BaseException) -> str:
     codigo = _status(erro)
     if codigo is None:
         return type(erro).__name__
-    return RECUSAS.get(codigo, f"HTTP {codigo}")
+    detalhe = _detalhe(erro)
+    return RECUSAS.get(codigo, f"HTTP {codigo}") + (f": {detalhe}" if detalhe else "")
 
 
 class EscutaDeepgram:
