@@ -25,6 +25,7 @@ from jarvis.transporte.websocket import BINARIO, Conexao, FechouErro
 log = logging.getLogger(__name__)
 TAXA = 16000
 BYTES_QUADRO = 2560  # 80 ms a 16 kHz, 16 bits
+LACUNA_S = 0.5  # sem quadro de áudio por mais que isto: vai para o registro
 FOLGA_S = 0.5  # quanto a voz pode ir à frente do que já tocou (interromper corta isto)
 
 
@@ -52,11 +53,18 @@ class VozNavegador:
     def ouvir(self, ao_quadro: Callable[[bytes], None]) -> None:
         """Entrega o microfone em quadros de 80 ms até a conexão fechar."""
         resto = b""
+        ultimo = time.monotonic()
         try:
             while True:
                 tipo, dados = self.conexao.receber()
                 if tipo != BINARIO:
                     continue
+                agora = time.monotonic()
+                if agora - ultimo > LACUNA_S:
+                    # O navegador manda um quadro a cada 80 ms, mesmo no silêncio: um buraco
+                    # destes é rede (4G, túnel) ou o celular com a tela apagada.
+                    log.warning("voz do navegador: %.1f s sem áudio", agora - ultimo)
+                ultimo = agora
                 resto += reamostrar(dados[: len(dados) // 2 * 2], self.taxa)
                 while len(resto) >= BYTES_QUADRO:
                     ao_quadro(resto[:BYTES_QUADRO])
