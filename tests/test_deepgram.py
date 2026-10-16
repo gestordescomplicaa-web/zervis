@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro, ler_chave
+from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro, ler_chave, motivo
 
 
 def _resultado(texto: str, final: bool, do_finalize: bool = False) -> str:
@@ -100,6 +100,36 @@ def test_falha_de_conexao_vira_erro() -> None:
     escuta = EscutaDeepgram("k", conectar=conectar)
     with pytest.raises(EscutaErro, match="conexão"):
         escuta.terminar(1)
+
+
+def test_recusa_diz_o_motivo_e_tenta_de_novo_so_quando_vale() -> None:
+    """Na VPS o registro dizia só "InvalidStatus": agora diz o código e o que ele significa."""
+
+    class Recusa(Exception):
+        def __init__(self, codigo: int) -> None:
+            self.response = type("R", (), {"status_code": codigo})()
+
+    tentativas: list[int] = []
+
+    def conectar_com(codigos: list[int]) -> Any:
+        def conectar(url: str, chave: str) -> WsFalso:
+            tentativas.append(1)
+            if codigos:
+                raise Recusa(codigos.pop(0))
+            return WsFalso()
+
+        return conectar
+
+    escuta = EscutaDeepgram("k", conectar=conectar_com([402]))
+    with pytest.raises(EscutaErro, match="sem crédito no Deepgram"):
+        escuta.terminar(1)
+    assert len(tentativas) == 1  # sem crédito, tentar de novo não adianta
+    tentativas.clear()
+    escuta = EscutaDeepgram("k", conectar=conectar_com([503]))  # passageiro: a segunda entra
+    escuta.enviar(b"\x00" * 2560)
+    assert escuta.terminar(1) == "Pede para um Codex rodar os testes." and len(tentativas) == 2
+    assert motivo(Recusa(429)) == "limite de conexões do Deepgram (HTTP 429)"
+    assert motivo(OSError("rede")) == "OSError"
 
 
 def test_sem_chave_fica_indisponivel(tmp_path: Path) -> None:
