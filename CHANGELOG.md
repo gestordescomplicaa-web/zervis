@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Cérebro Codex: as ferramentas do Zé (sessões, lembretes, memória) funcionam com os modelos
+  novos do Codex. O Zé baixa, junto com o Codex, o auxiliar que executa essas ferramentas.
+- Sessões: a lista de pastas sugeridas não repete as pastas de `~/projetos`.
 - Contas: "Entrar" faz o login do Claude Code e do Codex pelo próprio painel (link e código na
   tela), sem terminal na máquina: funciona numa VPS e pelo celular.
 - Agentes: o Claude Code e o Codex vêm com o Zé (o Codex oficial, conferido por SHA-256); o

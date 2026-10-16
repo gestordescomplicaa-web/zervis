@@ -30,10 +30,23 @@ def _pacote(*arquivos: tuple[str, bytes]) -> bytes:
     return saida.getvalue()
 
 
+AUXILIAR = _pacote(("codex-code-mode-host-x86_64-unknown-linux-musl", b"#!/bin/sh\necho host\n"))
+
+
+def _falso(nome: str, conteudo: bytes) -> Modelo:
+    return Modelo(nome, f"https://exemplo/{nome}", hashlib.sha256(conteudo).hexdigest(), "t")
+
+
+def _servir(**pacotes: bytes) -> Any:
+    """`abrir` falso: cada URL devolve o pacote com aquele nome."""
+    return lambda url, timeout: _Resposta(pacotes[url.rsplit("/", 1)[1].split("-x86")[0]])
+
+
 def _com_pacote(monkeypatch: pytest.MonkeyPatch, conteudo: bytes) -> None:
-    nome = "codex-x86_64-unknown-linux-musl.tar.gz"
-    falso = Modelo(nome, f"https://exemplo/{nome}", hashlib.sha256(conteudo).hexdigest(), "t")
+    falso = _falso("codex-x86_64-unknown-linux-musl.tar.gz", conteudo)
+    auxiliar = _falso("codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz", AUXILIAR)
     monkeypatch.setattr(an, "CODEX_PACOTES", {"x86_64": falso})
+    monkeypatch.setattr(an, "CODEX_AUXILIAR_PACOTES", {"x86_64": auxiliar})
     monkeypatch.setattr("jarvis.cerebro.agentes_nativos.platform.machine", lambda: "x86_64")
     monkeypatch.setattr("jarvis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: None)
 
@@ -44,11 +57,30 @@ def test_baixa_o_codex_oficial_conferido_e_o_deixa_executavel(
     conteudo = _pacote(("codex-x86_64-unknown-linux-musl", b"#!/bin/sh\necho codex\n"))
     _com_pacote(monkeypatch, conteudo)
     pasta = tmp_path / "codex" / "0.0.1"
-    assert an.garantir_codex(pasta, lambda url, timeout: _Resposta(conteudo))
+    assert an.garantir_codex(pasta, _servir(codex=conteudo, **{"codex-code-mode-host": AUXILIAR}))
     binario = pasta / "codex"
     assert binario.read_bytes().startswith(b"#!/bin/sh") and binario.stat().st_mode & 0o111
+    # As ferramentas dos modelos novos rodam no auxiliar, ao lado do binário.
+    auxiliar = pasta / "codex-code-mode-host"
+    assert auxiliar.read_bytes().endswith(b"host\n") and auxiliar.stat().st_mode & 0o111
     assert list(pasta.parent.iterdir()) == [pasta]  # o pacote baixado não fica
     assert not an.garantir_codex(pasta, lambda url, timeout: _Resposta(b""))  # já tem
+
+
+def test_instalacao_antiga_so_com_o_binario_ganha_o_auxiliar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A VPS de 16/10/2026: o Codex baixado sem o auxiliar, e nenhuma ferramenta funcionava."""
+    _com_pacote(monkeypatch, b"")
+    pasta = tmp_path / "codex" / "0.0.1"
+    pasta.mkdir(parents=True)
+    (pasta / "codex").write_text("antigo")
+    monkeypatch.setattr(
+        "jarvis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: str(pasta / nome)
+    )
+    assert an.garantir_codex(pasta, _servir(**{"codex-code-mode-host": AUXILIAR}))
+    assert (pasta / "codex").read_text() == "antigo"
+    assert (pasta / "codex-code-mode-host").is_file()
 
 
 def test_pacote_com_outra_coisa_que_nao_o_binario_e_recusado(
@@ -57,7 +89,7 @@ def test_pacote_com_outra_coisa_que_nao_o_binario_e_recusado(
     conteudo = _pacote(("codex-a", b"1"), ("codex-b", b"2"))
     _com_pacote(monkeypatch, conteudo)
     with pytest.raises(PrepararErro, match="esperava um binário"):
-        an.garantir_codex(tmp_path / "c" / "v", lambda url, timeout: _Resposta(conteudo))
+        an.garantir_codex(tmp_path / "c" / "v", _servir(codex=conteudo))
 
 
 def test_o_codex_da_maquina_tem_a_vez(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
