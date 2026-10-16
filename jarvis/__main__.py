@@ -64,8 +64,16 @@ def rodar() -> int:
         log.error("%s", erro)
         return 75
     parar = threading.Event()
-    signal.signal(signal.SIGTERM, lambda *_: parar.set())
-    signal.signal(signal.SIGINT, lambda *_: parar.set())
+
+    def encerrar(*_: object) -> None:
+        # O systemd manda o SIGTERM ao grupo inteiro: os agentes do cérebro e o servidor da sala
+        # saem junto com o Zé, e os SDKs registravam isso como erro a cada parada (16/10/2026).
+        for sdk in ("claude_agent_sdk", "livekit"):
+            logging.getLogger(sdk).setLevel(logging.CRITICAL)
+        parar.set()
+
+    signal.signal(signal.SIGTERM, encerrar)
+    signal.signal(signal.SIGINT, encerrar)
     log.info("jarvisd %s subindo", __version__)
     with trava:
         Nucleo(cfg, parar).rodar()
