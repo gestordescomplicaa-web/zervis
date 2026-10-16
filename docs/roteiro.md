@@ -136,6 +136,10 @@ na ordem em que resolver:
    pelo WebSocket do painel; no 4G e pelo túnel, isso pesa e a conexão cai (código 1006). Com Opus
    (WebCodecs no navegador, libopus no Zé), cerca de 24 kbit/s em cada sentido. O Zé decodifica
    antes do "Ei Zé" e do Deepgram, que seguem com PCM.
+   Com o motivo no registro, a causa apareceu: em um terço dos pedidos o Deepgram respondeu 401
+   ("chave inválida") e, segundos antes e depois, a mesma chave funcionou. Cada recusa perdia o
+   pedido inteiro, o "lapso de surdez" do modo ao vivo. Feito: o 401 também tenta de novo (o áudio
+   fica guardado enquanto reconecta) e o registro traz a explicação do próprio Deepgram.
 6. **Chaves digitadas no comando:** uma chave colada direto num comando fica no histórico do shell;
    com o item 1, chave só pelo painel.
 7. **Contribuições e atualizações:** como a comunidade propõe melhorias (PR, CI, aprovação de quem

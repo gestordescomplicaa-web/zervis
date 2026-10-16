@@ -106,8 +106,10 @@ def test_recusa_diz_o_motivo_e_tenta_de_novo_so_quando_vale() -> None:
     """Na VPS o registro dizia só "InvalidStatus": agora diz o código e o que ele significa."""
 
     class Recusa(Exception):
-        def __init__(self, codigo: int) -> None:
-            self.response = type("R", (), {"status_code": codigo})()
+        def __init__(self, codigo: int, cabecalhos: dict[str, str] | None = None) -> None:
+            self.response = type(
+                "R", (), {"status_code": codigo, "headers": cabecalhos or {}, "body": b""}
+            )()
 
     tentativas: list[int] = []
 
@@ -128,7 +130,15 @@ def test_recusa_diz_o_motivo_e_tenta_de_novo_so_quando_vale() -> None:
     escuta = EscutaDeepgram("k", conectar=conectar_com([503]))  # passageiro: a segunda entra
     escuta.enviar(b"\x00" * 2560)
     assert escuta.terminar(1) == "Pede para um Codex rodar os testes." and len(tentativas) == 2
+    tentativas.clear()
+    escuta = EscutaDeepgram("k", conectar=conectar_com([401]))  # 401 passageiro, como na VPS
+    escuta.enviar(b"\x00" * 2560)
+    assert escuta.terminar(1) == "Pede para um Codex rodar os testes." and len(tentativas) == 2
     assert motivo(Recusa(429)) == "limite de conexões do Deepgram (HTTP 429)"
+    assert (
+        motivo(Recusa(401, {"dg-error": "Invalid credentials."}))
+        == "chave inválida (HTTP 401): Invalid credentials."
+    )
     assert motivo(OSError("rede")) == "OSError"
 
 
