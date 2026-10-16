@@ -121,6 +121,11 @@ na ordem em que resolver:
    uma sessão nova travou: a ferramenta exigia o caminho da pasta. Feito: cada sessão nova ganha a
    própria pasta em `~/projetos` (o nome da sessão), o nome de um projeto existente vale como
    pasta, o agente padrão é o que tem conta conectada e o primeiro commit sai mesmo sem nome no git.
+   Primeiro acesso sem túnel SSH (16/10/2026, depois do repositório público): o instalador
+   termina com o endereço HTTPS do Cloudflare e um convite de uso único; a senha e o código do
+   autenticador são criados de fora, e num servidor quem entra com o código faz os ajustes. Fica
+   para depois o endereço fixo (domínio próprio ou túnel com nome no Cloudflare) e o HTTPS direto
+   pelo IP (Caddy e `sslip.io`), que pede as portas 80 e 443.
 2. **Entregar o código numa VPS:** com o repositório privado, o `git clone` pede usuário e token do
    GitHub (contornado com `git archive` e `scp`). Resolve com o repositório público e o instalador de
    um comando (ADR 0034, etapa I3).

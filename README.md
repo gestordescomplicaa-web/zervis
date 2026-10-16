@@ -41,8 +41,9 @@ git clone https://github.com/gestordescomplicaa-web/zervis.git
 cd zervis && deploy/instalar-servidor.sh
 ```
 
-O instalador prepara tudo e o Zé fica rodando como serviço. O passo a passo, o acesso ao painel e
-o login do Claude e do Codex estão em [docs/vps.md](docs/vps.md).
+O instalador prepara tudo, deixa o Zé rodando como serviço e termina com um endereço HTTPS e um
+código de primeiro acesso: abra o endereço, crie a senha e ligue o código do autenticador. Sem túnel
+SSH. O passo a passo e o login do Claude e do Codex estão em [docs/vps.md](docs/vps.md).
 
 ## Rodar (desenvolvimento)
 

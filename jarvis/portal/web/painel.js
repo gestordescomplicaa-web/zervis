@@ -6,6 +6,9 @@
 
 const TOKEN = /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="ze-token"]')).content;
 const NO_PC = ["127.0.0.1", "localhost"].includes(location.hostname); // o próprio PC, não outro aparelho
+// Ajustes do Zé (autodesenvolvimento): no próprio PC ou, num servidor, de um aparelho que entrou
+// com o código do autenticador. Quem decide é o servidor do painel; isto só esconde a página.
+const AJUSTES = /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="ze-ajustes"]'))?.content === "1";
 const conteudo = document.getElementById("conteudo");
 
 const ESTADOS = { inativo: "inativo", ativo: "pronto", ouvindo: "ouvindo", pensando: "pensando", falando: "falando", confirmando: "esperando o seu sim" };

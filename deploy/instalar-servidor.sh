@@ -3,10 +3,8 @@
 # de pé depois de sair do SSH e sobe com a máquina (ADR 0034). Rode no repositório, como usuário
 # comum, numa sessão SSH desse usuário:
 #   deploy/instalar-servidor.sh
-# Depois, do seu computador:
-#   ssh -L 8795:127.0.0.1:8795 <usuário>@<servidor>    e abra http://localhost:8795
-# Pelo túnel, o painel trata o acesso como o próprio computador: a configuração inicial e os
-# ajustes de acesso funcionam. Guia completo: docs/vps.md.
+# No fim, ele mostra um endereço HTTPS (Cloudflare) e um código de primeiro acesso: abra o
+# endereço, crie a senha e ligue o código do autenticador, sem túnel SSH. Guia: docs/vps.md.
 set -eu
 UV_VERSAO=0.11.32
 PORTA=8795
@@ -96,11 +94,11 @@ for opcional in node go; do
     esac
   fi
 done
-cat <<FIM
-
-O Zé está rodando neste servidor (serviço zervis do usuário $USUARIO).
-Do seu computador:
-  ssh -L $PORTA:127.0.0.1:$PORTA $USUARIO@<endereço do servidor>
-e abra http://localhost:$PORTA para a configuração inicial.
-Registro: journalctl --user -u zervis -f
-FIM
+echo
+echo "O Zé está rodando neste servidor (serviço zervis do usuário $USUARIO)."
+echo "Preparando o acesso ao painel (endereço seguro do Cloudflare)..."
+echo
+# Endereço HTTPS e convite de uso único: o primeiro acesso dispensa o túnel SSH.
+uv run python -m jarvis.portal.primeiro_acesso
+echo
+echo "Registro: journalctl --user -u zervis -f"

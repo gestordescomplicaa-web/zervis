@@ -234,3 +234,136 @@ def test_ajuste_de_acesso_so_pelo_proprio_pc(tmp_path: Path) -> None:
         assert local[0] == 200 and trocas == ["x"]
     finally:
         p.parar()
+
+
+def test_convite_cria_a_senha_uma_vez_so_e_vence(tmp_path: Path) -> None:
+    """Primeiro acesso num servidor: não há o próprio PC para definir a senha."""
+    relogio = Relogio()
+    a = _acesso(tmp_path, relogio)
+    convite = a.criar_convite()
+    assert len(convite) == 9 and convite[4] == "-" and a.convite_valido
+    assert convite not in (tmp_path / "painel.json").read_text()  # só o resumo
+    with pytest.raises(SenhaErro, match="inválido"):
+        a.criar_acesso("AAAA-AAAA", "uma senha boa", origem="1.2.3.4")
+    with pytest.raises(SenhaErro, match="8 caracteres"):
+        a.criar_acesso(convite, "curta")
+    codigo, _ = a.criar_acesso(convite.lower().replace("-", " "), "uma senha boa")
+    assert a.tem_senha and a.valido(codigo) and not a.confiavel(codigo)  # sem o código, ainda
+    assert not a.convite_valido
+    with pytest.raises(SenhaErro, match="inválido"):
+        a.criar_acesso(convite, "outra senha boa")  # usado: não vale de novo
+    with pytest.raises(SenhaErro, match="já foi criado"):
+        a.criar_convite()
+    b = _acesso(tmp_path / "b", relogio)
+    vencido = b.criar_convite()
+    relogio.t += 3601
+    with pytest.raises(SenhaErro, match="vencido"):
+        b.criar_acesso(vencido, "uma senha boa")
+
+
+def test_entrar_com_o_codigo_do_autenticador_marca_o_aparelho_como_confiavel(
+    tmp_path: Path,
+) -> None:
+    relogio = Relogio()
+    a = _acesso(tmp_path, relogio)
+    a.definir("uma senha boa")
+    so_senha, _ = a.entrar("uma senha boa")
+    assert a.valido(so_senha) and not a.confiavel(so_senha)
+    a.preparar_codigo()
+    semente = a.semente_pendente
+    a.confirmar_codigo(codigo_totp(semente, int(relogio.t // PASSO_S)))
+    relogio.t += PASSO_S
+    com_codigo, _ = a.entrar("uma senha boa", codigo_totp(semente, int(relogio.t // PASSO_S)))
+    assert a.confiavel(com_codigo)
+
+
+@pytest.fixture
+def servidor(tmp_path: Path) -> Any:
+    """Um Zé num servidor: o túnel repassa todos os pedidos, nenhum é do próprio PC."""
+    a = _acesso(tmp_path)
+    feitos: list[str] = []
+
+    def fazer(nome: str) -> Any:
+        def escrita(dados: dict[str, Any]) -> dict[str, Any]:
+            feitos.append(nome)
+            return {}
+
+        return escrita
+
+    rotas = ("acesso/senha", "acesso/codigo/preparar", "acesso/codigo/desligar", "ze/sessao")
+    p = Portal(
+        {"estado": lambda: {}},
+        {r: fazer(r) for r in rotas},
+        porta=0,
+        acesso=a,
+        so_no_pc=set(rotas),
+        servidor=True,
+    )
+    p.permitir("ze.trycloudflare.com")
+    p.iniciar()
+    yield p, a, feitos
+    p.parar()
+
+
+def test_primeiro_acesso_pelo_convite_e_ajustes_de_fora_num_servidor(servidor: Any) -> None:
+    p, a, feitos = servidor
+    host, fora = "ze.trycloudflare.com", {"Cf-Connecting-Ip": "203.0.113.7"}
+    convite = a.criar_convite()
+    tela = _pedir(p, "GET", "/entrar", host, cab=fora)[2].decode()
+    assert "Primeiro acesso" in tela and 'name="convite"' in tela
+    status, cab, _ = _pedir(
+        p, "POST", "/entrar", host, f"convite={convite}&senha=uma+senha+boa", cab=fora
+    )
+    assert status == 303 and cab["Location"] == "/#voz"
+    cookie = {"Cookie": cab["Set-Cookie"].split(";", 1)[0], **fora}
+    pagina = _pedir(p, "GET", "/", host, cab=cookie)[2].decode()
+    assert 'name="ze-ajustes" content="0"' in pagina  # ainda sem o código do autenticador
+    api = {"X-Ze-Token": p.token, "Content-Type": "application/json", **cookie}
+
+    def pedir(rota: str) -> int:
+        return _pedir(p, "POST", f"/api/{rota}", host, cab=api)[0]
+
+    # Só com a senha: pode ligar o código (só aumenta a proteção), mais nada.
+    assert pedir("acesso/codigo/preparar") == 200
+    assert pedir("acesso/senha") == 403 and pedir("ze/sessao") == 403
+    # Com o código ligado e a entrada com ele, os ajustes valem de fora...
+    a.preparar_codigo()
+    semente = a.semente_pendente
+    a.confirmar_codigo(codigo_totp(semente, int(a.agora() // PASSO_S)))
+    a.agora = lambda: 1000.0 + PASSO_S
+    certo = codigo_totp(semente, int(a.agora() // PASSO_S))
+    status, cab, _ = _pedir(
+        p, "POST", "/entrar", host, f"senha=uma+senha+boa&codigo={certo}", cab=fora
+    )
+    api["Cookie"] = cab["Set-Cookie"].split(";", 1)[0]
+    pagina = _pedir(p, "GET", "/", host, cab={"Cookie": api["Cookie"], **fora})[2].decode()
+    assert 'name="ze-ajustes" content="1"' in pagina
+    assert pedir("acesso/senha") == 200 and pedir("ze/sessao") == 200
+    # ...menos desligar a proteção pela qual se entrou.
+    assert pedir("acesso/codigo/desligar") == 403
+    assert feitos == ["acesso/codigo/preparar", "acesso/senha", "ze/sessao"]
+
+
+def test_num_computador_os_ajustes_continuam_so_no_proprio_pc(tmp_path: Path) -> None:
+    a = _acesso(tmp_path)
+    a.definir("uma senha boa")
+    p = Portal({}, {"ze/sessao": lambda d: {}}, porta=0, acesso=a, so_no_pc={"ze/sessao"})
+    p.permitir("ze.trycloudflare.com")
+    p.iniciar()
+    try:
+        relogio = Relogio()
+        a.agora = relogio
+        a.preparar_codigo()
+        a.confirmar_codigo(codigo_totp(a.semente_pendente, int(relogio.t // PASSO_S)))
+        semente = json.loads((tmp_path / "painel.json").read_text())["totp"]
+        relogio.t += PASSO_S
+        codigo, _ = a.entrar("uma senha boa", codigo_totp(semente, int(relogio.t // PASSO_S)))
+        cab = {
+            "X-Ze-Token": p.token,
+            "Content-Type": "application/json",
+            "Cookie": f"ze_acesso={codigo}",
+            "Cf-Connecting-Ip": "203.0.113.7",
+        }
+        assert _pedir(p, "POST", "/api/ze/sessao", "ze.trycloudflare.com", cab=cab)[0] == 403
+    finally:
+        p.parar()

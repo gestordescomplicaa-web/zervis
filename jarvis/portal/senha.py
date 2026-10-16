@@ -13,6 +13,9 @@ Authenticator, Aegis, 1Password...). Com "lembrar este aparelho", 30 dias sem pe
 - Cinco erros de um mesmo endereço em 15 minutos bloqueiam esse endereço por 15 minutos (quem
   ataca não tranca quem usa); 30 erros de qualquer lugar bloqueiam todos, contra tentativas
   espalhadas. Um código já usado não vale de novo.
+- Primeiro acesso num servidor (sem o "próprio PC" para definir a senha): o instalador gera um
+  convite de uso único, que vale uma hora e só enquanto não há senha. Quem tem o convite cria a
+  senha pela tela Entrar; o convite some na hora. Guardamos só o resumo dele.
 """
 
 import base64
@@ -42,6 +45,9 @@ JANELA_S = 15 * 60
 SCRYPT = {"n": 2**14, "r": 8, "p": 1}
 PASSO_S = 30  # o código muda a cada 30 s
 DIGITOS = 6
+CONVITE_S = 3600  # o convite do primeiro acesso vale uma hora
+# Sem letras que se confundem (0/O, 1/I/L): o convite é lido no terminal e digitado no celular.
+LETRAS_CONVITE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
 
 # Ajustes de acesso que só valem pelo próprio PC (servidor do painel recusa de outro aparelho).
@@ -183,6 +189,63 @@ class Acesso:
             return False
         return hmac.compare_digest(resumo.hex(), str(dados["hash"]))
 
+    # --- convite do primeiro acesso (servidor) ------------------------------------------------
+
+    def criar_convite(self, validade_s: float = CONVITE_S) -> str:
+        """Um convite novo para criar a senha de fora; só enquanto não há senha."""
+        with self._trava:
+            if self.tem_senha:
+                raise SenhaErro("O acesso já foi criado.")
+            letras = "".join(secrets.choice(LETRAS_CONVITE) for _ in range(8))
+            convite = f"{letras[:4]}-{letras[4:]}"
+            dados = {
+                **_ler(self.arquivo),
+                "convite": _resumo(convite),
+                "convite_expira": self.agora() + validade_s,
+            }
+            _gravar(self.arquivo, dados)
+            return convite
+
+    @property
+    def convite_valido(self) -> bool:
+        dados = _ler(self.arquivo)
+        return (
+            not dados.get("hash")
+            and bool(dados.get("convite"))
+            and float(dados.get("convite_expira", 0)) > self.agora()
+        )
+
+    def criar_acesso(
+        self, convite: str, senha: str, aparelho: str = "", origem: str = ""
+    ) -> tuple[str, int]:
+        """Cria a senha com o convite e já entra; `SenhaErro` se o convite não valer."""
+        with self._trava:
+            agora = self.agora()
+            if self._bloqueado(origem, agora):
+                raise SenhaErro("Muitas tentativas. Tente de novo em alguns minutos.")
+            dados = _ler(self.arquivo)
+            limpo = re.sub(r"[^A-Z0-9]", "", convite.upper())
+            digitado = f"{limpo[:4]}-{limpo[4:]}"
+            if not self.convite_valido or not hmac.compare_digest(
+                _resumo(digitado), str(dados.get("convite", ""))
+            ):
+                self.erros.setdefault(origem, []).append(agora)
+                raise SenhaErro("Código de primeiro acesso inválido ou vencido.")
+            if len(senha) < MINIMO:
+                raise SenhaErro(f"A senha precisa de pelo menos {MINIMO} caracteres.")
+            self.erros.pop(origem, None)
+            sal = secrets.token_bytes(16)
+            resumo = hashlib.scrypt(senha.encode(), salt=sal, **SCRYPT)
+            dados = {k: v for k, v in dados.items() if not k.startswith("convite")}
+            _gravar(self.arquivo, {**dados, "sal": sal.hex(), "hash": resumo.hex(), **SCRYPT})
+            _gravar(self.acessos, {})
+            codigo_aparelho, validade, nome = self._novo_aparelho(
+                agora, False, aparelho, origem, duas_etapas=False
+            )
+        if self.ao_entrar is not None:
+            self.ao_entrar(nome)
+        return codigo_aparelho, validade
+
     # --- código do autenticador (verificação em duas etapas) ---------------------------------
 
     @property
@@ -259,20 +322,29 @@ class Acesso:
             self.erros.pop(origem, None)
             if passo is not None:
                 _gravar(self.arquivo, {**dados, "usado": passo})
-            validade = LEMBRAR_S if lembrar else SESSAO_S
-            codigo_aparelho = secrets.token_urlsafe(32)
-            acessos = self._validos(agora)
-            nome = nome_do_aparelho(aparelho)
-            acessos[_resumo(codigo_aparelho)] = {
-                "expira": agora + validade,
-                "aparelho": nome,
-                "origem": origem[:64],
-                "desde": agora,
-            }
-            _gravar(self.acessos, acessos)
+            codigo_aparelho, validade, nome = self._novo_aparelho(
+                agora, lembrar, aparelho, origem, duas_etapas=passo is not None
+            )
         if self.ao_entrar is not None:
             self.ao_entrar(nome)
         return codigo_aparelho, validade
+
+    def _novo_aparelho(
+        self, agora: float, lembrar: bool, aparelho: str, origem: str, duas_etapas: bool
+    ) -> tuple[str, int, str]:
+        validade = LEMBRAR_S if lembrar else SESSAO_S
+        codigo_aparelho = secrets.token_urlsafe(32)
+        acessos = self._validos(agora)
+        nome = nome_do_aparelho(aparelho)
+        acessos[_resumo(codigo_aparelho)] = {
+            "expira": agora + validade,
+            "aparelho": nome,
+            "origem": origem[:64],
+            "desde": agora,
+            "duas_etapas": duas_etapas,
+        }
+        _gravar(self.acessos, acessos)
+        return codigo_aparelho, validade, nome
 
     def _validos(self, agora: float) -> dict[str, Any]:
         return {
@@ -285,6 +357,13 @@ class Acesso:
         if not codigo or not self.tem_senha:
             return False
         return _resumo(codigo) in self._validos(self.agora())
+
+    def confiavel(self, codigo: str) -> bool:
+        """Entrou com a senha e o código do autenticador: pode fazer ajustes de fora, num
+        servidor (onde não há o próprio PC)."""
+        if not self.valido(codigo):
+            return False
+        return bool(self._validos(self.agora())[_resumo(codigo)].get("duas_etapas"))
 
     def sair(self, codigo: str) -> None:
         self.desconectar(_resumo(codigo))

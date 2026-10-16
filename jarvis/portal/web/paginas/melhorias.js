@@ -3,7 +3,7 @@
 // Carregada sob demanda; só no PC do Zé.
 
 PAGINAS.melhorias = async () => {
-  if (!NO_PC) return `<div class="secao">${cabeca("Autodesenvolvimento")}${sub("Disponível só no computador do Zé.")}</div>`;
+  if (!AJUSTES) return `<div class="secao">${cabeca("Autodesenvolvimento")}${sub("Disponível no computador do Zé ou, num servidor, entrando com o código do autenticador.")}</div>`;
   return `<div class="pagina-melhorias">
     <header class="melhorias-topo"><div><h1>Autodesenvolvimento</h1>${sub("Revise e aplique melhorias. Acompanhe a atualização até o reinício.")}</div>
       <span class="espaco"></span><span id="manut"></span>${botao("Último diagnóstico", "diagnostico-ver", "", "discreta")}${botao("Diagnosticar", "diagnosticar", 'id="ze-diagnosticar" disabled', "principal")}</header>
@@ -72,7 +72,7 @@ window.desenharManutencao = (m) => {
 
 /** @param {number} vez */
 async function prepararMelhorias(vez) {
-  if (!NO_PC) return;
+  if (!AJUSTES) return;
   window.desenharManutencao((await api("estado")).manutencao);
   const c = await acompanharCentral();
   if (vez !== navegacao) return;
