@@ -21,6 +21,11 @@ class Maquina:
     tela: bool  # há uma sessão gráfica
     audio: bool  # há o microfone e o alto-falante locais (PulseAudio ou PipeWire)
 
+    @property
+    def servidor(self) -> bool:
+        """Sem tela nem áudio: ninguém senta na frente dela, o acesso é sempre de fora."""
+        return not (self.omarchy or self.tela or self.audio)
+
     def para_persona(self) -> str:
         if self.omarchy:
             corpo = (

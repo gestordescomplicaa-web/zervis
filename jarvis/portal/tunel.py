@@ -236,6 +236,11 @@ class Tunel:
                 log.info("túnel: já estava no ar em %s", antes)
                 self.ao_endereco(antes)
             else:
+                if self.lancador.ativo():
+                    # De pé, mas sem o endereço anotado (o registro foi apagado, por exemplo numa
+                    # reinstalação): sem parar, o serviço de mesmo nome não sobe de novo.
+                    log.info("túnel: no ar sem endereço conhecido; subindo de novo")
+                    self.lancador.parar()
                 self._quedas = 0
                 self._subir()
             if self._vigia is None or not self._vigia.is_alive():

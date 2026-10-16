@@ -136,3 +136,32 @@ def test_ze_reinicia_e_reencontra_o_tunel_no_mesmo_endereco(tmp_path: Path) -> N
     assert prontos == ["https://mesmo-endereco-de-antes.trycloudflare.com"]
     assert lancador.iniciados == 0  # não subiu outro
     t.soltar()  # o Zé parando: o túnel fica
+
+
+def test_tunel_de_pe_sem_endereco_anotado_sobe_de_novo(tmp_path: Path) -> None:
+    """Reinstalação na VPS (16/10/2026): o registro foi apagado e o serviço do túnel continuou de
+    pé. Sem parar, o novo, de mesmo nome, não subia, e o endereço nunca aparecia."""
+    registro = tmp_path / "cf.log"
+
+    class Orfao(_Vivo):
+        def __init__(self) -> None:
+            super().__init__()
+            self.paradas = 0
+            self.vivo = True
+
+        def ativo(self) -> bool:
+            return self.vivo
+
+        def parar(self) -> None:
+            self.paradas += 1
+            self.vivo = False
+
+        def iniciar(self, comando: list[str], registro: Path) -> None:
+            self.iniciados += 1
+            self.vivo = True
+
+    lancador = Orfao()
+    t = tunel.Tunel(lambda e: None, None, lancador, registro)  # type: ignore[arg-type]
+    t.iniciar(8795, tmp_path / "cloudflared")
+    assert lancador.paradas == 1 and lancador.iniciados == 1
+    t.soltar()

@@ -57,33 +57,46 @@ usuário, que o serviço usa.
 
 ## 3. Abrir o painel
 
-Do seu computador, num terminal que fica aberto:
+O instalador termina assim:
+
+```text
+Abra no navegador: https://<palavras>.trycloudflare.com
+Código de primeiro acesso: ABCD-EFGH (vale 1 hora)
+```
+
+1. Abra o endereço (no computador ou no celular), digite o código e crie a senha do painel.
+2. O painel abre na página Voz. Em **Acesso pelo celular → Código do autenticador**, toque em
+   **Ligar**, leia o QR no aplicativo autenticador (Google Authenticator, Aegis…) e confirme.
+3. Saia e entre de novo com a senha e o código. A partir daí, de qualquer aparelho, os ajustes
+   (chaves, contas, autodesenvolvimento) ficam liberados.
+
+Sem túnel SSH em nenhum momento. O endereço é HTTPS, criado pelo Cloudflare sem conta e sem abrir
+porta no servidor; ele muda quando o servidor reinicia (o painel mostra o novo em Voz).
+
+Num servidor, um aparelho que entrou só com a senha pode usar o Zé e ligar o código do
+autenticador, mais nada; os ajustes pedem a entrada com o código. Desligar o código e desativar o
+acesso de qualquer lugar ficam só pelo túnel SSH, para ninguém tirar as proteções pelas quais
+entrou. Não abra a porta 8795 na internet: o painel fala HTTP simples.
+
+### Pelo túnel SSH (alternativa)
+
+Se o endereço não responder (rede do servidor bloqueando o Cloudflare), o instalador mostra o
+comando do túnel e o mesmo código:
 
 ```sh
 ssh -N -L 8795:127.0.0.1:8795 ze@<servidor>
 ```
 
-Abra `http://localhost:8795`. Use a mesma porta dos dois lados: o painel confere o endereço.
+e abra `http://localhost:8795`, com a mesma porta dos dois lados. Pelo túnel, o painel trata você
+como o próprio computador do Zé: tudo fica liberado. Quem tem a sua chave SSH tem o Zé.
 
-### Sem túnel SSH
-
-Depois de ligar o acesso pelo celular (seção 4), o endereço `https://….trycloudflare.com` abre o
-painel e a voz também no navegador do computador, com a senha e o código do autenticador, sem o
-túnel SSH. Os ajustes que só valem no computador do Zé (configuração inicial, acesso ao Claude,
-chaves) continuam pelo túnel. Não abra a porta 8795 na internet: o painel fala HTTP simples, e a
-senha trafegaria sem proteção.
-
-Pelo túnel SSH, o painel trata você como o próprio computador do Zé: a configuração inicial
-(perfil, acesso ao Claude, chave do Deepgram) e os ajustes de acesso ficam liberados. Quem tem a
-sua chave SSH tem o Zé.
+Código vencido ou perdido: rode de novo `uv run python -m jarvis.portal.primeiro_acesso` na pasta
+do Zé (só gera um código novo enquanto a senha não existe).
 
 ## 4. Falar com o Zé
 
-- **Pelo navegador do computador:** com o túnel aberto, o botão "Ao vivo" do painel liga a
-  voz até você desligar. O navegador aceita o microfone em `http://localhost`.
-- **Pelo celular:** página Voz, cartão "Acesso pelo celular": salve a senha, ligue o código do
-  autenticador (Ligar, ler o QR no aplicativo e Confirmar) e toque em Ativar. Abra no celular o endereço `https://….trycloudflare.com`
-  (ou leia o QR) e entre com a senha e o código. O endereço muda quando o servidor reinicia.
+- **Pelo navegador (computador ou celular):** no endereço `https://….trycloudflare.com`, o botão
+  "Ao vivo" liga a voz até você desligar. No celular, o QR da página Voz abre o mesmo endereço.
 
 ## 5. Cérebro e sessões de código
 

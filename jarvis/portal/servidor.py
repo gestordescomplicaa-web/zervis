@@ -29,6 +29,10 @@ from jarvis.transporte import websocket
 
 log = logging.getLogger(__name__)
 WEB = Path(__file__).with_name("web")
+# Ajustes que só valem pelo próprio PC, mesmo num servidor: desligar as proteções ou o acesso
+# pelo qual se entrou deixaria a pessoa trancada fora, ou um invasor sem barreira.
+SEMPRE_NO_PC = frozenset({"acesso/codigo/desligar", "tunel/desativar", "remoto/desativar"})
+LIGAR_CODIGO = frozenset({"acesso/codigo/preparar", "acesso/codigo/confirmar"})
 PORTA = int(os.environ.get("JARVIS_PAINEL_PORTA", "8795"))  # o perfil limpo usa outra
 IMERSIVO = "http://127.0.0.1:8794"  # o modo imersivo (Barehands), embutido na aba Imersão
 # A sala LiveKit da voz remota: no próprio PC e, pelo celular, a do `tailscale serve` (8443).
@@ -116,8 +120,12 @@ class Portal:
         acesso: Acesso | None = None,
         voz: Voz | None = None,
         so_no_pc: set[str] | None = None,
+        servidor: bool = False,
     ) -> None:
         self.acesso = acesso
+        # Num servidor não há o "próprio PC": quem entrou com a senha e o código do autenticador
+        # faz os ajustes de fora (menos desligar as proteções e o acesso pelo qual entrou).
+        self.servidor = servidor
         # Ajustes de acesso (senha, código, túnel): só pelo próprio PC. Quem entrou de fora não
         # desliga as proteções que o deixaram entrar.
         self.so_no_pc = so_no_pc or set()
@@ -208,6 +216,21 @@ class Portal:
                     return True
                 return portal.acesso is not None and portal.acesso.valido(self._cookie())
 
+            def _local(self) -> bool:
+                return self.headers.get("Host", "") in portal.locais and not self._repassado()
+
+            def _pode_ajustar(self, rota: str) -> bool:
+                """Os ajustes de acesso e do próprio Zé: o PC sempre; num servidor, também quem
+                entrou com o código do autenticador. Ligar o código vale para qualquer aparelho
+                que entrou, enquanto ele estiver desligado: só aumenta a proteção."""
+                if self._local():
+                    return True
+                if not portal.servidor or portal.acesso is None or rota in SEMPRE_NO_PC:
+                    return False
+                if rota in LIGAR_CODIGO and not portal.acesso.tem_codigo:
+                    return portal.acesso.valido(self._cookie())
+                return portal.acesso.confiavel(self._cookie())
+
             def _autorizado(self) -> bool:
                 return (
                     self._host_local()
@@ -227,14 +250,48 @@ class Portal:
             def _tela_entrar(self, mensagem: str = "") -> None:
                 corpo = (WEB / "entrar.html").read_bytes()
                 aviso = f'<p class="resultado erro">{mensagem}</p>' if mensagem else ""
-                codigo = (
-                    '<label>Código do autenticador<input name="codigo" inputmode="numeric" '
-                    'autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required></label>'
-                    if portal.acesso is not None and portal.acesso.tem_codigo
-                    else ""
-                )
-                corpo = corpo.replace(b"__CODIGO__", codigo.encode())
-                self._enviar(200, corpo.replace(b"__MENSAGEM__", aviso.encode()), "text/html")
+                if portal.acesso is not None and portal.acesso.convite_valido:
+                    titulo, sub, botao = (
+                        "Primeiro acesso",
+                        "Use o código que o instalador mostrou e crie a senha do painel.",
+                        "Criar acesso",
+                    )
+                    campos = (
+                        '<label>Código de primeiro acesso<input name="convite" '
+                        'autocomplete="off" autocapitalize="characters" spellcheck="false" '
+                        'maxlength="9" required autofocus></label>'
+                        '<label>Nova senha<input type="password" name="senha" minlength="8" '
+                        'autocomplete="new-password" required></label>'
+                    )
+                else:
+                    titulo, sub, botao = (
+                        "Entrar",
+                        "Acesso de outro aparelho.",
+                        "Entrar",
+                    )
+                    codigo = (
+                        '<label>Código do autenticador<input name="codigo" inputmode="numeric" '
+                        'autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>'
+                        "</label>"
+                        if portal.acesso is not None and portal.acesso.tem_codigo
+                        else ""
+                    )
+                    campos = (
+                        '<label>Senha<input type="password" name="senha" '
+                        'autocomplete="current-password" required autofocus></label>'
+                        + codigo
+                        + '<label class="interruptor"><input type="checkbox" name="lembrar" '
+                        'value="1" checked> Lembrar este aparelho</label>'
+                    )
+                for marca, valor in (
+                    ("__TITULO__", titulo),
+                    ("__SUB__", sub),
+                    ("__CAMPOS__", campos),
+                    ("__BOTAO__", botao),
+                    ("__MENSAGEM__", aviso),
+                ):
+                    corpo = corpo.replace(marca.encode(), valor.encode())
+                self._enviar(200, corpo, "text/html")
 
             def _origem(self) -> str:
                 """O endereço de quem pede: o que o túnel ou proxy informa, senão a conexão."""
@@ -250,13 +307,23 @@ class Portal:
                 senha = campos.get("senha", [""])[0]
                 codigo = campos.get("codigo", [""])[0]
                 lembrar = campos.get("lembrar", [""])[0] == "1"
+                convite = campos.get("convite", [""])[0]
                 if portal.acesso is None:
                     self._tela_entrar("Acesso por outro aparelho indisponível.")
                     return
                 try:
-                    aparelho, validade = portal.acesso.entrar(
-                        senha, codigo, lembrar, self.headers.get("User-Agent", ""), self._origem()
-                    )
+                    if convite:
+                        aparelho, validade = portal.acesso.criar_acesso(
+                            convite, senha, self.headers.get("User-Agent", ""), self._origem()
+                        )
+                    else:
+                        aparelho, validade = portal.acesso.entrar(
+                            senha,
+                            codigo,
+                            lembrar,
+                            self.headers.get("User-Agent", ""),
+                            self._origem(),
+                        )
                 except SenhaErro as erro:
                     log.warning("painel: entrada recusada de %s (%s)", self._origem(), erro)
                     self._tela_entrar(str(erro))
@@ -266,7 +333,8 @@ class Portal:
                     f"{COOKIE}={aparelho}; Path=/; HttpOnly; Secure; SameSite=Strict; "
                     f"Max-Age={validade}"
                 )
-                self._ir("/", cookie)
+                # Primeiro acesso: a próxima etapa é ligar o código do autenticador (página Voz).
+                self._ir("/#voz" if convite else "/", cookie)
 
             def _mesma_origem(self) -> bool:
                 """O WebSocket leva o cookie sozinho: outro site não pode abri-lo em nome de quem
@@ -319,6 +387,12 @@ class Portal:
                     corpo = arquivo.read_bytes()
                     if arquivo.name == "index.html":
                         corpo = corpo.replace(b"__TOKEN__", portal.token.encode())
+                        ajustes = self._local() or (
+                            portal.servidor
+                            and portal.acesso is not None
+                            and portal.acesso.confiavel(self._cookie())
+                        )
+                        corpo = corpo.replace(b"__AJUSTES__", b"1" if ajustes else b"0")
                     self._enviar(200, corpo, TIPOS[arquivo.suffix])
                     return
                 if not caminho.startswith("/api/"):
@@ -346,9 +420,13 @@ class Portal:
                 if not self._autorizado():
                     self._json(403, {"erro": "token"})
                     return
-                local = self.headers.get("Host", "") in portal.locais and not self._repassado()
-                if caminho[5:] in portal.so_no_pc and not local:
-                    self._json(403, {"erro": "Ajuste disponível só no computador do Zé."})
+                if caminho[5:] in portal.so_no_pc and not self._pode_ajustar(caminho[5:]):
+                    erro = (
+                        "Ligue o código do autenticador e entre de novo para este ajuste."
+                        if portal.servidor and caminho[5:] not in SEMPRE_NO_PC
+                        else "Ajuste disponível só no computador do Zé."
+                    )
+                    self._json(403, {"erro": erro})
                     return
                 envio = portal.envios.get(caminho[5:]) if caminho.startswith("/api/") else None
                 if envio is not None:

@@ -114,6 +114,7 @@ from jarvis.rosto.painel import Painel
 from jarvis.rosto.quadro import Quadro
 from jarvis.rosto.teclado import Teclado
 from jarvis.sistema import catalogo as catalogo_sistema
+from jarvis.sistema import maquina as maquina_atual
 from jarvis.sistema.midia import Midia
 from jarvis.sistema.politica import Sistema
 from jarvis.sistema.vigia import Eventos, Vigia
@@ -482,6 +483,7 @@ class Nucleo(
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
                 so_no_pc=senha.SO_NO_PC,
+                servidor=maquina_atual.detectar().servidor,
             )
             self.portal.iniciar()
         except OSError as erro:
@@ -920,7 +922,13 @@ class Nucleo(
         self._avisar_interrompidas()
         self._ligar_voz_remota()
         if tunel.escolhido():  # o acesso de qualquer lugar continua depois de um reinício
-            if self.acesso.tem_senha and self.acesso.tem_codigo:
+            # O convite do primeiro acesso (servidor) abre o túnel antes da senha existir: é por
+            # ele que a pessoa chega para criá-la (`python -m jarvis.portal.primeiro_acesso`).
+            # Num servidor, a senha basta para manter o endereço: sem ele, quem ainda não ligou o
+            # código do autenticador ficaria trancado fora depois de um reinício.
+            servidor = maquina_atual.detectar().servidor
+            pronto = self.acesso.tem_senha and (self.acesso.tem_codigo or servidor)
+            if pronto or self.acesso.convite_valido:
                 threading.Thread(target=self._subir_tunel, name="tunel", daemon=True).start()
             else:
                 log.warning("túnel não sobe: falta a senha ou o código do autenticador")

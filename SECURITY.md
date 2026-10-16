@@ -18,7 +18,8 @@ possível e, corrigido o problema, damos o crédito se você quiser.
 
 ## Boas práticas para quem instala
 
-- O painel escuta só em `127.0.0.1`; num servidor, acesse por túnel SSH ou pelo endereço do acesso
-  pelo celular (senha e código do autenticador).
+- O painel escuta só em `127.0.0.1`; num servidor, o acesso é pelo endereço HTTPS do Cloudflare
+  que o instalador mostra (convite de uso único, depois senha e código do autenticador) ou por
+  túnel SSH. Ligue o código do autenticador logo no primeiro acesso.
 - Rode o Zé com um usuário comum, nunca como root.
 - Chaves entram pelo painel, não digitadas em comandos de terminal.

@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Servidor (VPS): primeiro acesso sem túnel SSH. O instalador termina com um endereço HTTPS
+  (Cloudflare) e um código de uso único para criar a senha; num servidor, quem entra com a senha
+  e o código do autenticador faz os ajustes de fora (chaves, contas, autodesenvolvimento), menos
+  desligar as proteções. Com só a senha, o endereço continua de pé depois de um reinício.
+- Acesso pelo celular: um túnel que ficou de pé sem o endereço anotado (reinstalação) sobe de
+  novo, em vez de falhar.
 - Código aberto: CONTRIBUTING, SECURITY, CODEOWNERS, modelo de PR e o ADR 0036 (contribuições
   por pull request, `master` protegida, atualização de quem personaliza o Zé em aberto); o guia
   de VPS passa a clonar o repositório público e explica o acesso sem o túnel SSH.
