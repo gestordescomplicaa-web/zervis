@@ -26,6 +26,7 @@ from jarvis.nucleo.apoio import DADOS, FALHA_NO_CEREBRO, JANELA_FALADA, PERSONA,
 from jarvis.rosto import manifesto, tela
 from jarvis.rosto.anel import Anel, separar_emocao
 from jarvis.rosto.quadro import Quadro
+from jarvis.sistema import maquina
 from jarvis.voz.fala import separar_fontes
 from jarvis.voz.latencia import Latencias
 
@@ -204,6 +205,8 @@ class ServicoCerebro:
             + "\n\n"
             + usuario.PERFIL.para_persona()
             + "\n\n"
+            + maquina.detectar().para_persona()
+            + "\n\n"
             + manifesto.para_persona(self.n.orbes)
         )
 
@@ -234,7 +237,13 @@ class ServicoCerebro:
         return ""
 
     def persona_rapida(self) -> str:
-        return PERSONA_RAPIDA.read_text() + "\n\n" + usuario.PERFIL.para_persona()
+        return (
+            PERSONA_RAPIDA.read_text()
+            + "\n\n"
+            + usuario.PERFIL.para_persona()
+            + "\n\n"
+            + maquina.detectar().para_persona()
+        )
 
     def aplicar_via_rapida(self) -> str:
         """O painel mudou a via rápida: troca só o motor, na hora; devolve um aviso ou ""."""
