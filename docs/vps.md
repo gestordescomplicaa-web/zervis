@@ -40,9 +40,9 @@ deploy/instalar-servidor.sh
 O repositório é público: o `git clone` não pede usuário nem token. Para atualizar depois, entre
 na pasta, rode `git pull` e o instalador de novo.
 
-O instalador confere o que precisa, instala o uv se faltar, baixa os modelos de som, instala o
-serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do SSH e sobe com a
-máquina) e espera o painel responder. Se ele pedir, rode como root uma vez:
+O instalador confere o que precisa, instala o uv e o Go se faltarem, baixa os modelos de som,
+instala o serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do SSH e sobe
+com a máquina) e espera o painel responder. Se ele pedir, rode como root uma vez:
 `loginctl enable-linger ze`.
 
 Sem acesso do servidor ao GitHub, envie o código como pacote: no seu computador,
@@ -113,11 +113,15 @@ agente pedir.
 
 Os projetos ficam no servidor (`~/projetos` por padrão).
 
+O Go 1.27.2 é instalado sem `sudo` no espaço do usuário, a partir do pacote oficial para x86-64
+ou arm64; o SHA-256 é conferido antes da extração ([checksums oficiais](https://go.dev/dl/?mode=json)).
+Na primeira conexão do WhatsApp, o Zé compila o WaCalls e baixa os módulos Go. O mesmo pareamento
+atende mensagens e ligações.
+
 ## Opcionais
 
 | Para | Instale | Por quê |
 |---|---|---|
-| WhatsApp do atendimento | Go 1.21 ou mais novo (Ubuntu 24.04: `sudo apt install golang-go`) | O Zé compila o WaCalls na primeira conexão; o Go baixa sozinho a versão que ele pede |
 | Autodesenvolvimento | Node 18 ou mais novo (Ubuntu 24.04: `sudo apt install nodejs npm`) | O `make check` confere os tipos do painel com o TypeScript |
 
 ## Conferir e manter

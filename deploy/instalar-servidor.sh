@@ -74,6 +74,11 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ] || ! git rev-parse -q --verify
 o autodesenvolvimento não vai abrir."
 fi
 uv sync --frozen
+echo "Preparando o Go para o WhatsApp e as ligações..."
+GO_BIN=$(uv run python -m jarvis.atendimento.preparar_go) \
+  || falta "Go verificado para o WhatsApp e as ligações. Confira o acesso a go.dev."
+PATH="$GO_BIN:$HOME/.local/bin:$PATH"
+export PATH
 uv run python -m jarvis.preparar || echo "Aviso: os modelos de som não baixaram. O Zé sobe sem \
 voz e baixa de novo no próximo início."
 # Claude Code e Codex prontos, também como comandos no terminal (ADR 0035).
@@ -111,11 +116,10 @@ until curl --fail --silent --max-time 2 -o /dev/null "http://127.0.0.1:$PORTA/";
 done
 echo " pronto."
 
-for opcional in node go; do
+for opcional in node; do
   if ! command -v "$opcional" >/dev/null; then
     case $opcional in
       node) echo "Opcional: Node, para o autodesenvolvimento conferir o painel (make check)." ;;
-      go) echo "Opcional: Go, para o WhatsApp do atendimento." ;;
     esac
   fi
 done

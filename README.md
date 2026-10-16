@@ -41,9 +41,10 @@ git clone https://github.com/gestordescomplicaa-web/zervis.git
 cd zervis && deploy/instalar-pc.sh
 ```
 
-O instalador prepara Python e dependências, modelos de voz e agentes de código, instala o serviço
-do usuário e o atalho Zérvis, e abre o painel na configuração inicial. O painel fica no próprio
-PC (`http://127.0.0.1:8795/`); acesso por outros aparelhos é configurado depois, no painel.
+O instalador prepara Python e dependências, modelos de voz, agentes de código e o Go verificado
+para o WhatsApp e as ligações. Instala o serviço do usuário e o atalho Zérvis, e abre o painel na
+configuração inicial. O painel fica no próprio PC (`http://127.0.0.1:8795/`); acesso por outros
+aparelhos é configurado depois, no painel.
 
 No Ubuntu 24.04, os pré-requisitos são `sudo apt install git make curl xdg-utils pulseaudio-utils`.
 PipeWire ou PulseAudio e um navegador devem estar disponíveis na sessão. Sem as ferramentas de

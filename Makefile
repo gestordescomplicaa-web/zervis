@@ -22,8 +22,8 @@ node_modules/.package-lock.json: package.json package-lock.json
 testes:
 	uv run pytest
 
-# O WaCalls (Go) do atendimento; sem o Go na máquina, fica de fora (o Zé também não o usa).
-# Com ZE_SEM_PULOS=1 (a CI), sem Go é falha, como os testes pulados do pytest.
+# O WaCalls (Go) do atendimento. O instalador prepara o Go no espaço do usuário; na CI,
+# ZE_SEM_PULOS=1 também garante que os testes não sejam ignorados.
 wacalls:
 	@if command -v go >/dev/null; then cd jarvis/atendimento/wacalls && go vet ./... && go test ./...; \
 	elif [ -n "$$ZE_SEM_PULOS" ]; then echo "wacalls: sem Go (ZE_SEM_PULOS=1)"; exit 1; \

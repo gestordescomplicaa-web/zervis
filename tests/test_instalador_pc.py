@@ -25,6 +25,9 @@ def instalacao(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, P
 nome=${0##*/}
 printf '%s %s\\n' "$nome" "$*" >> "$ZE_TESTE_LOG"
 case "$nome" in
+  uv) if [ "$1" = run ] && [ "$4" = jarvis.atendimento.preparar_go ]; then
+       printf '%s\\n' "$HOME/.local/lib/zervis/bin"
+     fi ;;
   id) case "$1" in -u) echo "${ZE_TESTE_UID:-1000}" ;; -un) echo teste ;; esac ;;
   getconf) echo 'glibc 2.39' ;;
   uname) echo Linux ;;
@@ -71,6 +74,7 @@ def test_pc_instala_servico_atalho_e_abre_painel(instalacao: tuple[Path, Path]) 
     assert resultado.returncode == 0, resultado.stdout + resultado.stderr
     comandos = registro.read_text()
     assert "uv sync --frozen" in comandos
+    assert "uv run python -m jarvis.atendimento.preparar_go" in comandos
     assert "uv run python -m jarvis.preparar" in comandos
     assert "uv run python -m jarvis.cerebro.agentes_nativos" in comandos
     assert "systemctl --user import-environment DISPLAY" in comandos
@@ -85,6 +89,8 @@ def test_pc_instala_servico_atalho_e_abre_painel(instalacao: tuple[Path, Path]) 
     atalho = Path(os.environ["XDG_DATA_HOME"]) / "applications/zervis.desktop"
     assert f'"{repo}/deploy/abrir-painel.sh"' in atalho.read_text()
     assert "@" not in atalho.read_text()
+    assert "Opcional: Go" not in resultado.stdout
+    assert "Environment=PATH=%h/.local/lib/zervis/bin" in servico.read_text()
 
 
 @pytest.mark.parametrize("sem_tela", [False, True])
