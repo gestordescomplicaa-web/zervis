@@ -466,8 +466,13 @@ class Sessoes:
             raise SessaoErro(f"já existe uma pasta {pasta_nome}; escolha como pasta existente")
         destino.mkdir(parents=True)
         (destino / "README.md").write_text(f"# {nome}\n")
-        for args in (["init", "-q"], ["add", "README.md"], ["commit", "-qm", "Início do projeto"]):
-            _git(destino, *args)
+        _git(destino, "init", "-q")
+        _git(destino, "add", "README.md")
+        # Numa máquina nova (VPS) o git ainda não tem nome nem e-mail, e o primeiro commit falhava
+        # calado: sem ele, a cópia isolada da sessão não tinha de onde partir.
+        sem_identidade = not _git(destino, "config", "user.email").stdout.strip()
+        identidade = ["-c", "user.name=Zérvis", "-c", "user.email=zervis@localhost"]
+        _git(destino, *(identidade if sem_identidade else []), "commit", "-qm", "Início do projeto")
         return destino
 
     def trabalhando(self) -> list[str]:

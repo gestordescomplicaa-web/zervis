@@ -115,6 +115,12 @@ na ordem em que resolver:
    - a revisão da conversa usa sempre o Claude; com só o Codex conectado, ela falha no registro.
      Deve usar o cérebro em uso;
    - o modelo padrão do Codex que a conta não aceita: o Zé deveria escolher um que ela aceite.
+   - um Codex instalado à mão sem o auxiliar (o caso da VPS: só o binário em `~/.local/bin`) tem a
+     vez e deixa o cérebro sem ferramentas; o Zé deve usar o dele nesse caso.
+   Testado na VPS depois do auxiliar: o cérebro Codex viu a sessão e mandou mensagem a ela. Criar
+   uma sessão nova travou: a ferramenta exigia o caminho da pasta. Feito: cada sessão nova ganha a
+   própria pasta em `~/projetos` (o nome da sessão), o nome de um projeto existente vale como
+   pasta, o agente padrão é o que tem conta conectada e o primeiro commit sai mesmo sem nome no git.
 2. **Entregar o código numa VPS:** com o repositório privado, o `git clone` pede usuário e token do
    GitHub (contornado com `git archive` e `scp`). Resolve com o repositório público e o instalador de
    um comando (ADR 0034, etapa I3).
