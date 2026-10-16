@@ -808,3 +808,19 @@ def test_limite_no_terminal_em_varios_quadros_pede_confirmacao_nativa(
     sessoes._evento(s.id, {"hook_event_name": "UserPromptSubmit", "prompt": "novo pedido"})
     sessoes._olhar_saida(s.id, b"Trabalhando no novo pedido")
     assert not sessoes.ler(s.id).limite
+
+
+def test_sugestoes_de_pasta_sem_repetir_a_raiz_padrao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A raiz padrão (~/projetos) também está entre as conhecidas: cada pasta aparece uma vez."""
+    from types import SimpleNamespace
+    from typing import Any, cast
+
+    from jarvis.portal.acoes.sessoes import AcoesSessoes
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / "projetos" / "Detetive").mkdir(parents=True)
+    cfg = SimpleNamespace(caminho=lambda *_: Path("~/projetos").expanduser())
+    acoes = AcoesSessoes(cast(Any, None), cast(Any, SimpleNamespace(cfg=cfg)))
+    assert acoes.pastas() == ["~/projetos/Detetive"]

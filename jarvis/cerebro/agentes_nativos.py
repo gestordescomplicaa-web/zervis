@@ -44,6 +44,24 @@ CODEX_PACOTES = {
         "Codex (OpenAI, Apache-2.0)",
     ),
 }
+# O Codex roda as ferramentas dos modelos novos (`code_mode_only`, como o gpt-6-luna) neste
+# auxiliar, que mora ao lado do binário e vem num pacote à parte. Sem ele, toda ferramenta do Zé
+# falhava no cérebro Codex ("failed to spawn code-mode host"; teste na VPS, 16/10/2026).
+CODEX_AUXILIAR = "codex-code-mode-host"
+CODEX_AUXILIAR_PACOTES = {
+    "x86_64": Modelo(
+        "codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz",
+        f"{_BASE}/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz",
+        "314263128ba6592e7e807c265deeaf928a692b72dcbfeb5e0b20c9423b703529",
+        "Codex code-mode host (OpenAI, Apache-2.0)",
+    ),
+    "aarch64": Modelo(
+        "codex-code-mode-host-aarch64-unknown-linux-musl.tar.gz",
+        f"{_BASE}/codex-code-mode-host-aarch64-unknown-linux-musl.tar.gz",
+        "284356aefb197f00b76b912efdfdbae8ccf3ea1f89b976dde064b7ccb43214ef",
+        "Codex code-mode host (OpenAI, Apache-2.0)",
+    ),
+}
 CODEX_PASTA = lugares.DADOS / "codex" / CODEX_VERSAO
 COMANDOS = Path("~/.local/bin").expanduser()  # onde o terminal acha os comandos do usuário
 
@@ -62,25 +80,36 @@ def codex_proprio(pasta: Path = CODEX_PASTA) -> Path | None:
 
 
 def garantir_codex(pasta: Path = CODEX_PASTA, abrir: Any = None) -> bool:
-    """Baixa e confere o Codex se a máquina não tiver nenhum; True se baixou agora."""
-    if shutil.which("codex") or codex_proprio(pasta):
+    """Baixa e confere o Codex e seu auxiliar se a máquina não tiver Codex; True se baixou agora.
+
+    Uma instalação anterior, só com o binário, ganha o auxiliar que faltava."""
+    if shutil.which("codex") and not codex_proprio(pasta):
         return False
-    pacote = CODEX_PACOTES.get(platform.machine())
-    if pacote is None:
-        raise PrepararErro(f"sem Codex pronto para {platform.machine()}")
-    baixar(pacote, pasta.parent, abrir or urllib.request.urlopen)
+    baixou = False
+    for nome, pacotes in (("codex", CODEX_PACOTES), (CODEX_AUXILIAR, CODEX_AUXILIAR_PACOTES)):
+        if (pasta / nome).is_file():
+            continue
+        pacote = pacotes.get(platform.machine())
+        if pacote is None:
+            raise PrepararErro(f"sem Codex pronto para {platform.machine()}")
+        _instalar(pacote, nome, pasta, abrir or urllib.request.urlopen)
+        baixou = True
+    return baixou
+
+
+def _instalar(pacote: Modelo, nome: str, pasta: Path, abrir: Any) -> None:
+    baixar(pacote, pasta.parent, abrir)
     arquivo = pasta.parent / pacote.nome
     try:
         with tarfile.open(arquivo) as tar:
-            membros = [m for m in tar.getmembers() if m.isfile() and m.name.startswith("codex")]
+            membros = [m for m in tar.getmembers() if m.isfile() and m.name.startswith(nome)]
             if len(membros) != 1:
                 raise PrepararErro(f"{pacote.nome}: esperava um binário, achei {len(membros)}")
             tar.extractall(pasta, members=membros, filter="data")  # nada fora da pasta
-        (pasta / membros[0].name).replace(pasta / "codex")
+        (pasta / membros[0].name).replace(pasta / nome)
     finally:
         arquivo.unlink(missing_ok=True)
-    (pasta / "codex").chmod(0o755)
-    return True
+    (pasta / nome).chmod(0o755)
 
 
 def no_path(ambiente: MutableMapping[str, str] = os.environ) -> list[str]:

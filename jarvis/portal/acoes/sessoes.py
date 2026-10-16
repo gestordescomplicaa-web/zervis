@@ -59,7 +59,7 @@ class AcoesSessoes(Pagina):
         raizes = [self.n.cfg.caminho("oficina", "raiz_projetos"), Path.home() / "Work"]
         raizes += [Path.home() / n for n in ("DESENVOLVIMENTO", "Projetos", "projetos", "code")]
         achadas: list[str] = []
-        for raiz in raizes:
+        for raiz in dict.fromkeys(r.expanduser() for r in raizes):  # a raiz padrão é ~/projetos
             if raiz.is_dir():
                 achadas += sorted(
                     str(p).replace(str(Path.home()), "~", 1)

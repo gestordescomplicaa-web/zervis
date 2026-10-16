@@ -36,7 +36,8 @@ avisos de licença em `LICENCAS.md` (ADR 0034, ponto 13).
 
 O Codex (github.com/openai/codex, Apache-2.0, OpenAI) é baixado pelo Zé quando a máquina não tem
 nenhum (`jarvis/cerebro/agentes_nativos.py`; versão 0.163.0, SHA-256 `beb339e8…` x86_64 e
-`a7261e65…` aarch64), sem mudanças, e roda como programa separado. O Claude Code usado é o que vem
+`a7261e65…` aarch64), com o auxiliar `codex-code-mode-host` da mesma versão (SHA-256
+`31426312…` x86_64 e `284356ae…` aarch64), sem mudanças, e roda como programa separado. O Claude Code usado é o que vem
 no `claude-agent-sdk`, instalado do PyPI como dependência (ADR 0035).
 
 ## Licenças de referência

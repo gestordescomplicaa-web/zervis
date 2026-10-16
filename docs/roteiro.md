@@ -107,6 +107,14 @@ na ordem em que resolver:
    Claude, Codex e OmniRoute, e quem procura "OpenAI pela chave" não acha. O login das contas (Claude e Codex) pelo painel não funcionou: no
    servidor, "Entrar" tentava abrir um terminal que não existe. Feito em seguida: o login pelo
    painel, com o link e o campo do código, para os dois.
+   Testado na VPS em seguida: a conta do Codex entrou pelo painel e o cérebro Codex respondeu (com
+   o gpt-6-luna; o modelo padrão deu "acesso inválido" na conta). Mas o cérebro não usava nenhuma
+   ferramenta do Zé (sessões, lembretes): os modelos novos do Codex chamam as ferramentas por um
+   auxiliar, `codex-code-mode-host`, que vem num pacote à parte e o Zé não baixava. Feito: o Zé
+   baixa e confere o auxiliar junto com o Codex, inclusive numa instalação anterior. Faltam:
+   - a revisão da conversa usa sempre o Claude; com só o Codex conectado, ela falha no registro.
+     Deve usar o cérebro em uso;
+   - o modelo padrão do Codex que a conta não aceita: o Zé deveria escolher um que ela aceite.
 2. **Entregar o código numa VPS:** com o repositório privado, o `git clone` pede usuário e token do
    GitHub (contornado com `git archive` e `scp`). Resolve com o repositório público e o instalador de
    um comando (ADR 0034, etapa I3).
