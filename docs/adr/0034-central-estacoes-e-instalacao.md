@@ -128,8 +128,9 @@ embutido no `claude-agent-sdk` e o `make check-instalacao`.
 
 ## Dificuldades para quem instala (levantamento de 16/10/2026)
 
-Feito sobre o commit `bb3b168` (D24 apareceu na CI da etapa I1): leitura do código, `make check`, `make check-instalacao` numa
-pasta limpa e o Zé subindo numa máquina sem áudio e sem tela, com o HuggingFace bloqueado.
+Feito sobre o commit `bb3b168`: leitura do código, `make check`, `make check-instalacao` numa
+pasta limpa e o Zé subindo numa máquina sem áudio e sem tela, com o HuggingFace bloqueado. A D24
+apareceu depois, na CI da etapa I1.
 
 **Impedem a instalação ou o uso na VPS**
 
