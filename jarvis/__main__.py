@@ -41,8 +41,9 @@ def rodar() -> int:
         if baixados := garantir(cfg.caminho("ativacao", "modelos_onnx")):
             log.info("primeira vez: baixei %s", ", ".join(baixados))
     except PrepararErro as erro:
-        log.error("%s (rode `python -m jarvis.preparar` com internet)", erro)
-        return 69  # EX_UNAVAILABLE
+        # Falha por função (ADR 0034): o painel e o texto sobem; o que precisa do modelo que
+        # faltou fica indisponível até o próximo início com internet.
+        log.warning("%s: a voz fica limitada (rode `python -m jarvis.preparar`)", erro)
     from jarvis.memoria import aimemory
 
     try:  # opcional: sem ele, o Zé segue sem memória longa
