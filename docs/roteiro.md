@@ -5,6 +5,47 @@ o Hermes e o OpenClaw, só que mais enxuto, rápido e eficiente. Linux primeiro:
 controle completo da máquina, outro Linux (Ubuntu) com o controle reduzido e, depois, uma VPS sem
 tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora por enquanto.
 
+## Onde estamos (passagem de 16/10/2026)
+
+Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro é o histórico.
+
+**Funciona e foi provado numa VPS real** (Ubuntu 24.04, do zero, pelo `git clone` público):
+
+- instalação por `deploy/instalar-servidor.sh`, que termina com um endereço HTTPS (Cloudflare) e um
+  convite de primeiro acesso: senha e código do autenticador criados de fora, sem túnel SSH
+  (`docs/vps.md`);
+- cérebro Codex com as ferramentas do Zé (sessões, lembretes, memória), login das contas pelo
+  painel, sessões de código no Codex, automações, Atividade, autodesenvolvimento (com a entrada pelo
+  código do autenticador), voz pelo navegador e pelo celular (Deepgram e Piper/Cadu).
+
+**Para "pronto para local e VPS, conforme a pessoa escolher"**, em ordem:
+
+1. **Instalador de PC** (`deploy/instalar-pc.sh` ou um modo do instalador atual): hoje o PC usa o
+   caminho de desenvolvimento do README. Provar num Ubuntu limpo com tela (o Omarchy é o caso já
+   usado no dia a dia).
+2. **Revisão da conversa pelo cérebro em uso:** `habilidades/revisao.py` chama sempre o Claude; com
+   só o Codex conectado, falha no registro a cada conversa.
+3. **Modelo padrão do Codex** que a conta aceite (o padrão deu "acesso inválido"; o gpt-6-luna
+   funcionou).
+4. **Codex da máquina sem o auxiliar** `codex-code-mode-host`: o Zé deve usar o dele
+   (`cerebro/agentes_nativos.py`); hoje o da máquina tem a vez e fica sem ferramentas.
+5. **Endereço fixo** para a VPS (domínio próprio ou túnel com nome no Cloudflare): o
+   `trycloudflare` muda quando o servidor reinicia.
+6. **Proteção da `master`** no GitHub (ADR 0036): o repositório é público; falta ligar as regras.
+
+**Depois** (sem urgência, decidido com dados): Opus na voz do navegador (o registro de um dia não
+mostrou buracos de áudio); Zé 3D animado no painel remoto, sem a câmera (hoje fora do PC aparece o
+holograma fixo); imersão com câmera fora do PC.
+
+**Armadilhas conhecidas:**
+
+- Os testes de navegador precisam de um Chromium no PATH; a CI usa `ZE_SEM_PULOS=1`, e teste pulado
+  é falha.
+- Numa VPS, desinstalar à mão não para o serviço `zervis-tunel`; o Zé o reinicia sozinho.
+- A rede do servidor pode bloquear o HuggingFace: os modelos vêm do espelho
+  `gestordescomplicaa-web/zervis-modelos`, conferidos por SHA-256.
+- Toda mudança entra por PR com o `make check` verde (CONTRIBUTING.md).
+
 ## Já decidido
 
 - **Dados em três raízes XDG** (`jarvis/lugares.py`): `~/.config/zervis`, `~/.local/share/zervis`,
