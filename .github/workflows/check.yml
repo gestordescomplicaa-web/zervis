@@ -58,4 +58,16 @@ jobs:
             || command -v google-chrome-stable
 
       - name: make check
-        run: make check
+        run: |
+          set -o pipefail
+          make check 2>&1 | tee "$RUNNER_TEMP/check.log"
+
+      # O resumo da falha também como anotação: aparece na página do envio e pela API do GitHub.
+      - name: Resumo da falha
+        if: failure()
+        run: |
+          resumo=$(grep -E '^(FAILED|ERROR) |^E  |rror|make: \*\*\*|ZE_SEM_PULOS|SKIPPED' \
+            "$RUNNER_TEMP/check.log" | head -60 || true)
+          resumo="${resumo//'%'/'%25'}"
+          resumo="${resumo//$'\n'/'%0A'}"
+          echo "::error title=make check::${resumo:-sem detalhes no registro}"
