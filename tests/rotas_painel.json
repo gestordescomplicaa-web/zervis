@@ -71,6 +71,7 @@
     "escuta/testar",
     "perfil",
     "acesso/chave",
+    "acesso/chave-codex",
     "acesso/remover",
     "acesso/testar",
     "conta/adicionar",

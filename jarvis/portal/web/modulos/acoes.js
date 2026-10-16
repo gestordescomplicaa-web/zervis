@@ -89,6 +89,14 @@ const ACOES = {
     acessoTela = { ...acessoTela, ...r.acesso, agentes: r.agentes }; desenharAcesso();
     mostrar("resultado-acesso", true, r.aviso);
   },
+  "codex-chave-salvar": async (b) => {
+    const r = await ocupado(b, () => api("acesso/chave-codex", { chave: valorCampo("segredo-codex").value }));
+    await recarregarContas(); mostrar("resultado-acesso", true, r.aviso);
+  },
+  "codex-chave-reusar": async (b) => {
+    const r = await ocupado(b, () => api("acesso/chave-codex", { reusar: true }));
+    await recarregarContas(); mostrar("resultado-acesso", true, r.aviso);
+  },
   "acesso-testar": async (b) => {
     mostrar("resultado-acesso", null, "Testando…");
     const t = await ocupado(b, () => api("acesso/testar", {}));

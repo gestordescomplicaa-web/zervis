@@ -34,6 +34,11 @@ Os modelos de som acima (Silero, openWakeWord, Smart Turn e a voz Cadu) também 
 conferidos pelo SHA-256, na release `modelos-1` de `gestordescomplicaa-web/zervis-modelos`, com os
 avisos de licença em `LICENCAS.md` (ADR 0034, ponto 13).
 
+O Codex (github.com/openai/codex, Apache-2.0, OpenAI) é baixado pelo Zé quando a máquina não tem
+nenhum (`jarvis/cerebro/agentes_nativos.py`; versão 0.163.0, SHA-256 `beb339e8…` x86_64 e
+`a7261e65…` aarch64), sem mudanças, e roda como programa separado. O Claude Code usado é o que vem
+no `claude-agent-sdk`, instalado do PyPI como dependência (ADR 0035).
+
 ## Licenças de referência
 
 - **Hermes Agent** (Nous Research): MIT. Copiar exige manter o aviso de copyright e a licença.

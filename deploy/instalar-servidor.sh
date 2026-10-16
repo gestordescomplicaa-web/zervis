@@ -50,6 +50,8 @@ cd "$REPO"
 uv sync --frozen
 uv run python -m jarvis.preparar || echo "Aviso: os modelos de som não baixaram. O Zé sobe sem \
 voz e baixa de novo no próximo início."
+# Claude Code e Codex prontos, também como comandos no terminal (ADR 0035).
+uv run python -m jarvis.cerebro.agentes_nativos
 
 # --- serviço -----------------------------------------------------------------------------------
 make instalar
