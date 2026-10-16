@@ -58,6 +58,14 @@ def rodar() -> int:
             log.info("primeira vez: baixei o LiveKit %s", servidor_livekit.VERSAO)
     except (PrepararErro, OSError) as erro:
         log.warning("LiveKit não baixou (%s): a voz remota fica indisponível", erro)
+    from jarvis.cerebro import agentes_nativos
+
+    try:  # o Codex vem com o Zé (ADR 0035); sem ele, o cérebro e as sessões ficam no Claude
+        if agentes_nativos.garantir_codex():
+            log.info("primeira vez: baixei o Codex %s", agentes_nativos.CODEX_VERSAO)
+    except (PrepararErro, OSError) as erro:
+        log.warning("Codex não baixou (%s): fica só o Claude", erro)
+    agentes_nativos.no_path()
     try:
         trava = travar(ESTADO / "jarvisd.lock")
     except JaRodando as erro:
