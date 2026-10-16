@@ -139,6 +139,10 @@ from jarvis.voz.latencia import Latencias
 from jarvis.voz.saida import Voz
 
 log = logging.getLogger(__name__)
+# Voz ouvida e descartada enquanto o Zé pensa (ao vivo): acima do ruído de fundo, e só conta
+# quando passa de meio segundo, para um estalo ou uma tosse não virar aviso.
+FALA_PERDIDA_DBFS = -35.0
+FALA_PERDIDA_MIN_S = 0.5
 # Comandos locais de voz (sem o cérebro), por tipo. "{}" é o argumento do comando
 # ("abrir_orbe:Guia" -> Guia). Os que pedem algo à página pelo maos-pedido: nome -> (pedido, fala).
 # O jeito do Zé (08/10/2026): o que ele diz quando dá uma voltinha e quando o usuário o roda
@@ -213,6 +217,7 @@ class Nucleo(
         self._antes_do_chamado: collections.deque[bytes] = collections.deque(maxlen=38)  # ~3 s
         self._ouvindo_desde = 0.0  # quando começou a ouvir, e se já ouviu voz desde então
         self._ouviu_voz = False
+        self._fala_perdida_s = 0.0  # voz ouvida enquanto o Zé pensava: ninguém a transcreveu
         self._fim_fala_em: float | None = None
 
         modelos = cfg.caminho("ativacao", "modelos_onnx")
@@ -729,6 +734,10 @@ class Nucleo(
                 )
             if depois is e.Estado.ATIVO and antes is e.Estado.INATIVO:
                 self._bom_dia()
+            if antes is e.Estado.PENSANDO:
+                self._relatar_fala_perdida()
+            if depois is e.Estado.PENSANDO:
+                self._fala_perdida_s = 0.0
             if depois is e.Estado.ATIVO:
                 self.detector.reiniciar()
                 if not self.maquina.em_conversa:
@@ -740,6 +749,21 @@ class Nucleo(
                 self._ouvindo_desde, self._ouviu_voz = time.monotonic(), False
             if depois is e.Estado.OUVINDO and antes is e.Estado.FALANDO:
                 self._descartar_escuta()  # conversa contínua: próxima pergunta sem "Hey Orca"
+
+    def _relatar_fala_perdida(self) -> None:
+        """Ao vivo, o que a pessoa diz enquanto o Zé pensa não é ouvido (só o "Ei Zé" interrompe).
+        Com o Codex o pensamento leva segundos, e isso parecia "surdez" (VPS, 16/10/2026): agora
+        o registro e a Atividade dizem quanto foi perdido."""
+        perdida, self._fala_perdida_s = self._fala_perdida_s, 0.0
+        if perdida < FALA_PERDIDA_MIN_S:
+            return
+        log.info("fala perdida: %.1f s de voz enquanto o Zé pensava", perdida)
+        atividade.PADRAO.registrar(
+            "falha",
+            "Fala não ouvida enquanto o Zé pensava",
+            origem="voz",
+            erro=f'{perdida:.0f} s de voz; espere a resposta ou diga "Ei Zé" para interromper',
+        )
 
     def _quadro(self, dados: bytes) -> None:
         if self.maquina.transcrevendo:
@@ -766,6 +790,11 @@ class Nucleo(
                 self.tratar(e.Silencio())
         else:
             self._fechar_escuta()
+            if self.maquina.ao_vivo and self.maquina.estado is e.Estado.PENSANDO:
+                amostras = np.frombuffer(dados, dtype="<i2").astype(np.float64)
+                rms = float(np.sqrt((amostras**2).mean())) if len(amostras) else 0.0
+                if 20 * np.log10(rms / 32768 + 1e-12) > FALA_PERDIDA_DBFS:
+                    self._fala_perdida_s += len(dados) / 32000  # 80 ms por quadro
             self._antes_do_chamado.append(dados)
             if self.maquina.detector_ligado and self.detector.processar(
                 np.frombuffer(dados, dtype="<i2")

@@ -190,6 +190,7 @@ def _painel(
     atraso_s: float = 0.0,
     extras: dict[str, Escrita] | None = None,
     estado: Leitura | None = None,
+    trocas: dict[str, Any] | None = None,
 ) -> Iterator[tuple[str, str]]:
     """O painel com as respostas de exemplo e um Chromium apontado para ele."""
     respostas = json.loads(RESPOSTAS.read_text())
@@ -202,6 +203,8 @@ def _painel(
         return ler
 
     leituras = {nome: leitura(v) for nome, v in respostas["leituras"].items()}
+    for nome, valor in (trocas or {}).items():
+        leituras[nome] = leitura(valor)
     if estado is not None:
         leituras["estado"] = estado
     nomes = Acoes(SimpleNamespace(), tmp_path, tmp_path).escritas()
@@ -949,3 +952,27 @@ def test_troca_de_aba_mostra_o_que_ja_tinha_sem_esperar_o_zé(tmp_path: Path) ->
 
     with _painel(tmp_path) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_nova_sessao_comeca_no_agente_que_tem_conta_conectada(tmp_path: Path) -> None:
+    """Na VPS só o Codex estava conectado, e a sessão nova abria no Claude."""
+    respostas = json.loads(RESPOSTAS.read_text())
+    contas = copy.deepcopy(respostas["leituras"]["contas"])
+    contas["agentes"][0]["contas"][0]["logado"] = False  # o Claude, sem login
+
+    async def conferir(depuracao: str, endereco: str) -> list[str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("formSessao()")
+            await asyncio.sleep(0.5)
+            marcados = await nav.avaliar(
+                "[...document.querySelectorAll('[data-acao=ns-motor][aria-pressed=true]')]"
+                ".map((b) => b.dataset.motor)"
+            )
+            assert not nav.erros, nav.erros
+            return list(marcados)
+
+    with _painel(tmp_path, trocas={"contas": contas}) as (depuracao, endereco):
+        assert asyncio.run(conferir(depuracao, endereco)) == ["codex"]
