@@ -147,6 +147,13 @@ na ordem em que resolver:
    ("chave inválida") e, segundos antes e depois, a mesma chave funcionou. Cada recusa perdia o
    pedido inteiro, o "lapso de surdez" do modo ao vivo. Feito: o 401 também tenta de novo (o áudio
    fica guardado enquanto reconecta) e o registro traz a explicação do próprio Deepgram.
+   O que sobrou dos "lapsos" no modo ao vivo é o desenho: enquanto o Zé pensa (segundos, com o
+   Codex) ou fala, o microfone só alimenta o "Ei Zé"; o que a pessoa diz nesse tempo se perde. Feito:
+   o Zé mede e mostra isso. A Atividade registra "Fala não ouvida enquanto o Zé pensava" (com os
+   segundos), e o registro do serviço marca "voz do navegador: N s sem áudio" quando a rede some.
+   Com isso dá para separar rede, celular com a tela apagada e fala durante o pensamento antes de
+   decidir o Opus (que reduz banda, não resolve nenhum dos três). Próximo, se os números pedirem:
+   guardar a fala do pensamento e tratá-la como o próximo pedido.
 6. **Chaves digitadas no comando:** uma chave colada direto num comando fica no histórico do shell;
    com o item 1, chave só pelo painel.
 7. **Contribuições e atualizações:** como a comunidade propõe melhorias (PR, CI, aprovação de quem

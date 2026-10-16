@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Voz ao vivo: o que se diz enquanto o Zé pensa não é ouvido, e agora isso aparece na Atividade
+  ("Fala não ouvida enquanto o Zé pensava"); buracos no áudio do navegador (rede, tela apagada)
+  vão para o registro do serviço.
+- Sessões: a sessão nova pelo painel começa no agente que tem conta conectada (antes, sempre
+  no Claude), e o Zé cria a sessão numa pasta nova a pedido, sem mandar a pessoa ao painel.
 - Painel: a troca de aba mostra na hora o que a página já tinha e se atualiza quando o Zé
   responde; longe do servidor (VPS), cada aba deixa de esperar uma ida e volta de rede. Gravar
   qualquer ajuste invalida o que estava guardado.

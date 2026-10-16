@@ -110,3 +110,29 @@ def test_tocador_anuncia_a_fala_vai_no_ritmo_e_interrompe() -> None:
         for _ in range(10):
             t2.write(meio_segundo)
     assert con.textos[-1] == {"tipo": "parar"} and t2.wait() == -9
+
+
+def test_buraco_no_audio_do_navegador_vai_para_o_registro(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """O navegador manda um quadro a cada 80 ms; meio segundo sem nenhum é rede ou tela apagada."""
+    from jarvis.transporte.websocket import BINARIO, FechouErro
+
+    quadro = bytes(BYTES_QUADRO)
+    chegadas = iter([(BINARIO, quadro), (BINARIO, quadro), (BINARIO, quadro)])
+    esperas = iter([0.0, 0.7, 0.0])
+
+    class Conexao:
+        def receber(self) -> tuple[int, bytes]:
+            time.sleep(next(esperas, 0.0))
+            try:
+                return next(chegadas)
+            except StopIteration:
+                raise FechouErro from None
+
+    quadros: list[bytes] = []
+    with caplog.at_level("WARNING"):
+        VozNavegador(Conexao()).ouvir(quadros.append)  # type: ignore[arg-type]
+    assert len(quadros) == 3
+    avisos = [r.getMessage() for r in caplog.records if "sem áudio" in r.getMessage()]
+    assert len(avisos) == 1 and "0.7 s" in avisos[0]

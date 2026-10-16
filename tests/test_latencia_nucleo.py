@@ -1,5 +1,6 @@
 """A instrumentação acompanha o fluxo real da máquina, com IO falso e estado isolado."""
 
+import collections
 import concurrent.futures
 import queue
 import time
@@ -52,6 +53,8 @@ class NucleoCronometrado(Nucleo):
         self._turno_atual = None
         self._turno_cerebro = (0, None)
         self._digitado_em = self._fim_fala_em = None
+        self._fala_perdida_s = 0.0
+        self._antes_do_chamado = collections.deque(maxlen=38)
         self.maquina = e.Maquina(estado=e.Estado.ATIVO)
         self.eventos = queue.Queue()
         self.status = Status()
@@ -221,3 +224,35 @@ def test_comando_local_nao_inventa_latencia_do_cerebro(nucleo: NucleoCronometrad
     r = n.latencias.ultimo
     assert r is not None and r["rota"] == "comando"
     assert r["provedor"] == "" and "cerebro" not in r["etapas_ms"]
+
+
+def test_fala_durante_o_pensamento_no_ao_vivo_e_contada_e_registrada(
+    nucleo: NucleoCronometrado, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ao vivo, o que se diz enquanto o Zé pensa não é ouvido. Com o Codex isso leva segundos e
+    parecia "surdez": agora o registro e a Atividade dizem quanto foi perdido."""
+    registros: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "jarvis.nucleo.laco.atividade.PADRAO.registrar",
+        lambda tipo, titulo, **extra: registros.append((tipo, titulo)),
+    )
+    n = nucleo
+    n.detector = SimpleNamespace(processar=lambda a: False, reiniciar=lambda: None)  # type: ignore[assignment]
+    n.maquina.ao_vivo = True
+    n.maquina.estado = e.Estado.PENSANDO
+    voz = (np.sin(np.linspace(0, 400, 1280)) * 8000).astype("<i2").tobytes()
+    baixo = (np.sin(np.linspace(0, 400, 1280)) * 20).astype("<i2").tobytes()
+    for _ in range(10):  # 0,8 s de voz e 0,8 s de ruído de fundo
+        n._quadro(voz)
+        n._quadro(baixo)
+    assert 0.7 < n._fala_perdida_s < 0.9  # o ruído de fundo não conta
+    n._relatar_fala_perdida()
+    assert registros == [("falha", "Fala não ouvida enquanto o Zé pensava")]
+    assert n._fala_perdida_s == 0.0
+    n._quadro(voz)  # uma tosse curta não vira aviso
+    n._relatar_fala_perdida()
+    assert len(registros) == 1
+    n.maquina.ao_vivo = False  # fora do ao vivo o chamado funciona como sempre: nada a contar
+    for _ in range(10):
+        n._quadro(voz)
+    assert n._fala_perdida_s == 0.0

@@ -47,11 +47,14 @@ async function listaSessoes() {
 
 async function formSessao() {
   mostrarLado(true);
-  const pastas = await api("pastas");
+  const [pastas, ct] = await Promise.all([api("pastas"), api("contas").catch(() => ({ agentes: [] }))]);
+  // O agente de partida é o que tem conta conectada: o Claude, a menos que só o Codex tenha.
+  const logado = (/** @type {string} */ id) => !!ct.agentes?.find((a) => a.id === id)?.contas.some((c) => c.logado);
+  const padrao = !logado("claude") && logado("codex") ? "codex" : "claude";
   $("lado-sessao").innerHTML = `<div class="nova-sessao">${cartao("Nova sessão", `
     <label>Nome<input id="ns-nome" placeholder="Ligatia — testes" autocomplete="off"></label>
     <div class="segmentos" role="group" aria-label="Onde">${botao("Pasta existente", "ns-onde", 'data-onde="existente" aria-pressed="true"')}${botao("Projeto novo", "ns-onde", 'data-onde="novo" aria-pressed="false"')}</div>
-    <div class="segmentos" role="group" aria-label="Agente">${botao("Claude", "ns-motor", 'data-motor="claude" aria-pressed="true"')}${botao("Codex", "ns-motor", 'data-motor="codex" aria-pressed="false"')}</div>
+    <div class="segmentos" role="group" aria-label="Agente">${botao("Claude", "ns-motor", `data-motor="claude" aria-pressed="${padrao === "claude"}"`)}${botao("Codex", "ns-motor", `data-motor="codex" aria-pressed="${padrao === "codex"}"`)}</div>
     <label id="ns-campo-pasta">Pasta<input id="ns-pasta" class="mono" list="ns-pastas" placeholder="~/projetos/…" autocomplete="off" spellcheck="false"></label>
     <datalist id="ns-pastas">${pastas.map((p) => `<option value="${esc(p)}">`).join("")}</datalist>
     <label id="ns-campo-projeto" hidden>Nome da pasta<input id="ns-projeto" class="mono" placeholder="minha-loja" autocomplete="off" spellcheck="false"></label>
