@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Modelos de som: o download tenta primeiro o espelho do projeto (`ZE_MODELOS_URL`) e cai para a
+  fonte original, sempre conferindo o SHA-256; `deploy/publicar-modelos.sh` publica os modelos
+  numa release do GitHub, para a voz Cadu não depender de uma única fonte.
 - Servidor (VPS): `deploy/instalar-servidor.sh` instala o Zé como serviço que continua depois
   de sair do SSH; guia em `docs/vps.md`. O Zé sobe sem áudio na máquina (a voz chega pelo
   navegador) e sem os modelos de som que não baixaram (painel e texto funcionam).

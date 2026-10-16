@@ -111,9 +111,15 @@ embutido no `claude-agent-sdk` e o `make check-instalacao`.
 
 12. **Falha por função, não o Zé inteiro.** Se um download falhar, o painel e a conversa por texto
     sobem mesmo assim; a função afetada aparece como "Indisponível" e o `doctor` tenta de novo.
-13. **Espelho próprio.** Os arquivos de terceiros que a licença permite redistribuir (CC0,
-    Apache-2.0, MIT, BSD) ficam também nas releases do projeto, com os mesmos SHA-256 num
-    manifesto (`deploy/arquivos.toml`). A origem oficial vira a alternativa.
+13. **Espelho próprio.** Os modelos de som, a voz Cadu entre eles, vêm também de uma release do
+    projeto no GitHub, e a fonte original (HuggingFace, GitHub de terceiros) vira a alternativa.
+    Só entra o que a licença permite redistribuir (CC0, Apache-2.0, MIT, BSD), com os avisos num
+    `LICENCAS.md` da release. O espelho não precisa ser de confiança: a impressão digital
+    (SHA-256) é a fixa em `jarvis/preparar.py`, um arquivo trocado é recusado e a fonte seguinte
+    é tentada. `ESPELHO` (ou `ZE_MODELOS_URL`, para quem hospeda por conta própria) diz onde;
+    `deploy/publicar-modelos.sh` confere os arquivos contra o código e publica. Download sem
+    login exige repositório público; um repositório público só para os modelos resolve já, sem
+    esperar o do código.
 14. **Atualizar sem perder as melhorias locais.** O que o autodesenvolvimento aplica fica numa
     branch local. `zervis update` busca a tag nova, reaplica a branch local sobre ela numa cópia
     isolada, roda o `make check` e só troca a versão em uso se tudo passar. Conflito ou falha:
@@ -199,4 +205,5 @@ Uma etapa por vez, cada uma com prova, como no ADR 0032.
 |---|---|---|
 | I1 | Concluído em 16/10/2026 | D18: o terminal não conta zumbi como processo vivo (teste novo cria o zumbi de propósito). D13: com `ZE_SEM_PULOS=1`, teste pulado e Go ausente são falha. D23: `livekit` e `segno` fixados, com teste que vigia a regra. CI no GitHub (`.github/workflows/check.yml`, Ubuntu 24.04): `make check` completo com Chromium, modelos de som, Node e Go, aprovado em 4 min 52 s, sem teste pulado. Na CI apareceu mais uma dificuldade: no Ubuntu 24.04, o AppArmor aborta o sandbox do Chromium, e a CI libera a restrição só na máquina dela. O ponto 12 passou para a I3: o núcleo carrega os modelos de voz ao subir (`jarvis/nucleo/laco.py:211-226`), e subir sem eles é o mesmo modo sem microfone da VPS. |
 | VPS para teste | Feito em 16/10/2026 | Antes da I3, o caminho verificado para testar numa VPS (`docs/vps.md`, `deploy/instalar-servidor.sh`). Num contêiner sem áudio, sem tela e sem acesso ao HuggingFace, o Zé caía duas vezes: no Smart Turn que não baixou e ao abrir o microfone sem `parec`. Agora sobe, as 18 leituras do painel respondem 200 e as sessões usam o Claude Code embutido. O ponto 12 foi feito aqui. A persona descreve a máquina real, e suspender só existe no Omarchy. O instalador foi testado como usuário comum novo, com o systemd simulado: saída 0 e painel em 7 s. |
+| Espelho dos modelos | Mecanismo feito em 16/10/2026; falta publicar | `preparar.py` tenta o espelho e cai para a fonte original, recusando arquivo que não bate com o SHA-256; `deploy/publicar-modelos.sh` publica (testado com `gh` e `uv` simulados). Falta rodá-lo uma vez no PC, onde os arquivos existem, e preencher `ESPELHO`. |
 | I2 a I5 | ⬜ | |

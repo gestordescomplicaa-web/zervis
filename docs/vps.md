@@ -99,6 +99,13 @@ Avisos normais no registro de um servidor:
 - `modelos de som faltando: ...`: um download falhou; o painel e o texto funcionam, e a voz volta
   depois de `uv run python -m jarvis.preparar` e de reiniciar o serviço.
 
+Se a rede do servidor bloqueia o HuggingFace (a voz Cadu vem de lá), há dois caminhos:
+
+- copiar os modelos do seu PC, que já os tem:
+  `scp -r ~/.local/share/zervis/modelos ze@<servidor>:.local/share/zervis/`
+- apontar o Zé para um espelho com os mesmos arquivos: `ZE_MODELOS_URL=https://…/modelos`. A
+  impressão digital de cada arquivo é conferida, então o espelho não precisa ser de confiança.
+
 Para remover: `systemctl --user disable --now zervis`, apague
 `~/.config/systemd/user/zervis.service` e, para apagar também os dados,
 `~/.config/zervis`, `~/.local/share/zervis` e `~/.local/state/zervis`.
