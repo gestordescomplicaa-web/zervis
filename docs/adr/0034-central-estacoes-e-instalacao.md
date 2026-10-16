@@ -128,7 +128,7 @@ embutido no `claude-agent-sdk` e o `make check-instalacao`.
 
 ## Dificuldades para quem instala (levantamento de 16/10/2026)
 
-Feito sobre o commit `bb3b168`: leitura do código, `make check`, `make check-instalacao` numa
+Feito sobre o commit `bb3b168` (D24 apareceu na CI da etapa I1): leitura do código, `make check`, `make check-instalacao` numa
 pasta limpa e o Zé subindo numa máquina sem áudio e sem tela, com o HuggingFace bloqueado.
 
 **Impedem a instalação ou o uso na VPS**
@@ -168,6 +168,7 @@ pasta limpa e o Zé subindo numa máquina sem áudio e sem tela, com o HuggingFa
 | D21 | Só glibc 2.28 ou mais nova: Alpine (musl) e distribuições antigas não instalam (onnxruntime, livekit e piper-tts só têm rodas `manylinux_2_28`) | `uv.lock` | Ponto 9 (confere e explica) |
 | D22 | Nome misto: pacote `jarvis`, variáveis `JARVIS_*`, comando `zervis` | Roteiro, "Em aberto" | MVP, etapa 5 |
 | D23 | `livekit` e `segno` sem versão exata, contra a regra de qualidade | `pyproject.toml` | Fixar num commit próprio |
+| D24 | No Ubuntu 24.04, um Chromium baixado (sem perfil do AppArmor) aborta ao abrir o sandbox: vale para o Chromium que o instalador trouxer | CI de 16/10/2026: os 12 testes do painel abortavam até liberar `kernel.apparmor_restrict_unprivileged_userns` | Instalar o perfil do AppArmor do Chromium trazido (como o Chrome oficial faz) ou usar o do sistema; nunca tirar o sandbox |
 
 ## Ordem de execução
 
@@ -175,9 +176,9 @@ Uma etapa por vez, cada uma com prova, como no ADR 0032.
 
 | Etapa | O que entra | Pronto quando |
 |---|---|---|
-| I1. Base | D13, D18, D23; falha por função nos downloads (ponto 12); CI com `make check` completo | A CI roda `make check` com Chromium e Go em cada envio, sem testes pulados |
+| I1. Base | D13, D18, D23; CI com `make check` completo | A CI roda `make check` com Chromium e Go em cada envio, sem testes pulados |
 | I2. Release | WaCalls compilado (x86-64 e arm64); espelho e manifesto de SHA-256; Codex, Node, Chromium e imersivo no manifesto | Uma máquina sem Go conecta o WhatsApp; o imersivo abre sem internet |
-| I3. Instalador | `install.sh` e o comando `zervis` (pontos 9, 10 e 14) | `check-instalacao` na CI nas quatro distribuições; numa VPS real sem áudio: painel, voz pelo celular e uma sessão de código terminando com aviso falado |
+| I3. Instalador | `install.sh` e o comando `zervis` (pontos 9, 10 e 14); falha por função nos downloads (ponto 12), junto com o modo sem áudio da VPS | `check-instalacao` na CI nas quatro distribuições; numa VPS real sem áudio: painel, voz pelo celular e uma sessão de código terminando com aviso falado |
 | I4. Estação | Pareamento, áudio, sistema e mídia; depois sessões nos projetos da estação | Zé na VPS e o PC como estação: "Ei Zé" no PC, uma ação do Omarchy e a música pausando enquanto ele fala |
 | I5. Docker | Imagem opcional a partir do instalador (ponto 15) | A imagem sobe com volumes vazios e passa no `doctor` |
 
@@ -190,3 +191,10 @@ Uma etapa por vez, cada uma com prova, como no ADR 0032.
   nenhum passo manual e do autodesenvolvimento funcionando na máquina de quem instala.
 - Na VPS, as funções do PC dependem da estação estar ligada. Sem ela, o Zé continua útil pelo
   navegador e pelo celular: conversa, voz, sessões dos projetos da VPS, automações e atendimento.
+
+## Andamento
+
+| Etapa | Estado | Resultado |
+|---|---|---|
+| I1 | Concluído em 16/10/2026 | D18: o terminal não conta zumbi como processo vivo (teste novo cria o zumbi de propósito). D13: com `ZE_SEM_PULOS=1`, teste pulado e Go ausente são falha. D23: `livekit` e `segno` fixados, com teste que vigia a regra. CI no GitHub (`.github/workflows/check.yml`, Ubuntu 24.04): `make check` completo com Chromium, modelos de som, Node e Go, aprovado em 4 min 52 s, sem teste pulado. Na CI apareceu mais uma dificuldade: no Ubuntu 24.04, o AppArmor aborta o sandbox do Chromium, e a CI libera a restrição só na máquina dela. O ponto 12 passou para a I3: o núcleo carrega os modelos de voz ao subir (`jarvis/nucleo/laco.py:211-226`), e subir sem eles é o mesmo modo sem microfone da VPS. |
+| I2 a I5 | ⬜ | |

@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Sessões: excluir uma sessão não trava mais num contêiner sem init (Docker sem `--init`), onde
+  os processos encerrados do agente ficavam como zumbis.
+- Qualidade: a CI do GitHub roda o `make check` completo a cada envio, com o painel num Chromium
+  de verdade, os modelos de som e o Go; teste pulado conta como falha.
 - Autodesenvolvimento: a unificação reconhece rascunhos já reconciliados na central e evita
   repetir o mesmo conflito a cada tentativa; conteúdo ou base novos continuam sendo conferidos.
 
