@@ -24,8 +24,10 @@ systemctl --user status zervis
 journalctl --user -u zervis -f
 ```
 
-Se a porta 8795 já estiver ocupada, encerre a outra instância antes de instalar. A escolha
-automática de porta e o comando `zervis doctor` continuam previstos no ADR 0034.
+Para manter uma porta já usada pela instalação, use por exemplo
+`JARVIS_PAINEL_PORTA=8796 deploy/instalar-pc.sh`: o serviço, o atalho e a conferência do painel
+usam a mesma porta. A escolha automática de porta e o comando `zervis doctor` continuam
+previstos no ADR 0034.
 
 ## Verificação
 

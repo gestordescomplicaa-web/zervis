@@ -49,7 +49,8 @@ DATA_HOME = $(or $(XDG_DATA_HOME),$(HOME)/.local/share)
 instalar:
 	uv sync --inexact
 	install -d "$(CONFIG_HOME)/systemd/user"
-	sed 's#@REPO@#$(CURDIR)#' systemd/zervis.service > "$(CONFIG_HOME)/systemd/user/zervis.service"
+	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' \
+		systemd/zervis.service > "$(CONFIG_HOME)/systemd/user/zervis.service"
 	install -Dm644 deploy/zervis.svg "$(DATA_HOME)/icons/hicolor/scalable/apps/zervis.svg"
 	install -d "$(DATA_HOME)/applications"
 	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' -e 's#@ICONE@#zervis#' \

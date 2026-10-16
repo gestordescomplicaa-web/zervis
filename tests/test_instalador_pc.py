@@ -53,6 +53,7 @@ esac
     monkeypatch.setenv("HOME", str(tmp_path / "casa vazia"))
     monkeypatch.setenv("DISPLAY", ":99")
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("JARVIS_PAINEL_PORTA", raising=False)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config com espacos"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "dados com espacos"))
     return repo, registro
@@ -111,6 +112,21 @@ def test_servidor_preserva_linger_e_primeiro_acesso(instalacao: tuple[Path, Path
     assert "uv run python -m jarvis.portal.primeiro_acesso" in comandos
     assert "setsid " not in comandos
     assert "import-environment" not in comandos
+
+
+def test_pc_preserva_porta_escolhida_no_servico_atalho_e_conferencia(
+    instalacao: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, registro = instalacao
+    monkeypatch.setenv("JARVIS_PAINEL_PORTA", "8796")
+    resultado = _rodar(repo, "instalar-pc.sh")
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    assert "http://127.0.0.1:8796/" in resultado.stdout
+    assert "http://127.0.0.1:8796/" in registro.read_text()
+    servico = Path(os.environ["XDG_CONFIG_HOME"]) / "systemd/user/zervis.service"
+    assert "Environment=JARVIS_PAINEL_PORTA=8796" in servico.read_text()
+    atalho = Path(os.environ["XDG_DATA_HOME"]) / "applications/zervis.desktop"
+    assert "JARVIS_PAINEL_PORTA=8796" in atalho.read_text()
 
 
 @pytest.mark.parametrize("navegador", ["chromium", "chromium-browser", "google-chrome", "xdg-open"])

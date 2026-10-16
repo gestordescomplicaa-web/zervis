@@ -13,7 +13,7 @@ case "${1:-}" in
   *) echo "Uso: $0 [--pc]" >&2; exit 1 ;;
 esac
 UV_VERSAO=0.11.32
-PORTA=8795
+PORTA=${JARVIS_PAINEL_PORTA:-8795}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 USUARIO=$(id -un)
 
@@ -80,7 +80,7 @@ voz e baixa de novo no próximo início."
 uv run python -m jarvis.cerebro.agentes_nativos
 
 # --- serviço -----------------------------------------------------------------------------------
-make instalar
+make instalar PORTA="$PORTA"
 # Sem linger, o systemd encerra os serviços do usuário quando a última sessão SSH fecha.
 if [ "$MODO" = servidor ] && ! loginctl enable-linger "$USUARIO" 2>/dev/null; then
   echo "Para o Zé continuar depois de sair do SSH, rode uma vez: sudo loginctl enable-linger $USUARIO"
