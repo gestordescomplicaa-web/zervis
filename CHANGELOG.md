@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Contas: "Entrar" faz o login do Claude Code e do Codex pelo próprio painel (link e código na
+  tela), sem terminal na máquina: funciona numa VPS e pelo celular.
 - Agentes: o Claude Code e o Codex vêm com o Zé (o Codex oficial, conferido por SHA-256); o
   Codex aceita a chave da OpenAI pelo painel, inclusive a mesma das Respostas rápidas.
 - Modelos de som: o download tenta primeiro o espelho do projeto (`ZE_MODELOS_URL`) e cai para a

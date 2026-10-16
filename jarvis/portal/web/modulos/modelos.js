@@ -146,13 +146,51 @@ function linhaConta(ag, c) {
   return item(esc(c.nome), detalhe, estado + acoes);
 }
 
+// --- Entrar na conta pelo painel (ADR 0035): o login do agente roda no Zé, a tela mostra o link
+// e recebe o código. Funciona num servidor sem tela e no celular.
+let loginTela = null;
+
+function caixaLogin(c) {
+  if (!loginTela || loginTela.id !== c.id) return "";
+  return `<div class="login-agente" id="login-agente">
+    <p class="nota">Abra o link, autorize com a conta e, se for pedido, cole o código aqui.</p>
+    <pre class="mono login-texto" id="login-texto"></pre>
+    <div class="linha" id="login-links"></div>
+    <div class="linha"><input id="login-codigo" class="mono" placeholder="Código" autocomplete="off" spellcheck="false" aria-label="Código do login">
+      ${botao("Enviar código", "login-codigo-enviar", `data-id="${esc(c.id)}"`, "principal")}${botao("Cancelar", "login-cancelar", `data-id="${esc(c.id)}"`, "discreta")}</div>
+    <p class="resultado" id="resultado-login"></p>
+  </div>`;
+}
+
+function mostrarLogin(r) {
+  const texto = $("login-texto"), lista = $("login-links");
+  if (!texto || !lista) return;
+  texto.textContent = r.texto || "Iniciando o login…";
+  texto.scrollTop = texto.scrollHeight;
+  lista.innerHTML = (r.links || []).map((l) => `<a class="externo" href="${esc(l)}" target="_blank" rel="noopener">Abrir link ↗</a>`).join("");
+}
+
+async function acompanharLogin(id) {
+  while (loginTela && loginTela.id === id) {
+    let r;
+    try { r = await api("conta/login/ler", { id, espera: 2 }); } catch { await new Promise((ok) => setTimeout(ok, 1500)); continue; }
+    if (!loginTela || loginTela.id !== id) return;
+    mostrarLogin(r);
+    if (r.codigo === 0) {
+      loginTela = null; contasTela = r.contas; desenharContas(); desenharAcesso();
+      mostrar("resultado-contas", true, r.aviso); await modelosDaConta(); return;
+    }
+    if (!r.ativo) { mostrar("resultado-login", false, "O login não terminou."); loginTela = null; return; }
+  }
+}
+
 function desenharContas() {
   const area = $("cartao-contas");
   if (!area) return;
   area.innerHTML = `<div class="cabeca"><h2>Contas</h2></div>
     ${sub("Contas dos agentes nesta máquina. O login é feito no próprio agente; o Zé só usa.")}
     ${contasTela.agentes.map((ag) => `<h3 class="subtitulo">${esc(ag.nome)}${ag.instalado ? "" : ' <span class="etiqueta">Não instalado</span>'}</h3>
-      <div class="itens">${ag.contas.map((c) => linhaConta(ag, c)).join("")}</div>
+      <div class="itens">${ag.contas.map((c) => linhaConta(ag, c) + caixaLogin(c)).join("")}</div>
       <div class="add"><input data-nova-conta="${esc(ag.id)}" placeholder="Nome de outra conta do ${esc(ag.nome)}" maxlength="40" autocomplete="off">${botao("Adicionar", "conta-adicionar", `data-agente="${esc(ag.id)}"`)}</div>`).join("")}
     <p class="resultado" id="resultado-contas"></p>`;
 }

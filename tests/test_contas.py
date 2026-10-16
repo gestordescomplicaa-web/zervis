@@ -40,7 +40,7 @@ def test_a_padrao_vem_sempre_e_a_nova_ganha_uma_pasta_so_dela(cs: contas.Contas)
         "login",
         "--device-auth",
     ]
-    assert cs.listar("claude")[0].comando_login() == ["env", "claude"]
+    assert cs.listar("claude")[0].comando_login() == ["env", "claude", "auth", "login"]
     for errado in (("codex", "trabalho"), ("codex", " "), ("gemini", "x")):
         with pytest.raises(contas.ContaErro):
             cs.adicionar(*errado)
