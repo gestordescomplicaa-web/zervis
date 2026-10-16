@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Sessões por voz: cada sessão nova ganha a própria pasta em `~/projetos`, sem precisar dizer o
+  caminho; o agente padrão é o que tem conta conectada. Projeto novo numa máquina sem nome no git
+  já sai com o primeiro commit.
 - Cérebro Codex: as ferramentas do Zé (sessões, lembretes, memória) funcionam com os modelos
   novos do Codex. O Zé baixa, junto com o Codex, o auxiliar que executa essas ferramentas.
 - Sessões: a lista de pastas sugeridas não repete as pastas de `~/projetos`.

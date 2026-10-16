@@ -6,6 +6,7 @@ avisa sozinho quando uma sessão termina. Ler é livre; criar, mandar e parar pe
 """
 
 import asyncio
+import os
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -72,6 +73,33 @@ def _resumo(s: Sessao) -> dict[str, Any]:
     }
 
 
+def _pasta(sessoes: Sessoes, args: dict[str, Any]) -> str:
+    """Cada sessão nova trabalha na própria pasta: sem pasta, um projeto novo com o nome dela.
+
+    Um nome solto ("Detetive") é a pasta de mesmo nome na raiz dos projetos, criada se faltar.
+    Na VPS, o cérebro pedia "uma sessão chamada teste" e travava sem saber a pasta (16/10/2026)."""
+    pasta = str(args.get("pasta", "")).strip()
+    novo = str(args.get("projeto_novo", "")).strip()
+    raiz = sessoes.projetos_novos
+    if pasta and not novo and raiz is not None and "/" not in pasta and pasta[0] not in "~.":
+        if (raiz.expanduser() / pasta).is_dir():
+            return str(raiz.expanduser() / pasta)
+        novo = pasta
+    if not pasta and not novo:
+        novo = str(args.get("nome", "")).strip()
+    return str(sessoes.criar_projeto(novo)) if novo else pasta
+
+
+def motor_conectado() -> str:
+    """O primeiro agente com conta conectada; o Claude também vale pela chave da Anthropic."""
+    for motor in MOTORES:
+        if motor == "claude" and os.environ.get("ANTHROPIC_API_KEY"):
+            return motor
+        if contas.Contas().em_uso(motor).login.is_file():
+            return motor
+    return MOTORES[0]
+
+
 def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
     if sessoes is None:
         return []
@@ -88,15 +116,19 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "sessao_criar",
-        "Cria uma sessão de código numa pasta de projeto e, se houver, já manda a primeira tarefa. "
-        "A tarefa precisa ser autossuficiente: o que mudar, onde, restrições e como provar que "
-        "terminou. Para um projeto que ainda não existe, use projeto_novo com o nome da pasta. "
-        "O Zé avisa sozinho quando o agente terminar.",
+        "Cria uma sessão de código e, se houver, já manda a primeira tarefa. Cada sessão tem a "
+        "própria pasta: sem pasta, o Zé cria um projeto novo com o nome da sessão; com o nome de "
+        "um projeto existente, usa a pasta dele. A tarefa precisa ser autossuficiente: o que "
+        "mudar, onde, restrições e como provar que terminou. Sem motor, usa o agente com conta "
+        "conectada. O Zé avisa sozinho quando o agente terminar.",
         {
             "type": "object",
             "properties": {
                 "nome": {"type": "string", "description": "Nome curto da sessão"},
-                "pasta": {"type": "string", "description": "Pasta existente do projeto"},
+                "pasta": {
+                    "type": "string",
+                    "description": "Pasta ou nome de um projeto existente (opcional)",
+                },
                 "projeto_novo": {"type": "string", "description": "Nome de um projeto novo"},
                 "tarefa": {"type": "string", "description": "A primeira tarefa (opcional)"},
                 "motor": {"type": "string", "enum": list(MOTORES)},
@@ -110,15 +142,13 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
     )
     async def criar(args: dict[str, Any]) -> dict[str, Any]:
         def fazer() -> Sessao:
-            pasta = str(args.get("pasta", "")).strip()
-            if novo := str(args.get("projeto_novo", "")).strip():
-                pasta = str(sessoes.criar_projeto(novo))
+            pasta = _pasta(sessoes, args)
             if not pasta:
-                raise SessaoErro("diga a pasta do projeto ou o nome de um projeto novo")
+                raise SessaoErro("diga o nome da sessão ou a pasta do projeto")
             s = sessoes.criar(
                 str(args["nome"]),
                 pasta,
-                motor=str(args.get("motor") or MOTORES[0]),
+                motor=str(args.get("motor") or motor_conectado()),
                 isolada=bool(args.get("isolada")),
                 origem="voz",
             )
