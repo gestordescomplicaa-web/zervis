@@ -45,6 +45,7 @@ class Captura:
         self.dispositivo = dispositivo
         self.quadros: queue.Queue[bytes] = queue.Queue(maxsize=tamanho_fila)
         self.processo: subprocess.Popen[bytes] | None = None
+        self.indisponivel: str | None = None  # por que o microfone local não abriu
         self._trava = threading.Lock()
 
     @property
@@ -59,26 +60,38 @@ class Captura:
             dispositivo = fonte(self.dispositivo)
             if dispositivo != self.dispositivo:
                 log.info("microfone %s não existe: usando o padrão do sistema", self.dispositivo)
-            self.processo = subprocess.Popen(  # noqa: S603 (comando fixo)
-                [
-                    "/usr/bin/parec",
-                    "--server",
-                    SERVIDOR,
-                    "--device",
-                    dispositivo,
-                    f"--client-name={NOME_CLIENTE}",
-                    "--format=s16le",
-                    "--rate=16000",
-                    "--channels=1",
-                    "--latency-msec=80",
-                    "--process-time-msec=20",
-                    "--raw",
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-            )
+            try:
+                self.processo = self._parec(dispositivo)
+            except OSError as erro:
+                # Sem áudio na máquina (VPS, contêiner): a voz chega pelo navegador. Abrir o
+                # microfone derrubava o laço inteiro (lição de 16/10/2026).
+                if self.indisponivel is None:
+                    log.warning("microfone local indisponível (%s): só a voz remota", erro)
+                self.indisponivel = str(erro)
+                return
+            self.indisponivel = None
             threading.Thread(target=self._ler, args=(self.processo,), daemon=True).start()
             log.info("microfone aberto")
+
+    def _parec(self, dispositivo: str) -> subprocess.Popen[bytes]:
+        return subprocess.Popen(  # noqa: S603 (comando fixo)
+            [
+                "/usr/bin/parec",
+                "--server",
+                SERVIDOR,
+                "--device",
+                dispositivo,
+                f"--client-name={NOME_CLIENTE}",
+                "--format=s16le",
+                "--rate=16000",
+                "--channels=1",
+                "--latency-msec=80",
+                "--process-time-msec=20",
+                "--raw",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
 
     def fechar(self) -> None:
         with self._trava:

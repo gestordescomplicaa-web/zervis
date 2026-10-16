@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 from livekit import rtc
 
+from jarvis.transporte import local as local_
 from jarvis.transporte import servidor_livekit as lk
 from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.remoto import TAXA_SAIDA, TocadorRemoto
@@ -99,6 +100,27 @@ def test_voz_remota_tem_a_vez_e_o_microfone_local_volta() -> None:
     entrada.remota(True)
     entrada.remota(False)
     assert not local.aberta  # fechada continua fechada
+
+
+def test_sem_audio_na_maquina_a_voz_remota_continua(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """VPS sem PulseAudio: abrir o microfone derrubava o laço inteiro (lição de 16/10/2026)."""
+
+    def sem_parec(dispositivo: str) -> Any:
+        raise FileNotFoundError(2, "No such file or directory", "/usr/bin/parec")
+
+    monkeypatch.setattr(local_, "fonte", lambda d: d)
+    captura = local_.Captura()
+    monkeypatch.setattr(captura, "_parec", sem_parec)
+    entrada = Entrada(captura)
+    entrada.abrir()
+    entrada.abrir()  # de novo: o aviso sai uma vez só
+    assert not captura.aberta and captura.indisponivel is not None
+    assert caplog.text.count("microfone local indisponível") == 1
+    entrada.remota(True)
+    entrada.receber(b"q")
+    assert entrada.quadros.get_nowait() == b"q"
 
 
 class SalaFalsa:
