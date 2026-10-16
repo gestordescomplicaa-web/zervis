@@ -105,8 +105,8 @@ na ordem em que resolver:
    Testado na VPS em 16/10/2026: a voz pelo navegador (Ao vivo) e pelo celular funcionou, com a
    chave da OpenAI nas Respostas rápidas. O cérebro ficou sem acesso: a lista dele mostra só
    Claude, Codex e OmniRoute, e quem procura "OpenAI pela chave" não acha. O login das contas (Claude e Codex) pelo painel não funcionou: no
-   servidor, "Entrar" tenta abrir um terminal que não existe. Próximo: login sem navegador pelo
-   painel (o link e o código na tela) para os dois.
+   servidor, "Entrar" tentava abrir um terminal que não existe. Feito em seguida: o login pelo
+   painel, com o link e o campo do código, para os dois.
 2. **Entregar o código numa VPS:** com o repositório privado, o `git clone` pede usuário e token do
    GitHub (contornado com `git archive` e `scp`). Resolve com o repositório público e o instalador de
    um comando (ADR 0034, etapa I3).
