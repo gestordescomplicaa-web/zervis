@@ -113,6 +113,9 @@ def test_cada_execucao_registrada_com_a_autorizacao(
 
 def test_suspender_existe_com_confirmacao_falada(tmp_path: Path) -> None:
     (tmp_path / "systemctl").write_text("#!/bin/sh\n")
+    # Sem Omarchy (um servidor): suspender deixaria a máquina fora do ar até religá-la.
+    assert "system-suspend" not in catalogo.carregar(tmp_path)
+    (tmp_path / "omarchy-menu").write_text("#!/bin/sh\n")
     acao = catalogo.carregar(tmp_path)["system-suspend"]
     assert (acao.risco, acao.fixos, acao.caminho.name) == (2, ("suspend",), "systemctl")
     assert "system-suspend" not in catalogo.carregar(tmp_path / "vazia")

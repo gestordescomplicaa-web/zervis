@@ -80,6 +80,11 @@ def classificar(nome: str, usa_sudo: bool, forcados: dict[str, int] | None = Non
     return 2
 
 
+def tem_omarchy(pasta: Path = PASTA) -> bool:
+    """Há comandos do Omarchy nesta máquina (em outro Linux e na VPS, não)."""
+    return any(pasta.glob(f"{PREFIXO}*"))
+
+
 def carregar(pasta: Path = PASTA, forcados: dict[str, int] | None = None) -> dict[str, Acao]:
     acoes = {}
     for arquivo in sorted(pasta.glob(f"{PREFIXO}*")):
@@ -102,8 +107,11 @@ def carregar(pasta: Path = PASTA, forcados: dict[str, int] | None = None) -> dic
             arquivo,
         )
     # Suspender: o Omarchy não tem um comando próprio (13/10/2026: "suspenda o computador" virou
-    # "desligar"). Volta ao tocar o teclado, então basta a confirmação falada.
-    if (systemctl := pasta / "systemctl").is_file() and "system-suspend" not in acoes:
+    # "desligar"). Volta ao tocar o teclado, então basta a confirmação falada. Só num Omarchy:
+    # num servidor, suspender deixaria a máquina fora do ar até alguém religá-la pelo provedor
+    # (lição de 16/10/2026).
+    systemctl = pasta / "systemctl"
+    if tem_omarchy(pasta) and systemctl.is_file() and "system-suspend" not in acoes:
         acoes["system-suspend"] = Acao(
             "system-suspend",
             "Suspend the computer (sleep).",
