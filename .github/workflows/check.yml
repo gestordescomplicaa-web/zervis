@@ -1,0 +1,61 @@
+# A porta de qualidade (docs/06-qualidade.md) a cada envio, numa máquina que não é a de quem
+# desenvolve: formatação, lint, tipos (Python e JavaScript), testes com o painel num Chromium de
+# verdade e os testes do Go. Teste pulado é falha (ZE_SEM_PULOS=1): a prova não some sem aviso.
+# Ações fixadas pelo commit (a etiqueta fica no comentário); atualizar é um commit próprio.
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ZE_SEM_PULOS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.22.0"
+          cache: npm
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: jarvis/atendimento/wacalls/go.mod
+          cache-dependency-path: jarvis/atendimento/wacalls/go.sum
+
+      # Os modelos de som (~100 MB) mudam só com jarvis/preparar.py, que guarda os SHA-256.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.local/share/zervis/modelos
+          key: modelos-${{ hashFiles('jarvis/preparar.py') }}
+
+      - name: Dependências
+        run: uv sync --frozen
+
+      - name: Modelos de som
+        run: uv run python -m jarvis.preparar
+
+      - name: Chromium
+        run: |
+          command -v chromium || command -v chromium-browser || command -v google-chrome \
+            || command -v google-chrome-stable
+
+      - name: make check
+        run: make check
