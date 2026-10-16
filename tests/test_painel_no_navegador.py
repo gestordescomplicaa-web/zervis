@@ -97,25 +97,36 @@ class _Navegador:
 
 def _chromium(perfil: Path) -> tuple[subprocess.Popen[bytes], str]:
     """Um Chromium sem tela e o endereço de depuração da aba dele."""
-    processo = subprocess.Popen(  # noqa: S603 (o Chromium da máquina, argumentos fixos)
-        [
-            str(CHROMIUM),
-            "--headless=new",
-            "--remote-debugging-port=0",
-            f"--user-data-dir={perfil}",
-            "--no-first-run",
-            "--disable-background-networking",
-            "--window-size=1400,900",
-            "about:blank",
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    perfil.mkdir(parents=True, exist_ok=True)
+    registro = perfil.with_name("chromium.log")
+    with registro.open("wb") as saida:
+        processo = subprocess.Popen(  # noqa: S603 (o Chromium da máquina, argumentos fixos)
+            [
+                str(CHROMIUM),
+                "--headless=new",
+                "--remote-debugging-port=0",
+                f"--user-data-dir={perfil}",
+                "--no-first-run",
+                "--disable-background-networking",
+                "--window-size=1400,900",
+                "about:blank",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=saida,
+        )
     porta = perfil / "DevToolsActivePort"
     for _ in range(150):
         if porta.exists() and porta.read_text().strip():
             break
+        if processo.poll() is not None:
+            break
         time.sleep(0.1)
+    else:
+        processo.kill()
+    if not (porta.exists() and porta.read_text().strip()):
+        # Sem isso, a falha era só "DevToolsActivePort não existe" (lição de 16/10/2026).
+        fim = registro.read_bytes()[-1500:].decode(errors="replace")
+        raise RuntimeError(f"O Chromium ({CHROMIUM}) não abriu: {fim or 'sem mensagem'}")
     lista = f"http://127.0.0.1:{porta.read_text().splitlines()[0]}/json/list"
     with urllib.request.urlopen(lista, timeout=5) as r:
         alvo = next(x for x in json.load(r) if x["type"] == "page")
