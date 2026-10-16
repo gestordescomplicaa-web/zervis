@@ -13,6 +13,8 @@ trap 'chmod -R u+w "$TEMP" 2>/dev/null; rm -rf "$TEMP"' EXIT INT TERM
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$(uv cache dir)}"
 command -v npm >/dev/null && export npm_config_cache="${npm_config_cache:-$(npm config get cache)}"
 if command -v go >/dev/null; then
+  go_root=$(go env GOROOT)
+  export PATH="$go_root/bin:$PATH"
   export GOMODCACHE="${GOMODCACHE:-$(go env GOMODCACHE)}" GOCACHE="${GOCACHE:-$(go env GOCACHE)}"
 fi
 
@@ -25,5 +27,12 @@ unset JARVIS_RAIZ JARVIS_PERFIL VIRTUAL_ENV
 cd "$TEMP/zervis"
 echo "instalação do zero: $(git -C "$REPO" rev-parse --short "$COMMIT") em $TEMP"
 uv sync --frozen
+# A instalação limpa também prepara o Go para que o make check prove o WaCalls sem depender
+# de uma ferramenta que já exista na máquina.
+GO_BIN=$(uv run python -m jarvis.atendimento.preparar_go)
+export PATH="$GO_BIN:$PATH"
+# Com HOME vazio, os testes reais de áudio precisam dos modelos, como numa instalação nova.
+# Sem essa preparação, ZE_SEM_PULOS=1 revela que a prova de features ONNX foi pulada.
+uv run python -m jarvis.preparar
 make check
 echo "instalação do zero: aprovada"

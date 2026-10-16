@@ -207,3 +207,8 @@ Uma etapa por vez, cada uma com prova, como no ADR 0032.
 | VPS para teste | Feito em 16/10/2026 | Antes da I3, o caminho verificado para testar numa VPS (`docs/vps.md`, `deploy/instalar-servidor.sh`). Num contêiner sem áudio, sem tela e sem acesso ao HuggingFace, o Zé caía duas vezes: no Smart Turn que não baixou e ao abrir o microfone sem `parec`. Agora sobe, as 18 leituras do painel respondem 200 e as sessões usam o Claude Code embutido. O ponto 12 foi feito aqui. A persona descreve a máquina real, e suspender só existe no Omarchy. O instalador foi testado como usuário comum novo, com o systemd simulado: saída 0 e painel em 7 s. |
 | Espelho dos modelos | Feito em 16/10/2026 | Release `modelos-1` em `gestordescomplicaa-web/zervis-modelos` (público), publicada por `deploy/publicar-modelos.sh` com os 6 arquivos conferidos. `ESPELHO` preenchido. Prova num contêiner sem acesso ao HuggingFace: os 6 modelos baixaram do espelho com o SHA-256 conferido, e a Cadu sintetizou 4,6 s de fala em 1,6 s. |
 | I2 a I5 | ⬜ | |
+
+O instalador atual prepara Go 1.27.2 no espaço do usuário e confere o SHA-256 oficial para que o
+WhatsApp e as ligações fiquem disponíveis sem uma instalação manual. A I2 continua pendente: ela
+vai substituir a compilação na primeira conexão por binários WaCalls publicados e verificados;
+enquanto isso, a primeira conexão ainda baixa os módulos Go.
