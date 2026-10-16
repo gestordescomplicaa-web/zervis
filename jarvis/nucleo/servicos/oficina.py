@@ -246,6 +246,22 @@ class ServicoOficina:
     def _sessao_terminou(self, sessao: Sessao, resumo: str) -> None:
         """Cada sessão informa o resultado em Normal e Mãos livres. A de manutenção tem seu
         próprio resumo falado, salvo se falhar."""
+        if sessao.estado == "trabalhando":
+            self.n._aviso_da_oficina(
+                f"Sessão {sessao.nome}: {resumo}",
+                "notificacao",
+                sessao.id,
+                f"a sessão {sessao.nome} continua em outra conta",
+            )
+            return
+        if sessao.limite and sessao.estado == "erro" and "bateu o limite" not in resumo:
+            self.n._aviso_da_oficina(
+                f"Sessão {sessao.nome}: {resumo}",
+                "urgente",
+                sessao.id,
+                f"a sessão {sessao.nome} precisa de uma conta disponível",
+            )
+            return
         if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
             return
         nome = sessao.nome

@@ -32,8 +32,50 @@ sua sessão nativa e um registro portátil da parte visível leva ao próximo s�
 4. **O ai-memory vem embutido:** o Zé baixa o binário oficial fixado por versão e SHA-256 (como a
    voz) e o roda como serviço filho; as sessões do Zé alimentam o ai-memory e ganham a busca dele.
    Se a máquina já tiver o ai-memory rodando, o Zé usa esse.
-5. A troca automática ao bater o limite fica desligada por padrão: trocar entre contas próprias é
-   escolha de quem usa, dentro dos termos de cada empresa.
+5. A troca automática foi autorizada em 15/10/2026 para contas cadastradas do mesmo agente,
+   preservando modelo e esforço. Sem configuração compatível, avisa e aguarda escolha.
+   Ver os critérios abaixo; o plano serve para ordenar, não para presumir saldo.
+
+## Fallback de contas (15/10/2026)
+
+Pedido: continuar sessões comuns e a central de autodesenvolvimento quando uma conta atingir
+limite, priorizando Pro, Plus e Gratuita. A pessoa escolheu explicitamente preservar modelo e
+esforço; trocar de modelo ou de agente exige escolha manual.
+
+- O aviso do terminal dispara uma conferência do registro nativo. Texto de resposta ou ferramenta
+  não muda o estado nem exibe alerta de saldo. O bloqueio precisa ter timestamp posterior à
+  abertura do processo atual; um erro antigo redesenhado é ignorado. No Codex, conferem-se o
+  erro ou a indicação explícita de bloqueio, o último pedido,
+  o modelo e o esforço do turno. No Claude, o erro estruturado e o modelo da transcrição; esforço
+  fixado por `CLAUDE_CODE_EFFORT_LEVEL`. O esforço salvo em configurações pode diferir de uma
+  escolha feita só para a conversa, portanto não é usado como prova. Sem evidência suficiente,
+  pausa com uma mensagem. Não adivinha padrões, equivalência de modelos nem esforço.
+- O catálogo local de cada conta Codex precisa oferecer exatamente o modelo e o esforço.
+  O plano é lido pelo mecanismo existente de contas; desconhecidos ficam depois dos planos
+  reconhecidos, mantendo a ordem de cadastro entre iguais. Login existente e catálogo em cache
+  não garantem saldo nem acesso atual: a tentativa real pode ser recusada e encerrar a retomada.
+- Cada conta esgotada fica fora das alternativas por uma hora, em SQLite, inclusive entre
+  sessões e reinícios. Para o mesmo pedido, contas já tentadas não são reutilizadas, mesmo
+  depois dessa hora. Novo pedido reinicia a cadeia; troca manual continua disponível.
+- O agente anterior encerra antes da abertura do próximo. A conversa nativa atual substitui
+  atomicamente uma cópia antiga no destino, com permissão privada. Pasta, branch, ID da sessão
+  e pedidos da manutenção continuam os mesmos. A mensagem de retomada exige conferir o que já
+  foi feito e executar apenas o restante; isso não oferece garantia de execução única de efeitos
+  externos já realizados pelo modelo.
+- Interromper, digitar, enviar ou trocar manualmente cancela a tentativa pendente. Atualização,
+  unificação e exclusão impedem a retomada. Após reiniciar o Zérvis, não há envio espontâneo:
+  a recuperação de tarefas interrompidas continua dependendo da pessoa.
+- Troca registrada na Atividade e no histórico, com aviso próprio, sem anunciar conclusão.
+  O painel acompanha a geração do terminal e reinicia o cursor de leitura após a troca.
+- Correção de 16/10/2026: o limite é vinculado à conta que o apresentou. Marcas e bloqueios
+  legados sem identificação/prova deixam de autorizar alerta ou exclusão de alternativas.
+  Escolher conta no seletor não reenvia tarefas; o botão Continuar é uma ação separada,
+  validada e serializada na API. Desligar manutenção impede encaminhar comandos enfileirados.
+
+Referências: [contexto e erros nativos do Codex](https://github.com/openai/codex/blob/main/codex-rs/protocol/src/protocol.rs),
+[modelo e esforço do Claude Code](https://code.claude.com/docs/en/model-config).
+Os adaptadores dependem dos formatos das versões instaladas. Formato desconhecido interrompe
+a automação. Não há consulta de cobrança nem mudança de plano ou de credenciais.
 
 ## Implementado e conferido (12/10/2026)
 Uma sessão real do Zé: Codex na conta Plus cria o arquivo e guarda uma palavra-chave; troca para o

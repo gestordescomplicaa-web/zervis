@@ -653,8 +653,11 @@ class Nucleo(
             if nome == "manutencao_entrar":
                 resposta = m.entrar(argumento)
             elif nome == "manutencao_pedido":
-                resposta = m.encaminhar(argumento, self._contexto_da_manutencao(), time.time())
-                self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
+                if not m.ligado:
+                    resposta = "Manutenção desligada. Faça o pedido na conversa."
+                else:
+                    resposta = m.encaminhar(argumento, self._contexto_da_manutencao(), time.time())
+                    self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
             elif nome == "rodada_melhoria":
                 resposta = self._rodada_de_melhoria()
             elif not self._no_proprio_pc():

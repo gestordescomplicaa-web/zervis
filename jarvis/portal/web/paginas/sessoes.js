@@ -105,7 +105,9 @@ function faixaLimite(sessao) {
 let sessaoAtual = null;
 
 async function trocarSessao(motor, conta, continuar) {
-  const r = await api("sessao/trocar", { id: sessaoAberta, motor, conta, continuar });
+  const id = sessaoAberta;
+  const r = await api("sessao/trocar", { id, motor, conta, continuar });
+  if (sessaoAberta !== id) return;
   toast(r.aviso);
   await abrirSessao(sessaoAberta);
 }
@@ -144,6 +146,7 @@ async function abrirSessao(id) {
   sessaoAberta = id;
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".item-sessao")).forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === id)));
   const [{ sessao }, ct] = await Promise.all([api("sessao/ler", { id, desde: 1e9 }), api("contas")]);
+  if (sessaoAberta !== id || !$("lado-sessao")) return;
   contasSessao = ct;
   sessaoAtual = sessao;
   const lado = $("lado-sessao");
@@ -198,7 +201,13 @@ async function abrirSessao(id) {
 
 async function acompanharSessao() {
   if (!sessaoAberta || !$("terminal")) return;
-  const { sessao } = await api("sessao/ler", { id: sessaoAberta, desde: 1e9 });
+  const id = sessaoAberta;
+  const { sessao } = await api("sessao/ler", { id, desde: 1e9 });
+  if (sessaoAberta !== id || !$("estado-sessao")) return;
+  if (sessaoAtual?.conta_id !== sessao.conta_id || sessaoAtual?.motor !== sessao.motor || sessaoAtual?.modelo !== sessao.modelo) {
+    fecharEscolhas();
+    $("ajustes-sessao").innerHTML = seletorConta(sessao) + seletorModeloSessao(sessao);
+  }
   sessaoAtual = sessao;
   const etiqueta = $("estado-sessao");
   if (etiqueta.dataset.estado === "trabalhando" && sessao.estado !== "trabalhando") {
@@ -215,8 +224,9 @@ async function acompanharSessao() {
     carregarCopia(sessao.id);
   }
   const faixa = $("limite-sessao");
-  if (faixa.dataset.limite !== String(sessao.limite)) {
-    faixa.dataset.limite = String(sessao.limite);
+  const versaoLimite = JSON.stringify([sessao.limite, sessao.conta_id, sessao.motor]);
+  if (faixa.dataset.limite !== versaoLimite) {
+    faixa.dataset.limite = versaoLimite;
     faixa.innerHTML = faixaLimite(sessao);
   }
 }

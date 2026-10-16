@@ -82,6 +82,33 @@ def test_outro_host_e_recusado_mesmo_com_token(portal: Portal) -> None:
     assert pedir(portal, "GET", "/api/estado", host="malicioso.com")[0] == 403
 
 
+def test_terminal_novo_reinicia_cursor_da_leitura(tmp_path: Path) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (tmp_path,))
+    s = sessoes.criar("Teste", str(tmp_path))
+    terminal = Terminal(["cat"], tmp_path, {})
+    sessoes.terminais[s.id] = terminal
+    acoes = Acoes(SimpleNamespace(sessoes=sessoes), tmp_path, tmp_path)
+    try:
+        terminal.escrever(b"retomada\n")
+        terminal.ler(0, 2)
+        resposta = acoes.ler_terminal(
+            {"id": s.id, "desde": 99999, "geracao": terminal.pid + 1, "espera": 0}
+        )
+        assert resposta["reiniciado"] and resposta["geracao"] == terminal.pid
+        assert b"retomada" in base64.b64decode(resposta["dados"])
+    finally:
+        terminal.encerrar()
+
+
+def test_continuar_por_alerta_antigo_nao_troca_nem_reenvia(tmp_path: Path) -> None:
+    sessoes = Sessoes(tmp_path / "sessoes", (tmp_path,), rodar=lambda *args: None)
+    s = sessoes.criar("Teste", str(tmp_path))
+    acoes = Acoes(SimpleNamespace(sessoes=sessoes), tmp_path, tmp_path)
+    with pytest.raises(PedidoInvalido, match="Não há limite confirmado"):
+        acoes.trocar_sessao({"id": s.id, "motor": "codex", "continuar": True})
+    assert sessoes.ler(s.id).motor == "claude" and not sessoes.tarefas
+
+
 @pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
 def test_painel_exclui_sessao_com_agente_ativo_e_preserva_projeto(tmp_path: Path) -> None:
     projeto = tmp_path / "projeto"
