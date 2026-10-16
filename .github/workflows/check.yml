@@ -52,8 +52,11 @@ jobs:
       - name: Modelos de som
         run: uv run python -m jarvis.preparar
 
+      # O Ubuntu 24.04 restringe namespaces de usuário sem perfil do AppArmor, e o sandbox do
+      # Chromium aborta ao abrir. Liberar só na máquina da CI, sem tirar o sandbox do navegador.
       - name: Chromium
         run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           command -v chromium || command -v chromium-browser || command -v google-chrome \
             || command -v google-chrome-stable
 
