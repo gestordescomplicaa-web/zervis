@@ -99,7 +99,9 @@ abriu pelo túnel SSH e o Zé continuou de pé depois de fechar o SSH (*linger*)
 na ordem em que resolver:
 
 1. **Agentes na VPS** ([ADR 0035](adr/0035-agentes-prontos-na-instalacao.md)): Claude e Codex
-   "Não instalado"; o Codex exigiu terminal; o cérebro não aceitava a chave da OpenAI. Em andamento.
+   "Não instalado"; o Codex exigiu terminal; o cérebro não aceitava a chave da OpenAI. Feito: os
+   dois vêm com o Zé, e o Codex aceita a chave da OpenAI pelo painel. Falta: o login da conta do
+   ChatGPT pelo painel (hoje, `codex login --device-auth` no terminal).
 2. **Entregar o código numa VPS:** com o repositório privado, o `git clone` pede usuário e token do
    GitHub (contornado com `git archive` e `scp`). Resolve com o repositório público e o instalador de
    um comando (ADR 0034, etapa I3).

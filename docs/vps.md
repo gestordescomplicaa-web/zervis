@@ -76,9 +76,9 @@ O Claude Code e o Codex vêm com o Zé (ADR 0035). Em **Modelos**, escolha o cé
 pelo painel, sem terminal:
 
 - **Claude:** o token de `claude setup-token` (rodado no seu PC) ou uma chave da Anthropic.
-- **Codex:** uma chave da OpenAI (em "Usar chave de API da OpenAI", ou "Usar a das Respostas
-  rápidas" se você já salvou uma lá) ou a conta do ChatGPT, em **Contas → Entrar**, que mostra um
-  código para autorizar pelo navegador do PC ou do celular.
+- **Codex:** uma chave da OpenAI, em "Usar chave de API da OpenAI" (ou "Usar a das Respostas
+  rápidas", se você já salvou uma lá). A conta do ChatGPT, por enquanto, só pelo terminal da VPS:
+  `codex login --device-auth` mostra um código para autorizar no navegador do PC ou do celular.
 
 Os projetos ficam no servidor (`~/projetos` por padrão).
 
