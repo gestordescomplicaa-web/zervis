@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 # A release do projeto com os modelos (mesmos nomes de arquivo). Vazio até existir uma pública:
 # `deploy/publicar-modelos.sh` publica, e o endereço entra aqui. `ZE_MODELOS_URL` tem a vez, para
 # quem hospeda os modelos por conta própria (rede sem acesso à internet, por exemplo).
-ESPELHO = ""
+ESPELHO = "https://github.com/gestordescomplicaa-web/zervis-modelos/releases/download/modelos-1"
 OWW = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1"
 # Revisão fixa do repositório oficial de vozes do Piper (rhasspy/piper-voices).
 VOZES = (
