@@ -78,6 +78,25 @@ if [ -n "${ZE_SIMULAR:-}" ]; then
   echo "Simulação: publicaria $# arquivos na release $TAG de $REPO:"
   printf '  %s\n' "$@"
 else
+  # Repositório recém-criado, sem nenhum commit: o GitHub não cria a etiqueta da release ("HTTP
+  # 422: Repository is empty"). Um README inicial dá o primeiro commit.
+  if ! consulta=$(gh api "repos/$REPO/commits?per_page=1" 2>&1); then
+    case "$consulta" in
+      *mpty*)
+        echo "Repositório vazio: criando o README inicial."
+        texto=$(printf '# Zérvis: modelos de som\n\nEspelho dos modelos de som e da voz Cadu usados pelo Zérvis. Os arquivos estão na release; origem e licenças em LICENCAS.md.\n' | base64 | tr -d '\n')
+        gh api -X PUT "repos/$REPO/contents/README.md" -f message="README inicial" \
+          -f content="$texto" >/dev/null || falta "criar o README em $REPO."
+        ;;
+      *) falta "ler $REPO: $consulta" ;;
+    esac
+  fi
+  # Rascunho que uma tentativa anterior deixou: a busca por etiqueta não o enxerga, e uma nova
+  # release ficaria ao lado dele.
+  for id in $(gh api "repos/$REPO/releases" --jq ".[] | select(.draft and .tag_name==\"$TAG\") | .id"); do
+    echo "Apagando o rascunho $id de uma tentativa anterior."
+    gh api -X DELETE "repos/$REPO/releases/$id" >/dev/null
+  done
   if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
     gh release upload "$TAG" --repo "$REPO" --clobber "$@"
   else
