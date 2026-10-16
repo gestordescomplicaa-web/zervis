@@ -32,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from jarvis import fuso
+from jarvis import caminhos, fuso
 from jarvis.cerebro import contas, modelos
 from jarvis.dados.documentos import Documentos, linhas_json, objeto_json
 from jarvis.memoria import aimemory
@@ -1737,7 +1737,7 @@ def comando_terminal(
             {"matcher": "", "hooks": [entregar]},
         ]
     cmd = [
-        "claude",
+        caminhos.claude(),
         "--permission-mode",
         "acceptEdits",
         "--append-system-prompt",

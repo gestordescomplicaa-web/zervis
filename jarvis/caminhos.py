@@ -13,6 +13,7 @@ adiante para os agentes, as sessões e os hooks.
 import logging
 import os
 import pwd
+import shutil
 import subprocess
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -78,3 +79,15 @@ def completar(
     if novas:
         log.info("PATH completado com %d pastas (%s)", len(novas), ", ".join(novas[:4]))
     return novas
+
+
+def claude() -> str:
+    """O `claude` das sessões de código: o da pessoa, se houver no PATH; senão o Claude Code que
+    vem com o `claude-agent-sdk`. Numa VPS nova ele é o único, e criar uma sessão falhava com
+    FileNotFoundError (lição de 16/10/2026)."""
+    if shutil.which("claude"):
+        return "claude"
+    import claude_agent_sdk
+
+    embutido = Path(claude_agent_sdk.__file__).parent / "_bundled" / "claude"
+    return str(embutido) if embutido.is_file() else "claude"
