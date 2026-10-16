@@ -77,8 +77,11 @@ pelo painel, sem terminal:
 
 - **Claude:** o token de `claude setup-token` (rodado no seu PC) ou uma chave da Anthropic.
 - **Codex:** uma chave da OpenAI, em "Usar chave de API da OpenAI" (ou "Usar a das Respostas
-  rápidas", se você já salvou uma lá). A conta do ChatGPT, por enquanto, só pelo terminal da VPS:
-  `codex login --device-auth` mostra um código para autorizar no navegador do PC ou do celular.
+  rápidas", se você já salvou uma lá).
+
+Para entrar com a conta da assinatura (Claude ou ChatGPT), use **Modelos → Contas → Entrar**: o
+painel mostra o link para autorizar, no PC ou no celular, e um campo para colar o código, se o
+agente pedir.
 
 Os projetos ficam no servidor (`~/projetos` por padrão).
 

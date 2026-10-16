@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 from jarvis import fuso, usuario
-from jarvis.cerebro import acesso, contas, rapido
+from jarvis.cerebro import acesso, contas, logins, rapido
 from jarvis.portal.acoes.pagina import Pagina
 from jarvis.portal.servidor import PedidoInvalido
 
@@ -149,10 +149,29 @@ class AcoesConfiguracao(Pagina):
         return {**self.painel.contas(), "aviso": aviso or f"Usando a conta {conta.nome}."}
 
     def entrar_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O login do agente roda no Zé e aparece no painel: funciona sem tela, numa VPS."""
         try:
             conta = contas.Contas().achar(str(dados.get("id", "")))
+            logins.PADRAO.abrir(conta)
         except contas.ContaErro as erro:
             raise PedidoInvalido(str(erro)) from None
-        if contas.abrir_login(conta):
-            return {"aberto": True, "aviso": "Terminal aberto. Faça o login e volte aqui."}
-        return {"aberto": False, "aviso": "Sem terminal: rode o comando mostrado."}
+        return {"login": conta.id, **logins.PADRAO.ler(conta.id, 3.0)}
+
+    def ler_login(self, dados: dict[str, Any]) -> dict[str, Any]:
+        id_ = str(dados.get("id", ""))
+        estado = logins.PADRAO.ler(id_, float(dados.get("espera", 2)))
+        if estado["codigo"] == 0:
+            logins.PADRAO.fechar(id_)
+            return {**estado, "contas": self.painel.contas(), "aviso": "Conta conectada."}
+        return estado
+
+    def codigo_login(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            logins.PADRAO.escrever(str(dados.get("id", "")), str(dados.get("codigo", "")))
+        except contas.ContaErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {}
+
+    def fechar_login(self, dados: dict[str, Any]) -> dict[str, Any]:
+        logins.PADRAO.fechar(str(dados.get("id", "")))
+        return {}

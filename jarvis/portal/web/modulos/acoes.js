@@ -77,8 +77,15 @@ const ACOES = {
   },
   "conta-entrar": async (b) => {
     const r = await ocupado(b, () => api("conta/entrar", { id: b.dataset.id }));
-    mostrar("resultado-contas", r.aberto, r.aviso);
-    vigiarContas();
+    loginTela = { id: r.login }; desenharContas(); mostrarLogin(r);
+    acompanharLogin(r.login);
+  },
+  "login-codigo-enviar": async (b) => {
+    await ocupado(b, () => api("conta/login/codigo", { id: b.dataset.id, codigo: valorCampo("login-codigo").value }));
+    valorCampo("login-codigo").value = ""; mostrar("resultado-login", null, "Código enviado. Aguardando o agente…");
+  },
+  "login-cancelar": async (b) => {
+    loginTela = null; await api("conta/login/fechar", { id: b.dataset.id }); desenharContas();
   },
   "conta-remover": (b) => confirmar(b, "Remover a conta e o login dela?", async () => {
     const r = await api("conta/remover", { id: b.dataset.id });

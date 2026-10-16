@@ -57,7 +57,11 @@ class Conta:
 
     def comando_login(self) -> list[str]:
         variavel = [f"{VARIAVEIS[self.agente]}={self.pasta}"] if self.pasta else []
-        agente = ["claude"] if self.agente == "claude" else ["codex", "login", "--device-auth"]
+        agente = (
+            ["claude", "auth", "login"]
+            if self.agente == "claude"
+            else ["codex", "login", "--device-auth"]
+        )
         return ["env", *variavel, *agente]
 
 
@@ -165,36 +169,3 @@ class Contas:
         dados["usar"] = {**dados.get("usar", {}), conta.agente: conta.id}
         self._gravar(dados)
         return conta
-
-
-# Terminais que abrem um comando (o primeiro que existir); `xdg-terminal-exec` é o padrão do
-# freedesktop e respeita o terminal escolhido por quem usa.
-TERMINAIS = (
-    ("xdg-terminal-exec",),
-    ("ghostty", "-e"),
-    ("kitty",),
-    ("alacritty", "-e"),
-    ("foot",),
-    ("gnome-terminal", "--"),
-    ("konsole", "-e"),
-    ("xterm", "-e"),
-)
-
-
-def abrir_login(conta: Conta) -> bool:
-    """Abre um terminal com o login do próprio agente nesta conta; False se não houver terminal
-    (a tela mostra o comando para copiar)."""
-    import subprocess
-
-    for terminal in TERMINAIS:
-        if shutil.which(terminal[0]):
-            subprocess.Popen(  # noqa: S603 (terminal da lista acima; comando montado aqui)
-                [*terminal, *conta.comando_login()],
-                cwd=Path.home(),
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-            return True
-    return False
