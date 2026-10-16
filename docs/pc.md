@@ -53,3 +53,23 @@ o item 1 de “Onde estamos” concluído. Na sessão gráfica de um Ubuntu 24.0
 5. Registre aqui o resultado e a versão testada, sem chaves ou dados pessoais.
 
 Essa prova física permanece pendente. A CI com tela virtual não comprova os dispositivos de áudio.
+
+## Prova local no Omarchy (16/10/2026)
+
+O instalador foi executado numa sessão gráfica real, sobre uma instalação anterior, mantendo
+a porta escolhida (8796). Configuração, dados e estado receberam backup privado fora do
+repositório; os serviços antigos foram parados. O serviço e o atalho passaram a apontar para
+a cópia atual do projeto. O serviço iniciou ativo, sem reinícios, e painel e Imersão responderam.
+
+No Chromium visível, com GPU de hardware, o avatar chimpanzé carregou. Alegria, dúvida, raiva
+e tristeza alteraram suas respectivas shape keys, sem erro de JavaScript. Modelo, texturas e
+animações já existiam no código atual; não foi necessário importar código da instalação antiga.
+A câmera também apareceu na Imersão. Nenhuma imagem da pessoa entrou no repositório.
+
+A captura local recebeu cinco quadros PCM (12.800 bytes a 16 kHz). O Piper gerou uma frase
+de 4,47 s e o reprodutor local concluiu a reprodução. Isso comprova captura e saída disponíveis,
+mas não substitui a confirmação humana de volume, inteligibilidade e conversa por voz.
+
+`ZE_SEM_PULOS=1 make check` e a instalação em pasta limpa passaram com 1.049 testes, tipos,
+lint e Go. A prova no Ubuntu com dispositivos físicos e o pedido falado de ponta a ponta
+continuam pendentes; a instalação deste PC é Omarchy, não Ubuntu.

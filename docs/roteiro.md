@@ -24,7 +24,10 @@ Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro 
    instalador documentado no README, com serviço, atalho e abertura local do painel. Testes dos
    scripts e prova na CI em Ubuntu com tela virtual: [docs/pc.md](pc.md). Falta registrar a prova
    com microfone e saída de som num Ubuntu limpo com tela física (o Omarchy é o caso já usado no
-   dia a dia). O item continua em andamento até essa prova.
+   dia a dia). Comprovado em 16/10/2026 no Omarchy: serviço e atalho da cópia atual, avatar 3D
+   com as quatro expressões, câmera, captura local e reprodução pelo Piper; contas e dados
+   preservados com backup privado. Detalhes e limites em `docs/pc.md`. O item continua em
+   andamento até a prova no Ubuntu e a confirmação da conversa por voz.
 2. **Revisão da conversa pelo cérebro em uso:** `habilidades/revisao.py` chama sempre o Claude; com
    só o Codex conectado, falha no registro a cada conversa.
 3. **Modelo padrão do Codex** que a conta aceite (o padrão deu "acesso inválido"; o gpt-6-luna
