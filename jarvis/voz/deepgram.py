@@ -93,6 +93,30 @@ def _conectar_websocket(url: str, chave: str) -> Any:
     )
 
 
+# O que o Deepgram responde ao recusar a conexão; o registro dizia só "InvalidStatus".
+RECUSAS = {
+    400: "pedido recusado (HTTP 400)",
+    401: "chave inválida (HTTP 401)",
+    402: "sem crédito no Deepgram (HTTP 402)",
+    403: "chave sem permissão (HTTP 403)",
+    429: "limite de conexões do Deepgram (HTTP 429)",
+}
+DEFINITIVOS = {400, 401, 402, 403}
+
+
+def _status(erro: BaseException) -> int | None:
+    resposta = getattr(erro, "response", None)
+    codigo = getattr(resposta, "status_code", None)
+    return codigo if isinstance(codigo, int) else None
+
+
+def motivo(erro: BaseException) -> str:
+    codigo = _status(erro)
+    if codigo is None:
+        return type(erro).__name__
+    return RECUSAS.get(codigo, f"HTTP {codigo}")
+
+
 class EscutaDeepgram:
     """Um pedido: abre, recebe os quadros, finaliza e devolve o texto."""
 
@@ -133,12 +157,19 @@ class EscutaDeepgram:
     # --- conexão (thread própria) -------------------------------------------------------------
 
     def _rodar(self) -> None:
-        try:
-            self._ws = self.conectar(f"{ENDERECO}?{consulta()}", self.chave)
-        except Exception as erro:
-            self.erro = f"conexão: {type(erro).__name__}"
-            self.finalizado.set()
-            return
+        # Uma segunda tentativa: na VPS (16/10/2026) a conexão foi recusada quatro vezes seguidas
+        # e voltou sozinha; chave e crédito não melhoram tentando de novo.
+        for tentativa in range(2):
+            try:
+                self._ws = self.conectar(f"{ENDERECO}?{consulta()}", self.chave)
+                break
+            except Exception as erro:
+                self.erro = f"conexão: {motivo(erro)}"
+                if tentativa or _status(erro) in DEFINITIVOS:
+                    self.finalizado.set()
+                    return
+                time.sleep(0.3)
+        self.erro = None
         threading.Thread(target=self._receber, name="deepgram-rx", daemon=True).start()
         try:
             while True:

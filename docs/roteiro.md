@@ -129,6 +129,13 @@ na ordem em que resolver:
 4. **Aba Imersão no servidor:** aparece vazia pelo túnel (busca a porta 8794); esconder quando o Zé
    está num servidor.
 5. **Modelos de voz faltando:** o painel não mostra; só o registro.
+   **Escuta que falha às vezes (VPS, 16/10/2026):** o Deepgram recusou a conexão quatro vezes
+   seguidas e voltou sozinho; o registro dizia só "InvalidStatus". Feito: o registro diz o motivo
+   (chave, crédito, limite) e uma recusa passageira tenta de novo uma vez. Próximo: **Opus na voz
+   do navegador.** Hoje o microfone vai em PCM de 16 kHz (256 kbit/s) e a voz do Zé volta em PCM,
+   pelo WebSocket do painel; no 4G e pelo túnel, isso pesa e a conexão cai (código 1006). Com Opus
+   (WebCodecs no navegador, libopus no Zé), cerca de 24 kbit/s em cada sentido. O Zé decodifica
+   antes do "Ei Zé" e do Deepgram, que seguem com PCM.
 6. **Chaves digitadas no comando:** uma chave colada direto num comando fica no histórico do shell;
    com o item 1, chave só pelo painel.
 7. **Contribuições e atualizações:** como a comunidade propõe melhorias (PR, CI, aprovação de quem

@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Escuta: quando o Deepgram recusa a conexão, o registro e a Atividade dizem o motivo (chave,
+  crédito, limite), e uma recusa passageira tenta de novo uma vez.
 - Sessões por voz: cada sessão nova ganha a própria pasta em `~/projetos`, sem precisar dizer o
   caminho; o agente padrão é o que tem conta conectada. Projeto novo numa máquina sem nome no git
   já sai com o primeiro commit.
