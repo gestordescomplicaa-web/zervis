@@ -92,6 +92,28 @@ etapa por vez. Ela absorve os itens 5 (instalação), 6 (SQLite) e 8 (revisão f
 8. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
    falam do Orca e do JARVIS: visão, conceitos, reaproveitamento, plano da oficina).
 
+## Primeiro teste numa VPS real (16/10/2026)
+
+O Zé foi instalado numa VPS (Ubuntu 24.04) pelo `docs/vps.md`: o instalador terminou, o painel
+abriu pelo túnel SSH e o Zé continuou de pé depois de fechar o SSH (*linger*). O que apareceu,
+na ordem em que resolver:
+
+1. **Agentes na VPS** ([ADR 0035](adr/0035-agentes-prontos-na-instalacao.md)): Claude e Codex
+   "Não instalado"; o Codex exigiu terminal; o cérebro não aceitava a chave da OpenAI. Em andamento.
+2. **Entregar o código numa VPS:** com o repositório privado, o `git clone` pede usuário e token do
+   GitHub (contornado com `git archive` e `scp`). Resolve com o repositório público e o instalador de
+   um comando (ADR 0034, etapa I3).
+3. **Túnel e porta:** o painel só aceita a mesma porta dos dois lados, e o PC de quem desenvolve já
+   usa a 8795; foi preciso parar o Zé do PC durante o teste.
+4. **Aba Imersão no servidor:** aparece vazia pelo túnel (busca a porta 8794); esconder quando o Zé
+   está num servidor.
+5. **Modelos de voz faltando:** o painel não mostra; só o registro.
+6. **Chaves digitadas no comando:** uma chave colada direto num comando fica no histórico do shell;
+   com o item 1, chave só pelo painel.
+7. **Contribuições e atualizações:** como a comunidade propõe melhorias (PR, CI, aprovação de quem
+   mantém) e como quem personaliza pelo autodesenvolvimento atualiza para uma versão nova sem perder o
+   que é seu. Vira um ADR antes da liberação.
+
 ## Em aberto
 
 - Nome do pacote e das variáveis: o código ainda é o pacote `jarvis` e usa `JARVIS_*`; as pastas

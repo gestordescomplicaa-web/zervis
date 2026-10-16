@@ -39,3 +39,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0032](0032-arquitetura-para-crescer.md) | Arquitetura para crescer: linguagem por papel, núcleo dividido, SQLite e pacotes | Aceito como direção (plano E1 a E7) |
 | [0033](0033-pacotes-de-extensao.md) | Pacotes de extensão: o Zé ganha capacidades sem mudar o próprio código | Proposta |
 | [0034](0034-central-estacoes-e-instalacao.md) | Central e estações (o Zé na VPS com as funções do PC) e a instalação de um comando | Proposta |
+| [0035](0035-agentes-prontos-na-instalacao.md) | Agentes prontos na instalação: Claude Code e Codex nativos, chaves pelo painel | Aceito |
