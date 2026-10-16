@@ -70,11 +70,17 @@ sua chave SSH tem o Zé.
   autenticador (Ligar, ler o QR no aplicativo e Confirmar) e toque em Ativar. Abra no celular o endereço `https://….trycloudflare.com`
   (ou leia o QR) e entre com a senha e o código. O endereço muda quando o servidor reinicia.
 
-## 5. Sessões de código
+## 5. Cérebro e sessões de código
 
-Os projetos ficam no servidor (`~/projetos` por padrão). O Claude Code vem junto com o Zé. Para
-o Codex, instale o CLI dele no servidor e entre na conta pelo painel, no cartão Contas da
-página Modelos.
+O Claude Code e o Codex vêm com o Zé (ADR 0035). Em **Modelos**, escolha o cérebro e dê o acesso
+pelo painel, sem terminal:
+
+- **Claude:** o token de `claude setup-token` (rodado no seu PC) ou uma chave da Anthropic.
+- **Codex:** uma chave da OpenAI (em "Usar chave de API da OpenAI", ou "Usar a das Respostas
+  rápidas" se você já salvou uma lá) ou a conta do ChatGPT, em **Contas → Entrar**, que mostra um
+  código para autorizar pelo navegador do PC ou do celular.
+
+Os projetos ficam no servidor (`~/projetos` por padrão).
 
 ## Opcionais
 

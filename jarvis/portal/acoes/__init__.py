@@ -139,6 +139,7 @@ class Acoes:
             "escuta/testar": self.testar_chave_escuta,
             "perfil": self.salvar_perfil,
             "acesso/chave": self.guardar_chave_claude,
+            "acesso/chave-codex": self.guardar_chave_codex,
             "acesso/remover": self.remover_acesso,
             "acesso/testar": self.testar_acesso,
             "conta/adicionar": self.adicionar_conta,

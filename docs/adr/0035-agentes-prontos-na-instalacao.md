@@ -46,3 +46,10 @@ Para quem instala numa VPS, cada passo desses é atrito, e o terminal é o pior 
 - Uma versão do Codex fixada: atualizar é um commit próprio, com o SHA-256 novo.
 - Login real do Codex e da chave só se provam na máquina de quem instala; os testes cobrem o fluxo
   com um Codex falso.
+
+## Andamento
+
+| Parte | Estado | Resultado |
+|---|---|---|
+| Agentes com o Zé | Feito em 16/10/2026 | Codex 0.163.0 baixado e conferido; Claude Code do SDK. Num usuário limpo, sem nenhum dos dois: `codex --version` e `claude --version` responderam, e o painel passou de "Não instalado" para instalado nos dois. |
+| Chave da OpenAI no Codex | Feito em 16/10/2026 | Pelo painel, entregue ao `codex login --with-api-key` pela entrada do processo. Com o Codex real, uma conta nova falhava porque o Codex recusa um `CODEX_HOME` que não existe: o Zé cria a pasta antes (regressão no teste). |

@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Agentes: o Claude Code e o Codex vêm com o Zé (o Codex oficial, conferido por SHA-256); o
+  Codex aceita a chave da OpenAI pelo painel, inclusive a mesma das Respostas rápidas.
 - Modelos de som: o download tenta primeiro o espelho do projeto (`ZE_MODELOS_URL`) e cai para a
   fonte original, sempre conferindo o SHA-256; `deploy/publicar-modelos.sh` publica os modelos
   numa release do GitHub, para a voz Cadu não depender de uma única fonte.

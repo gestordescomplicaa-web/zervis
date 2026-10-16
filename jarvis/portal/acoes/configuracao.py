@@ -25,6 +25,8 @@ class AcoesConfiguracao(Pagina):
             "acesso": acesso.situacao(),
             "agentes": acesso.agentes(),
             "chave_anthropic": "https://console.anthropic.com/settings/keys",
+            "chave_openai": "https://platform.openai.com/api-keys",
+            "openai_salva": bool(rapido.ler_chave("openai", "")),  # a das Respostas rápidas
         }
 
     def salvar_perfil(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -58,6 +60,18 @@ class AcoesConfiguracao(Pagina):
         except rapido.MotorErro:
             raise PedidoInvalido("Informe a chave.") from None
         return self.painel._acesso("Chave salva.")
+
+    def guardar_chave_codex(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A chave da OpenAI no Codex: colada agora ou a mesma das Respostas rápidas."""
+        if dados.get("reusar"):
+            chave = rapido.ler_chave("openai", "") or ""
+        else:
+            chave = str(dados.get("chave", ""))
+        try:
+            acesso.chave_no_codex(chave)
+        except acesso.AcessoErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return self.painel._acesso("Chave salva no Codex.")
 
     def remover_acesso(self, dados: dict[str, Any]) -> dict[str, Any]:
         rapido.apagar_chave("anthropic")

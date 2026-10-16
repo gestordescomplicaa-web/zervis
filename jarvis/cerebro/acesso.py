@@ -15,6 +15,8 @@ pelo Agent SDK, que herda o ambiente do processo. Ordem:
 
 import os
 import shutil
+import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -93,6 +95,46 @@ def escolha(
     if ambiente.get(TOKEN) or login.is_file():
         return {"metodo": "login", "origem": "agente", "valor": ""}
     return {"metodo": "", "origem": "", "valor": ""}
+
+
+class AcessoErro(ValueError):
+    """A mensagem vai para a tela como está."""
+
+
+def chave_no_codex(
+    chave: str,
+    conta: contas.Conta | None = None,
+    rodar: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> None:
+    """Entrega a chave da OpenAI ao Codex da conta em uso, pelo login dele (ADR 0035).
+
+    O Codex guarda a chave no próprio login (`auth.json`, como o login da conta); o Zé não a grava
+    em lugar nenhum. A chave vai pela entrada do processo, nunca na linha de comando, que outros
+    usuários da máquina veem em `ps`.
+    """
+    chave = chave.strip()
+    if not chave or len(chave) > 400 or any(c.isspace() for c in chave):
+        raise AcessoErro("Informe a chave.")
+    programa = shutil.which("codex")
+    if programa is None:
+        raise AcessoErro("Codex indisponível nesta máquina.")
+    conta = conta or contas.Contas().em_uso("codex")
+    # O Codex recusa um CODEX_HOME que não existe (conta nova, VPS recém-instalada).
+    conta.onde.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        r = rodar(
+            [programa, "login", "--with-api-key"],
+            input=chave,
+            env={**os.environ, **conta.ambiente()},
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise AcessoErro("O Codex não respondeu.") from None
+    if r.returncode != 0:
+        raise AcessoErro("O Codex recusou a chave.")
 
 
 def situacao(pasta: Path | None = None, login: Path | None = None) -> dict[str, Any]:

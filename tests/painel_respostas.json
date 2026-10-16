@@ -301,7 +301,9 @@
      "entrar": "Exemplo"
     }
    ],
-   "chave_anthropic": "https://exemplo.invalid"
+   "chave_anthropic": "https://exemplo.invalid",
+   "chave_openai": "https://exemplo.invalid",
+   "openai_salva": true
   },
   "contas": {
    "agentes": [

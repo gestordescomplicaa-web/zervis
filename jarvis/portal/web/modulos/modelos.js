@@ -41,7 +41,7 @@ function camposPerfil(cfg) {
 }
 
 function prepararAcesso(cfg) {
-  acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, modelo: acessoTela.modelo };
+  acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, linkOpenai: cfg.chave_openai, openaiSalva: cfg.openai_salva, modelo: acessoTela.modelo };
 }
 
 // Outra conta, outro plano: as listas de modelos do Cérebro e das Respostas rápidas mudam.
@@ -108,7 +108,11 @@ function desenharAcesso() {
       <div class="linha"><input id="segredo-acesso" type="password" class="mono" placeholder="${temChave ? "•••• " + esc(a.fim) : "Chave de API"}" autocomplete="off" spellcheck="false" aria-label="Chave de API da Anthropic">
         ${botao("Salvar", "acesso-salvar", "", "principal")}${temChave ? botao("Remover", "acesso-remover", "", "discreta") : ""}</div>
       <p class="nota"><a href="${esc(a.link)}" target="_blank" rel="noopener">Obter chave de API ↗</a> Pago por uso; vence o login quando preenchida.</p>
-    </details>` : ""}
+    </details>` : `<details class="alternativa"><summary>Usar chave de API da OpenAI</summary>
+      <div class="linha"><input id="segredo-codex" type="password" class="mono" placeholder="Chave de API" autocomplete="off" spellcheck="false" aria-label="Chave de API da OpenAI">
+        ${botao("Salvar", "codex-chave-salvar", "", "principal")}${a.openaiSalva ? botao("Usar a das Respostas rápidas", "codex-chave-reusar") : ""}</div>
+      <p class="nota"><a href="${esc(a.linkOpenai || "")}" target="_blank" rel="noopener">Obter chave de API ↗</a> Pago por uso; substitui o login da conta no Codex.</p>
+    </details>`}
     <div class="linha">${botao("Testar conexão", "acesso-testar")}</div>
     <p class="resultado" id="resultado-acesso"></p>`;
 }
