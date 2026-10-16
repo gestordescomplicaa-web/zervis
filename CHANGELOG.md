@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Servidor (VPS): `deploy/instalar-servidor.sh` instala o Zé como serviço que continua depois
+  de sair do SSH; guia em `docs/vps.md`. O Zé sobe sem áudio na máquina (a voz chega pelo
+  navegador) e sem os modelos de som que não baixaram (painel e texto funcionam).
+- O cérebro sabe em que máquina está (Omarchy, outro Linux ou servidor) e, fora do Omarchy,
+  não oferece suspender o computador.
+- Sessões de código funcionam sem o Claude Code instalado à parte: usam o que vem com o Zé.
 - Sessões: excluir uma sessão não trava mais num contêiner sem init (Docker sem `--init`), onde
   os processos encerrados do agente ficavam como zumbis.
 - Qualidade: a CI do GitHub roda o `make check` completo a cada envio, com o painel num Chromium
