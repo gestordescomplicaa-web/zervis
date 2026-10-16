@@ -42,14 +42,16 @@ check-imersivo:
 # próprio Zé na primeira subida (jarvis/preparar.py).
 
 PORTA ?= 8795
+CONFIG_HOME = $(or $(XDG_CONFIG_HOME),$(HOME)/.config)
+DATA_HOME = $(or $(XDG_DATA_HOME),$(HOME)/.local/share)
 
 .PHONY: instalar
 instalar:
 	uv sync --inexact
-	install -d $(HOME)/.config/systemd/user
-	sed 's#@REPO@#$(CURDIR)#' systemd/zervis.service > $(HOME)/.config/systemd/user/zervis.service
-	install -Dm644 deploy/zervis.svg $(HOME)/.local/share/icons/hicolor/scalable/apps/zervis.svg
-	install -d $(HOME)/.local/share/applications
+	install -d "$(CONFIG_HOME)/systemd/user"
+	sed 's#@REPO@#$(CURDIR)#' systemd/zervis.service > "$(CONFIG_HOME)/systemd/user/zervis.service"
+	install -Dm644 deploy/zervis.svg "$(DATA_HOME)/icons/hicolor/scalable/apps/zervis.svg"
+	install -d "$(DATA_HOME)/applications"
 	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' -e 's#@ICONE@#zervis#' \
-		deploy/zervis.desktop > $(HOME)/.local/share/applications/zervis.desktop
+		deploy/zervis.desktop > "$(DATA_HOME)/applications/zervis.desktop"
 	systemctl --user daemon-reload

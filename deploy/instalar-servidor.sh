@@ -6,6 +6,12 @@
 # No fim, ele mostra um endereço HTTPS (Cloudflare) e um código de primeiro acesso: abra o
 # endereço, crie a senha e ligue o código do autenticador, sem túnel SSH. Guia: docs/vps.md.
 set -eu
+MODO=servidor
+case "${1:-}" in
+  --pc) MODO=pc ;;
+  "") ;;
+  *) echo "Uso: $0 [--pc]" >&2; exit 1 ;;
+esac
 UV_VERSAO=0.11.32
 PORTA=8795
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -31,6 +37,18 @@ done
 command -v systemctl >/dev/null || falta "systemd."
 systemctl --user show-environment >/dev/null 2>&1 || falta "o systemd do usuário. Entre por SSH \
 direto como $USUARIO (su e sudo -u não abrem a sessão do usuário)."
+if [ "$MODO" = pc ]; then
+  [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || falta "uma sessão gráfica. Rode no terminal do PC."
+  navegador=
+  for programa in chromium chromium-browser google-chrome google-chrome-stable xdg-open; do
+    if command -v "$programa" >/dev/null; then navegador=$programa; break; fi
+  done
+  [ -n "$navegador" ] || falta "um navegador e xdg-utils (sudo apt install xdg-utils)."
+  for programa in parec paplay pactl; do
+    command -v "$programa" >/dev/null || echo "Aviso: falta $programa para o áudio local. \
+No Ubuntu: sudo apt install pulseaudio-utils. O painel continua disponível."
+  done
+fi
 
 # --- uv, dependências e modelos --------------------------------------------------------------
 PATH="$HOME/.local/bin:$PATH"
@@ -64,8 +82,15 @@ uv run python -m jarvis.cerebro.agentes_nativos
 # --- serviço -----------------------------------------------------------------------------------
 make instalar
 # Sem linger, o systemd encerra os serviços do usuário quando a última sessão SSH fecha.
-if ! loginctl enable-linger "$USUARIO" 2>/dev/null; then
+if [ "$MODO" = servidor ] && ! loginctl enable-linger "$USUARIO" 2>/dev/null; then
   echo "Para o Zé continuar depois de sair do SSH, rode uma vez: sudo loginctl enable-linger $USUARIO"
+fi
+if [ "$MODO" = pc ]; then
+  # O serviço precisa da sessão gráfica atual para abrir as janelas locais.
+  for variavel in DISPLAY WAYLAND_DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP; do
+    printenv "$variavel" >/dev/null 2>&1 || continue
+    systemctl --user import-environment "$variavel"
+  done
 fi
 systemctl --user enable zervis
 systemctl --user restart zervis
@@ -73,7 +98,7 @@ systemctl --user restart zervis
 # --- conferência -------------------------------------------------------------------------------
 printf "Esperando o painel"
 i=0
-until curl -s -o /dev/null "http://127.0.0.1:$PORTA/"; do
+until curl --fail --silent --max-time 2 -o /dev/null "http://127.0.0.1:$PORTA/"; do
   i=$((i + 1))
   if [ $i -ge 120 ] || ! systemctl --user is-active --quiet zervis; then
     echo
@@ -95,6 +120,13 @@ for opcional in node go; do
   fi
 done
 echo
+if [ "$MODO" = pc ]; then
+  echo "Zérvis instalado. Painel: http://127.0.0.1:$PORTA/"
+  echo "Abra também pelo atalho Zérvis no menu de aplicativos."
+  echo "Registro: journalctl --user -u zervis -f"
+  setsid -f "$REPO/deploy/abrir-painel.sh" >/dev/null 2>&1
+  exit 0
+fi
 echo "O Zé está rodando neste servidor (serviço zervis do usuário $USUARIO)."
 echo "Preparando o acesso ao painel (endereço seguro do Cloudflare)..."
 echo

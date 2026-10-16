@@ -21,8 +21,10 @@ Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro 
 **Para "pronto para local e VPS, conforme a pessoa escolher"**, em ordem:
 
 1. **Instalador de PC** (`deploy/instalar-pc.sh` ou um modo do instalador atual): hoje o PC usa o
-   caminho de desenvolvimento do README. Provar num Ubuntu limpo com tela (o Omarchy é o caso já
-   usado no dia a dia).
+   instalador documentado no README, com serviço, atalho e abertura local do painel. Testes dos
+   scripts e prova na CI em Ubuntu com tela virtual: [docs/pc.md](pc.md). Falta registrar a prova
+   com microfone e saída de som num Ubuntu limpo com tela física (o Omarchy é o caso já usado no
+   dia a dia). O item continua em andamento até essa prova.
 2. **Revisão da conversa pelo cérebro em uso:** `habilidades/revisao.py` chama sempre o Claude; com
    só o Codex conectado, falha no registro a cada conversa.
 3. **Modelo padrão do Codex** que a conta aceite (o padrão deu "acesso inválido"; o gpt-6-luna

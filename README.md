@@ -6,7 +6,7 @@ automações em segundo plano e manda agentes de código trabalharem nos seus pr
 Inspirado no Hermes e no OpenClaw, mas mais enxuto, rápido e eficiente.
 
 > **Estado:** em desenvolvimento, de código aberto (AGPL-3.0-or-later). Ainda sem instalação de um
-> comando; num servidor, o [guia de VPS](docs/vps.md) leva uns minutos. O caminho até lá está em
+> comando; há instaladores para PC e [servidor](docs/vps.md). O caminho até lá está em
 > [docs/roteiro.md](docs/roteiro.md). Quer ajudar? Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Princípios
@@ -31,6 +31,25 @@ Inspirado no Hermes e no OpenClaw, mas mais enxuto, rápido e eficiente.
 
 `JARVIS_PERFIL=<nome>` usa outro conjunto de pastas (`zervis-<nome>`); `JARVIS_RAIZ=<pasta>` põe as
 três dentro de uma pasta só. O fuso vem do sistema (ou de `JARVIS_FUSO`).
+
+## Instalar no PC (Linux)
+
+No terminal da sessão gráfica, como usuário comum, com Git, Make e curl instalados:
+
+```sh
+git clone https://github.com/gestordescomplicaa-web/zervis.git
+cd zervis && deploy/instalar-pc.sh
+```
+
+O instalador prepara Python e dependências, modelos de voz e agentes de código, instala o serviço
+do usuário e o atalho Zérvis, e abre o painel na configuração inicial. O painel fica no próprio
+PC (`http://127.0.0.1:8795/`); acesso por outros aparelhos é configurado depois, no painel.
+
+No Ubuntu 24.04, os pré-requisitos são `sudo apt install git make curl xdg-utils pulseaudio-utils`.
+PipeWire ou PulseAudio e um navegador devem estar disponíveis na sessão. Sem as ferramentas de
+áudio, o instalador avisa; o painel e a conversa por texto continuam disponíveis. O atalho detecta
+Chromium ou Chrome e, na falta deles, abre o navegador padrão. O controle completo da máquina é
+no Omarchy; outros Linux têm o controle reduzido. Veja a [prova e seus limites](docs/pc.md).
 
 ## Instalar num servidor (VPS)
 

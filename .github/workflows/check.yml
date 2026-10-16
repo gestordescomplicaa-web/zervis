@@ -68,6 +68,43 @@ jobs:
           set -o pipefail
           make check 2>&1 | tee "$RUNNER_TEMP/check.log"
 
+      # Ubuntu limpo com sessão gráfica virtual e systemd real. Não usa contas nem áudio físico.
+      - name: Instalador de PC
+        run: |
+          set -o pipefail
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          sudo loginctl enable-linger "$USER"
+          sudo systemctl start "user@$(id -u).service"
+          Xvfb :99 -screen 0 1400x900x24 > "$RUNNER_TEMP/tela.log" 2>&1 &
+          export DISPLAY=:99 PAINEL_DEPURACAO=9336
+          # Espera o servidor gráfico antes de abrir o navegador.
+          for tentativa in $(seq 1 30); do
+            if xdpyinfo -display :99 > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          xdpyinfo -display :99 > /dev/null
+          timeout 600 deploy/instalar-pc.sh 2>&1 | tee "$RUNNER_TEMP/instalador.log"
+          systemctl --user is-enabled zervis
+          systemctl --user is-active zervis
+          test -f "$HOME/.local/share/applications/zervis.desktop"
+          curl --fail --retry 30 --retry-delay 1 --retry-connrefused --max-time 5 \
+            http://127.0.0.1:9336/json/list -o "$RUNNER_TEMP/abas.json"
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          abas = json.loads((Path(os.environ["RUNNER_TEMP"]) / "abas.json").read_text())
+          assert any(a.get("url") == "http://127.0.0.1:8795/" for a in abas), abas
+          PY
+
+      - name: Registro da instalação
+        if: failure()
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          journalctl --user -u zervis -n 80 --no-pager || true
+
       # O resumo da falha também como anotação: aparece na página do envio e pela API do GitHub.
       - name: Resumo da falha
         if: failure()
