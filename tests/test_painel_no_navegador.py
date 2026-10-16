@@ -125,8 +125,9 @@ def _chromium(perfil: Path) -> tuple[subprocess.Popen[bytes], str]:
         processo.kill()
     if not (porta.exists() and porta.read_text().strip()):
         # Sem isso, a falha era só "DevToolsActivePort não existe" (lição de 16/10/2026).
-        fim = registro.read_bytes()[-1500:].decode(errors="replace")
-        raise RuntimeError(f"O Chromium ({CHROMIUM}) não abriu: {fim or 'sem mensagem'}")
+        linhas = registro.read_text(errors="replace").splitlines()
+        motivo = [x for x in linhas if "FATAL" in x or "ERROR" in x] or linhas[-5:]
+        raise RuntimeError(f"O Chromium ({CHROMIUM}) não abriu: {' | '.join(motivo[:5])}")
     lista = f"http://127.0.0.1:{porta.read_text().splitlines()[0]}/json/list"
     with urllib.request.urlopen(lista, timeout=5) as r:
         alvo = next(x for x in json.load(r) if x["type"] == "page")
