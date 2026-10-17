@@ -611,6 +611,12 @@
     "usos": 0
    }
   ],
+  "skills/sugeridas": [
+   {
+    "nome": "codebase-exploration",
+    "descricao": "Entender a estrutura e as convenções de um repositório antes de implementar uma tarefa."
+   }
+  ],
   "skills/agentes": [
    {
     "agente": "claude",

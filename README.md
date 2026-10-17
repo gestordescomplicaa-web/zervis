@@ -1,13 +1,24 @@
-# Zérvis: o Zé, um assistente pessoal local
+<div align="center">
+  <img src=".github/ze-logo.png" width="112" alt="Logo do Zé, o assistente Zérvis">
+  <h1>Zérvis</h1>
+  <p><strong>Seu assistente pessoal, rodando no seu Linux.</strong></p>
+  <p>Converse por voz ou pelo painel. Organize tarefas, memória e automações.<br>Trabalhe nos seus projetos com agentes Claude e Codex.</p>
+  <p><a href="docs/vps.md">Começar pela VPS</a> · <a href="docs/roteiro.md">Ver o roteiro</a> · <a href="CONTRIBUTING.md">Contribuir</a></p>
+  <p><a href="LICENSE"><img alt="Licença AGPL-3.0-or-later" src="https://img.shields.io/badge/licen%C3%A7a-AGPL--3.0--or--later-45c6d8?style=flat-square"></a></p>
+</div>
 
-O Zé é um assistente pessoal que roda na sua máquina Linux. Você conversa com ele por voz ("Ei Zé")
-ou pelo painel. Ele lê e opera o computador, tem memória própria, aprende skills com o uso, roda
-automações em segundo plano e manda agentes de código trabalharem nos seus projetos.
-Inspirado no Hermes e no OpenClaw, mas mais enxuto, rápido e eficiente.
+> **Em desenvolvimento.** O Zérvis é código aberto e já tem um guia para testar numa
+> [VPS](docs/vps.md); a instalação simplificada no PC ainda está no roteiro.
 
-> **Estado:** em desenvolvimento, de código aberto (AGPL-3.0-or-later). Ainda sem instalação de um
-> comando; num servidor, o [guia de VPS](docs/vps.md) leva uns minutos. O caminho até lá está em
-> [docs/roteiro.md](docs/roteiro.md). Quer ajudar? Veja o [CONTRIBUTING.md](CONTRIBUTING.md).
+## O que o Zé faz
+
+- **Conversa com você:** por voz ("Ei Zé") ou pelo painel local.
+- **Cuida do trabalho recorrente:** organiza contexto e memória, oferece skills iniciais opcionais,
+  aprende procedimentos com sua aprovação e roda automações em segundo plano.
+- **Acompanha seus projetos:** abre sessões com agentes Claude e Codex no seu computador.
+
+Seus dados ficam na sua máquina. O Zé não presume seu nome, fuso ou caminhos; ações que podem
+enviar, aprovar ou apagar falham fechadas quando há dúvida.
 
 ## Princípios
 

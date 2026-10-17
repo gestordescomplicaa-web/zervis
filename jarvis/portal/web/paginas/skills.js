@@ -3,12 +3,14 @@
 // formulário; o SKILL.md (o formato aberto dos agentes) é montado por trás.
 
 PAGINAS.skills = async () => {
-  const [s, dosAgentes] = await Promise.all([api("skills"), api("skills/agentes")]);
+  const [s, dosAgentes, sugeridas] = await Promise.all([api("skills"), api("skills/agentes"), api("skills/sugeridas")]);
   const linhas = s.map((k) => item(`${esc(k.nome)}${k.sessoes ? ' <span class="etiqueta">Sessões</span>' : ""}`, esc(k.descricao),
     liga(k.ligada, "skill", `data-nome="${esc(k.nome)}"`, "Ligada") + botao("Editar", "skill-editar", `data-nome="${esc(k.nome)}"`, "discreta") + xis("skill-excluir", `data-nome="${esc(k.nome)}"`, "Excluir"), !k.ligada));
   return `${cabeca("Skills", botao("Nova skill", "skill-nova", "", "principal"))}${sub("Procedimentos do seu jeito: o Zé e as sessões seguem antes de agir.")}
     <section class="cartao" id="editor-skill" hidden></section>
     ${s.length ? `<div class="itens">${linhas.join("")}</div>` : vazio("Nenhuma skill ainda.")}
+    ${sugeridas.length ? cartao("Comece com uma skill", `${sub("Sugestões para sessões de código. Ao instalar, ficam disponíveis para o Codex e o Claude.")}
+      <div class="itens">${sugeridas.map((k) => item(esc(k.nome), esc(k.descricao), botao("Instalar", "skill-instalar-sugerida", `data-nome="${esc(k.nome)}"`, "discreta"))).join("")}</div>`) : ""}
     ${dosAgentes.length ? cartao("Skills dos agentes", `${sub("Instaladas no Claude Code e no Codex. Valem nas sessões de código daquele agente; gerenciadas no próprio agente.")}
       <div class="itens">${dosAgentes.map((k) => item(`${esc(k.nome)} <span class="etiqueta">${k.agente === "codex" ? "Codex" : "Claude"}</span>`, esc(k.descricao))).join("")}</div>`) : ""}`;
 };
@@ -87,6 +89,10 @@ Object.assign(ACOES, {
     if (!skillEditada.texto && !valorCampo("sk-quando").value.trim()) return mostrar("sk-resultado", false, "Diga quando usar.");
     await ocupado(b, () => api("skill/salvar", { nome, conteudo: conteudoDoEditor(nome) }));
     toast("Skill salva."); await recarregar();
+  },
+  "skill-instalar-sugerida": async (b) => {
+    await ocupado(b, () => api("skill/instalar-sugerida", { nome: b.dataset.nome }));
+    toast("Skill instalada."); await recarregar();
   },
   "skill-excluir": (b) => confirmar(b, "Excluir?", async () => { await api("skill/excluir", { nome: b.dataset.nome }); toast("Excluída."); await recarregar(); }),
 });

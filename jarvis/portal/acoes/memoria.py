@@ -41,6 +41,11 @@ class AcoesMemoria(Pagina):
                 )
         return sorted(ligadas + desligadas, key=lambda k: k["nome"])
 
+    def skills_sugeridas(self) -> list[dict[str, str]]:
+        return [
+            {"nome": nome, "descricao": descricao} for nome, descricao in self.n.skills.sugeridas()
+        ]
+
     def memoria(self) -> dict[str, Any]:
         m = self.n.memoria
         return {
@@ -111,6 +116,10 @@ class AcoesMemoria(Pagina):
         self.painel._chamar(
             lambda: self.n.skills.ligar(str(dados.get("nome", "")), bool(dados.get("ligada")))
         )
+        return self.painel.skills()
+
+    def instalar_skill_sugerida(self, dados: dict[str, Any]) -> list[dict[str, Any]]:
+        self.painel._chamar(lambda: self.n.skills.instalar_sugerida(str(dados.get("nome", ""))))
         return self.painel.skills()
 
     def excluir_skill(self, dados: dict[str, Any]) -> list[dict[str, Any]]:
