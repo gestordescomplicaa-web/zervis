@@ -476,12 +476,14 @@ class Nucleo(
         self.testes_do_atendente = agente.Executor()
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
+            escritas = acoes.escritas()
             self.portal = Portal(
                 acoes.leituras(),
-                acoes.escritas(),
+                escritas,
                 envios=acoes.envios(),
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
+                entrada_terminal=escritas["terminal/escrever"],
                 so_no_pc=senha.SO_NO_PC,
                 servidor=maquina_atual.detectar().servidor,
             )
