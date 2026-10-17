@@ -86,6 +86,31 @@ def test_skill_posta_a_mao_aparece_no_catalogo(tmp_path: Path) -> None:
     assert ("agenda", "Lembretes e reuniões.") in _skills(tmp_path).listar()
 
 
+def test_skills_iniciais_sao_opt_in_e_nao_sobrescrevem(tmp_path: Path) -> None:
+    s = _skills(tmp_path)
+    nomes = {nome for nome, _ in s.sugeridas()}
+    assert {"codebase-exploration", "systematic-debugging", "test-driven-development"} <= nomes
+
+    s.instalar_sugerida("systematic-debugging")
+    assert "systematic-debugging" in {nome for nome, _ in s.listar()}
+    assert "systematic-debugging" not in {nome for nome, _ in s.sugeridas()}
+    assert "sessoes: sim" in s.atual("systematic-debugging")
+    with pytest.raises(SkillErro, match="já está instalada"):
+        s.instalar_sugerida("systematic-debugging")
+
+
+def test_skill_inicial_nao_ocupa_pasta_existente(tmp_path: Path) -> None:
+    s = _skills(tmp_path)
+    pasta = s.pasta / "systematic-debugging"
+    pasta.mkdir(parents=True)
+    apoio = pasta / "notas.txt"
+    apoio.write_text("conteúdo do usuário")
+
+    with pytest.raises(SkillErro, match="já está instalada"):
+        s.instalar_sugerida("systematic-debugging")
+    assert apoio.read_text() == "conteúdo do usuário"
+
+
 def test_prechecagem_e_diff_na_tela(tmp_path: Path) -> None:
     s = _skills(tmp_path)
     prechecar = prechecagem(Memoria(tmp_path / "m", {"usuario": 100, "jarvis": 100}), s)

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081321"/>
+      <stop offset="1" stop-color="#101c31"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#39c9ed" stop-opacity=".20"/>
+      <stop offset="1" stop-color="#39c9ed" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#8ae8f7"/>
+      <stop offset="1" stop-color="#42b9df"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="285" cy="320" r="300" fill="url(#glow)"/>
+  <circle cx="285" cy="320" r="222" fill="none" stroke="#3bbad8" stroke-opacity=".12" stroke-width="1"/>
+  <circle cx="285" cy="320" r="188" fill="none" stroke="#3bbad8" stroke-opacity=".10" stroke-width="1"/>
+  <rect x="92" y="127" width="386" height="386" rx="88" fill="#091321" stroke="#57cde5" stroke-opacity=".22"/>
+  <image href="ze-logo.png" x="106" y="141" width="358" height="358" preserveAspectRatio="xMidYMid meet"/>
+  <text x="570" y="254" fill="#f1f7fc" font-family="Inter, Arial, sans-serif" font-size="80" font-weight="700" letter-spacing="-3">Zérvis</text>
+  <rect x="575" y="283" width="118" height="5" rx="2.5" fill="url(#accent)"/>
+  <text x="570" y="354" fill="#d6e3ef" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="500">Seu assistente pessoal.</text>
+  <text x="570" y="404" fill="#d6e3ef" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="500">No seu Linux.</text>
+  <text x="574" y="478" fill="#93aabe" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" letter-spacing="2">VOZ  ·  MEMÓRIA  ·  AUTOMAÇÕES  ·  CLAUDE + CODEX</text>
+  <text x="574" y="548" fill="#62c9df" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500">Código aberto  ·  AGPL-3.0-or-later</text>
+</svg>
