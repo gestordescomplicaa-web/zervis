@@ -14,6 +14,7 @@ import json
 import re
 import shutil
 import subprocess
+import threading
 import time
 import urllib.request
 from collections.abc import Iterator
@@ -191,6 +192,7 @@ def _painel(
     extras: dict[str, Escrita] | None = None,
     estado: Leitura | None = None,
     trocas: dict[str, Any] | None = None,
+    entrada_terminal: Escrita | None = None,
 ) -> Iterator[tuple[str, str]]:
     """O painel com as respostas de exemplo e um Chromium apontado para ele."""
     respostas = json.loads(RESPOSTAS.read_text())
@@ -210,7 +212,7 @@ def _painel(
     nomes = Acoes(SimpleNamespace(), tmp_path, tmp_path).escritas()
     escritas = {nome: _escrita(respostas["escritas"].get(nome, {})) for nome in nomes}
     escritas.update(extras or {})
-    portal = Portal(leituras, escritas, porta=0)
+    portal = Portal(leituras, escritas, porta=0, entrada_terminal=entrada_terminal)
     portal.iniciar()
     processo, depuracao = _chromium(tmp_path / "chromium")
     try:
@@ -338,6 +340,64 @@ def test_terminal_acompanha_fallback_sem_reabrir_a_pagina(tmp_path: Path) -> Non
         asyncio.run(conferir(depuracao, endereco))
     assert leituras[2]["geracao"] == 11
     assert leituras[3]["geracao"] == 22 and leituras[3]["desde"] == 24
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_terminal_envia_teclas_pelo_websocket_e_fecha_ao_trocar_de_pagina(
+    tmp_path: Path,
+) -> None:
+    recebidas: list[str] = []
+    chegaram = threading.Event()
+
+    def entrada(dados: dict[str, Any]) -> None:
+        recebidas.append(str(dados["dados"]))
+        if len(recebidas) == 2:
+            chegaram.set()
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!term && !!termWs && termWsPronto")
+            await nav.avaliar("escreverNoTerminal('co'); escreverNoTerminal('dex\\r')")
+            assert await asyncio.to_thread(chegaram.wait, 3)
+            await nav.avaliar("document.querySelector('nav a[data-secao=\"inicio\"]').click()")
+            await _esperar(nav, "!termWs")
+            assert not nav.erros, nav.erros
+
+    with _painel(tmp_path, entrada_terminal=entrada) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+    assert recebidas == ["co", "dex\r"]
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_terminal_recorre_ao_http_se_o_websocket_nao_estiver_disponivel(
+    tmp_path: Path,
+) -> None:
+    escritas: list[str] = []
+    chegou = threading.Event()
+
+    def escrever(dados: dict[str, Any]) -> None:
+        escritas.append(str(dados["dados"]))
+        chegou.set()
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!term && !!termId")
+            await nav.avaliar("escreverNoTerminal('fallback')")
+            assert await asyncio.to_thread(chegou.wait, 5)
+            assert not nav.erros, nav.erros
+
+    with _painel(tmp_path, extras={"terminal/escrever": escrever}) as (
+        depuracao,
+        endereco,
+    ):
+        asyncio.run(conferir(depuracao, endereco))
+    assert escritas == ["fallback"]
 
 
 async def _layout_do_autodesenvolvimento(depuracao: str, endereco: str) -> dict[str, Any]:

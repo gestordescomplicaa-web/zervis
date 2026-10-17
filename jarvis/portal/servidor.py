@@ -3,8 +3,8 @@
 HTTP da biblioteca padrão, só em loopback, numa thread do `jarvisd`. Duas proteções contra
 outros sites abertos no navegador, que também alcançam 127.0.0.1:
 - o `Host` precisa ser o endereço local (barra o DNS rebinding);
-- toda chamada de API leva o cabeçalho `X-Ze-Token`, um segredo por sessão que só aparece
-  dentro da própria página (outro site não consegue lê-la).
+- toda chamada REST leva o cabeçalho `X-Ze-Token`; os WebSockets conferem o mesmo segredo na
+  primeira mensagem. Ele só aparece dentro da própria página (outro site não consegue lê-lo).
 As respostas nunca trazem segredo: a chave colada no painel só entra.
 
 Outro aparelho (celular, outro computador) só chega por um nome permitido (o `tailscale serve`
@@ -12,6 +12,7 @@ repassa o dele) e passa pela tela "Entrar": sem o cookie do aparelho (`jarvis/po
 só a tela de entrada e o que ela usa ficam abertos.
 """
 
+import contextlib
 import hmac
 import json
 import logging
@@ -119,6 +120,7 @@ class Portal:
         envios: dict[str, Envio] | None = None,
         acesso: Acesso | None = None,
         voz: Voz | None = None,
+        entrada_terminal: Escrita | None = None,
         so_no_pc: set[str] | None = None,
         servidor: bool = False,
     ) -> None:
@@ -130,6 +132,7 @@ class Portal:
         # desliga as proteções que o deixaram entrar.
         self.so_no_pc = so_no_pc or set()
         self.voz = voz
+        self.entrada_terminal = entrada_terminal
         self.leituras = leituras
         self.escritas = escritas
         self.envios = envios or {}
@@ -362,6 +365,60 @@ class Portal:
                     return
                 portal.voz(conexao, taxa)
 
+            def _terminal(self) -> None:
+                if portal.entrada_terminal is None:
+                    self._json(404, {"erro": "não existe"})
+                    return
+                if not self._entrou() or not self._mesma_origem():
+                    self._json(403, {"erro": "terminal"})
+                    return
+                conexao = websocket.aceitar(self)
+                if conexao is None:
+                    self._json(400, {"erro": "esperado WebSocket"})
+                    return
+                try:
+                    self.connection.settimeout(10)
+                    tipo, primeira = conexao.receber()
+                    if tipo != websocket.TEXTO:
+                        raise ValueError("token")
+                    dados = json.loads(primeira)
+                    if not isinstance(dados, dict):
+                        raise ValueError("token")
+                    token = dados.get("token")
+                    id_ = dados.get("id")
+                    if (
+                        not isinstance(token, str)
+                        or not hmac.compare_digest(token, portal.token)
+                        or not isinstance(id_, str)
+                        or not id_
+                        or len(id_) > 128
+                    ):
+                        raise ValueError("token")
+                    self.connection.settimeout(None)
+                    conexao.texto(json.dumps({"tipo": "pronto"}))
+                    while True:
+                        tipo, entrada = conexao.receber()
+                        if tipo != websocket.TEXTO:
+                            raise websocket.FechouErro("entrada de terminal inválida")
+                        if len(entrada) > MAXIMO_CORPO:
+                            raise PedidoInvalido("Entrada do terminal grande demais.")
+                        try:
+                            texto = entrada.decode("utf-8")
+                        except UnicodeDecodeError:
+                            raise PedidoInvalido("Entrada do terminal inválida.") from None
+                        portal.entrada_terminal({"id": id_, "dados": texto})
+                except PedidoInvalido as erro:
+                    with contextlib.suppress(websocket.FechouErro):
+                        conexao.texto(json.dumps({"tipo": "erro", "erro": str(erro)}))
+                except (OSError, ValueError, TypeError, AttributeError, websocket.FechouErro):
+                    pass
+                except Exception:
+                    log.exception("painel: falha na entrada do terminal")
+                    with contextlib.suppress(websocket.FechouErro):
+                        conexao.texto(json.dumps({"tipo": "erro", "erro": "Falha no terminal."}))
+                finally:
+                    conexao.fechar()
+
             def do_GET(self) -> None:
                 if not self._host_local():
                     self._json(403, {"erro": "host"})
@@ -369,6 +426,9 @@ class Portal:
                 caminho = self.path.split("?", 1)[0]
                 if caminho == "/api/voz/ws":
                     self._voz()
+                    return
+                if caminho == "/api/terminal/ws":
+                    self._terminal()
                     return
                 if caminho == "/entrar":
                     if self._entrou():
