@@ -8,6 +8,7 @@ o que é livre, o que pede aprovação falada e o que fica bloqueado.
 """
 
 import contextlib
+import itertools
 import json
 import os
 import queue
@@ -24,6 +25,16 @@ from jarvis.cerebro import mcp_externo
 from jarvis.cerebro.mcp_externo import McpInvalido
 
 VARIAVEL = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
+# O valor de um segredo fora do lugar dele (argumentos ou url): chaves com formato conhecido e
+# `nome=valor` ou `--nome valor` com nome de segredo. Caminho de arquivo com a chave não conta.
+_NOME_SEGREDO = r"(?:token|secret|password|passwd|senha|api[-_]?key|apikey|access[-_]?key)"
+CHAVE_CONHECIDA = re.compile(
+    r"\b(?:sk-[A-Za-z0-9_\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}"
+    r"|AKIA[0-9A-Z]{16}|xox[abprs]-[A-Za-z0-9\-]{10,}|AIza[0-9A-Za-z_\-]{30,})"
+)
+NOME_E_VALOR = re.compile(rf"[\w-]*{_NOME_SEGREDO}[\w-]*=(?!\$)[^&\s]{{6,}}", re.IGNORECASE)
+OPCAO_DE_SEGREDO = re.compile(rf"--?[\w-]*{_NOME_SEGREDO}[\w-]*", re.IGNORECASE)
+CAMINHO = re.compile(r"(file|path|dir)", re.IGNORECASE)
 PROTOCOLO = "2025-06-18"
 LIMITE_TESTE_S = 25.0
 
@@ -76,6 +87,22 @@ def listar(
     return sorted(saida, key=lambda c: (c["origem"] != "painel", c["nome"]))
 
 
+def _tem_segredo(argumentos: list[str], url: str) -> bool:
+    """Um valor de segredo escrito nos argumentos ou na url, que iriam para o arquivo do painel
+    e para a linha de comando (visível a outros processos)."""
+    textos = [*argumentos, url]
+    if any(CHAVE_CONHECIDA.search(t) or NOME_E_VALOR.search(t) for t in textos):
+        return True
+    for opcao, valor in itertools.pairwise(argumentos):
+        if (
+            OPCAO_DE_SEGREDO.fullmatch(opcao)
+            and not CAMINHO.search(opcao)
+            and not valor.startswith(("-", "$"))
+        ):
+            return True
+    return False
+
+
 def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     if not mcp_externo.NOME.fullmatch(nome) or nome in mcp_externo.RESERVADOS:
         raise McpInvalido("nome: minúsculas, números, hífen ou sublinhado (até 32)")
@@ -101,6 +128,11 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
             bloco[chave] = valores
     if set(bloco.get("livres", [])) & set(bloco.get("bloqueadas", [])):
         raise McpInvalido("uma ferramenta não pode ser livre e bloqueada")
+    if _tem_segredo(bloco.get("argumentos", []), bloco.get("url", "")):
+        raise McpInvalido(
+            "segredo nos argumentos ou no endereço: use o nome de uma variável e guarde o valor "
+            "no cartão do conector"
+        )
     # A mesma validação do carregador, com segredos fictícios (só a forma importa aqui).
     ficticio = {v: "x" for v in [*ambiente, *cabecalhos.values()]}
     mcp_externo._servidor(nome, bloco, ficticio)

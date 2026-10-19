@@ -99,6 +99,16 @@ def test_skills_iniciais_sao_opt_in_e_nao_sobrescrevem(tmp_path: Path) -> None:
         s.instalar_sugerida("systematic-debugging")
 
 
+def test_toda_skill_inicial_instala_e_vai_para_as_sessoes(tmp_path: Path) -> None:
+    """Uma skill inicial que a varredura recusa só falharia no clique de quem instala."""
+    s = _skills(tmp_path)
+    sugeridas = {nome for nome, _ in s.sugeridas()}
+    assert "integrar-sistema" in sugeridas
+    for nome in sugeridas:
+        s.instalar_sugerida(nome)
+    assert {nome for nome, _ in s.para_sessoes()} == sugeridas
+
+
 def test_skill_inicial_nao_ocupa_pasta_existente(tmp_path: Path) -> None:
     s = _skills(tmp_path)
     pasta = s.pasta / "systematic-debugging"

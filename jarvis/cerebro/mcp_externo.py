@@ -71,7 +71,9 @@ def _lista_de_textos(valor: Any, onde: str) -> list[str]:
     return list(valor)
 
 
-def _servidor(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[str, Any] | None:
+def _servidor(
+    nome: str, bloco: dict[str, Any], env: dict[str, str], avisar: bool = True
+) -> dict[str, Any] | None:
     desconhecidas = set(bloco) - CHAVES
     if desconhecidas:
         raise McpInvalido(f"{nome}: chave desconhecida {sorted(desconhecidas)[0]}")
@@ -83,7 +85,8 @@ def _servidor(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[str
         raise McpInvalido(f"{nome}.cabecalhos precisa ser uma tabela")
     faltando += [v for v in cabecalhos.values() if v not in env]
     if faltando:
-        log.warning("MCP %s desligado: falta a variável %s no ambiente", nome, faltando[0])
+        if avisar:
+            log.warning("MCP %s desligado: falta a variável %s no ambiente", nome, faltando[0])
         return None
     tipo = bloco.get("tipo", "stdio")
     if tipo == "stdio":
@@ -166,14 +169,19 @@ def com_segredos(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[
 
 
 def carregar(
-    caminho: Path = CAMINHO, env: dict[str, str] | None = None, painel: Path | None = None
+    caminho: Path = CAMINHO,
+    env: dict[str, str] | None = None,
+    painel: Path | None = None,
+    avisar: bool = True,
 ) -> Externos:
+    """Os conectores ligados, prontos para o cérebro. `avisar=False` só confere (o painel
+    compara com os que estão valendo, sem encher o registro)."""
     externos = Externos()
     base = os.environ.copy() if env is None else env
     for nome, (bloco, _origem) in _blocos(caminho, painel).items():
         if bloco.get("ligado", True) is False:
             continue
-        config = _servidor(nome, bloco, com_segredos(nome, bloco, base))
+        config = _servidor(nome, bloco, com_segredos(nome, bloco, base), avisar)
         if config is None:
             continue
         externos.servidores[nome] = config
@@ -186,6 +194,6 @@ def carregar(
             )
         externos.livres += [f"mcp__{nome}__{f}" for f in livres]
         externos.bloqueadas += [f"mcp__{nome}__{f}" for f in bloqueadas]
-    if externos.servidores:
+    if externos.servidores and avisar:
         log.info("MCPs externos ligados: %s", ", ".join(externos.servidores))
     return externos
