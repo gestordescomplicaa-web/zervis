@@ -701,6 +701,17 @@ class Sessoes:
             self.anotar(id_, "sistema", f"Modelo: {nome}{extra}.")
             return s
 
+    def recarregar_conectores(self, id_: str, nomes: list[str]) -> Sessao:
+        """Os conectores do projeto mudaram: o agente reabre com eles, retomando a conversa (os
+        agentes só leem os MCPs ao iniciar)."""
+        with self._operacoes:
+            if id_ in self.trabalhando():
+                raise SessaoErro("essa sessão está trabalhando; espere para trocar os conectores")
+            if (terminal := self.terminais.pop(id_, None)) is not None:
+                terminal.encerrar()  # reabre com os conectores novos, com resume
+            self.anotar(id_, "sistema", f"Conectores: {', '.join(nomes) or 'nenhum'}.")
+            return self.ler(id_)
+
     def continuar_interrompida(self, id_: str) -> Sessao:
         """Retoma o pedido interrompido: a conversa do agente continua, e ele recebe o pedido de
         novo com o aviso de que pode ter feito parte antes."""

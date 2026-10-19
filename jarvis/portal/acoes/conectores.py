@@ -50,6 +50,7 @@ class AcoesConectores(Pagina):
                 str(dados.get("texto", "")),
                 str(dados.get("nome", "")).strip(),
                 [str(p) for p in projetos] if isinstance(projetos, list) else None,
+                novo=bool(dados.get("novo")),
             )
         )
         self.painel.conectores_pendentes = True

@@ -824,3 +824,23 @@ def test_sugestoes_de_pasta_sem_repetir_a_raiz_padrao(
     cfg = SimpleNamespace(caminho=lambda *_: Path("~/projetos").expanduser())
     acoes = AcoesSessoes(cast(Any, None), cast(Any, SimpleNamespace(cfg=cfg)))
     assert acoes.pastas() == ["~/projetos/Detetive"]
+
+
+@pytest.mark.filterwarnings("ignore:This process .* is multi-threaded:DeprecationWarning")
+def test_trocar_conectores_reabre_o_agente_e_espera_o_trabalho(tmp_path: Path, raiz: Path) -> None:
+    sessoes, _ = nova(tmp_path, raiz, None)
+    projeto = raiz / "projetos/loja"
+    s = sessoes.criar("Loja", str(projeto))
+    terminal = Terminal(["sleep", "30"], projeto, {}, ao_sair=lambda _c: None)
+    sessoes.terminais[s.id] = terminal
+    try:
+        sessoes._mudar(s.id, estado="trabalhando")
+        with pytest.raises(SessaoErro, match="trabalhando"):
+            sessoes.recarregar_conectores(s.id, ["n8n"])
+        assert terminal.vivo
+        sessoes._mudar(s.id, estado="pronta")
+        sessoes.recarregar_conectores(s.id, ["n8n"])
+        assert not terminal.vivo and s.id not in sessoes.terminais  # reabre com resume
+        assert sessoes.mensagens(s.id)[-1]["texto"] == "Conectores: n8n."
+    finally:
+        terminal.encerrar()

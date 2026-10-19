@@ -1185,7 +1185,7 @@ def test_editar_conector_abre_preenchido_e_mantem_as_permissoes(tmp_path: Path) 
             )
             await asyncio.sleep(0.3)
             campos = await nav.avaliar(
-                "['cx-nome','cx-url','cx-cabecalhos','cx-projetos'].map("
+                "['cx-nome','cx-url','cx-cabecalhos'].map("
                 "(i) => document.getElementById(i).value)"
                 ".concat([document.getElementById('cx-nome').readOnly,"
                 " document.querySelector('#form-conector h2').textContent])"
@@ -1204,7 +1204,6 @@ def test_editar_conector_abre_preenchido_e_mantem_as_permissoes(tmp_path: Path) 
         "crm",
         "https://mcp.exemplo.com/mcp",
         "Authorization: CRM_TOKEN",
-        "loja",
         True,
         "Editar crm",
     ]
@@ -1274,7 +1273,7 @@ def test_colar_a_configuracao_salva_testa_e_mostra_o_resultado(tmp_path: Path) -
             await nav.avaliar(
                 "document.querySelector('[data-acao=conector-novo]').click();"
                 f"document.getElementById('cx-colar').value = {json.dumps(colado)};"
-                "document.getElementById('cx-projetos').value = 'loja';"
+                "document.getElementById('cx-nome').value = 'crm';"
                 "document.querySelector('[data-acao=cx-salvar]').click()"
             )
             await asyncio.sleep(0.8)
@@ -1285,6 +1284,55 @@ def test_colar_a_configuracao_salva_testa_e_mostra_o_resultado(tmp_path: Path) -
 
     with _painel(tmp_path, extras={"conector/importar": importar}) as (depuracao, endereco):
         cartao, texto = asyncio.run(conferir(depuracao, endereco))
-    assert importados == [{"texto": colado, "nome": "", "projetos": ["loja"]}]
+    assert importados == [{"texto": colado, "nome": "crm", "novo": True}]
     assert cartao == "1 ferramenta" and "crm: 1 ferramenta." in texto
     assert "buscar_contatos" in texto  # as permissões abrem sem outro clique
+
+
+def test_sessao_escolhe_os_conectores_do_projeto(tmp_path: Path) -> None:
+    """O seletor na sessão (19/10/2026): marcar o n8n do cliente ali mesmo, ver onde mais ele
+    está, e salvar reabre o agente com a conversa."""
+    salvos: list[dict[str, Any]] = []
+    lista = {
+        "conectores": [
+            {"nome": "docs", "tipo": "http", "marcado": True, "todos": True, "editavel": False,
+             "outros": []},
+            {"nome": "n8n-joao", "tipo": "http", "marcado": False, "todos": False,
+             "editavel": True, "outros": ["loja-do-joao"]},
+        ]
+    }  # fmt: skip
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        respostas = json.loads(RESPOSTAS.read_text())
+        return {**respostas["escritas"]["sessao/ler"]["sessao"], "aviso": "Conectores: docs."}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await _esperar(nav, "!!document.querySelector('.item-sessao')")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!document.querySelector('[data-acao=sessao-conectores]')")
+            await nav.avaliar("document.querySelector('[data-acao=sessao-conectores]').click()")
+            await _esperar(nav, "!!document.querySelector('[data-conector-sessao=n8n-joao]')")
+            texto = await nav.avaliar("document.getElementById('conectores-da-sessao').innerText")
+            travado = await nav.avaliar(
+                "document.querySelector('[data-conector-sessao=docs]').disabled"
+            )
+            await nav.avaliar(
+                "document.querySelector('[data-conector-sessao=n8n-joao]').click();"
+                "document.querySelector('[data-acao=sessao-conectores-salvar]').click()"
+            )
+            await asyncio.sleep(0.6)
+            assert not nav.erros, nav.erros
+            return str(texto), str(travado)
+
+    with _painel(
+        tmp_path,
+        extras={"sessao/conectores": lambda _d: lista, "sessao/conectores/salvar": salvar},
+    ) as (depuracao, endereco):
+        texto, travado = asyncio.run(conferir(depuracao, endereco))
+    assert "Também em: loja-do-joao" in texto and "Todos os projetos" in texto
+    assert travado == "True"  # o de todos os projetos não sai por uma sessão
+    assert salvos == [{"id": "sessao1", "nomes": ["docs", "n8n-joao"]}]

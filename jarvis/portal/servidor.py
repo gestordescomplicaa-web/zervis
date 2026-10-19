@@ -61,6 +61,7 @@ ARQUIVOS = {
     "/modulos/modelos.js": "modulos/modelos.js",
     "/modulos/navegacao.js": "modulos/navegacao.js",
     "/modulos/terminal.js": "modulos/terminal.js",
+    "/modulos/conectores-sessao.js": "modulos/conectores-sessao.js",
     "/modulos/voz.js": "modulos/voz.js",
     "/paginas/automacoes.js": "paginas/automacoes.js",
     "/paginas/configurar.js": "paginas/configurar.js",

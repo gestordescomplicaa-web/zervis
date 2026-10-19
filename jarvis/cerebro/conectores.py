@@ -36,6 +36,7 @@ NOME_E_VALOR = re.compile(rf"[\w-]*{_NOME_SEGREDO}[\w-]*=(?!\$)[^&\s]{{6,}}", re
 OPCAO_DE_SEGREDO = re.compile(rf"--?[\w-]*{_NOME_SEGREDO}[\w-]*", re.IGNORECASE)
 CAMINHO = re.compile(r"(file|path|dir)", re.IGNORECASE)
 PROJETO = re.compile(r"[^/\\\x00*]{1,128}")  # o nome da pasta, sem caminho
+CAMINHO_PROJETO = re.compile(r"/[^\x00*]{1,1023}")  # a pasta inteira, como a sessão grava
 PROTOCOLO = "2025-06-18"
 LIMITE_TESTE_S = 25.0
 
@@ -108,6 +109,12 @@ def _tem_segredo(argumentos: list[str], url: str) -> bool:
     return False
 
 
+def _projeto_valido(projeto: str) -> bool:
+    if CAMINHO_PROJETO.fullmatch(projeto):
+        return ".." not in Path(projeto).parts
+    return bool(PROJETO.fullmatch(projeto))
+
+
 def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     if not mcp_externo.NOME.fullmatch(nome) or nome in mcp_externo.RESERVADOS:
         raise McpInvalido("nome: minúsculas, números, hífen ou sublinhado (até 32)")
@@ -144,7 +151,7 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
             bloco[chave] = valores
     projetos = list(dict.fromkeys(str(p).strip() for p in dados.get("projetos") or []))
     if projetos := [p for p in projetos if p]:
-        if not all(p == mcp_externo.TODOS or PROJETO.fullmatch(p) for p in projetos):
+        if not all(p == mcp_externo.TODOS or _projeto_valido(p) for p in projetos):
             raise McpInvalido("projeto: o nome da pasta do projeto, ou * para todos")
         bloco["projetos"] = projetos
     if set(bloco.get("livres", [])) & set(bloco.get("bloqueadas", [])):
@@ -214,6 +221,76 @@ def gravar_segredo(nome: str, variavel: str, valor: str) -> None:
     temporario.chmod(0o600)
     temporario.write_text(valor + "\n")
     temporario.replace(destino)
+
+
+# --- por projeto: o que cada sessão escolhe -------------------------------------------------
+
+
+def _rotulo(projeto: str) -> str:
+    return "todos os projetos" if projeto == mcp_externo.TODOS else Path(projeto).name
+
+
+def do_projeto(
+    pasta: Path,
+    caminho: Path = mcp_externo.CAMINHO,
+    painel: Path = mcp_externo.PAINEL,
+) -> list[dict[str, Any]]:
+    """Os conectores para o seletor da sessão: os que valem nesta pasta e, de cada um, em que
+    outros projetos ele está (para não ligar o sistema de um cliente na pasta de outro)."""
+    pasta = pasta.resolve()
+    saida = []
+    for nome, (bloco, origem) in mcp_externo._blocos(caminho, painel).items():
+        projetos = [str(p) for p in bloco.get("projetos") or []]
+        todos = mcp_externo.TODOS in projetos
+        aqui = {str(pasta), pasta.name}
+        saida.append(
+            {
+                "nome": nome,
+                "tipo": bloco.get("tipo", "stdio"),
+                "marcado": mcp_externo.vale_no_projeto(projetos, pasta),
+                "todos": todos,
+                "editavel": origem == "painel" and not todos,
+                "outros": sorted({_rotulo(p) for p in projetos if p not in aqui and not todos}),
+            }
+        )
+    return sorted(saida, key=lambda c: c["nome"])
+
+
+def ligar_no_projeto(
+    pasta: Path,
+    nomes: list[str],
+    so_adicionar: bool = False,
+    painel: Path = mcp_externo.PAINEL,
+    caminho: Path = mcp_externo.CAMINHO,
+) -> list[str]:
+    """Deixa valendo nesta pasta exatamente os conectores `nomes` (ou só soma, ao criar a
+    sessão). Grava o caminho completo; o nome antigo desta pasta sai quando ela deixa de usar o
+    conector. Devolve os que valem agora."""
+    pasta = pasta.resolve()
+    blocos = mcp_externo._blocos(caminho, painel)
+    if desconhecidos := sorted(set(nomes) - set(blocos)):
+        raise McpInvalido(f"conector desconhecido: {desconhecidos[0]}")
+    atual = _ler_painel(painel)
+    for nome, (bloco, origem) in blocos.items():
+        projetos = [str(p) for p in bloco.get("projetos") or []]
+        if mcp_externo.TODOS in projetos:
+            continue
+        quer, vale = nome in nomes, mcp_externo.vale_no_projeto(projetos, pasta)
+        if quer == vale or (so_adicionar and not quer):
+            continue
+        if origem != "painel":
+            raise McpInvalido(f"{nome} vem do mcp.toml: os projetos dele se ajustam lá")
+        if quer:
+            projetos.append(str(pasta))
+        else:
+            projetos = [p for p in projetos if p not in (str(pasta), pasta.name)]
+        servidor = atual["servidores"][nome]
+        if projetos:
+            servidor["projetos"] = projetos
+        else:
+            servidor.pop("projetos", None)
+    _gravar_painel(painel, atual)
+    return [c["nome"] for c in do_projeto(pasta, caminho, painel) if c["marcado"]]
 
 
 # --- importar: a configuração que o serviço fornece, colada como veio ------------------------
@@ -299,11 +376,17 @@ def importar(
     projetos: list[str] | None = None,
     painel: Path = mcp_externo.PAINEL,
     caminho: Path = mcp_externo.CAMINHO,
+    novo: bool = False,
 ) -> list[str]:
-    """Cria (ou troca) os conectores da configuração colada. Os valores dos cabeçalhos e do
-    `env` vão para os segredos 0600 e nunca para o arquivo; as permissões já escolhidas
-    continuam. Nenhuma mensagem de erro repete o que foi colado."""
+    """Cria (ou troca) os conectores da configuração colada. `novo` recusa um nome que já
+    existe: cinco n8n de clientes colados com o mesmo JSON não se sobrescrevem. Os valores dos
+    cabeçalhos e do `env` vão para os segredos 0600 e nunca para o arquivo; as permissões já
+    escolhidas continuam. Nenhuma mensagem de erro repete o que foi colado."""
     servidores = ler_configuracao(texto)
+    existentes = mcp_externo._blocos(caminho, painel)
+    alvos = [nome or _nome_de(chave) for chave, _ in servidores]
+    if novo and (repetidos := [a for a in alvos if a in existentes]):
+        raise McpInvalido(f"Já existe o conector {repetidos[0]}. Dê outro nome.")
     if nome and len(servidores) > 1:
         raise McpInvalido("a configuração tem mais de um servidor: deixe o nome em branco")
     atuais = _ler_painel(painel)["servidores"]

@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- Sessões: o botão "Conectores", no topo da sessão (e a lista na criação), liga e desliga os MCPs
+  do projeto ali mesmo. A escolha vale para todas as sessões daquela pasta; cada conector mostra
+  em que outros projetos ele já está ("Também em: …"), e salvar reabre o agente com a conversa.
+- Conectores por projeto pelo caminho completo da pasta: dois clientes com pastas de mesmo nome
+  em lugares diferentes não se misturam. O nome sozinho, como era antes, continua valendo.
+- Conectores: etiqueta "MCP" em cada cartão; "Nome" no formulário de colar, e colar o mesmo JSON
+  para outro cliente pede outro nome em vez de sobrescrever. Os projetos saíram do formulário e
+  do cartão (lá, só leitura): quem escolhe é a sessão.
 - Conectores: "Adicionar" agora pede só para colar a configuração que o serviço fornece, o JSON
   do MCP (`mcpServers`, como o do n8n, do Claude ou do Cursor) ou o comando `curl`, e os
   projetos. "Salvar e testar" cria o conector, guarda tokens e chaves como segredos (nunca no

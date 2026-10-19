@@ -233,22 +233,29 @@ def carregar(
     return externos
 
 
+def vale_no_projeto(projetos: list[str], pasta: Path) -> bool:
+    """O caminho completo isola o projeto: dois clientes com pastas de mesmo nome em lugares
+    diferentes não se misturam. O nome sozinho (sem `/`) vale como antes."""
+    return TODOS in projetos or str(pasta.resolve()) in projetos or pasta.name in projetos
+
+
 def para_projeto(
     pasta: Path,
     caminho: Path | None = None,
     painel: Path | None = None,
     env: dict[str, str] | None = None,
 ) -> Externos:
-    """Os conectores ligados que valem nas sessões de código de um projeto: os que citam o nome
-    da pasta (ou `*`) em `projetos`. Sem `projetos`, o conector fica só na conversa com o Zé: o
-    sistema de um cliente não aparece no projeto de outro (ADR 0037)."""
+    """Os conectores ligados que valem nas sessões de código de um projeto: os que citam a
+    pasta em `projetos` (o caminho completo, como a sessão grava; o nome, como era antes; ou
+    `*`). Sem `projetos`, o conector fica só na conversa com o Zé: o sistema de um cliente não
+    aparece no projeto de outro (ADR 0037)."""
     caminho = CAMINHO if caminho is None else caminho
     painel = PAINEL if painel is None else painel
     blocos = _blocos(caminho, painel)
     escolhidos = []
     for nome, (bloco, _origem) in blocos.items():
         projetos = _lista_de_textos(bloco.get("projetos", []), f"{nome}.projetos")
-        if TODOS in projetos or pasta.name in projetos:
+        if vale_no_projeto(projetos, pasta):
             escolhidos.append(nome)
     todos = carregar(caminho, env, painel, avisar=False)
     prefixos = tuple(f"mcp__{nome}__" for nome in escolhidos)

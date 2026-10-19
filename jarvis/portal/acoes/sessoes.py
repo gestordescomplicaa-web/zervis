@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import atividade
-from jarvis.cerebro import contas
+from jarvis.cerebro import conectores, contas
 from jarvis.oficina import arquivos
 from jarvis.oficina.manutencao import ORIGEM
 from jarvis.oficina.sessoes import Sessao
@@ -100,7 +100,28 @@ class AcoesSessoes(Pagina):
                 bool(dados.get("isolada", False)),
             )
         )
+        # Os conectores escolhidos valem antes do agente abrir pela primeira vez.
+        if escolhidos := [str(n) for n in dados.get("conectores") or []]:
+            self.painel._chamar(
+                lambda: conectores.ligar_no_projeto(Path(s.pasta), escolhidos, so_adicionar=True)
+            )
         return self.painel._sessao(s)
+
+    def conectores_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        s = self.painel._chamar(lambda: self.n.sessoes.ler(str(dados.get("id", ""))))
+        return {"conectores": self.painel._chamar(lambda: conectores.do_projeto(Path(s.pasta)))}
+
+    def salvar_conectores_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Os conectores do projeto da sessão (valem em todas as sessões daquela pasta)."""
+        id_ = str(dados.get("id", ""))
+        s = self.painel._chamar(lambda: self.n.sessoes.ler(id_))
+        nomes = [str(n) for n in dados.get("nomes") or []]
+        valendo = self.painel._chamar(lambda: conectores.ligar_no_projeto(Path(s.pasta), nomes))
+        s = self.painel._chamar(lambda: self.n.sessoes.recarregar_conectores(id_, valendo))
+        return {
+            **self.painel._sessao(s),
+            "aviso": f"Conectores: {', '.join(valendo) or 'nenhum'}. A conversa continua.",
+        }
 
     def ler_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         id_ = str(dados.get("id", ""))

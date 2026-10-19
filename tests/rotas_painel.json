@@ -86,6 +86,8 @@
     "sessao/ler",
     "sessao/trocar",
     "sessao/modelo",
+    "sessao/conectores",
+    "sessao/conectores/salvar",
     "sessao/interrompida",
     "sessao/copia",
     "sessao/copia/aplicar",

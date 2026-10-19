@@ -154,6 +154,8 @@ class Acoes:
             "sessao/ler": self.ler_sessao,
             "sessao/trocar": self.trocar_sessao,
             "sessao/modelo": self.modelo_da_sessao,
+            "sessao/conectores": self.conectores_da_sessao,
+            "sessao/conectores/salvar": self.salvar_conectores_da_sessao,
             "sessao/interrompida": self.tarefa_interrompida,
             "sessao/copia": lambda d: self._chamar(
                 lambda: self.n.sessoes.copia(str(d.get("id", "")))

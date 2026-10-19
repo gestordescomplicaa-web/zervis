@@ -143,7 +143,7 @@ const ACOES = {
   "ns-criar": async (b) => {
     const novo = !$("ns-campo-projeto").hidden;
     const motor = /** @type {HTMLElement} */ (document.querySelector('[data-acao="ns-motor"][aria-pressed="true"]')).dataset.motor;
-    const s = await ocupado(b, () => api("sessao/criar", { nome: valorCampo("ns-nome").value, pasta: valorCampo("ns-pasta").value, motor, novo, projeto: valorCampo("ns-projeto").value, isolada: !novo && entradaCampo("ns-isolada").checked }));
+    const s = await ocupado(b, () => api("sessao/criar", { nome: valorCampo("ns-nome").value, pasta: valorCampo("ns-pasta").value, motor, novo, projeto: valorCampo("ns-projeto").value, isolada: !novo && entradaCampo("ns-isolada").checked, conectores: conectoresMarcados("ns-conector") }));
     await listaSessoes(); await abrirSessao(s.id);
   },
   "copia-atualizar": () => carregarCopia(sessaoAberta),
