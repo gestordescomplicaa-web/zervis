@@ -24,7 +24,8 @@ function cartaoConector(k) {
     ${segredos}
     <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
     <div class="ferramentas-mcp" data-ferramentas="${esc(k.nome)}" hidden></div>
-    <details class="detalhes"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p></details></section>`;
+    <details class="detalhes"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
+      ${k.origem === "painel" ? `<div class="linha"><label>Sessões de código (projetos)<input class="mono" data-projetos="${esc(k.nome)}" value="${esc(k.projetos.join(", "))}" placeholder="Nenhum" autocomplete="off" spellcheck="false"></label>${botao("Salvar", "conector-projetos", id)}</div>` : `<p>Sessões de código: ${esc(k.projetos.join(", ") || "nenhuma")}</p>`}</details></section>`;
 }
 
 function permissoes(nome, ferramentas, k) {
@@ -36,6 +37,10 @@ function permissoes(nome, ferramentas, k) {
 }
 
 const linhasDe = (t) => t.split("\n").map((l) => l.trim()).filter(Boolean);
+const listaDe = (t) => t.split(",").map((v) => v.trim()).filter(Boolean);
+
+/** O conector como o painel grava, com uma parte trocada (permissões ou projetos). */
+const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, ...troca });
 
 function formConector() {
   const f = $("form-conector");
@@ -48,6 +53,7 @@ function formConector() {
     <label data-remoto hidden>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" autocomplete="off" spellcheck="false"></label>
     <label data-remoto hidden>Cabeçalhos (um por linha: Nome: VARIAVEL)<textarea id="cx-cabecalhos" class="mono" rows="2"></textarea></label>
     <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" autocomplete="off" spellcheck="false"></label>
+    <label>Sessões de código (projetos, separados por vírgula; * para todos)<input id="cx-projetos" class="mono" placeholder="Nenhum" autocomplete="off" spellcheck="false"></label>
     <div class="linha">${botao("Salvar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}<span class="resultado" id="cx-resultado"></span></div>`;
   $("cx-nome").focus();
 }
@@ -67,7 +73,7 @@ Object.assign(ACOES, {
     await ocupado(b, () => api("conector/salvar", {
       nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
       argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
-      ambiente: valorCampo("cx-ambiente").value.split(",").map((v) => v.trim()).filter(Boolean),
+      ambiente: listaDe(valorCampo("cx-ambiente").value), projetos: listaDe(valorCampo("cx-projetos").value),
     }));
     toast("Conector salvo."); await recarregar();
   },
@@ -93,8 +99,14 @@ Object.assign(ACOES, {
     const k = conectoresVistos.find((x) => x.nome === b.dataset.nome);
     const escolhas = [.../** @type {NodeListOf<HTMLSelectElement>} */ (/** @type {HTMLElement} */ (b.closest(".ferramentas-mcp")).querySelectorAll("[data-permissao]"))];
     const de = (v) => escolhas.filter((e) => e.value === v).map((e) => e.dataset.permissao);
-    await ocupado(b, () => api("conector/salvar", { nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: de("livre"), bloqueadas: de("bloqueada") }));
+    await ocupado(b, () => api("conector/salvar", dadosDe(k, { livres: de("livre"), bloqueadas: de("bloqueada") })));
     toast("Permissões salvas."); await recarregar();
+  },
+  "conector-projetos": async (b) => {
+    const k = conectoresVistos.find((x) => x.nome === b.dataset.nome);
+    const campo = /** @type {HTMLInputElement} */ (document.querySelector(`[data-projetos="${CSS.escape(k.nome)}"]`));
+    await ocupado(b, () => api("conector/salvar", dadosDe(k, { projetos: listaDe(campo.value) })));
+    toast("Projetos salvos."); await recarregar();
   },
   "conector-remover": (b) => confirmar(b, "Remover?", async () => { await api("conector/remover", { nome: b.dataset.nome }); await recarregar(); }),
   "conectores-aplicar": async (b) => { const r = await ocupado(b, () => api("conectores/aplicar", {})); toast(r.aviso); await recarregar(); },

@@ -43,6 +43,9 @@ sem a pessoa intervir no meio.
    os segredos já resolvidos, sem que eles apareçam na linha de comando: o Claude por um arquivo
    de configuração 0600, o Codex pelas variáveis do processo (`env_vars`, `env_http_headers`).
    Um conector sem `projetos` fica só na conversa com o Zé (separação entre clientes).
+   Nas sessões, as ferramentas bloqueadas nunca chegam e as livres passam sem pergunta. As que
+   pedem aprovação só valem no terminal do Claude, que pergunta na tela; sem terminal, ou no
+   Codex (que não pergunta ao Zé antes de usar uma ferramenta MCP), ficam de fora.
 4. **Login OAuth nos MCPs remotos, pelo Zé.** O painel faz o login (descoberta pelo próprio
    servidor MCP, registro dinâmico do cliente, PKCE) e guarda os tokens 0600. Uma ponte local
    (`127.0.0.1`, com segredo próprio) entrega cada pedido ao servidor com o token em dia e

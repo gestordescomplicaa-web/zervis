@@ -7,6 +7,10 @@
   aprendeu) e vale também nas sessões de código. O Zé lista, cadastra (com aprovação) e testa
   conectores pela conversa; o painel mostra o conector novo como pendente. Valor de segredo nos
   argumentos ou no endereço de um conector é recusado.
+- Conectores nas sessões de código: cada conector diz em que projetos vale (nome da pasta, ou
+  `*`), e as sessões do Claude e do Codex daquele projeto o recebem com os segredos fora da linha
+  de comando. Sem projetos, o conector fica só na conversa (o sistema de um cliente não aparece no
+  projeto de outro).
 - Servidor (VPS): primeiro acesso sem túnel SSH. O instalador termina com um endereço HTTPS
   (Cloudflare) e um código de uso único para criar a senha; num servidor, quem entra com a senha
   e o código do autenticador faz os ajustes de fora (chaves, contas, autodesenvolvimento), menos

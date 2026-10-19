@@ -9,6 +9,7 @@ Arquivo próprio, `~/.config/zervis/mcp.toml`, um bloco por servidor:
     ambiente = ["GITHUB_PERSONAL_ACCESS_TOKEN"]   # só nomes: o valor vem do ambiente do serviço
     livres = ["search_repositories"]     # ferramentas só de leitura, sem pergunta falada
     bloqueadas = ["delete_repository"]   # nem aparecem para o cérebro (e não custam tokens)
+    projetos = ["loja-do-cliente"]       # também nas sessões de código destes projetos ("*": todos)
     ligado = true
 
     [servidores.agenda]
@@ -49,8 +50,10 @@ CHAVES = {
     "cabecalhos",
     "livres",
     "bloqueadas",
+    "projetos",
     "ligado",
 }
+TODOS = "*"
 
 
 class McpInvalido(ValueError):
@@ -197,3 +200,30 @@ def carregar(
     if externos.servidores and avisar:
         log.info("MCPs externos ligados: %s", ", ".join(externos.servidores))
     return externos
+
+
+def para_projeto(
+    pasta: Path,
+    caminho: Path | None = None,
+    painel: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> Externos:
+    """Os conectores ligados que valem nas sessões de código de um projeto: os que citam o nome
+    da pasta (ou `*`) em `projetos`. Sem `projetos`, o conector fica só na conversa com o Zé: o
+    sistema de um cliente não aparece no projeto de outro (ADR 0037)."""
+    caminho = CAMINHO if caminho is None else caminho
+    painel = PAINEL if painel is None else painel
+    blocos = _blocos(caminho, painel)
+    escolhidos = []
+    for nome, (bloco, _origem) in blocos.items():
+        projetos = _lista_de_textos(bloco.get("projetos", []), f"{nome}.projetos")
+        if TODOS in projetos or pasta.name in projetos:
+            escolhidos.append(nome)
+    todos = carregar(caminho, env, painel, avisar=False)
+    prefixos = tuple(f"mcp__{nome}__" for nome in escolhidos)
+    return Externos(
+        servidores={n: c for n, c in todos.servidores.items() if n in escolhidos},
+        livres=[f for f in todos.livres if f.startswith(prefixos)],
+        bloqueadas=[f for f in todos.bloqueadas if f.startswith(prefixos)],
+        nomes={k: v for k, v in todos.nomes.items() if v in escolhidos},
+    )

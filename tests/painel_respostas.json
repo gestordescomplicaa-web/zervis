@@ -265,7 +265,31 @@
    }
   },
   "conectores": {
-   "conectores": [],
+   "conectores": [
+    {
+     "nome": "crm",
+     "origem": "painel",
+     "tipo": "http",
+     "comando": "",
+     "argumentos": [],
+     "url": "https://mcp.exemplo.com/mcp",
+     "ambiente": [],
+     "cabecalhos": {
+      "Authorization": "CRM_TOKEN"
+     },
+     "livres": [
+      "buscar_contatos"
+     ],
+     "bloqueadas": [],
+     "projetos": [
+      "loja"
+     ],
+     "ligado": true,
+     "segredos": {
+      "CRM_TOKEN": false
+     }
+    }
+   ],
    "pendente": false
   },
   "configuracao": {

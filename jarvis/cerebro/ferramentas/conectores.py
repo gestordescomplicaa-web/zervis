@@ -21,7 +21,7 @@ APLICAR = "Para valer na conversa, a pessoa aplica em Conectores (Aplicar agora)
 
 def _dados(args: dict[str, Any]) -> dict[str, Any]:
     """Só os campos do conector, nos tipos que o painel grava."""
-    listas = ("argumentos", "ambiente", "livres", "bloqueadas")
+    listas = ("argumentos", "ambiente", "livres", "bloqueadas", "projetos")
     dados: dict[str, Any] = {k: args[k] for k in listas if isinstance(args.get(k), list)}
     for chave in ("tipo", "comando", "url"):
         if isinstance(args.get(chave), str):
@@ -62,6 +62,7 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
                 "onde": c["url"] or " ".join([c["comando"], *c["argumentos"]]),
                 "ligado": c["ligado"],
                 "faltam_segredos": [v for v, tem in c["segredos"].items() if not tem],
+                "projetos": c["projetos"],
                 "origem": c["origem"],
             }
             for c in lista
@@ -88,8 +89,10 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
         "servidor remoto). Segredos: só os NOMES das variáveis, em MAIÚSCULAS (ambiente, para o "
         "stdio; cabecalhos = {Cabeçalho: VARIAVEL}, para o http); nunca o valor, nem em "
         "argumentos ou na url. livres = ferramentas só de leitura, sem pergunta; bloqueadas = "
-        "as que apagam ou fazem o que a pessoa não quer. O resto pede aprovação. A pessoa "
-        "aprova por voz.",
+        "as que apagam ou fazem o que a pessoa não quer. O resto pede aprovação. projetos = "
+        "nomes das pastas dos projetos cujas sessões de código também usam o conector ('*' = "
+        "todos; vazio = só a conversa); o de um cliente só nos projetos dele. A pessoa aprova "
+        "por voz.",
         {
             "type": "object",
             "properties": {
@@ -102,6 +105,7 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
                 "cabecalhos": {"type": "object", "additionalProperties": {"type": "string"}},
                 "livres": {"type": "array", "items": {"type": "string"}},
                 "bloqueadas": {"type": "array", "items": {"type": "string"}},
+                "projetos": {"type": "array", "items": {"type": "string"}},
             },
             "required": ["nome", "tipo"],
         },

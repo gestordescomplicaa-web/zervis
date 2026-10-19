@@ -35,6 +35,7 @@ CHAVE_CONHECIDA = re.compile(
 NOME_E_VALOR = re.compile(rf"[\w-]*{_NOME_SEGREDO}[\w-]*=(?!\$)[^&\s]{{6,}}", re.IGNORECASE)
 OPCAO_DE_SEGREDO = re.compile(rf"--?[\w-]*{_NOME_SEGREDO}[\w-]*", re.IGNORECASE)
 CAMINHO = re.compile(r"(file|path|dir)", re.IGNORECASE)
+PROJETO = re.compile(r"[^/\\\x00*]{1,128}")  # o nome da pasta, sem caminho
 PROTOCOLO = "2025-06-18"
 LIMITE_TESTE_S = 25.0
 
@@ -80,6 +81,7 @@ def listar(
                 "cabecalhos": bloco.get("cabecalhos", {}),
                 "livres": bloco.get("livres", []),
                 "bloqueadas": bloco.get("bloqueadas", []),
+                "projetos": bloco.get("projetos", []),
                 "ligado": bloco.get("ligado", True) is not False,
                 "segredos": {v: v in env_com for v in segredos},
             }
@@ -126,6 +128,11 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     for chave in ("livres", "bloqueadas"):
         if valores := [str(v) for v in dados.get(chave) or []]:
             bloco[chave] = valores
+    projetos = list(dict.fromkeys(str(p).strip() for p in dados.get("projetos") or []))
+    if projetos := [p for p in projetos if p]:
+        if not all(p == mcp_externo.TODOS or PROJETO.fullmatch(p) for p in projetos):
+            raise McpInvalido("projeto: o nome da pasta do projeto, ou * para todos")
+        bloco["projetos"] = projetos
     if set(bloco.get("livres", [])) & set(bloco.get("bloqueadas", [])):
         raise McpInvalido("uma ferramenta não pode ser livre e bloqueada")
     if _tem_segredo(bloco.get("argumentos", []), bloco.get("url", "")):
