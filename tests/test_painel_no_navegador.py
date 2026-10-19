@@ -193,6 +193,7 @@ def _painel(
     estado: Leitura | None = None,
     trocas: dict[str, Any] | None = None,
     entrada_terminal: Escrita | None = None,
+    leituras_vivas: dict[str, Leitura] | None = None,
 ) -> Iterator[tuple[str, str]]:
     """O painel com as respostas de exemplo e um Chromium apontado para ele."""
     respostas = json.loads(RESPOSTAS.read_text())
@@ -209,6 +210,7 @@ def _painel(
         leituras[nome] = leitura(valor)
     if estado is not None:
         leituras["estado"] = estado
+    leituras.update(leituras_vivas or {})
     nomes = Acoes(SimpleNamespace(), tmp_path, tmp_path).escritas()
     escritas = {nome: _escrita(respostas["escritas"].get(nome, {})) for nome in nomes}
     escritas.update(extras or {})
@@ -1036,3 +1038,88 @@ def test_nova_sessao_comeca_no_agente_que_tem_conta_conectada(tmp_path: Path) ->
 
     with _painel(tmp_path, trocas={"contas": contas}) as (depuracao, endereco):
         assert asyncio.run(conferir(depuracao, endereco)) == ["codex"]
+
+
+def _conector_com_login(conectado: bool) -> dict[str, Any]:
+    respostas = json.loads(RESPOSTAS.read_text())
+    dados: dict[str, Any] = copy.deepcopy(respostas["leituras"]["conectores"])
+    (notion,) = [c for c in dados["conectores"] if c["nome"] == "notion"]
+    notion["conectado"] = conectado
+    return dados
+
+
+def test_entrar_no_conector_abre_o_login_no_clique_e_acompanha_ate_conectar(
+    tmp_path: Path,
+) -> None:
+    """O "Abrir login" ficava escondido depois do Entrar (19/10/2026): agora a aba abre no
+    clique, segue ao login quando o endereço chega, e o cartão vira Conectado sozinho."""
+    entrou = threading.Event()
+    pedidos: list[dict[str, Any]] = []
+
+    def entrar(dados: dict[str, Any]) -> dict[str, Any]:
+        pedidos.append(dados)
+        return {"url": "https://login.exemplo.com/authorize?state=s"}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[Any, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "window.__abas = []; window.open = (...a) => {"
+                " const aba = { location: { href: '' }, opener: 'painel', fechada: false,"
+                " close() { this.fechada = true; } };"
+                " window.__abas.push([a[0], aba]); return aba; }"
+            )
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-entrar][data-nome=notion]').click()"
+            )
+            await asyncio.sleep(0.5)
+            abas = await nav.avaliar(
+                "window.__abas.map(([u, a]) => [u, a.location.href, a.opener, a.fechada])"
+            )
+            entrou.set()  # o fornecedor devolveu o código ao Zé
+            await asyncio.sleep(3)  # o painel pergunta a cada 2 s
+            texto = await nav.avaliar('document.querySelector("#conteudo").innerText') or ""
+            assert not nav.erros, nav.erros
+            return abas, texto
+
+    def lido() -> dict[str, Any]:
+        return _conector_com_login(entrou.is_set())
+
+    with _painel(
+        tmp_path, extras={"conector/entrar": entrar}, leituras_vivas={"conectores": lido}
+    ) as (depuracao, endereco):
+        abas, texto = asyncio.run(conferir(depuracao, endereco))
+    # Uma aba, aberta no clique (antes do endereço chegar), mandada ao login e sem o painel nela.
+    assert abas == [["about:blank", "https://login.exemplo.com/authorize?state=s", None, False]]
+    assert pedidos[0]["nome"] == "notion" and pedidos[0]["retorno"].endswith("/oauth/retorno")
+    assert "Conectado" in texto and "Não conectado" not in texto
+
+
+def test_entrar_com_a_aba_bloqueada_mostra_o_botao_abrir_login(tmp_path: Path) -> None:
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar("window.open = () => null")  # o navegador bloqueou a aba
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-entrar][data-nome=notion]').click()"
+            )
+            await asyncio.sleep(0.5)
+            link = await nav.avaliar(
+                "(() => { const a = document.querySelector('[data-login=notion] a.acao');"
+                " return a ? a.href + '|' + getComputedStyle(a).borderRadius : ''; })()"
+            )
+            texto = await nav.avaliar('document.querySelector("#conteudo").innerText') or ""
+            assert not nav.erros, nav.erros
+            return link, texto
+
+    with _painel(
+        tmp_path,
+        extras={"conector/entrar": lambda _d: {"url": "https://login.exemplo.com/a?s=1"}},
+        leituras_vivas={"conectores": lambda: _conector_com_login(False)},
+    ) as (depuracao, endereco):
+        link, texto = asyncio.run(conferir(depuracao, endereco))
+    # Com o estilo de botão (cantos arredondados): um link solto teria 0px.
+    assert link == "https://login.exemplo.com/a?s=1|10px"
+    assert "Abrir login" in texto and "bloqueou a nova aba" in texto

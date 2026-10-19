@@ -18,6 +18,9 @@
   com "Entrar" no cartão do conector, no navegador, sem chave. O Zé guarda os tokens (0600) e uma
   ponte local os renova sozinha, sem recomeçar a conversa nem as sessões. Fora do PC, a volta do
   login chega pelo endereço do painel; se não chegar, cola-se o endereço em que o navegador parou.
+- Conectores com login: "Entrar" abre direto a aba de login do fornecedor, sem passo escondido;
+  quando o login termina, a aba fecha (ou leva de volta ao painel) e o cartão passa a
+  "Conectado" sozinho. Se o navegador bloquear a nova aba, aparece o botão "Abrir login".
 - Servidor (VPS): primeiro acesso sem túnel SSH. O instalador termina com um endereço HTTPS
   (Cloudflare) e um código de uso único para criar a senha; num servidor, quem entra com a senha
   e o código do autenticador faz os ajustes de fora (chaves, contas, autodesenvolvimento), menos

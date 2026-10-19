@@ -136,13 +136,14 @@ input:focus, select:focus, button:focus-visible, nav a:focus-visible {
 .linha > label { flex: 1 1 220px; }
 .linha:has(> label) { align-items: flex-end; } /* o botão na altura do campo, não do rótulo */
 .linha > input[type="password"] { flex: 1 1 260px; }
-button.acao {
+:is(button, a).acao {
   font: inherit; cursor: pointer; padding: 10px 16px; border-radius: 10px;
   color: var(--texto); background: rgb(70 217 222 / .10); border: 1px solid var(--borda-forte);
 }
-button.acao:hover { background: rgb(70 217 222 / .18); }
-button.acao.principal { background: var(--acento); color: #041417; border-color: var(--acento); font-weight: 600; }
-button.acao.principal:hover { filter: brightness(1.08); }
+a.acao { display: inline-block; text-decoration: none; }
+:is(button, a).acao:hover { background: rgb(70 217 222 / .18); }
+:is(button, a).acao.principal { background: var(--acento); color: #041417; border-color: var(--acento); font-weight: 600; }
+:is(button, a).acao.principal:hover { filter: brightness(1.08); }
 button.acao.discreta { background: transparent; color: var(--suave); }
 button.acao:disabled { opacity: .45; cursor: not-allowed; filter: none; }
 button:disabled { opacity: .5; cursor: progress; }
