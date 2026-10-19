@@ -103,6 +103,7 @@
     "skill/salvar",
     "skill/instalar-sugerida",
     "conector/salvar",
+    "conector/importar",
     "conector/remover",
     "conector/ligar",
     "conector/segredo",

@@ -81,24 +81,74 @@ const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando,
 /** @type {any} */
 let conectorEditado = null;
 
-/** O formulário de conector: vazio para um novo, ou preenchido para editar `k` (o nome fica). */
+const EXEMPLO_COLAR = `{
+  "mcpServers": {
+    "n8n": {
+      "type": "http",
+      "url": "https://…/mcp-server/http",
+      "headers": { "Authorization": "Bearer …" }
+    }
+  }
+}`;
+
+/** O formulário de conector: colar a configuração que o serviço fornece (o caminho comum) ou,
+ * nos detalhes, preencher os campos. Vazio para um novo; para editar `k`, o nome fica. */
 function formConector(k = null) {
   conectorEditado = k;
-  const remoto = k?.tipo === "http";
+  const remoto = k ? k.tipo === "http" : true;
   const f = $("form-conector");
   f.hidden = false;
-  f.innerHTML = `<h2>${k ? "Editar conector" : "Novo conector"}</h2>
-    <div class="linha"><label>Nome<input id="cx-nome" class="mono" placeholder="github" value="${esc(k?.nome ?? "")}" ${k ? "readonly" : ""} autocomplete="off" spellcheck="false"></label></div>
-    <div class="segmentos" role="group" aria-label="Tipo">${botao("Local", "cx-tipo", `data-tipo="stdio" aria-pressed="${!remoto}"`)}${botao("Remoto", "cx-tipo", `data-tipo="http" aria-pressed="${remoto}"`)}</div>
-    <label data-local ${remoto ? "hidden" : ""}>Comando<input id="cx-comando" class="mono" placeholder="npx" value="${esc(k?.comando ?? "")}" autocomplete="off" spellcheck="false"></label>
-    <label data-local ${remoto ? "hidden" : ""}>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3">${esc((k?.argumentos ?? []).join("\n"))}</textarea></label>
-    <label data-remoto ${remoto ? "" : "hidden"}>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" value="${esc(k?.url ?? "")}" autocomplete="off" spellcheck="false"></label>
-    <label data-remoto ${remoto ? "" : "hidden"}>Cabeçalhos (um por linha: nome do cabeçalho e a variável com o valor)<textarea id="cx-cabecalhos" class="mono" rows="2" placeholder="Authorization: N8N_AUTH" spellcheck="false">${esc(Object.entries(k?.cabecalhos ?? {}).map(([n, v]) => `${n}: ${v}`).join("\n"))}</textarea></label>
-    <label data-remoto ${remoto ? "" : "hidden"} class="interruptor"><input type="checkbox" id="cx-oauth" ${k?.oauth ? "checked" : ""}> Login com OAuth</label>
-    <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" value="${esc((k?.ambiente ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
-    <label>Sessões de código (projetos, separados por vírgula; * para todos)<input id="cx-projetos" class="mono" placeholder="Nenhum" value="${esc((k?.projetos ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
-    <div class="linha">${botao("Salvar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}<span class="resultado" id="cx-resultado"></span></div>`;
-  $(k ? (remoto ? "cx-url" : "cx-comando") : "cx-nome").focus();
+  f.innerHTML = `<h2>${k ? `Editar ${esc(k.nome)}` : "Novo conector"}</h2>
+    ${sub("Cole a configuração que o serviço fornece: o JSON do MCP ou o comando curl. Tokens e chaves são guardados como segredos.")}
+    <label>Configuração<textarea id="cx-colar" class="mono" rows="8" placeholder="${esc(EXEMPLO_COLAR)}" autocomplete="off" spellcheck="false"></textarea></label>
+    <details class="detalhes" id="cx-campos" ${k ? "open" : ""}><summary>Preencher campos</summary>
+      <div class="linha"><label>Nome<input id="cx-nome" class="mono" placeholder="github" value="${esc(k?.nome ?? "")}" ${k ? "readonly" : ""} autocomplete="off" spellcheck="false"></label></div>
+      <div class="segmentos" role="group" aria-label="Tipo">${botao("Local", "cx-tipo", `data-tipo="stdio" aria-pressed="${!remoto}"`)}${botao("Remoto", "cx-tipo", `data-tipo="http" aria-pressed="${remoto}"`)}</div>
+      <label data-local ${remoto ? "hidden" : ""}>Comando<input id="cx-comando" class="mono" placeholder="npx" value="${esc(k?.comando ?? "")}" autocomplete="off" spellcheck="false"></label>
+      <label data-local ${remoto ? "hidden" : ""}>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3">${esc((k?.argumentos ?? []).join("\n"))}</textarea></label>
+      <label data-remoto ${remoto ? "" : "hidden"}>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" value="${esc(k?.url ?? "")}" autocomplete="off" spellcheck="false"></label>
+      <label data-remoto ${remoto ? "" : "hidden"}>Cabeçalhos (um por linha: nome do cabeçalho e a variável com o valor)<textarea id="cx-cabecalhos" class="mono" rows="2" placeholder="Authorization: N8N_AUTH" spellcheck="false">${esc(Object.entries(k?.cabecalhos ?? {}).map(([n, v]) => `${n}: ${v}`).join("\n"))}</textarea></label>
+      <label data-remoto ${remoto ? "" : "hidden"} class="interruptor"><input type="checkbox" id="cx-oauth" ${k?.oauth ? "checked" : ""}> Login com OAuth</label>
+      <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" value="${esc((k?.ambiente ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
+    </details>
+    <label>Projetos<input id="cx-projetos" class="mono" placeholder="Nenhum" value="${esc((k?.projetos ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
+    ${sub("Pastas dos projetos cujas sessões de código usam este conector, separadas por vírgula (* para todos).")}
+    <div class="linha">${botao("Salvar e testar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}</div>`;
+  $("cx-colar").focus();
+}
+
+const ferramentasTexto = (n) => `${n} ${n === 1 ? "ferramenta" : "ferramentas"}`;
+
+/** O resultado do teste no cartão do conector, com as permissões quando conectou. */
+function mostrarTeste(nome, r) {
+  const saida = /** @type {HTMLElement | null} */ (document.querySelector(`[data-resultado="${CSS.escape(nome)}"]`));
+  if (!saida) return;
+  saida.className = "resultado " + (r.ok ? "ok" : "erro");
+  saida.textContent = r.ok ? ferramentasTexto(r.ferramentas.length) : r.erro;
+  if (r.ok) {
+    const area = /** @type {HTMLElement} */ (document.querySelector(`[data-ferramentas="${CSS.escape(nome)}"]`));
+    area.innerHTML = permissoes(nome, r.ferramentas, conectoresVistos.find((k) => k.nome === nome));
+    area.hidden = false;
+  }
+}
+
+/** Os campos preenchidos à mão, como o painel grava. */
+function lerCampos() {
+  const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
+  // Cada linha é "Nome: VARIAVEL", cortada no primeiro ":". Linha fora disso não some calada.
+  const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => {
+    const i = l.indexOf(":");
+    if (i <= 0 || !l.slice(i + 1).trim()) throw new Error("Cabeçalho inválido. Use uma linha por cabeçalho, como Authorization: N8N_AUTH.");
+    return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
+  }));
+  // Na edição, as permissões escolhidas continuam (elas não estão no formulário).
+  const permissoesAtuais = conectorEditado ? { livres: conectorEditado.livres, bloqueadas: conectorEditado.bloqueadas } : {};
+  return {
+    nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
+    argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
+    ambiente: listaDe(valorCampo("cx-ambiente").value), projetos: listaDe(valorCampo("cx-projetos").value),
+    oauth: remoto && /** @type {HTMLInputElement} */ ($("cx-oauth")).checked, ...permissoesAtuais,
+  };
 }
 
 Object.assign(ACOES, {
@@ -115,23 +165,23 @@ Object.assign(ACOES, {
     /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("[data-remoto]")).forEach((x) => { x.hidden = !remoto; });
   },
   "cx-salvar": async (b) => {
-    const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
-    // Cada linha é "Nome: VARIAVEL", cortada no primeiro ":". Linha fora disso não some calada.
-    const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => {
-      const i = l.indexOf(":");
-      if (i <= 0 || !l.slice(i + 1).trim()) throw new Error("Cabeçalho inválido. Use uma linha por cabeçalho, como Authorization: N8N_AUTH.");
-      return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
-    }));
-    // Na edição, as permissões escolhidas continuam (elas não estão no formulário).
-    const permissoesAtuais = conectorEditado ? { livres: conectorEditado.livres, bloqueadas: conectorEditado.bloqueadas } : {};
-    await ocupado(b, () => api("conector/salvar", {
-      nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
-      argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
-      ambiente: listaDe(valorCampo("cx-ambiente").value), projetos: listaDe(valorCampo("cx-projetos").value),
-      oauth: remoto && /** @type {HTMLInputElement} */ ($("cx-oauth")).checked, ...permissoesAtuais,
-    }));
+    const colado = valorCampo("cx-colar").value.trim();
+    let testes;
+    if (colado) {
+      const r = await ocupado(b, () => api("conector/importar", { texto: colado, nome: conectorEditado?.nome ?? "", projetos: listaDe(valorCampo("cx-projetos").value) }));
+      testes = r.testes;
+    } else {
+      const dados = lerCampos();
+      if (!dados.nome) throw new Error("Cole a configuração ou preencha os campos.");
+      await ocupado(b, () => api("conector/salvar", dados));
+      testes = [{ nome: dados.nome, ...(await api("conector/testar", { nome: dados.nome })) }];
+    }
     conectorEditado = null;
-    toast("Conector salvo."); await recarregar();
+    await recarregar();
+    for (const t of testes) mostrarTeste(t.nome, t);
+    const [t] = testes;
+    if (testes.length === 1) toast(t.ok ? `${t.nome}: ${ferramentasTexto(t.ferramentas.length)}.` : `${t.nome}: ${t.erro}`);
+    else toast(`${testes.length} conectores salvos.`);
   },
   "conector-segredo": async (b) => {
     const campo = /** @type {HTMLInputElement} */ (/** @type {HTMLElement} */ (b.closest(".segredo")).querySelector("input"));
@@ -142,14 +192,7 @@ Object.assign(ACOES, {
     const nome = b.dataset.nome;
     const saida = /** @type {HTMLElement} */ (document.querySelector(`[data-resultado="${CSS.escape(nome)}"]`));
     saida.className = "resultado"; saida.textContent = "Conectando…";
-    const r = await ocupado(b, () => api("conector/testar", { nome }));
-    saida.className = "resultado " + (r.ok ? "ok" : "erro");
-    saida.textContent = r.ok ? `${r.ferramentas.length} ferramentas` : r.erro;
-    if (r.ok) {
-      const area = /** @type {HTMLElement} */ (document.querySelector(`[data-ferramentas="${CSS.escape(nome)}"]`));
-      area.innerHTML = permissoes(nome, r.ferramentas, conectoresVistos.find((k) => k.nome === nome));
-      area.hidden = false;
-    }
+    mostrarTeste(nome, await ocupado(b, () => api("conector/testar", { nome })));
   },
   "conector-permissoes": async (b) => {
     const k = conectoresVistos.find((x) => x.nome === b.dataset.nome);

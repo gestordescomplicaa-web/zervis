@@ -172,6 +172,7 @@ class Acoes:
             "skill/ver": self.ver_skill,
             "skill/salvar": self.salvar_skill,
             "conector/salvar": self.salvar_conector,
+            "conector/importar": self.importar_conector,
             "conector/remover": self.remover_conector,
             "conector/ligar": self.ligar_conector,
             "conector/segredo": self.segredo_conector,
