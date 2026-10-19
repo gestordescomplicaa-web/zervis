@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Skill inicial `fluxos-n8n` (ADR 0038), também nas sessões: criar, editar, testar, publicar e
+  investigar fluxos pelo MCP do n8n, na ordem que ele pede (boas práticas, tipos dos nós,
+  validação, criação, teste com dados de exemplo). Produção só muda com aprovação; editar guarda
+  a versão para voltar; todo fluxo publicado tem um fluxo de erro; credenciais só no n8n.
+  A `integrar-sistema` aponta para ela e passa a mandar ligar o conector pelo botão da sessão.
 - Sessões: o botão "Conectores", no topo da sessão (e a lista na criação), liga e desliga os MCPs
   do projeto ali mesmo. A escolha vale para todas as sessões daquela pasta; cada conector mostra
   em que outros projetos ele já está ("Também em: …"), e salvar reabre o agente com a conversa.

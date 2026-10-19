@@ -44,6 +44,7 @@ pede a chave inteira da conta: avise a pessoa antes de usar.
 | Existe MCP oficial ou confiável | Conector MCP |
 | Uso no dia a dia pelo Zé, mas só há API | Conector MCP próprio: um servidor pequeno que embrulha os endpoints do objetivo (passo 6) |
 | Uma automação ou um projeto só, sem conversa | API direta, no código do projeto |
+| Fluxo repetido de um cliente (gatilho, passos, avisos) | Um fluxo no n8n: siga a skill `fluxos-n8n` |
 
 Remoto (`http`) quando o fornecedor hospeda o MCP; local (`stdio`, `npx`/`uvx`) quando o
 servidor roda na máquina.
@@ -74,9 +75,9 @@ servidor roda na máquina.
   crie nem edite `.mcp.json` ou `config.toml`: isso foge do cadastro do Zé (sem login pelo
   painel, sem renovação do token, sem política por ferramenta) e deixa um arquivo solto no
   repositório do cliente, que acaba num commit. Diga à pessoa o que fazer, em duas linhas:
-  pedir ao Zé na conversa ("instale o conector do <sistema>, <endereço>"), ou cadastrar em
-  Conectores (nome, tipo, comando ou endereço, nomes dos segredos, livres e bloqueadas), com o
-  nome da pasta deste projeto em "Sessões de código" para ele valer aqui.
+  pedir ao Zé na conversa ("instale o conector do <sistema>, <endereço>"), ou colar em
+  Conectores a configuração que o fornecedor dá (o JSON do MCP ou o curl) e ligá-lo nesta
+  sessão pelo botão "Conectores", no topo da sessão.
 - API direta: escreva o cliente com a chave lida do ambiente, um tempo limite em toda chamada,
   nova tentativa só para erro passageiro (429, 5xx) respeitando o `Retry-After`, e um teste que
   roda sem rede (resposta gravada ou servidor falso).
