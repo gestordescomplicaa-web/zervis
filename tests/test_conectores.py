@@ -3,6 +3,7 @@
 import stat
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -182,3 +183,122 @@ def test_token_colado_no_lugar_da_variavel_e_recusado_sem_repetir_o_token(
     with pytest.raises(McpInvalido) as erro:
         conectores.salvar("n8n", dados, painel, toml)
     assert "N8N_AUTH" in str(erro.value) and "segredo" not in str(erro.value)
+
+
+# --- colar a configuração (19/10/2026: o formulário de campos não deu certo com o n8n) -------
+
+N8N = """{
+  "mcpServers": {
+    "n8n-mcp": {
+      "type": "http",
+      "url": "%s",
+      "headers": {
+        "Authorization": "Bearer tok-de-teste"
+      }
+    }
+  }
+}"""
+
+
+def _servidor_mcp_com_bearer() -> Any:
+    """Um MCP por HTTP que só responde com `Authorization: Bearer tok-de-teste`."""
+    import http.server
+    import json as _json
+    import threading
+
+    class Mcp(http.server.BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            if self.headers.get("Authorization") != "Bearer tok-de-teste":
+                self.send_response(401)
+                self.end_headers()
+                return
+            msg = _json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            resultados = {
+                "initialize": {"protocolVersion": "2025-06-18", "capabilities": {}},
+                "tools/list": {"tools": [{"name": "search_workflows", "description": "Busca"}]},
+            }
+            corpo = b""
+            if "id" in msg:
+                corpo = _json.dumps(
+                    {"jsonrpc": "2.0", "id": msg["id"], "result": resultados[msg["method"]]}
+                ).encode()
+            self.send_response(200 if corpo else 202)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(corpo)
+
+        def log_message(self, *_args: object) -> None:
+            pass
+
+    servidor = http.server.HTTPServer(("127.0.0.1", 0), Mcp)
+    threading.Thread(target=servidor.serve_forever, daemon=True).start()
+    return servidor
+
+
+def test_colar_o_json_do_n8n_conecta_de_primeira(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    servidor = _servidor_mcp_com_bearer()
+    url = f"http://127.0.0.1:{servidor.server_port}/mcp-server/http"
+    try:
+        nomes = conectores.importar(N8N % url, projetos=["n8n-teste"], painel=painel, caminho=toml)
+        resultado = conectores.testar("n8n-mcp", toml, painel, env={})
+    finally:
+        servidor.shutdown()
+    assert nomes == ["n8n-mcp"]
+    assert resultado["ok"] and [f["nome"] for f in resultado["ferramentas"]] == ["search_workflows"]
+    gravado = painel.read_text()
+    assert "tok-de-teste" not in gravado  # o token fica só no segredo 0600
+    (n8n,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "n8n-mcp"]
+    assert n8n["cabecalhos"] == {"Authorization": "N8N_MCP_AUTHORIZATION"}
+    assert n8n["segredos"] == {"N8N_MCP_AUTHORIZATION": True} and n8n["projetos"] == ["n8n-teste"]
+
+
+def test_colar_aceita_curl_trecho_sem_chaves_e_servidor_local(arquivos: tuple[Path, Path]) -> None:
+    curl = (
+        'curl -X POST "https://n8n.exemplo.com/mcp-server/http" \\\n'
+        '  -H "Authorization: Bearer tok" -H "Content-Type: application/json" -d \'{}\''
+    )
+    ((nome, servidor),) = conectores.ler_configuracao(curl)
+    assert nome == "n8n" and servidor == {
+        "url": "https://n8n.exemplo.com/mcp-server/http",
+        "headers": {"Authorization": "Bearer tok"},
+    }
+    trecho = '"crm": {"url": "https://crm.exemplo.com/mcp", "headers": {"X-Key": "k"}},'
+    assert [n for n, _ in conectores.ler_configuracao(trecho)] == ["crm"]
+    toml, painel = arquivos
+    local = '{"mcpServers": {"GitHub": {"command": "npx", "args": ["-y", "srv"],'
+    local += ' "env": {"GITHUB_TOKEN": "<seu token>"}}}}'
+    assert conectores.importar(local, painel=painel, caminho=toml) == ["github"]
+    (gh,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "github"]
+    # O valor de exemplo não vira segredo: o cartão mostra o que falta.
+    assert gh["comando"] == "npx" and gh["segredos"] == {"GITHUB_TOKEN": False}
+
+
+def test_colar_de_novo_troca_a_configuracao_e_mantem_as_permissoes(
+    arquivos: tuple[Path, Path],
+) -> None:
+    toml, painel = arquivos
+    conectores.salvar(
+        "n8n-teste",
+        {"tipo": "http", "url": "https://velho.exemplo.com/mcp", "livres": ["search_workflows"]},
+        painel,
+        toml,
+    )
+    novo = N8N % "https://n8n.exemplo.com/mcp-server/http"
+    assert conectores.importar(novo, "n8n-teste", painel=painel, caminho=toml) == ["n8n-teste"]
+    (k,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "n8n-teste"]
+    assert k["url"] == "https://n8n.exemplo.com/mcp-server/http"
+    assert k["livres"] == ["search_workflows"] and k["segredos"] == {
+        "N8N_TESTE_AUTHORIZATION": True
+    }
+
+
+def test_colar_algo_que_nao_e_configuracao_nao_repete_o_texto(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    for texto in ("Bearer eyJsegredo", '{"x": 1}', "curl sem-endereco -H 'A: segredo'"):
+        with pytest.raises(McpInvalido) as erro:
+            conectores.importar(texto, painel=painel, caminho=toml)
+        assert str(erro.value) == conectores.NAO_RECONHECIDA
+    sse = '{"mcpServers": {"velho": {"type": "sse", "url": "https://a.exemplo.com/sse"}}}'
+    with pytest.raises(McpInvalido, match="SSE"):
+        conectores.importar(sse, painel=painel, caminho=toml)

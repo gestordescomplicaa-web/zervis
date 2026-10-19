@@ -1206,7 +1206,7 @@ def test_editar_conector_abre_preenchido_e_mantem_as_permissoes(tmp_path: Path) 
         "Authorization: CRM_TOKEN",
         "loja",
         True,
-        "Editar conector",
+        "Editar crm",
     ]
     (enviado,) = salvos
     assert enviado["url"] == "https://n8n.exemplo.com/mcp-server/http"
@@ -1253,3 +1253,38 @@ def test_cabecalho_fora_do_formato_avisa_e_nao_salva_calado(tmp_path: Path) -> N
     assert "Cabeçalho inválido" in texto
     (enviado,) = salvos  # só a segunda tentativa, no formato certo
     assert enviado["cabecalhos"] == {"Authorization": "N8N_AUTH"}
+
+
+def test_colar_a_configuracao_salva_testa_e_mostra_o_resultado(tmp_path: Path) -> None:
+    """O jeito comum (19/10/2026): colar o JSON que o serviço dá, sem preencher campos."""
+    importados: list[dict[str, Any]] = []
+    colado = '{"mcpServers": {"crm": {"type": "http", "url": "https://mcp.exemplo.com/mcp"}}}'
+
+    def importar(dados: dict[str, Any]) -> dict[str, Any]:
+        importados.append(dados)
+        respostas = json.loads(RESPOSTAS.read_text())
+        ferramentas = [{"nome": "buscar_contatos", "descricao": "Busca"}]
+        teste = {"nome": "crm", "ok": True, "ms": 5, "ferramentas": ferramentas}
+        return {**respostas["leituras"]["conectores"], "testes": [teste]}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-novo]').click();"
+                f"document.getElementById('cx-colar').value = {json.dumps(colado)};"
+                "document.getElementById('cx-projetos').value = 'loja';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.8)
+            cartao = await nav.avaliar("document.querySelector('[data-resultado=crm]').textContent")
+            texto = await nav.avaliar("document.body.innerText") or ""
+            assert not nav.erros, nav.erros
+            return str(cartao), str(texto)
+
+    with _painel(tmp_path, extras={"conector/importar": importar}) as (depuracao, endereco):
+        cartao, texto = asyncio.run(conferir(depuracao, endereco))
+    assert importados == [{"texto": colado, "nome": "", "projetos": ["loja"]}]
+    assert cartao == "1 ferramenta" and "crm: 1 ferramenta." in texto
+    assert "buscar_contatos" in texto  # as permissões abrem sem outro clique

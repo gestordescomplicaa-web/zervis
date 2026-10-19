@@ -216,6 +216,140 @@ def gravar_segredo(nome: str, variavel: str, valor: str) -> None:
     temporario.replace(destino)
 
 
+# --- importar: a configuração que o serviço fornece, colada como veio ------------------------
+
+NAO_RECONHECIDA = "Configuração não reconhecida. Cole o JSON do MCP ou o comando curl."
+# Valor de exemplo, não segredo: "<token>", "YOUR_API_KEY", "${TOKEN}", "SEU_TOKEN".
+EXEMPLO = re.compile(r"^$|<.*>|\$\{|(^|\s)(your|seu|sua)[_-]", re.IGNORECASE)
+
+
+def _nome_de(texto: str) -> str:
+    nome = re.sub(r"[^a-z0-9_-]+", "-", texto.lower()).strip("-_")[:32].strip("-_")
+    return nome or "conector"
+
+
+def _variavel_de(*partes: str) -> str:
+    variavel = re.sub(r"[^A-Z0-9]+", "_", "_".join(partes).upper()).strip("_")
+    if not variavel[:1].isalpha():
+        variavel = "MCP_" + variavel
+    return variavel[:64]
+
+
+def _de_curl(texto: str) -> list[tuple[str, dict[str, Any]]]:
+    import shlex
+
+    try:
+        partes = shlex.split(texto.replace("\\\n", " "))
+    except ValueError:
+        raise McpInvalido(NAO_RECONHECIDA) from None
+    url, cabecalhos = "", {}
+    for anterior, parte in itertools.pairwise(["", *partes]):
+        if anterior in ("-H", "--header") and ":" in parte:
+            chave, valor = parte.split(":", 1)
+            cabecalhos[chave.strip()] = valor.strip()
+        elif not url and parte.startswith(("https://", "http://")):
+            url = parte
+    if not url:
+        raise McpInvalido(NAO_RECONHECIDA)
+    # Os de protocolo vêm do próprio Zé; só os de acesso viram segredo.
+    for comum in ("Content-Type", "Accept", "User-Agent"):
+        for chave in [c for c in cabecalhos if c.lower() == comum.lower()]:
+            del cabecalhos[chave]
+    host = re.sub(r"^www\.", "", url.split("//", 1)[1].split("/", 1)[0].split(":", 1)[0])
+    return [(host.split(".")[0], {"url": url, "headers": cabecalhos})]
+
+
+def _de_json(texto: str) -> list[tuple[str, dict[str, Any]]]:
+    dados: Any = None
+    for tentativa in (texto, "{" + texto.strip().rstrip(",") + "}"):  # aceita o trecho sem chaves
+        with contextlib.suppress(ValueError):
+            dados = json.loads(tentativa)
+            break
+    if not isinstance(dados, dict):
+        raise McpInvalido(NAO_RECONHECIDA)
+    for chave in ("mcpServers", "servers", "mcp_servers"):
+        if isinstance(dados.get(chave), dict):
+            dados = dados[chave]
+            break
+    if "url" in dados or "command" in dados:  # um servidor só, sem nome
+        dados = {"conector": dados}
+    servidores = [(k, v) for k, v in dados.items() if isinstance(v, dict)]
+    if not servidores:
+        raise McpInvalido(NAO_RECONHECIDA)
+    return servidores
+
+
+def _tabela(valor: Any, alvo: str, campo: str) -> dict[str, Any]:
+    if valor is None:
+        return {}
+    if not isinstance(valor, dict):
+        raise McpInvalido(f"{alvo}: {campo} precisa ser um objeto")
+    return {str(k): v for k, v in valor.items()}
+
+
+def ler_configuracao(texto: str) -> list[tuple[str, dict[str, Any]]]:
+    """(nome sugerido, servidor) no formato `mcpServers` (Claude, Cursor, n8n) ou de um curl."""
+    texto = texto.strip()
+    return _de_curl(texto) if texto.startswith("curl") else _de_json(texto)
+
+
+def importar(
+    texto: str,
+    nome: str = "",
+    projetos: list[str] | None = None,
+    painel: Path = mcp_externo.PAINEL,
+    caminho: Path = mcp_externo.CAMINHO,
+) -> list[str]:
+    """Cria (ou troca) os conectores da configuração colada. Os valores dos cabeçalhos e do
+    `env` vão para os segredos 0600 e nunca para o arquivo; as permissões já escolhidas
+    continuam. Nenhuma mensagem de erro repete o que foi colado."""
+    servidores = ler_configuracao(texto)
+    if nome and len(servidores) > 1:
+        raise McpInvalido("a configuração tem mais de um servidor: deixe o nome em branco")
+    atuais = _ler_painel(painel)["servidores"]
+    feitos = []
+    for chave, servidor in servidores:
+        alvo = nome or _nome_de(chave)
+        tipo = str(servidor.get("type") or servidor.get("transport") or "")
+        if tipo.lower() == "sse":
+            raise McpInvalido(f"{alvo}: servidor SSE; o Zé usa MCP por HTTP (streamable)")
+        segredos: dict[str, str] = {}
+        dados: dict[str, Any]
+        if servidor.get("command"):
+            ambiente = []
+            for variavel, valor in _tabela(servidor.get("env"), alvo, "env").items():
+                variavel = variavel if VARIAVEL.fullmatch(variavel) else _variavel_de(variavel)
+                ambiente.append(variavel)
+                segredos[variavel] = str(valor)
+            dados = {
+                "tipo": "stdio",
+                "comando": str(servidor["command"]),
+                "argumentos": [str(a) for a in servidor.get("args") or [] if isinstance(a, str)],
+                "ambiente": ambiente,
+            }
+        elif servidor.get("url"):
+            cabecalhos = {}
+            for cabecalho, valor in _tabela(servidor.get("headers"), alvo, "headers").items():
+                variavel = _variavel_de(alvo, cabecalho)
+                cabecalhos[str(cabecalho)] = variavel
+                segredos[variavel] = str(valor)
+            dados = {"tipo": "http", "url": str(servidor["url"]), "cabecalhos": cabecalhos}
+        else:
+            raise McpInvalido(f"{alvo}: sem url nem command")
+        anterior = atuais.get(alvo, {})
+        dados.update(
+            livres=anterior.get("livres", []),
+            bloqueadas=anterior.get("bloqueadas", []),
+            projetos=projetos if projetos is not None else anterior.get("projetos", []),
+        )
+        salvar(alvo, dados, painel, caminho)
+        for variavel, valor in segredos.items():
+            if not EXEMPLO.search(valor.strip()):
+                gravar_segredo(alvo, variavel, valor)
+        feitos.append(alvo)
+    return feitos
+
+
 # --- testar: sobe o servidor e lista as ferramentas -----------------------------------------
 
 

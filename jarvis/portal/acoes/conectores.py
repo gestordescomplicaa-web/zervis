@@ -41,6 +41,21 @@ class AcoesConectores(Pagina):
         self.painel.conectores_pendentes = True
         return self.painel.conectores()
 
+    def importar_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A configuração colada (JSON do MCP ou curl): salva, guarda os segredos e já testa,
+        para o resultado aparecer sem outro clique. O texto colado nunca vai para o registro."""
+        projetos = dados.get("projetos")
+        nomes = self.painel._chamar(
+            lambda: conectores.importar(
+                str(dados.get("texto", "")),
+                str(dados.get("nome", "")).strip(),
+                [str(p) for p in projetos] if isinstance(projetos, list) else None,
+            )
+        )
+        self.painel.conectores_pendentes = True
+        testes = [{"nome": n, **conectores.testar(n)} for n in nomes]
+        return {**self.painel.conectores(), "testes": testes}
+
     def remover_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
         self.painel._chamar(lambda: conectores.remover(str(dados.get("nome", ""))))
         self.painel.conectores_pendentes = True

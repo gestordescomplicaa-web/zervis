@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Conectores: "Adicionar" agora pede só para colar a configuração que o serviço fornece, o JSON
+  do MCP (`mcpServers`, como o do n8n, do Claude ou do Cursor) ou o comando `curl`, e os
+  projetos. "Salvar e testar" cria o conector, guarda tokens e chaves como segredos (nunca no
+  arquivo de configuração), testa e mostra as ferramentas na hora. Colar de novo num conector
+  existente ("Editar") troca a configuração e mantém as permissões. Os campos ficam em
+  "Preencher campos", para quem precisar.
 - Conectores: uma linha de cabeçalho fora do formato (`Authorization: N8N_AUTH`) era descartada
   sem aviso, e o conector ficava sem o cabeçalho (no n8n, HTTP 401). Agora o painel avisa
   "Cabeçalho inválido" e não salva; o valor pode ter `:` depois do primeiro. O token colado no
