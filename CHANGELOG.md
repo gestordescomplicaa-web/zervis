@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Conectores: "Editar" no cartão abre o formulário com o que está gravado (endereço, cabeçalhos,
+  segredos, projetos); os segredos guardados e as permissões continuam. Antes só dava para
+  remover, o que apagava também os segredos.
+- Conectores: "Ferramentas" com HTTP 401 ou 403 mostra "Acesso negado" e, quando o
+  `Authorization` está sem o tipo (o token sem `Bearer `, como pede o n8n), diz isso, sem
+  mostrar o segredo.
 - Skill `integrar-sistema`: numa sessão de código, o agente não instala o conector por conta
   própria (`claude mcp add`, `.mcp.json`): diz à pessoa para pedir ao Zé ou cadastrar em
   Conectores, com o projeto marcado. Quem já instalou a skill atualiza o texto em Skills.

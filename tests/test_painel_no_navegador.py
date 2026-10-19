@@ -1165,3 +1165,54 @@ def test_servidor_sem_registro_automatico_abre_o_app_proprio_e_guarda_o_client_i
         fechado, aberto = asyncio.run(conferir(depuracao, endereco))
     assert (fechado, aberto) == (False, True)  # o erro leva ao lugar de resolver
     assert enviados == [{"nome": "notion", "client_id": "meu-app", "client_secret": "s3gr3d0"}]
+
+
+def test_editar_conector_abre_preenchido_e_mantem_as_permissoes(tmp_path: Path) -> None:
+    """O cartão só deixava remover (19/10/2026): Editar abre o formulário com o que está
+    gravado, o nome fixo, e Salvar manda as permissões que já existiam."""
+    salvos: list[dict[str, Any]] = []
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> list[Any]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-editar][data-nome=crm]').click()"
+            )
+            await asyncio.sleep(0.3)
+            campos = await nav.avaliar(
+                "['cx-nome','cx-url','cx-cabecalhos','cx-projetos'].map("
+                "(i) => document.getElementById(i).value)"
+                ".concat([document.getElementById('cx-nome').readOnly,"
+                " document.querySelector('#form-conector h2').textContent])"
+            )
+            await nav.avaliar(
+                "document.getElementById('cx-url').value = 'https://n8n.exemplo.com/mcp-server/http';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.6)
+            assert not nav.erros, nav.erros
+            return list(campos)
+
+    with _painel(tmp_path, extras={"conector/salvar": salvar}) as (depuracao, endereco):
+        campos = asyncio.run(conferir(depuracao, endereco))
+    assert campos == [
+        "crm",
+        "https://mcp.exemplo.com/mcp",
+        "Authorization: CRM_TOKEN",
+        "loja",
+        True,
+        "Editar conector",
+    ]
+    (enviado,) = salvos
+    assert enviado["url"] == "https://n8n.exemplo.com/mcp-server/http"
+    assert enviado["cabecalhos"] == {"Authorization": "CRM_TOKEN"}
+    assert (enviado["livres"], enviado["bloqueadas"], enviado["projetos"]) == (
+        ["buscar_contatos"],
+        [],
+        ["loja"],
+    )

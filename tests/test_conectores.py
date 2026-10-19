@@ -116,3 +116,55 @@ def test_testar_sobe_o_servidor_e_lista_as_ferramentas(
     assert carregado.bloqueadas == ["mcp__falso__criar_issue"]
     conectores.salvar("quebrado", {"comando": "/nao/existe"}, painel, toml)
     assert conectores.testar("quebrado", toml, painel, env={})["ok"] is False
+
+
+def test_acesso_negado_diz_quando_falta_o_tipo_do_token(arquivos: tuple[Path, Path]) -> None:
+    """O 401 do n8n com o token sem `Bearer ` (19/10/2026): a mensagem aponta a causa, sem
+    mostrar o segredo."""
+    import http.server
+    import threading
+
+    class Recusa(http.server.BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            self.send_response(401)
+            self.end_headers()
+
+        def log_message(self, *_args: object) -> None:
+            pass
+
+    servidor = http.server.HTTPServer(("127.0.0.1", 0), Recusa)
+    threading.Thread(target=servidor.serve_forever, daemon=True).start()
+    toml, painel = arquivos
+    try:
+        conectores.salvar(
+            "n8n",
+            {
+                "tipo": "http",
+                "url": f"http://127.0.0.1:{servidor.server_port}/mcp-server/http",
+                "cabecalhos": {"Authorization": "N8N_AUTH"},
+            },
+            painel,
+            toml,
+        )
+        conectores.gravar_segredo("n8n", "N8N_AUTH", "tok-sem-tipo")
+        sem_tipo = conectores.testar("n8n", toml, painel, env={})
+        conectores.gravar_segredo("n8n", "N8N_AUTH", "Bearer tok-vencido")
+        com_tipo = conectores.testar("n8n", toml, painel, env={})
+    finally:
+        servidor.shutdown()
+    assert sem_tipo == {
+        "ok": False,
+        "erro": "Acesso negado (HTTP 401). O Authorization está sem o tipo, como Bearer.",
+    }
+    assert com_tipo == {"ok": False, "erro": "Acesso negado (HTTP 401). Confira o segredo."}
+    assert "tok" not in str(sem_tipo) + str(com_tipo)
+
+
+def test_editar_o_conector_mantem_o_segredo_guardado(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    dados = {"tipo": "http", "url": "https://a.exemplo.com/mcp", "cabecalhos": {"X": "A_AUTH"}}
+    conectores.salvar("crm", dados, painel, toml)
+    conectores.gravar_segredo("crm", "A_AUTH", "Bearer s3gr3d0")
+    conectores.salvar("crm", {**dados, "url": "https://b.exemplo.com/mcp"}, painel, toml)
+    (crm,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "crm"]
+    assert crm["url"] == "https://b.exemplo.com/mcp" and crm["segredos"] == {"A_AUTH": True}

@@ -56,7 +56,7 @@ function cartaoConector(k) {
     <div class="cabeca"><h2>${esc(k.nome)}</h2><span class="etiqueta">${k.tipo === "http" ? "Remoto" : "Local"}</span>${k.origem === "arquivo" ? '<span class="etiqueta">arquivo de config</span>' : ""}
       ${liga(k.ligado, "conector", id, "Ligado")}</div>
     ${segredos}${login}
-    <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
+    <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? botao("Editar", "conector-editar", id) + xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
     <div class="ferramentas-mcp" data-ferramentas="${esc(k.nome)}" hidden></div>
     <details class="detalhes" data-detalhes="${esc(k.nome)}"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
       ${appProprio(k, id)}
@@ -77,26 +77,37 @@ const listaDe = (t) => t.split(",").map((v) => v.trim()).filter(Boolean);
 /** O conector como o painel grava, com uma parte trocada (permissões ou projetos). */
 const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, oauth: k.oauth, ...troca });
 
-function formConector() {
+/** O conector em edição (os segredos guardados continuam: ficam fora do formulário). */
+/** @type {any} */
+let conectorEditado = null;
+
+/** O formulário de conector: vazio para um novo, ou preenchido para editar `k` (o nome fica). */
+function formConector(k = null) {
+  conectorEditado = k;
+  const remoto = k?.tipo === "http";
   const f = $("form-conector");
   f.hidden = false;
-  f.innerHTML = `<h2>Novo conector</h2>
-    <div class="linha"><label>Nome<input id="cx-nome" class="mono" placeholder="github" autocomplete="off" spellcheck="false"></label></div>
-    <div class="segmentos" role="group" aria-label="Tipo">${botao("Local", "cx-tipo", 'data-tipo="stdio" aria-pressed="true"')}${botao("Remoto", "cx-tipo", 'data-tipo="http" aria-pressed="false"')}</div>
-    <label data-local>Comando<input id="cx-comando" class="mono" placeholder="npx" autocomplete="off" spellcheck="false"></label>
-    <label data-local>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3"></textarea></label>
-    <label data-remoto hidden>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" autocomplete="off" spellcheck="false"></label>
-    <label data-remoto hidden>Cabeçalhos (um por linha: Nome: VARIAVEL)<textarea id="cx-cabecalhos" class="mono" rows="2"></textarea></label>
-    <label data-remoto hidden class="interruptor"><input type="checkbox" id="cx-oauth"> Login com OAuth</label>
-    <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" autocomplete="off" spellcheck="false"></label>
-    <label>Sessões de código (projetos, separados por vírgula; * para todos)<input id="cx-projetos" class="mono" placeholder="Nenhum" autocomplete="off" spellcheck="false"></label>
+  f.innerHTML = `<h2>${k ? "Editar conector" : "Novo conector"}</h2>
+    <div class="linha"><label>Nome<input id="cx-nome" class="mono" placeholder="github" value="${esc(k?.nome ?? "")}" ${k ? "readonly" : ""} autocomplete="off" spellcheck="false"></label></div>
+    <div class="segmentos" role="group" aria-label="Tipo">${botao("Local", "cx-tipo", `data-tipo="stdio" aria-pressed="${!remoto}"`)}${botao("Remoto", "cx-tipo", `data-tipo="http" aria-pressed="${remoto}"`)}</div>
+    <label data-local ${remoto ? "hidden" : ""}>Comando<input id="cx-comando" class="mono" placeholder="npx" value="${esc(k?.comando ?? "")}" autocomplete="off" spellcheck="false"></label>
+    <label data-local ${remoto ? "hidden" : ""}>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3">${esc((k?.argumentos ?? []).join("\n"))}</textarea></label>
+    <label data-remoto ${remoto ? "" : "hidden"}>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" value="${esc(k?.url ?? "")}" autocomplete="off" spellcheck="false"></label>
+    <label data-remoto ${remoto ? "" : "hidden"}>Cabeçalhos (um por linha: Nome: VARIAVEL)<textarea id="cx-cabecalhos" class="mono" rows="2">${esc(Object.entries(k?.cabecalhos ?? {}).map(([n, v]) => `${n}: ${v}`).join("\n"))}</textarea></label>
+    <label data-remoto ${remoto ? "" : "hidden"} class="interruptor"><input type="checkbox" id="cx-oauth" ${k?.oauth ? "checked" : ""}> Login com OAuth</label>
+    <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" value="${esc((k?.ambiente ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
+    <label>Sessões de código (projetos, separados por vírgula; * para todos)<input id="cx-projetos" class="mono" placeholder="Nenhum" value="${esc((k?.projetos ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
     <div class="linha">${botao("Salvar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}<span class="resultado" id="cx-resultado"></span></div>`;
-  $("cx-nome").focus();
+  $(k ? (remoto ? "cx-url" : "cx-comando") : "cx-nome").focus();
 }
 
 Object.assign(ACOES, {
-  "conector-novo": formConector,
-  "cx-cancelar": () => { $("form-conector").hidden = true; },
+  "conector-novo": () => formConector(),
+  "conector-editar": (b) => {
+    formConector(conectoresVistos.find((k) => k.nome === b.dataset.nome));
+    $("form-conector").scrollIntoView({ block: "nearest" });
+  },
+  "cx-cancelar": () => { $("form-conector").hidden = true; conectorEditado = null; },
   "cx-tipo": (b) => {
     /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-acao="cx-tipo"]')).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     const remoto = b.dataset.tipo === "http";
@@ -106,12 +117,15 @@ Object.assign(ACOES, {
   "cx-salvar": async (b) => {
     const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
     const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => l.split(":").map((x) => x.trim())).filter((p) => p.length === 2));
+    // Na edição, as permissões escolhidas continuam (elas não estão no formulário).
+    const permissoesAtuais = conectorEditado ? { livres: conectorEditado.livres, bloqueadas: conectorEditado.bloqueadas } : {};
     await ocupado(b, () => api("conector/salvar", {
       nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
       argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
       ambiente: listaDe(valorCampo("cx-ambiente").value), projetos: listaDe(valorCampo("cx-projetos").value),
-      oauth: remoto && /** @type {HTMLInputElement} */ ($("cx-oauth")).checked,
+      oauth: remoto && /** @type {HTMLInputElement} */ ($("cx-oauth")).checked, ...permissoesAtuais,
     }));
+    conectorEditado = null;
     toast("Conector salvo."); await recarregar();
   },
   "conector-segredo": async (b) => {
