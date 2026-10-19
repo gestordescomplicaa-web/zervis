@@ -93,7 +93,7 @@ function formConector(k = null) {
     <label data-local ${remoto ? "hidden" : ""}>Comando<input id="cx-comando" class="mono" placeholder="npx" value="${esc(k?.comando ?? "")}" autocomplete="off" spellcheck="false"></label>
     <label data-local ${remoto ? "hidden" : ""}>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3">${esc((k?.argumentos ?? []).join("\n"))}</textarea></label>
     <label data-remoto ${remoto ? "" : "hidden"}>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" value="${esc(k?.url ?? "")}" autocomplete="off" spellcheck="false"></label>
-    <label data-remoto ${remoto ? "" : "hidden"}>Cabeçalhos (um por linha: Nome: VARIAVEL)<textarea id="cx-cabecalhos" class="mono" rows="2">${esc(Object.entries(k?.cabecalhos ?? {}).map(([n, v]) => `${n}: ${v}`).join("\n"))}</textarea></label>
+    <label data-remoto ${remoto ? "" : "hidden"}>Cabeçalhos (um por linha: nome do cabeçalho e a variável com o valor)<textarea id="cx-cabecalhos" class="mono" rows="2" placeholder="Authorization: N8N_AUTH" spellcheck="false">${esc(Object.entries(k?.cabecalhos ?? {}).map(([n, v]) => `${n}: ${v}`).join("\n"))}</textarea></label>
     <label data-remoto ${remoto ? "" : "hidden"} class="interruptor"><input type="checkbox" id="cx-oauth" ${k?.oauth ? "checked" : ""}> Login com OAuth</label>
     <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" value="${esc((k?.ambiente ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
     <label>Sessões de código (projetos, separados por vírgula; * para todos)<input id="cx-projetos" class="mono" placeholder="Nenhum" value="${esc((k?.projetos ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
@@ -116,7 +116,12 @@ Object.assign(ACOES, {
   },
   "cx-salvar": async (b) => {
     const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
-    const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => l.split(":").map((x) => x.trim())).filter((p) => p.length === 2));
+    // Cada linha é "Nome: VARIAVEL", cortada no primeiro ":". Linha fora disso não some calada.
+    const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => {
+      const i = l.indexOf(":");
+      if (i <= 0 || !l.slice(i + 1).trim()) throw new Error("Cabeçalho inválido. Use uma linha por cabeçalho, como Authorization: N8N_AUTH.");
+      return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
+    }));
     // Na edição, as permissões escolhidas continuam (elas não estão no formulário).
     const permissoesAtuais = conectorEditado ? { livres: conectorEditado.livres, bloqueadas: conectorEditado.bloqueadas } : {};
     await ocupado(b, () => api("conector/salvar", {

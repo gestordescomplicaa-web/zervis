@@ -1216,3 +1216,40 @@ def test_editar_conector_abre_preenchido_e_mantem_as_permissoes(tmp_path: Path) 
         [],
         ["loja"],
     )
+
+
+def test_cabecalho_fora_do_formato_avisa_e_nao_salva_calado(tmp_path: Path) -> None:
+    """Uma linha de cabeçalho sem "Nome: VARIAVEL" sumia sem aviso (19/10/2026): o conector do
+    n8n foi salvo sem o Authorization e o teste dava 401."""
+    salvos: list[dict[str, Any]] = []
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> str:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-novo]').click();"
+                "document.querySelector('[data-acao=cx-tipo][data-tipo=http]').click();"
+                "document.getElementById('cx-nome').value = 'n8n';"
+                "document.getElementById('cx-url').value = 'https://n8n.exemplo.com/mcp-server/http';"
+                "document.getElementById('cx-cabecalhos').value = 'Authorization N8N_AUTH';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.5)
+            texto = await nav.avaliar("document.body.innerText") or ""
+            await nav.avaliar(
+                "document.getElementById('cx-cabecalhos').value = 'Authorization: N8N_AUTH';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.5)
+            return str(texto)
+
+    with _painel(tmp_path, extras={"conector/salvar": salvar}) as (depuracao, endereco):
+        texto = asyncio.run(conferir(depuracao, endereco))
+    assert "Cabeçalho inválido" in texto
+    (enviado,) = salvos  # só a segunda tentativa, no formato certo
+    assert enviado["cabecalhos"] == {"Authorization": "N8N_AUTH"}

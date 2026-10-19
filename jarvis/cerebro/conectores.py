@@ -123,9 +123,16 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     cabecalhos = {
         str(k).strip(): str(v).strip() for k, v in (dados.get("cabecalhos") or {}).items()
     }
-    for variavel in [*ambiente, *cabecalhos.values()]:
+    for nome_cab, variavel in cabecalhos.items():
         if not VARIAVEL.fullmatch(variavel):
-            raise McpInvalido(f"variável {variavel!r}: use MAIÚSCULAS_COM_SUBLINHADO")
+            # Sem repetir o que veio: quase sempre é o próprio token colado no lugar do nome.
+            raise McpInvalido(
+                f"cabeçalho {nome_cab[:40]}: use o nome de uma variável, como N8N_AUTH; "
+                "o valor se guarda no cartão do conector"
+            )
+    for variavel in ambiente:
+        if not VARIAVEL.fullmatch(variavel):
+            raise McpInvalido(f"variável {variavel[:40]!r}: use MAIÚSCULAS_COM_SUBLINHADO")
     if bloco.get("oauth") and (ambiente or cabecalhos):
         raise McpInvalido("com login (OAuth), o conector não leva segredos próprios")
     if ambiente:

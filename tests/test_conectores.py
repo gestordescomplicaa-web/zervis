@@ -168,3 +168,17 @@ def test_editar_o_conector_mantem_o_segredo_guardado(arquivos: tuple[Path, Path]
     conectores.salvar("crm", {**dados, "url": "https://b.exemplo.com/mcp"}, painel, toml)
     (crm,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "crm"]
     assert crm["url"] == "https://b.exemplo.com/mcp" and crm["segredos"] == {"A_AUTH": True}
+
+
+def test_token_colado_no_lugar_da_variavel_e_recusado_sem_repetir_o_token(
+    arquivos: tuple[Path, Path],
+) -> None:
+    toml, painel = arquivos
+    dados = {
+        "tipo": "http",
+        "url": "https://n8n.exemplo.com/mcp-server/http",
+        "cabecalhos": {"Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.segredo"},
+    }
+    with pytest.raises(McpInvalido) as erro:
+        conectores.salvar("n8n", dados, painel, toml)
+    assert "N8N_AUTH" in str(erro.value) and "segredo" not in str(erro.value)
