@@ -42,4 +42,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0035](0035-agentes-prontos-na-instalacao.md) | Agentes prontos na instalação: Claude Code e Codex nativos, chaves pelo painel | Aceito |
 | [0036](0036-contribuicoes-e-atualizacoes.md) | Código aberto: como a comunidade contribui e como o Zé se atualiza | Aceito (atualização em aberto) |
 | [0037](0037-integracao-com-sistemas.md) | Integração com sistemas: um método (skill), conectores pelo cérebro e nas sessões, login OAuth | Aceito |
-| [0038](0038-integracoes-como-codigo.md) | Integrações como código: o Zé escreve o script, um executor sem modelo roda (horário, webhook), fila em SQLite | Proposta |
+| [0038](0038-fluxos-no-n8n-ze-constroi-e-vigia.md) | Fluxos dos clientes: o n8n executa; o Zé constrói pelo MCP e vigia 24 horas pela API, com avisos | Aceito como direção (plano F1 a F4) |
