@@ -11,6 +11,10 @@
   `*`), e as sessões do Claude e do Codex daquele projeto o recebem com os segredos fora da linha
   de comando. Sem projetos, o conector fica só na conversa (o sistema de um cliente não aparece no
   projeto de outro).
+- Conectores com login (OAuth): um MCP remoto que pede login (Notion, Linear e outros) entra
+  com "Entrar" no cartão do conector, no navegador, sem chave. O Zé guarda os tokens (0600) e uma
+  ponte local os renova sozinha, sem recomeçar a conversa nem as sessões. Fora do PC, a volta do
+  login chega pelo endereço do painel; se não chegar, cola-se o endereço em que o navegador parou.
 - Servidor (VPS): primeiro acesso sem túnel SSH. O instalador termina com um endereço HTTPS
   (Cloudflare) e um código de uso único para criar a senha; num servidor, quem entra com a senha
   e o código do autenticador faz os ajustes de fora (chaves, contas, autodesenvolvimento), menos

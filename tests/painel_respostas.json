@@ -287,7 +287,26 @@
      "ligado": true,
      "segredos": {
       "CRM_TOKEN": false
-     }
+     },
+     "oauth": false,
+     "conectado": false
+    },
+    {
+     "nome": "notion",
+     "origem": "painel",
+     "tipo": "http",
+     "comando": "",
+     "argumentos": [],
+     "url": "https://mcp.notion.com/mcp",
+     "ambiente": [],
+     "cabecalhos": {},
+     "livres": [],
+     "bloqueadas": [],
+     "projetos": [],
+     "oauth": true,
+     "conectado": false,
+     "ligado": true,
+     "segredos": {}
     }
    ],
    "pendente": false

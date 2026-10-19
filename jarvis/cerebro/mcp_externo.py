@@ -17,6 +17,11 @@ Arquivo próprio, `~/.config/zervis/mcp.toml`, um bloco por servidor:
     url = "https://exemplo/mcp"
     cabecalhos = { Authorization = "AGENDA_AUTH" }  # nome da variável com o valor do cabeçalho
 
+    [servidores.notion]
+    tipo = "http"
+    url = "https://mcp.notion.com/mcp"
+    oauth = true                         # login pelo painel (Entrar); o Zé renova o token
+
 Segredos nunca ficam no arquivo (docs/06-qualidade.md). Toda ferramenta externa pede aprovação
 falada, menos as `livres`. Cada servidor ligado põe a descrição das ferramentas dele em todo turno:
 o custo aparece no consumo do dia; ligue só o que usar.
@@ -51,6 +56,7 @@ CHAVES = {
     "livres",
     "bloqueadas",
     "projetos",
+    "oauth",
     "ligado",
 }
 TODOS = "*"
@@ -109,11 +115,36 @@ def _servidor(
         local = partes.hostname in ("127.0.0.1", "localhost", "::1")
         if partes.scheme != "https" and not (partes.scheme == "http" and local):
             raise McpInvalido(f"{nome}: http precisa de https (ou http em loopback)")
+        if bloco.get("oauth") is True:
+            return _com_login(nome, avisar)
         config = {"type": "http", "url": url}
         if cabecalhos:
             config["headers"] = {k: env[v] for k, v in cabecalhos.items()}
         return config
     raise McpInvalido(f"{nome}: tipo deve ser stdio ou http")
+
+
+def _com_login(nome: str, avisar: bool) -> dict[str, Any] | None:
+    """O conector com login OAuth fala com a ponte local, que põe o token em dia (ADR 0037)."""
+    from jarvis.cerebro import mcp_oauth, mcp_ponte  # eles importam este módulo
+
+    if not mcp_oauth.PADRAO.conectado(nome):
+        if avisar:
+            log.warning("MCP %s desligado: falta entrar (Conectores)", nome)
+        return None
+    url, cabecalhos = mcp_ponte.PADRAO.endereco(nome)
+    return {"type": "http", "url": url, "headers": cabecalhos}
+
+
+def url_com_login(nome: str) -> str | None:
+    """O endereço remoto de um conector ligado com login OAuth (None se não for um)."""
+    try:
+        bloco, _origem = _blocos(CAMINHO, PAINEL).get(nome, ({}, ""))
+    except McpInvalido:
+        return None
+    if bloco.get("oauth") is not True or bloco.get("ligado", True) is False:
+        return None
+    return str(bloco.get("url", "")) or None
 
 
 def _blocos(caminho: Path, painel: Path | None) -> dict[str, tuple[dict[str, Any], str]]:

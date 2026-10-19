@@ -18,10 +18,14 @@ function cartaoConector(k) {
   const segredos = Object.entries(k.segredos).map(([v, tem]) => `<div class="linha segredo"><span class="mono">${esc(v)}</span>
       <span class="etiqueta ${tem ? "bom" : "alerta"}">${tem ? "guardado" : "falta"}</span>
       <input type="password" class="mono" data-segredo="${esc(v)}" placeholder="valor" autocomplete="off">${botao("Guardar", "conector-segredo", `${id} data-variavel="${esc(v)}"`)}</div>`).join("");
+  const login = k.oauth ? `<div class="linha segredo"><span>Login</span>
+      <span class="etiqueta ${k.conectado ? "bom" : "alerta"}">${k.conectado ? "Conectado" : "Não conectado"}</span>
+      ${k.conectado ? botao("Sair", "conector-sair", id) : botao("Entrar", "conector-entrar", id, "principal")}</div>
+    <div class="login-conector" data-login="${esc(k.nome)}" hidden></div>` : "";
   return `<section class="cartao conector">
     <div class="cabeca"><h2>${esc(k.nome)}</h2><span class="etiqueta">${k.tipo === "http" ? "Remoto" : "Local"}</span>${k.origem === "arquivo" ? '<span class="etiqueta">arquivo de config</span>' : ""}
       ${liga(k.ligado, "conector", id, "Ligado")}</div>
-    ${segredos}
+    ${segredos}${login}
     <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
     <div class="ferramentas-mcp" data-ferramentas="${esc(k.nome)}" hidden></div>
     <details class="detalhes"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
@@ -40,7 +44,7 @@ const linhasDe = (t) => t.split("\n").map((l) => l.trim()).filter(Boolean);
 const listaDe = (t) => t.split(",").map((v) => v.trim()).filter(Boolean);
 
 /** O conector como o painel grava, com uma parte trocada (permissões ou projetos). */
-const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, ...troca });
+const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, oauth: k.oauth, ...troca });
 
 function formConector() {
   const f = $("form-conector");
@@ -52,6 +56,7 @@ function formConector() {
     <label data-local>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3"></textarea></label>
     <label data-remoto hidden>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" autocomplete="off" spellcheck="false"></label>
     <label data-remoto hidden>Cabeçalhos (um por linha: Nome: VARIAVEL)<textarea id="cx-cabecalhos" class="mono" rows="2"></textarea></label>
+    <label data-remoto hidden class="interruptor"><input type="checkbox" id="cx-oauth"> Login com OAuth</label>
     <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" autocomplete="off" spellcheck="false"></label>
     <label>Sessões de código (projetos, separados por vírgula; * para todos)<input id="cx-projetos" class="mono" placeholder="Nenhum" autocomplete="off" spellcheck="false"></label>
     <div class="linha">${botao("Salvar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}<span class="resultado" id="cx-resultado"></span></div>`;
@@ -74,6 +79,7 @@ Object.assign(ACOES, {
       nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
       argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
       ambiente: listaDe(valorCampo("cx-ambiente").value), projetos: listaDe(valorCampo("cx-projetos").value),
+      oauth: remoto && /** @type {HTMLInputElement} */ ($("cx-oauth")).checked,
     }));
     toast("Conector salvo."); await recarregar();
   },
@@ -108,6 +114,21 @@ Object.assign(ACOES, {
     await ocupado(b, () => api("conector/salvar", dadosDe(k, { projetos: listaDe(campo.value) })));
     toast("Projetos salvos."); await recarregar();
   },
+  "conector-entrar": async (b) => {
+    const nome = b.dataset.nome;
+    const r = await ocupado(b, () => api("conector/entrar", { nome, retorno: `${location.origin}/oauth/retorno` }));
+    const area = /** @type {HTMLElement} */ (document.querySelector(`[data-login="${CSS.escape(nome)}"]`));
+    area.innerHTML = `<div class="linha"><a class="acao principal" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Abrir login</a></div>
+      <div class="linha"><label>Endereço de retorno (se a página não voltar ao painel)<input class="mono" data-retorno="${esc(nome)}" autocomplete="off" spellcheck="false"></label>${botao("Concluir", "conector-concluir", `data-nome="${esc(nome)}"`)}</div>`;
+    area.hidden = false;
+    window.addEventListener("focus", () => { recarregar(); }, { once: true });
+  },
+  "conector-concluir": async (b) => {
+    const campo = /** @type {HTMLInputElement} */ (document.querySelector(`[data-retorno="${CSS.escape(b.dataset.nome)}"]`));
+    const r = await ocupado(b, () => api("conector/entrar/concluir", { endereco: campo.value }));
+    toast(r.aviso); await recarregar();
+  },
+  "conector-sair": async (b) => { await ocupado(b, () => api("conector/sair", { nome: b.dataset.nome })); await recarregar(); },
   "conector-remover": (b) => confirmar(b, "Remover?", async () => { await api("conector/remover", { nome: b.dataset.nome }); await recarregar(); }),
   "conectores-aplicar": async (b) => { const r = await ocupado(b, () => api("conectores/aplicar", {})); toast(r.aviso); await recarregar(); },
 });

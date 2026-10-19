@@ -28,6 +28,8 @@ def _dados(args: dict[str, Any]) -> dict[str, Any]:
             dados[chave] = args[chave]
     if isinstance(args.get("cabecalhos"), dict):
         dados["cabecalhos"] = args["cabecalhos"]
+    if args.get("oauth") is True:
+        dados["oauth"] = True
     return dados
 
 
@@ -84,15 +86,16 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
 
     @tool(
         "conector_cadastrar",
-        "Cadastra (ou troca) um conector MCP do painel. Siga a skill integrar-sistema. "
-        "tipo 'stdio' (comando e argumentos de um servidor local) ou 'http' (url https de um "
+        "Cadastra (ou troca) um conector MCP do painel. Siga a skill integrar-sistema. tipo "
+        "'stdio' (comando e argumentos de um servidor local) ou 'http' (url https de um "
         "servidor remoto). Segredos: só os NOMES das variáveis, em MAIÚSCULAS (ambiente, para o "
         "stdio; cabecalhos = {Cabeçalho: VARIAVEL}, para o http); nunca o valor, nem em "
-        "argumentos ou na url. livres = ferramentas só de leitura, sem pergunta; bloqueadas = "
-        "as que apagam ou fazem o que a pessoa não quer. O resto pede aprovação. projetos = "
-        "nomes das pastas dos projetos cujas sessões de código também usam o conector ('*' = "
-        "todos; vazio = só a conversa); o de um cliente só nos projetos dele. A pessoa aprova "
-        "por voz.",
+        "argumentos ou na url. oauth = true para um MCP remoto que pede login (a pessoa entra "
+        "pelo painel; sem segredos próprios). livres = ferramentas só de leitura, sem pergunta; "
+        "bloqueadas = as que apagam ou fazem o que a pessoa não quer. O resto pede aprovação. "
+        "projetos = nomes das pastas dos projetos cujas sessões de código também usam o "
+        "conector ('*' = todos; vazio = só a conversa); o de um cliente só nos projetos dele. A "
+        "pessoa aprova por voz.",
         {
             "type": "object",
             "properties": {
@@ -106,6 +109,7 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
                 "livres": {"type": "array", "items": {"type": "string"}},
                 "bloqueadas": {"type": "array", "items": {"type": "string"}},
                 "projetos": {"type": "array", "items": {"type": "string"}},
+                "oauth": {"type": "boolean"},
             },
             "required": ["nome", "tipo"],
         },
@@ -117,6 +121,14 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
             listado = next(c for c in await asyncio.to_thread(_listar) if c["nome"] == nome)
         except McpInvalido as erro:
             return _erro(erro)
+        if listado["oauth"] and not listado["conectado"]:
+            return _texto(
+                {
+                    "cadastrado": nome,
+                    "proximo_passo": f"A pessoa clica em Entrar no cartão {nome}, em Conectores, "
+                    f"e faz o login no navegador; depois teste com conector_testar. {APLICAR}",
+                }
+            )
         faltam = [v for v, tem in listado["segredos"].items() if not tem]
         if faltam:
             return _texto(

@@ -69,3 +69,6 @@ sem a pessoa intervir no meio.
 
 - 19/10/2026: skill `integrar-sistema`, ferramentas de conectores no cérebro e pendência
   calculada no painel; conectores nas sessões por projeto; login OAuth com a ponte local.
+  Descoberta conferida nos MCPs reais do Notion e do Linear (o Notion barra o User-Agent
+  padrão do Python; o Zé se identifica como `Ze/1 (Zervis)`). O login completo, com a pessoa
+  no navegador, ainda precisa da prova na máquina real.

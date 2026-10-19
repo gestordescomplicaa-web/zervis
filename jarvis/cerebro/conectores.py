@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from jarvis.cerebro import mcp_externo
+from jarvis.cerebro import mcp_externo, mcp_oauth
 from jarvis.cerebro.mcp_externo import McpInvalido
 
 VARIAVEL = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
@@ -82,6 +82,8 @@ def listar(
                 "livres": bloco.get("livres", []),
                 "bloqueadas": bloco.get("bloqueadas", []),
                 "projetos": bloco.get("projetos", []),
+                "oauth": bloco.get("oauth") is True,
+                "conectado": bloco.get("oauth") is True and mcp_oauth.PADRAO.conectado(nome),
                 "ligado": bloco.get("ligado", True) is not False,
                 "segredos": {v: v in env_com for v in segredos},
             }
@@ -114,6 +116,8 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
         bloco["argumentos"] = [str(a) for a in dados.get("argumentos") or [] if str(a).strip()]
     else:
         bloco["url"] = str(dados.get("url", "")).strip()
+        if dados.get("oauth") is True:
+            bloco["oauth"] = True
     ambiente = [str(v).strip() for v in dados.get("ambiente") or [] if str(v).strip()]
     cabecalhos = {
         str(k).strip(): str(v).strip() for k, v in (dados.get("cabecalhos") or {}).items()
@@ -121,6 +125,8 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     for variavel in [*ambiente, *cabecalhos.values()]:
         if not VARIAVEL.fullmatch(variavel):
             raise McpInvalido(f"variável {variavel!r}: use MAIÚSCULAS_COM_SUBLINHADO")
+    if bloco.get("oauth") and (ambiente or cabecalhos):
+        raise McpInvalido("com login (OAuth), o conector não leva segredos próprios")
     if ambiente:
         bloco["ambiente"] = ambiente
     if cabecalhos:
@@ -279,6 +285,7 @@ def _post(url: str, msg: dict[str, Any], cab: dict[str, str]) -> tuple[dict[str,
             **cab,
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
+            "User-Agent": mcp_oauth.AGENTE,
         },
     )
     with urllib.request.urlopen(pedido, timeout=LIMITE_TESTE_S) as resp:  # noqa: S310
@@ -321,7 +328,9 @@ def testar(
         raise McpInvalido("conector desconhecido")
     bloco = blocos[nome][0]
     base = mcp_externo.com_segredos(nome, bloco, os.environ.copy() if env is None else env)
-    config = mcp_externo._servidor(nome, bloco, base)
+    config = mcp_externo._servidor(nome, bloco, base, avisar=False)
+    if config is None and bloco.get("oauth") is True:
+        return {"ok": False, "erro": "falta entrar"}
     if config is None:
         faltam = [v for v in mcp_externo._nomes_de_segredo(bloco) if v not in base]
         return {"ok": False, "erro": "falta o segredo " + ", ".join(faltam)}
