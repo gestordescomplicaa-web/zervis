@@ -1,6 +1,26 @@
 // A página Conectores (MCP), carregada sob demanda pelo painel: usa as funções dele.
 
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };
+const ESPERA_LOGIN_MS = 2000;
+const LIMITE_LOGIN_MS = 10 * 60 * 1000; // o login em andamento vale 10 minutos (mcp_oauth.py)
+let esperaLogin = 0;
+
+/** Acompanha o login até o cartão ficar Conectado: a aba do fornecedor volta ao painel e fecha. */
+function aguardarLogin(nome) {
+  clearInterval(esperaLogin);
+  const ate = Date.now() + LIMITE_LOGIN_MS;
+  esperaLogin = setInterval(async () => {
+    if (location.hash !== "#conectores" || Date.now() > ate) { clearInterval(esperaLogin); return; }
+    try {
+      const { conectores } = await api("conectores");
+      if (conectores.find((k) => k.nome === nome)?.conectado) {
+        clearInterval(esperaLogin);
+        toast("Conectado. Aplique para valer na conversa.");
+        await recarregar();
+      }
+    } catch { /* o próximo ciclo tenta de novo */ }
+  }, ESPERA_LOGIN_MS);
+}
 
 PAGINAS.conectores = async () => {
     const { conectores, pendente } = await api("conectores");
@@ -116,12 +136,29 @@ Object.assign(ACOES, {
   },
   "conector-entrar": async (b) => {
     const nome = b.dataset.nome;
-    const r = await ocupado(b, () => api("conector/entrar", { nome, retorno: `${location.origin}/oauth/retorno` }));
     const area = /** @type {HTMLElement} */ (document.querySelector(`[data-login="${CSS.escape(nome)}"]`));
-    area.innerHTML = `<div class="linha"><a class="acao principal" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Abrir login</a></div>
-      <div class="linha"><label>Endereço de retorno (se a página não voltar ao painel)<input class="mono" data-retorno="${esc(nome)}" autocomplete="off" spellcheck="false"></label>${botao("Concluir", "conector-concluir", `data-nome="${esc(nome)}"`)}</div>`;
+    // A aba abre já no clique (o navegador só permite assim) e segue ao login quando o endereço chega.
+    const aba = window.open("about:blank", "_blank");
+    if (aba) aba.opener = null; // a página do fornecedor não alcança o painel
     area.hidden = false;
-    window.addEventListener("focus", () => { recarregar(); }, { once: true });
+    area.innerHTML = sub("Preparando o login…");
+    let r;
+    try {
+      r = await ocupado(b, () => api("conector/entrar", { nome, retorno: `${location.origin}/oauth/retorno` }));
+    } catch (erro) {
+      if (aba) aba.close();
+      area.hidden = true;
+      throw erro;
+    }
+    const manual = `<details class="detalhes"><summary>A página não voltou ao painel?</summary>
+      <div class="linha"><label>Endereço em que a aba parou<input class="mono" data-retorno="${esc(nome)}" autocomplete="off" spellcheck="false"></label>${botao("Concluir", "conector-concluir", `data-nome="${esc(nome)}"`)}</div></details>`;
+    if (aba) {
+      aba.location.href = r.url;
+      area.innerHTML = sub("Aguardando o login na outra aba.") + manual;
+    } else {
+      area.innerHTML = `${sub("O navegador bloqueou a nova aba.")}<div class="linha"><a class="acao principal" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Abrir login</a></div>${manual}`;
+    }
+    aguardarLogin(nome);
   },
   "conector-concluir": async (b) => {
     const campo = /** @type {HTMLInputElement} */ (document.querySelector(`[data-retorno="${CSS.escape(b.dataset.nome)}"]`));

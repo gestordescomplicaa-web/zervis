@@ -346,4 +346,4 @@ def concluir_pela_volta(consulta: str) -> tuple[bool, str]:
     except OAuthErro as erro:
         log.warning("login de conector recusado: %s", erro)
         return False, f"Login não concluído: {erro}."
-    return True, f"Conector {nome} conectado. Volte ao painel e aplique as mudanças."
+    return True, f"Conector {nome} conectado."

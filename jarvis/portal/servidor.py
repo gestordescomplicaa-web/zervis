@@ -79,6 +79,8 @@ ARQUIVOS = {
     "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
     # O microfone do navegador em pedaços de 80 ms a 16 kHz (voz pelo HTTPS do painel).
     "/voz-captura.js": "voz-captura.js",
+    # A página de volta do login de um conector (aberta sem o cookie; ver `_retorno_oauth`).
+    "/oauth-retorno.js": "oauth-retorno.js",
     "/paginas/atividade.js": "paginas/atividade.js",  # páginas carregadas sob demanda
     "/paginas/melhorias.js": "paginas/melhorias.js",
     "/paginas/conectores.js": "paginas/conectores.js",
@@ -97,6 +99,7 @@ ARQUIVOS = {
 # O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).
 LIVRES = {
     "/painel.css",
+    "/oauth-retorno.js",
     "/ze.webp",
     "/manifest.webmanifest",
     "/icones/ze-192.webp",
@@ -437,6 +440,8 @@ class Portal:
                     '<title>Conectores</title><link rel="stylesheet" href="/painel.css"></head>'
                     '<body><main class="entrar"><section class="cartao"><h1>Conectores</h1>'
                     f'<p class="resultado {"ok" if ok else "erro"}">{html.escape(mensagem)}</p>'
+                    '<a class="acao principal" href="/#conectores">Voltar ao painel</a>'
+                    f'<script src="/oauth-retorno.js" data-ok="{int(ok)}"></script>'
                     "</section></main></body></html>"
                 )
                 self._enviar(200 if ok else 400, corpo.encode(), "text/html")

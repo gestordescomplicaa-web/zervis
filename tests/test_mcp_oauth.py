@@ -289,6 +289,12 @@ def test_a_volta_do_login_abre_sem_cookie_so_no_endereco_do_painel() -> None:
         with urllib.request.urlopen(url, timeout=5) as resposta:
             pagina = resposta.read().decode()
         assert vistos == ["code=c&state=s"] and "Conector &lt;docs&gt; conectado." in pagina
+        # A aba do login fecha sozinha ou, se não der, volta ao painel pelo link; o script vem
+        # do próprio painel (a CSP não deixa script na página) e abre sem o cookie.
+        assert 'href="/#conectores"' in pagina and 'data-ok="1"' in pagina
+        assert '<script src="/oauth-retorno.js"' in pagina
+        with urllib.request.urlopen(f"http://127.0.0.1:{portal.porta}/oauth-retorno.js") as js:
+            assert b"window.close()" in js.read()
         de_fora = urllib.request.Request(url, headers={"Host": "outro.site"})
         with pytest.raises(urllib.error.HTTPError) as erro:
             urllib.request.urlopen(de_fora, timeout=5)  # noqa: S310

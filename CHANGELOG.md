@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Conectores com login: "Entrar" abre direto a aba de login do fornecedor, sem passo escondido;
+  quando o login termina, a aba fecha (ou leva de volta ao painel) e o cartão passa a
+  "Conectado" sozinho. Se o navegador bloquear a nova aba, aparece o botão "Abrir login".
 - Integração com sistemas (ADR 0037): a skill inicial `integrar-sistema` traz o método (pesquisar,
   escolher entre MCP e API, credenciais só pelo nome, provar com uma leitura real, registrar o que
   aprendeu) e vale também nas sessões de código. O Zé lista, cadastra (com aprovação) e testa
