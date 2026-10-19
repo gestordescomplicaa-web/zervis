@@ -70,8 +70,13 @@ servidor roda na máquina.
 5. A pessoa aplica em Conectores ("Aplicar agora") para valer na conversa.
 
 **Numa sessão de código** (sem as ferramentas do Zé):
-- Conector MCP: diga à pessoa exatamente o que cadastrar em Conectores (nome, tipo, comando ou
-  endereço, nomes dos segredos, livres e bloqueadas).
+- Conector MCP: NÃO instale você mesmo. Não rode `claude mcp add` nem `codex mcp add` e não
+  crie nem edite `.mcp.json` ou `config.toml`: isso foge do cadastro do Zé (sem login pelo
+  painel, sem renovação do token, sem política por ferramenta) e deixa um arquivo solto no
+  repositório do cliente, que acaba num commit. Diga à pessoa o que fazer, em duas linhas:
+  pedir ao Zé na conversa ("instale o conector do <sistema>, <endereço>"), ou cadastrar em
+  Conectores (nome, tipo, comando ou endereço, nomes dos segredos, livres e bloqueadas), com o
+  nome da pasta deste projeto em "Sessões de código" para ele valer aqui.
 - API direta: escreva o cliente com a chave lida do ambiente, um tempo limite em toda chamada,
   nova tentativa só para erro passageiro (429, 5xx) respeitando o `Retry-After`, e um teste que
   roda sem rede (resposta gravada ou servidor falso).
@@ -94,6 +99,9 @@ Quando o caminho do passo 3 é um MCP próprio:
   fornecedor, decisão da pessoa).
 
 ## Armadilhas
+- Numa sessão de código, o jeito mais curto (`claude mcp add --scope project`) é o errado aqui:
+  ele só vale naquele projeto, entra pelo login do próprio agente e não aparece em Conectores.
+  Só use arquivo de configuração do projeto se a pessoa pedir isso por escrito.
 - MCP remoto que pede login (OAuth): use o login do próprio conector no painel; não troque por
   uma chave pessoal sem a pessoa decidir.
 - Conector de um cliente não serve a outro: nomes e skills com o cliente quando for o caso.

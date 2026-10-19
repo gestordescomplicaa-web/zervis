@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from jarvis.cerebro.ferramentas import mostrador, prechecagem
+from jarvis.habilidades import skills as skills_mod
 from jarvis.habilidades.skills import SkillErro, Skills
 from jarvis.memoria.curta import Memoria
 
@@ -107,6 +108,16 @@ def test_toda_skill_inicial_instala_e_vai_para_as_sessoes(tmp_path: Path) -> Non
     for nome in sugeridas:
         s.instalar_sugerida(nome)
     assert {nome for nome, _ in s.para_sessoes()} == sugeridas
+
+
+def test_integrar_sistema_nao_deixa_a_sessao_instalar_por_conta_propria() -> None:
+    """A sessão de código instalou o Linear com `claude mcp add` (19/10/2026): o conector ficou
+    num `.mcp.json` do projeto, fora de Conectores. A skill precisa proibir isso."""
+    texto = (Path(skills_mod.__file__).parent / "iniciais/integrar-sistema/SKILL.md").read_text()
+    assert "NÃO instale você mesmo" in texto
+    for atalho in ("claude mcp add", "codex mcp add", ".mcp.json"):
+        assert atalho in texto
+    assert "Sessões de código" in texto  # e para onde ir: Conectores, com o projeto marcado
 
 
 def test_skill_inicial_nao_ocupa_pasta_existente(tmp_path: Path) -> None:
