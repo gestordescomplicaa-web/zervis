@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Skill `integrar-sistema`: numa sessão de código, o agente não instala o conector por conta
+  própria (`claude mcp add`, `.mcp.json`): diz à pessoa para pedir ao Zé ou cadastrar em
+  Conectores, com o projeto marcado. Quem já instalou a skill atualiza o texto em Skills.
 - Integração com sistemas (ADR 0037): a skill inicial `integrar-sistema` traz o método (pesquisar,
   escolher entre MCP e API, credenciais só pelo nome, provar com uma leitura real, registrar o que
   aprendeu) e vale também nas sessões de código. O Zé lista, cadastra (com aprovação) e testa
