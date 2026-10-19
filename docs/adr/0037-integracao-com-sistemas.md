@@ -50,7 +50,11 @@ sem a pessoa intervir no meio.
    servidor MCP, registro dinâmico do cliente, PKCE) e guarda os tokens 0600. Uma ponte local
    (`127.0.0.1`, com segredo próprio) entrega cada pedido ao servidor com o token em dia e
    renova sozinha quando ele vence: o cérebro e as sessões não precisam recomeçar a cada hora.
-   O mesmo login vale para o Claude, o Codex e qualquer outro provedor.
+   O mesmo login vale para o Claude, o Codex e qualquer outro provedor. Servidores que não
+   aceitam o registro dinâmico do cliente (e exigem um app cadastrado à mão no fornecedor) usam
+   o **app próprio**: o Client ID e o secret ficam num arquivo 0600 ao lado dos tokens e valem
+   no lugar do registro; o secret vai no corpo do pedido ou em `Authorization: Basic`, conforme o
+   que o servidor declara aceitar. A pessoa os informa nos detalhes do conector, nunca ao cérebro.
 
 ## Consequências
 

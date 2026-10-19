@@ -18,6 +18,10 @@
 - Conectores com login: "Entrar" abre direto a aba de login do fornecedor, sem passo escondido;
   quando o login termina, a aba fecha (ou leva de volta ao painel) e o cartão passa a
   "Conectado" sozinho. Se o navegador bloquear a nova aba, aparece o botão "Abrir login".
+- Conectores com login: servidores que não aceitam o registro automático do cliente passam a
+  funcionar com um app próprio. O Client ID (e o secret, se houver) é guardado nos detalhes do
+  conector (0600, nunca devolvido) e o cartão mostra o endereço de retorno a cadastrar no app;
+  o secret segue no corpo do pedido ou em `Authorization: Basic`, como o servidor pedir.
 - Servidor (VPS): primeiro acesso sem túnel SSH. O instalador termina com um endereço HTTPS
   (Cloudflare) e um código de uso único para criar a senha; num servidor, quem entra com a senha
   e o código do autenticador faz os ajustes de fora (chaves, contas, autodesenvolvimento), menos

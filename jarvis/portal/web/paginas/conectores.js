@@ -33,6 +33,16 @@ PAGINAS.conectores = async () => {
 
 let conectoresVistos = [];
 
+/** O app cadastrado à mão, para servidores que não aceitam o registro automático do login. */
+function appProprio(k, id) {
+  if (!k.oauth) return "";
+  return `<div class="linha segredo"><span>App próprio</span><span class="etiqueta ${k.app_proprio ? "bom" : ""}">${k.app_proprio ? "Guardado" : "Não usado"}</span></div>
+    <div class="linha"><label>Client ID<input class="mono" data-cliente-id="${esc(k.nome)}" autocomplete="off" spellcheck="false"></label>
+      <label>Client secret (opcional)<input type="password" class="mono" data-cliente-segredo="${esc(k.nome)}" autocomplete="off"></label>
+      ${botao("Guardar", "conector-cliente", id)}${k.app_proprio ? botao("Remover", "conector-cliente-remover", id, "discreta") : ""}</div>
+    <p class="sub">Só para servidores sem registro automático. Endereço de retorno a cadastrar no app: <span class="mono">${esc(location.origin)}/oauth/retorno</span></p>`;
+}
+
 function cartaoConector(k) {
   const id = `data-nome="${esc(k.nome)}"`;
   const segredos = Object.entries(k.segredos).map(([v, tem]) => `<div class="linha segredo"><span class="mono">${esc(v)}</span>
@@ -48,7 +58,8 @@ function cartaoConector(k) {
     ${segredos}${login}
     <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
     <div class="ferramentas-mcp" data-ferramentas="${esc(k.nome)}" hidden></div>
-    <details class="detalhes"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
+    <details class="detalhes" data-detalhes="${esc(k.nome)}"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
+      ${appProprio(k, id)}
       ${k.origem === "painel" ? `<div class="linha"><label>Sessões de código (projetos)<input class="mono" data-projetos="${esc(k.nome)}" value="${esc(k.projetos.join(", "))}" placeholder="Nenhum" autocomplete="off" spellcheck="false"></label>${botao("Salvar", "conector-projetos", id)}</div>` : `<p>Sessões de código: ${esc(k.projetos.join(", ") || "nenhuma")}</p>`}</details></section>`;
 }
 
@@ -148,6 +159,8 @@ Object.assign(ACOES, {
     } catch (erro) {
       if (aba) aba.close();
       area.hidden = true;
+      // Sem registro automático, o app próprio está nos detalhes do cartão.
+      if (/app próprio/.test(erro.message)) { const d = /** @type {HTMLDetailsElement | null} */ (document.querySelector(`[data-detalhes="${CSS.escape(nome)}"]`)); if (d) d.open = true; }
       throw erro;
     }
     const manual = `<details class="detalhes"><summary>A página não voltou ao painel?</summary>
@@ -165,6 +178,13 @@ Object.assign(ACOES, {
     const r = await ocupado(b, () => api("conector/entrar/concluir", { endereco: campo.value }));
     toast(r.aviso); await recarregar();
   },
+  "conector-cliente": async (b) => {
+    const nome = b.dataset.nome;
+    const campo = (/** @type {string} */ atributo) => /** @type {HTMLInputElement} */ (document.querySelector(`[${atributo}="${CSS.escape(nome)}"]`)).value;
+    await ocupado(b, () => api("conector/cliente", { nome, client_id: campo("data-cliente-id"), client_secret: campo("data-cliente-segredo") }));
+    toast("App guardado."); await recarregar();
+  },
+  "conector-cliente-remover": async (b) => { await ocupado(b, () => api("conector/cliente/apagar", { nome: b.dataset.nome })); await recarregar(); },
   "conector-sair": async (b) => { await ocupado(b, () => api("conector/sair", { nome: b.dataset.nome })); await recarregar(); },
   "conector-remover": (b) => confirmar(b, "Remover?", async () => { await api("conector/remover", { nome: b.dataset.nome }); await recarregar(); }),
   "conectores-aplicar": async (b) => { const r = await ocupado(b, () => api("conectores/aplicar", {})); toast(r.aviso); await recarregar(); },

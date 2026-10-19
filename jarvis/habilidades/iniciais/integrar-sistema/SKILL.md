@@ -99,6 +99,10 @@ Quando o caminho do passo 3 é um MCP próprio:
 - Conector de um cliente não serve a outro: nomes e skills com o cliente quando for o caso.
 - Muitos conectores ligados custam tokens em toda conversa: ligue só o que vai usar e bloqueie
   ferramentas que ninguém pediu.
+- Login que falha com "não aceita o registro automático": o fornecedor exige um app próprio.
+  Mostre à pessoa como criá-lo (na página de desenvolvedor do fornecedor, com o endereço de
+  retorno que o cartão do conector mostra em Detalhes, App próprio) e peça que guarde o Client
+  ID (e o secret, se houver) ali, nunca na conversa.
 - Limite de uso da API: leia antes de fazer laços ou sincronizações em lote.
 - Ambiente de teste do fornecedor (sandbox), quando existir, antes da conta real do cliente.
 

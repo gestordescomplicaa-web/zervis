@@ -27,7 +27,7 @@ import websockets
 
 from jarvis.oficina.progresso import Progresso
 from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import WEB, Escrita, Leitura, Portal
+from jarvis.portal.servidor import WEB, Escrita, Leitura, PedidoInvalido, Portal
 
 RESPOSTAS = Path(__file__).with_name("painel_respostas.json")
 CHROMIUM = next(
@@ -1123,3 +1123,45 @@ def test_entrar_com_a_aba_bloqueada_mostra_o_botao_abrir_login(tmp_path: Path) -
     # Com o estilo de botão (cantos arredondados): um link solto teria 0px.
     assert link == "https://login.exemplo.com/a?s=1|10px"
     assert "Abrir login" in texto and "bloqueou a nova aba" in texto
+
+
+def test_servidor_sem_registro_automatico_abre_o_app_proprio_e_guarda_o_client_id(
+    tmp_path: Path,
+) -> None:
+    enviados: list[dict[str, Any]] = []
+
+    def entrar(_dados: dict[str, Any]) -> dict[str, Any]:
+        raise PedidoInvalido("o servidor não aceita o registro automático: guarde o app próprio")
+
+    def guardar(dados: dict[str, Any]) -> dict[str, Any]:
+        enviados.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[bool, bool]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar("window.open = () => null")
+            fechado = await nav.avaliar("document.querySelector('[data-detalhes=notion]').open")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-entrar][data-nome=notion]').click()"
+            )
+            await asyncio.sleep(0.6)
+            aberto = await nav.avaliar("document.querySelector('[data-detalhes=notion]').open")
+            await nav.avaliar(
+                "document.querySelector('[data-cliente-id=notion]').value = 'meu-app';"
+                "document.querySelector('[data-cliente-segredo=notion]').value = 's3gr3d0';"
+                "document.querySelector('[data-acao=conector-cliente][data-nome=notion]').click()"
+            )
+            await asyncio.sleep(0.6)
+            assert not nav.erros, nav.erros
+            return bool(fechado), bool(aberto)
+
+    with _painel(
+        tmp_path,
+        extras={"conector/entrar": entrar, "conector/cliente": guardar},
+        leituras_vivas={"conectores": lambda: _conector_com_login(False)},
+    ) as (depuracao, endereco):
+        fechado, aberto = asyncio.run(conferir(depuracao, endereco))
+    assert (fechado, aberto) == (False, True)  # o erro leva ao lugar de resolver
+    assert enviados == [{"nome": "notion", "client_id": "meu-app", "client_secret": "s3gr3d0"}]

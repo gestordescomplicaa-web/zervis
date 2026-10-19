@@ -6,7 +6,10 @@ O fluxo da especificação de autorização do MCP (2025-06-18):
    vêm os endereços de autorização, de token e de registro. Os endereços candidatos, na ordem da
    especificação, vêm do SDK oficial do MCP.
 2. **Registro dinâmico do cliente** (RFC 7591): o Zé se registra com o endereço de volta do
-   painel. Sem registro dinâmico, não há como entrar sem um cliente cadastrado à mão.
+   painel. Servidores que não aceitam isso exigem um app cadastrado à mão no fornecedor: o
+   Client ID (e o secret, se houver) fica em `<chaves>/mcp/<conector>/cliente.json` (0600) e
+   vale no lugar do registro; o secret vai no corpo do pedido ou no `Authorization: Basic`,
+   conforme o que o servidor declara aceitar (`token_endpoint_auth_methods_supported`).
 3. **Autorização com PKCE** (S256) e `resource` (RFC 8707): a pessoa entra no navegador; o
    servidor volta ao painel com o código, que só vale junto do verificador guardado aqui.
 4. **Tokens** em `<chaves>/mcp/<conector>/oauth.json` (0600), renovados pelo `refresh_token`
@@ -29,7 +32,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
 
 from mcp.client.auth.utils import (
     build_oauth_authorization_server_metadata_discovery_urls,
@@ -40,6 +43,8 @@ from jarvis.cerebro import mcp_externo
 
 log = logging.getLogger(__name__)
 ARQUIVO = "oauth.json"
+CLIENTE = "cliente.json"  # o app cadastrado à mão (Client ID e secret), ao lado dos tokens
+TEXTO_DO_CLIENTE = re.compile(r"[\x21-\x7e]{1,2000}")  # imprimível, sem espaço
 VALIDADE_DO_LOGIN_S = 600
 RENOVAR_ANTES_S = 120
 LIMITE_S = 15.0
@@ -62,6 +67,7 @@ class Login:
     token_endpoint: str
     recurso: str
     criado: float
+    metodo: str = "post"  # como o secret vai ao servidor: "post" (no corpo) ou "basic"
 
 
 def _seguro(url: str) -> bool:
@@ -93,6 +99,27 @@ def _pedir(
     if not isinstance(resultado, dict):
         raise OAuthErro("resposta inesperada do servidor de login")
     return resultado
+
+
+def _metodo(autorizacao: dict[str, Any], com_segredo: bool) -> str:
+    """Basic só quando o servidor declara aceitar só ele; sem declaração, o corpo do pedido."""
+    aceitos = autorizacao.get("token_endpoint_auth_methods_supported") or []
+    if com_segredo and "client_secret_post" not in aceitos and "client_secret_basic" in aceitos:
+        return "basic"
+    return "post"
+
+
+def _credenciais(cliente: dict[str, Any], metodo: str) -> tuple[dict[str, str], dict[str, str]]:
+    """O que identifica o cliente num pedido de token: campos do corpo e cabeçalhos."""
+    corpo = {"client_id": str(cliente["client_id"])}
+    cabecalhos: dict[str, str] = {}
+    if segredo := cliente.get("client_secret"):
+        if metodo == "basic":  # RFC 6749 2.3.1: id e secret em urlencoded, depois em base64
+            par = f"{quote(str(cliente['client_id']), safe='')}:{quote(str(segredo), safe='')}"
+            cabecalhos["Authorization"] = "Basic " + base64.b64encode(par.encode()).decode()
+        else:
+            corpo["client_secret"] = str(segredo)
+    return corpo, cabecalhos
 
 
 def _primeiro(urls: list[str]) -> dict[str, Any] | None:
@@ -160,10 +187,33 @@ class Logins:
     # --- arquivo ----------------------------------------------------------------------------
 
     @staticmethod
-    def _arquivo(nome: str) -> Path:
+    def _arquivo(nome: str, arquivo: str = ARQUIVO) -> Path:
         if not mcp_externo.NOME.fullmatch(nome):
             raise OAuthErro("conector inválido")
-        return mcp_externo.SEGREDOS / nome / ARQUIVO
+        return mcp_externo.SEGREDOS / nome / arquivo
+
+    def cliente_proprio(self, nome: str) -> dict[str, str] | None:
+        """O app cadastrado à mão para este conector (Client ID e, se houver, o secret)."""
+        try:
+            dados = json.loads(self._arquivo(nome, CLIENTE).read_text())
+        except (OSError, ValueError):
+            return None
+        if isinstance(dados, dict) and isinstance(dados.get("client_id"), str):
+            return {k: dados[k] for k in ("client_id", "client_secret") if dados.get(k)}
+        return None
+
+    def guardar_cliente(self, nome: str, client_id: str, client_secret: str = "") -> None:
+        client_id, client_secret = client_id.strip(), client_secret.strip()
+        if not TEXTO_DO_CLIENTE.fullmatch(client_id):
+            raise OAuthErro("Client ID vazio ou com espaços")
+        if client_secret and not TEXTO_DO_CLIENTE.fullmatch(client_secret):
+            raise OAuthErro("Client secret com espaços ou grande demais")
+        self._gravar(
+            nome, {"client_id": client_id, "client_secret": client_secret}, arquivo=CLIENTE
+        )
+
+    def apagar_cliente(self, nome: str) -> None:
+        self._arquivo(nome, CLIENTE).unlink(missing_ok=True)
 
     def _ler(self, nome: str) -> dict[str, Any]:
         try:
@@ -172,8 +222,8 @@ class Logins:
             return {}
         return dados if isinstance(dados, dict) else {}
 
-    def _gravar(self, nome: str, dados: dict[str, Any]) -> None:
-        destino = self._arquivo(nome)
+    def _gravar(self, nome: str, dados: dict[str, Any], arquivo: str = ARQUIVO) -> None:
+        destino = self._arquivo(nome, arquivo)
         destino.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         for pasta in (mcp_externo.SEGREDOS, destino.parent):
             pasta.chmod(0o700)
@@ -197,29 +247,10 @@ class Logins:
         if not _seguro(retorno) or urlsplit(retorno).path != RETORNO:
             raise OAuthErro("endereço de volta inválido")
         autorizacao, recurso, escopo = descobrir(url_mcp)
-        registro = autorizacao.get("registration_endpoint")
-        if not registro:
-            raise OAuthErro("o servidor não aceita o registro automático do Zé")
         metodos = autorizacao.get("code_challenge_methods_supported") or ["S256"]
         if "S256" not in metodos:
             raise OAuthErro("o servidor não aceita PKCE")
-        try:
-            cliente = _pedir(
-                str(registro),
-                corpo={
-                    "client_name": "Zé (Zérvis)",
-                    "redirect_uris": [retorno],
-                    "grant_types": ["authorization_code", "refresh_token"],
-                    "response_types": ["code"],
-                    "token_endpoint_auth_method": "none",
-                },
-            )
-        except urllib.error.HTTPError as erro:
-            raise OAuthErro(f"registro recusado (HTTP {erro.code})") from None
-        except (urllib.error.URLError, OSError, ValueError) as erro:
-            raise OAuthErro(f"registro sem resposta ({type(erro).__name__})") from None
-        if not cliente.get("client_id"):
-            raise OAuthErro("registro sem identificador do cliente")
+        cliente = self.cliente_proprio(nome) or self._registrar(autorizacao, retorno, nome)
         verificador, desafio = _pkce()
         estado = secrets.token_urlsafe(32)
         parametros = {
@@ -248,9 +279,38 @@ class Logins:
                 str(autorizacao["token_endpoint"]),
                 recurso,
                 agora,
+                _metodo(autorizacao, bool(cliente.get("client_secret"))),
             )
         separador = "&" if "?" in str(autorizacao["authorization_endpoint"]) else "?"
         return f"{autorizacao['authorization_endpoint']}{separador}{urlencode(parametros)}"
+
+    @staticmethod
+    def _registrar(autorizacao: dict[str, Any], retorno: str, nome: str) -> dict[str, Any]:
+        """O registro dinâmico do cliente (RFC 7591), para servidores que o oferecem."""
+        registro = autorizacao.get("registration_endpoint")
+        if not registro:
+            raise OAuthErro(
+                "o servidor não aceita o registro automático: guarde o Client ID de um app "
+                f"próprio nos detalhes do conector {nome}"
+            )
+        try:
+            cliente = _pedir(
+                str(registro),
+                corpo={
+                    "client_name": "Zé (Zérvis)",
+                    "redirect_uris": [retorno],
+                    "grant_types": ["authorization_code", "refresh_token"],
+                    "response_types": ["code"],
+                    "token_endpoint_auth_method": "none",
+                },
+            )
+        except urllib.error.HTTPError as erro:
+            raise OAuthErro(f"registro recusado (HTTP {erro.code})") from None
+        except (urllib.error.URLError, OSError, ValueError) as erro:
+            raise OAuthErro(f"registro sem resposta ({type(erro).__name__})") from None
+        if not cliente.get("client_id"):
+            raise OAuthErro("registro sem identificador do cliente")
+        return cliente
 
     def concluir(self, consulta: str) -> str:
         """A volta do login (a parte depois do `?`): troca o código pelos tokens; devolve o nome
@@ -264,6 +324,7 @@ class Logins:
             raise OAuthErro(campos.get("error_description") or erro)
         if not campos.get("code"):
             raise OAuthErro("o servidor não devolveu o código")
+        corpo, cabecalhos = _credenciais(login.cliente, login.metodo)
         tokens = self._trocar(
             login.token_endpoint,
             {
@@ -272,8 +333,9 @@ class Logins:
                 "redirect_uri": login.retorno,
                 "code_verifier": login.verificador,
                 "resource": login.recurso,
-                **login.cliente,
+                **corpo,
             },
+            cabecalhos,
         )
         self._gravar(
             login.nome,
@@ -281,6 +343,7 @@ class Logins:
                 **tokens,
                 "token_endpoint": login.token_endpoint,
                 "cliente": login.cliente,
+                "metodo": login.metodo,
                 "recurso": login.recurso,
             },
         )
@@ -288,9 +351,11 @@ class Logins:
         return login.nome
 
     @staticmethod
-    def _trocar(endpoint: str, form: dict[str, str]) -> dict[str, Any]:
+    def _trocar(
+        endpoint: str, form: dict[str, str], cabecalhos: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         try:
-            resposta = _pedir(endpoint, form=form)
+            resposta = _pedir(endpoint, form=form, cabecalhos=cabecalhos)
         except urllib.error.HTTPError as erro:
             raise OAuthErro(f"o servidor recusou o token (HTTP {erro.code})") from None
         except (urllib.error.URLError, OSError) as erro:
@@ -320,14 +385,17 @@ class Logins:
                 return str(dados["access_token"])
             if not dados.get("refresh_token"):
                 return None if expira and expira <= time.time() else str(dados["access_token"])
+            corpo, cabecalhos = _credenciais(
+                dados.get("cliente") or {"client_id": ""}, str(dados.get("metodo", "post"))
+            )
             form = {
                 "grant_type": "refresh_token",
                 "refresh_token": str(dados["refresh_token"]),
                 "resource": str(dados.get("recurso", "")),
-                **dados.get("cliente", {}),
+                **corpo,
             }
             try:
-                novos = self._trocar(str(dados["token_endpoint"]), form)
+                novos = self._trocar(str(dados["token_endpoint"]), form, cabecalhos)
             except OAuthErro as erro:
                 log.warning("conector %s: token não renovado (%s)", nome, erro)
                 return None

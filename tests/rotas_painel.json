@@ -111,6 +111,8 @@
     "conector/entrar",
     "conector/entrar/concluir",
     "conector/sair",
+    "conector/cliente",
+    "conector/cliente/apagar",
     "foco/acao",
     "automacao/ativar",
     "automacao/remover",
