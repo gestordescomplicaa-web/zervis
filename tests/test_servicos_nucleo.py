@@ -80,6 +80,7 @@ def test_foco_sem_sessao_nao_altera_pedido() -> None:
 
 def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
     import queue
+    import threading
     from datetime import datetime
 
     from jarvis.automacoes.jobs import Job
@@ -98,6 +99,8 @@ def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
         eventos_sistema=SimpleNamespace(novos=lambda: []),
         _vigia_em=agora,
         _agenda_em=agora,
+        _n8n_em=agora,  # o vigia do n8n acabou de rodar
+        _n8n_conferindo=threading.Event(),
     )
     ServicoAutomacoes(contexto)._agendador(agora)
     assert anotadas == ["Reunião."]

@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Vigia do n8n (ADR 0038): todo conector do MCP de um n8n é vigiado sozinho, uma vez por minuto,
+  pelo `/healthz` e pelo `/healthz/readiness` da instância, sem chave e sem modelo. Depois de três
+  falhas seguidas, o aviso "<n8n> fora do ar: sem resposta" (ou "erro do servidor", "banco fora")
+  vai para a tela e para a Atividade, e é falado conforme o modo de fala; a volta avisa
+  "<n8n> voltou". Um aviso por mudança, guardado em SQLite: reiniciar o Zé não repete.
 - Skill inicial `fluxos-n8n` (ADR 0038), também nas sessões: criar, editar, testar, publicar e
   investigar fluxos pelo MCP do n8n, na ordem que ele pede (boas práticas, tipos dos nós,
   validação, criação, teste com dados de exemplo). Produção só muda com aprovação; editar guarda
