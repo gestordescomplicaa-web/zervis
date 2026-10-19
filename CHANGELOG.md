@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Conectores: uma linha de cabeçalho fora do formato (`Authorization: N8N_AUTH`) era descartada
+  sem aviso, e o conector ficava sem o cabeçalho (no n8n, HTTP 401). Agora o painel avisa
+  "Cabeçalho inválido" e não salva; o valor pode ter `:` depois do primeiro. O token colado no
+  lugar do nome da variável é recusado sem ser repetido na mensagem. O campo mostra o exemplo.
 - Conectores: "Editar" no cartão abre o formulário com o que está gravado (endereço, cabeçalhos,
   segredos, projetos); os segredos guardados e as permissões continuam. Antes só dava para
   remover, o que apagava também os segredos.
