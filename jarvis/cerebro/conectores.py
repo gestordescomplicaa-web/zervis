@@ -303,6 +303,18 @@ def _post(url: str, msg: dict[str, Any], cab: dict[str, str]) -> tuple[dict[str,
     return {}, sessao
 
 
+def _acesso_negado(codigo: int, cabecalhos: dict[str, str]) -> str:
+    """401/403 com a causa mais comum quando dá para ver sem mostrar o segredo: o token sem o
+    tipo no Authorization (o n8n e a maioria dos MCPs pedem `Bearer <token>`)."""
+    sem_tipo = any(
+        nome.lower() == "authorization" and " " not in valor.strip()
+        for nome, valor in cabecalhos.items()
+    )
+    if sem_tipo:
+        return f"Acesso negado (HTTP {codigo}). O Authorization está sem o tipo, como Bearer."
+    return f"Acesso negado (HTTP {codigo}). Confira o segredo."
+
+
 def _testar_http(config: dict[str, Any]) -> list[dict[str, str]]:
     cab = dict(config.get("headers", {}))
     try:
@@ -312,6 +324,8 @@ def _testar_http(config: dict[str, Any]) -> list[dict[str, str]]:
         _post(config["url"], _pedido(None, "notifications/initialized"), cab)
         resposta, _ = _post(config["url"], _pedido(2, "tools/list"), cab)
     except urllib.error.HTTPError as erro:
+        if erro.code in (401, 403):
+            raise McpInvalido(_acesso_negado(erro.code, config.get("headers", {}))) from None
         raise McpInvalido(f"HTTP {erro.code}") from None
     except (urllib.error.URLError, OSError) as erro:
         raise McpInvalido(f"não conectou ({type(erro).__name__})") from None
