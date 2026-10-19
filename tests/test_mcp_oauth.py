@@ -38,6 +38,9 @@ class Fornecedor:
         self.renovacoes: set[str] = set()
         self.emitidos = 0
         self.sse = False  # responder em fluxo SSE, como muitos MCPs remotos
+        self.registro = True  # oferecer o registro dinâmico do cliente
+        self.metodos: list[str] | None = None  # token_endpoint_auth_methods_supported
+        self.fixo: tuple[str, str] | None = None  # o app cadastrado à mão: (client_id, secret)
         self.http = ThreadingHTTPServer(("127.0.0.1", 0), self._tratador())
         self.base = f"http://127.0.0.1:{self.http.server_port}"
         threading.Thread(target=self.http.serve_forever, daemon=True).start()
@@ -77,16 +80,17 @@ class Fornecedor:
                         },
                     )
                 elif self.path == "/.well-known/oauth-authorization-server":
-                    self._json(
-                        200,
-                        {
-                            "issuer": f.base,
-                            "authorization_endpoint": f"{f.base}/authorize",
-                            "token_endpoint": f"{f.base}/token",
-                            "registration_endpoint": f"{f.base}/register",
-                            "code_challenge_methods_supported": ["S256"],
-                        },
-                    )
+                    meta: dict[str, Any] = {
+                        "issuer": f.base,
+                        "authorization_endpoint": f"{f.base}/authorize",
+                        "token_endpoint": f"{f.base}/token",
+                        "code_challenge_methods_supported": ["S256"],
+                    }
+                    if f.registro:
+                        meta["registration_endpoint"] = f"{f.base}/register"
+                    if f.metodos:
+                        meta["token_endpoint_auth_methods_supported"] = f.metodos
+                    self._json(200, meta)
                 else:
                     self._json(404, {})
 
@@ -97,9 +101,23 @@ class Fornecedor:
                     f.clientes["cliente-1"] = dados["redirect_uris"]
                     self._json(201, {"client_id": "cliente-1"})
                 elif self.path == "/token":
-                    self._token({k: v[0] for k, v in parse_qs(corpo.decode()).items()})
+                    form = {k: v[0] for k, v in parse_qs(corpo.decode()).items()}
+                    if f.fixo and not self._cliente_confere(form):
+                        self._json(401, {"error": "invalid_client"})
+                        return
+                    self._token(form)
                 elif self.path == "/mcp":
                     self._mcp(json.loads(corpo))
+
+            def _cliente_confere(self, form: dict[str, str]) -> bool:
+                """O app cadastrado à mão: id e secret no corpo ou, se o servidor só aceita
+                isso, em `Authorization: Basic` (RFC 6749 2.3.1)."""
+                assert f.fixo is not None
+                basico = self.headers.get("Authorization", "")
+                if f.metodos == ["client_secret_basic"]:
+                    par = base64.b64encode(":".join(f.fixo).encode()).decode()
+                    return basico == f"Basic {par}" and "client_secret" not in form
+                return (form.get("client_id"), form.get("client_secret")) == f.fixo
 
             def _token(self, form: dict[str, str]) -> None:
                 if form["grant_type"] == "authorization_code":
@@ -301,3 +319,72 @@ def test_a_volta_do_login_abre_sem_cookie_so_no_endereco_do_painel() -> None:
         assert erro.value.code == 403 and len(vistos) == 1
     finally:
         portal.parar()
+
+
+def test_sem_registro_automatico_o_login_pede_o_app_proprio(
+    fornecedor: Fornecedor, logins: Logins
+) -> None:
+    fornecedor.registro = False
+    with pytest.raises(OAuthErro, match="app próprio"):
+        logins.iniciar("docs", f"{fornecedor.base}/mcp", RETORNO)
+    for invalido in ("", "com espaço", "x" * 2001):
+        with pytest.raises(OAuthErro, match="Client"):
+            logins.guardar_cliente("docs", invalido)
+    with pytest.raises(OAuthErro, match="secret"):
+        logins.guardar_cliente("docs", "meu-app", "tem espaço")
+
+    logins.guardar_cliente("docs", "meu-app", "s3gr3d0")
+    arquivo = mcp_externo.SEGREDOS / "docs" / "cliente.json"
+    assert stat.S_IMODE(arquivo.stat().st_mode) == 0o600
+    (listado,) = _listar_docs(fornecedor)
+    assert listado["app_proprio"] and "s3gr3d0" not in str(listado)
+
+    fornecedor.fixo = ("meu-app", "s3gr3d0")
+    url = logins.iniciar("docs", f"{fornecedor.base}/mcp", RETORNO)
+    pedido = {k: v[0] for k, v in parse_qs(urlsplit(url).query).items()}
+    assert pedido["client_id"] == "meu-app" and not fornecedor.clientes  # sem registro
+    fornecedor.codigos["codigo-1"] = (pedido["code_challenge"], RETORNO)
+    assert logins.concluir(f"code=codigo-1&state={pedido['state']}") == "docs"
+    # A renovação leva as mesmas credenciais.
+    dados = json.loads((mcp_externo.SEGREDOS / "docs" / "oauth.json").read_text())
+    (mcp_externo.SEGREDOS / "docs" / "oauth.json").write_text(
+        json.dumps({**dados, "expira_em": time.time() + 30})
+    )
+    assert logins.token("docs") == "acesso-2"
+    # Sair não apaga o app; removê-lo, sim.
+    logins.sair("docs")
+    assert logins.cliente_proprio("docs") == {"client_id": "meu-app", "client_secret": "s3gr3d0"}
+    logins.apagar_cliente("docs")
+    assert logins.cliente_proprio("docs") is None
+
+
+def test_servidor_que_so_aceita_basic_recebe_o_secret_no_cabecalho(
+    fornecedor: Fornecedor, logins: Logins
+) -> None:
+    fornecedor.registro = False
+    fornecedor.metodos = ["client_secret_basic"]
+    fornecedor.fixo = ("meu-app", "s3gr3d0")
+    logins.guardar_cliente("docs", "meu-app", "s3gr3d0")
+    url = logins.iniciar("docs", f"{fornecedor.base}/mcp", RETORNO)
+    pedido = {k: v[0] for k, v in parse_qs(urlsplit(url).query).items()}
+    fornecedor.codigos["codigo-1"] = (pedido["code_challenge"], RETORNO)
+    assert logins.concluir(f"code=codigo-1&state={pedido['state']}") == "docs"
+    assert (
+        json.loads((mcp_externo.SEGREDOS / "docs" / "oauth.json").read_text())["metodo"] == "basic"
+    )
+    # Sem o secret (app público, só PKCE), nada vai em Authorization.
+    logins.guardar_cliente("docs", "app-publico")
+    fornecedor.fixo = None
+    fornecedor.metodos = None
+    url = logins.iniciar("docs", f"{fornecedor.base}/mcp", RETORNO)
+    assert "client_id=app-publico" in url
+
+
+def _listar_docs(fornecedor: Fornecedor) -> list[dict[str, Any]]:
+    conectores.salvar(
+        "docs",
+        {"tipo": "http", "url": f"{fornecedor.base}/mcp", "oauth": True},
+        mcp_externo.PAINEL,
+        mcp_externo.CAMINHO,
+    )
+    return conectores.listar(mcp_externo.CAMINHO, mcp_externo.PAINEL, env={})

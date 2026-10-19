@@ -289,7 +289,8 @@
       "CRM_TOKEN": false
      },
      "oauth": false,
-     "conectado": false
+     "conectado": false,
+     "app_proprio": false
     },
     {
      "nome": "notion",
@@ -306,7 +307,8 @@
      "oauth": true,
      "conectado": false,
      "ligado": true,
-     "segredos": {}
+     "segredos": {},
+     "app_proprio": false
     }
    ],
    "pendente": false

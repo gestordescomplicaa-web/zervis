@@ -180,6 +180,8 @@ class Acoes:
             "conector/entrar": self.entrar_conector,
             "conector/entrar/concluir": self.concluir_conector,
             "conector/sair": self.sair_conector,
+            "conector/cliente": self.guardar_cliente_conector,
+            "conector/cliente/apagar": self.apagar_cliente_conector,
             "foco/acao": self.acao_no_foco,
             "automacao/ativar": self.ativar_automacao,
             "automacao/remover": self.remover_automacao,

@@ -82,6 +82,21 @@ class AcoesConectores(Pagina):
         nome = self.painel._chamar(lambda: mcp_oauth.PADRAO.concluir(consulta))
         return {**self.painel.conectores(), "aviso": f"Conector {nome} conectado."}
 
+    def guardar_cliente_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O app cadastrado à mão no fornecedor (servidores sem registro automático)."""
+        self.painel._chamar(
+            lambda: mcp_oauth.PADRAO.guardar_cliente(
+                str(dados.get("nome", "")),
+                str(dados.get("client_id", "")),
+                str(dados.get("client_secret", "")),
+            )
+        )
+        return self.painel.conectores()
+
+    def apagar_cliente_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self.painel._chamar(lambda: mcp_oauth.PADRAO.apagar_cliente(str(dados.get("nome", ""))))
+        return self.painel.conectores()
+
     def sair_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
         self.painel._chamar(lambda: mcp_oauth.PADRAO.sair(str(dados.get("nome", ""))))
         return self.painel.conectores()

@@ -84,6 +84,7 @@ def listar(
                 "projetos": bloco.get("projetos", []),
                 "oauth": bloco.get("oauth") is True,
                 "conectado": bloco.get("oauth") is True and mcp_oauth.PADRAO.conectado(nome),
+                "app_proprio": mcp_oauth.PADRAO.cliente_proprio(nome) is not None,
                 "ligado": bloco.get("ligado", True) is not False,
                 "segredos": {v: v in env_com for v in segredos},
             }
