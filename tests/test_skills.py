@@ -117,7 +117,7 @@ def test_integrar_sistema_nao_deixa_a_sessao_instalar_por_conta_propria() -> Non
     assert "NÃO instale você mesmo" in texto
     for atalho in ("claude mcp add", "codex mcp add", ".mcp.json"):
         assert atalho in texto
-    assert "Sessões de código" in texto  # e para onde ir: Conectores, com o projeto marcado
+    assert '"Conectores", no topo da sessão' in texto  # e onde ligar: na própria sessão
 
 
 def test_skill_inicial_nao_ocupa_pasta_existente(tmp_path: Path) -> None:
@@ -144,3 +144,21 @@ def test_prechecagem_e_diff_na_tela(tmp_path: Path) -> None:
         "mcp__jarvis__skill_criar", bom
     )
     assert telas[0][0] == "Skill fala-natural" and "+# Fala natural" in telas[0][1]
+
+
+def test_fluxos_n8n_nao_mexe_em_producao_sem_aprovacao() -> None:
+    """A skill do n8n (19/10/2026): a ordem que o MCP do n8n pede, e produção só com aprovação."""
+    base = Path(skills_mod.__file__).parent / "iniciais"
+    texto = (base / "fluxos-n8n/SKILL.md").read_text()
+    assert len(texto) < skills_mod.LIMITE_SKILL
+    criar = texto[texto.index("## Criar um fluxo") : texto.index("## Editar")]
+    ordem = ["get_workflow_best_practices", "get_node_types", "validate_workflow",
+             "create_workflow_from_code"]  # fmt: skip
+    posicoes = [criar.index(f) for f in ordem]
+    assert posicoes == sorted(posicoes)
+    assert texto.index("## Testar") < texto.index("## Publicar")
+    for regra in ("Error workflow", "get_workflow_history", "restore_workflow_version"):
+        assert regra in texto
+    for perigosa in ("archive_workflow", "delete_agent", "execute_workflow"):
+        assert perigosa in texto
+    assert "fluxos-n8n" in (base / "integrar-sistema/SKILL.md").read_text()
