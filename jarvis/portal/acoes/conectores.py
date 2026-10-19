@@ -2,21 +2,33 @@
 
 import logging
 from typing import Any
+from urllib.parse import urlsplit
 
-from jarvis.cerebro import conectores
+from jarvis.cerebro import conectores, mcp_externo, mcp_oauth
 from jarvis.portal.acoes.pagina import Pagina
 
 log = logging.getLogger(__name__)
 
 
 class AcoesConectores(Pagina):
-    dependencias = ("recarregar_conectores",)
+    dependencias = ("recarregar_conectores", "externos")
 
     def conectores(self) -> dict[str, Any]:
         return {
             "conectores": self.painel._chamar(conectores.listar),
-            "pendente": self.painel.conectores_pendentes,
+            "pendente": self.painel.conectores_pendentes or self._mudaram(),
         }
+
+    def _mudaram(self) -> bool:
+        """Os conectores no disco diferem dos que o cérebro usa: o Zé cadastrou um pela conversa
+        ou o mcp.toml mudou (o painel não viu a mudança acontecer)."""
+        try:
+            no_disco = mcp_externo.carregar(
+                mcp_externo.CAMINHO, painel=mcp_externo.PAINEL, avisar=False
+            )
+        except mcp_externo.McpInvalido:
+            return True
+        return bool(no_disco != self.n.externos)
 
     def aplicar_conectores(self, _dados: dict[str, Any]) -> dict[str, Any]:
         aviso = self.n.recarregar_conectores()
@@ -50,6 +62,28 @@ class AcoesConectores(Pagina):
             )
         )
         self.painel.conectores_pendentes = True
+        return self.painel.conectores()
+
+    def entrar_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O endereço de login do conector, para abrir no navegador (a volta é /oauth/retorno)."""
+        nome = str(dados.get("nome", ""))
+        url = mcp_externo.url_com_login(nome)
+        if url is None:
+            raise mcp_externo.McpInvalido("este conector não usa login") from None
+
+        def iniciar() -> str:
+            return mcp_oauth.PADRAO.iniciar(nome, url, str(dados.get("retorno", "")))
+
+        return {"url": self.painel._chamar(iniciar)}
+
+    def concluir_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O endereço em que o navegador parou, colado quando a volta não chega ao Zé."""
+        consulta = urlsplit(str(dados.get("endereco", "")).strip()).query
+        nome = self.painel._chamar(lambda: mcp_oauth.PADRAO.concluir(consulta))
+        return {**self.painel.conectores(), "aviso": f"Conector {nome} conectado."}
+
+    def sair_conector(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self.painel._chamar(lambda: mcp_oauth.PADRAO.sair(str(dados.get("nome", ""))))
         return self.painel.conectores()
 
     def testar_conector(self, dados: dict[str, Any]) -> dict[str, Any]:

@@ -29,7 +29,15 @@ from jarvis.automacoes.jobs import Jobs
 from jarvis.avisos import mensagens
 from jarvis.avisos import modo as modo_fala
 from jarvis.avisos.fila import Fila
-from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, omniroute
+from jarvis.cerebro import (
+    acesso,
+    catalogo,
+    ferramentas,
+    mcp_externo,
+    mcp_oauth,
+    navegador,
+    omniroute,
+)
 from jarvis.cerebro.base import Ponte
 from jarvis.cerebro.baterias import Bateria, do_omniroute
 from jarvis.cerebro.claude import ClaudeBrain
@@ -486,6 +494,7 @@ class Nucleo(
                 entrada_terminal=escritas["terminal/escrever"],
                 so_no_pc=senha.SO_NO_PC,
                 servidor=maquina_atual.detectar().servidor,
+                retorno_oauth=mcp_oauth.concluir_pela_volta,
             )
             self.portal.iniciar()
         except OSError as erro:

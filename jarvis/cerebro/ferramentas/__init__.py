@@ -1,7 +1,7 @@
 """Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
-manutencao, navegador);
+manutencao, navegador, conectores);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
@@ -19,6 +19,7 @@ from jarvis import atividade
 from jarvis.automacoes.jobs import Jobs
 from jarvis.cerebro.ferramentas import aprendizado as g_aprendizado
 from jarvis.cerebro.ferramentas import automacoes as g_automacoes
+from jarvis.cerebro.ferramentas import conectores as g_conectores
 from jarvis.cerebro.ferramentas import manutencao as g_manutencao
 from jarvis.cerebro.ferramentas import navegador as g_navegador
 from jarvis.cerebro.ferramentas import sessoes as g_sessoes
@@ -51,6 +52,8 @@ LEITURA = [
     "tela_agir",  # só a própria tela do JARVIS: abrir, mostrar, zoom, tema; tudo reversível
     "janela_fechar",  # fechar a própria janela apaga a câmera; abrir (acende) pede confirmação
     "navegador_continuar",  # o resto de uma página que o JARVIS já leu (só leitura)
+    "conectores_listar",
+    "conector_testar",  # sobe só o que a pessoa aprovou ao cadastrar
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -137,6 +140,7 @@ def montar(
             *g_aprendizado.ferramentas(memoria, skills, pendencias, diario),
             *g_manutencao.ferramentas(manutencao),
             *g_navegador.ferramentas(),
+            *g_conectores.ferramentas(),
         ]
     ]
 

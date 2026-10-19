@@ -106,6 +106,14 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
         return f"Vou {acao} a automação {entrada.get('id', '')}."
     if nome == "mcp__jarvis__janela_abrir":
         return "Vou abrir a minha janela; a câmera acende."
+    if nome == "mcp__jarvis__conector_cadastrar":
+        if entrada.get("tipo") == "http":
+            onde = urlsplit(str(entrada.get("url", ""))).hostname or "um endereço"
+            alvo = f"ligado a {onde}"
+        else:
+            partes = [str(entrada.get("comando", "")), *map(str, entrada.get("argumentos") or [])]
+            alvo = f"rodando {' '.join(p for p in partes if p)[:120]}"
+        return f"Vou cadastrar o conector {entrada.get('nome', '')}, {alvo}."
     if nome == "mcp__jarvis__sistema_executar":
         argumentos = " ".join(str(a) for a in entrada.get("argumentos") or [])
         return (

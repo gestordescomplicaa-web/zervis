@@ -8,6 +8,7 @@ o que é livre, o que pede aprovação falada e o que fica bloqueado.
 """
 
 import contextlib
+import itertools
 import json
 import os
 import queue
@@ -20,10 +21,21 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from jarvis.cerebro import mcp_externo
+from jarvis.cerebro import mcp_externo, mcp_oauth
 from jarvis.cerebro.mcp_externo import McpInvalido
 
 VARIAVEL = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
+# O valor de um segredo fora do lugar dele (argumentos ou url): chaves com formato conhecido e
+# `nome=valor` ou `--nome valor` com nome de segredo. Caminho de arquivo com a chave não conta.
+_NOME_SEGREDO = r"(?:token|secret|password|passwd|senha|api[-_]?key|apikey|access[-_]?key)"
+CHAVE_CONHECIDA = re.compile(
+    r"\b(?:sk-[A-Za-z0-9_\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}"
+    r"|AKIA[0-9A-Z]{16}|xox[abprs]-[A-Za-z0-9\-]{10,}|AIza[0-9A-Za-z_\-]{30,})"
+)
+NOME_E_VALOR = re.compile(rf"[\w-]*{_NOME_SEGREDO}[\w-]*=(?!\$)[^&\s]{{6,}}", re.IGNORECASE)
+OPCAO_DE_SEGREDO = re.compile(rf"--?[\w-]*{_NOME_SEGREDO}[\w-]*", re.IGNORECASE)
+CAMINHO = re.compile(r"(file|path|dir)", re.IGNORECASE)
+PROJETO = re.compile(r"[^/\\\x00*]{1,128}")  # o nome da pasta, sem caminho
 PROTOCOLO = "2025-06-18"
 LIMITE_TESTE_S = 25.0
 
@@ -69,11 +81,30 @@ def listar(
                 "cabecalhos": bloco.get("cabecalhos", {}),
                 "livres": bloco.get("livres", []),
                 "bloqueadas": bloco.get("bloqueadas", []),
+                "projetos": bloco.get("projetos", []),
+                "oauth": bloco.get("oauth") is True,
+                "conectado": bloco.get("oauth") is True and mcp_oauth.PADRAO.conectado(nome),
                 "ligado": bloco.get("ligado", True) is not False,
                 "segredos": {v: v in env_com for v in segredos},
             }
         )
     return sorted(saida, key=lambda c: (c["origem"] != "painel", c["nome"]))
+
+
+def _tem_segredo(argumentos: list[str], url: str) -> bool:
+    """Um valor de segredo escrito nos argumentos ou na url, que iriam para o arquivo do painel
+    e para a linha de comando (visível a outros processos)."""
+    textos = [*argumentos, url]
+    if any(CHAVE_CONHECIDA.search(t) or NOME_E_VALOR.search(t) for t in textos):
+        return True
+    for opcao, valor in itertools.pairwise(argumentos):
+        if (
+            OPCAO_DE_SEGREDO.fullmatch(opcao)
+            and not CAMINHO.search(opcao)
+            and not valor.startswith(("-", "$"))
+        ):
+            return True
+    return False
 
 
 def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
@@ -85,6 +116,8 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
         bloco["argumentos"] = [str(a) for a in dados.get("argumentos") or [] if str(a).strip()]
     else:
         bloco["url"] = str(dados.get("url", "")).strip()
+        if dados.get("oauth") is True:
+            bloco["oauth"] = True
     ambiente = [str(v).strip() for v in dados.get("ambiente") or [] if str(v).strip()]
     cabecalhos = {
         str(k).strip(): str(v).strip() for k, v in (dados.get("cabecalhos") or {}).items()
@@ -92,6 +125,8 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     for variavel in [*ambiente, *cabecalhos.values()]:
         if not VARIAVEL.fullmatch(variavel):
             raise McpInvalido(f"variável {variavel!r}: use MAIÚSCULAS_COM_SUBLINHADO")
+    if bloco.get("oauth") and (ambiente or cabecalhos):
+        raise McpInvalido("com login (OAuth), o conector não leva segredos próprios")
     if ambiente:
         bloco["ambiente"] = ambiente
     if cabecalhos:
@@ -99,8 +134,18 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     for chave in ("livres", "bloqueadas"):
         if valores := [str(v) for v in dados.get(chave) or []]:
             bloco[chave] = valores
+    projetos = list(dict.fromkeys(str(p).strip() for p in dados.get("projetos") or []))
+    if projetos := [p for p in projetos if p]:
+        if not all(p == mcp_externo.TODOS or PROJETO.fullmatch(p) for p in projetos):
+            raise McpInvalido("projeto: o nome da pasta do projeto, ou * para todos")
+        bloco["projetos"] = projetos
     if set(bloco.get("livres", [])) & set(bloco.get("bloqueadas", [])):
         raise McpInvalido("uma ferramenta não pode ser livre e bloqueada")
+    if _tem_segredo(bloco.get("argumentos", []), bloco.get("url", "")):
+        raise McpInvalido(
+            "segredo nos argumentos ou no endereço: use o nome de uma variável e guarde o valor "
+            "no cartão do conector"
+        )
     # A mesma validação do carregador, com segredos fictícios (só a forma importa aqui).
     ficticio = {v: "x" for v in [*ambiente, *cabecalhos.values()]}
     mcp_externo._servidor(nome, bloco, ficticio)
@@ -240,6 +285,7 @@ def _post(url: str, msg: dict[str, Any], cab: dict[str, str]) -> tuple[dict[str,
             **cab,
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
+            "User-Agent": mcp_oauth.AGENTE,
         },
     )
     with urllib.request.urlopen(pedido, timeout=LIMITE_TESTE_S) as resp:  # noqa: S310
@@ -282,7 +328,9 @@ def testar(
         raise McpInvalido("conector desconhecido")
     bloco = blocos[nome][0]
     base = mcp_externo.com_segredos(nome, bloco, os.environ.copy() if env is None else env)
-    config = mcp_externo._servidor(nome, bloco, base)
+    config = mcp_externo._servidor(nome, bloco, base, avisar=False)
+    if config is None and bloco.get("oauth") is True:
+        return {"ok": False, "erro": "falta entrar"}
     if config is None:
         faltam = [v for v in mcp_externo._nomes_de_segredo(bloco) if v not in base]
         return {"ok": False, "erro": "falta o segredo " + ", ".join(faltam)}

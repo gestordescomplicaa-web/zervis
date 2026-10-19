@@ -10,10 +10,15 @@ As respostas nunca trazem segredo: a chave colada no painel só entra.
 Outro aparelho (celular, outro computador) só chega por um nome permitido (o `tailscale serve`
 repassa o dele) e passa pela tela "Entrar": sem o cookie do aparelho (`jarvis/portal/senha.py`),
 só a tela de entrada e o que ela usa ficam abertos.
+
+A volta do login de um conector (`/oauth/retorno`, ADR 0037) também abre sem o cookie: ela vem
+de outro site, e o cookie `SameSite=Strict` não acompanha. Só serve a quem traz o `state` de um
+login que o próprio painel começou, e o código só vale com o verificador que fica no Zé.
 """
 
 import contextlib
 import hmac
+import html
 import json
 import logging
 import os
@@ -123,8 +128,10 @@ class Portal:
         entrada_terminal: Escrita | None = None,
         so_no_pc: set[str] | None = None,
         servidor: bool = False,
+        retorno_oauth: Callable[[str], tuple[bool, str]] | None = None,
     ) -> None:
         self.acesso = acesso
+        self.retorno_oauth = retorno_oauth
         # Num servidor não há o "próprio PC": quem entrou com a senha e o código do autenticador
         # faz os ajustes de fora (menos desligar as proteções e o acesso pelo qual entrou).
         self.servidor = servidor
@@ -419,11 +426,29 @@ class Portal:
                 finally:
                     conexao.fechar()
 
+            def _retorno_oauth(self) -> None:
+                if portal.retorno_oauth is None:
+                    self._json(404, {"erro": "não existe"})
+                    return
+                ok, mensagem = portal.retorno_oauth(urlsplit(self.path).query)
+                corpo = (
+                    '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
+                    '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                    '<title>Conectores</title><link rel="stylesheet" href="/painel.css"></head>'
+                    '<body><main class="entrar"><section class="cartao"><h1>Conectores</h1>'
+                    f'<p class="resultado {"ok" if ok else "erro"}">{html.escape(mensagem)}</p>'
+                    "</section></main></body></html>"
+                )
+                self._enviar(200 if ok else 400, corpo.encode(), "text/html")
+
             def do_GET(self) -> None:
                 if not self._host_local():
                     self._json(403, {"erro": "host"})
                     return
                 caminho = self.path.split("?", 1)[0]
+                if caminho == "/oauth/retorno":
+                    self._retorno_oauth()
+                    return
                 if caminho == "/api/voz/ws":
                     self._voz()
                     return
