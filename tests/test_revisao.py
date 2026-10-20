@@ -23,11 +23,11 @@ def _base(tmp_path: Path) -> tuple[Memoria, Skills, revisao.Pendencias]:
 
 
 def test_so_revisa_conversa_longa_ou_com_correcao() -> None:
-    curta = [{"gabriel": "que horas são?", "jarvis": "Três horas."}]
+    curta = [{"pessoa": "que horas são?", "jarvis": "Três horas."}]
     assert not revisao.vale_revisar([])
     assert not revisao.vale_revisar(curta)
     assert revisao.vale_revisar(
-        [{"gabriel": "Não é assim, prefiro respostas curtas.", "jarvis": ""}]
+        [{"pessoa": "Não é assim, prefiro respostas curtas.", "jarvis": ""}]
     )
     assert revisao.vale_revisar(curta * revisao.MINIMO_TURNOS)
 
@@ -35,7 +35,7 @@ def test_so_revisa_conversa_longa_ou_com_correcao() -> None:
 def test_prompt_traz_memoria_skills_e_conversa(tmp_path: Path) -> None:
     memoria, skills, _ = _base(tmp_path)
     skills.gravar("resumo-falado", SKILL)
-    prompt = revisao.montar_prompt([{"gabriel": "oi", "jarvis": "Olá."}], memoria, skills)
+    prompt = revisao.montar_prompt([{"pessoa": "oi", "jarvis": "Olá."}], memoria, skills)
     assert "### resumo-falado" in prompt and "Usuário: oi\nJARVIS: Olá." in prompt
     assert "Responda SÓ com JSON" in prompt
 

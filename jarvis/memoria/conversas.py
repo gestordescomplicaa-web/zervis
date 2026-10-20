@@ -36,14 +36,26 @@ _CARIMBO = re.compile(r"^\[[^\]]*?(\d{2})/(\d{2})/(\d{4}), (\d{2}):(\d{2})\]\s*"
 @dataclass(frozen=True)
 class Turno:
     em: datetime
-    gabriel: str
+    pessoa: str  # o que quem usa disse
     ze: str
 
     def para_json(self) -> str:
         return json.dumps(
-            {"em": self.em.isoformat(timespec="seconds"), "gabriel": self.gabriel, "ze": self.ze},
+            {"em": self.em.isoformat(timespec="seconds"), "pessoa": self.pessoa, "ze": self.ze},
             ensure_ascii=False,
         )
+
+
+_CAMPOS = {"em", "ze", "dia", "pessoa"}
+
+
+def _turno(d: dict[str, Any]) -> Turno:
+    """Um turno gravado. Nos registros de antes de 20/10/2026, a fala de quem usa ficava sob
+    outra chave (o nome de uma pessoa, que não pode estar no código): a que não é conhecida."""
+    fala = d.get("pessoa")
+    if fala is None:
+        fala = next((v for k, v in d.items() if k not in _CAMPOS), "")
+    return Turno(datetime.fromisoformat(d["em"]), str(fala), str(d["ze"]))
 
 
 def nome_do_dia(dia: date) -> str:
@@ -68,8 +80,8 @@ class Conversas:
     def _arquivo(self, dia: date) -> Path:
         return self.pasta / f"{dia:%Y-%m-%d}.jsonl"
 
-    def registrar(self, gabriel: str, ze: str, em: datetime | None = None) -> Turno:
-        turno = Turno((em or datetime.now(FUSO)).astimezone(FUSO), gabriel.strip(), ze.strip())
+    def registrar(self, pessoa: str, ze: str, em: datetime | None = None) -> Turno:
+        turno = Turno((em or datetime.now(FUSO)).astimezone(FUSO), pessoa.strip(), ze.strip())
         self._dados.guardar(
             "conversas", {**json.loads(turno.para_json()), "dia": turno.em.date().isoformat()}
         )
@@ -77,22 +89,13 @@ class Conversas:
 
     def do_dia(self, dia: date) -> list[Turno]:
         dados = self._dados.filtrar("conversas", "dia", [dia.isoformat()], -1)
-        return sorted(
-            (
-                Turno(datetime.fromisoformat(d["em"]), str(d["gabriel"]), str(d["ze"]))
-                for d in dados
-            ),
-            key=lambda t: t.em,
-        )
+        return sorted((_turno(d) for d in dados), key=lambda t: t.em)
 
     def dias(self) -> list[date]:
         return sorted({date.fromisoformat(d["dia"]) for d in self._dados.listar("conversas")})
 
     def buscar(self, texto: str, limite: int = 50) -> list[Turno]:
-        return [
-            Turno(datetime.fromisoformat(d["em"]), str(d["gabriel"]), str(d["ze"]))
-            for d in self._dados.buscar(texto, "conversas", limite)
-        ]
+        return [_turno(d) for d in self._dados.buscar(texto, "conversas", limite)]
 
     def juntar(self, turnos: Iterable[Turno]) -> int:
         """Importa só os turnos novos dentro de uma transação entre processos."""
@@ -102,12 +105,12 @@ class Conversas:
             por_dia.setdefault(t.em.date(), []).append(t)
         with self._dados.banco.transacao():
             for dia, lista in por_dia.items():
-                vistos = {(t.em.isoformat(timespec="minutes"), t.gabriel) for t in self.do_dia(dia)}
+                vistos = {(t.em.isoformat(timespec="minutes"), t.pessoa) for t in self.do_dia(dia)}
                 for t in sorted(lista, key=lambda x: x.em):
-                    chave = (t.em.isoformat(timespec="minutes"), t.gabriel)
+                    chave = (t.em.isoformat(timespec="minutes"), t.pessoa)
                     if chave not in vistos:
                         vistos.add(chave)
-                        self.registrar(t.gabriel, t.ze, t.em)
+                        self.registrar(t.pessoa, t.ze, t.em)
                         novos += 1
         return novos
 
@@ -117,7 +120,7 @@ class Conversas:
         for t in self.do_dia(dia):
             partes += [
                 f"## {t.em:%H:%M}",
-                f"**{usuario.PERFIL.rotulo}:** {t.gabriel}",
+                f"**{usuario.PERFIL.rotulo}:** {t.pessoa}",
                 "",
                 f"**Zé:** {t.ze}",
                 "",

@@ -85,12 +85,12 @@ def vale_revisar(turnos: list[dict[str, str]]) -> bool:
         return False
     if len(turnos) >= MINIMO_TURNOS:
         return True
-    return any(SINAIS.search(t.get("gabriel", "")) for t in turnos)
+    return any(SINAIS.search(t.get("pessoa", "")) for t in turnos)
 
 
 def origem(turnos: list[dict[str, str]]) -> str:
     """De onde a sugestão veio, para o diário: as falas do usuário com correção, ou a primeira."""
-    falas = [t.get("gabriel", "").strip() for t in turnos]
+    falas = [t.get("pessoa", "").strip() for t in turnos]
     com_sinal = [f for f in falas if SINAIS.search(f)] or falas[:1]
     return " / ".join(com_sinal)[:LIMITE_ORIGEM]
 
@@ -105,7 +105,7 @@ def montar_prompt(turnos: list[dict[str, str]], memoria: Memoria, skills: Skills
         corpos.append(f"### {nome}\n{corpo}")
         tamanho += len(corpo)
     conversa = "\n".join(
-        f"{usuario.PERFIL.rotulo}: {t.get('gabriel', '')}\nJARVIS: {t.get('jarvis', '')}"
+        f"{usuario.PERFIL.rotulo}: {t.get('pessoa', '')}\nJARVIS: {t.get('jarvis', '')}"
         for t in turnos
     )
     return PROMPT.format(

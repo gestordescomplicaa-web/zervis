@@ -555,7 +555,7 @@ class Nucleo(
                 self.status.pedidos += 1
                 self._pedido_em = time.monotonic()
                 self._conversa_suja = True
-                self.turnos.append({"gabriel": texto, "jarvis": ""})
+                self.turnos.append({"pessoa": texto, "jarvis": ""})
                 self._pedido_quando = datetime.now(FUSO)
                 pedido = self._com_memoria(
                     self._com_foco(self._com_avisos(self._com_nucleo(texto)))

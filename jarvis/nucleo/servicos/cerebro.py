@@ -127,10 +127,10 @@ class ServicoCerebro:
         )
         usadas = {n.rsplit("__", 1)[-1] for n in getattr(self.n.cerebro, "ferramentas_usadas", [])}
         if usadas and usadas <= {"tela_agir", "tela_ver"} and self.n.turnos:
-            self.n.evidencias.registrar("so_tela", self.n.turnos[-1]["gabriel"])
+            self.n.evidencias.registrar("so_tela", self.n.turnos[-1]["pessoa"])
         if erro:
             self.n.evidencias.registrar("falha_cerebro", erro)
-            pedido = self.n.turnos[-1]["gabriel"] if self.n.turnos else ""
+            pedido = self.n.turnos[-1]["pessoa"] if self.n.turnos else ""
             atividade.PADRAO.registrar("falha", "O cérebro falhou", erro=erro, pedido=pedido)
         if marca != self.n.marca:
             return

@@ -694,7 +694,7 @@ class Roteado:
         self.limite_historico = historico
         self.motor_ok = False
         self._avisos = -1
-        self.turnos: list[dict[str, str]] = []  # {"gabriel", "ze", "via"}
+        self.turnos: list[dict[str, str]] = []  # {"pessoa", "ze", "via"}
         self.visto_completo = 0  # quantos turnos o completo já tem na sessão dele
         self.visto_motor = 0
         self.via = ""  # quem respondeu o último pedido: "rapida" ou "completo"
@@ -742,8 +742,7 @@ class Roteado:
     def _perdidos(self, desde: int) -> str:
         """O que foi conversado sem este lado, para ele continuar a mesma conversa."""
         trechos = [
-            f"{usuario.PERFIL.rotulo}: «{t['gabriel']}» Zé: «{t['ze']}»"
-            for t in self.turnos[desde:]
+            f"{usuario.PERFIL.rotulo}: «{t['pessoa']}» Zé: «{t['ze']}»" for t in self.turnos[desde:]
         ]
         if not trechos:
             return ""
@@ -755,13 +754,13 @@ class Roteado:
         mensagens: list[dict[str, str]] = []
         for t in self.turnos[-self.limite_historico :]:
             mensagens += [
-                {"role": "user", "content": t["gabriel"]},
+                {"role": "user", "content": t["pessoa"]},
                 {"role": "assistant", "content": t["ze"]},
             ]
         return [*mensagens, {"role": "user", "content": texto}]
 
     def _guardar(self, texto: str, resposta: str, via: str) -> None:
-        self.turnos.append({"gabriel": texto, "ze": resposta.strip(), "via": via})
+        self.turnos.append({"pessoa": texto, "ze": resposta.strip(), "via": via})
         if len(self.turnos) > 4 * self.limite_historico:
             corte = len(self.turnos) - 2 * self.limite_historico
             self.turnos = self.turnos[corte:]

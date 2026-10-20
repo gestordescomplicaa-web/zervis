@@ -53,8 +53,8 @@ def test_curadoria_arquiva_so_skill_parada_e_nada_se_perde(tmp_path: Path) -> No
 
 def test_origem_da_sugestao_e_a_fala_com_correcao() -> None:
     turnos = [
-        {"gabriel": "abre os temas", "jarvis": "..."},
-        {"gabriel": "não é assim, prefiro o seletor na tela", "jarvis": "..."},
+        {"pessoa": "abre os temas", "jarvis": "..."},
+        {"pessoa": "não é assim, prefiro o seletor na tela", "jarvis": "..."},
     ]
     assert revisao.origem(turnos) == "não é assim, prefiro o seletor na tela"
     assert revisao.origem(turnos[:1]) == "abre os temas"
