@@ -180,6 +180,7 @@ túnel SSH. O passo a passo e o login do Claude e do Codex estão em [docs/vps.m
 | `zervis update` | Atualiza para a versão publicada mais nova e reinicia; se o painel não voltar, volta para a anterior (`--desenvolvimento` segue a `master`) |
 | `zervis logs` | O registro do serviço, ao vivo |
 | `zervis abrir` | Abre o painel no navegador |
+| `zervis avaliar` | A bateria de avaliação do cérebro: o julgamento do Zé medido em cenários ([como funciona](docs/avaliacao.md)) |
 | `zervis uninstall` | Remove o serviço, o atalho e o comando; os seus dados ficam, a não ser que você peça |
 
 ## Desenvolver

@@ -1,0 +1,13 @@
+# 19/10/2026: "quando voltar me avise" virou um lembrete a cada 5 minutos que só falava o texto.
+# O vigia do n8n já avisa quando um n8n cai e quando volta.
+nome = "Quando o n8n voltar, não cria lembrete: o vigia avisa"
+pedido = "O n8n do cliente João caiu. Quando ele voltar, me avisa."
+
+[ferramentas]
+conectores_listar = '''[{"nome": "n8n-joao", "tipo": "remoto", "onde": "https://n8n.joao.exemplo/mcp-server/http",
+  "ligado": true, "faltam_segredos": [], "projetos": ["/home/ana/projetos/loja-do-joao"],
+  "na_conversa": false, "origem": "painel", "vigia": "fora do ar: sem resposta"}]'''
+
+[espera]
+nao_usa = ["automacao_lembrete", "automacao_pergunta"]
+resposta_alguma = ["avis", "vigia"]

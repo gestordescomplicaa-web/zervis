@@ -405,7 +405,18 @@ def main(argv: list[str] | None = None) -> int:
     remover = sub.add_parser("uninstall", help="remove o serviço, o atalho e o comando")
     remover.add_argument("--apagar-dados", action="store_true", help="apaga também os dados")
     sub.add_parser("version", help="a versão instalada")
-    args = partes.parse_args(argv)
+    sub.add_parser(
+        "avaliar",
+        help="a bateria de avaliação do cérebro (gasta a conta do Claude)",
+        add_help=False,
+    )
+    args, resto = partes.parse_known_args(argv)
+    if args.acao == "avaliar":
+        from jarvis.avaliacao.__main__ import main as avaliar
+
+        return avaliar(resto)
+    if resto:
+        partes.error(f"argumentos desconhecidos: {' '.join(resto)}")
     if args.acao == "status":
         return status()
     if args.acao == "doctor":

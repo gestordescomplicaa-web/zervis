@@ -1,7 +1,11 @@
 # Porta única de qualidade (docs/06-qualidade.md): formatação, lint, tipos e testes.
-.PHONY: check fmt lint tipos testes check-imersivo check-instalacao wacalls
+.PHONY: check fmt lint tipos testes check-imersivo check-instalacao wacalls avaliar
 
 check: lint tipos testes wacalls
+
+# A bateria de avaliação do cérebro (docs/avaliacao.md): gasta a conta do Claude, fora do check.
+avaliar:
+	uv run python -m jarvis.avaliacao $(ARGS)
 
 fmt:
 	uv run ruff format .

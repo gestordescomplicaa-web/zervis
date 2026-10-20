@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Bateria de avaliação do cérebro (`zervis avaliar`, `docs/avaliacao.md`): cenários em TOML com
+  o pedido, o que as ferramentas respondem e o que se espera (ferramentas, argumentos e
+  resposta); o cérebro de verdade com as ferramentas simuladas, repetições para a taxa de
+  acerto, relatório comparado com a rodada anterior e rodadas sem resposta fora da nota.
+  Referência de 20/10/2026: 91% em 11 cenários.
+
 ## 0.1.0 (19/10/2026)
 
 A primeira versão publicada. Destaques:
