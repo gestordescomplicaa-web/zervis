@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.portal import tunel
+from zervis.portal import tunel
 
 
 def test_le_o_endereco_que_o_cloudflared_imprime() -> None:
@@ -79,9 +79,9 @@ def test_parado_de_proposito_nao_sobe_de_novo(
 def test_binario_da_maquina_tem_preferencia(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("jarvis.portal.tunel.shutil.which", lambda nome: "/usr/bin/cloudflared")
+    monkeypatch.setattr("zervis.portal.tunel.shutil.which", lambda nome: "/usr/bin/cloudflared")
     assert tunel.binario(tmp_path) == Path("/usr/bin/cloudflared")
-    monkeypatch.setattr("jarvis.portal.tunel.shutil.which", lambda nome: None)
+    monkeypatch.setattr("zervis.portal.tunel.shutil.which", lambda nome: None)
     assert tunel.binario(tmp_path) is None
     (tmp_path / "cloudflared").write_text("")
     assert tunel.binario(tmp_path) == tmp_path / "cloudflared"
@@ -89,7 +89,7 @@ def test_binario_da_maquina_tem_preferencia(
 
 def test_encerrado_de_fora_nao_e_queda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O serviço parando: o systemd encerra o cloudflared junto. Não é falha nem sobe de novo."""
-    from jarvis import atividade
+    from zervis import atividade
 
     monkeypatch.setattr(tunel, "ESPERA_S", (0.05,))
     falhas: list[str] = []

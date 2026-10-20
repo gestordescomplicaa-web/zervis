@@ -21,9 +21,9 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from jarvis.cerebro import conectores, mcp_externo, mcp_oauth, mcp_ponte
-from jarvis.cerebro.mcp_oauth import Logins, OAuthErro
-from jarvis.portal.servidor import Portal
+from zervis.cerebro import conectores, mcp_externo, mcp_oauth, mcp_ponte
+from zervis.cerebro.mcp_oauth import Logins, OAuthErro
+from zervis.portal.servidor import Portal
 
 RETORNO = "http://127.0.0.1:8795/oauth/retorno"
 

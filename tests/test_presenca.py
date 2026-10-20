@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-from jarvis.presenca.hyprland import CLASSE, Janelas, MonitorPresenca, pastas_de_instancia
+from zervis.presenca.hyprland import CLASSE, Janelas, MonitorPresenca, pastas_de_instancia
 
 ABRIU = f"openwindow>>59fe8abbff90,1,{CLASSE},127.0.0.1_/stage.html"
 FECHOU = "closewindow>>59fe8abbff90"
@@ -104,7 +104,7 @@ def _esperar(condicao: object, limite: float = 3.0) -> None:
 
 def test_a_janela_do_painel_tambem_e_a_do_ze() -> None:
     """09/10/2026: o modo imersivo passou a morar numa aba do painel."""
-    from jarvis.presenca.hyprland import CLASSE_PAINEL
+    from zervis.presenca.hyprland import CLASSE_PAINEL
 
     j = Janelas()
     j.evento(f"openwindow>>7a01,1,{CLASSE_PAINEL},Zé — painel")

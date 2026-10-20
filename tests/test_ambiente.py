@@ -2,7 +2,7 @@
 
 import pytest
 
-from jarvis import ambiente, lugares
+from zervis import ambiente, lugares
 
 
 def test_o_nome_novo_vale_primeiro_e_o_antigo_ainda_serve(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -25,7 +25,7 @@ def test_perfil_pelo_nome_antigo_ainda_separa_as_pastas(monkeypatch: pytest.Monk
 
 
 def test_ponte_aceita_a_chave_pelo_nome_antigo(monkeypatch: pytest.MonkeyPatch) -> None:
-    from jarvis.cerebro import rapido
+    from zervis.cerebro import rapido
 
     monkeypatch.delenv("ZERVIS_PONTE_API_KEY", raising=False)
     monkeypatch.setenv("JARVIS_PONTE_API_KEY", "chave-antiga")

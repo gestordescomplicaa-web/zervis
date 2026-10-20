@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.imersivo import servidor
-from jarvis.imersivo.http import NOME_ARQUIVO, gravar_token, ler_token
-from jarvis.rosto.quadro import Quadro
+from zervis.imersivo import servidor
+from zervis.imersivo.http import NOME_ARQUIVO, gravar_token, ler_token
+from zervis.rosto.quadro import Quadro
 
 
 @dataclass

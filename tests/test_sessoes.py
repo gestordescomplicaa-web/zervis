@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.oficina.sessoes import (
+from zervis.oficina.sessoes import (
     Sessao,
     SessaoErro,
     Sessoes,
@@ -18,7 +18,7 @@ from jarvis.oficina.sessoes import (
     comando_proibido,
     rodar_agente,
 )
-from jarvis.oficina.terminal import Terminal
+from zervis.oficina.terminal import Terminal
 
 
 def esperar(condicao: Any, limite_s: float = 5.0) -> None:
@@ -381,7 +381,7 @@ def test_o_motor_codex_anota_guarda_o_fio_e_continua_com_resume(
 def test_trocar_de_conta_copia_a_conversa_e_de_agente_leva_a_passagem(
     tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.cerebro import contas
+    from zervis.cerebro import contas
 
     cs = contas.Contas(tmp_path / "contas.json", tmp_path / "pastas")
     monkeypatch.setattr(contas, "Contas", lambda: cs)
@@ -424,8 +424,8 @@ def test_trocar_de_conta_copia_a_conversa_e_de_agente_leva_a_passagem(
 def test_creditos_esgotados_avisam_e_a_outra_conta_continua_o_mesmo_pedido(
     tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.cerebro import contas
-    from jarvis.oficina.sessoes import LimiteErro
+    from zervis.cerebro import contas
+    from zervis.oficina.sessoes import LimiteErro
 
     cs = contas.Contas(tmp_path / "contas.json", tmp_path / "pastas")
     monkeypatch.setattr(contas, "Contas", lambda: cs)
@@ -460,7 +460,7 @@ def test_creditos_esgotados_avisam_e_a_outra_conta_continua_o_mesmo_pedido(
 def test_o_modelo_e_o_esforco_vem_da_lista_da_conta(
     tmp_path: Path, raiz: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.cerebro import contas
+    from zervis.cerebro import contas
 
     cs = contas.Contas(tmp_path / "contas.json", tmp_path / "pastas")
     monkeypatch.setattr(contas, "Contas", lambda: cs)
@@ -480,7 +480,7 @@ def test_o_modelo_e_o_esforco_vem_da_lista_da_conta(
     s = sessoes.ajustar_modelo(s.id, "gpt-x", "high")
     assert (s.modelo, s.esforco) == ("gpt-x", "high")
     assert sessoes.mensagens(s.id)[-1]["texto"] == "Modelo: GPT-X, esforço alto."
-    from jarvis.oficina.sessoes import _comando_codex
+    from zervis.oficina.sessoes import _comando_codex
 
     assert _comando_codex(s, "oi")[6:8] == ["-m", "gpt-x"]
     assert 'model_reasoning_effort="high"' in _comando_codex(s, "oi")
@@ -549,7 +549,7 @@ def test_conclusao_repetida_gera_um_so_resultado_e_novo_turno_pode_repetir(
 ) -> None:
     capturas: list[tuple[Any, ...]] = []
     monkeypatch.setattr(
-        "jarvis.memoria.aimemory.capturar_codex", lambda *args: capturas.append(args)
+        "zervis.memoria.aimemory.capturar_codex", lambda *args: capturas.append(args)
     )
     fim: list[str] = []
     sessoes = Sessoes(tmp_path / "sessoes", (raiz,), lambda _s, r: fim.append(r))
@@ -587,7 +587,7 @@ def test_terminal_sem_o_agente_instalado_avisa(
 
 
 def test_a_passagem_entra_como_contexto_sem_gastar_um_turno(tmp_path: Path) -> None:
-    from jarvis.oficina.sessoes import comando_terminal
+    from zervis.oficina.sessoes import comando_terminal
 
     eventos = tmp_path / "eventos.jsonl"
     contexto = tmp_path / "contexto.json"
@@ -609,8 +609,8 @@ def test_a_passagem_entra_como_contexto_sem_gastar_um_turno(tmp_path: Path) -> N
 
 def test_so_as_skills_marcadas_vao_para_as_sessoes(tmp_path: Path) -> None:
     """Uma skill pessoal ("resumo do dia") não vai para as sessões de código (13/10/2026)."""
-    from jarvis.habilidades.skills import Skills
-    from jarvis.oficina.sessoes import regras_de_skills
+    from zervis.habilidades.skills import Skills
+    from zervis.oficina.sessoes import regras_de_skills
 
     skills = Skills(tmp_path / "skills")
     assert regras_de_skills(skills) == ("", None)  # sem skills, nada muda
@@ -628,8 +628,8 @@ def test_codex_acha_as_skills_marcadas_na_pasta_do_projeto(tmp_path: Path) -> No
     abertura (13/10/2026). Os atalhos ficam fora do Git do projeto."""
     import subprocess
 
-    from jarvis.habilidades.skills import Skills
-    from jarvis.oficina.sessoes import ligar_skills_no_projeto
+    from zervis.habilidades.skills import Skills
+    from zervis.oficina.sessoes import ligar_skills_no_projeto
 
     skills = Skills(tmp_path / "skills")
     (tmp_path / "skills/deploy").mkdir(parents=True)
@@ -724,8 +724,8 @@ def test_abrir_sem_pedido_nao_guarda_conversa_que_o_claude_nao_salvou(
 def test_conversa_do_claude_existe_pela_pasta_da_conta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.cerebro import contas
-    from jarvis.oficina.sessoes import conversa_claude_existe
+    from zervis.cerebro import contas
+    from zervis.oficina.sessoes import conversa_claude_existe
 
     conta = contas.Conta("claude:x", "claude", "X", str(tmp_path / "conta"))
     monkeypatch.setattr(contas.Contas, "achar", lambda self, id_: conta)
@@ -817,7 +817,7 @@ def test_sugestoes_de_pasta_sem_repetir_a_raiz_padrao(
     from types import SimpleNamespace
     from typing import Any, cast
 
-    from jarvis.portal.acoes.sessoes import AcoesSessoes
+    from zervis.portal.acoes.sessoes import AcoesSessoes
 
     monkeypatch.setenv("HOME", str(tmp_path))
     (tmp_path / "projetos" / "Detetive").mkdir(parents=True)

@@ -9,10 +9,10 @@ from typing import Any
 
 import pytest
 
-from jarvis.foco.frentes import Foco
-from jarvis.memoria.linha import LinhaDoTempo
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo, Status
+from zervis.foco.frentes import Foco
+from zervis.memoria.linha import LinhaDoTempo
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo, Status
 
 
 @dataclass

@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import acesso, contas
+from zervis.cerebro import acesso, contas
 
 CODEX_FALSO = """#!/bin/sh
 # Como o Codex: `login --with-api-key` lê a chave da entrada e grava o login da conta.
@@ -49,7 +49,7 @@ def test_a_chave_vai_pela_entrada_e_nunca_na_linha_de_comando(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Na linha de comando, outro usuário da máquina veria a chave em `ps`."""
-    monkeypatch.setattr("jarvis.cerebro.acesso.shutil.which", lambda nome: "/x/codex")
+    monkeypatch.setattr("zervis.cerebro.acesso.shutil.which", lambda nome: "/x/codex")
     chamadas: list[dict[str, Any]] = []
 
     def rodar(args: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
@@ -74,6 +74,6 @@ def test_chave_invalida_nem_chega_ao_codex(chave: str) -> None:
 
 
 def test_sem_codex_na_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("jarvis.cerebro.acesso.shutil.which", lambda nome: None)
+    monkeypatch.setattr("zervis.cerebro.acesso.shutil.which", lambda nome: None)
     with pytest.raises(acesso.AcessoErro, match="Codex indisponível"):
         acesso.chave_no_codex("sk-x")

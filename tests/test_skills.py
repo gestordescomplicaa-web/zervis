@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro.ferramentas import mostrador, prechecagem
-from jarvis.habilidades import skills as skills_mod
-from jarvis.habilidades.skills import SkillErro, Skills
-from jarvis.memoria.curta import Memoria
+from zervis.cerebro.ferramentas import mostrador, prechecagem
+from zervis.habilidades import skills as skills_mod
+from zervis.habilidades.skills import SkillErro, Skills
+from zervis.memoria.curta import Memoria
 
 SKILL = """---
 name: fala-natural

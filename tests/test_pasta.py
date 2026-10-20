@@ -6,14 +6,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-from jarvis.automacoes.jobs import Jobs
-from jarvis.cerebro import ferramentas
-from jarvis.cerebro.consumo import Consumo
-from jarvis.habilidades import revisao
-from jarvis.habilidades.diario import Diario
-from jarvis.habilidades.skills import Skills
-from jarvis.memoria.curta import Memoria, Mudanca
-from jarvis.rosto import pasta
+from zervis.automacoes.jobs import Jobs
+from zervis.cerebro import ferramentas
+from zervis.cerebro.consumo import Consumo
+from zervis.habilidades import revisao
+from zervis.habilidades.diario import Diario
+from zervis.habilidades.skills import Skills
+from zervis.memoria.curta import Memoria, Mudanca
+from zervis.rosto import pasta
 
 SKILL = "---\nname: {nome}\ndescription: Faz {nome}.\n---\n# {nome}\n"
 

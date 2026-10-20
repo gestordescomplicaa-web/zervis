@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from jarvis.portal import primeiro_acesso, tunel
-from jarvis.portal.senha import Acesso
+from zervis.portal import primeiro_acesso, tunel
+from zervis.portal.senha import Acesso
 
 
 def _acesso(tmp_path: Path) -> Acesso:

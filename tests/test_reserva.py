@@ -5,9 +5,9 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from jarvis.cerebro.base import EventoCerebro, Fim, Texto
-from jarvis.cerebro.eco import Eco
-from jarvis.cerebro.reserva import ComReserva
+from zervis.cerebro.base import EventoCerebro, Fim, Texto
+from zervis.cerebro.eco import Eco
+from zervis.cerebro.reserva import ComReserva
 
 
 class ContaFalsa(Eco):

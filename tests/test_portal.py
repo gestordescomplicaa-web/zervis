@@ -12,14 +12,14 @@ from typing import Any
 
 import pytest
 
-from jarvis import config, usuario
-from jarvis.cerebro import acesso, rapido
-from jarvis.oficina.progresso import ETAPAS, Progresso
-from jarvis.oficina.sessoes import Sessoes
-from jarvis.oficina.terminal import Terminal
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import PedidoInvalido, Portal
-from jarvis.voz import deepgram
+from zervis import config, usuario
+from zervis.cerebro import acesso, rapido
+from zervis.oficina.progresso import ETAPAS, Progresso
+from zervis.oficina.sessoes import Sessoes
+from zervis.oficina.terminal import Terminal
+from zervis.portal.acoes import Acoes
+from zervis.portal.servidor import PedidoInvalido, Portal
+from zervis.voz import deepgram
 
 
 def pedir(
@@ -360,7 +360,7 @@ def test_conferir_a_chave_do_deepgram_distingue_recusa_de_rede() -> None:
 
 
 def test_os_arquivos_da_pagina_sao_leves() -> None:
-    web = Path(__file__).resolve().parents[1] / "jarvis/portal/web"
+    web = Path(__file__).resolve().parents[1] / "zervis/portal/web"
     import re
 
     html = (web / "index.html").read_text()
@@ -423,7 +423,7 @@ def test_o_acesso_ao_claude_pelo_painel_nunca_devolve_o_segredo(
 def test_conexao_codex_usa_a_conta_do_codex(
     acoes: tuple[Acoes, NucleoFalso], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.cerebro import codex
+    from zervis.cerebro import codex
 
     a, n = acoes
     n.provedor = "codex"
@@ -440,7 +440,7 @@ def test_conexao_codex_usa_a_conta_do_codex(
 
 
 def test_terminal_e_paginas_carregam_sob_demanda() -> None:
-    from jarvis.portal.servidor import ARQUIVOS, WEB
+    from zervis.portal.servidor import ARQUIVOS, WEB
 
     html = (WEB / "index.html").read_text()
     assert "/vendor/xterm/" not in html

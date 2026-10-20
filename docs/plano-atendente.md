@@ -127,7 +127,7 @@ omnichannel. Proposta:
    atendimento, não do canal, para que Instagram, Telegram, chat do site e telefone (SIP) entrem
    depois sem mudar o agente.
 5. **Quem mexe em quê:** o código da Central (canais, regras, segurança) faz parte do Zé, e a sessão
-   de autodesenvolvimento o lê por `jarvis/atendimento/README.md`. O agente de cada pessoa
+   de autodesenvolvimento o lê por `zervis/atendimento/README.md`. O agente de cada pessoa
    (persona, conhecimento, integrações) é dado dela e se edita numa sessão comum, nunca no
    autodesenvolvimento (essência).
 

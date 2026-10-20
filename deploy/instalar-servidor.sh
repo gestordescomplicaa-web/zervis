@@ -75,14 +75,14 @@ o autodesenvolvimento não vai abrir."
 fi
 uv sync --frozen
 echo "Preparando o Go para o WhatsApp e as ligações..."
-GO_BIN=$(uv run python -m jarvis.atendimento.preparar_go) \
+GO_BIN=$(uv run python -m zervis.atendimento.preparar_go) \
   || falta "Go verificado para o WhatsApp e as ligações. Confira o acesso a go.dev."
 PATH="$GO_BIN:$HOME/.local/bin:$PATH"
 export PATH
-uv run python -m jarvis.preparar || echo "Aviso: os modelos de som não baixaram. O Zé sobe sem \
+uv run python -m zervis.preparar || echo "Aviso: os modelos de som não baixaram. O Zé sobe sem \
 voz e baixa de novo no próximo início."
 # Claude Code e Codex prontos, também como comandos no terminal (ADR 0035).
-uv run python -m jarvis.cerebro.agentes_nativos
+uv run python -m zervis.cerebro.agentes_nativos
 
 # --- serviço -----------------------------------------------------------------------------------
 make instalar PORTA="$PORTA"
@@ -135,6 +135,6 @@ echo "O Zé está rodando neste servidor (serviço zervis do usuário $USUARIO).
 echo "Preparando o acesso ao painel (endereço seguro do Cloudflare)..."
 echo
 # Endereço HTTPS e convite de uso único: o primeiro acesso dispensa o túnel SSH.
-uv run python -m jarvis.portal.primeiro_acesso
+uv run python -m zervis.portal.primeiro_acesso
 echo
 echo "Comando: zervis status, doctor, update e logs (em ~/.local/bin)."

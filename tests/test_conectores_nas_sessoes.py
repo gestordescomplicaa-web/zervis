@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro import conectores, mcp_externo
-from jarvis.cerebro.mcp_externo import McpInvalido
-from jarvis.oficina.sessoes import (
+from zervis.cerebro import conectores, mcp_externo
+from zervis.cerebro.mcp_externo import McpInvalido
+from zervis.oficina.sessoes import (
     Sessao,
     arquivo_de_conectores,
     comando_terminal,
@@ -220,7 +220,7 @@ def test_colar_de_novo_mantem_a_marca_da_conversa(arquivos: tuple[Path, Path]) -
 def test_sessoes_listar_mostra_os_conectores_de_cada_projeto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from jarvis.cerebro.ferramentas import sessoes as ferramentas_sessoes
+    from zervis.cerebro.ferramentas import sessoes as ferramentas_sessoes
 
     def do_projeto(pasta: Path) -> list[dict[str, object]]:
         marcado = pasta.name == "loja"

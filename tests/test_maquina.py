@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from jarvis.sistema.maquina import Maquina, nome_do_sistema
+from zervis.sistema.maquina import Maquina, nome_do_sistema
 
-PERSONAS = Path(__file__).resolve().parents[1] / "jarvis" / "persona"
+PERSONAS = Path(__file__).resolve().parents[1] / "zervis" / "persona"
 
 
 def test_nome_do_sistema_vem_do_os_release(tmp_path: Path) -> None:

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis import cli, lugares
+from zervis import cli, lugares
 
 
 class Maquina:
@@ -90,7 +90,7 @@ def test_update_volta_para_a_anterior_se_o_painel_nao_sobe(
 @pytest.mark.parametrize(
     ("respostas", "motivo"),
     [
-        ({"git_status": (0, " M jarvis/cli.py")}, "alterações locais"),
+        ({"git_status": (0, " M zervis/cli.py")}, "alterações locais"),
         ({"git_rev-parse_--abbrev-ref": (128, "")}, "não segue uma branch"),
         ({"git_merge-base": (1, "")}, "commits locais"),
         ({"git_fetch": (1, "")}, "Sem conexão"),

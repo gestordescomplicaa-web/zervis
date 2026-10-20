@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.oficina.terminal import Terminal, _grupo_ativo
+from zervis.oficina.terminal import Terminal, _grupo_ativo
 
 # O Python avisa de fork com threads; o filho do Terminal só chama chdir e execve.
 pytestmark = pytest.mark.filterwarnings(
@@ -58,7 +58,7 @@ def test_colar_entrega_o_pedido_inteiro(tmp_path: Path) -> None:
 
 
 def test_buffer_circular_mantem_o_fim(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr("jarvis.oficina.terminal.BUFFER", 1024)
+    monkeypatch.setattr("zervis.oficina.terminal.BUFFER", 1024)
     t = Terminal(["sh", "-c", "head -c 5000 /dev/zero | tr '\\0' a; printf FIM"], tmp_path, {})
     visto = _ler_ate(t, b"FIM")
     assert visto.endswith(b"FIM")

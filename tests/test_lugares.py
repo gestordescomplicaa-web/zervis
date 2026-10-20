@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis import lugares
+from zervis import lugares
 
 
 def test_padrao_xdg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

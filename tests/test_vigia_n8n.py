@@ -11,11 +11,11 @@ from typing import Any
 
 import pytest
 
-from jarvis import atividade
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.servicos.automacoes import ServicoAutomacoes
-from jarvis.sistema import vigia_n8n
-from jarvis.sistema.vigia_n8n import VigiaN8n
+from zervis import atividade
+from zervis.nucleo import estados as e
+from zervis.nucleo.servicos.automacoes import ServicoAutomacoes
+from zervis.sistema import vigia_n8n
+from zervis.sistema.vigia_n8n import VigiaN8n
 
 
 def _n8n(saude: int, pronto: int) -> http.server.HTTPServer:

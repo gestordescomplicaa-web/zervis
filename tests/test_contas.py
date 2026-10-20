@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import contas
-from jarvis.oficina.sessoes import Sessao, ambiente_da_conta
+from zervis.cerebro import contas
+from zervis.oficina.sessoes import Sessao, ambiente_da_conta
 
 
 @pytest.fixture

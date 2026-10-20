@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import agentes_nativos as an
-from jarvis.preparar import Modelo, PrepararErro
+from zervis.cerebro import agentes_nativos as an
+from zervis.preparar import Modelo, PrepararErro
 
 
 class _Resposta(io.BytesIO):
@@ -47,8 +47,8 @@ def _com_pacote(monkeypatch: pytest.MonkeyPatch, conteudo: bytes) -> None:
     auxiliar = _falso("codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz", AUXILIAR)
     monkeypatch.setattr(an, "CODEX_PACOTES", {"x86_64": falso})
     monkeypatch.setattr(an, "CODEX_AUXILIAR_PACOTES", {"x86_64": auxiliar})
-    monkeypatch.setattr("jarvis.cerebro.agentes_nativos.platform.machine", lambda: "x86_64")
-    monkeypatch.setattr("jarvis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: None)
+    monkeypatch.setattr("zervis.cerebro.agentes_nativos.platform.machine", lambda: "x86_64")
+    monkeypatch.setattr("zervis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: None)
 
 
 def test_baixa_o_codex_oficial_conferido_e_o_deixa_executavel(
@@ -76,7 +76,7 @@ def test_instalacao_antiga_so_com_o_binario_ganha_o_auxiliar(
     pasta.mkdir(parents=True)
     (pasta / "codex").write_text("antigo")
     monkeypatch.setattr(
-        "jarvis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: str(pasta / nome)
+        "zervis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: str(pasta / nome)
     )
     assert an.garantir_codex(pasta, _servir(**{"codex-code-mode-host": AUXILIAR}))
     assert (pasta / "codex").read_text() == "antigo"
@@ -94,7 +94,7 @@ def test_pacote_com_outra_coisa_que_nao_o_binario_e_recusado(
 
 def test_o_codex_da_maquina_tem_a_vez(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "jarvis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: "/usr/bin/codex"
+        "zervis.cerebro.agentes_nativos.shutil.which", lambda nome, path=None: "/usr/bin/codex"
     )
     assert not an.garantir_codex(tmp_path, lambda url, timeout: pytest.fail("baixou"))
 

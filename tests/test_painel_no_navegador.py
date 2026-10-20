@@ -25,9 +25,9 @@ from typing import Any
 import pytest
 import websockets
 
-from jarvis.oficina.progresso import Progresso
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import WEB, Escrita, Leitura, PedidoInvalido, Portal
+from zervis.oficina.progresso import Progresso
+from zervis.portal.acoes import Acoes
+from zervis.portal.servidor import WEB, Escrita, Leitura, PedidoInvalido, Portal
 
 RESPOSTAS = Path(__file__).with_name("painel_respostas.json")
 CHROMIUM = next(
@@ -757,7 +757,7 @@ def test_autodesenvolvimento_interrompe_troca_agente_e_permite_revisar(tmp_path:
     estado = respostas["leituras"]["estado"]
     estado["manutencao"]["ligada"] = False
     mudancas = respostas["escritas"]["ze/melhorias"]
-    mudancas["protegidos"] = ["jarvis/oficina/manutencao.py"]
+    mudancas["protegidos"] = ["zervis/oficina/manutencao.py"]
     chamadas: list[tuple[str, Any]] = []
 
     def fechar(dados: dict[str, Any]) -> dict[str, str]:

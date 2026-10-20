@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.rosto import tela
+from zervis.rosto import tela
 
 
 def batimento(pasta: Path) -> None:

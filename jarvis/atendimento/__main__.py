@@ -1,5 +1,6 @@
-"""`python -m jarvis.atendimento`: a Central de Atendimento (ver central.py)."""
+"""`python -m jarvis.atendimento`, de uma Central antiga: sobe a do `zervis`."""
 
-from jarvis.atendimento.central import main
+import runpy
 
-main()
+if __name__ == "__main__":
+    runpy.run_module("zervis.atendimento", run_name="__main__", alter_sys=True)

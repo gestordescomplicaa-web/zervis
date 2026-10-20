@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from jarvis.voz.ativacao import (
+from zervis.voz.ativacao import (
     JANELA,
     QUADRO,
     Detector,
@@ -118,7 +118,7 @@ def test_features_reais_de_silencio_sao_estaveis() -> None:
 
 def test_sem_modelo_treinado_o_ze_sobe_e_nunca_dispara(tmp_path: Path) -> None:
     """Instalação nova: sem a voz treinada, atende pelo teclado e pelo painel."""
-    from jarvis.voz.ativacao import SemAtivacao, carregar_modelo
+    from zervis.voz.ativacao import SemAtivacao, carregar_modelo
 
     modelo = carregar_modelo(tmp_path / "nao-existe.npz")
     assert isinstance(modelo, SemAtivacao) and not modelo.treinada

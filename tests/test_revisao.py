@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-from jarvis.cerebro.ferramentas import descritor, mostrador
-from jarvis.habilidades import revisao
-from jarvis.habilidades.skills import Skills
-from jarvis.memoria.curta import Memoria
+from zervis.cerebro.ferramentas import descritor, mostrador
+from zervis.habilidades import revisao
+from zervis.habilidades.skills import Skills
+from zervis.memoria.curta import Memoria
 
 SKILL = (
     "---\nname: resumo-falado\ndescription: Como fechar respostas longas.\n---\n"

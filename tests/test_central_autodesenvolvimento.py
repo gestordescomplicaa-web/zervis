@@ -11,13 +11,13 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import contas
-from jarvis.oficina.central import Central
-from jarvis.oficina.manutencao import Manutencao
-from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.senha import SO_NO_PC
-from jarvis.portal.servidor import PedidoInvalido
+from zervis.cerebro import contas
+from zervis.oficina.central import Central
+from zervis.oficina.manutencao import Manutencao
+from zervis.oficina.sessoes import Sessao, SessaoErro, Sessoes
+from zervis.portal.acoes import Acoes
+from zervis.portal.senha import SO_NO_PC
+from zervis.portal.servidor import PedidoInvalido
 
 
 def git(pasta: Path, *args: str) -> str:

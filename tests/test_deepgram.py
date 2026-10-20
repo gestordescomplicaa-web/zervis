@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro, ler_chave, motivo
+from zervis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro, ler_chave, motivo
 
 
 def _resultado(texto: str, final: bool, do_finalize: bool = False) -> str:

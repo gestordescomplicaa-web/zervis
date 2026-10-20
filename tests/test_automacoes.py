@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 
-from jarvis.automacoes.agenda import FUSO, AgendaInvalida, interpretar
-from jarvis.automacoes.calendario import Calendario
-from jarvis.automacoes.jobs import JobErro, Jobs
-from jarvis.avisos.fila import Fila
+from zervis.automacoes.agenda import FUSO, AgendaInvalida, interpretar
+from zervis.automacoes.calendario import Calendario
+from zervis.automacoes.jobs import JobErro, Jobs
+from zervis.avisos.fila import Fila
 
 AGORA = datetime(2026, 10, 6, 20, 50, tzinfo=FUSO)  # terça-feira
 

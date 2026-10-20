@@ -7,7 +7,7 @@ Roda no próprio computador; a câmera nunca sai da máquina.
 ## Rodar
 
 ```bash
-uv run python -m jarvis.imersivo.servidor
+uv run python -m zervis.imersivo.servidor
 ```
 
 Abra **http://127.0.0.1:8794/stage.html** no Chromium e permita a câmera. O próprio Zérvis

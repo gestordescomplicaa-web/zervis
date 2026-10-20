@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro import catalogo, omniroute
-from jarvis.cerebro.claude import ClaudeBrain
-from jarvis.cerebro.eco import Eco
-from jarvis.config import validar
+from zervis.cerebro import catalogo, omniroute
+from zervis.cerebro.claude import ClaudeBrain
+from zervis.cerebro.eco import Eco
+from zervis.config import validar
 
 
 def test_chave_vem_so_da_linha_dela(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

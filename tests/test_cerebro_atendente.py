@@ -7,14 +7,14 @@ from typing import Any
 
 import pytest
 
-from jarvis.atendimento import agente as ag
-from jarvis.atendimento import cerebro as c
-from jarvis.atendimento import ligacao as lg
-from jarvis.cerebro import rapido
+from zervis.atendimento import agente as ag
+from zervis.atendimento import cerebro as c
+from zervis.atendimento import ligacao as lg
+from zervis.cerebro import rapido
 
 
 def test_opcoes_mostram_api_so_com_chave(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("jarvis.atendimento.cerebro.shutil.which", lambda _: None)
+    monkeypatch.setattr("zervis.atendimento.cerebro.shutil.which", lambda _: None)
     monkeypatch.setattr(c, "tem_chave", lambda motor: motor == "anthropic")
     grupos = c.opcoes()
     assert [g["titulo"] for g in grupos] == ["Claude · assinatura", "Anthropic · chave de API"]
@@ -72,7 +72,7 @@ class MotorFalso:
 def test_central_pre_aquece_e_troca_a_reserva_quando_a_persona_muda(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.atendimento import central as ce
+    from zervis.atendimento import central as ce
 
     monkeypatch.setattr(lg, "voz_pronta", lambda: True)
     monkeypatch.setattr(lg, "falar_com_piper", lambda texto: b"voz:" + texto.encode())

@@ -4,10 +4,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from jarvis.avisos import central
-from jarvis.avisos.fila import Fila
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo
+from zervis.avisos import central
+from zervis.avisos.fila import Fila
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo
 
 
 def test_urgente_passa_na_frente_e_as_sessoes_saem_separadas(tmp_path: Path) -> None:

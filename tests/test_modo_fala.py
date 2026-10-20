@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.avisos import modo
-from jarvis.nucleo.estados import comando
+from zervis.avisos import modo
+from zervis.nucleo.estados import comando
 
 
 @pytest.mark.parametrize(
@@ -89,8 +89,8 @@ class _Nucleo:
 
 
 def _fim(m: str, estado: str = "parada", resumo: str = "ok") -> list[tuple[str, str]]:
-    from jarvis.nucleo.laco import Nucleo
-    from jarvis.oficina.sessoes import Sessao
+    from zervis.nucleo.laco import Nucleo
+    from zervis.oficina.sessoes import Sessao
 
     n = _Nucleo(m)
     s = Sessao("s1", "Loja", "~/projetos/loja", "claude", estado=estado)

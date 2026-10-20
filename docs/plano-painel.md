@@ -35,12 +35,12 @@ como está, como outra opção, e é o caminho futuro para óculos de realidade 
 
 ## Arquitetura
 
-- `jarvis/portal/servidor.py`: HTTP da biblioteca padrão, só em `127.0.0.1:8795`, numa thread
+- `zervis/portal/servidor.py`: HTTP da biblioteca padrão, só em `127.0.0.1:8795`, numa thread
   do serviço do Zé. Protegido contra outros sites do navegador: o `Host` precisa ser local e todo
   pedido de API leva um token por sessão, entregue só na própria página (outro site não
   consegue lê-la).
-- `jarvis/portal/acoes.py`: a ponte entre a API e o núcleo (o que ler, o que mudar).
-- `jarvis/portal/web/`: `index.html`, `painel.css`, `painel.js`.
+- `zervis/portal/acoes.py`: a ponte entre a API e o núcleo (o que ler, o que mudar).
+- `zervis/portal/web/`: `index.html`, `painel.css`, `painel.js`.
 - As escolhas da via rápida feitas no painel ficam em `~/.local/state/zervis/via-rapida.json`
   (por cima da config, como a escolha do cérebro) e valem na hora, sem reiniciar.
 

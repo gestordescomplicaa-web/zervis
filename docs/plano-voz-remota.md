@@ -39,7 +39,7 @@ não recebeu nenhuma.
    PC durante o desenvolvimento, e o mesmo código vai para a VPS na etapa 4, sem mudança.
 2. **Só o transporte muda.** O Zé entra numa sala LiveKit como participante (SDK Python `livekit`,
    só sala e faixas, sem o framework de agentes). Ativação, escuta, Deepgram, cérebro, modos de
-   fala, interrupção e Piper continuam os mesmos. A porta já existe: `jarvis/transporte/`.
+   fala, interrupção e Piper continuam os mesmos. A porta já existe: `zervis/transporte/`.
 3. **"Ei Zé" é detectado no Zé, onde quer que ele rode.** O áudio vai do dispositivo para o
    servidor do próprio usuário (PC ou VPS), não para terceiros; o Deepgram só abre depois do
    chamado, como hoje. Privacidade igual à do modo mesa.
@@ -72,7 +72,7 @@ fica ligado 24 horas e opera as sessões dos projetos que estão lá; comandar d
 
 | Peça | Onde | O que faz |
 |---|---|---|
-| `jarvis/transporte/livekit.py` | Zé | Entra na sala; recebe a faixa da pessoa em quadros de 80 ms a 16 kHz (mesma fila da `Captura` local); publica a voz do Piper numa `rtc.AudioSource` (reamostragem para 48 kHz). |
+| `zervis/transporte/livekit.py` | Zé | Entra na sala; recebe a faixa da pessoa em quadros de 80 ms a 16 kHz (mesma fila da `Captura` local); publica a voz do Piper numa `rtc.AudioSource` (reamostragem para 48 kHz). |
 | Rostos (presença generalizada) | Zé | O Zé fica ativo quando existe um rosto: janela do painel no Hyprland, interruptor "Escuta" ligado, ou dispositivo conectado na sala. Substitui a dependência exclusiva do Hyprland. |
 | `voz/token` | portal | Emite token LiveKit só com sessão do painel válida: uma sala da instalação, validade de 10 min, identidade por dispositivo, publicar só áudio. |
 | Botão "Conectar voz" | painel | Liga o microfone do navegador (`livekit-client`, Apache-2.0, vendorizado) com cancelamento de eco, anel de estado, nível do microfone, desconectar. |
@@ -127,7 +127,7 @@ fica ligado 24 horas e opera as sessões dos projetos que estão lá; comandar d
 | Do Ligatia | Para o Zé |
 |---|---|
 | `DASHBOARD/api.py` (`testar_agente_token`, softphone) | `voz/token`: identidade, sala e permissões do token |
-| `WHATSAPP_BRIDGE/bridge.py` (`AudioStream`, `AudioSource`, reamostragem) | `jarvis/transporte/livekit.py` |
+| `WHATSAPP_BRIDGE/bridge.py` (`AudioStream`, `AudioSource`, reamostragem) | `zervis/transporte/livekit.py` |
 | `DASHBOARD/static/js/01-softphone.js` | Botão "Conectar voz" e telemetria do áudio no painel |
 | Configuração do LiveKit em `stack.producao.yml` | Configuração gerada pelo Zé |
 | `CAPACIDADE-E-ESCALA-VOZ.md`, `HARDENING-VPS.md` | Dimensionamento da VPS e endurecimento |

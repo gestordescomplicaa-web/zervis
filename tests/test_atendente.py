@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.atendimento import agente as ag
-from jarvis.atendimento import ferramentas, projeto
-from jarvis.atendimento.whatsapp import Recebida
+from zervis.atendimento import agente as ag
+from zervis.atendimento import ferramentas, projeto
+from zervis.atendimento.whatsapp import Recebida
 
 
 def test_perfil_validado_e_gravado_so_para_o_dono(tmp_path: Path) -> None:
@@ -324,8 +324,8 @@ def test_painel_salva_no_rascunho_e_so_liga_publicado(
 ) -> None:
     from types import SimpleNamespace
 
-    from jarvis.portal.acoes import Acoes
-    from jarvis.portal.servidor import PedidoInvalido
+    from zervis.portal.acoes import Acoes
+    from zervis.portal.servidor import PedidoInvalido
 
     pasta = tmp_path / "dados"
     monkeypatch.setattr(ag, "PASTA", pasta)
@@ -391,10 +391,10 @@ def test_chave_de_api_pela_pagina_e_volta_ao_padrao_ao_remover(
 ) -> None:
     from types import SimpleNamespace
 
-    from jarvis.atendimento import cerebro
-    from jarvis.cerebro import rapido
-    from jarvis.portal.acoes import Acoes
-    from jarvis.portal.servidor import PedidoInvalido
+    from zervis.atendimento import cerebro
+    from zervis.cerebro import rapido
+    from zervis.portal.acoes import Acoes
+    from zervis.portal.servidor import PedidoInvalido
 
     pasta = tmp_path / "dados"
     monkeypatch.setattr(ag, "PASTA", pasta)

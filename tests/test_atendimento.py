@@ -12,8 +12,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.atendimento import whatsapp as w
-from jarvis.avisos import mensagens as m
+from zervis.atendimento import whatsapp as w
+from zervis.avisos import mensagens as m
 
 CHAT = "5511999990000@s.whatsapp.net"
 
@@ -312,8 +312,8 @@ def test_painel_mostra_o_qr_como_imagem_e_exige_confirmacao_para_desconectar(
 ) -> None:
     from types import SimpleNamespace
 
-    from jarvis.portal.acoes import Acoes
-    from jarvis.portal.servidor import PedidoInvalido
+    from zervis.portal.acoes import Acoes
+    from zervis.portal.servidor import PedidoInvalido
 
     desconexoes: list[bool] = []
 

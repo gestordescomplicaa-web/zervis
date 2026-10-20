@@ -8,7 +8,7 @@ Data: 06/10/2026. O que entra no projeto novo, de onde vem, em que estado está 
 |---|---|---|
 | Zé atual (`VIBE-CODING/jarvis`) | nosso | Copiar e adaptar livremente. |
 | Hermes Agent (`~/.hermes/hermes-agent`) | **MIT** | Copiar trechos com aviso de autoria (cabeçalho citando Nous Research + MIT) em `THIRD_PARTY.md`. |
-| Barehands | **AGPL-3.0** | Embutido em `jarvis/imersivo/` (ADR 0014), com os avisos de autoria. |
+| Barehands | **AGPL-3.0** | Embutido em `zervis/imersivo/` (ADR 0014), com os avisos de autoria. |
 | backtalk, ai-visualizer (jaredrhod) | **AGPL-3.0** | Compatíveis com a licença do Zé; código copiado mantém o aviso de autoria e entra em `THIRD_PARTY.md`. |
 | Piper (`piper-tts`) | **GPL-3.0** | Dependência Python, dentro do processo (ADR 0013). |
 | ai-memory-vault (jaredrhod) | CC BY-SA 4.0 | Só ideias (estrutura de notas); se copiar texto de template, citar e manter a licença. |
@@ -29,7 +29,7 @@ Data: 06/10/2026. O que entra no projeto novo, de onde vem, em que estado está 
 | `lembrar.py` (61) | Busca no ai-memory em todos os projetos | `memoria/historico.py` | Vira ferramenta do cérebro. |
 | `brain.py` (100) | Envio ao painel do Orca + espera da resposta | **Não levar.** Substituído pelo cérebro por SDK (ADR 0002). | `speakable()` (limpeza de Markdown) vai para `voz/fala.py`. |
 | `core.py` (270) | Laço único: microfone, estados, avisos, voz | Reescrever como máquina de estados explícita | Manter as proteções: eco, autorização por palavra de ativação, uma fala por vez. |
-| `persona/ZE.md` | Regras de fala e de ação | `jarvis/persona/ZE.md` | Remover a parte "consulte o Orca pela CLI" do texto fixo; vira skill. |
+| `persona/ZE.md` | Regras de fala e de ação | `zervis/persona/ZE.md` | Remover a parte "consulte o Orca pela CLI" do texto fixo; vira skill. |
 | Skill `fala-natural` | Resumo falado no fim das respostas das sessões | Fica no projeto onde as sessões rodam | O Zé lê o bloco "Resumo falado:" dos avisos. |
 | `hermes-monitor/orca_monitor.py` | Redutor de estado das sessões do Orca | `oficina/monitor.py` | Testado; manter. |
 | `hermes-monitor/calendar_monitor.py` | Leitura da agenda do Omarchy | `automacoes/fontes/agenda.py` | Reativar a agenda que ficou sem dono. |

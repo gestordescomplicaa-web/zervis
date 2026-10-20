@@ -11,8 +11,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.memoria import aimemory
-from jarvis.preparar import Modelo, PrepararErro
+from zervis.memoria import aimemory
+from zervis.preparar import Modelo, PrepararErro
 
 
 def pacote(arquivos: dict[str, bytes]) -> bytes:

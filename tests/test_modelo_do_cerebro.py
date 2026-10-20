@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import catalogo
-from jarvis.config import carregar
-from jarvis.nucleo.laco import Nucleo
+from zervis.cerebro import catalogo
+from zervis.config import carregar
+from zervis.nucleo.laco import Nucleo
 
 
 def test_escolha_guardada_vale_sobre_a_config(tmp_path: Path) -> None:

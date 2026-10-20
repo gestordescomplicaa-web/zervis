@@ -6,9 +6,9 @@
 # Exemplo: deploy/publicar-modelos.sh minha-conta/zervis-modelos modelos-1
 #
 # Antes de subir, cada arquivo é conferido contra a impressão digital (SHA-256) fixa em
-# jarvis/preparar.py: só vai o que o projeto já testou. O repositório precisa ser PÚBLICO para o
+# zervis/preparar.py: só vai o que o projeto já testou. O repositório precisa ser PÚBLICO para o
 # download funcionar sem login; num privado o Zé cai para a fonte original. Depois de publicar,
-# o endereço impresso no fim vai em ESPELHO (jarvis/preparar.py) ou em ZE_MODELOS_URL.
+# o endereço impresso no fim vai em ESPELHO (zervis/preparar.py) ou em ZE_MODELOS_URL.
 #   MODELOS=<pasta>      onde estão os modelos (padrão: a pasta de dados do Zé)
 #   ZE_SIMULAR=1         confere tudo e mostra o que faria, sem publicar
 set -eu
@@ -34,13 +34,13 @@ AQUI=$(cd "$(dirname "$0")/.." && pwd)
 PASTA=${MODELOS:-${XDG_DATA_HOME:-$HOME/.local/share}/zervis/modelos}
 command -v gh >/dev/null || falta "o CLI gh (https://cli.github.com), logado com gh auth login."
 command -v uv >/dev/null || falta "o uv (https://docs.astral.sh/uv)."
-[ -d "$PASTA" ] || falta "a pasta de modelos $PASTA. Suba o Zé uma vez (ou rode python -m jarvis.preparar)."
+[ -d "$PASTA" ] || falta "a pasta de modelos $PASTA. Suba o Zé uma vez (ou rode python -m zervis.preparar)."
 
 TEMP=$(mktemp -d)
 trap 'rm -rf "$TEMP"' EXIT INT TERM
 
 # --- conferir contra as impressões digitais do código ----------------------------------------
-(cd "$AQUI" && uv run --frozen python -m jarvis.preparar --manifesto) >"$TEMP/SHA256SUMS"
+(cd "$AQUI" && uv run --frozen python -m zervis.preparar --manifesto) >"$TEMP/SHA256SUMS"
 if ! (cd "$PASTA" && sha256sum -c "$TEMP/SHA256SUMS"); then
   falta "modelos íntegros em $PASTA: algum falta ou não bate com o SHA-256 do projeto (acima)."
 fi
@@ -106,5 +106,5 @@ else
 fi
 
 echo
-echo "Endereço do espelho (vai em ESPELHO, em jarvis/preparar.py, ou em ZE_MODELOS_URL):"
+echo "Endereço do espelho (vai em ESPELHO, em zervis/preparar.py, ou em ZE_MODELOS_URL):"
 echo "  https://github.com/$REPO/releases/download/$TAG"

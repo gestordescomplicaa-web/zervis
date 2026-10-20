@@ -6,10 +6,10 @@ from typing import Any
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
-from jarvis.cerebro.base import Fim, Texto
-from jarvis.cerebro.codex import CodexBrain
-from jarvis.cerebro.codex_mcp import FerramentasCodex
-from jarvis.cerebro.codex_rpc import codigo_erro
+from zervis.cerebro.base import Fim, Texto
+from zervis.cerebro.codex import CodexBrain
+from zervis.cerebro.codex_mcp import FerramentasCodex
+from zervis.cerebro.codex_rpc import codigo_erro
 
 
 def test_erros_de_cota_e_login_sao_codigos_sem_conteudo() -> None:
@@ -122,8 +122,8 @@ def test_fluxo_isola_fio_e_conta_cache_sem_duplicar(tmp_path: Path) -> None:
 
 
 def test_mcp_da_conta_desligado_com_chave_sem_aspas(tmp_path: Path) -> None:
-    from jarvis.cerebro.codex_rpc import comando
-    from jarvis.cerebro.contas import Conta
+    from zervis.cerebro.codex_rpc import comando
+    from zervis.cerebro.contas import Conta
 
     (tmp_path / "config.toml").write_text(
         '[mcp_servers.ai-memory]\nurl = "http://127.0.0.1:1/mcp"\n'

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro.base import EventoCerebro, Fim
-from jarvis.cerebro.claude import FUSO, ClaudeBrain, carimbo, descrever
+from zervis.cerebro.base import EventoCerebro, Fim
+from zervis.cerebro.claude import FUSO, ClaudeBrain, carimbo, descrever
 
 
 def test_carimbo_em_portugues_no_fuso_de_recife() -> None:
@@ -110,7 +110,7 @@ def test_ferramenta_de_conector_vai_para_a_atividade(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O cérebro usou o n8n pela conversa e nada apareceu na Atividade (19/10/2026)."""
-    from jarvis import atividade
+    from zervis import atividade
 
     registro = atividade.Atividade(tmp_path / "atividade.jsonl")
     monkeypatch.setattr(atividade, "PADRAO", registro)

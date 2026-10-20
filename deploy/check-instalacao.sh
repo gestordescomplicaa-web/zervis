@@ -29,10 +29,10 @@ echo "instalação do zero: $(git -C "$REPO" rev-parse --short "$COMMIT") em $TE
 uv sync --frozen
 # A instalação limpa também prepara o Go para que o make check prove o WaCalls sem depender
 # de uma ferramenta que já exista na máquina.
-GO_BIN=$(uv run python -m jarvis.atendimento.preparar_go)
+GO_BIN=$(uv run python -m zervis.atendimento.preparar_go)
 export PATH="$GO_BIN:$PATH"
 # Com HOME vazio, os testes reais de áudio precisam dos modelos, como numa instalação nova.
 # Sem essa preparação, ZE_SEM_PULOS=1 revela que a prova de features ONNX foi pulada.
-uv run python -m jarvis.preparar
+uv run python -m zervis.preparar
 make check
 echo "instalação do zero: aprovada"

@@ -6,8 +6,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from jarvis.rosto.hud import Hud
-from jarvis.rosto.teclado import Teclado
+from zervis.rosto.hud import Hud
+from zervis.rosto.teclado import Teclado
 
 
 def escrever(pasta: Path, pedido: str, texto: str, idade: float = 0.0) -> None:

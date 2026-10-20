@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from jarvis.rosto import manifesto
+from zervis.rosto import manifesto
 
 ORBES = {
     "orbs": [

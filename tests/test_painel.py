@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from jarvis.cerebro.baterias import Bateria
-from jarvis.rosto.painel import Painel
+from zervis.cerebro.baterias import Bateria
+from zervis.rosto.painel import Painel
 
 
 def test_mostra_os_cinco_com_o_ativo_e_as_baterias(tmp_path: Path) -> None:
