@@ -80,3 +80,6 @@ sem a pessoa intervir no meio.
   escolhe os conectores dentro da sessão ("Conectores", na criação e no topo), e o vínculo passa
   a ser pelo caminho completo da pasta (o nome sozinho continua valendo para os antigos). O MCP
   do n8n conectou na máquina real.
+- 19/10/2026: conector ligado a projeto sai da conversa com o Zé e fica só nas sessões do
+  projeto ("Também na conversa" o traz de volta); a conversa acha a sessão pelos conectores de
+  cada uma. As chamadas a MCPs externos pela conversa entram na Atividade.

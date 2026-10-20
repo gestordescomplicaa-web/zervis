@@ -1336,3 +1336,36 @@ def test_sessao_escolhe_os_conectores_do_projeto(tmp_path: Path) -> None:
     assert "Também em: loja-do-joao" in texto and "Todos os projetos" in texto
     assert travado == "True"  # o de todos os projetos não sai por uma sessão
     assert salvos == [{"id": "sessao1", "nomes": ["docs", "n8n-joao"]}]
+
+
+def test_conector_de_projeto_pode_valer_tambem_na_conversa(tmp_path: Path) -> None:
+    """O conector de um cliente sai da conversa com o Zé (19/10/2026); a chave o traz de volta."""
+    salvos: list[dict[str, Any]] = []
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            geral = await nav.avaliar(
+                "(() => { const d = document.querySelector('[data-detalhes=notion]');"
+                " d.open = true; return d.innerText; })()"
+            )
+            await nav.avaliar(
+                "document.querySelector('[data-detalhes=crm]').open = true;"
+                "document.querySelector('[data-mudar=conector-conversa][data-nome=crm]').click()"
+            )
+            await asyncio.sleep(0.6)
+            texto = await nav.avaliar("document.body.innerText") or ""
+            assert not nav.erros, nav.erros
+            return str(geral), str(texto)
+
+    with _painel(tmp_path, extras={"conector/salvar": salvar}) as (depuracao, endereco):
+        geral, texto = asyncio.run(conferir(depuracao, endereco))
+    assert "Sempre" in geral  # sem projeto, já está na conversa
+    assert "Vale também na conversa." in texto
+    (enviado,) = salvos
+    assert (enviado["nome"], enviado["conversa"], enviado["projetos"]) == ("crm", True, ["loja"])

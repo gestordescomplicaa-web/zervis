@@ -56,6 +56,7 @@ CHAVES = {
     "livres",
     "bloqueadas",
     "projetos",
+    "conversa",
     "oauth",
     "ligado",
 }
@@ -231,6 +232,31 @@ def carregar(
     if externos.servidores and avisar:
         log.info("MCPs externos ligados: %s", ", ".join(externos.servidores))
     return externos
+
+
+def para_conversa(
+    caminho: Path = CAMINHO,
+    env: dict[str, str] | None = None,
+    painel: Path | None = None,
+    avisar: bool = True,
+) -> Externos:
+    """Os conectores da conversa com o Zé: os sem projeto (gerais) e os marcados "também na
+    conversa". O de um cliente fica só nas sessões dele: pela voz, com cinco n8n ligados, o
+    cérebro teria de adivinhar de qual se fala, e as ferramentas de todos iriam em todo turno."""
+    blocos = _blocos(caminho, painel)
+    todos = carregar(caminho, env, painel, avisar)
+    escolhidos = [
+        nome
+        for nome, (bloco, _origem) in blocos.items()
+        if not bloco.get("projetos") or bloco.get("conversa") is True
+    ]
+    prefixos = tuple(f"mcp__{nome}__" for nome in escolhidos)
+    return Externos(
+        servidores={n: c for n, c in todos.servidores.items() if n in escolhidos},
+        livres=[f for f in todos.livres if f.startswith(prefixos)],
+        bloqueadas=[f for f in todos.bloqueadas if f.startswith(prefixos)],
+        nomes={k: v for k, v in todos.nomes.items() if v in escolhidos},
+    )
 
 
 def vale_no_projeto(projetos: list[str], pasta: Path) -> bool:

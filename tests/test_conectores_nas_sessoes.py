@@ -185,3 +185,54 @@ def test_colar_o_mesmo_json_para_outro_cliente_pede_outro_nome(
     assert conectores.importar(colado, "docs-maria", painel=painel, caminho=toml, novo=True) == [
         "docs-maria"
     ]
+
+
+# --- a conversa com o Zé (19/10/2026): o conector de um cliente fica nas sessões dele ---------
+
+
+def test_conversa_recebe_so_os_gerais_e_os_marcados(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    assert set(mcp_externo.para_conversa(toml, {}, painel).servidores) == {"pessoal"}
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["conversa"] is False
+    conectores.salvar("erp-loja", {**_dados(erp), "conversa": True}, painel, toml)
+    conversa = mcp_externo.para_conversa(toml, {}, painel)
+    assert set(conversa.servidores) == {"pessoal", "erp-loja"}
+    assert conversa.livres == ["mcp__erp-loja__listar_pedidos", "mcp__pessoal__ver"]
+    assert conversa.bloqueadas == ["mcp__erp-loja__apagar_pedido"]
+    # Tirado do último projeto, volta a ser geral, e a marca some.
+    conectores.ligar_no_projeto(Path("/clientes/loja"), [], painel=painel, caminho=toml)
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["projetos"] == [] and erp["conversa"] is True
+    assert "conversa" not in json.loads(painel.read_text())["servidores"]["erp-loja"]
+
+
+def test_colar_de_novo_mantem_a_marca_da_conversa(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    conectores.salvar("erp-loja", {**_dados(erp), "conversa": True}, painel, toml)
+    colado = '{"mcpServers": {"x": {"command": "npx", "args": ["-y", "erp-mcp@2"]}}}'
+    conectores.importar(colado, "erp-loja", painel=painel, caminho=toml)
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["conversa"] is True and erp["argumentos"] == ["-y", "erp-mcp@2"]
+
+
+def test_sessoes_listar_mostra_os_conectores_de_cada_projeto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from jarvis.cerebro.ferramentas import sessoes as ferramentas_sessoes
+
+    def do_projeto(pasta: Path) -> list[dict[str, object]]:
+        marcado = pasta.name == "loja"
+        return [{"nome": "n8n-loja", "marcado": marcado}, {"nome": "docs", "marcado": True}]
+
+    monkeypatch.setattr(conectores, "do_projeto", do_projeto)
+    assert ferramentas_sessoes._conectores("/clientes/loja") == ["n8n-loja", "docs"]
+    assert ferramentas_sessoes._conectores("/clientes/padaria") == ["docs"]
+
+
+def _dados(c: dict[str, object]) -> dict[str, object]:
+    """O conector como o painel manda salvar, a partir do que a lista mostra."""
+    chaves = ("tipo", "comando", "argumentos", "url", "ambiente", "cabecalhos", "livres",
+              "bloqueadas", "projetos")  # fmt: skip
+    return {k: c[k] for k in chaves}

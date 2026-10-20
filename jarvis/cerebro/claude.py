@@ -199,9 +199,7 @@ class ClaudeBrain:
             disallowed_tools=list(self.bloqueadas),
             mcp_servers=self.mcp,
             can_use_tool=self._pode_usar,
-            hooks={"PostToolUse": [HookMatcher(hooks=[self._depois_da_ferramenta])]}
-            if self.depois is not None
-            else None,
+            hooks={"PostToolUse": [HookMatcher(hooks=[self._depois_da_ferramenta])]},
             permission_mode="default",
             setting_sources=[],
             strict_mcp_config=True,
@@ -221,7 +219,15 @@ class ClaudeBrain:
     async def _depois_da_ferramenta(
         self, entrada: HookInput, _id: str | None, _contexto: HookContext
     ) -> SyncHookJSONOutput:
-        if self.depois is None or entrada["hook_event_name"] != "PostToolUse":
+        if entrada["hook_event_name"] != "PostToolUse":
+            return {}
+        try:
+            atividade.registrar_externa(
+                entrada["tool_name"], entrada.get("tool_input"), entrada["tool_response"]
+            )
+        except Exception:
+            log.exception("registro de %s na atividade falhou", entrada["tool_name"])
+        if self.depois is None:
             return {}
         try:
             novo = self.depois(entrada["tool_name"], entrada["tool_response"])

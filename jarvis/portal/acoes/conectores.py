@@ -23,7 +23,7 @@ class AcoesConectores(Pagina):
         """Os conectores no disco diferem dos que o cérebro usa: o Zé cadastrou um pela conversa
         ou o mcp.toml mudou (o painel não viu a mudança acontecer)."""
         try:
-            no_disco = mcp_externo.carregar(
+            no_disco = mcp_externo.para_conversa(
                 mcp_externo.CAMINHO, painel=mcp_externo.PAINEL, avisar=False
             )
         except mcp_externo.McpInvalido:

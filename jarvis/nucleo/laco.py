@@ -405,7 +405,7 @@ class Nucleo(
         )
         servidor = ferramentas.servidor(self.proprias)
         try:
-            externos = mcp_externo.carregar(painel=mcp_externo.PAINEL)
+            externos = mcp_externo.para_conversa(painel=mcp_externo.PAINEL)
         except mcp_externo.McpInvalido as erro:
             log.error("MCPs externos ignorados: %s", erro)
             self._erro(f"mcp.toml: {erro}")

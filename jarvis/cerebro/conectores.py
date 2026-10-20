@@ -83,6 +83,7 @@ def listar(
                 "livres": bloco.get("livres", []),
                 "bloqueadas": bloco.get("bloqueadas", []),
                 "projetos": bloco.get("projetos", []),
+                "conversa": not bloco.get("projetos") or bloco.get("conversa") is True,
                 "oauth": bloco.get("oauth") is True,
                 "conectado": bloco.get("oauth") is True and mcp_oauth.PADRAO.conectado(nome),
                 "app_proprio": mcp_oauth.PADRAO.cliente_proprio(nome) is not None,
@@ -154,6 +155,8 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
         if not all(p == mcp_externo.TODOS or _projeto_valido(p) for p in projetos):
             raise McpInvalido("projeto: o nome da pasta do projeto, ou * para todos")
         bloco["projetos"] = projetos
+    if dados.get("conversa") is True and bloco.get("projetos"):
+        bloco["conversa"] = True  # sem projetos, ele já está na conversa
     if set(bloco.get("livres", [])) & set(bloco.get("bloqueadas", [])):
         raise McpInvalido("uma ferramenta não pode ser livre e bloqueada")
     if _tem_segredo(bloco.get("argumentos", []), bloco.get("url", "")):
@@ -289,6 +292,7 @@ def ligar_no_projeto(
             servidor["projetos"] = projetos
         else:
             servidor.pop("projetos", None)
+            servidor.pop("conversa", None)
     _gravar_painel(painel, atual)
     return [c["nome"] for c in do_projeto(pasta, caminho, painel) if c["marcado"]]
 
@@ -424,6 +428,7 @@ def importar(
             livres=anterior.get("livres", []),
             bloqueadas=anterior.get("bloqueadas", []),
             projetos=projetos if projetos is not None else anterior.get("projetos", []),
+            conversa=anterior.get("conversa") is True,
         )
         salvar(alvo, dados, painel, caminho)
         for variavel, valor in segredos.items():

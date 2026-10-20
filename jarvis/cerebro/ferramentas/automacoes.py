@@ -40,8 +40,9 @@ def ferramentas(jobs: Jobs | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "automacao_lembrete",
-        "Agenda um lembrete: na hora, o texto é falado ao usuário (sem gastar modelo). "
-        + quando_doc,
+        "Agenda um lembrete: na hora, o texto é falado ao usuário (sem gastar modelo). O lembrete "
+        "só fala o texto, não confere nada: para saber quando um n8n cai ou volta, não crie "
+        "lembrete, o vigia do n8n já avisa as duas coisas sozinho. " + quando_doc,
         esquema_job,
     )
     async def automacao_lembrete(args: dict[str, Any]) -> dict[str, Any]:
