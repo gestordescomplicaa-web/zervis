@@ -31,6 +31,6 @@ def test_nada_de_quem_escreveu_o_ze_no_codigo() -> None:
     arquivos = [a for ext in extensoes for a in (RAIZ / "jarvis").rglob(f"*.{ext}")]
     for arquivo in arquivos:
         texto = arquivo.read_text()
-        achados = [p for p in pessoais if p in texto]
+        achados = [p for p in pessoais if p.lower() in texto.lower()]  # "gabriel" também
         achados += re.findall(r"gdautomacao(?!\.ia)", texto)
         assert not achados, arquivo

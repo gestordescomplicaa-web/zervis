@@ -54,7 +54,7 @@ def linha_do_tempo(
             item["nota_do_dia"] = nota
         elif turnos:
             item["conversas"] = len(turnos)
-            item["primeiros_pedidos"] = [f"{t.em:%H:%M} {t.gabriel[:120]}" for t in turnos[:6]]
+            item["primeiros_pedidos"] = [f"{t.em:%H:%M} {t.pessoa[:120]}" for t in turnos[:6]]
         if eventos:
             item["eventos"] = eventos
         if len(item) > 1:
@@ -67,7 +67,7 @@ def conversa_do_dia(conversas: Conversas, dia: date, busca: str = "") -> str:
     termos = [t.casefold() for t in busca.split() if len(t) > 2]
     linhas = []
     for t in conversas.do_dia(dia):
-        bloco = f"[{t.em:%H:%M}] {usuario.PERFIL.rotulo}: {t.gabriel}\n[{t.em:%H:%M}] Zé: {t.ze}"
+        bloco = f"[{t.em:%H:%M}] {usuario.PERFIL.rotulo}: {t.pessoa}\n[{t.em:%H:%M}] Zé: {t.ze}"
         if not termos or any(x in bloco.casefold() for x in termos):
             linhas.append(bloco)
     texto = "\n".join(linhas) or "Nenhuma conversa nesse dia" + (

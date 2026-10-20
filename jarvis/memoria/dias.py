@@ -65,7 +65,7 @@ class Dias:
         inicio = datetime.combine(dia, time(0), FUSO)
         # Cada fala encurtada: um dia longo cabe inteiro, da manhã à noite, no que o modelo lê.
         partes = [
-            f"[{t.em:%H:%M}] {usuario.PERFIL.rotulo}: {_curta(t.gabriel, 220)}\n"
+            f"[{t.em:%H:%M}] {usuario.PERFIL.rotulo}: {_curta(t.pessoa, 220)}\n"
             f"[{t.em:%H:%M}] Zé: {_curta(t.ze, 220)}"
             for t in self.conversas.do_dia(dia)
         ]

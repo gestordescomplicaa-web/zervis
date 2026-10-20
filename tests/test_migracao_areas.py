@@ -19,7 +19,11 @@ def test_importa_conversas_linha_atividade_e_preserva_busca(tmp_path: Path) -> N
     c.mkdir()
     (c / "2026-10-14.jsonl").write_text(
         json.dumps(
-            {"em": "2026-10-14T10:00:00-03:00", "gabriel": "cadê a proposta?", "ze": "Em revisão."}
+            {
+                "em": "2026-10-14T10:00:00-03:00",
+                "fala_antiga": "cadê a proposta?",
+                "ze": "Em revisão.",
+            }
         )
         + "\n"
     )

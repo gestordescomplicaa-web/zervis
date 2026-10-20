@@ -49,7 +49,7 @@ def test_cada_fala_fica_com_a_hora_e_o_dia_vira_pagina(tmp_path: Path) -> None:
     c.registrar("Que horas são?", "São dez da manhã.", quando(8, 10, 2))
     c.registrar("E amanhã?", "Quinta.", quando(8, 11, 30))
     c.registrar("Bom dia", "Bom dia!", quando(9, 8))
-    assert [t.gabriel for t in c.do_dia(date(2026, 10, 8))] == ["Que horas são?", "E amanhã?"]
+    assert [t.pessoa for t in c.do_dia(date(2026, 10, 8))] == ["Que horas são?", "E amanhã?"]
     assert c.dias() == [date(2026, 10, 8), date(2026, 10, 9)]
     pagina = c.pagina(date(2026, 10, 8))
     assert pagina.startswith("# Conversas com o Zé — quinta-feira, 08/10/2026")
@@ -164,3 +164,23 @@ def test_a_busca_ve_as_paginas_do_ze_primeiro(tmp_path: Path) -> None:
             "INSERT INTO pages VALUES (1, 2, 100);"
         )
     assert historico.projetos(banco) == ["Zé", "VIBE-CODING"]
+
+
+def test_conversa_gravada_no_formato_antigo_continua_legivel(tmp_path: Path) -> None:
+    """Antes de 20/10/2026, a fala de quem usa ficava sob outra chave: ela continua sendo lida, e
+    as falas novas vão como "pessoa"."""
+    from jarvis.dados.documentos import Documentos
+
+    pasta = tmp_path / "conversas"
+    antigo = {
+        "em": "2026-10-14T10:00:00-03:00",
+        "fala_antiga": "cadê a proposta?",
+        "ze": "Em revisão.",
+    }
+    Documentos(pasta / "conversas.db").guardar("conversas", {**antigo, "dia": "2026-10-14"})
+    c = Conversas(pasta)
+    (turno,) = c.do_dia(date(2026, 10, 14))
+    assert (turno.pessoa, turno.ze) == ("cadê a proposta?", "Em revisão.")
+    assert c.buscar("proposta")[0].pessoa == "cadê a proposta?"
+    novo = c.registrar("e o contrato?", "Assinado.")
+    assert '"pessoa": "e o contrato?"' in novo.para_json()

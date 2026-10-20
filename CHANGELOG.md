@@ -7,6 +7,9 @@
   resposta); o cérebro de verdade com as ferramentas simuladas, repetições para a taxa de
   acerto, relatório comparado com a rodada anterior e rodadas sem resposta fora da nota.
   Referência de 20/10/2026: 91% em 11 cenários.
+- Conversas: a fala de quem usa passa a ser gravada como `pessoa`. Antes, a chave era o nome de
+  uma pessoa, no código público. As conversas já gravadas continuam legíveis, sem migração, e o
+  teste de dados pessoais passa a procurar sem distinguir maiúsculas.
 
 ## 0.1.0 (19/10/2026)
 

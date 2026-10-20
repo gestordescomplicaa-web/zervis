@@ -143,7 +143,7 @@ class ServicoMemoria:
 
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
-        pedido = turno["gabriel"]
+        pedido = turno["pessoa"]
         if self.n.voz.muda and turno["jarvis"]:
             self.n._mostrar(turno["jarvis"])
         atividade.PADRAO.registrar("pedido", pedido, resposta=turno["jarvis"])
@@ -151,7 +151,7 @@ class ServicoMemoria:
             atividade.PADRAO.registrar("correcao", pedido)
         try:
             feito = self.n.conversas.registrar(
-                turno["gabriel"], turno["jarvis"], self.n._pedido_quando
+                turno["pessoa"], turno["jarvis"], self.n._pedido_quando
             )
         except OSError as erro:
             log.warning("conversas: %s", erro)
