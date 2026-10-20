@@ -1,0 +1,16 @@
+nome = "Manda uma tarefa para a sessão certa e diz que avisa"
+pedido = "Manda a sessão da Loja do João rodar os testes e me avisar se algo quebrar."
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false,
+  "conectores": ["n8n-joao"]}]'''
+sessao_enviar = '{"enviado": true, "sessao": "Loja do João", "estado": "trabalhando"}'
+
+[espera]
+usa = ["sessao_enviar"]
+nao_usa = ["sessao_criar"]
+entrada = { sessao_enviar = ["teste"] }
+entrada_alguma = { sessao_enviar = ["s1", "loja"] }
+resposta_alguma = ["avis"]

@@ -1,0 +1,18 @@
+# Duas sessões com n8n: o Zé pergunta qual, dizendo os nomes (pedido de 19/10/2026).
+nome = "Pergunta sobre o n8n com duas sessões: pergunta qual"
+pedido = "Quais fluxos estão ativos no n8n?"
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false,
+  "conectores": ["n8n-joao"]},
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/home/ana/clientes/padaria-maria", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Publiquei o fluxo de encomendas.", "copia_isolada": false,
+  "conectores": ["n8n-maria"]}]'''
+
+[espera]
+usa = ["sessoes_listar"]
+nao_usa = ["sessao_enviar", "sessao_criar"]
+pergunta = true
+resposta = ["Jo[aã]o", "Maria"]
