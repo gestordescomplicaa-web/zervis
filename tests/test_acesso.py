@@ -78,7 +78,7 @@ def test_o_fuso_do_perfil_vale_quando_nao_ha_variavel(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(usuario, "ARQUIVO", tmp_path / "perfil.json")
-    monkeypatch.delenv("JARVIS_FUSO")
+    monkeypatch.delenv("ZERVIS_FUSO")
     monkeypatch.delenv("TZ", raising=False)
     usuario.gravar(usuario.Perfil("Ana", "", "Europe/Lisbon"))
     assert fuso.local().key == "Europe/Lisbon"

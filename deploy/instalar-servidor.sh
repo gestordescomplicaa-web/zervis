@@ -13,7 +13,7 @@ case "${1:-}" in
   *) echo "Uso: $0 [--pc]" >&2; exit 1 ;;
 esac
 UV_VERSAO=0.11.32
-PORTA=${JARVIS_PAINEL_PORTA:-8795}
+PORTA=${ZERVIS_PAINEL_PORTA:-${JARVIS_PAINEL_PORTA:-8795}}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 USUARIO=$(id -un)
 

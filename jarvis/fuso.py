@@ -1,4 +1,4 @@
-"""O fuso de quem usa o Zé: `JARVIS_FUSO`, o do perfil, `TZ` ou o do sistema; UTC se nada servir.
+"""O fuso de quem usa o Zé: `ZERVIS_FUSO`, o do perfil, `TZ` ou o do sistema; UTC se nada servir.
 
 Nada de fuso fixo no código: a hora das automações, das conversas e da linha do tempo é a da
 máquina onde o Zé roda (no Linux, `/etc/localtime` aponta para o fuso escolhido na instalação).
@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
-from jarvis import usuario
+from jarvis import ambiente, usuario
 
 
 def _do_sistema() -> str:
@@ -43,7 +43,7 @@ def do_sistema() -> ZoneInfo:
 
 def local() -> ZoneInfo:
     return _primeiro(
-        os.environ.get("JARVIS_FUSO", ""),
+        ambiente.ler("FUSO"),
         usuario.ler().fuso,
         os.environ.get("TZ", ""),
         _do_sistema(),

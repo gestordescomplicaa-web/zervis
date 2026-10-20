@@ -30,7 +30,7 @@ journalctl --user -u zervis -f
 ```
 
 Para manter uma porta já usada pela instalação, use por exemplo
-`JARVIS_PAINEL_PORTA=8796 deploy/instalar-pc.sh`: o serviço, o atalho e a conferência do painel
+`ZERVIS_PAINEL_PORTA=8796 deploy/instalar-pc.sh`: o serviço, o atalho e a conferência do painel
 usam a mesma porta. A escolha automática de porta continua prevista no ADR 0034.
 
 ## O comando `zervis`

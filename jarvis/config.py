@@ -108,7 +108,7 @@ PADRAO: dict[str, dict[str, Any]] = {
     # motor: plano (Claude pela assinatura), anthropic, openai, openrouter ou ponte (qualquer
     # proxy no formato OpenAI; endereco obrigatório). A chave vem de arquivo_chave (chmod 600)
     # ou da variável do motor (ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY,
-    # JARVIS_PONTE_API_KEY); nunca desta config. raciocinio: só para GPT-5 e série "o".
+    # ZERVIS_PONTE_API_KEY); nunca desta config. raciocinio: só para GPT-5 e série "o".
     # espera_s: sem a primeira palavra nesse tempo, o pedido vai ao cérebro completo.
     "via_rapida": {
         "ligada": True,

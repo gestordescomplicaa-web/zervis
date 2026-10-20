@@ -22,7 +22,7 @@ mkdir -p "$TEMP/zervis" "$TEMP/home"
 git -C "$REPO" archive "$COMMIT" | tar -x -C "$TEMP/zervis"
 export HOME="$TEMP/home"
 export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share" XDG_STATE_HOME="$HOME/.local/state"
-unset JARVIS_RAIZ JARVIS_PERFIL VIRTUAL_ENV
+unset ZERVIS_RAIZ ZERVIS_PERFIL JARVIS_RAIZ JARVIS_PERFIL VIRTUAL_ENV
 
 cd "$TEMP/zervis"
 echo "instalação do zero: $(git -C "$REPO" rev-parse --short "$COMMIT") em $TEMP"

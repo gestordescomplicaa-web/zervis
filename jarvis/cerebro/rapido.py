@@ -85,8 +85,18 @@ VARIAVEIS = {
     "openai": "OPENAI_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
-    "ponte": "JARVIS_PONTE_API_KEY",
+    "ponte": "ZERVIS_PONTE_API_KEY",
 }
+LEGADO = {"ponte": "JARVIS_PONTE_API_KEY"}  # o nome até 20/10/2026, ainda aceito
+
+
+def _do_ambiente(motor: str) -> str:
+    for variavel in (VARIAVEIS.get(motor, ""), LEGADO.get(motor, "")):
+        if variavel and (valor := os.environ.get(variavel, "").strip()):
+            return valor
+    return ""
+
+
 MOTORES = {"plano", "codex", "contas", "openai", "openrouter", "anthropic", "ponte", "omniroute"}
 _FIM = object()
 
@@ -143,7 +153,7 @@ def arquivo_da_chave(motor: str, pasta: Path | None = None) -> Path:
 
 def ler_chave(motor: str, arquivo: str, pasta: Path | None = None) -> str | None:
     """A variável de ambiente, o arquivo da config ou o arquivo que o painel gravou."""
-    if valor := os.environ.get(VARIAVEIS.get(motor, ""), "").strip():
+    if valor := _do_ambiente(motor):
         return valor
     caminho = Path(arquivo).expanduser() if arquivo else None
     if caminho is None and motor in VARIAVEIS:
@@ -181,7 +191,7 @@ def situacao_da_chave(motor: str, arquivo: str = "", pasta: Path | None = None) 
     if motor not in VARIAVEIS:
         return {"usa": False}
     chave = ler_chave(motor, arquivo, pasta)
-    if os.environ.get(VARIAVEIS[motor], "").strip():
+    if _do_ambiente(motor):
         origem = "ambiente"
     elif arquivo:
         origem = "config"

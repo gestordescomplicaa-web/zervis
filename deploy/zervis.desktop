@@ -3,7 +3,7 @@ Type=Application
 Name=Zérvis
 GenericName=Assistente pessoal
 Comment=Painel do Zé
-Exec=env JARVIS_PAINEL_PORTA=@PORTA@ "@REPO@/deploy/abrir-painel.sh"
+Exec=env ZERVIS_PAINEL_PORTA=@PORTA@ "@REPO@/deploy/abrir-painel.sh"
 Icon=@ICONE@
 Terminal=false
 Categories=Utility;

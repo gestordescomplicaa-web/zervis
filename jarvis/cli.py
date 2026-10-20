@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from jarvis import __version__
+from jarvis import __version__, ambiente
 
 REPO = Path(__file__).resolve().parents[1]
 SERVICO = "zervis"
@@ -65,11 +65,11 @@ def comando() -> Path:
 def porta() -> int:
     """A porta do serviço instalado (o `make instalar` grava na unidade), senão a do ambiente."""
     try:
-        if achado := re.search(r"JARVIS_PAINEL_PORTA=(\d+)", unidade().read_text()):
+        if achado := re.search(r"(?:ZERVIS|JARVIS)_PAINEL_PORTA=(\d+)", unidade().read_text()):
             return int(achado.group(1))
     except OSError:
         pass
-    return int(os.environ.get("JARVIS_PAINEL_PORTA") or PORTA_PADRAO)
+    return int(ambiente.ler("PAINEL_PORTA") or PORTA_PADRAO)
 
 
 def painel_responde(numero: int) -> bool:
@@ -431,7 +431,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.acao == "logs":
         os.execvp("journalctl", ["journalctl", "--user", "-u", SERVICO, "-n", "100", "-f"])  # noqa: S606, S607
     if args.acao == "abrir":
-        os.environ["JARVIS_PAINEL_PORTA"] = str(porta())
+        os.environ[ambiente.nome("PAINEL_PORTA")] = str(porta())
         abrir = str(REPO / "deploy" / "abrir-painel.sh")
         os.execv(abrir, [abrir])  # noqa: S606
     partes.print_help()
