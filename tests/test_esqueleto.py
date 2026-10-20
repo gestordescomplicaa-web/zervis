@@ -10,7 +10,11 @@ from jarvis.__main__ import main
 
 
 def test_versao_vem_do_pyproject() -> None:
-    assert __version__ == "0.0.1"
+    import tomllib
+    from pathlib import Path
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    assert __version__ == tomllib.loads(pyproject.read_text())["project"]["version"]
 
 
 def test_main_mostra_versao(capsys: pytest.CaptureFixture[str]) -> None:

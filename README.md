@@ -177,7 +177,7 @@ túnel SSH. O passo a passo e o login do Claude e do Codex estão em [docs/vps.m
 |---|---|
 | `zervis status` | Se o serviço está de pé, a versão e o endereço do painel |
 | `zervis doctor` | Cada função, "Disponível" ou "Indisponível", com o motivo e como resolver |
-| `zervis update` | Atualiza para a versão mais nova e reinicia; se o painel não voltar, volta para a anterior |
+| `zervis update` | Atualiza para a versão publicada mais nova e reinicia; se o painel não voltar, volta para a anterior (`--desenvolvimento` segue a `master`) |
 | `zervis logs` | O registro do serviço, ao vivo |
 | `zervis abrir` | Abre o painel no navegador |
 | `zervis uninstall` | Remove o serviço, o atalho e o comando; os seus dados ficam, a não ser que você peça |

@@ -1,7 +1,8 @@
 """O comando `zervis` (ADR 0034, ponto 10): cuidar da instalação sem decorar systemctl e git.
 
 `status` (está de pé?), `doctor` (cada função, disponível ou não, com o motivo e o passo para
-resolver), `update` (atualiza e reinicia; se o painel não voltar, volta para a versão anterior),
+resolver), `update` (avança para a versão publicada mais nova, ou para a master com
+`--desenvolvimento`, e reinicia; se o painel não voltar, volta para a versão anterior),
 `logs`, `abrir` e `uninstall` (tira o serviço, o atalho e o comando; os dados ficam, a não ser
 com `--apagar-dados` e a frase de confirmação).
 
@@ -87,10 +88,12 @@ def _git(rodar: Rodar, *args: str) -> subprocess.CompletedProcess[str]:
 
 
 def versao(rodar: Rodar = rodar) -> str:
-    commit = _git(rodar, "rev-parse", "--short", "HEAD").stdout.strip()
+    """A versão do pacote e onde o código está: a etiqueta (`v0.1.0`), ou a etiqueta mais o
+    que veio depois (`v0.1.0-3-gabc1234`), ou só o commit, sem versão publicada."""
+    onde = _git(rodar, "describe", "--tags", "--always", "--match", "v[0-9]*").stdout.strip()
     sujo = _git(rodar, "status", "--porcelain").stdout.strip()
     detalhe = ", com alterações locais" if sujo else ""
-    return f"{__version__} ({commit or 'sem Git'}{detalhe})"
+    return f"{__version__} ({onde or 'sem Git'}{detalhe})"
 
 
 # --- status e doctor ---------------------------------------------------------------------------
@@ -259,14 +262,22 @@ def _esperar_painel(responde: Responde, espera_s: float, pausa: Callable[[float]
     return False
 
 
+def ultima_versao(rodar: Rodar = rodar) -> str:
+    """A etiqueta de versão mais nova (`v0.1.0`…), ou "" se nenhuma foi publicada."""
+    etiquetas = _git(rodar, "tag", "--list", "v[0-9]*", "--sort=-v:refname").stdout.split()
+    return etiquetas[0] if etiquetas else ""
+
+
 def update(
     rodar: Rodar = rodar,
     responde: Responde = painel_responde,
     espera_s: float = ESPERA_PAINEL_S,
     pausa: Callable[[float], None] = time.sleep,
+    desenvolvimento: bool = False,
 ) -> int:
-    """Avança para o código mais novo da origem, só se for um avanço limpo (sem alterações nem
-    commits locais por cima), e só fica nele se o painel voltar."""
+    """Avança para a versão publicada mais nova (ou, com `desenvolvimento`, para o código mais
+    novo da branch da origem), só se for um avanço limpo (sem alterações nem commits locais por
+    cima), e só fica nela se o painel voltar."""
     if _git(rodar, "status", "--porcelain").stdout.strip():
         print(
             "Há alterações locais no código: o update não mexe nelas. Registre-as ou descarte-as."
@@ -279,31 +290,52 @@ def update(
             "reinstale pelo git clone."
         )
         return 1
-    if _git(rodar, "fetch", "--quiet").returncode != 0:
+    if _git(rodar, "fetch", "--quiet", "--tags").returncode != 0:
         print("Sem conexão com a origem do código.")
         return 1
     antes = _git(rodar, "rev-parse", "HEAD").stdout.strip()
-    alvo = _git(rodar, "rev-parse", "@{u}").stdout.strip()
+    if desenvolvimento:
+        destino, rotulo = "@{u}", seguida.stdout.strip()
+    else:
+        if not (rotulo := ultima_versao(rodar)):
+            print(
+                "Ainda não há versão publicada. "
+                "Para seguir a master: zervis update --desenvolvimento"
+            )
+            return 0
+        destino = f"{rotulo}^{{commit}}"
+    alvo = _git(rodar, "rev-parse", destino).stdout.strip()
     if antes == alvo:
-        print(f"Já está na versão mais nova ({antes[:7]}).")
+        print(f"Já está na versão mais nova ({rotulo}).")
         return 0
-    if _git(rodar, "merge-base", "--is-ancestor", "HEAD", "@{u}").returncode != 0:
+    if (
+        not desenvolvimento
+        and _git(rodar, "merge-base", "--is-ancestor", alvo, "HEAD").returncode == 0
+    ):
+        print(
+            f"Já está à frente da versão mais nova ({rotulo}), no código em desenvolvimento. "
+            "Para seguir a master: zervis update --desenvolvimento"
+        )
+        return 0
+    if _git(rodar, "merge-base", "--is-ancestor", "HEAD", alvo).returncode != 0:
         print(
             "Há commits locais que não estão na origem (melhorias do próprio Zé, por exemplo): "
             "junte-os numa sessão de autodesenvolvimento antes de atualizar."
         )
         return 1
-    novidades = _git(rodar, "log", "--oneline", "--no-decorate", "HEAD..@{u}").stdout.splitlines()
-    print(f"Atualizando {antes[:7]} → {alvo[:7]} ({len(novidades)} mudanças):")
+    novidades = _git(
+        rodar, "log", "--oneline", "--no-decorate", f"HEAD..{alvo}"
+    ).stdout.splitlines()
+    print(f"Atualizando {antes[:7]} → {rotulo} ({len(novidades)} mudanças):")
     for linha in novidades[:8]:
         print(f"  {linha}")
-    if _git(rodar, "merge", "--ff-only", "--quiet", "@{u}").returncode != 0:
+    if _git(rodar, "merge", "--ff-only", "--quiet", alvo).returncode != 0:
         print("O avanço falhou; nada mudou.")
         return 1
     if rodar([_uv(), "sync", "--frozen", "--project", str(REPO)]).returncode == 0:
         rodar(["systemctl", "--user", "restart", SERVICO])
         if _esperar_painel(responde, espera_s, pausa):
-            print("Atualizado. O painel respondeu.")
+            print(f"Atualizado para {rotulo}. O painel respondeu.")
             return 0
         print("O painel não voltou na versão nova: voltando para a anterior.")
     else:
@@ -364,7 +396,10 @@ def main(argv: list[str] | None = None) -> int:
     sub = partes.add_subparsers(dest="acao", metavar="comando")
     sub.add_parser("status", help="se o serviço está de pé, a versão e o painel")
     sub.add_parser("doctor", help="cada função, disponível ou não, e como resolver")
-    sub.add_parser("update", help="atualiza e reinicia; volta se o painel não subir")
+    atualizar = sub.add_parser("update", help="atualiza e reinicia; volta se o painel não subir")
+    atualizar.add_argument(
+        "--desenvolvimento", action="store_true", help="segue a master, não as versões publicadas"
+    )
     sub.add_parser("logs", help="o registro do serviço, ao vivo")
     sub.add_parser("abrir", help="abre o painel")
     remover = sub.add_parser("uninstall", help="remove o serviço, o atalho e o comando")
@@ -376,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.acao == "doctor":
         return doctor()
     if args.acao == "update":
-        return update()
+        return update(desenvolvimento=args.desenvolvimento)
     if args.acao == "uninstall":
         return uninstall(args.apagar_dados)
     if args.acao == "version":

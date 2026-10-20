@@ -1,6 +1,6 @@
 [project]
 name = "zervis"
-version = "0.0.1"
+version = "0.1.0"
 description = "Zé (Zérvis): assistente pessoal local por voz, com memória, skills, automações e agentes de código."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
