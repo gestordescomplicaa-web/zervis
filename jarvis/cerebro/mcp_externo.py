@@ -9,12 +9,18 @@ Arquivo próprio, `~/.config/zervis/mcp.toml`, um bloco por servidor:
     ambiente = ["GITHUB_PERSONAL_ACCESS_TOKEN"]   # só nomes: o valor vem do ambiente do serviço
     livres = ["search_repositories"]     # ferramentas só de leitura, sem pergunta falada
     bloqueadas = ["delete_repository"]   # nem aparecem para o cérebro (e não custam tokens)
+    projetos = ["loja-do-cliente"]       # também nas sessões de código destes projetos ("*": todos)
     ligado = true
 
     [servidores.agenda]
     tipo = "http"
     url = "https://exemplo/mcp"
     cabecalhos = { Authorization = "AGENDA_AUTH" }  # nome da variável com o valor do cabeçalho
+
+    [servidores.notion]
+    tipo = "http"
+    url = "https://mcp.notion.com/mcp"
+    oauth = true                         # login pelo painel (Entrar); o Zé renova o token
 
 Segredos nunca ficam no arquivo (docs/06-qualidade.md). Toda ferramenta externa pede aprovação
 falada, menos as `livres`. Cada servidor ligado põe a descrição das ferramentas dele em todo turno:
@@ -49,8 +55,12 @@ CHAVES = {
     "cabecalhos",
     "livres",
     "bloqueadas",
+    "projetos",
+    "conversa",
+    "oauth",
     "ligado",
 }
+TODOS = "*"
 
 
 class McpInvalido(ValueError):
@@ -71,7 +81,9 @@ def _lista_de_textos(valor: Any, onde: str) -> list[str]:
     return list(valor)
 
 
-def _servidor(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[str, Any] | None:
+def _servidor(
+    nome: str, bloco: dict[str, Any], env: dict[str, str], avisar: bool = True
+) -> dict[str, Any] | None:
     desconhecidas = set(bloco) - CHAVES
     if desconhecidas:
         raise McpInvalido(f"{nome}: chave desconhecida {sorted(desconhecidas)[0]}")
@@ -83,7 +95,8 @@ def _servidor(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[str
         raise McpInvalido(f"{nome}.cabecalhos precisa ser uma tabela")
     faltando += [v for v in cabecalhos.values() if v not in env]
     if faltando:
-        log.warning("MCP %s desligado: falta a variável %s no ambiente", nome, faltando[0])
+        if avisar:
+            log.warning("MCP %s desligado: falta a variável %s no ambiente", nome, faltando[0])
         return None
     tipo = bloco.get("tipo", "stdio")
     if tipo == "stdio":
@@ -103,11 +116,36 @@ def _servidor(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[str
         local = partes.hostname in ("127.0.0.1", "localhost", "::1")
         if partes.scheme != "https" and not (partes.scheme == "http" and local):
             raise McpInvalido(f"{nome}: http precisa de https (ou http em loopback)")
+        if bloco.get("oauth") is True:
+            return _com_login(nome, avisar)
         config = {"type": "http", "url": url}
         if cabecalhos:
             config["headers"] = {k: env[v] for k, v in cabecalhos.items()}
         return config
     raise McpInvalido(f"{nome}: tipo deve ser stdio ou http")
+
+
+def _com_login(nome: str, avisar: bool) -> dict[str, Any] | None:
+    """O conector com login OAuth fala com a ponte local, que põe o token em dia (ADR 0037)."""
+    from jarvis.cerebro import mcp_oauth, mcp_ponte  # eles importam este módulo
+
+    if not mcp_oauth.PADRAO.conectado(nome):
+        if avisar:
+            log.warning("MCP %s desligado: falta entrar (Conectores)", nome)
+        return None
+    url, cabecalhos = mcp_ponte.PADRAO.endereco(nome)
+    return {"type": "http", "url": url, "headers": cabecalhos}
+
+
+def url_com_login(nome: str) -> str | None:
+    """O endereço remoto de um conector ligado com login OAuth (None se não for um)."""
+    try:
+        bloco, _origem = _blocos(CAMINHO, PAINEL).get(nome, ({}, ""))
+    except McpInvalido:
+        return None
+    if bloco.get("oauth") is not True or bloco.get("ligado", True) is False:
+        return None
+    return str(bloco.get("url", "")) or None
 
 
 def _blocos(caminho: Path, painel: Path | None) -> dict[str, tuple[dict[str, Any], str]]:
@@ -166,14 +204,19 @@ def com_segredos(nome: str, bloco: dict[str, Any], env: dict[str, str]) -> dict[
 
 
 def carregar(
-    caminho: Path = CAMINHO, env: dict[str, str] | None = None, painel: Path | None = None
+    caminho: Path = CAMINHO,
+    env: dict[str, str] | None = None,
+    painel: Path | None = None,
+    avisar: bool = True,
 ) -> Externos:
+    """Os conectores ligados, prontos para o cérebro. `avisar=False` só confere (o painel
+    compara com os que estão valendo, sem encher o registro)."""
     externos = Externos()
     base = os.environ.copy() if env is None else env
     for nome, (bloco, _origem) in _blocos(caminho, painel).items():
         if bloco.get("ligado", True) is False:
             continue
-        config = _servidor(nome, bloco, com_segredos(nome, bloco, base))
+        config = _servidor(nome, bloco, com_segredos(nome, bloco, base), avisar)
         if config is None:
             continue
         externos.servidores[nome] = config
@@ -186,6 +229,65 @@ def carregar(
             )
         externos.livres += [f"mcp__{nome}__{f}" for f in livres]
         externos.bloqueadas += [f"mcp__{nome}__{f}" for f in bloqueadas]
-    if externos.servidores:
+    if externos.servidores and avisar:
         log.info("MCPs externos ligados: %s", ", ".join(externos.servidores))
     return externos
+
+
+def para_conversa(
+    caminho: Path = CAMINHO,
+    env: dict[str, str] | None = None,
+    painel: Path | None = None,
+    avisar: bool = True,
+) -> Externos:
+    """Os conectores da conversa com o Zé: os sem projeto (gerais) e os marcados "também na
+    conversa". O de um cliente fica só nas sessões dele: pela voz, com cinco n8n ligados, o
+    cérebro teria de adivinhar de qual se fala, e as ferramentas de todos iriam em todo turno."""
+    blocos = _blocos(caminho, painel)
+    todos = carregar(caminho, env, painel, avisar)
+    escolhidos = [
+        nome
+        for nome, (bloco, _origem) in blocos.items()
+        if not bloco.get("projetos") or bloco.get("conversa") is True
+    ]
+    prefixos = tuple(f"mcp__{nome}__" for nome in escolhidos)
+    return Externos(
+        servidores={n: c for n, c in todos.servidores.items() if n in escolhidos},
+        livres=[f for f in todos.livres if f.startswith(prefixos)],
+        bloqueadas=[f for f in todos.bloqueadas if f.startswith(prefixos)],
+        nomes={k: v for k, v in todos.nomes.items() if v in escolhidos},
+    )
+
+
+def vale_no_projeto(projetos: list[str], pasta: Path) -> bool:
+    """O caminho completo isola o projeto: dois clientes com pastas de mesmo nome em lugares
+    diferentes não se misturam. O nome sozinho (sem `/`) vale como antes."""
+    return TODOS in projetos or str(pasta.resolve()) in projetos or pasta.name in projetos
+
+
+def para_projeto(
+    pasta: Path,
+    caminho: Path | None = None,
+    painel: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> Externos:
+    """Os conectores ligados que valem nas sessões de código de um projeto: os que citam a
+    pasta em `projetos` (o caminho completo, como a sessão grava; o nome, como era antes; ou
+    `*`). Sem `projetos`, o conector fica só na conversa com o Zé: o sistema de um cliente não
+    aparece no projeto de outro (ADR 0037)."""
+    caminho = CAMINHO if caminho is None else caminho
+    painel = PAINEL if painel is None else painel
+    blocos = _blocos(caminho, painel)
+    escolhidos = []
+    for nome, (bloco, _origem) in blocos.items():
+        projetos = _lista_de_textos(bloco.get("projetos", []), f"{nome}.projetos")
+        if vale_no_projeto(projetos, pasta):
+            escolhidos.append(nome)
+    todos = carregar(caminho, env, painel, avisar=False)
+    prefixos = tuple(f"mcp__{nome}__" for nome in escolhidos)
+    return Externos(
+        servidores={n: c for n, c in todos.servidores.items() if n in escolhidos},
+        livres=[f for f in todos.livres if f.startswith(prefixos)],
+        bloqueadas=[f for f in todos.bloqueadas if f.startswith(prefixos)],
+        nomes={k: v for k, v in todos.nomes.items() if v in escolhidos},
+    )

@@ -1,7 +1,5 @@
 // --- Sessões: o terminal do agente, com pasta, anexos e explorador ---
 
-
-
 let explorador = innerWidth > 1100;
 
 /** @param {boolean} mostrar */
@@ -16,7 +14,6 @@ function mostrarExplorador(mostrar) {
 matchMedia("(max-width: 1100px)").addEventListener("change", (e) => { if (e.matches && explorador) mostrarExplorador(false); });
 let abertas = new Set();
 let modoBusca = "nomes";
-
 
 const matiz = (t) => [...t].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 const inicial = (n) => esc((n.trim()[0] || "?").toUpperCase());
@@ -60,6 +57,7 @@ async function formSessao() {
     <label id="ns-campo-projeto" hidden>Nome da pasta<input id="ns-projeto" class="mono" placeholder="minha-loja" autocomplete="off" spellcheck="false"></label>
     <label class="interruptor" id="ns-campo-isolada"><input type="checkbox" id="ns-isolada"> Cópia isolada (só mexe no projeto quando você aprovar)</label>
     <div class="linha">${botao("Criar", "ns-criar", "", "principal")}<span class="resultado" id="ns-resultado"></span></div>`)}</div>`;
+  conectoresDaNovaSessao();
 }
 
 // Agente e conta da sessão, trocáveis ali mesmo; a faixa avisa quando a conta acabou.
@@ -70,9 +68,6 @@ const contasComLogin = () => contasSessao.agentes.flatMap((ag) =>
 
 // Menu de escolha próprio do painel (o <select> nativo abre com o tema do sistema, claro no Linux):
 // um botão em pílula com o valor atual e uma lista que abre para cima, com grupos e o ✓ no escolhido.
-
-
-
 
 function seletorConta(sessao) {
   const grupos = contasSessao.agentes.map((ag) => ({
@@ -160,7 +155,7 @@ async function abrirSessao(id) {
       <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}${seletorModeloSessao(sessao)}</div>
       <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
-        ${botao("Interromper", "sessao-interromper", 'id="interromper-trabalho" hidden', "discreta")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
+        ${botao("Interromper", "sessao-interromper", 'id="interromper-trabalho" hidden', "discreta")}${botao("Conectores", "sessao-conectores")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
     <div id="excluir-sessao"></div>
     <div id="interromper-sessao"></div>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>

@@ -7,8 +7,8 @@ const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que
 /** @type {Record<string, string[]>} */
 const DEPENDENCIAS = {
  modelos: ['/modulos/modelos.js'], perfil: ['/modulos/modelos.js'], configurar: ['/modulos/modelos.js'],
- sessoes: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js', '/modulos/terminal.js'],
- melhorias: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js', '/modulos/terminal.js', '/paginas/sessoes.js'],
+ sessoes: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js', '/modulos/terminal.js', '/modulos/conectores-sessao.js'],
+ melhorias: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js', '/modulos/terminal.js', '/modulos/conectores-sessao.js', '/paginas/sessoes.js'],
 };
 /** @type {Record<string, Promise<void>>} */
 const carregados = {};

@@ -1,6 +1,26 @@
 // A página Conectores (MCP), carregada sob demanda pelo painel: usa as funções dele.
 
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };
+const ESPERA_LOGIN_MS = 2000;
+const LIMITE_LOGIN_MS = 10 * 60 * 1000; // o login em andamento vale 10 minutos (mcp_oauth.py)
+let esperaLogin = 0;
+
+/** Acompanha o login até o cartão ficar Conectado: a aba do fornecedor volta ao painel e fecha. */
+function aguardarLogin(nome) {
+  clearInterval(esperaLogin);
+  const ate = Date.now() + LIMITE_LOGIN_MS;
+  esperaLogin = setInterval(async () => {
+    if (location.hash !== "#conectores" || Date.now() > ate) { clearInterval(esperaLogin); return; }
+    try {
+      const { conectores } = await api("conectores");
+      if (conectores.find((k) => k.nome === nome)?.conectado) {
+        clearInterval(esperaLogin);
+        toast("Conectado. Aplique para valer na conversa.");
+        await recarregar();
+      }
+    } catch { /* o próximo ciclo tenta de novo */ }
+  }, ESPERA_LOGIN_MS);
+}
 
 PAGINAS.conectores = async () => {
     const { conectores, pendente } = await api("conectores");
@@ -13,18 +33,39 @@ PAGINAS.conectores = async () => {
 
 let conectoresVistos = [];
 
+/** O app cadastrado à mão, para servidores que não aceitam o registro automático do login. */
+function appProprio(k, id) {
+  if (!k.oauth) return "";
+  return `<div class="linha segredo"><span>App próprio</span><span class="etiqueta ${k.app_proprio ? "bom" : ""}">${k.app_proprio ? "Guardado" : "Não usado"}</span></div>
+    <div class="linha"><label>Client ID<input class="mono" data-cliente-id="${esc(k.nome)}" autocomplete="off" spellcheck="false"></label>
+      <label>Client secret (opcional)<input type="password" class="mono" data-cliente-segredo="${esc(k.nome)}" autocomplete="off"></label>
+      ${botao("Guardar", "conector-cliente", id)}${k.app_proprio ? botao("Remover", "conector-cliente-remover", id, "discreta") : ""}</div>
+    <p class="sub">Só para servidores sem registro automático. Endereço de retorno a cadastrar no app: <span class="mono">${esc(location.origin)}/oauth/retorno</span></p>`;
+}
+
+/** Os projetos de um conector pelo nome da pasta (a sessão grava o caminho inteiro). */
+const rotulosProjetos = (projetos) => projetos.map((p) => (p === "*" ? "todos" : p.split("/").pop())).join(", ") || "nenhum";
+
 function cartaoConector(k) {
   const id = `data-nome="${esc(k.nome)}"`;
   const segredos = Object.entries(k.segredos).map(([v, tem]) => `<div class="linha segredo"><span class="mono">${esc(v)}</span>
       <span class="etiqueta ${tem ? "bom" : "alerta"}">${tem ? "guardado" : "falta"}</span>
       <input type="password" class="mono" data-segredo="${esc(v)}" placeholder="valor" autocomplete="off">${botao("Guardar", "conector-segredo", `${id} data-variavel="${esc(v)}"`)}</div>`).join("");
+  const login = k.oauth ? `<div class="linha segredo"><span>Login</span>
+      <span class="etiqueta ${k.conectado ? "bom" : "alerta"}">${k.conectado ? "Conectado" : "Não conectado"}</span>
+      ${k.conectado ? botao("Sair", "conector-sair", id) : botao("Entrar", "conector-entrar", id, "principal")}</div>
+    <div class="login-conector" data-login="${esc(k.nome)}" hidden></div>` : "";
   return `<section class="cartao conector">
-    <div class="cabeca"><h2>${esc(k.nome)}</h2><span class="etiqueta">${k.tipo === "http" ? "Remoto" : "Local"}</span>${k.origem === "arquivo" ? '<span class="etiqueta">arquivo de config</span>' : ""}
+    <div class="cabeca"><h2>${esc(k.nome)}</h2><span class="etiqueta">MCP</span><span class="etiqueta">${k.tipo === "http" ? "Remoto" : "Local"}</span>${k.origem === "arquivo" ? '<span class="etiqueta">arquivo de config</span>' : ""}
       ${liga(k.ligado, "conector", id, "Ligado")}</div>
-    ${segredos}
-    <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
+    ${segredos}${login}
+    <div class="botoes">${botao("Ferramentas", "conector-testar", id)}${k.origem === "painel" ? botao("Editar", "conector-editar", id) + xis("conector-remover", id, "Remover") : ""}<span class="resultado" data-resultado="${esc(k.nome)}"></span></div>
     <div class="ferramentas-mcp" data-ferramentas="${esc(k.nome)}" hidden></div>
-    <details class="detalhes"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p></details></section>`;
+    <details class="detalhes" data-detalhes="${esc(k.nome)}"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
+      ${appProprio(k, id)}
+      <p data-projetos="${esc(k.nome)}">Projetos: ${esc(rotulosProjetos(k.projetos))}</p>${sub("Cada sessão escolhe os conectores do seu projeto.")}
+      <div class="linha segredo"><span>Conversa com o Zé</span>${k.projetos.length && k.origem === "painel" ? liga(k.conversa, "conector-conversa", id, "Também na conversa") : `<span class="etiqueta">${k.conversa ? "Sempre" : "Não"}</span>`}</div>
+      ${sub(k.projetos.length ? "Conector de projeto vale só nas sessões dele, a não ser que valha também na conversa." : "Sem projeto, o conector vale na conversa com o Zé.")}</details></section>`;
 }
 
 function permissoes(nome, ferramentas, k) {
@@ -36,25 +77,91 @@ function permissoes(nome, ferramentas, k) {
 }
 
 const linhasDe = (t) => t.split("\n").map((l) => l.trim()).filter(Boolean);
+const listaDe = (t) => t.split(",").map((v) => v.trim()).filter(Boolean);
 
-function formConector() {
+/** O conector como o painel grava, com uma parte trocada (as permissões). */
+const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, conversa: k.conversa, oauth: k.oauth, ...troca });
+
+/** O conector em edição (os segredos guardados continuam: ficam fora do formulário). */
+/** @type {any} */
+let conectorEditado = null;
+
+const EXEMPLO_COLAR = `{
+  "mcpServers": {
+    "n8n": {
+      "type": "http",
+      "url": "https://…/mcp-server/http",
+      "headers": { "Authorization": "Bearer …" }
+    }
+  }
+}`;
+
+/** O formulário de conector: colar a configuração que o serviço fornece (o caminho comum) ou,
+ * nos detalhes, preencher os campos. Vazio para um novo; para editar `k`, o nome fica. */
+function formConector(k = null) {
+  conectorEditado = k;
+  const remoto = k ? k.tipo === "http" : true;
   const f = $("form-conector");
   f.hidden = false;
-  f.innerHTML = `<h2>Novo conector</h2>
-    <div class="linha"><label>Nome<input id="cx-nome" class="mono" placeholder="github" autocomplete="off" spellcheck="false"></label></div>
-    <div class="segmentos" role="group" aria-label="Tipo">${botao("Local", "cx-tipo", 'data-tipo="stdio" aria-pressed="true"')}${botao("Remoto", "cx-tipo", 'data-tipo="http" aria-pressed="false"')}</div>
-    <label data-local>Comando<input id="cx-comando" class="mono" placeholder="npx" autocomplete="off" spellcheck="false"></label>
-    <label data-local>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3"></textarea></label>
-    <label data-remoto hidden>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" autocomplete="off" spellcheck="false"></label>
-    <label data-remoto hidden>Cabeçalhos (um por linha: Nome: VARIAVEL)<textarea id="cx-cabecalhos" class="mono" rows="2"></textarea></label>
-    <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" autocomplete="off" spellcheck="false"></label>
-    <div class="linha">${botao("Salvar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}<span class="resultado" id="cx-resultado"></span></div>`;
-  $("cx-nome").focus();
+  f.innerHTML = `<h2>${k ? `Editar ${esc(k.nome)}` : "Novo conector"}</h2>
+    ${sub("Cole a configuração que o serviço fornece: o JSON do MCP ou o comando curl. Tokens e chaves são guardados como segredos.")}
+    <label>Nome<input id="cx-nome" class="mono" placeholder="${k ? "" : "n8n-cliente"}" value="${esc(k?.nome ?? "")}" ${k ? "readonly" : ""} autocomplete="off" spellcheck="false"></label>
+    <label>Configuração<textarea id="cx-colar" class="mono" rows="8" placeholder="${esc(EXEMPLO_COLAR)}" autocomplete="off" spellcheck="false"></textarea></label>
+    <details class="detalhes" id="cx-campos" ${k ? "open" : ""}><summary>Preencher campos</summary>
+      <div class="segmentos" role="group" aria-label="Tipo">${botao("Local", "cx-tipo", `data-tipo="stdio" aria-pressed="${!remoto}"`)}${botao("Remoto", "cx-tipo", `data-tipo="http" aria-pressed="${remoto}"`)}</div>
+      <label data-local ${remoto ? "hidden" : ""}>Comando<input id="cx-comando" class="mono" placeholder="npx" value="${esc(k?.comando ?? "")}" autocomplete="off" spellcheck="false"></label>
+      <label data-local ${remoto ? "hidden" : ""}>Argumentos (um por linha)<textarea id="cx-argumentos" class="mono" rows="3">${esc((k?.argumentos ?? []).join("\n"))}</textarea></label>
+      <label data-remoto ${remoto ? "" : "hidden"}>Endereço<input id="cx-url" class="mono" placeholder="https://…/mcp" value="${esc(k?.url ?? "")}" autocomplete="off" spellcheck="false"></label>
+      <label data-remoto ${remoto ? "" : "hidden"}>Cabeçalhos (um por linha: nome do cabeçalho e a variável com o valor)<textarea id="cx-cabecalhos" class="mono" rows="2" placeholder="Authorization: N8N_AUTH" spellcheck="false">${esc(Object.entries(k?.cabecalhos ?? {}).map(([n, v]) => `${n}: ${v}`).join("\n"))}</textarea></label>
+      <label data-remoto ${remoto ? "" : "hidden"} class="interruptor"><input type="checkbox" id="cx-oauth" ${k?.oauth ? "checked" : ""}> Login com OAuth</label>
+      <label>Segredos que ele precisa (nomes, separados por vírgula)<input id="cx-ambiente" class="mono" placeholder="GITHUB_TOKEN" value="${esc((k?.ambiente ?? []).join(", "))}" autocomplete="off" spellcheck="false"></label>
+    </details>
+    ${k ? "" : sub("Com mais de um cliente no mesmo serviço, dê um nome por cliente. Os projetos se escolhem dentro de cada sessão.")}
+    <div class="linha">${botao("Salvar e testar", "cx-salvar", "", "principal")}${botao("Cancelar", "cx-cancelar", "", "discreta")}</div>`;
+  $("cx-colar").focus();
+}
+
+const ferramentasTexto = (n) => `${n} ${n === 1 ? "ferramenta" : "ferramentas"}`;
+
+/** O resultado do teste no cartão do conector, com as permissões quando conectou. */
+function mostrarTeste(nome, r) {
+  const saida = /** @type {HTMLElement | null} */ (document.querySelector(`[data-resultado="${CSS.escape(nome)}"]`));
+  if (!saida) return;
+  saida.className = "resultado " + (r.ok ? "ok" : "erro");
+  saida.textContent = r.ok ? ferramentasTexto(r.ferramentas.length) : r.erro;
+  if (r.ok) {
+    const area = /** @type {HTMLElement} */ (document.querySelector(`[data-ferramentas="${CSS.escape(nome)}"]`));
+    area.innerHTML = permissoes(nome, r.ferramentas, conectoresVistos.find((k) => k.nome === nome));
+    area.hidden = false;
+  }
+}
+
+/** Os campos preenchidos à mão, como o painel grava. */
+function lerCampos() {
+  const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
+  // Cada linha é "Nome: VARIAVEL", cortada no primeiro ":". Linha fora disso não some calada.
+  const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => {
+    const i = l.indexOf(":");
+    if (i <= 0 || !l.slice(i + 1).trim()) throw new Error("Cabeçalho inválido. Use uma linha por cabeçalho, como Authorization: N8N_AUTH.");
+    return [l.slice(0, i).trim(), l.slice(i + 1).trim()];
+  }));
+  // Na edição, as permissões escolhidas continuam (elas não estão no formulário).
+  const permissoesAtuais = conectorEditado ? { livres: conectorEditado.livres, bloqueadas: conectorEditado.bloqueadas } : {};
+  return {
+    nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
+    argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
+    ambiente: listaDe(valorCampo("cx-ambiente").value), projetos: conectorEditado?.projetos ?? [],
+    oauth: remoto && /** @type {HTMLInputElement} */ ($("cx-oauth")).checked, ...permissoesAtuais,
+  };
 }
 
 Object.assign(ACOES, {
-  "conector-novo": formConector,
-  "cx-cancelar": () => { $("form-conector").hidden = true; },
+  "conector-novo": () => formConector(),
+  "conector-editar": (b) => {
+    formConector(conectoresVistos.find((k) => k.nome === b.dataset.nome));
+    $("form-conector").scrollIntoView({ block: "nearest" });
+  },
+  "cx-cancelar": () => { $("form-conector").hidden = true; conectorEditado = null; },
   "cx-tipo": (b) => {
     /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-acao="cx-tipo"]')).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     const remoto = b.dataset.tipo === "http";
@@ -62,14 +169,23 @@ Object.assign(ACOES, {
     /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("[data-remoto]")).forEach((x) => { x.hidden = !remoto; });
   },
   "cx-salvar": async (b) => {
-    const remoto = /** @type {HTMLElement} */ (document.querySelector('[data-acao="cx-tipo"][aria-pressed="true"]')).dataset.tipo === "http";
-    const cab = Object.fromEntries(linhasDe(valorCampo("cx-cabecalhos").value).map((l) => l.split(":").map((x) => x.trim())).filter((p) => p.length === 2));
-    await ocupado(b, () => api("conector/salvar", {
-      nome: valorCampo("cx-nome").value.trim(), tipo: remoto ? "http" : "stdio", comando: valorCampo("cx-comando").value.trim(),
-      argumentos: linhasDe(valorCampo("cx-argumentos").value), url: valorCampo("cx-url").value.trim(), cabecalhos: remoto ? cab : {},
-      ambiente: valorCampo("cx-ambiente").value.split(",").map((v) => v.trim()).filter(Boolean),
-    }));
-    toast("Conector salvo."); await recarregar();
+    const colado = valorCampo("cx-colar").value.trim();
+    let testes;
+    if (colado) {
+      const r = await ocupado(b, () => api("conector/importar", { texto: colado, nome: valorCampo("cx-nome").value.trim(), novo: !conectorEditado }));
+      testes = r.testes;
+    } else {
+      const dados = lerCampos();
+      if (!dados.nome) throw new Error("Cole a configuração ou preencha os campos.");
+      await ocupado(b, () => api("conector/salvar", dados));
+      testes = [{ nome: dados.nome, ...(await api("conector/testar", { nome: dados.nome })) }];
+    }
+    conectorEditado = null;
+    await recarregar();
+    for (const t of testes) mostrarTeste(t.nome, t);
+    const [t] = testes;
+    if (testes.length === 1) toast(t.ok ? `${t.nome}: ${ferramentasTexto(t.ferramentas.length)}.` : `${t.nome}: ${t.erro}`);
+    else toast(`${testes.length} conectores salvos.`);
   },
   "conector-segredo": async (b) => {
     const campo = /** @type {HTMLInputElement} */ (/** @type {HTMLElement} */ (b.closest(".segredo")).querySelector("input"));
@@ -80,26 +196,66 @@ Object.assign(ACOES, {
     const nome = b.dataset.nome;
     const saida = /** @type {HTMLElement} */ (document.querySelector(`[data-resultado="${CSS.escape(nome)}"]`));
     saida.className = "resultado"; saida.textContent = "Conectando…";
-    const r = await ocupado(b, () => api("conector/testar", { nome }));
-    saida.className = "resultado " + (r.ok ? "ok" : "erro");
-    saida.textContent = r.ok ? `${r.ferramentas.length} ferramentas` : r.erro;
-    if (r.ok) {
-      const area = /** @type {HTMLElement} */ (document.querySelector(`[data-ferramentas="${CSS.escape(nome)}"]`));
-      area.innerHTML = permissoes(nome, r.ferramentas, conectoresVistos.find((k) => k.nome === nome));
-      area.hidden = false;
-    }
+    mostrarTeste(nome, await ocupado(b, () => api("conector/testar", { nome })));
   },
   "conector-permissoes": async (b) => {
     const k = conectoresVistos.find((x) => x.nome === b.dataset.nome);
     const escolhas = [.../** @type {NodeListOf<HTMLSelectElement>} */ (/** @type {HTMLElement} */ (b.closest(".ferramentas-mcp")).querySelectorAll("[data-permissao]"))];
     const de = (v) => escolhas.filter((e) => e.value === v).map((e) => e.dataset.permissao);
-    await ocupado(b, () => api("conector/salvar", { nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: de("livre"), bloqueadas: de("bloqueada") }));
+    await ocupado(b, () => api("conector/salvar", dadosDe(k, { livres: de("livre"), bloqueadas: de("bloqueada") })));
     toast("Permissões salvas."); await recarregar();
   },
+  "conector-entrar": async (b) => {
+    const nome = b.dataset.nome;
+    const area = /** @type {HTMLElement} */ (document.querySelector(`[data-login="${CSS.escape(nome)}"]`));
+    // A aba abre já no clique (o navegador só permite assim) e segue ao login quando o endereço chega.
+    const aba = window.open("about:blank", "_blank");
+    if (aba) aba.opener = null; // a página do fornecedor não alcança o painel
+    area.hidden = false;
+    area.innerHTML = sub("Preparando o login…");
+    let r;
+    try {
+      r = await ocupado(b, () => api("conector/entrar", { nome, retorno: `${location.origin}/oauth/retorno` }));
+    } catch (erro) {
+      if (aba) aba.close();
+      area.hidden = true;
+      // Sem registro automático, o app próprio está nos detalhes do cartão.
+      if (/app próprio/.test(erro.message)) { const d = /** @type {HTMLDetailsElement | null} */ (document.querySelector(`[data-detalhes="${CSS.escape(nome)}"]`)); if (d) d.open = true; }
+      throw erro;
+    }
+    const manual = `<details class="detalhes"><summary>A página não voltou ao painel?</summary>
+      <div class="linha"><label>Endereço em que a aba parou<input class="mono" data-retorno="${esc(nome)}" autocomplete="off" spellcheck="false"></label>${botao("Concluir", "conector-concluir", `data-nome="${esc(nome)}"`)}</div></details>`;
+    if (aba) {
+      aba.location.href = r.url;
+      area.innerHTML = sub("Aguardando o login na outra aba.") + manual;
+    } else {
+      area.innerHTML = `${sub("O navegador bloqueou a nova aba.")}<div class="linha"><a class="acao principal" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Abrir login</a></div>${manual}`;
+    }
+    aguardarLogin(nome);
+  },
+  "conector-concluir": async (b) => {
+    const campo = /** @type {HTMLInputElement} */ (document.querySelector(`[data-retorno="${CSS.escape(b.dataset.nome)}"]`));
+    const r = await ocupado(b, () => api("conector/entrar/concluir", { endereco: campo.value }));
+    toast(r.aviso); await recarregar();
+  },
+  "conector-cliente": async (b) => {
+    const nome = b.dataset.nome;
+    const campo = (/** @type {string} */ atributo) => /** @type {HTMLInputElement} */ (document.querySelector(`[${atributo}="${CSS.escape(nome)}"]`)).value;
+    await ocupado(b, () => api("conector/cliente", { nome, client_id: campo("data-cliente-id"), client_secret: campo("data-cliente-segredo") }));
+    toast("App guardado."); await recarregar();
+  },
+  "conector-cliente-remover": async (b) => { await ocupado(b, () => api("conector/cliente/apagar", { nome: b.dataset.nome })); await recarregar(); },
+  "conector-sair": async (b) => { await ocupado(b, () => api("conector/sair", { nome: b.dataset.nome })); await recarregar(); },
   "conector-remover": (b) => confirmar(b, "Remover?", async () => { await api("conector/remover", { nome: b.dataset.nome }); await recarregar(); }),
   "conectores-aplicar": async (b) => { const r = await ocupado(b, () => api("conectores/aplicar", {})); toast(r.aviso); await recarregar(); },
 });
 
 Object.assign(MUDAR, {
+  "conector-conversa": async (el) => {
+    const k = conectoresVistos.find((x) => x.nome === el.dataset.nome);
+    await api("conector/salvar", dadosDe(k, { conversa: el.checked }));
+    toast(el.checked ? "Vale também na conversa." : "Vale só nas sessões do projeto.");
+    await recarregar();
+  },
   conector: async (el) => { await api("conector/ligar", { nome: el.dataset.nome, ligado: el.checked }); await recarregar(); },
 });

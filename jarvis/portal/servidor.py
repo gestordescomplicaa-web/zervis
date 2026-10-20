@@ -3,16 +3,22 @@
 HTTP da biblioteca padrão, só em loopback, numa thread do `jarvisd`. Duas proteções contra
 outros sites abertos no navegador, que também alcançam 127.0.0.1:
 - o `Host` precisa ser o endereço local (barra o DNS rebinding);
-- toda chamada de API leva o cabeçalho `X-Ze-Token`, um segredo por sessão que só aparece
-  dentro da própria página (outro site não consegue lê-la).
+- toda chamada REST leva o cabeçalho `X-Ze-Token`; os WebSockets conferem o mesmo segredo na
+  primeira mensagem. Ele só aparece dentro da própria página (outro site não consegue lê-lo).
 As respostas nunca trazem segredo: a chave colada no painel só entra.
 
 Outro aparelho (celular, outro computador) só chega por um nome permitido (o `tailscale serve`
 repassa o dele) e passa pela tela "Entrar": sem o cookie do aparelho (`jarvis/portal/senha.py`),
 só a tela de entrada e o que ela usa ficam abertos.
+
+A volta do login de um conector (`/oauth/retorno`, ADR 0037) também abre sem o cookie: ela vem
+de outro site, e o cookie `SameSite=Strict` não acompanha. Só serve a quem traz o `state` de um
+login que o próprio painel começou, e o código só vale com o verificador que fica no Zé.
 """
 
+import contextlib
 import hmac
+import html
 import json
 import logging
 import os
@@ -55,6 +61,7 @@ ARQUIVOS = {
     "/modulos/modelos.js": "modulos/modelos.js",
     "/modulos/navegacao.js": "modulos/navegacao.js",
     "/modulos/terminal.js": "modulos/terminal.js",
+    "/modulos/conectores-sessao.js": "modulos/conectores-sessao.js",
     "/modulos/voz.js": "modulos/voz.js",
     "/paginas/automacoes.js": "paginas/automacoes.js",
     "/paginas/configurar.js": "paginas/configurar.js",
@@ -73,6 +80,8 @@ ARQUIVOS = {
     "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
     # O microfone do navegador em pedaços de 80 ms a 16 kHz (voz pelo HTTPS do painel).
     "/voz-captura.js": "voz-captura.js",
+    # A página de volta do login de um conector (aberta sem o cookie; ver `_retorno_oauth`).
+    "/oauth-retorno.js": "oauth-retorno.js",
     "/paginas/atividade.js": "paginas/atividade.js",  # páginas carregadas sob demanda
     "/paginas/melhorias.js": "paginas/melhorias.js",
     "/paginas/conectores.js": "paginas/conectores.js",
@@ -91,6 +100,7 @@ ARQUIVOS = {
 # O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).
 LIVRES = {
     "/painel.css",
+    "/oauth-retorno.js",
     "/ze.webp",
     "/manifest.webmanifest",
     "/icones/ze-192.webp",
@@ -119,10 +129,13 @@ class Portal:
         envios: dict[str, Envio] | None = None,
         acesso: Acesso | None = None,
         voz: Voz | None = None,
+        entrada_terminal: Escrita | None = None,
         so_no_pc: set[str] | None = None,
         servidor: bool = False,
+        retorno_oauth: Callable[[str], tuple[bool, str]] | None = None,
     ) -> None:
         self.acesso = acesso
+        self.retorno_oauth = retorno_oauth
         # Num servidor não há o "próprio PC": quem entrou com a senha e o código do autenticador
         # faz os ajustes de fora (menos desligar as proteções e o acesso pelo qual entrou).
         self.servidor = servidor
@@ -130,6 +143,7 @@ class Portal:
         # desliga as proteções que o deixaram entrar.
         self.so_no_pc = so_no_pc or set()
         self.voz = voz
+        self.entrada_terminal = entrada_terminal
         self.leituras = leituras
         self.escritas = escritas
         self.envios = envios or {}
@@ -362,13 +376,90 @@ class Portal:
                     return
                 portal.voz(conexao, taxa)
 
+            def _terminal(self) -> None:
+                if portal.entrada_terminal is None:
+                    self._json(404, {"erro": "não existe"})
+                    return
+                if not self._entrou() or not self._mesma_origem():
+                    self._json(403, {"erro": "terminal"})
+                    return
+                conexao = websocket.aceitar(self)
+                if conexao is None:
+                    self._json(400, {"erro": "esperado WebSocket"})
+                    return
+                try:
+                    self.connection.settimeout(10)
+                    tipo, primeira = conexao.receber()
+                    if tipo != websocket.TEXTO:
+                        raise ValueError("token")
+                    dados = json.loads(primeira)
+                    if not isinstance(dados, dict):
+                        raise ValueError("token")
+                    token = dados.get("token")
+                    id_ = dados.get("id")
+                    if (
+                        not isinstance(token, str)
+                        or not hmac.compare_digest(token, portal.token)
+                        or not isinstance(id_, str)
+                        or not id_
+                        or len(id_) > 128
+                    ):
+                        raise ValueError("token")
+                    self.connection.settimeout(None)
+                    conexao.texto(json.dumps({"tipo": "pronto"}))
+                    while True:
+                        tipo, entrada = conexao.receber()
+                        if tipo != websocket.TEXTO:
+                            raise websocket.FechouErro("entrada de terminal inválida")
+                        if len(entrada) > MAXIMO_CORPO:
+                            raise PedidoInvalido("Entrada do terminal grande demais.")
+                        try:
+                            texto = entrada.decode("utf-8")
+                        except UnicodeDecodeError:
+                            raise PedidoInvalido("Entrada do terminal inválida.") from None
+                        portal.entrada_terminal({"id": id_, "dados": texto})
+                except PedidoInvalido as erro:
+                    with contextlib.suppress(websocket.FechouErro):
+                        conexao.texto(json.dumps({"tipo": "erro", "erro": str(erro)}))
+                except (OSError, ValueError, TypeError, AttributeError, websocket.FechouErro):
+                    pass
+                except Exception:
+                    log.exception("painel: falha na entrada do terminal")
+                    with contextlib.suppress(websocket.FechouErro):
+                        conexao.texto(json.dumps({"tipo": "erro", "erro": "Falha no terminal."}))
+                finally:
+                    conexao.fechar()
+
+            def _retorno_oauth(self) -> None:
+                if portal.retorno_oauth is None:
+                    self._json(404, {"erro": "não existe"})
+                    return
+                ok, mensagem = portal.retorno_oauth(urlsplit(self.path).query)
+                corpo = (
+                    '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'
+                    '<meta name="viewport" content="width=device-width, initial-scale=1">'
+                    '<title>Conectores</title><link rel="stylesheet" href="/painel.css"></head>'
+                    '<body><main class="entrar"><section class="cartao"><h1>Conectores</h1>'
+                    f'<p class="resultado {"ok" if ok else "erro"}">{html.escape(mensagem)}</p>'
+                    '<a class="acao principal" href="/#conectores">Voltar ao painel</a>'
+                    f'<script src="/oauth-retorno.js" data-ok="{int(ok)}"></script>'
+                    "</section></main></body></html>"
+                )
+                self._enviar(200 if ok else 400, corpo.encode(), "text/html")
+
             def do_GET(self) -> None:
                 if not self._host_local():
                     self._json(403, {"erro": "host"})
                     return
                 caminho = self.path.split("?", 1)[0]
+                if caminho == "/oauth/retorno":
+                    self._retorno_oauth()
+                    return
                 if caminho == "/api/voz/ws":
                     self._voz()
+                    return
+                if caminho == "/api/terminal/ws":
+                    self._terminal()
                     return
                 if caminho == "/entrar":
                     if self._entrou():

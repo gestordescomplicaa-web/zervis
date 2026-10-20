@@ -265,7 +265,54 @@
    }
   },
   "conectores": {
-   "conectores": [],
+   "conectores": [
+    {
+     "nome": "crm",
+     "origem": "painel",
+     "tipo": "http",
+     "comando": "",
+     "argumentos": [],
+     "url": "https://mcp.exemplo.com/mcp",
+     "ambiente": [],
+     "cabecalhos": {
+      "Authorization": "CRM_TOKEN"
+     },
+     "livres": [
+      "buscar_contatos"
+     ],
+     "bloqueadas": [],
+     "projetos": [
+      "loja"
+     ],
+     "ligado": true,
+     "segredos": {
+      "CRM_TOKEN": false
+     },
+     "oauth": false,
+     "conectado": false,
+     "app_proprio": false,
+     "conversa": false
+    },
+    {
+     "nome": "notion",
+     "origem": "painel",
+     "tipo": "http",
+     "comando": "",
+     "argumentos": [],
+     "url": "https://mcp.notion.com/mcp",
+     "ambiente": [],
+     "cabecalhos": {},
+     "livres": [],
+     "bloqueadas": [],
+     "projetos": [],
+     "oauth": true,
+     "conectado": false,
+     "ligado": true,
+     "segredos": {},
+     "app_proprio": false,
+     "conversa": true
+    }
+   ],
    "pendente": false
   },
   "configuracao": {
@@ -609,6 +656,12 @@
     "ligada": true,
     "sessoes": true,
     "usos": 0
+   }
+  ],
+  "skills/sugeridas": [
+   {
+    "nome": "codebase-exploration",
+    "descricao": "Entender a estrutura e as convenções de um repositório antes de implementar uma tarefa."
    }
   ],
   "skills/agentes": [

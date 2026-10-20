@@ -133,7 +133,9 @@ def test_terminal_real_retoma_so_com_evidencia_e_atualiza_copia_nativa(
     comandos: list[tuple[Sessao, str]] = []
     avisos: list[str] = []
 
-    def comando(s: Sessao, pedido: str, eventos: Path, contexto: Path | None) -> list[str]:
+    def comando(
+        s: Sessao, pedido: str, eventos: Path, contexto: Path | None, *_conectores: object
+    ) -> list[str]:
         comandos.append((s, pedido))
         if s.conta == inicial.id:
             linhas = "".join(json.dumps(e) + "\n" for e in eventos_nativos(tmp_path, confirmado))

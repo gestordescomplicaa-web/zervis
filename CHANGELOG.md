@@ -2,6 +2,74 @@
 
 ## Não lançado
 
+- Conversa com o Zé: o conector ligado a um projeto (o n8n de um cliente) passa a valer só nas
+  sessões daquele projeto, e a conversa recebe só os conectores gerais. Antes, todos iam para a
+  conversa: pela voz, o Zé usava o n8n sem dizer de qual cliente, e as ferramentas de todos
+  custavam tokens em todo turno. A chave "Também na conversa", no cartão, traz um de volta.
+- O Zé acha a sessão certa: `sessoes_listar` mostra os conectores de cada sessão. Pergunta sobre
+  o n8n com uma sessão ligada a ele vai para ela; com mais de uma, o Zé pergunta qual.
+- Atividade: as ferramentas dos conectores MCP usadas pela conversa (Claude e Codex) passam a
+  ser registradas, como as do próprio Zé (essência, item 6).
+- `conectores_listar` traz o estado do vigia em cada n8n (de pé ou fora do ar), e o lembrete
+  avisa ao cérebro que não confere nada: "quando o n8n voltar, me avise" não vira mais um
+  lembrete repetido a cada 5 minutos, porque o vigia já avisa.
+- Vigia do n8n (ADR 0038): todo conector do MCP de um n8n é vigiado sozinho, uma vez por minuto,
+  pelo `/healthz` e pelo `/healthz/readiness` da instância, sem chave e sem modelo. Depois de três
+  falhas seguidas, o aviso "<n8n> fora do ar: sem resposta" (ou "erro do servidor", "banco fora")
+  vai para a tela e para a Atividade, e é falado conforme o modo de fala; a volta avisa
+  "<n8n> voltou". Um aviso por mudança, guardado em SQLite: reiniciar o Zé não repete.
+- Skill inicial `fluxos-n8n` (ADR 0038), também nas sessões: criar, editar, testar, publicar e
+  investigar fluxos pelo MCP do n8n, na ordem que ele pede (boas práticas, tipos dos nós,
+  validação, criação, teste com dados de exemplo). Produção só muda com aprovação; editar guarda
+  a versão para voltar; todo fluxo publicado tem um fluxo de erro; credenciais só no n8n.
+  A `integrar-sistema` aponta para ela e passa a mandar ligar o conector pelo botão da sessão.
+- Sessões: o botão "Conectores", no topo da sessão (e a lista na criação), liga e desliga os MCPs
+  do projeto ali mesmo. A escolha vale para todas as sessões daquela pasta; cada conector mostra
+  em que outros projetos ele já está ("Também em: …"), e salvar reabre o agente com a conversa.
+- Conectores por projeto pelo caminho completo da pasta: dois clientes com pastas de mesmo nome
+  em lugares diferentes não se misturam. O nome sozinho, como era antes, continua valendo.
+- Conectores: etiqueta "MCP" em cada cartão; "Nome" no formulário de colar, e colar o mesmo JSON
+  para outro cliente pede outro nome em vez de sobrescrever. Os projetos saíram do formulário e
+  do cartão (lá, só leitura): quem escolhe é a sessão.
+- Conectores: "Adicionar" agora pede só para colar a configuração que o serviço fornece, o JSON
+  do MCP (`mcpServers`, como o do n8n, do Claude ou do Cursor) ou o comando `curl`, e os
+  projetos. "Salvar e testar" cria o conector, guarda tokens e chaves como segredos (nunca no
+  arquivo de configuração), testa e mostra as ferramentas na hora. Colar de novo num conector
+  existente ("Editar") troca a configuração e mantém as permissões. Os campos ficam em
+  "Preencher campos", para quem precisar.
+- Conectores: uma linha de cabeçalho fora do formato (`Authorization: N8N_AUTH`) era descartada
+  sem aviso, e o conector ficava sem o cabeçalho (no n8n, HTTP 401). Agora o painel avisa
+  "Cabeçalho inválido" e não salva; o valor pode ter `:` depois do primeiro. O token colado no
+  lugar do nome da variável é recusado sem ser repetido na mensagem. O campo mostra o exemplo.
+- Conectores: "Editar" no cartão abre o formulário com o que está gravado (endereço, cabeçalhos,
+  segredos, projetos); os segredos guardados e as permissões continuam. Antes só dava para
+  remover, o que apagava também os segredos.
+- Conectores: "Ferramentas" com HTTP 401 ou 403 mostra "Acesso negado" e, quando o
+  `Authorization` está sem o tipo (o token sem `Bearer `, como pede o n8n), diz isso, sem
+  mostrar o segredo.
+- Skill `integrar-sistema`: numa sessão de código, o agente não instala o conector por conta
+  própria (`claude mcp add`, `.mcp.json`): diz à pessoa para pedir ao Zé ou cadastrar em
+  Conectores, com o projeto marcado. Quem já instalou a skill atualiza o texto em Skills.
+- Integração com sistemas (ADR 0037): a skill inicial `integrar-sistema` traz o método (pesquisar,
+  escolher entre MCP e API, credenciais só pelo nome, provar com uma leitura real, registrar o que
+  aprendeu) e vale também nas sessões de código. O Zé lista, cadastra (com aprovação) e testa
+  conectores pela conversa; o painel mostra o conector novo como pendente. Valor de segredo nos
+  argumentos ou no endereço de um conector é recusado.
+- Conectores nas sessões de código: cada conector diz em que projetos vale (nome da pasta, ou
+  `*`), e as sessões do Claude e do Codex daquele projeto o recebem com os segredos fora da linha
+  de comando. Sem projetos, o conector fica só na conversa (o sistema de um cliente não aparece no
+  projeto de outro).
+- Conectores com login (OAuth): um MCP remoto que pede login (Notion, Linear e outros) entra
+  com "Entrar" no cartão do conector, no navegador, sem chave. O Zé guarda os tokens (0600) e uma
+  ponte local os renova sozinha, sem recomeçar a conversa nem as sessões. Fora do PC, a volta do
+  login chega pelo endereço do painel; se não chegar, cola-se o endereço em que o navegador parou.
+- Conectores com login: "Entrar" abre direto a aba de login do fornecedor, sem passo escondido;
+  quando o login termina, a aba fecha (ou leva de volta ao painel) e o cartão passa a
+  "Conectado" sozinho. Se o navegador bloquear a nova aba, aparece o botão "Abrir login".
+- Conectores com login: servidores que não aceitam o registro automático do cliente passam a
+  funcionar com um app próprio. O Client ID (e o secret, se houver) é guardado nos detalhes do
+  conector (0600, nunca devolvido) e o cartão mostra o endereço de retorno a cadastrar no app;
+  o secret segue no corpo do pedido ou em `Authorization: Basic`, como o servidor pedir.
 - Servidor (VPS): primeiro acesso sem túnel SSH. O instalador termina com um endereço HTTPS
   (Cloudflare) e um código de uso único para criar a senha; num servidor, quem entra com a senha
   e o código do autenticador faz os ajustes de fora (chaves, contas, autodesenvolvimento), menos

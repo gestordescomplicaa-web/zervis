@@ -29,7 +29,15 @@ from jarvis.automacoes.jobs import Jobs
 from jarvis.avisos import mensagens
 from jarvis.avisos import modo as modo_fala
 from jarvis.avisos.fila import Fila
-from jarvis.cerebro import acesso, catalogo, ferramentas, mcp_externo, navegador, omniroute
+from jarvis.cerebro import (
+    acesso,
+    catalogo,
+    ferramentas,
+    mcp_externo,
+    mcp_oauth,
+    navegador,
+    omniroute,
+)
 from jarvis.cerebro.base import Ponte
 from jarvis.cerebro.baterias import Bateria, do_omniroute
 from jarvis.cerebro.claude import ClaudeBrain
@@ -118,6 +126,7 @@ from jarvis.sistema import maquina as maquina_atual
 from jarvis.sistema.midia import Midia
 from jarvis.sistema.politica import Sistema
 from jarvis.sistema.vigia import Eventos, Vigia
+from jarvis.sistema.vigia_n8n import VigiaN8n
 from jarvis.transporte import servidor_livekit
 from jarvis.transporte.entrada import Entrada
 from jarvis.transporte.local import Captura
@@ -296,6 +305,9 @@ class Nucleo(
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
         self.vigia = Vigia()
         self._vigia_em = 0.0
+        self.vigia_n8n = VigiaN8n()  # os n8n dos conectores estão de pé? (ADR 0038)
+        self._n8n_em = 0.0
+        self._n8n_conferindo = threading.Event()
         self.consumo = Consumo(DADOS / "consumo.db", legado=ESTADO / "consumo.json")
         self.uso_ferramentas = UsoDeFerramentas(ESTADO / "uso-ferramentas.json")
         self.pergunta = ""  # a última pergunta de aprovação (o card de decisão do Barehands)
@@ -393,7 +405,7 @@ class Nucleo(
         )
         servidor = ferramentas.servidor(self.proprias)
         try:
-            externos = mcp_externo.carregar(painel=mcp_externo.PAINEL)
+            externos = mcp_externo.para_conversa(painel=mcp_externo.PAINEL)
         except mcp_externo.McpInvalido as erro:
             log.error("MCPs externos ignorados: %s", erro)
             self._erro(f"mcp.toml: {erro}")
@@ -476,14 +488,17 @@ class Nucleo(
         self.testes_do_atendente = agente.Executor()
         try:
             acoes = Acoes(self, ESTADO / "latencias", DADOS / "cerebro-teste")
+            escritas = acoes.escritas()
             self.portal = Portal(
                 acoes.leituras(),
-                acoes.escritas(),
+                escritas,
                 envios=acoes.envios(),
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
+                entrada_terminal=escritas["terminal/escrever"],
                 so_no_pc=senha.SO_NO_PC,
                 servidor=maquina_atual.detectar().servidor,
+                retorno_oauth=mcp_oauth.concluir_pela_volta,
             )
             self.portal.iniciar()
         except OSError as erro:

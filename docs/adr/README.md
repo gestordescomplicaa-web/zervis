@@ -41,3 +41,4 @@ e o antigo ganha "Substituído por NNNN" no status.
 | [0034](0034-central-estacoes-e-instalacao.md) | Central e estações (o Zé na VPS com as funções do PC) e a instalação de um comando | Proposta |
 | [0035](0035-agentes-prontos-na-instalacao.md) | Agentes prontos na instalação: Claude Code e Codex nativos, chaves pelo painel | Aceito |
 | [0036](0036-contribuicoes-e-atualizacoes.md) | Código aberto: como a comunidade contribui e como o Zé se atualiza | Aceito (atualização em aberto) |
+| [0037](0037-integracao-com-sistemas.md) | Integração com sistemas: um método (skill), conectores pelo cérebro e nas sessões, login OAuth | Aceito |

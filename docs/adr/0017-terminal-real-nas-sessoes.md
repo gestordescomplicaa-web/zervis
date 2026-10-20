@@ -14,7 +14,11 @@ painel sempre ficaria atrás.
 1. Cada sessão abre o `claude` ou o `codex` de verdade num pseudo-terminal (`jarvis/oficina/terminal.py`,
    `pty.fork`), na pasta e na conta da sessão. O painel desenha o terminal com o xterm.js (MIT,
    servido pelo próprio painel, sem CDN) e lê a saída por long-poll a partir de uma posição; a saída
-   fica num buffer de 512 KB, então reabrir a tela mostra o que já passou.
+   fica num buffer de 512 KB, então reabrir a tela mostra o que já passou. A entrada do teclado usa
+   um WebSocket persistente para evitar uma requisição HTTP por evento; o painel mantém o endpoint
+   HTTP como fallback. Atualização de 16/10/2026: o servidor confere origem, acesso e o token da
+   primeira mensagem antes de aceitar entradas. Ao trocar de terminal, a tela fecha o socket;
+   durante atualizações, a entrada continua bloqueada no painel e no servidor.
 2. Modelo, esforço e os demais comandos são os do próprio agente (`/model`, `/effort`...). O painel
    mantém o que é do Zé: agente e conta (a troca fecha o terminal e reabre com o resume nativo ou
    com a passagem, ADR 0016), o aviso de créditos esgotados, o explorador de arquivos e os anexos

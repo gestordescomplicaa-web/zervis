@@ -76,6 +76,38 @@ class Skills:
             skills.append((arquivo.parent.name, descricao[:LIMITE_LINHA]))
         return skills
 
+    def sugeridas(self) -> list[tuple[str, str]]:
+        """Skills iniciais do Zé que ainda não foram instaladas por quem usa."""
+        instaladas = {
+            pasta.name for pasta in self.pasta.glob("*") if pasta.is_dir() or pasta.is_symlink()
+        } | set(self.arquivadas())
+        base = Path(__file__).with_name("iniciais")
+        saida = []
+        for arquivo in sorted(base.glob("*/SKILL.md")):
+            nome = arquivo.parent.name
+            if nome in instaladas:
+                continue
+            try:
+                campos = frente(arquivo.read_text())
+            except OSError:
+                continue
+            descricao = " ".join(campos.get("description", "").split())
+            if campos.get("name") == nome and descricao:
+                saida.append((nome, descricao[:LIMITE_LINHA]))
+        return saida
+
+    def instalar_sugerida(self, nome: str) -> None:
+        """Copia uma skill inicial para a pasta do usuário, sem sobrescrever nada."""
+        self._dir(nome)
+        origem = Path(__file__).with_name("iniciais") / nome / "SKILL.md"
+        if not origem.is_file():
+            raise SkillErro("skill sugerida não existe")
+        alvos = (self.pasta / nome, self.pasta / ".arquivo" / nome)
+        if any(alvo.exists() or alvo.is_symlink() for alvo in alvos):
+            raise SkillErro(f"a skill {nome} já está instalada")
+        conteudo = self.novo_conteudo(nome, conteudo=origem.read_text())
+        self.gravar(nome, conteudo)
+
     def para_sessoes(self) -> list[tuple[str, str]]:
         """As skills marcadas "Também nas sessões de código" (`sessoes: sim` no cabeçalho): só
         elas vão para os agentes de código; uma skill pessoal ("resumo do dia") não tem nada a

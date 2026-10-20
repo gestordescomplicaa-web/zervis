@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from jarvis import caminhos, fuso
-from jarvis.cerebro import contas, modelos
+from jarvis.cerebro import contas, mcp_externo, modelos
 from jarvis.dados.documentos import Documentos, linhas_json, objeto_json
 from jarvis.memoria import aimemory
 from jarvis.oficina import continuidade, fallback
@@ -701,6 +701,17 @@ class Sessoes:
             self.anotar(id_, "sistema", f"Modelo: {nome}{extra}.")
             return s
 
+    def recarregar_conectores(self, id_: str, nomes: list[str]) -> Sessao:
+        """Os conectores do projeto mudaram: o agente reabre com eles, retomando a conversa (os
+        agentes só leem os MCPs ao iniciar)."""
+        with self._operacoes:
+            if id_ in self.trabalhando():
+                raise SessaoErro("essa sessão está trabalhando; espere para trocar os conectores")
+            if (terminal := self.terminais.pop(id_, None)) is not None:
+                terminal.encerrar()  # reabre com os conectores novos, com resume
+            self.anotar(id_, "sistema", f"Conectores: {', '.join(nomes) or 'nenhum'}.")
+            return self.ler(id_)
+
     def continuar_interrompida(self, id_: str) -> Sessao:
         """Retoma o pedido interrompido: a conversa do agente continua, e ele recebe o pedido de
         novo com o aviso de que pode ter feito parte antes."""
@@ -888,6 +899,13 @@ class Sessoes:
             ligar_skills_no_projeto(Path(s.onde), self.skills)
         self.eventos(id_).touch(mode=0o600)
         self._lidos[id_] = self.eventos(id_).stat().st_size
+        externos = conectores_do_projeto(s)
+        arquivo_mcp = (
+            arquivo_de_conectores(self._dir(id_) / CONECTORES, externos)
+            if s.motor == "claude"
+            else None
+        )
+        segredos = conectores_codex(externos)[1] if s.motor == "codex" else {}
         try:
             self.fallback.inicios[id_] = time.time()
             terminal = Terminal(
@@ -896,9 +914,11 @@ class Sessoes:
                     pedido,
                     self.eventos(id_),
                     self._contexto(id_, contexto),
+                    externos,
+                    arquivo_mcp,
                 ),
                 s.onde,
-                ambiente_da_conta(s),
+                {**ambiente_da_conta(s), **segredos},
                 ao_sair=lambda codigo: self._terminal_saiu(id_, codigo),
                 ao_ler=lambda dados: self._olhar_saida(id_, dados),
                 colunas=colunas,
@@ -1354,9 +1374,14 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
     )
     from claude_agent_sdk.types import ToolPermissionContext
 
+    externos = conectores_do_projeto(s)
+    arquivo_mcp = arquivo_de_conectores(sessoes._dir(s.id) / CONECTORES, externos)
+
     async def pode(
         nome: str, entrada: dict[str, Any], _ctx: ToolPermissionContext
     ) -> PermissionResultAllow | PermissionResultDeny:
+        if pede_aprovacao(nome, externos):
+            return PermissionResultDeny(message=SEM_APROVACAO)
         if nome == "Bash" and comando_proibido(str(entrada.get("command", ""))):
             sessoes.anotar(s.id, "sistema", f"Recusei: {str(entrada.get('command'))[:160]}")
             return PermissionResultDeny(
@@ -1379,9 +1404,11 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
         can_use_tool=pode,
         setting_sources=["project"],
         strict_mcp_config=True,
+        mcp_servers=str(arquivo_mcp) if arquivo_mcp else {},
+        allowed_tools=list(externos.livres),
         resume=s.sdk_sessao or None,
         model=s.modelo or None,
-        disallowed_tools=["Task", "Agent", "WebSearch"],
+        disallowed_tools=["Task", "Agent", "WebSearch", *externos.bloqueadas],
         # O ai-memory recebe o que a sessão faz (ADR 0016): os hooks dele só nesta sessão.
         settings=json.dumps(hooks) if (hooks := aimemory.hooks_claude()) else None,
         env=ambiente_da_conta(s),
@@ -1425,7 +1452,7 @@ LIMITE = re.compile(
 LIMITE_CODEX = LIMITE
 
 
-def _comando_codex(s: Sessao, texto: str) -> list[str]:
+def _comando_codex(s: Sessao, texto: str, conectores: list[str] | None = None) -> list[str]:
     """`codex exec` na primeira vez, `codex exec resume <id>` depois. Escreve só na pasta da
     sessão (os anexos ele lê de onde estão; liberar escrita numa pasta que ainda não existe
     derruba o isolamento inteiro do Codex, visto em 12/10/2026)."""
@@ -1436,6 +1463,7 @@ def _comando_codex(s: Sessao, texto: str) -> list[str]:
         comum += ["-c", f'model_reasoning_effort="{s.esforco}"']
     if memoria := aimemory.orientacao(Path(s.pasta)):
         comum += ["-c", f"developer_instructions={json.dumps(memoria)}"]
+    comum += conectores or []
     if s.sdk_sessao:
         return ["codex", "exec", "resume", *comum, s.sdk_sessao, texto]
     return ["codex", "exec", *comum, texto]
@@ -1446,10 +1474,11 @@ async def rodar_codex(sessoes: Sessoes, s: Sessao, texto: str) -> str:
     A conta é a pasta de login da sessão (CODEX_HOME); as regras vão na primeira mensagem."""
     if not s.sdk_sessao:
         texto = f"{REGRAS.strip()}\n\nPedido:\n{texto}"
+    conectores, segredos = conectores_codex(conectores_do_projeto(s))
     processo = await asyncio.create_subprocess_exec(
-        *_comando_codex(s, texto),
+        *_comando_codex(s, texto, conectores),
         cwd=s.onde,
-        env={**os.environ, **ambiente_da_conta(s)},
+        env={**os.environ, **ambiente_da_conta(s), **segredos},
         stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -1651,6 +1680,83 @@ def conversa_claude_existe(s: Sessao) -> bool:
 PREFIXO_SKILL = "zervis-"  # os atalhos que o Zé põe no projeto, para reconhecer e limpar
 
 
+CONECTORES = "conectores.json"  # na pasta da sessão, 0600: os conectores do projeto (Claude)
+SEM_APROVACAO = (
+    "Sem o terminal aberto, só as ferramentas livres do conector. Para esta, a pessoa abre o "
+    "terminal da sessão (o Claude pergunta ali) ou a libera em Conectores."
+)
+
+
+def conectores_do_projeto(s: Sessao) -> mcp_externo.Externos:
+    """Os conectores do Zé marcados para o projeto desta sessão (ADR 0037)."""
+    try:
+        return mcp_externo.para_projeto(Path(s.pasta))
+    except mcp_externo.McpInvalido as erro:
+        log.warning("sessão %s sem conectores: %s", s.id, erro)
+        return mcp_externo.Externos()
+
+
+def pede_aprovacao(nome: str, externos: mcp_externo.Externos) -> bool:
+    """Uma ferramenta de conector que não é livre (sem terminal, não há a quem perguntar)."""
+    partes = nome.split("__")
+    return (
+        len(partes) == 3
+        and partes[0] == "mcp"
+        and partes[1] in externos.servidores
+        and nome not in externos.livres
+    )
+
+
+def arquivo_de_conectores(destino: Path, externos: mcp_externo.Externos) -> Path | None:
+    """Claude: os conectores num arquivo 0600 (`--mcp-config`), com os segredos fora da linha de
+    comando, que outros processos leem. Sem conectores, o arquivo sai."""
+    if not externos.servidores:
+        destino.unlink(missing_ok=True)
+        return None
+    destino.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporario = destino.with_suffix(".next")
+    temporario.touch(mode=0o600)
+    temporario.chmod(0o600)
+    temporario.write_text(json.dumps({"mcpServers": externos.servidores}))
+    temporario.replace(destino)
+    return destino
+
+
+def _tabela_toml(valores: dict[str, str]) -> str:
+    return "{" + ", ".join(f"{json.dumps(k)} = {json.dumps(v)}" for k, v in valores.items()) + "}"
+
+
+def conectores_codex(externos: mcp_externo.Externos) -> tuple[list[str], dict[str, str]]:
+    """Codex: os conectores do projeto em `-c mcp_servers.*` e os segredos no ambiente do
+    processo (`env_vars`, `env_http_headers`), nunca na linha de comando. Só as ferramentas
+    livres (`enabled_tools`): o Codex não pergunta ao Zé antes de usar uma ferramenta MCP."""
+    argumentos: list[str] = []
+    segredos: dict[str, str] = {}
+    for nome, config in externos.servidores.items():
+        prefixo = f"mcp__{nome}__"
+        livres = [f.removeprefix(prefixo) for f in externos.livres if f.startswith(prefixo)]
+        if not livres:
+            continue
+        base = f"mcp_servers.{nome}"
+        if config["type"] == "stdio":
+            argumentos += ["-c", f"{base}.command={json.dumps(config['command'])}"]
+            argumentos += ["-c", f"{base}.args={json.dumps(config.get('args', []))}"]
+            if variaveis := config.get("env"):
+                segredos.update(variaveis)
+                argumentos += ["-c", f"{base}.env_vars={json.dumps(sorted(variaveis))}"]
+        else:
+            argumentos += ["-c", f"{base}.url={json.dumps(config['url'])}"]
+            cabecalhos = {}
+            for i, (cabecalho, valor) in enumerate(sorted(config.get("headers", {}).items())):
+                variavel = f"ZE_MCP_{nome.upper().replace('-', '_')}_{i}"
+                segredos[variavel] = valor
+                cabecalhos[cabecalho] = variavel
+            if cabecalhos:
+                argumentos += ["-c", f"{base}.env_http_headers={_tabela_toml(cabecalhos)}"]
+        argumentos += ["-c", f"{base}.enabled_tools={json.dumps(livres)}"]
+    return argumentos, segredos
+
+
 PASTAS_DE_SKILLS = (".claude/skills", ".agents/skills")  # onde o Claude Code e o Codex procuram
 
 
@@ -1726,10 +1832,14 @@ def comando_terminal(
     pedido: str,
     eventos: Path,
     contexto: Path | None = None,
+    externos: mcp_externo.Externos | None = None,
+    arquivo_mcp: Path | None = None,
 ) -> list[str]:
     """O agente interativo da sessão: retoma a conversa nativa e conta ao Zé o que acontece.
     `contexto` (a passagem) entra sem virar pedido. As skills do Zé chegam pela pasta do projeto
-    (`ligar_skills_no_projeto`)."""
+    (`ligar_skills_no_projeto`); os conectores do projeto, pelo `arquivo_mcp` (Claude) ou pela
+    configuração do Codex, com os segredos no ambiente (`conectores_codex`)."""
+    externos = externos or mcp_externo.Externos()
     if s.motor == "codex":
         avisar = ["sh", "-c", 'printf "%s\\n" "$1" >> "$0"', str(eventos)]  # + o JSON do Codex
         cmd = [
@@ -1750,6 +1860,7 @@ def comando_terminal(
             cmd += ["-m", s.modelo]
         if s.esforco:
             cmd += ["-c", f'model_reasoning_effort="{s.esforco}"']
+        cmd += conectores_codex(externos)[0]
         if s.sdk_sessao:
             cmd += ["resume", s.sdk_sessao]
         return [*cmd, *([pedido] if pedido else [])]
@@ -1768,14 +1879,19 @@ def comando_terminal(
             *hooks.get("SessionStart", []),
             {"matcher": "", "hooks": [entregar]},
         ]
-    cmd = [
-        caminhos.claude(),
+    ajustes: dict[str, Any] = {"hooks": hooks}
+    if externos.servidores:  # livres sem pergunta, bloqueadas nunca; o resto o Claude pergunta
+        ajustes["permissions"] = {"allow": externos.livres, "deny": externos.bloqueadas}
+    cmd = [caminhos.claude()]
+    if arquivo_mcp is not None:  # logo depois do comando: a opção aceita vários arquivos
+        cmd += ["--mcp-config", str(arquivo_mcp)]
+    cmd += [
         "--permission-mode",
         "acceptEdits",
         "--append-system-prompt",
         REGRAS.strip() + "\n" + aimemory.orientacao(Path(s.pasta)),
         "--settings",
-        json.dumps({"hooks": hooks}),
+        json.dumps(ajustes),
     ]
     if s.sdk_sessao:
         cmd += ["--resume", s.sdk_sessao]

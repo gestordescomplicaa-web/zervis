@@ -8,6 +8,7 @@ o que é livre, o que pede aprovação falada e o que fica bloqueado.
 """
 
 import contextlib
+import itertools
 import json
 import os
 import queue
@@ -20,10 +21,22 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from jarvis.cerebro import mcp_externo
+from jarvis.cerebro import mcp_externo, mcp_oauth
 from jarvis.cerebro.mcp_externo import McpInvalido
 
 VARIAVEL = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
+# O valor de um segredo fora do lugar dele (argumentos ou url): chaves com formato conhecido e
+# `nome=valor` ou `--nome valor` com nome de segredo. Caminho de arquivo com a chave não conta.
+_NOME_SEGREDO = r"(?:token|secret|password|passwd|senha|api[-_]?key|apikey|access[-_]?key)"
+CHAVE_CONHECIDA = re.compile(
+    r"\b(?:sk-[A-Za-z0-9_\-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}"
+    r"|AKIA[0-9A-Z]{16}|xox[abprs]-[A-Za-z0-9\-]{10,}|AIza[0-9A-Za-z_\-]{30,})"
+)
+NOME_E_VALOR = re.compile(rf"[\w-]*{_NOME_SEGREDO}[\w-]*=(?!\$)[^&\s]{{6,}}", re.IGNORECASE)
+OPCAO_DE_SEGREDO = re.compile(rf"--?[\w-]*{_NOME_SEGREDO}[\w-]*", re.IGNORECASE)
+CAMINHO = re.compile(r"(file|path|dir)", re.IGNORECASE)
+PROJETO = re.compile(r"[^/\\\x00*]{1,128}")  # o nome da pasta, sem caminho
+CAMINHO_PROJETO = re.compile(r"/[^\x00*]{1,1023}")  # a pasta inteira, como a sessão grava
 PROTOCOLO = "2025-06-18"
 LIMITE_TESTE_S = 25.0
 
@@ -69,11 +82,38 @@ def listar(
                 "cabecalhos": bloco.get("cabecalhos", {}),
                 "livres": bloco.get("livres", []),
                 "bloqueadas": bloco.get("bloqueadas", []),
+                "projetos": bloco.get("projetos", []),
+                "conversa": not bloco.get("projetos") or bloco.get("conversa") is True,
+                "oauth": bloco.get("oauth") is True,
+                "conectado": bloco.get("oauth") is True and mcp_oauth.PADRAO.conectado(nome),
+                "app_proprio": mcp_oauth.PADRAO.cliente_proprio(nome) is not None,
                 "ligado": bloco.get("ligado", True) is not False,
                 "segredos": {v: v in env_com for v in segredos},
             }
         )
     return sorted(saida, key=lambda c: (c["origem"] != "painel", c["nome"]))
+
+
+def _tem_segredo(argumentos: list[str], url: str) -> bool:
+    """Um valor de segredo escrito nos argumentos ou na url, que iriam para o arquivo do painel
+    e para a linha de comando (visível a outros processos)."""
+    textos = [*argumentos, url]
+    if any(CHAVE_CONHECIDA.search(t) or NOME_E_VALOR.search(t) for t in textos):
+        return True
+    for opcao, valor in itertools.pairwise(argumentos):
+        if (
+            OPCAO_DE_SEGREDO.fullmatch(opcao)
+            and not CAMINHO.search(opcao)
+            and not valor.startswith(("-", "$"))
+        ):
+            return True
+    return False
+
+
+def _projeto_valido(projeto: str) -> bool:
+    if CAMINHO_PROJETO.fullmatch(projeto):
+        return ".." not in Path(projeto).parts
+    return bool(PROJETO.fullmatch(projeto))
 
 
 def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
@@ -85,13 +125,24 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
         bloco["argumentos"] = [str(a) for a in dados.get("argumentos") or [] if str(a).strip()]
     else:
         bloco["url"] = str(dados.get("url", "")).strip()
+        if dados.get("oauth") is True:
+            bloco["oauth"] = True
     ambiente = [str(v).strip() for v in dados.get("ambiente") or [] if str(v).strip()]
     cabecalhos = {
         str(k).strip(): str(v).strip() for k, v in (dados.get("cabecalhos") or {}).items()
     }
-    for variavel in [*ambiente, *cabecalhos.values()]:
+    for nome_cab, variavel in cabecalhos.items():
         if not VARIAVEL.fullmatch(variavel):
-            raise McpInvalido(f"variável {variavel!r}: use MAIÚSCULAS_COM_SUBLINHADO")
+            # Sem repetir o que veio: quase sempre é o próprio token colado no lugar do nome.
+            raise McpInvalido(
+                f"cabeçalho {nome_cab[:40]}: use o nome de uma variável, como N8N_AUTH; "
+                "o valor se guarda no cartão do conector"
+            )
+    for variavel in ambiente:
+        if not VARIAVEL.fullmatch(variavel):
+            raise McpInvalido(f"variável {variavel[:40]!r}: use MAIÚSCULAS_COM_SUBLINHADO")
+    if bloco.get("oauth") and (ambiente or cabecalhos):
+        raise McpInvalido("com login (OAuth), o conector não leva segredos próprios")
     if ambiente:
         bloco["ambiente"] = ambiente
     if cabecalhos:
@@ -99,8 +150,20 @@ def _bloco_valido(nome: str, dados: dict[str, Any]) -> dict[str, Any]:
     for chave in ("livres", "bloqueadas"):
         if valores := [str(v) for v in dados.get(chave) or []]:
             bloco[chave] = valores
+    projetos = list(dict.fromkeys(str(p).strip() for p in dados.get("projetos") or []))
+    if projetos := [p for p in projetos if p]:
+        if not all(p == mcp_externo.TODOS or _projeto_valido(p) for p in projetos):
+            raise McpInvalido("projeto: o nome da pasta do projeto, ou * para todos")
+        bloco["projetos"] = projetos
+    if dados.get("conversa") is True and bloco.get("projetos"):
+        bloco["conversa"] = True  # sem projetos, ele já está na conversa
     if set(bloco.get("livres", [])) & set(bloco.get("bloqueadas", [])):
         raise McpInvalido("uma ferramenta não pode ser livre e bloqueada")
+    if _tem_segredo(bloco.get("argumentos", []), bloco.get("url", "")):
+        raise McpInvalido(
+            "segredo nos argumentos ou no endereço: use o nome de uma variável e guarde o valor "
+            "no cartão do conector"
+        )
     # A mesma validação do carregador, com segredos fictícios (só a forma importa aqui).
     ficticio = {v: "x" for v in [*ambiente, *cabecalhos.values()]}
     mcp_externo._servidor(nome, bloco, ficticio)
@@ -161,6 +224,218 @@ def gravar_segredo(nome: str, variavel: str, valor: str) -> None:
     temporario.chmod(0o600)
     temporario.write_text(valor + "\n")
     temporario.replace(destino)
+
+
+# --- por projeto: o que cada sessão escolhe -------------------------------------------------
+
+
+def _rotulo(projeto: str) -> str:
+    return "todos os projetos" if projeto == mcp_externo.TODOS else Path(projeto).name
+
+
+def do_projeto(
+    pasta: Path,
+    caminho: Path = mcp_externo.CAMINHO,
+    painel: Path = mcp_externo.PAINEL,
+) -> list[dict[str, Any]]:
+    """Os conectores para o seletor da sessão: os que valem nesta pasta e, de cada um, em que
+    outros projetos ele está (para não ligar o sistema de um cliente na pasta de outro)."""
+    pasta = pasta.resolve()
+    saida = []
+    for nome, (bloco, origem) in mcp_externo._blocos(caminho, painel).items():
+        projetos = [str(p) for p in bloco.get("projetos") or []]
+        todos = mcp_externo.TODOS in projetos
+        aqui = {str(pasta), pasta.name}
+        saida.append(
+            {
+                "nome": nome,
+                "tipo": bloco.get("tipo", "stdio"),
+                "marcado": mcp_externo.vale_no_projeto(projetos, pasta),
+                "todos": todos,
+                "editavel": origem == "painel" and not todos,
+                "outros": sorted({_rotulo(p) for p in projetos if p not in aqui and not todos}),
+            }
+        )
+    return sorted(saida, key=lambda c: c["nome"])
+
+
+def ligar_no_projeto(
+    pasta: Path,
+    nomes: list[str],
+    so_adicionar: bool = False,
+    painel: Path = mcp_externo.PAINEL,
+    caminho: Path = mcp_externo.CAMINHO,
+) -> list[str]:
+    """Deixa valendo nesta pasta exatamente os conectores `nomes` (ou só soma, ao criar a
+    sessão). Grava o caminho completo; o nome antigo desta pasta sai quando ela deixa de usar o
+    conector. Devolve os que valem agora."""
+    pasta = pasta.resolve()
+    blocos = mcp_externo._blocos(caminho, painel)
+    if desconhecidos := sorted(set(nomes) - set(blocos)):
+        raise McpInvalido(f"conector desconhecido: {desconhecidos[0]}")
+    atual = _ler_painel(painel)
+    for nome, (bloco, origem) in blocos.items():
+        projetos = [str(p) for p in bloco.get("projetos") or []]
+        if mcp_externo.TODOS in projetos:
+            continue
+        quer, vale = nome in nomes, mcp_externo.vale_no_projeto(projetos, pasta)
+        if quer == vale or (so_adicionar and not quer):
+            continue
+        if origem != "painel":
+            raise McpInvalido(f"{nome} vem do mcp.toml: os projetos dele se ajustam lá")
+        if quer:
+            projetos.append(str(pasta))
+        else:
+            projetos = [p for p in projetos if p not in (str(pasta), pasta.name)]
+        servidor = atual["servidores"][nome]
+        if projetos:
+            servidor["projetos"] = projetos
+        else:
+            servidor.pop("projetos", None)
+            servidor.pop("conversa", None)
+    _gravar_painel(painel, atual)
+    return [c["nome"] for c in do_projeto(pasta, caminho, painel) if c["marcado"]]
+
+
+# --- importar: a configuração que o serviço fornece, colada como veio ------------------------
+
+NAO_RECONHECIDA = "Configuração não reconhecida. Cole o JSON do MCP ou o comando curl."
+# Valor de exemplo, não segredo: "<token>", "YOUR_API_KEY", "${TOKEN}", "SEU_TOKEN".
+EXEMPLO = re.compile(r"^$|<.*>|\$\{|(^|\s)(your|seu|sua)[_-]", re.IGNORECASE)
+
+
+def _nome_de(texto: str) -> str:
+    nome = re.sub(r"[^a-z0-9_-]+", "-", texto.lower()).strip("-_")[:32].strip("-_")
+    return nome or "conector"
+
+
+def _variavel_de(*partes: str) -> str:
+    variavel = re.sub(r"[^A-Z0-9]+", "_", "_".join(partes).upper()).strip("_")
+    if not variavel[:1].isalpha():
+        variavel = "MCP_" + variavel
+    return variavel[:64]
+
+
+def _de_curl(texto: str) -> list[tuple[str, dict[str, Any]]]:
+    import shlex
+
+    try:
+        partes = shlex.split(texto.replace("\\\n", " "))
+    except ValueError:
+        raise McpInvalido(NAO_RECONHECIDA) from None
+    url, cabecalhos = "", {}
+    for anterior, parte in itertools.pairwise(["", *partes]):
+        if anterior in ("-H", "--header") and ":" in parte:
+            chave, valor = parte.split(":", 1)
+            cabecalhos[chave.strip()] = valor.strip()
+        elif not url and parte.startswith(("https://", "http://")):
+            url = parte
+    if not url:
+        raise McpInvalido(NAO_RECONHECIDA)
+    # Os de protocolo vêm do próprio Zé; só os de acesso viram segredo.
+    for comum in ("Content-Type", "Accept", "User-Agent"):
+        for chave in [c for c in cabecalhos if c.lower() == comum.lower()]:
+            del cabecalhos[chave]
+    host = re.sub(r"^www\.", "", url.split("//", 1)[1].split("/", 1)[0].split(":", 1)[0])
+    return [(host.split(".")[0], {"url": url, "headers": cabecalhos})]
+
+
+def _de_json(texto: str) -> list[tuple[str, dict[str, Any]]]:
+    dados: Any = None
+    for tentativa in (texto, "{" + texto.strip().rstrip(",") + "}"):  # aceita o trecho sem chaves
+        with contextlib.suppress(ValueError):
+            dados = json.loads(tentativa)
+            break
+    if not isinstance(dados, dict):
+        raise McpInvalido(NAO_RECONHECIDA)
+    for chave in ("mcpServers", "servers", "mcp_servers"):
+        if isinstance(dados.get(chave), dict):
+            dados = dados[chave]
+            break
+    if "url" in dados or "command" in dados:  # um servidor só, sem nome
+        dados = {"conector": dados}
+    servidores = [(k, v) for k, v in dados.items() if isinstance(v, dict)]
+    if not servidores:
+        raise McpInvalido(NAO_RECONHECIDA)
+    return servidores
+
+
+def _tabela(valor: Any, alvo: str, campo: str) -> dict[str, Any]:
+    if valor is None:
+        return {}
+    if not isinstance(valor, dict):
+        raise McpInvalido(f"{alvo}: {campo} precisa ser um objeto")
+    return {str(k): v for k, v in valor.items()}
+
+
+def ler_configuracao(texto: str) -> list[tuple[str, dict[str, Any]]]:
+    """(nome sugerido, servidor) no formato `mcpServers` (Claude, Cursor, n8n) ou de um curl."""
+    texto = texto.strip()
+    return _de_curl(texto) if texto.startswith("curl") else _de_json(texto)
+
+
+def importar(
+    texto: str,
+    nome: str = "",
+    projetos: list[str] | None = None,
+    painel: Path = mcp_externo.PAINEL,
+    caminho: Path = mcp_externo.CAMINHO,
+    novo: bool = False,
+) -> list[str]:
+    """Cria (ou troca) os conectores da configuração colada. `novo` recusa um nome que já
+    existe: cinco n8n de clientes colados com o mesmo JSON não se sobrescrevem. Os valores dos
+    cabeçalhos e do `env` vão para os segredos 0600 e nunca para o arquivo; as permissões já
+    escolhidas continuam. Nenhuma mensagem de erro repete o que foi colado."""
+    servidores = ler_configuracao(texto)
+    existentes = mcp_externo._blocos(caminho, painel)
+    alvos = [nome or _nome_de(chave) for chave, _ in servidores]
+    if novo and (repetidos := [a for a in alvos if a in existentes]):
+        raise McpInvalido(f"Já existe o conector {repetidos[0]}. Dê outro nome.")
+    if nome and len(servidores) > 1:
+        raise McpInvalido("a configuração tem mais de um servidor: deixe o nome em branco")
+    atuais = _ler_painel(painel)["servidores"]
+    feitos = []
+    for chave, servidor in servidores:
+        alvo = nome or _nome_de(chave)
+        tipo = str(servidor.get("type") or servidor.get("transport") or "")
+        if tipo.lower() == "sse":
+            raise McpInvalido(f"{alvo}: servidor SSE; o Zé usa MCP por HTTP (streamable)")
+        segredos: dict[str, str] = {}
+        dados: dict[str, Any]
+        if servidor.get("command"):
+            ambiente = []
+            for variavel, valor in _tabela(servidor.get("env"), alvo, "env").items():
+                variavel = variavel if VARIAVEL.fullmatch(variavel) else _variavel_de(variavel)
+                ambiente.append(variavel)
+                segredos[variavel] = str(valor)
+            dados = {
+                "tipo": "stdio",
+                "comando": str(servidor["command"]),
+                "argumentos": [str(a) for a in servidor.get("args") or [] if isinstance(a, str)],
+                "ambiente": ambiente,
+            }
+        elif servidor.get("url"):
+            cabecalhos = {}
+            for cabecalho, valor in _tabela(servidor.get("headers"), alvo, "headers").items():
+                variavel = _variavel_de(alvo, cabecalho)
+                cabecalhos[str(cabecalho)] = variavel
+                segredos[variavel] = str(valor)
+            dados = {"tipo": "http", "url": str(servidor["url"]), "cabecalhos": cabecalhos}
+        else:
+            raise McpInvalido(f"{alvo}: sem url nem command")
+        anterior = atuais.get(alvo, {})
+        dados.update(
+            livres=anterior.get("livres", []),
+            bloqueadas=anterior.get("bloqueadas", []),
+            projetos=projetos if projetos is not None else anterior.get("projetos", []),
+            conversa=anterior.get("conversa") is True,
+        )
+        salvar(alvo, dados, painel, caminho)
+        for variavel, valor in segredos.items():
+            if not EXEMPLO.search(valor.strip()):
+                gravar_segredo(alvo, variavel, valor)
+        feitos.append(alvo)
+    return feitos
 
 
 # --- testar: sobe o servidor e lista as ferramentas -----------------------------------------
@@ -240,6 +515,7 @@ def _post(url: str, msg: dict[str, Any], cab: dict[str, str]) -> tuple[dict[str,
             **cab,
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
+            "User-Agent": mcp_oauth.AGENTE,
         },
     )
     with urllib.request.urlopen(pedido, timeout=LIMITE_TESTE_S) as resp:  # noqa: S310
@@ -256,6 +532,18 @@ def _post(url: str, msg: dict[str, Any], cab: dict[str, str]) -> tuple[dict[str,
     return {}, sessao
 
 
+def _acesso_negado(codigo: int, cabecalhos: dict[str, str]) -> str:
+    """401/403 com a causa mais comum quando dá para ver sem mostrar o segredo: o token sem o
+    tipo no Authorization (o n8n e a maioria dos MCPs pedem `Bearer <token>`)."""
+    sem_tipo = any(
+        nome.lower() == "authorization" and " " not in valor.strip()
+        for nome, valor in cabecalhos.items()
+    )
+    if sem_tipo:
+        return f"Acesso negado (HTTP {codigo}). O Authorization está sem o tipo, como Bearer."
+    return f"Acesso negado (HTTP {codigo}). Confira o segredo."
+
+
 def _testar_http(config: dict[str, Any]) -> list[dict[str, str]]:
     cab = dict(config.get("headers", {}))
     try:
@@ -265,6 +553,8 @@ def _testar_http(config: dict[str, Any]) -> list[dict[str, str]]:
         _post(config["url"], _pedido(None, "notifications/initialized"), cab)
         resposta, _ = _post(config["url"], _pedido(2, "tools/list"), cab)
     except urllib.error.HTTPError as erro:
+        if erro.code in (401, 403):
+            raise McpInvalido(_acesso_negado(erro.code, config.get("headers", {}))) from None
         raise McpInvalido(f"HTTP {erro.code}") from None
     except (urllib.error.URLError, OSError) as erro:
         raise McpInvalido(f"não conectou ({type(erro).__name__})") from None
@@ -282,7 +572,9 @@ def testar(
         raise McpInvalido("conector desconhecido")
     bloco = blocos[nome][0]
     base = mcp_externo.com_segredos(nome, bloco, os.environ.copy() if env is None else env)
-    config = mcp_externo._servidor(nome, bloco, base)
+    config = mcp_externo._servidor(nome, bloco, base, avisar=False)
+    if config is None and bloco.get("oauth") is True:
+        return {"ok": False, "erro": "falta entrar"}
     if config is None:
         faltam = [v for v in mcp_externo._nomes_de_segredo(bloco) if v not in base]
         return {"ok": False, "erro": "falta o segredo " + ", ".join(faltam)}

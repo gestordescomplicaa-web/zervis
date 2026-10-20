@@ -141,6 +141,7 @@ function fecharEscolhas(exceto) {
 }
 
 let term = null, termId = null, termPos = 0, termObservador = null, filaEscrita = Promise.resolve();
+let termWs = null, termWsPronto = false, filaTerminalWs = [], prazoTerminalWs = null;
 // Cancela a leitura do terminal aberto. A leitura espera novidade por até 20 s; sem cancelar, cada
 // troca de aba deixava uma presa, e seis presas esgotam as conexões do navegador com o painel.
 /** @type {AbortController | null} */
@@ -150,9 +151,15 @@ function fecharTerminalTela() {
   termParar?.abort();
   termParar = null;
   termId = null;
+  clearTimeout(prazoTerminalWs);
+  prazoTerminalWs = null;
+  const ws = termWs;
+  termWs = null;
+  termWsPronto = false;
+  filaTerminalWs = [];
+  ws?.close();
   termObservador?.disconnect();
   termObservador = null;
   term?.dispose();
   term = null;
 }
-

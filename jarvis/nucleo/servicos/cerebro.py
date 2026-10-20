@@ -171,7 +171,7 @@ class ServicoCerebro:
     def recarregar_conectores(self) -> str:
         """O painel mudou os conectores MCP: remonta o cérebro com eles (a conversa recomeça)."""
         try:
-            novos = mcp_externo.carregar(painel=mcp_externo.PAINEL)
+            novos = mcp_externo.para_conversa(painel=mcp_externo.PAINEL)
         except mcp_externo.McpInvalido as erro:
             return f"Conectores com erro: {erro}."
         antigos = self.n.externos

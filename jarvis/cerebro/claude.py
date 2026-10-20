@@ -106,6 +106,14 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
         return f"Vou {acao} a automação {entrada.get('id', '')}."
     if nome == "mcp__jarvis__janela_abrir":
         return "Vou abrir a minha janela; a câmera acende."
+    if nome == "mcp__jarvis__conector_cadastrar":
+        if entrada.get("tipo") == "http":
+            onde = urlsplit(str(entrada.get("url", ""))).hostname or "um endereço"
+            alvo = f"ligado a {onde}"
+        else:
+            partes = [str(entrada.get("comando", "")), *map(str, entrada.get("argumentos") or [])]
+            alvo = f"rodando {' '.join(p for p in partes if p)[:120]}"
+        return f"Vou cadastrar o conector {entrada.get('nome', '')}, {alvo}."
     if nome == "mcp__jarvis__sistema_executar":
         argumentos = " ".join(str(a) for a in entrada.get("argumentos") or [])
         return (
@@ -191,9 +199,7 @@ class ClaudeBrain:
             disallowed_tools=list(self.bloqueadas),
             mcp_servers=self.mcp,
             can_use_tool=self._pode_usar,
-            hooks={"PostToolUse": [HookMatcher(hooks=[self._depois_da_ferramenta])]}
-            if self.depois is not None
-            else None,
+            hooks={"PostToolUse": [HookMatcher(hooks=[self._depois_da_ferramenta])]},
             permission_mode="default",
             setting_sources=[],
             strict_mcp_config=True,
@@ -213,7 +219,15 @@ class ClaudeBrain:
     async def _depois_da_ferramenta(
         self, entrada: HookInput, _id: str | None, _contexto: HookContext
     ) -> SyncHookJSONOutput:
-        if self.depois is None or entrada["hook_event_name"] != "PostToolUse":
+        if entrada["hook_event_name"] != "PostToolUse":
+            return {}
+        try:
+            atividade.registrar_externa(
+                entrada["tool_name"], entrada.get("tool_input"), entrada["tool_response"]
+            )
+        except Exception:
+            log.exception("registro de %s na atividade falhou", entrada["tool_name"])
+        if self.depois is None:
             return {}
         try:
             novo = self.depois(entrada["tool_name"], entrada["tool_response"])
