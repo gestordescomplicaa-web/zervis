@@ -86,7 +86,7 @@ class AcoesInicio(Pagina):
         itens: list[dict[str, str]] = []
         for t in self.n.conversas.do_dia(hoje.date()):
             quando = t.em.isoformat(timespec="seconds")
-            itens.append({"quando": quando, "tipo": "voce", "texto": t.gabriel})
+            itens.append({"quando": quando, "tipo": "voce", "texto": t.pessoa})
             if t.ze:
                 itens.append({"quando": quando, "tipo": "ze", "texto": t.ze})
         inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)

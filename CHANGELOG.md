@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Conversas: a fala de quem usa passa a ser gravada como `pessoa`. Antes, a chave era o nome de
+  uma pessoa, no código público. As conversas já gravadas continuam legíveis, sem migração, e o
+  teste de dados pessoais passa a procurar sem distinguir maiúsculas.
+
 ## 0.1.0 (19/10/2026)
 
 A primeira versão publicada. Destaques:
