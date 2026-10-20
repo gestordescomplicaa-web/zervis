@@ -1,5 +1,5 @@
 """Anel do Barehands: `state/state`, `state/mood.json`, `state/wave.json` e `state/expressao.json`
-(só o JARVIS escreve). A expressão é a emoção do avatar (08/10/2026): o cérebro começa a
+(só o Zé escreve). A expressão é a emoção do avatar (08/10/2026): o cérebro começa a
 resposta com `[alegria]`, `[duvida]`, `[raiva]` ou `[tristeza]`; a marca sai antes da voz e
 vira o rosto.
 

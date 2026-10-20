@@ -2,6 +2,18 @@
 
 ## Não lançado
 
+- Nome: o assistente é o Zé em toda parte do código, da interface, das descrições das
+  ferramentas e dos documentos atuais (eram 268 "JARVIS"); a persona passa a ser `ZE.md` (o
+  caminho antigo continua como link) e o prefixo dos pedidos de manutenção, `[Zé · modo
+  manutenção · pedido <id>]`. "Hey Orca" vira "Ei Zé" nos textos. ADRs, CHANGELOG e auditorias
+  ficam como foram escritos. Os nomes técnicos (o pacote `jarvis`, as variáveis `JARVIS_*`, o
+  arquivo de memória `JARVIS.md`) mudam depois, com transição.
+- Dados expostos: uma imagem do avatar levava nos metadados o caminho do arquivo de origem, com
+  o usuário da máquina; o fuso de quem desenvolve saiu de uma auditoria. O teste de dados
+  pessoais passa a olhar também `.toml`, `.sh` e os metadados das imagens PNG.
+- Documentos: o registro do serviço é `journalctl --user -u zervis` (estava `jarvisd`, que não
+  existe), e a arquitetura antiga ganha o aviso do que mudou.
+
 - Bateria de avaliação do cérebro (`zervis avaliar`, `docs/avaliacao.md`): cenários em TOML com
   o pedido, o que as ferramentas respondem e o que se espera (ferramentas, argumentos e
   resposta); o cérebro de verdade com as ferramentas simuladas, repetições para a taxa de

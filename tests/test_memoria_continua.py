@@ -66,7 +66,7 @@ def test_juntar_nao_duplica(tmp_path: Path) -> None:
 
 def test_carimbo_e_contexto_aninhado_saem_do_pedido() -> None:
     conteudo = (
-        "[quinta-feira, 08/10/2026, 00:47] (Janela do JARVIS: aberta; Núcleo recolhido "
+        "[quinta-feira, 08/10/2026, 00:47] (Janela do Zé: aberta; Núcleo recolhido "
         "(Mapa, Guia); o usuário está usando as mãos) (Aviso: algo) Quero o mapa."
     )
     assert mc.pedido_do_carimbo(conteudo) == (quando(8, 0, 47), "Quero o mapa.")

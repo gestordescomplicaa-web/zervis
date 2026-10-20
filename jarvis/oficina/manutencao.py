@@ -10,7 +10,7 @@ igual com qualquer agente.
 
 Supervisionado de propósito (docs/05-roadmap.md, fase de manutenção):
 - a zona protegida (regras de aprovação, política do sistema, configuração, este módulo, o
-  reinício) pode mudar só com o usuário aprovando na sessão; se mudar, o JARVIS avisa e não se
+  reinício) pode mudar só com o usuário aprovando na sessão; se mudar, o Zé avisa e não se
   reinicia sem a revisão marcada no painel, no próprio PC (ADR 0028);
 - reiniciar para a mudança valer passa pelos testes e por `deploy/reinicio-seguro.sh`, que volta
   sozinho para a última versão boa se a nova não subir.
@@ -39,7 +39,7 @@ AGENTES = {"claude": "Claude", "codex": "Codex"}
 NOME_DA_SESSAO = "Zé · autodesenvolvimento"
 NOMES_ANTIGOS = ("Zé · melhorias",)
 ORIGEM = "manutencao"
-# Mudam só com o usuário aprovando: o que decide o que o JARVIS faz sem perguntar.
+# Mudam só com o usuário aprovando: o que decide o que o Zé faz sem perguntar.
 PROTEGIDOS = (
     "jarvis/cerebro/ferramentas/__init__.py",  # LEITURA: o que passa sem aprovação
     "jarvis/cerebro/claude.py",  # can_use_tool: a aprovação falada
@@ -291,7 +291,7 @@ class Manutencao:
             corpo = rodada or f'O usuário pediu por voz: "{texto}".'
         resposta, pergunta = self._arquivos(pedido.id)
         mensagem = (
-            f"[JARVIS · modo manutenção · pedido {pedido.id}] {corpo} Contexto agora: {contexto} "
+            f"[Zé · modo manutenção · pedido {pedido.id}] {corpo} Contexto agora: {contexto} "
             "Trabalhe como sempre neste projeto (CLAUDE.md, testes, conferir na janela real, "
             "commit). Leia docs/essencia.md: nenhuma mudança pode contrariá-la. Escopo: só "
             "trabalho sobre o próprio Zérvis; pedido fora disso (outro projeto, um site, um "

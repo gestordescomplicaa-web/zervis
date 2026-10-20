@@ -1,8 +1,8 @@
 """Texto de tela -> texto para a fala em português do Brasil.
 
-Portado sem mudança de comportamento do JARVIS antigo (VIBE-CODING/jarvis/fala.py, 06/10/2026),
+Portado sem mudança de comportamento do Zé antigo (VIBE-CODING/jarvis/fala.py, 06/10/2026),
 com `para_fala` vindo de `brain.speakable`. As sessões escrevem para leitura ("71%", "10:05",
-"3,5 GB", "R$ 20"); o Cadu lê mal dígitos e símbolos, então tudo o que o JARVIS fala passa aqui.
+"3,5 GB", "R$ 20"); o Cadu lê mal dígitos e símbolos, então tudo o que o Zé fala passa aqui.
 """
 
 import re
@@ -496,7 +496,7 @@ def separar_fontes(texto: str) -> tuple[str, str]:
 
 
 def para_fala(texto: str, limite: int = 2400) -> str:
-    """Markdown/code/URLs out; long answers cut at a sentence. O JARVIS novo não tem chat: as
+    """Markdown/code/URLs out; long answers cut at a sentence. O Zé novo não tem chat: as
     frases antigas ("disponível no chat") viraram referências neutras (teste de 06/10/2026)."""
     value = re.sub(r"```.*?```", " um trecho de código. ", str(texto), flags=re.S)
     value = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", value)

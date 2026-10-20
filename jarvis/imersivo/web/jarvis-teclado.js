@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // gdautomacao.ia: the Teclado. A small keyboard icon beside CPU · RAM · GPU · VRAM opens
-// a plain (non-holographic) text bar: what is typed goes to the JARVIS exactly like a
+// a plain (non-holographic) text bar: what is typed goes to the Zé exactly like a
 // spoken request (local commands first, then the brain), with no "Ei Zé" needed.
-// POST /teclado writes state/teclado.json; the JARVIS answers in teclado-resposta.json
+// POST /teclado writes state/teclado.json; the Zé answers in teclado-resposta.json
 // (what it says, as it says it), shown under the bar. Also typed: "sim" / "não" to a
-// question the JARVIS is waiting on. Enter sends, ↑/↓ recall, Esc closes, "/" opens.
+// question the Zé is waiting on. Enter sends, ↑/↓ recall, Esc closes, "/" opens.
 (() => {
   if (new URLSearchParams(location.search).get("role") === "render") return;
   const hint = document.getElementById("hint"), linha = document.getElementById("hud-m");
@@ -45,7 +45,7 @@
 
   const botao = document.createElement("span");
   botao.id = "jv-teclado-btn"; botao.setAttribute("role", "button"); botao.tabIndex = 0;
-  botao.title = "Teclado: escrever um comando para o JARVIS (/)";
+  botao.title = "Teclado: escrever um comando para o Zé (/)";
   botao.setAttribute("aria-label", "Teclado");
   botao.innerHTML = '<svg viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">' +
     '<rect x=".6" y=".6" width="16.8" height="10.8" rx="2"/>' +
@@ -56,7 +56,7 @@
   painel.id = "jv-teclado"; painel.hidden = true;
   painel.innerHTML = `<header>TECLADO<small>Enter envia · ↑ anteriores · Esc fecha</small></header>
     <form><input type="text" maxlength="2000" autocomplete="off" spellcheck="true"
-      placeholder="Escreva um comando para o JARVIS…" aria-label="Comando para o JARVIS">
+      placeholder="Escreva um comando para o Zé…" aria-label="Comando para o Zé">
       <button type="submit" title="Enviar">Enviar</button><button type="button" data-a="fechar" title="Fechar">✕</button></form>
     <div class="resposta" aria-live="polite"></div>`;
   hint.appendChild(painel);
@@ -94,13 +94,13 @@
       esperando = (await r.json()).id;
       return esperando;
     } catch (e) {
-      saida.innerHTML = `<div class="voce">› ${esc(texto)}</div><div>Não consegui enviar ao JARVIS.</div>`;
+      saida.innerHTML = `<div class="voce">› ${esc(texto)}</div><div>Não consegui enviar ao Zé.</div>`;
       return null;
     }
   }
 
-  // The answer arrives as the JARVIS speaks it; a request with no answer in 20 s is
-  // reported (the JARVIS stopped, or inactive with the screen locked).
+  // The answer arrives as the Zé speaks it; a request with no answer in 20 s is
+  // reported (the Zé stopped, or inactive with the screen locked).
   let desde = 0;
   async function ouvir() {
     if (!esperando) return;
@@ -114,7 +114,7 @@
       }
     } catch (e) {}
     if (Date.now() - desde > 20000) {
-      mostrar(ultimoTexto, "O JARVIS não respondeu. Ele está rodando?", true);
+      mostrar(ultimoTexto, "O Zé não respondeu. Ele está rodando?", true);
       esperando = null; desde = 0;
     }
   }

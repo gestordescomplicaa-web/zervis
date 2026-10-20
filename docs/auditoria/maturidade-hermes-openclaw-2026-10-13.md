@@ -1,6 +1,6 @@
 # Auditoria de maturidade: Zérvis, Hermes Agent e OpenClaw
 
-Data de referência: 13/10/2026, fuso America/Recife. Checkout: `aca2855`.
+Data de referência: 13/10/2026. Checkout: `aca2855`.
 
 O Zérvis já é um assistente pessoal funcional, com uma arquitetura de agente consistente.
 Minha nota geral é **7,4/10**. Para conversar e operar o próprio computador com supervisão,

@@ -138,7 +138,7 @@ etapa por vez. Ela absorve os itens 5 (instalação), 6 (SQLite) e 8 (revisão f
    pelo QR (WaCalls) e as mensagens como fonte dos avisos de lead quente. Falta: a recepcionista
    por ligação, o atendente no texto, montar o agente, assumir ao vivo e a telefonia SIP.
 8. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
-   falam do Orca e do JARVIS: visão, conceitos, reaproveitamento, plano da oficina).
+   falam do Orca e do Zé: visão, conceitos, reaproveitamento, plano da oficina).
 
 ## Primeiro teste numa VPS real (16/10/2026)
 

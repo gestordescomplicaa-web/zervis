@@ -1,4 +1,4 @@
-"""Revisão em segundo plano: o JARVIS aprende com a conversa (Fase 6; o que fez o Hermes famoso).
+"""Revisão em segundo plano: o Zé aprende com a conversa (Fase 6; o que fez o Hermes famoso).
 
 No fim de uma conversa que valha a pena (correção do usuário ou pelo menos `MINIMO_TURNOS`), um
 modelo menor relê só aquela conversa, com a memória e as skills atuais, e propõe o que guardar.
@@ -34,12 +34,12 @@ SINAIS = re.compile(
     re.IGNORECASE,
 )
 
-PROMPT = """Você revisa uma conversa entre o usuário e o JARVIS, o assistente de voz dele, para \
-o JARVIS aprender. Proponha só o que fará a próxima conversa sair melhor de primeira.
+PROMPT = """Você revisa uma conversa entre o usuário e o Zé, o assistente de voz dele, para \
+o Zé aprender. Proponha só o que fará a próxima conversa sair melhor de primeira.
 
 Dois lugares, um fato vai para um só:
 - memória "usuario": quem o usuário é, preferências, jeito de trabalhar, o que ele espera do \
-JARVIS;
+Zé;
 - memória "jarvis": fatos do ambiente (máquina, projetos, ferramentas, caminhos, convenções);
 - skill: como fazer bem uma CLASSE de tarefa, do jeito do usuário (procedimento na ordem, \
 armadilhas como regra geral + o porquê em uma frase). Nome no nível da classe, nunca de uma \

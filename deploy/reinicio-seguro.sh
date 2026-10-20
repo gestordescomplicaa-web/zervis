@@ -36,7 +36,7 @@ subiu() {
 
 dizer() { printf '{"resultado": "%s", "bom": "%s", "em": %s}\n' "$1" "$BOM" "$(date +%s)" > "$PASTA/reinicio.json"; }
 
-sleep 5   # o JARVIS termina de dizer que vai se reiniciar
+sleep 5   # o Zé termina de dizer que vai se reiniciar
 antes=$(pid_de)
 agora=$(date +%s)
 systemctl --user restart zervis

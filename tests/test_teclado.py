@@ -39,7 +39,7 @@ def test_pedido_novo_sai_uma_vez_e_a_resposta_acompanha_a_fala(tmp_path: Path) -
 
 def test_o_que_ja_estava_la_ou_velho_nao_roda(tmp_path: Path) -> None:
     escrever(tmp_path, "antes", "abre o navegador")
-    t = Teclado(tmp_path, Hud(tmp_path))  # reinício do JARVIS: não repete o último pedido
+    t = Teclado(tmp_path, Hud(tmp_path))  # reinício do Zé: não repete o último pedido
     escrever(tmp_path, "antes", "abre o navegador")
     assert t.novo() is None
     escrever(tmp_path, "velho1", "abre o navegador", idade=60)

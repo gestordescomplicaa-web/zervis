@@ -1,4 +1,4 @@
-"""A pasta do JARVIS: diário de aprendizado, curadoria das skills e as notas do Barehands."""
+"""A pasta do Zé: diário de aprendizado, curadoria das skills e as notas do Barehands."""
 
 import asyncio
 import os

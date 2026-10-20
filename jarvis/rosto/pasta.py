@@ -1,6 +1,6 @@
-"""A pasta do JARVIS no Barehands: ele mesmo escreve, o usuário lê (pedido de 06/10/2026).
+"""A pasta do Zé no Barehands: ele mesmo escreve, o usuário lê (pedido de 06/10/2026).
 
-Uma pasta de notas em Markdown, apontada por uma bolha do Barehands, com tudo o que é do JARVIS:
+Uma pasta de notas em Markdown, apontada por uma bolha do Barehands, com tudo o que é do Zé:
 quem ele é e com o que está conectado, a memória, as skills com o uso, as automações, as
 sugestões com o diário de aprendizado e o consumo de tokens por dia. Só leitura: mudar continua
 passando pela aprovação por voz. Cada nota só é regravada quando o conteúdo muda.
@@ -66,7 +66,7 @@ def quem_sou(c: Conexoes) -> str:
     linhas = [
         "# Quem sou",
         "",
-        "Sou o JARVIS desta máquina. Esta pasta é escrita por mim e serve só para ler: "
+        "Sou o Zé desta máquina. Esta pasta é escrita por mim e serve só para ler: "
         "mudanças passam pela sua aprovação por voz.",
         "",
         "## Cérebro agora",

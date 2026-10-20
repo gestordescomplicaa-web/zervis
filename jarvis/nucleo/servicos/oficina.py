@@ -61,7 +61,7 @@ class ServicoOficina:
     def _contexto_da_manutencao(self) -> str:
         partes = [self.n.tela.resumo()]
         if self.n.status.ultimo_erro and time.time() - self.n.status.erro_em < 3600:
-            partes.append(f"Último erro do JARVIS: {self.n.status.ultimo_erro}.")
+            partes.append(f"Último erro do Zé: {self.n.status.ultimo_erro}.")
         return " ".join(partes)
 
     @staticmethod
@@ -203,7 +203,7 @@ class ServicoOficina:
         if maos := evidencias.maos(self.n.tela.pasta / "maos-diagnostico.json"):
             provas += " " + maos
         corpo = (
-            "Rodada de melhoria pedida pelo usuário. Evidências do uso real do JARVIS: "
+            "Rodada de melhoria pedida pelo usuário. Evidências do uso real do Zé: "
             f"{provas} Proponha até cinco melhorias numeradas, da mais útil para a menos, cada "
             "uma com o problema que resolve e o risco. Não implemente nada ainda: o usuário "
             "aprova por voz quais fazer, e então faça uma por vez."

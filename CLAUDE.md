@@ -28,6 +28,6 @@ O Zérvis é um produto, não um protótipo. Vale para a interface e para quem d
   Linear): consistentes, objetivos, sem enfeite.
 - **Comunicação com o usuário:** direta e curta. O que foi feito, o que falta, e no máximo uma
   pergunta com a recomendação. Sem listas de opções longas nem explicações que ninguém pediu.
-- Pedidos que começam com `[JARVIS · modo manutenção · pedido <id>]` vêm do usuário por voz,
+- Pedidos que começam com `[Zé · modo manutenção · pedido <id>]` vêm do usuário por voz,
   pelo próprio Zé: respeite a zona protegida escrita no pedido e, ao terminar, grave no arquivo
   indicado um resumo falado de um parágrafo, sem símbolos, caminhos nem códigos.

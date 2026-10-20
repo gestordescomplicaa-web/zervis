@@ -1,4 +1,4 @@
-"""Evidências do uso real, para a rodada de melhoria: onde o JARVIS falhou ou gastou à toa.
+"""Evidências do uso real, para a rodada de melhoria: onde o Zé falhou ou gastou à toa.
 
 Uma linha JSON por evento em `evidencias.jsonl` (local; nada sai da máquina sem a rodada). Os
 tipos são poucos e acionáveis:

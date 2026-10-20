@@ -1,7 +1,7 @@
-"""Detector "Hey Orca": o MLP em numpy e a regra de paciência.
+"""Detector "Ei Zé": o MLP em numpy e a regra de paciência.
 
 A equivalência com o openWakeWord original (diferença 0,0 nas 32 gravações do treino e os
-mesmos 28 de 30 disparos do JARVIS antigo) é medida por provas/prova_ativacao.py, porque usa a
+mesmos 28 de 30 disparos do Zé antigo) é medida por provas/prova_ativacao.py, porque usa a
 voz do usuário, que fica fora do repositório.
 """
 

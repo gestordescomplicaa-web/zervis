@@ -5,10 +5,10 @@ pedido = "O n8n da Padaria Maria está de pé?"
 [ferramentas]
 conectores_listar = '''[
  {"nome": "n8n-joao", "tipo": "remoto", "onde": "https://n8n.joao.exemplo/mcp-server/http", "ligado": true,
-  "faltam_segredos": [], "projetos": ["/home/ana/projetos/loja-do-joao"], "na_conversa": false,
+  "faltam_segredos": [], "projetos": ["/srv/projetos/projetos/loja-do-joao"], "na_conversa": false,
   "origem": "painel", "vigia": "fora do ar: banco fora"},
  {"nome": "n8n-maria", "tipo": "remoto", "onde": "https://n8n.maria.exemplo/mcp-server/http", "ligado": true,
-  "faltam_segredos": [], "projetos": ["/home/ana/clientes/padaria-maria"], "na_conversa": false,
+  "faltam_segredos": [], "projetos": ["/srv/projetos/clientes/padaria-maria"], "na_conversa": false,
   "origem": "painel", "vigia": "de pé"}]'''
 
 [espera]

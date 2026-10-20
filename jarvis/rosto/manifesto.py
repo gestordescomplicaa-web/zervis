@@ -1,10 +1,10 @@
-"""O manifesto do Núcleo: os orbes que alimentam o JARVIS, numa fonte só.
+"""O manifesto do Núcleo: os orbes que alimentam o Zé, numa fonte só.
 
 Mora no `barehands.json` (a página monta os orbes dele). Cada orbe tem um id estável, o nome
 mostrado, o tipo (brain = Mapa, hoje, trabalho, notes, media = Acervo), apelidos falados e o que
 guarda.
 Daqui saem os nomes que a voz entende e o trecho do Núcleo que entra na persona; para mudar
-ou entregar o JARVIS a outra pessoa, edita-se o manifesto, não o código.
+ou entregar o Zé a outra pessoa, edita-se o manifesto, não o código.
 """
 
 import json

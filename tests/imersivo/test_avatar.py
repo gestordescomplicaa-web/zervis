@@ -1,6 +1,6 @@
 """The avatar: the Zé's holographic chimpanzee (Blender glTF) inside the ring
 widget (tap still blooms the Núcleo), switchable back to the ring from the D menu, by the
-JARVIS (action visual) or by voice.
+Zé (action visual) or by voice.
 
 Run: python tests/test_avatar.py   (or pytest). WebGL runs on SwiftShader (no GPU needed);
 three.js comes from the CDN like the rest of the page.
@@ -130,7 +130,7 @@ async def main():
                     await asyncio.sleep(.1)
                 await check('thinking pulses and shows the pensive face (eyes up)', 'jarvisAvatar.diagnostico()[0].olharCima>.4')
                 await ev('clearInterval(avatarFeed);jarvisRing.data={state:"idle",wave:null}')
-                # Emotions: the JARVIS's controller action and the avatar API mix the new keys.
+                # Emotions: the Zé's controller action and the avatar API mix the new keys.
                 async def ate(js):
                     for _ in range(60):
                         if await ev(js):
@@ -158,7 +158,7 @@ async def main():
                     await asyncio.sleep(.1)
                 await check('and ends one full turn later, facing front', '''(() => {
                     const g = jarvisAvatar.diagnostico()[0].giro; return Math.abs(g - 2*Math.PI) < .05 || Math.abs(g) < .05; })()''')
-                # Spun round and round by hand, he gets dizzy and tells the JARVIS (once).
+                # Spun round and round by hand, he gets dizzy and tells the Zé (once).
                 await ev('''(()=>{window.eventos=[];const o=jarvisControle.evento;jarvisControle.evento=t=>{eventos.push(t);return o(t)};
                   const it=jarvisItemDe(document.querySelector(".ringcard"));it.grabbedBy=[0];it.mode="rotate";
                   window.rodar=setInterval(()=>{it.ry=(it.ry||0)+.35;},20);})()''')
@@ -198,7 +198,7 @@ async def main():
                 await check('tapping it still blooms the Núcleo', 'document.querySelectorAll(".card.orb").length === 5')
                 r = await ev('jarvisControle.executar({id: "v1", acoes: [{acao: "visual", valor: "anel"}]}).then(() => jarvisControle.estado())')
                 await asyncio.sleep(.3)
-                await check('the JARVIS can bring the ring back ("volta o anel")', '''!document.querySelector("canvas.jv-avatar-cena")
+                await check('the Zé can bring the ring back ("volta o anel")', '''!document.querySelector("canvas.jv-avatar-cena")
                     && !document.querySelector(".ringcard").classList.contains("jv-avatar")
                     && getComputedStyle(document.querySelector(".ringcard canvas")).opacity === "1" && jarvisControle.estado().visual === "anel"''')
                 await ev('jarvisConfig.abrir()')

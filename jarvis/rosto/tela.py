@@ -1,17 +1,17 @@
-"""A tela do JARVIS (Barehands) e o Núcleo nela. Ver, agir, abrir e fechar.
+"""A tela do Zé (Barehands) e o Núcleo nela. Ver, agir, abrir e fechar.
 
 O Núcleo é o anel do Zé com os orbes que nascem dele (Mapa, Hoje, Trabalho, Acervo, Guia).
-A janela do JARVIS é onde ele vive: com ela fechada, a câmera fica apagada e não há Núcleo.
+A janela do Zé é onde ele vive: com ela fechada, a câmera fica apagada e não há Núcleo.
 
 Contrato pela pasta de estado do Barehands, como o resto do rosto:
-- `tela-comando.json`: o JARVIS escreve `{id, acoes, ts}`; a página executa as ações em ordem.
+- `tela-comando.json`: o Zé escreve `{id, acoes, ts}`; a página executa as ações em ordem.
 - `tela-estado.json`: a página publica o estado a cada poucos segundos (o batimento que diz se a
   janela está aberta), avisa `recebido: id` ao começar e `resposta: id` com os resultados ao
   terminar.
 
 A janela costuma ficar em outro workspace; escondida, o Chromium pausa as animações. Antes de
 mostrar algo, `trazer()` põe a janela na frente pelo Hyprland. `em_foco()` diz se a janela do
-JARVIS é a ativa: é assim que "aumenta o brilho" vira o brilho da câmera dele e não o do monitor.
+Zé é a ativa: é assim que "aumenta o brilho" vira o brilho da câmera dele e não o do monitor.
 """
 
 import contextlib
@@ -62,7 +62,7 @@ VIVO_S = 15.0  # a página publica o estado a cada 5 s; sem isso por 15 s, a jan
 MODOS = {"brain": "geral", "work": "trabalho", "focus": "foco"}
 
 
-EVENTO_VALIDO_S = 15.0  # evento mais velho que isso (o JARVIS estava parado) não é falado
+EVENTO_VALIDO_S = 15.0  # evento mais velho que isso (o Zé estava parado) não é falado
 
 
 def evento_novo(dados: dict[str, Any], visto: str, agora: float) -> dict[str, Any] | None:
@@ -112,11 +112,11 @@ class Tela:
         return self._ler()
 
     def aberto(self) -> bool:
-        """A janela do JARVIS está rodando (a página publicou o estado há pouco)."""
+        """A janela do Zé está rodando (a página publicou o estado há pouco)."""
         return time.time() - float(self._ler().get("ts", 0)) < VIVO_S
 
     def em_foco(self) -> bool:
-        """A janela do JARVIS é a janela ativa do Hyprland agora."""
+        """A janela do Zé é a janela ativa do Hyprland agora."""
         try:
             ativa = json.loads(_hyprctl("activewindow", "-j") or "{}")
         except ValueError:
@@ -127,16 +127,16 @@ class Tela:
     def ver(self) -> dict[str, Any]:
         dados = self._ler()
         if not self.aberto():
-            raise TelaErro("a janela do JARVIS está fechada (sem ela não há Núcleo)")
+            raise TelaErro("a janela do Zé está fechada (sem ela não há Núcleo)")
         return {**dict(dados.get("estado") or {}), "em_foco": self.em_foco()}
 
     def resumo(self) -> str:
         """Uma linha para o cérebro saber, onde está a janela e o que o Núcleo mostra."""
         if not self.aberto():
-            return "Janela do JARVIS: fechada (não há Núcleo na tela)."
+            return "Janela do Zé: fechada (não há Núcleo na tela)."
         estado = self._ler().get("estado") or {}
         partes = [
-            "Janela do JARVIS: aberta, "
+            "Janela do Zé: aberta, "
             + ("é a janela ativa" if self.em_foco() else "em segundo plano")
         ]
         n = estado.get("nucleo") or {}
@@ -173,12 +173,12 @@ class Tela:
         esperar_fim: bool | None = None,
     ) -> dict[str, Any]:
         """Executa as ações em ordem. Passeios (com 'aguardar' ou longos) voltam assim que a
-        página confirma o início, para o JARVIS falar enquanto a tela anda."""
+        página confirma o início, para o Zé falar enquanto a tela anda."""
         for a in acoes:
             if a.get("acao") not in ACOES:
                 raise TelaErro(f"ação desconhecida: {a.get('acao')}")
         if acoes and not self.aberto():
-            raise TelaErro("a janela do JARVIS está fechada; ofereça abrir (janela_abrir)")
+            raise TelaErro("a janela do Zé está fechada; ofereça abrir (janela_abrir)")
         if trazer and acoes:
             self.trazer()
         if esperar_fim is None:
@@ -195,7 +195,7 @@ class Tela:
             if not esperar_fim and dados.get("recebido") == pedido:
                 return {**dados, "resultados": "em andamento na tela"}
             time.sleep(0.1)
-        raise TelaErro("a tela do JARVIS não respondeu a tempo")
+        raise TelaErro("a tela do Zé não respondeu a tempo")
 
     def enviar(self, acoes: list[dict[str, Any]]) -> None:
         """Sem esperar resposta (comandos locais por voz: a fala não espera a tela)."""
@@ -210,11 +210,11 @@ class Tela:
         temporario.replace(arquivo)
 
     def trazer(self) -> None:
-        """Põe a janela do JARVIS na frente; escondida, as animações não rodam."""
+        """Põe a janela do Zé na frente; escondida, as animações não rodam."""
         _hyprctl("dispatch", "focuswindow", JANELA)
 
     def abrir(self) -> None:
-        """Liga a janela do JARVIS (servidor e janela; a câmera acende) e a traz para a frente."""
+        """Liga a janela do Zé (servidor e janela; a câmera acende) e a traz para a frente."""
         _systemctl("start", *SERVICOS)
         for _ in range(20):
             if self.aberto():
@@ -223,5 +223,5 @@ class Tela:
         self.trazer()
 
     def fechar(self) -> None:
-        """Fecha a janela do JARVIS (a câmera apaga); o servidor fica para o HUD."""
+        """Fecha a janela do Zé (a câmera apaga); o servidor fica para o HUD."""
         _systemctl("stop", SERVICOS[1])

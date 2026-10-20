@@ -4,10 +4,10 @@ pedido = "O que a sessão da Loja do João fez hoje?"
 
 [ferramentas]
 sessoes_listar = '''[
- {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/projetos/loja-do-joao", "motor": "claude",
   "estado": "parada", "ultimo_recado": "Corrigi o fluxo de pedidos.", "copia_isolada": false,
   "conectores": ["n8n-joao"]},
- {"id": "s3", "nome": "Padaria Maria", "pasta": "/home/ana/clientes/padaria-maria", "motor": "claude",
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/srv/projetos/clientes/padaria-maria", "motor": "claude",
   "estado": "parada", "ultimo_recado": "", "copia_isolada": false, "conectores": ["n8n-maria"]}]'''
 sessao_ler = '''{"id": "s1", "nome": "Loja do João", "estado": "parada", "mensagens": [
  {"quem": "voce", "texto": "corrige o fluxo de pedidos que está duplicando"},

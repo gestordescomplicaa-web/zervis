@@ -3,14 +3,14 @@
 Adaptado do openWakeWord 0.6.0 (David Scripka, Apache-2.0; ver THIRD_PARTY.md): o mesmo
 pré-processamento em fluxo (`AudioFeatures._streaming_features` e `VAD`), só para quadros de
 80 ms, sem o pacote — ele exige tflite-runtime, que não existe para Python recente, e traz
-scikit-learn e scipy (0,7 s de importação) que o JARVIS não usa.
+scikit-learn e scipy (0,7 s de importação) que o Zé não usa.
 
 Diferença proposital: o original começa o buffer com embeddings de ruído aleatório; aqui ele
 começa vazio e o detector só pontua depois de 16 quadros reais (1,28 s). Determinístico e sem
 pontuação sobre ruído inventado.
 
 O classificador é um MLP treinado com a voz do usuário: `ei_ze.npz`, por `treino_ativacao.py`
-(antes o `hey_orca.npz` do JARVIS antigo, no mesmo formato).
+(antes o `hey_orca.npz` do Zé antigo, no mesmo formato).
 """
 
 from collections import deque
@@ -123,7 +123,7 @@ def faltando(*modelos: Path) -> list[str]:
 
 
 class ModeloAtivacao:
-    """MLP em numpy salvo pelo treino do JARVIS antigo (pesos W0.., b0.., média, desvio, limiar)."""
+    """MLP em numpy salvo pelo treino do Zé antigo (pesos W0.., b0.., média, desvio, limiar)."""
 
     def __init__(self, caminho: Path) -> None:
         pesos: Any = np.load(caminho)

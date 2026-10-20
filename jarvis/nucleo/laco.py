@@ -634,7 +634,7 @@ class Nucleo(
                     return
                 if self._comecados.get(texto):
                     self._cortados.add(texto)  # a volta de um aviso cortado não é repetição
-                # Fila durável (Fase 7): o aviso sai quando o JARVIS voltar a ATIVO.
+                # Fila durável (Fase 7): o aviso sai quando o Zé voltar a ATIVO.
                 log.info("aviso retido até ficar ativo: %d caracteres", len(texto))
                 self._guardar(texto)
 
@@ -765,7 +765,7 @@ class Nucleo(
             if depois is e.Estado.OUVINDO and antes is not e.Estado.OUVINDO:
                 self._ouvindo_desde, self._ouviu_voz = time.monotonic(), False
             if depois is e.Estado.OUVINDO and antes is e.Estado.FALANDO:
-                self._descartar_escuta()  # conversa contínua: próxima pergunta sem "Hey Orca"
+                self._descartar_escuta()  # conversa contínua: próxima pergunta sem "Ei Zé"
 
     def _relatar_fala_perdida(self) -> None:
         """Ao vivo, o que a pessoa diz enquanto o Zé pensa não é ouvido (só o "Ei Zé" interrompe).
@@ -865,7 +865,7 @@ class Nucleo(
 
     # --- automações e agenda (Fase 7) -------------------------------------------------------
 
-    # --- a pasta do JARVIS no Barehands e a curadoria das skills ----------------------------
+    # --- a pasta do Zé no Barehands e a curadoria das skills ----------------------------
 
     def _conexoes(self) -> pasta.Conexoes:
         c, r = self.cfg["cerebro"], self.cfg["revisao"]

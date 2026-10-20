@@ -3,7 +3,7 @@ pedido = "Manda a sessão da Loja do João rodar os testes e me avisar se algo q
 
 [ferramentas]
 sessoes_listar = '''[
- {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/projetos/loja-do-joao", "motor": "claude",
   "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false,
   "conectores": ["n8n-joao"]}]'''
 sessao_enviar = '{"enviado": true, "sessao": "Loja do João", "estado": "trabalhando"}'

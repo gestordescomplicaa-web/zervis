@@ -8,7 +8,7 @@ from jarvis.rosto import manifesto
 ORBES = {
     "orbs": [
         {"id": "mapa", "title": "Mapa", "kind": "brain", "apelidos": ["cérebro", "seu cérebro"]},
-        {"title": "Identidade", "kind": "notes", "path": "/x", "descricao": "Quem o JARVIS é."},
+        {"title": "Identidade", "kind": "notes", "path": "/x", "descricao": "Quem o Zé é."},
         {"id": "orca", "title": "Orca", "kind": "orca", "apelidos": ["agentes de código"]},
         {"kind": "notes"},  # sem título: ignorado
     ]
@@ -43,4 +43,4 @@ def test_o_trecho_da_persona_sai_do_manifesto(tmp_path: Path) -> None:
     texto = manifesto.para_persona(manifesto.ler(arquivo))
     assert texto.splitlines()[0] == "## Os orbes do Núcleo (do manifesto)"
     assert "- **Mapa** (também: cérebro, seu cérebro): o que o Zé sabe e faz" in texto
-    assert "- **Identidade**: Quem o JARVIS é." in texto
+    assert "- **Identidade**: Quem o Zé é." in texto

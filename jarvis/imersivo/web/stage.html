@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-JARVIS · gdautomacao.ia — a interface do JARVIS movida pelas mãos.
+Zé · gdautomacao.ia — a interface do Zé movida pelas mãos.
 Copyright (C) 2026 gdautomacao.ia (versão modificada, desde 2026-10-07)
 Copyright (C) 2026 Jared Rhodenizer (obra original)
 
@@ -550,7 +550,7 @@ function makeRing() {
   el.className = "card ringcard";
   el.innerHTML = `<canvas></canvas>`;
   el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", "JARVIS — abrir menu circular");
+  el.setAttribute("aria-label", "Zé — abrir menu circular");
   const tapRing = () => ringToggle(it);
   el.addEventListener("click", tapRing);
   el.addEventListener("keydown", ev => {
@@ -1458,7 +1458,7 @@ function ringToggle(ring) {
 }
 
 
-// JARVIS expansions share the original ring and orbital menu.
+// Zé expansions share the original ring and orbital menu.
 let workspacePose = null;
 window.jarvisStage = {
   ensureMenu() {
@@ -2311,7 +2311,7 @@ function killItem(c) {
 
 function physics(dt) {
   items = items.filter(c => c.el.isConnected || c.flying);
-  // barehands-jarvis: transient JARVIS cards leave by themselves; touching
+  // barehands-jarvis: transient Zé cards leave by themselves; touching
   // one (grab or open) keeps it on the board for good.
   const nowMs = performance.now();
   const dimensions = new Map(items.map(c => [c, {w:c.el.offsetWidth, h:c.el.offsetHeight}]));
@@ -3511,7 +3511,7 @@ async function renderLoop() {
           el.className = "card modelcard" + (it.mm === "holo" ? " holo" : "");
           el.innerHTML = `<canvas></canvas>`;
   el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", "JARVIS — abrir menu circular");
+  el.setAttribute("aria-label", "Zé — abrir menu circular");
   const tapRing = () => ringToggle(it);
   el.addEventListener("click", tapRing);
   el.addEventListener("keydown", ev => {
@@ -3522,7 +3522,7 @@ async function renderLoop() {
           el.className = "card ringcard";
           el.innerHTML = `<canvas></canvas>`;
   el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", "JARVIS — abrir menu circular");
+  el.setAttribute("aria-label", "Zé — abrir menu circular");
   const tapRing = () => ringToggle(it);
   el.addEventListener("click", tapRing);
   el.addEventListener("keydown", ev => {
@@ -3669,8 +3669,8 @@ if (ROLE === "render") {
 <script>
 // barehands-jarvis: the gesture cheat sheet gave way to a live activity HUD
 // fed by GET /stats (Omarchy Activity Monitor sampler), plus a row of brain
-// batteries from GET /cerebros (written by the JARVIS). Tapping a brain posts
-// it to /cerebro and the JARVIS switches. The tracker page only; the render
+// batteries from GET /cerebros (written by the Zé). Tapping a brain posts
+// it to /cerebro and the Zé switches. The tracker page only; the render
 // page removes #hint at boot.
 (function () {
   const h = document.getElementById("hint");

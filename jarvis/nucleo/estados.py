@@ -38,7 +38,7 @@ class Presenca:
 
 @dataclass(frozen=True)
 class Ativacao:
-    """O detector ouviu "Hey Orca"."""
+    """O detector ouviu "Ei Zé"."""
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,7 @@ class FimDeFala:
 
 @dataclass(frozen=True)
 class Digitado:
-    """Pedido escrito no Teclado do Núcleo: vale como fala autorizada, sem "Hey Orca"."""
+    """Pedido escrito no Teclado do Núcleo: vale como fala autorizada, sem "Ei Zé"."""
 
     texto: str
 
@@ -190,7 +190,7 @@ class FecharPedido:
 
 @dataclass(frozen=True)
 class Comando:
-    """Pedido resolvido no próprio JARVIS, sem o cérebro ("nova conversa", "relatório de uso")."""
+    """Pedido resolvido no próprio Zé, sem o cérebro ("nova conversa", "relatório de uso")."""
 
     nome: str
 
@@ -287,8 +287,8 @@ NAO_ENTENDI = "Não consegui entender. Pode repetir?"
 # Frase curta feita só destas palavras, com pelo menos uma das principais, encerra a conversa.
 # O Whisper escreve "Ok", "OK", "Okay", "Okey" e às vezes repete ("Ok, ok."). Teste de 06/10/2026:
 # a lista exata ("ok" sozinho) não pegou o "ok" do usuário e a conversa não fechava.
-# O comando "interromper" é "Hey Orca" (corta a resposta) seguido de uma destas ordens de parar:
-# sem elas, "Hey Orca, para" ia ao cérebro como um pedido novo.
+# O comando "interromper" é "Ei Zé" (corta a resposta) seguido de uma destas ordens de parar:
+# sem elas, "Ei Zé, para" ia ao cérebro como um pedido novo.
 ENCERRAR_PRINCIPAIS = {"ok", "okay", "okey", "obrigado", "valeu", "tchau", "chega", "parar"}
 INTERROMPER = {"para", "pare", "interromper", "interrompe", "cancela", "cancelar", "silencio"}
 ENCERRAR_PRINCIPAIS |= INTERROMPER
@@ -433,7 +433,7 @@ COMANDOS = {
         )
     }
     | {("calibracao", "padrao"), ("calibracao", "original")},
-    # Brilho da câmera e cores do JARVIS no Barehands (07/10/2026). "Da câmera" é
+    # Brilho da câmera e cores do Zé no Barehands (07/10/2026). "Da câmera" é
     # obrigatório: o brilho da TELA é outra coisa e fica com o cérebro.
     **{
         nome: {
@@ -475,8 +475,8 @@ COMANDOS = {
             ("o", "menu", "de", "configuracoes"),
         )
     },
-    # O Núcleo (o anel do JARVIS com os orbes), 07/10/2026: abrir e recolher sem o cérebro. A
-    # janela do JARVIS é outra coisa: fechá-la apaga a câmera.
+    # O Núcleo (o anel do Zé com os orbes), 07/10/2026: abrir e recolher sem o cérebro. A
+    # janela do Zé é outra coisa: fechá-la apaga a câmera.
     "nucleo_abrir": {
         (*verbo, *alvo)
         for verbo in (("abre",), ("abra",), ("abrir",), ("mostra",), ("mostre",), ("me", "mostra"))
@@ -527,7 +527,7 @@ COMANDOS = {
         for verbo in ((), ("faz", "uma"), ("faca", "uma"), ("comeca", "uma"), ("inicia", "uma"))
         for alvo in (("rodada", "de", "melhoria"), ("rodada", "de", "melhorias"))
     },
-    # O visual do JARVIS na tela (07/10/2026): o avatar holográfico ou o anel original.
+    # O visual do Zé na tela (07/10/2026): o avatar holográfico ou o anel original.
     "visual_avatar": {
         (*verbo, *alvo)
         for verbo in (
@@ -906,7 +906,7 @@ def orbe(texto: str, orbes: dict[str, str] | None = None) -> str | None:
     return f"abrir_item:{dentro or ''}:{nome}" if acao == "abrir" else f"fechar_alvo:{nome}"
 
 
-# O nome falado (08/10/2026: o JARVIS passou a se chamar Zé; "Jarvis" ainda vale). Os comandos
+# O nome falado (08/10/2026: o Zé passou a se chamar Zé; "Jarvis" ainda vale). Os comandos
 # escritos com "o jarvis" ("reinicia o jarvis") valem com qualquer um dos nomes.
 NOMES = {"jarvis", "ze"}
 CHAMADOS = {
@@ -1023,8 +1023,8 @@ class Maquina:
     prazo: float = 0.0
     cerebro_terminou: bool = True
     pergunta_falando: bool = False
-    em_conversa: bool = False  # aberta por "Hey Orca"; fechada por "ok", silêncio ou janela
-    continuacao: bool = False  # pergunta seguinte da conversa (sem "Hey Orca")
+    em_conversa: bool = False  # aberta por "Ei Zé"; fechada por "ok", silêncio ou janela
+    continuacao: bool = False  # pergunta seguinte da conversa (sem "Ei Zé")
     aviso_falando: str | None = None  # aviso em fala; cortado, volta para a fila
     escutar_depois: bool = False  # o aviso em fala abre a escuta ao terminar (mãos livres)
     reperguntou: bool = False  # a confirmação já foi repetida uma vez por resposta confusa
@@ -1184,7 +1184,7 @@ class Maquina:
             return []
         efeitos: list[Efeito] = []
         if self.estado in (Estado.PENSANDO, Estado.FALANDO):
-            # "Hey Orca" no meio da resposta interrompe e já abre um pedido novo. Só interrompe o
+            # "Ei Zé" no meio da resposta interrompe e já abre um pedido novo. Só interrompe o
             # cérebro se ele estiver respondendo: no meio de um aviso não há o que interromper, e
             # a interrupção à toa refazia a sessão (contexto perdido, teste de 06/10/2026).
             efeitos += [CortarFala(), *self._aviso_cortado()]
@@ -1256,7 +1256,7 @@ class Maquina:
 
     def _digitado(self, texto: str) -> list[Efeito]:
         """O Teclado: escrever é pedir. Responde a uma confirmação pendente, corta a resposta em
-        andamento (como "Hey Orca") e não abre conversa por voz depois."""
+        andamento (como "Ei Zé") e não abre conversa por voz depois."""
         if self.estado is Estado.CONFIRMANDO:
             # Escrito, "sim" ou "não" vale na hora; o que não for nenhum dos dois é uma correção.
             self.pergunta_falando = False
@@ -1333,7 +1333,7 @@ class Maquina:
         elif self.ao_vivo:
             self._ouvir_ao_vivo(agora)
         elif self.em_conversa:
-            # Conversa aberta pelo usuário: a resposta concede a próxima pergunta sem "Hey Orca".
+            # Conversa aberta pelo usuário: a resposta concede a próxima pergunta sem "Ei Zé".
             self._ir(Estado.OUVINDO)
             self.autorizado = True
             self.continuacao = True

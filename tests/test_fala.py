@@ -1,4 +1,4 @@
-"""Normalizador de fala: casos portados do JARVIS antigo (VIBE-CODING/jarvis/tests, 06/10/2026)."""
+"""Normalizador de fala: casos portados do Zé antigo (VIBE-CODING/jarvis/tests, 06/10/2026)."""
 
 import json
 from pathlib import Path
@@ -78,7 +78,7 @@ def test_para_fala_tira_markdown_codigo_e_links() -> None:
     assert "**" not in texto
     assert "x=1" not in texto
     assert "https" not in texto
-    assert "chat" not in texto  # o JARVIS novo não tem chat
+    assert "chat" not in texto  # o Zé novo não tem chat
     assert texto.endswith("Veja o link")
     assert fala.para_fala("Frase. " * 600).endswith("Tem mais; se quiser, eu continuo.")
 

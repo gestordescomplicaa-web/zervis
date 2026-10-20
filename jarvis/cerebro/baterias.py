@@ -3,7 +3,7 @@
 - Claude: o `RateLimitEvent` que chega a cada resposta da assinatura (janelas de 5 h e semana).
 - GPT e Gemini: o cache que o próprio OmniRoute atualiza sozinho para cada conta conectada
   (`providerLimitsCache` no `storage.sqlite` dele), lido só para consulta. É um formato interno
-  do OmniRoute: qualquer surpresa vira "sem dado", nunca erro no JARVIS.
+  do OmniRoute: qualquer surpresa vira "sem dado", nunca erro no Zé.
 
 A bateria da família é a da janela mais apertada entre as contas dela; o detalhe por conta
 (sem e-mail) vai junto para a dica do Barehands.

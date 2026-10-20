@@ -153,7 +153,7 @@ class ClaudeBrain:
         self.pasta = pasta
         self.env = env or {}
         self.tempo_limite_s = tempo_limite_s
-        self.mcp = mcp or {}  # servidores MCP do JARVIS (o pacote ferramentas)
+        self.mcp = mcp or {}  # servidores MCP do Zé (o pacote ferramentas)
         self.livres = livres or []  # ferramentas só de leitura: sem pergunta falada
         # Ferramentas MCP fora da lista: o cérebro nem as vê (cada descrição custa tokens em
         # todo turno; o navegador tem 25 e o Zé usa umas 15).

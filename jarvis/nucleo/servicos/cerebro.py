@@ -429,7 +429,7 @@ class ServicoCerebro:
         return "Baterias: " + ", ".join(partes) + "." + fim + " " + self.n.consumo.resumo_falado()
 
     def _fim_da_conversa(self) -> None:
-        """A conversa acabou: se valer a pena e houver cota no dia, o JARVIS revisa e aprende."""
+        """A conversa acabou: se valer a pena e houver cota no dia, o Zé revisa e aprende."""
         turnos, self.n.turnos = self.n.turnos, []
         r = self.n.cfg["revisao"]
         if not r["ligada"] or not revisao.vale_revisar(turnos):

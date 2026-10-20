@@ -1,5 +1,5 @@
 #!/bin/bash
-# JARVIS · gdautomacao.ia — a interface do JARVIS movida pelas mãos.
+# Zé · gdautomacao.ia — a interface do Zé movida pelas mãos.
 # Copyright (C) 2026 gdautomacao.ia (versão modificada, desde 2026-10-07)
 # Copyright (C) 2026 Jared Rhodenizer (obra original)
 #

@@ -78,7 +78,7 @@ def inicial(cfg: Config) -> str:
 
 @dataclass(frozen=True)
 class Extras:
-    """Ferramentas MCP do JARVIS, iguais em todo cérebro."""
+    """Ferramentas MCP do Zé, iguais em todo cérebro."""
 
     mcp: dict[str, Any] = field(default_factory=dict)
     livres: tuple[str, ...] = ()

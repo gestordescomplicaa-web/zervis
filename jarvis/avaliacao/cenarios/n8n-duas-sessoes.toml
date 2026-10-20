@@ -4,10 +4,10 @@ pedido = "Quais fluxos estão ativos no n8n?"
 
 [ferramentas]
 sessoes_listar = '''[
- {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/projetos/loja-do-joao", "motor": "claude",
   "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false,
   "conectores": ["n8n-joao"]},
- {"id": "s3", "nome": "Padaria Maria", "pasta": "/home/ana/clientes/padaria-maria", "motor": "claude",
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/srv/projetos/clientes/padaria-maria", "motor": "claude",
   "estado": "parada", "ultimo_recado": "Publiquei o fluxo de encomendas.", "copia_isolada": false,
   "conectores": ["n8n-maria"]}]'''
 

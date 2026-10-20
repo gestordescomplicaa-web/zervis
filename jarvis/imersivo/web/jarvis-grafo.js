@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Local, dependency-free SVG graph. Springs encode only relationships supplied
-// by JARVIS; the simulation never invents semantic links or calls a model.
+// by Zé; the simulation never invents semantic links or calls a model.
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));

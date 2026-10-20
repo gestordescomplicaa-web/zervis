@@ -7,7 +7,7 @@ como está, como outra opção, e é o caminho futuro para óculos de realidade 
 
 ## Princípios
 
-1. **O Zé é um agente; as telas são portas.** Toda função mora no núcleo (`jarvisd`). O painel,
+1. **O Zé é um agente; as telas são portas.** Toda função mora no núcleo (o serviço `zervis`). O painel,
    o modo imersivo, o celular ou os óculos só mostram e pedem. Função feita uma vez serve a
    todas as portas; nada de regra de negócio dentro de uma tela.
 2. **Rápido por carregar pouco.** HTML, CSS e JavaScript puros, sem framework, sem build e sem
@@ -36,7 +36,7 @@ como está, como outra opção, e é o caminho futuro para óculos de realidade 
 ## Arquitetura
 
 - `jarvis/portal/servidor.py`: HTTP da biblioteca padrão, só em `127.0.0.1:8795`, numa thread
-  do `jarvisd`. Protegido contra outros sites do navegador: o `Host` precisa ser local e todo
+  do serviço do Zé. Protegido contra outros sites do navegador: o `Host` precisa ser local e todo
   pedido de API leva um token por sessão, entregue só na própria página (outro site não
   consegue lê-la).
 - `jarvis/portal/acoes.py`: a ponte entre a API e o núcleo (o que ler, o que mudar).

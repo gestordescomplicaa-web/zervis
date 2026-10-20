@@ -75,7 +75,7 @@ def test_ciclo_hey_orca_teste() -> None:
     m.tratar(RespostaFim(), 3)
     assert estado(m) is Estado.FALANDO  # ainda falando a última frase
     m.tratar(FalaOcioso(), 4)
-    assert estado(m) is Estado.OUVINDO  # conversa: segue ouvindo sem "Hey Orca"
+    assert estado(m) is Estado.OUVINDO  # conversa: segue ouvindo sem "Ei Zé"
     assert m.tratar(FimDeFala("Ok."), 6) == [Bip()]
     assert estado(m) is Estado.ATIVO
     assert m.historico == [
@@ -499,7 +499,7 @@ def test_brilho_sem_camera_nao_e_comando_local(fala: str) -> None:
         ("Abre o núcleo.", "nucleo_abrir"),
         ("Abra o Núcleo.", "nucleo_abrir"),
         ("Fecha o núcleo.", "nucleo_fechar"),
-        ("Fecha a janela do JARVIS.", "janela_fechar"),
+        ("Fecha a janela do Zé.", "janela_fechar"),
         ("Desliga a câmera.", "janela_fechar"),
         ("Abra o GUIA do núcleo.", "abrir_orbe:Guia"),
         ("Abre o guia.", "abrir_orbe:Guia"),
@@ -652,7 +652,7 @@ def test_evento_da_tela_e_tratado_uma_vez_e_so_recente() -> None:
     dados = {"evento": {"id": "a1", "tipo": "tonto", "ts": 100.0}}
     assert evento_novo(dados, "", 105.0) == dados["evento"]
     assert evento_novo(dados, "a1", 105.0) is None  # já falado
-    assert evento_novo(dados, "", 200.0) is None  # velho: o JARVIS estava parado
+    assert evento_novo(dados, "", 200.0) is None  # velho: o Zé estava parado
     assert evento_novo({}, "", 105.0) is None
 
 

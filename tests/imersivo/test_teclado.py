@@ -1,8 +1,8 @@
 """The Teclado: a keyboard icon beside CPU/RAM/GPU/VRAM opens a text bar; what is typed
-goes to the JARVIS (POST /teclado) and its answer shows under the bar.
+goes to the Zé (POST /teclado) and its answer shows under the bar.
 
 Run: python tests/test_teclado.py   (or pytest)
-Reuses the stage harness of test_brain_navigation.py; the JARVIS is played by the test.
+Reuses the stage harness of test_brain_navigation.py; the Zé is played by the test.
 """
 # SPDX-License-Identifier: AGPL-3.0-or-later
 import asyncio
@@ -132,7 +132,7 @@ async def main():
                     && /pensando/.test(document.querySelector("#jv-teclado .resposta").textContent)''')
                 CANAL['resposta'] = {'pedido': 'k0', 'texto': 'Guia na tela.', 'fim': False, 'ts': time.time()}
                 await asyncio.sleep(.6)
-                await check('the answer shows as the JARVIS speaks it', '''/Guia na tela\\./.test(document.querySelector("#jv-teclado .resposta").textContent)
+                await check('the answer shows as the Zé speaks it', '''/Guia na tela\\./.test(document.querySelector("#jv-teclado .resposta").textContent)
                     && /pensando/.test(document.querySelector("#jv-teclado .resposta").textContent)''')
                 CANAL['resposta'] = {'pedido': 'k0', 'texto': 'Guia na tela.', 'fim': True, 'ts': time.time()}
                 await asyncio.sleep(.6)
@@ -144,7 +144,7 @@ async def main():
                 await tecla('/', '/')
                 await check('"/" opens it again', '!document.getElementById("jv-teclado").hidden')
                 await ev('jarvisControle.executar({id: "t1", acoes: [{acao: "teclado", valor: "fechar"}]})')
-                await check('and the JARVIS can open or close it ("abre o teclado")', 'document.getElementById("jv-teclado").hidden && !jarvisControle.estado().teclado.aberto')
+                await check('and the Zé can open or close it ("abre o teclado")', 'document.getElementById("jv-teclado").hidden && !jarvisControle.estado().teclado.aberto')
                 assert not errors, errors
                 print(json.dumps({'passed': len(passed), 'checks': passed}, ensure_ascii=False, indent=2))
         finally:

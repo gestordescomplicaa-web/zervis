@@ -11,6 +11,10 @@ pendente não podem ser excluídas. Registros operacionais ainda estão em JSON/
 descrito abaixo é uma migração planejada, não implementada. Codex funciona nas sessões de código;
 no cérebro, permanece planejado.
 
+> **Atualizado em parte.** Este documento descreve a arquitetura até 10/10/2026: o rosto e as mãos
+> ainda aparecem como o Barehands, que depois entrou no Zé como o modo imersivo (ADR 0014). O
+> quadro atual está no [README](../README.md#arquitetura) e nos ADRs 0032 a 0038.
+
 ## Visão geral
 
 ```
@@ -19,7 +23,7 @@ no cérebro, permanece planejado.
                      └──────────────▲───────────────────────────────────────▲──────────────────┘
                                     │ sinais em arquivo                     │ cards / diff / pendências
 ┌───────────────────────────────────┴───────────────────────────────────────┴───────────────────┐
-│                                   jarvisd  (um processo, systemd --user)                      │
+│                                   Zérvis   (um processo, systemd --user)                      │
 │                                                                                               │
 │   Interruptor ──► Máquina de estados ◄── Voz: ativação ─ escuta ─ transcrição ─ saída (Cadu)  │
 │   Sistema (Omarchy/Hyprland: eventos e ações) ──► avisos e ferramentas                        │
@@ -49,7 +53,7 @@ no cérebro, permanece planejado.
 | `jarvis/voz` | Ativação "Ei Zé", captura, transcrição, normalizador de fala, saída Cadu com streaming | Decidir o que dizer |
 | `jarvis/rosto` | Anel (estado, cor, onda), painel de cérebros (ADR 0010) e quadro (cards, pendências) | — |
 | `jarvis/cerebro` | Interface `Brain` e implementações Claude/Codex; persona; sessão contínua; catálogo e baterias (ADR 0010) | Guardar estado próprio |
-| `jarvis/ferramentas` | Servidor MCP com as ferramentas do JARVIS para o cérebro | Falar com o usuário |
+| `jarvis/ferramentas` | Servidor MCP com as ferramentas do Zé para o cérebro | Falar com o usuário |
 | `jarvis/memoria` | `USUARIO.md` e `JARVIS.md` curtos com limite, varredura, histórico (ai-memory) | — |
 | `jarvis/skills` | Catálogo progressivo, escrita com pendência e diff, uso e curadoria | — |
 | `jarvis/automacoes` | Jobs (`jobs.json` atômico), agendador | Falar diretamente: entrega para os avisos |
@@ -62,10 +66,10 @@ no cérebro, permanece planejado.
 ## Máquina de estados do núcleo
 
 ```
-INATIVO ──(front abriu)──► ATIVO ──("Hey Orca")──► OUVINDO ──(fim da fala)──► PENSANDO
+INATIVO ──(front abriu)──► ATIVO ──("Ei Zé")─────► OUVINDO ──(fim da fala)──► PENSANDO
    ▲                          ▲                                                   │
    │(front fechou: de          │◄──────────────(fala terminou)─── FALANDO ◄───────┘
-   │ qualquer estado,          │                                     │("Hey Orca" = interromper)
+   │ qualquer estado,          │                                     │("Ei Zé" = interromper)
    │ corta fala e microfone)   │◄──("sim"/"não"/tempo)── CONFIRMANDO ◄┘(pedido de aprovação)
 ```
 
@@ -81,7 +85,7 @@ Regras invariantes (cada uma vira teste):
 
 ## Presença (liga/desliga e rosto ativo)
 
-O JARVIS está ATIVO quando há pelo menos um rosto conectado. Rostos:
+O Zé está ATIVO quando há pelo menos um rosto conectado. Rostos:
 - **Mesa:** janela do Barehands aberta → `TransporteLocal` (microfone MIC FX e saída do PC).
 - **Remoto:** app do celular conectado à sala do LiveKit → `TransporteLiveKit` (microfone e fone do celular).
   Nesse modo o microfone e a saída do PC ficam desligados.
@@ -103,10 +107,10 @@ O JARVIS está ATIVO quando há pelo menos um rosto conectado. Rostos:
 ```
 celular (PWA: botão, anel, avisos) ──WebRTC──► livekit-server (no PC, só local)
         ▲            via Tailscale                    │
-        └──────── voz do Cadu ◄──── jarvisd (participante da sala pelo SDK Python rtc)
+        └──────── voz do Cadu ◄──── Zé (participante da sala pelo SDK Python rtc)
 ```
-- O `jarvisd` emite tokens de sala de curta duração; o PWA pede um token a um endpoint do
-  `jarvisd` publicado só na rede do Tailscale (`tailscale serve`, HTTPS).
+- O serviço do Zé emite tokens de sala de curta duração; o PWA pede um token a um endpoint do
+  `Zé` publicado só na rede do Tailscale (`tailscale serve`, HTTPS).
 - O áudio recebido entra no mesmo pipeline do modo mesa (detector → transcrição → cérebro);
   a voz sintetizada sai pela faixa publicada na sala.
 - O PWA mostra o mesmo estado do anel e os avisos/pendências, e permite aprovar tocando,
@@ -131,15 +135,15 @@ class Brain(Protocol):
 
 - **ClaudeBrain:** `claude-agent-sdk` (`ClaudeSDKClient`), sessão contínua, `include_partial_messages`
   para falar por frase, `can_use_tool` para a aprovação falada, persona como acréscimo ao prompt
-  `claude_code`, skills do JARVIS visíveis, servidor MCP `jarvis` registrado.
+  `claude_code`, skills do Zé visíveis, servidor MCP `jarvis` registrado.
 - **ClaudeBrain via OmniRoute:** o mesmo `ClaudeBrain` com o CLI apontado para o OmniRoute local
   (`ANTHROPIC_BASE_URL`), usando as rotas dele como modelo ([ADR 0008](adr/0008-omniroute-como-provedor-do-cerebro.md)).
 - **CodexBrain:** pelo `codex app-server` (JSON-RPC por stdio), com MCP por stdio e aprovação
-  respondida pelo JARVIS; confirmado na Prova 2 ([ADR 0002](adr/0002-cerebro-por-sdk-de-agente.md)).
+  respondida pelo Zé; confirmado na Prova 2 ([ADR 0002](adr/0002-cerebro-por-sdk-de-agente.md)).
 - **Toda sessão** passa `permission_mode="default"` explícito: na Prova 4 a aprovação foi pulada
   sem isso.
 - **Autenticação:** login de assinatura do CLI instalado (Claude Code / Codex), que é como o
-  o usuário usa hoje. Chave de API fica como opção futura. O JARVIS **não** implementa OAuth próprio.
+  o usuário usa hoje. Chave de API fica como opção futura. O Zé **não** implementa OAuth próprio.
 - O núcleo é síncrono com threads (herança do atual); o cérebro roda num **laço asyncio próprio**
   em uma thread dedicada, conversando com o núcleo por filas. Assim o laço do microfone nunca
   espera rede.
@@ -169,12 +173,12 @@ no Claude o servidor roda **dentro do processo** (sem porta); no Codex, como sub
 | `~/.local/share/zervis/skills/<nome>/SKILL.md` | Skills aprovadas | agentskills.io |
 | `~/.local/share/zervis/skills/.arquivo/` | Skills arquivadas pela curadoria (sem uso há 30 dias) | — |
 | `~/.local/share/zervis/diario.jsonl` | Diário de aprendizado: sugestão aprovada/descartada, memória e skill gravadas, skill arquivada | JSON por linha, só cresce |
-| `~/.local/share/zervis/pasta/*.md` | A pasta do JARVIS (bolha "JARVIS" do Barehands): quem sou e conexões, memória, skills, automações, aprendizado, consumo | Markdown gerado a cada 15 s, só a nota que mudou |
+| `~/.local/share/zervis/pasta/*.md` | A pasta do Zé (bolha "Zé" do Barehands): quem sou e conexões, memória, skills, automações, aprendizado, consumo | Markdown gerado a cada 15 s, só a nota que mudou |
 | `~/.local/state/zervis/consumo.json`, `consumo-dias.json` | Tokens do dia (e pedidos resolvidos sem o cérebro) e dos últimos 60 dias | JSON |
 | `~/.local/state/zervis/uso-ferramentas.json` | Usos e último uso de cada ferramenta do cérebro | JSON |
 | `<imersivo>/state/{decisao,eficiencia,mapa,mapa-abrir}.json` | O cérebro na tela: card de decisão, medidor, mapa do cérebro navegável por grupo e conexão | JSON com `ts`; velho (90 s) some da tela |
 | `<imersivo>/state/maos-pedido.json` | Pedido por voz ao Barehands: calibrar as mãos, voltar ao padrão, brilho da câmera e tema de cores | JSON com `pedido` e `acao` |
-| `<imersivo>/state/tela-{comando,estado}.json` | O JARVIS na própria tela (`tela_agir` / `tela_ver`): ações em ordem e o estado de volta | JSON com `id`; comando com mais de 30 s não roda |
+| `<imersivo>/state/tela-{comando,estado}.json` | O Zé na própria tela (`tela_agir` / `tela_ver`): ações em ordem e o estado de volta | JSON com `id`; comando com mais de 30 s não roda |
 | `<imersivo>/state/teclado{,-resposta}.json` | O Teclado do Núcleo: pedido escrito (POST /teclado) e a resposta conforme é falada | JSON com `id`/`pedido`; pedido com mais de 30 s não roda |
 | `<imersivo>/barehands.json` | O manifesto do Núcleo: os orbes (id, título, tipo, apelidos falados, descrição); a página, a voz e a persona leem dele | JSON `orbs`; sem ele, os orbes do padrão |
 | `~/.local/state/zervis/manutencao/` | Modo manutenção: `estado.json` (ligado, agente, pedidos), `resposta-<id>.md` e `pergunta-<id>.md` gravados pelo agente, `reinicio.json` do reinício seguro | Aperto de mão por arquivo com a sessão de código |
@@ -192,9 +196,9 @@ Segredos: nunca nesses arquivos. Variável de ambiente do serviço ou chaveiro (
 local) → PENSANDO → `Brain.ask` → frases parciais passam por `fala.py` → FALANDO frase a frase →
 fim → ATIVO. A revisão em segundo plano conta o turno.
 
-**Aprovação de ferramenta do próprio JARVIS:** o SDK chama `can_use_tool` → descrição falada →
+**Aprovação de ferramenta do próprio Zé:** o SDK chama `can_use_tool` → descrição falada →
 CONFIRMANDO → "sim" libera, "não" nega com o motivo dito. Ações só de leitura dentro das pastas do
-JARVIS passam sem perguntar.
+Zé passam sem perguntar.
 
 **Delegação ao Orca:** cérebro chama `oficina.delegar` → `orca orchestration worker-start` → núcleo
 espia a caixa do Run (`check --peek`) → `worker_done` vira aviso "deu certo/falhou" → falado se ATIVO.
@@ -203,14 +207,14 @@ espia a caixa do Run (`check --peek`) → `worker_done` vira aviso "deu certo/fa
 resultado vira aviso → falado se ATIVO; senão fica pendente para o resumo ao reativar.
 
 **Aprendizado:** a cada N turnos → revisão (sessão separada do cérebro, prompts do Hermes
-adaptados) → propostas de memória/skill → pendências com diff → card no quadro → "Hey Orca, aprovar
+adaptados) → propostas de memória/skill → pendências com diff → card no quadro → "Ei Zé, aprovar
 a skill" → aplicada.
 
 ## Ambiente de execução
 
 - Python 3.12+, ambiente próprio gerenciado por `uv` (fim da dependência do venv do Hermes).
 - Dependências fixadas por versão exata (lição do Hermes contra ataques de cadeia de suprimentos).
-- `jarvisd.service` (systemd --user; o nome `jarvis.service` já é do JARVIS do F9), `Restart=on-failure`, sem `PartOf=graphical-session.target`
+- `zervis.service` (systemd --user), `Restart=on-failure`, sem `PartOf=graphical-session.target`
   para não morrer quando o Hyprland reinicia (lição de 06/10/2026), mas esperando a sessão de áudio.
 - Go fica como candidato para um núcleo binário único quando a arquitetura estabilizar.
 

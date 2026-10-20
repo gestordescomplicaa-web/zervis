@@ -153,7 +153,7 @@ def publicar_dia(conversas: Conversas, dia: date) -> bool:
 
 
 def _sem_contexto(texto: str) -> str:
-    """Tira os parênteses de contexto do começo ("(Janela do JARVIS: …)"), mesmo aninhados."""
+    """Tira os parênteses de contexto do começo ("(Janela do Zé: …)"), mesmo aninhados."""
     texto = texto.strip()
     while texto.startswith("("):
         nivel = 0
