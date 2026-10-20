@@ -111,6 +111,31 @@ class Atividade:
 PADRAO = Atividade()  # o registro do Zé em execução (os testes apontam o arquivo para outro lugar)
 
 
+def externa(nome: str) -> bool:
+    """Uma ferramenta de um conector MCP (as do Zé passam pelo registro delas, `auditada`)."""
+    return nome.startswith("mcp__") and not nome.startswith("mcp__jarvis__")
+
+
+def registrar_externa(nome: str, entrada: Any, resposta: Any) -> None:
+    """O que o cérebro fez num sistema de fora (n8n, CRM…), como as ferramentas do Zé: a
+    essência pede tudo o que ele executa na Atividade (item 6)."""
+    if not externa(nome):
+        return
+    corpo = resposta if isinstance(resposta, dict) else {"content": resposta}
+    conteudo = corpo.get("content")
+    blocos: list[Any] = conteudo if isinstance(conteudo, list) else []
+    texto = " ".join(str(b.get("text", "")) for b in blocos if isinstance(b, dict)).strip()
+    erro = bool(corpo.get("isError") or corpo.get("is_error"))
+    PADRAO.registrar(
+        "falha" if erro else "execucao",
+        titulo_da_ferramenta(nome, entrada if isinstance(entrada, dict) else {}),
+        ferramenta=nome,
+        entrada=entrada if isinstance(entrada, dict) else {},
+        autorizacao=PADRAO.autorizacao(nome),
+        resultado=texto or str(resposta)[:TEXTO_MAX],
+    )
+
+
 def titulo_da_ferramenta(nome: str, entrada: dict[str, Any]) -> str:
     """Uma linha legível do que a ferramenta fez ("sistema_executar · system-shutdown")."""
     curto = nome.removeprefix("mcp__jarvis__")

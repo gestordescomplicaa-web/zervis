@@ -290,7 +290,8 @@
      },
      "oauth": false,
      "conectado": false,
-     "app_proprio": false
+     "app_proprio": false,
+     "conversa": false
     },
     {
      "nome": "notion",
@@ -308,7 +309,8 @@
      "conectado": false,
      "ligado": true,
      "segredos": {},
-     "app_proprio": false
+     "app_proprio": false,
+     "conversa": true
     }
    ],
    "pendente": false

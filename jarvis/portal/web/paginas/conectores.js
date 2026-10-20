@@ -63,7 +63,9 @@ function cartaoConector(k) {
     <div class="ferramentas-mcp" data-ferramentas="${esc(k.nome)}" hidden></div>
     <details class="detalhes" data-detalhes="${esc(k.nome)}"><summary>Detalhes</summary><p class="mono quebra">${esc(k.tipo === "http" ? k.url : [k.comando, ...k.argumentos].join(" "))}</p>
       ${appProprio(k, id)}
-      <p data-projetos="${esc(k.nome)}">Projetos: ${esc(rotulosProjetos(k.projetos))}</p>${sub("Cada sessão escolhe os conectores do seu projeto.")}</details></section>`;
+      <p data-projetos="${esc(k.nome)}">Projetos: ${esc(rotulosProjetos(k.projetos))}</p>${sub("Cada sessão escolhe os conectores do seu projeto.")}
+      <div class="linha segredo"><span>Conversa com o Zé</span>${k.projetos.length && k.origem === "painel" ? liga(k.conversa, "conector-conversa", id, "Também na conversa") : `<span class="etiqueta">${k.conversa ? "Sempre" : "Não"}</span>`}</div>
+      ${sub(k.projetos.length ? "Conector de projeto vale só nas sessões dele, a não ser que valha também na conversa." : "Sem projeto, o conector vale na conversa com o Zé.")}</details></section>`;
 }
 
 function permissoes(nome, ferramentas, k) {
@@ -78,7 +80,7 @@ const linhasDe = (t) => t.split("\n").map((l) => l.trim()).filter(Boolean);
 const listaDe = (t) => t.split(",").map((v) => v.trim()).filter(Boolean);
 
 /** O conector como o painel grava, com uma parte trocada (as permissões). */
-const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, oauth: k.oauth, ...troca });
+const dadosDe = (k, troca) => ({ nome: k.nome, tipo: k.tipo, comando: k.comando, argumentos: k.argumentos, url: k.url, ambiente: k.ambiente, cabecalhos: k.cabecalhos, livres: k.livres, bloqueadas: k.bloqueadas, projetos: k.projetos, conversa: k.conversa, oauth: k.oauth, ...troca });
 
 /** O conector em edição (os segredos guardados continuam: ficam fora do formulário). */
 /** @type {any} */
@@ -249,5 +251,11 @@ Object.assign(ACOES, {
 });
 
 Object.assign(MUDAR, {
+  "conector-conversa": async (el) => {
+    const k = conectoresVistos.find((x) => x.nome === el.dataset.nome);
+    await api("conector/salvar", dadosDe(k, { conversa: el.checked }));
+    toast(el.checked ? "Vale também na conversa." : "Vale só nas sessões do projeto.");
+    await recarregar();
+  },
   conector: async (el) => { await api("conector/ligar", { nome: el.dataset.nome, ligado: el.checked }); await recarregar(); },
 });

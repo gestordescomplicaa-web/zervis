@@ -61,6 +61,17 @@ def descritor(sessoes: Sessoes) -> Callable[[str, dict[str, Any]], str | None]:
     return descrever
 
 
+def _conectores(pasta: str) -> list[str]:
+    """Os conectores (MCP) ligados no projeto da sessão: é ali que o sistema do cliente mora."""
+    from jarvis.cerebro import conectores
+    from jarvis.cerebro.mcp_externo import McpInvalido
+
+    try:
+        return [c["nome"] for c in conectores.do_projeto(Path(pasta)) if c["marcado"]]
+    except (McpInvalido, OSError):
+        return []
+
+
 def _resumo(s: Sessao) -> dict[str, Any]:
     return {
         "id": s.id,
@@ -70,6 +81,7 @@ def _resumo(s: Sessao) -> dict[str, Any]:
         "estado": s.estado,
         "ultimo_recado": s.resumo,
         "copia_isolada": bool(s.branch),
+        "conectores": _conectores(s.pasta),
     }
 
 
@@ -106,8 +118,12 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "sessoes_listar",
-        "Lista as sessões de código do Zé: nome, pasta, motor, estado (parada, trabalhando, erro) "
-        "e o último recado do agente.",
+        "Lista as sessões de código do Zé: nome, pasta, motor, estado (parada, trabalhando, erro), "
+        "o último recado do agente e os conectores (MCP) ligados no projeto de cada uma. Pergunta "
+        "sobre o sistema de um cliente (o n8n, um CRM): o conector dele vale só nas sessões do "
+        "projeto, então procure aqui as sessões com ele. Com uma, use essa (sessao_ler para o que "
+        "já foi feito, sessao_enviar para pedir algo); com mais de uma, pergunte qual, dizendo os "
+        "nomes; com nenhuma, diga que nenhuma sessão tem esse conector ligado.",
         {},
     )
     async def listar(_: dict[str, Any]) -> dict[str, Any]:

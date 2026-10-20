@@ -15,6 +15,7 @@ from claude_agent_sdk import SdkMcpTool, tool
 from jarvis.cerebro import conectores, mcp_externo
 from jarvis.cerebro.ferramentas.comum import _erro, _texto
 from jarvis.cerebro.mcp_externo import McpInvalido
+from jarvis.sistema import vigia_n8n
 
 APLICAR = "Para valer na conversa, a pessoa aplica em Conectores (Aplicar agora)."
 
@@ -37,6 +38,10 @@ def _listar() -> list[dict[str, Any]]:
     return conectores.listar(mcp_externo.CAMINHO, mcp_externo.PAINEL)
 
 
+def _fora_do_ar() -> dict[str, str]:
+    return vigia_n8n.VigiaN8n().fora()
+
+
 def _testar(nome: str) -> dict[str, Any]:
     return conectores.testar(nome, mcp_externo.CAMINHO, mcp_externo.PAINEL)
 
@@ -49,7 +54,10 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
     @tool(
         "conectores_listar",
         "Os conectores MCP do Zé (ligações com outros sistemas): nome, tipo, comando ou "
-        "endereço, se está ligado e quais segredos faltam (só os nomes, nunca os valores).",
+        "endereço, se está ligado, quais segredos faltam (só os nomes, nunca os valores), em que "
+        "projetos vale e se vale também nesta conversa. Um n8n traz o estado que o vigia viu "
+        "(de pé ou fora do ar). Conector de um projeto sem na_conversa só funciona nas sessões "
+        "daquele projeto: ache a sessão em sessoes_listar.",
         {},
     )
     async def conectores_listar(_: dict[str, Any]) -> dict[str, Any]:
@@ -57,6 +65,7 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
             lista = await asyncio.to_thread(_listar)
         except McpInvalido as erro:
             return _erro(erro)
+        n8n, fora = vigia_n8n.alvos(lista), await asyncio.to_thread(_fora_do_ar)
         resumo = [
             {
                 "nome": c["nome"],
@@ -65,7 +74,13 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
                 "ligado": c["ligado"],
                 "faltam_segredos": [v for v, tem in c["segredos"].items() if not tem],
                 "projetos": c["projetos"],
+                "na_conversa": c["conversa"],
                 "origem": c["origem"],
+                **(
+                    {"vigia": f"fora do ar: {fora[c['nome']]}" if c["nome"] in fora else "de pé"}
+                    if c["nome"] in n8n
+                    else {}
+                ),
             }
             for c in lista
         ]

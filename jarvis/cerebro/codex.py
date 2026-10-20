@@ -9,6 +9,7 @@ from typing import Any
 
 from claude_agent_sdk import PermissionResultDeny, ToolPermissionContext
 
+from jarvis import atividade
 from jarvis.cerebro import contas
 from jarvis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 from jarvis.cerebro.claude import ClaudeBrain, carimbo
@@ -114,6 +115,10 @@ class CodexBrain(ClaudeBrain):
                 }
         resultado = await self.ponte_mcp.chamar(nome, argumentos)
         bruto = resultado.model_dump(mode="json", by_alias=True)
+        try:
+            atividade.registrar_externa(nome, argumentos, bruto)
+        except Exception:
+            log.exception("registro de %s na atividade falhou", nome)
         if self.depois is not None:
             novo = self.depois(nome, bruto)
             if novo is not None:

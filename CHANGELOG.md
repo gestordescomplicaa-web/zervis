@@ -2,6 +2,17 @@
 
 ## Não lançado
 
+- Conversa com o Zé: o conector ligado a um projeto (o n8n de um cliente) passa a valer só nas
+  sessões daquele projeto, e a conversa recebe só os conectores gerais. Antes, todos iam para a
+  conversa: pela voz, o Zé usava o n8n sem dizer de qual cliente, e as ferramentas de todos
+  custavam tokens em todo turno. A chave "Também na conversa", no cartão, traz um de volta.
+- O Zé acha a sessão certa: `sessoes_listar` mostra os conectores de cada sessão. Pergunta sobre
+  o n8n com uma sessão ligada a ele vai para ela; com mais de uma, o Zé pergunta qual.
+- Atividade: as ferramentas dos conectores MCP usadas pela conversa (Claude e Codex) passam a
+  ser registradas, como as do próprio Zé (essência, item 6).
+- `conectores_listar` traz o estado do vigia em cada n8n (de pé ou fora do ar), e o lembrete
+  avisa ao cérebro que não confere nada: "quando o n8n voltar, me avise" não vira mais um
+  lembrete repetido a cada 5 minutos, porque o vigia já avisa.
 - Vigia do n8n (ADR 0038): todo conector do MCP de um n8n é vigiado sozinho, uma vez por minuto,
   pelo `/healthz` e pelo `/healthz/readiness` da instância, sem chave e sem modelo. Depois de três
   falhas seguidas, o aviso "<n8n> fora do ar: sem resposta" (ou "erro do servidor", "banco fora")
