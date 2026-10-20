@@ -4,6 +4,7 @@
   <p><strong>O assistente de voz e a oficina de IA de quem toca automações, para os próprios projetos e os dos clientes.</strong></p>
   <p>Você dá o norte, por voz ou pelo painel. O Zé conduz os agentes Claude e Codex, liga os sistemas dos clientes por MCP<br>e fica de olho no que está rodando, no seu Linux ou na sua VPS.</p>
   <p>
+    <a href="#instalar-no-pc">Instalar no PC</a> ·
     <a href="docs/vps.md">Instalar numa VPS</a> ·
     <a href="#arquitetura">Arquitetura</a> ·
     <a href="#como-se-compara">Hermes e OpenClaw</a> ·
@@ -18,9 +19,9 @@
   </p>
 </div>
 
-> **Em desenvolvimento ativo.** A instalação numa VPS é de um comando e foi provada do zero
-> ([guia](docs/vps.md)). No PC, o caminho ainda é o de desenvolvimento (abaixo). O que está pronto
-> e o que está em teste vem marcado em cada função.
+> **Em desenvolvimento ativo.** Há instaladores para o PC e para a VPS; o da VPS foi provado do
+> zero ([guia](docs/vps.md)), o do PC num Omarchy ([prova e limites](docs/pc.md)). O que está
+> pronto e o que está em teste vem marcado em cada função.
 
 ## Para quem é
 
@@ -139,6 +140,24 @@ flowchart LR
   [docs/essencia.md](docs/essencia.md): nenhuma mudança, nem a feita por ele mesmo, pode
   contrariá-la.
 
+## Instalar no PC
+
+No terminal da sessão gráfica, como usuário comum, com Git, Make e curl instalados:
+
+```sh
+git clone https://github.com/gestordescomplicaa-web/zervis.git
+cd zervis && deploy/instalar-pc.sh
+```
+
+O instalador prepara Python e dependências, os modelos de voz, os agentes de código e o Go
+verificado para o WhatsApp. Instala o serviço do usuário, o atalho Zérvis no menu e o comando
+`zervis`, e abre o painel na configuração inicial (`http://127.0.0.1:8795/`, só no próprio PC;
+acesso por outros aparelhos se liga depois, no painel).
+
+No Ubuntu 24.04, os pré-requisitos são `sudo apt install git make curl xdg-utils pulseaudio-utils`.
+Sem as ferramentas de áudio, o instalador avisa; o painel e a conversa por texto continuam
+funcionando. O controle completo da máquina é no Omarchy; outros Linux têm o controle reduzido.
+
 ## Instalar numa VPS
 
 Num Ubuntu 24.04 ou parecido, com um usuário comum (não root) e Git, Make e curl instalados:
@@ -152,7 +171,18 @@ O instalador prepara tudo, deixa o Zé rodando como serviço e termina com um en
 código de primeiro acesso: abra o endereço, crie a senha e ligue o código do autenticador, sem
 túnel SSH. O passo a passo e o login do Claude e do Codex estão em [docs/vps.md](docs/vps.md).
 
-## Rodar no PC (desenvolvimento)
+## O comando `zervis`
+
+| Comando | O que faz |
+|---|---|
+| `zervis status` | Se o serviço está de pé, a versão e o endereço do painel |
+| `zervis doctor` | Cada função, "Disponível" ou "Indisponível", com o motivo e como resolver |
+| `zervis update` | Atualiza para a versão mais nova e reinicia; se o painel não voltar, volta para a anterior |
+| `zervis logs` | O registro do serviço, ao vivo |
+| `zervis abrir` | Abre o painel no navegador |
+| `zervis uninstall` | Remove o serviço, o atalho e o comando; os seus dados ficam, a não ser que você peça |
+
+## Desenvolver
 
 Linux, Python 3.12 a 3.14, Node.js 22+ e [uv](https://docs.astral.sh/uv/):
 
@@ -169,8 +199,7 @@ do Deepgram para a voz. Sem a palavra de ativação treinada, ele atende pelo pa
 teclado. `make instalar` instala o serviço do systemd do usuário e o atalho "Zérvis" no menu de
 aplicativos (`PORTA=8796 make instalar` para outra porta).
 
-O controle completo da máquina é no Omarchy; outros Linux têm o controle reduzido, e numa VPS,
-sem tela e sem som, o Zé não oferece o que a máquina não tem.
+Numa VPS, sem tela e sem som, o Zé não oferece o que a máquina não tem.
 
 ## Onde ficam os seus dados
 
@@ -189,6 +218,7 @@ conjunto de pastas (`zervis-<nome>`); `JARVIS_RAIZ=<pasta>` põe as três dentro
 | Documento | Conteúdo |
 |---|---|
 | [docs/roteiro.md](docs/roteiro.md) | Para onde o projeto vai, em ordem |
+| [docs/pc.md](docs/pc.md) | O Zé no PC: instalação, verificação e limites |
 | [docs/vps.md](docs/vps.md) | O Zé numa VPS: instalação, acesso e celular |
 | [docs/essencia.md](docs/essencia.md) | O que o Zé é e não deixa de ser |
 | [docs/conceitos.md](docs/conceitos.md) | Conversa, voz, foco, sessão, automação, memória e skill |

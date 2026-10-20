@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-zervis = "jarvis.__main__:main"
+zervis = "jarvis.cli:main"  # cuidar da instalação; o serviço sobe por `python -m jarvis`
 
 [build-system]
 requires = ["hatchling"]

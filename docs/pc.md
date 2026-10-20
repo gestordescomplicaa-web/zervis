@@ -1,0 +1,92 @@
+# Instalar no PC Linux
+
+Use o terminal da sessão gráfica de um usuário comum, com systemd do usuário ativo. No Ubuntu
+24.04 com desktop, instale os pré-requisitos:
+
+```sh
+sudo apt install git make curl xdg-utils pulseaudio-utils
+git clone https://github.com/gestordescomplicaa-web/zervis.git
+cd zervis
+deploy/instalar-pc.sh
+```
+
+O instalador reaproveita a preparação do servidor: uv fixado, `uv sync --frozen`, modelos de
+voz conferidos, agentes de código e Go verificado para o WhatsApp e as ligações. Instala o serviço
+`zervis` do usuário, habilita o início automático e abre `http://127.0.0.1:8795/`. Configure perfil,
+conta Claude ou Codex e Deepgram no
+painel. Sem Deepgram, a conversa por texto funciona. A instalação não configura acesso externo.
+
+Se faltar uma versão compatível do Go, o instalador baixa Go 1.27.2 oficial para x86-64 ou arm64
+sem `sudo` e confere o SHA-256. Na primeira conexão do WhatsApp, compila o WaCalls e baixa seus
+módulos Go; o mesmo pareamento atende mensagens e ligações.
+
+O atalho Zérvis fica no menu de aplicativos. Ele usa Chromium ou Chrome, inclusive os nomes
+`chromium-browser` e `google-chrome-stable`; sem eles, abre o navegador padrão por `xdg-open`.
+As pastas XDG são respeitadas, inclusive quando seus caminhos têm espaços.
+
+```sh
+systemctl --user status zervis
+journalctl --user -u zervis -f
+```
+
+Para manter uma porta já usada pela instalação, use por exemplo
+`JARVIS_PAINEL_PORTA=8796 deploy/instalar-pc.sh`: o serviço, o atalho e a conferência do painel
+usam a mesma porta. A escolha automática de porta continua prevista no ADR 0034.
+
+## O comando `zervis`
+
+O instalador põe o comando em `~/.local/bin/zervis` (sem sobrescrever outro de mesmo nome):
+
+- `zervis status`: se o serviço está de pé, a versão e o painel;
+- `zervis doctor`: cada função (serviço, painel, agente, escuta, modelos de voz, áudio, Go,
+  controle da máquina, disco), "Disponível" ou "Indisponível", com o motivo e como resolver;
+- `zervis update`: avança para o código mais novo da origem e reinicia. Só avança se a árvore
+  estiver limpa e sem commits locais por cima; se o painel não voltar, volta sozinho para a
+  versão anterior;
+- `zervis logs`, `zervis abrir` e `zervis uninstall` (os dados ficam; `--apagar-dados` pede a
+  frase de confirmação).
+
+## Verificação
+
+Os testes de `tests/test_instalador_pc.py` executam os scripts reais e o `make instalar` em
+pastas temporárias com espaços. Rede, agentes e systemd são substituídos por comandos falsos:
+conferem serviço, atalho, abertura local, recusa de root e de sessão sem tela, e preservação
+do modo servidor. O navegador padrão e os nomes diferentes do Chromium têm testes próprios.
+
+A CI acrescenta a prova em Ubuntu 24.04 com tela virtual (Xvfb), systemd do usuário real e
+Chromium com sandbox: executa o instalador, confere o serviço ativo e habilitado, o atalho
+instalado e a aba aberta no endereço local. Não usa contas pessoais nem simula audição.
+
+`make check-instalacao` prepara também os modelos de som no ambiente vazio, antes dos testes;
+assim `ZE_SEM_PULOS=1 make check-instalacao` não perde a prova das features ONNX por falta deles.
+
+Microfone, saída de som e controle do desktop precisam da prova num PC físico antes de declarar
+o item 1 de “Onde estamos” concluído. Na sessão gráfica de um Ubuntu 24.04 limpo:
+
+1. Execute os comandos de instalação acima; o painel deve abrir na configuração inicial.
+2. Configure as contas pelo painel, envie uma mensagem e confira a resposta.
+3. Configure Deepgram, teste o microfone e confira uma resposta falada.
+4. Feche a janela e abra Zérvis pelo menu; reinicie a sessão e confira o serviço e o atalho.
+5. Registre aqui o resultado e a versão testada, sem chaves ou dados pessoais.
+
+Essa prova física permanece pendente. A CI com tela virtual não comprova os dispositivos de áudio.
+
+## Prova local no Omarchy (16/10/2026)
+
+O instalador foi executado numa sessão gráfica real, sobre uma instalação anterior, mantendo
+a porta escolhida (8796). Configuração, dados e estado receberam backup privado fora do
+repositório; os serviços antigos foram parados. O serviço e o atalho passaram a apontar para
+a cópia atual do projeto. O serviço iniciou ativo, sem reinícios, e painel e Imersão responderam.
+
+No Chromium visível, com GPU de hardware, o avatar chimpanzé carregou. Alegria, dúvida, raiva
+e tristeza alteraram suas respectivas shape keys, sem erro de JavaScript. Modelo, texturas e
+animações já existiam no código atual; não foi necessário importar código da instalação antiga.
+A câmera também apareceu na Imersão. Nenhuma imagem da pessoa entrou no repositório.
+
+A captura local recebeu cinco quadros PCM (12.800 bytes a 16 kHz). O Piper gerou uma frase
+de 4,47 s e o reprodutor local concluiu a reprodução. Isso comprova captura e saída disponíveis,
+mas não substitui a confirmação humana de volume, inteligibilidade e conversa por voz.
+
+`ZE_SEM_PULOS=1 make check` e a instalação em pasta limpa passaram com 1.049 testes, tipos,
+lint e Go. A prova no Ubuntu com dispositivos físicos e o pedido falado de ponta a ponta
+continuam pendentes; a instalação deste PC é Omarchy, não Ubuntu.
