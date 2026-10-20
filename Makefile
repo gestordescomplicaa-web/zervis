@@ -55,4 +55,10 @@ instalar:
 	install -d "$(DATA_HOME)/applications"
 	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' -e 's#@ICONE@#zervis#' \
 		deploy/zervis.desktop > "$(DATA_HOME)/applications/zervis.desktop"
+	# O comando `zervis` (status, doctor, update...): um atalho para o do projeto, sem
+	# sobrescrever um `zervis` que não seja este.
+	install -d "$(HOME)/.local/bin"
+	if [ ! -e "$(HOME)/.local/bin/zervis" ] || [ -L "$(HOME)/.local/bin/zervis" ]; then \
+		ln -sfn "$(CURDIR)/.venv/bin/zervis" "$(HOME)/.local/bin/zervis"; \
+	else echo "Aviso: já existe um $(HOME)/.local/bin/zervis que não é do Zérvis; ficou como está."; fi
 	systemctl --user daemon-reload

@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Instalador do PC (`deploy/instalar-pc.sh`): serviço do usuário, atalho no menu e o painel aberto
+  na configuração inicial, com o Go verificado para o WhatsApp.
+- Comando `zervis`: `status`, `doctor` (cada função disponível ou não, com o motivo e como
+  resolver), `update` (avança só um caminho limpo e volta sozinho se o painel não subir), `logs`,
+  `abrir` e `uninstall` (os dados ficam, a não ser com `--apagar-dados` e a frase de confirmação).
 - Conversa com o Zé: o conector ligado a um projeto (o n8n de um cliente) passa a valer só nas
   sessões daquele projeto, e a conversa recebe só os conectores gerais. Antes, todos iam para a
   conversa: pela voz, o Zé usava o n8n sem dizer de qual cliente, e as ferramentas de todos

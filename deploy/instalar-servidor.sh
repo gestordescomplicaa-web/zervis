@@ -127,7 +127,7 @@ echo
 if [ "$MODO" = pc ]; then
   echo "Zérvis instalado. Painel: http://127.0.0.1:$PORTA/"
   echo "Abra também pelo atalho Zérvis no menu de aplicativos."
-  echo "Registro: journalctl --user -u zervis -f"
+  echo "Comando: zervis status, doctor, update e logs (em ~/.local/bin)."
   setsid -f "$REPO/deploy/abrir-painel.sh" >/dev/null 2>&1
   exit 0
 fi
@@ -137,4 +137,4 @@ echo
 # Endereço HTTPS e convite de uso único: o primeiro acesso dispensa o túnel SSH.
 uv run python -m jarvis.portal.primeiro_acesso
 echo
-echo "Registro: journalctl --user -u zervis -f"
+echo "Comando: zervis status, doctor, update e logs (em ~/.local/bin)."

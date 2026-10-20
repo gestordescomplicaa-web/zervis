@@ -91,6 +91,22 @@ def test_pc_instala_servico_atalho_e_abre_painel(instalacao: tuple[Path, Path]) 
     assert "@" not in atalho.read_text()
     assert "Opcional: Go" not in resultado.stdout
     assert "Environment=PATH=%h/.local/lib/zervis/bin" in servico.read_text()
+    comando = Path(os.environ["HOME"]) / ".local/bin/zervis"
+    assert comando.is_symlink() and os.readlink(comando) == f"{repo}/.venv/bin/zervis"
+    assert "zervis status, doctor, update e logs" in resultado.stdout
+
+
+def test_instalar_nao_sobrescreve_um_zervis_que_nao_e_o_nosso(
+    instalacao: tuple[Path, Path],
+) -> None:
+    repo, _ = instalacao
+    alheio = Path(os.environ["HOME"]) / ".local/bin/zervis"
+    alheio.parent.mkdir(parents=True)
+    alheio.write_text("#!/bin/sh\necho outro\n")
+    resultado = _rodar(repo, "instalar-pc.sh")
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    assert not alheio.is_symlink() and "outro" in alheio.read_text()
+    assert "não é do Zérvis" in resultado.stdout + resultado.stderr
 
 
 @pytest.mark.parametrize("sem_tela", [False, True])
