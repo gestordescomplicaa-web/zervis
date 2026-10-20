@@ -36,7 +36,9 @@ Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro 
    (`cerebro/agentes_nativos.py`); hoje o da máquina tem a vez e fica sem ferramentas.
 5. **Endereço fixo** para a VPS (domínio próprio ou túnel com nome no Cloudflare): o
    `trycloudflare` muda quando o servidor reinicia.
-6. **Proteção da `master`** no GitHub (ADR 0036): o repositório é público; falta ligar as regras.
+6. **Proteção da `master`** no GitHub (ADR 0036). Feito em 19/10/2026: só entra por PR com a CI
+   verde, também para administradores; sem aprovação obrigatória (mantenedor único), sem
+   force-push nem apagar a branch. A primeira versão publicada é a `v0.1.0`.
 
 **Depois** (sem urgência, decidido com dados): Opus na voz do navegador (o registro de um dia não
 mostrou buracos de áudio); Zé 3D animado no painel remoto, sem a câmera (hoje fora do PC aparece o

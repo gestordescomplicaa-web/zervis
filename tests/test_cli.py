@@ -34,12 +34,15 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _git_limpo(**extra: tuple[int, str]) -> dict[str, tuple[int, str]]:
-    """Árvore limpa, seguindo origin/master, e o HEAD atrás da origem por padrão."""
+    """Árvore limpa, seguindo origin/master, e o HEAD atrás da versão v0.1.0 e da origem."""
     return {
         "git_status": (0, ""),
         "git_rev-parse_--abbrev-ref": (0, "origin/master"),
         "git_rev-parse_HEAD": (0, "a" * 40),
         "git_rev-parse_@{u}": (0, "b" * 40),
+        "git_tag": (0, "v0.1.0\nv0.0.9\n"),
+        "git_rev-parse_v0.1.0^{commit}": (0, "b" * 40),
+        f"git_merge-base_--is-ancestor_{'b' * 40}_HEAD": (1, ""),  # a versão não está atrás
         "git_log": (0, "bbbbbbb Vigia do n8n\ncccccc1 Conectores"),
         **extra,
     }
@@ -64,7 +67,8 @@ def test_update_avanca_reinicia_e_confere_o_painel(capsys: pytest.CaptureFixture
     assert any(p.endswith(f"sync --frozen --project {cli.REPO}") for p in maquina.pedidos)
     assert not any(p.startswith("git reset") for p in maquina.pedidos)
     saida = capsys.readouterr().out
-    assert "aaaaaaa → bbbbbbb (2 mudanças)" in saida and "O painel respondeu." in saida
+    assert "aaaaaaa → v0.1.0 (2 mudanças)" in saida and "Atualizado para v0.1.0." in saida
+    assert f"git merge --ff-only --quiet {'b' * 40}" in maquina.pedidos
 
 
 def test_update_volta_para_a_anterior_se_o_painel_nao_sobe(
@@ -102,10 +106,40 @@ def test_update_recusa_sem_mexer_em_nada(
 
 
 def test_update_ja_na_mais_nova(capsys: pytest.CaptureFixture[str]) -> None:
-    maquina = Maquina(**_git_limpo(**{"git_rev-parse_@{u}": (0, "a" * 40)}))
+    maquina = Maquina(**_git_limpo(**{"git_rev-parse_v0.1.0^{commit}": (0, "a" * 40)}))
     assert cli.update(maquina, responde=lambda _p: True) == 0
-    assert "Já está na versão mais nova (aaaaaaa)." in capsys.readouterr().out
+    assert "Já está na versão mais nova (v0.1.0)." in capsys.readouterr().out
     assert not any(p.startswith("systemctl") for p in maquina.pedidos)
+
+
+def test_update_a_frente_da_versao_nao_volta_para_tras(capsys: pytest.CaptureFixture[str]) -> None:
+    """Quem está na master, depois da v0.1.0, não é levado de volta para ela."""
+    respostas = _git_limpo()
+    del respostas[f"git_merge-base_--is-ancestor_{'b' * 40}_HEAD"]  # a versão está atrás
+    maquina = Maquina(**respostas)
+    assert cli.update(maquina, responde=lambda _p: True) == 0
+    assert "à frente da versão mais nova (v0.1.0)" in capsys.readouterr().out
+    assert not any(p.startswith(("git merge --ff", "systemctl")) for p in maquina.pedidos)
+
+
+def test_update_sem_versao_publicada_aponta_o_desenvolvimento(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    maquina = Maquina(**_git_limpo(git_tag=(0, "")))
+    assert cli.update(maquina, responde=lambda _p: True) == 0
+    assert "zervis update --desenvolvimento" in capsys.readouterr().out
+
+
+def test_update_desenvolvimento_segue_a_branch_da_origem(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    maquina = Maquina(**_git_limpo(**{"git_rev-parse_@{u}": (0, "c" * 40)}))
+    assert (
+        cli.update(maquina, responde=lambda _p: True, pausa=lambda _s: None, desenvolvimento=True)
+        == 0
+    )
+    assert f"git merge --ff-only --quiet {'c' * 40}" in maquina.pedidos
+    assert "Atualizado para origin/master." in capsys.readouterr().out
 
 
 def test_uninstall_tira_servico_atalho_e_comando_e_deixa_os_dados(

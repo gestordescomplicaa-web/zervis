@@ -2,6 +2,27 @@
 
 ## Não lançado
 
+## 0.1.0 (19/10/2026)
+
+A primeira versão publicada. Destaques:
+
+- **Instalação:** no PC (`deploy/instalar-pc.sh`) e na VPS (`deploy/instalar-servidor.sh`, com
+  HTTPS, senha e código do autenticador), e o comando `zervis` (`status`, `doctor`, `update`,
+  `logs`, `abrir`, `uninstall`). O `update` segue as versões publicadas e volta sozinho se o
+  painel não subir.
+- **Voz:** "Ei Zé" treinado com a voz de quem usa, interrupção, fim de turno pela entonação e voz
+  local (Piper, Cadu), pelo PC ou pelo navegador do celular.
+- **Oficina:** sessões Claude Code e Codex num terminal real, com cópia isolada, troca de conta
+  sem perder a conversa e os conectores do projeto.
+- **Integrações:** conectores MCP colados do serviço (JSON ou curl), login OAuth, permissão por
+  ferramenta, separação por cliente; skills `integrar-sistema` e `fluxos-n8n`; vigia do n8n.
+- **Memória, skills, automações, Foco e central de avisos**, com aprovação no que é sensível e
+  tudo registrado na Atividade.
+- **Controle da máquina** no Omarchy, com nível de risco por ação.
+- **Atendimento no WhatsApp**, em teste.
+
+O registro completo, item por item:
+
 - Instalador do PC (`deploy/instalar-pc.sh`): serviço do usuário, atalho no menu e o painel aberto
   na configuração inicial, com o Go verificado para o WhatsApp.
 - Comando `zervis`: `status`, `doctor` (cada função disponível ou não, com o motivo e como

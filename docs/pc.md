@@ -40,9 +40,10 @@ O instalador põe o comando em `~/.local/bin/zervis` (sem sobrescrever outro de 
 - `zervis status`: se o serviço está de pé, a versão e o painel;
 - `zervis doctor`: cada função (serviço, painel, agente, escuta, modelos de voz, áudio, Go,
   controle da máquina, disco), "Disponível" ou "Indisponível", com o motivo e como resolver;
-- `zervis update`: avança para o código mais novo da origem e reinicia. Só avança se a árvore
-  estiver limpa e sem commits locais por cima; se o painel não voltar, volta sozinho para a
-  versão anterior;
+- `zervis update`: avança para a versão publicada mais nova (`v0.1.0`…) e reinicia;
+  `--desenvolvimento` segue a `master`. Só avança se a árvore estiver limpa e sem commits locais
+  por cima, nunca volta para uma versão mais antiga, e se o painel não voltar, volta sozinho para
+  a versão anterior;
 - `zervis logs`, `zervis abrir` e `zervis uninstall` (os dados ficam; `--apagar-dados` pede a
   frase de confirmação).
 
