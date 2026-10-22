@@ -30,6 +30,9 @@ case "$nome" in
      fi ;;
   id) case "$1" in -u) echo "${ZE_TESTE_UID:-1000}" ;; -un) echo teste ;; esac ;;
   getconf) echo 'glibc 2.39' ;;
+  systemctl) if [ "$2" = show ] && [ -n "${ZE_TESTE_PORTA_EM_USO:-}" ]; then
+       echo "PATH=/usr/bin JARVIS_PAINEL_PORTA=$ZE_TESTE_PORTA_EM_USO"
+     fi ;;
   uname) echo Linux ;;
 esac
 """
@@ -178,3 +181,18 @@ def test_painel_detecta_navegador(
         assert f"<--user-data-dir={tmp_path}/dados com espacos/zervis/navegador-painel>" in (
             resultado.stdout
         )
+
+
+def test_reinstalar_mantem_a_porta_que_o_servico_ja_usa(
+    instalacao: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem a variável, a reinstalação ficava na 8795 e o atalho abria a porta errada."""
+    repo, _ = instalacao
+    monkeypatch.setenv("ZE_TESTE_PORTA_EM_USO", "8797")
+    resultado = _rodar(repo, "instalar-pc.sh")
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    servico = Path(os.environ["XDG_CONFIG_HOME"]) / "systemd/user/zervis.service"
+    atalho = Path(os.environ["XDG_DATA_HOME"]) / "applications/zervis.desktop"
+    assert "ZERVIS_PAINEL_PORTA=8797" in servico.read_text()
+    assert "ZERVIS_PAINEL_PORTA=8797" in atalho.read_text()
+    assert "http://127.0.0.1:8797/" in resultado.stdout

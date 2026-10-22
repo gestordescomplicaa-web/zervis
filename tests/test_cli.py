@@ -57,7 +57,8 @@ def test_porta_vem_da_unidade_instalada(nome: str) -> None:
     """A unidade de antes de 20/10/2026 tem o nome antigo da variável."""
     cli.unidade().parent.mkdir(parents=True, exist_ok=True)
     cli.unidade().write_text(f"[Service]\nEnvironment={nome}=8796\n")
-    assert cli.porta() == 8796
+    sem_systemd = Maquina(**{"systemctl_--user_show": (1, "")})  # nunca o Zé desta máquina
+    assert cli.porta(sem_systemd) == 8796
 
 
 def test_update_avanca_reinicia_e_confere_o_painel(capsys: pytest.CaptureFixture[str]) -> None:
@@ -197,3 +198,30 @@ def test_doctor_marca_o_que_falta_e_como_resolver(
     assert "✗ Serviço" in saida and "Resolver: systemctl --user start zervis" in saida
     assert "✗ Painel" in saida and "- Áudio local" in saida  # sem tela: não se aplica
     assert "Indisponível" in saida and "Não se aplica" in saida
+
+
+def test_a_porta_e_a_que_o_systemd_da_ao_servico() -> None:
+    """22/10/2026: um ajuste em zervis.service.d dizia 8796, a unidade 8795, e o update esperou
+    o painel na porta errada (e voltou para a versão anterior sem motivo)."""
+    cli.unidade().parent.mkdir(parents=True, exist_ok=True)
+    cli.unidade().write_text("[Service]\nEnvironment=JARVIS_PAINEL_PORTA=8795\n")
+    efetivo = (
+        "PATH=/usr/bin JARVIS_PAINEL_PORTA=8795 JARVIS_PAINEL_PORTA=8796"  # o ajuste por último
+    )
+    maquina = Maquina(**{"systemctl_--user_show": (0, efetivo)})
+    assert cli.porta(maquina) == 8796
+    assert (
+        cli.porta(Maquina(**{"systemctl_--user_show": (1, "")})) == 8795
+    )  # sem systemd: a unidade
+
+
+def test_update_espera_o_painel_na_porta_efetiva() -> None:
+    consultadas: list[int] = []
+
+    def responde(numero: int) -> bool:
+        consultadas.append(numero)
+        return True
+
+    maquina = Maquina(**_git_limpo(**{"systemctl_--user_show": (0, "ZERVIS_PAINEL_PORTA=8796")}))
+    assert cli.update(maquina, responde=responde, pausa=lambda _s: None) == 0
+    assert consultadas == [8796]

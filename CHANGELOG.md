@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Porta do painel: o `zervis` (`status`, `doctor` e a espera do `update`), o `make instalar` e o
+  instalador passam a ler a porta que o systemd dá ao serviço, contando os ajustes em
+  `zervis.service.d`, e a reinstalação sem porta mantém a que já está em uso. Antes, com a
+  porta num ajuste, o `update` esperava o painel na porta errada e voltava para a versão
+  anterior sem motivo, e o atalho do menu abria uma porta vazia.
 - Nota do dia, revisão das conversas e automações: com a chave da Anthropic do painel recusada
   (sem crédito ou inválida) e o login da assinatura do Claude disponível, a consulta roda de
   novo pela assinatura, fica registrada uma vez na Atividade e as próximas vão direto. Antes, a
