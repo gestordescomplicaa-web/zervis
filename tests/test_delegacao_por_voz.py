@@ -12,18 +12,18 @@ from typing import Any
 import pytest
 from claude_agent_sdk import PermissionResultAllow, ToolPermissionContext, create_sdk_mcp_server
 
-from jarvis.avisos import central
-from jarvis.avisos.fila import Fila
-from jarvis.cerebro.base import Resposta
-from jarvis.cerebro.claude import ClaudeBrain
-from jarvis.cerebro.codex import CodexBrain
-from jarvis.cerebro.codex_mcp import FerramentasCodex
-from jarvis.cerebro.ferramentas import sessoes as ferramentas
-from jarvis.habilidades import revisao
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.servicos.avisos import ServicoAvisos
-from jarvis.nucleo.servicos.oficina import ServicoOficina
-from jarvis.oficina.sessoes import Sessao, Sessoes
+from zervis.avisos import central
+from zervis.avisos.fila import Fila
+from zervis.cerebro.base import Resposta
+from zervis.cerebro.claude import ClaudeBrain
+from zervis.cerebro.codex import CodexBrain
+from zervis.cerebro.codex_mcp import FerramentasCodex
+from zervis.cerebro.ferramentas import sessoes as ferramentas
+from zervis.habilidades import revisao
+from zervis.nucleo import estados as e
+from zervis.nucleo.servicos.avisos import ServicoAvisos
+from zervis.nucleo.servicos.oficina import ServicoOficina
+from zervis.oficina.sessoes import Sessao, Sessoes
 
 
 @pytest.mark.parametrize("motor", ["claude", "codex"])

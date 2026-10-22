@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis import fuso, usuario
-from jarvis.cerebro import acesso, rapido
+from zervis import fuso, usuario
+from zervis.cerebro import acesso, rapido
 
 
 @pytest.fixture

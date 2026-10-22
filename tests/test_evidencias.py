@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from jarvis.habilidades.evidencias import GUARDAR_S, Evidencias, maos
+from zervis.habilidades.evidencias import GUARDAR_S, Evidencias, maos
 
 DIA = 86400.0
 

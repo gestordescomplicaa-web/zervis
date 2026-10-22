@@ -9,9 +9,9 @@ from types import SimpleNamespace
 
 import websockets
 
-from jarvis.oficina.sessoes import Sessoes, _git
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import Portal
+from zervis.oficina.sessoes import Sessoes, _git
+from zervis.portal.acoes import Acoes
+from zervis.portal.servidor import Portal
 
 
 async def verificar(tmp_path):

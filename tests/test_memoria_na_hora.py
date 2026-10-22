@@ -3,8 +3,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from jarvis.memoria.curta import Memoria, Mudanca
-from jarvis.nucleo.laco import Nucleo
+from zervis.memoria.curta import Memoria, Mudanca
+from zervis.nucleo.laco import Nucleo
 
 
 def test_mudou_no_meio_vai_junto_e_depois_nao_repete(tmp_path: Path) -> None:
@@ -54,7 +54,7 @@ def test_vale_o_que_o_cerebro_recebeu_ao_conectar(tmp_path: Path) -> None:
 
 def test_skill_criada_no_meio_da_conversa_chega_ao_cerebro(tmp_path: Path) -> None:
     """13/10/2026: a pessoa criou "resumo-do-dia" e pediu o resumo; o Zé não sabia da skill."""
-    from jarvis.habilidades.skills import Skills
+    from zervis.habilidades.skills import Skills
 
     memoria = Memoria(tmp_path / "m", {"usuario": 2000, "jarvis": 2000})
     skills = Skills(tmp_path / "skills")
@@ -73,7 +73,7 @@ def test_skill_editada_avisa_para_ler_de_novo(tmp_path: Path) -> None:
     """13/10/2026: a pessoa mudou o "Pronto quando" e o Zé seguiu a versão que já tinha lido."""
     import os
 
-    from jarvis.habilidades.skills import Skills
+    from zervis.habilidades.skills import Skills
 
     skills = Skills(tmp_path / "skills")
     (tmp_path / "skills/resumo-do-dia").mkdir(parents=True)

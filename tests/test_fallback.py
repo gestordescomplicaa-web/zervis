@@ -11,9 +11,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import contas
-from jarvis.oficina import fallback
-from jarvis.oficina.sessoes import LimiteErro, Sessao, Sessoes, comando_terminal
+from zervis.cerebro import contas
+from zervis.oficina import fallback
+from zervis.oficina.sessoes import LimiteErro, Sessao, Sessoes, comando_terminal
 
 
 def esperar(condicao: Any) -> None:
@@ -148,8 +148,8 @@ def test_terminal_real_retoma_so_com_evidencia_e_atualiza_copia_nativa(
             script = "import time; print('Continuando', flush=True); time.sleep(60)"
         return [sys.executable, "-c", script]
 
-    monkeypatch.setattr("jarvis.oficina.sessoes.comando_terminal", comando)
-    monkeypatch.setattr("jarvis.oficina.sessoes.confiar_pasta_codex", lambda s: None)
+    monkeypatch.setattr("zervis.oficina.sessoes.comando_terminal", comando)
+    monkeypatch.setattr("zervis.oficina.sessoes.confiar_pasta_codex", lambda s: None)
     ss = Sessoes(tmp_path / "sessoes", (tmp_path,), lambda s, r: avisos.append(r))
     s = ss.criar("Teste", str(tmp_path), "codex")
     ss._mudar(s.id, conta=inicial.id, modelo="modelo-antigo", esforco="low")

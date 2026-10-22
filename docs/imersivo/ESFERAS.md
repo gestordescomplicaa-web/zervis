@@ -30,11 +30,11 @@ relance (e, adiante, em óculos). Configurar e decidir fica no painel; comandar,
 | Guia | `notes` | Primeiros passos, gestos, atalhos, esferas e comandos de voz | `web/guia` | sempre |
 
 Quais aparecem e o modo desenvolvedor vêm de `orbes.json`, escrito pelo Zé
-(`jarvis/rosto/hud.py`, `orbes()`). Sem esse arquivo (Zé parado), a página mostra todas as esferas
+(`zervis/rosto/hud.py`, `orbes()`). Sem esse arquivo (Zé parado), a página mostra todas as esferas
 do manifesto.
 
 ## Manifesto
 
-`jarvis/imersivo/barehands.padrao.json` lista as esferas (id, título, tipo, apelidos falados e
+`zervis/imersivo/barehands.padrao.json` lista as esferas (id, título, tipo, apelidos falados e
 descrição). Quem quiser outras esferas cria `<dados>/imersivo/barehands.json`; a voz e a persona
-do Zé leem o mesmo manifesto (`jarvis/rosto/manifesto.py`).
+do Zé leem o mesmo manifesto (`zervis/rosto/manifesto.py`).

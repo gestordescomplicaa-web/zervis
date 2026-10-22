@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.portal import remoto
-from jarvis.portal.servidor import Portal
+from zervis.portal import remoto
+from zervis.portal.servidor import Portal
 
 STATUS = {
     "BackendState": "Running",
@@ -31,12 +31,12 @@ def _falso(respostas: dict[str, Any], chamadas: list[list[str]], codigo: int = 0
 
 
 def test_sem_tailscale(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("jarvis.portal.remoto.shutil.which", lambda nome: None)
+    monkeypatch.setattr("zervis.portal.remoto.shutil.which", lambda nome: None)
     assert remoto.rede(8796) == remoto.Rede()
 
 
 def test_le_nome_ip_e_se_o_painel_esta_publicado(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("jarvis.portal.remoto.shutil.which", lambda nome: "/usr/bin/tailscale")
+    monkeypatch.setattr("zervis.portal.remoto.shutil.which", lambda nome: "/usr/bin/tailscale")
     chamadas: list[list[str]] = []
     monkeypatch.setattr(
         remoto, "_tailscale", _falso({"status": STATUS, "serve status": SERVE}, chamadas)
@@ -48,7 +48,7 @@ def test_le_nome_ip_e_se_o_painel_esta_publicado(monkeypatch: pytest.MonkeyPatch
 
 
 def test_tailscale_parado_e_instalado_mas_desconectado(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("jarvis.portal.remoto.shutil.which", lambda nome: "/usr/bin/tailscale")
+    monkeypatch.setattr("zervis.portal.remoto.shutil.which", lambda nome: "/usr/bin/tailscale")
     parado = {"status": {"BackendState": "NeedsLogin", "Self": {}}}
     monkeypatch.setattr(remoto, "_tailscale", _falso(parado, []))
     assert remoto.rede(8796) == remoto.Rede(instalado=True)
@@ -83,7 +83,7 @@ def test_painel_aceita_o_nome_da_rede_so_quando_permitido() -> None:
 def test_firewall_que_barra_o_audio_mostra_o_comando(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("jarvis.portal.remoto.shutil.which", lambda nome: "/usr/bin/ufw")
+    monkeypatch.setattr("zervis.portal.remoto.shutil.which", lambda nome: "/usr/bin/ufw")
     regras = tmp_path / "user.rules"
     assert remoto.firewall(regras=regras) == ""  # sem ufw configurado
     regras.write_text(

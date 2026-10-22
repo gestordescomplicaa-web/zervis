@@ -14,12 +14,12 @@ import numpy as np
 import pytest
 from livekit import rtc
 
-from jarvis.transporte import local as local_
-from jarvis.transporte import remoto as remoto_
-from jarvis.transporte import servidor_livekit as lk
-from jarvis.transporte.entrada import Entrada
-from jarvis.transporte.remoto import TAXA_SAIDA, TocadorRemoto
-from jarvis.voz.saida import FluxoPronto, Voz
+from zervis.transporte import local as local_
+from zervis.transporte import remoto as remoto_
+from zervis.transporte import servidor_livekit as lk
+from zervis.transporte.entrada import Entrada
+from zervis.transporte.remoto import TAXA_SAIDA, TocadorRemoto
+from zervis.voz.saida import FluxoPronto, Voz
 
 
 def _decodificar(parte: str) -> Any:
@@ -171,7 +171,7 @@ def test_voz_sai_pelo_destino_quando_ha_um() -> None:
 
 
 def test_segmentador_segurando_so_fecha_ao_soltar() -> None:
-    from jarvis.voz.escuta import Segmentador
+    from zervis.voz.escuta import Segmentador
 
     s = Segmentador(fim_silencio_s=0.16, segurando=True)
     voz, silencio = b"\1\0" * 1280, b"\0\0" * 1280
@@ -183,7 +183,7 @@ def test_segmentador_segurando_so_fecha_ao_soltar() -> None:
 
 
 def test_ativacao_pelo_botao_guardada(tmp_path: Path) -> None:
-    from jarvis.voz import chamado
+    from zervis.voz import chamado
 
     arquivo = tmp_path / "chamado.json"
     assert chamado.ler(arquivo) == "voz"

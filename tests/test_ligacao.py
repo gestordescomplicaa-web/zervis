@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from jarvis.atendimento import agente as ag
-from jarvis.atendimento import ligacao as lg
+from zervis.atendimento import agente as ag
+from zervis.atendimento import ligacao as lg
 
 QUADRO = b"\x01\x00" * 960
 
@@ -207,7 +207,7 @@ def test_cliente_interrompe_e_a_voz_para(tmp_path: Path) -> None:
 
 
 def test_quando_a_central_atende_a_ligacao(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from jarvis.atendimento import central as c
+    from zervis.atendimento import central as c
 
     perfil = ag.Perfil(ligado=True, modo="teste", numeros_teste=["5511999990000"], ligacoes=True)
     atendente = ag.Atendente(lambda: None, lambda *_: "", lambda *_: None, tmp_path,  # type: ignore[arg-type, return-value]

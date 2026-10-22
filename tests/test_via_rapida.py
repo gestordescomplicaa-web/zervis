@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from jarvis import config
-from jarvis.cerebro import rapido
-from jarvis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
+from zervis import config
+from zervis.cerebro import rapido
+from zervis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 
 
 class MotorFalso:

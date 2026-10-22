@@ -25,7 +25,7 @@ def instalacao(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, P
 nome=${0##*/}
 printf '%s %s\\n' "$nome" "$*" >> "$ZE_TESTE_LOG"
 case "$nome" in
-  uv) if [ "$1" = run ] && [ "$4" = jarvis.atendimento.preparar_go ]; then
+  uv) if [ "$1" = run ] && [ "$4" = zervis.atendimento.preparar_go ]; then
        printf '%s\\n' "$HOME/.local/lib/zervis/bin"
      fi ;;
   id) case "$1" in -u) echo "${ZE_TESTE_UID:-1000}" ;; -un) echo teste ;; esac ;;
@@ -75,9 +75,9 @@ def test_pc_instala_servico_atalho_e_abre_painel(instalacao: tuple[Path, Path]) 
     assert resultado.returncode == 0, resultado.stdout + resultado.stderr
     comandos = registro.read_text()
     assert "uv sync --frozen" in comandos
-    assert "uv run python -m jarvis.atendimento.preparar_go" in comandos
-    assert "uv run python -m jarvis.preparar" in comandos
-    assert "uv run python -m jarvis.cerebro.agentes_nativos" in comandos
+    assert "uv run python -m zervis.atendimento.preparar_go" in comandos
+    assert "uv run python -m zervis.preparar" in comandos
+    assert "uv run python -m zervis.cerebro.agentes_nativos" in comandos
     assert "systemctl --user import-environment DISPLAY" in comandos
     assert "systemctl --user enable zervis" in comandos
     assert "systemctl --user restart zervis" in comandos
@@ -86,7 +86,7 @@ def test_pc_instala_servico_atalho_e_abre_painel(instalacao: tuple[Path, Path]) 
     assert "loginctl" not in comandos
     assert "http://127.0.0.1:8795/" in resultado.stdout
     servico = Path(os.environ["XDG_CONFIG_HOME"]) / "systemd/user/zervis.service"
-    assert f'ExecStart="{repo}/.venv/bin/python" -m jarvis' in servico.read_text()
+    assert f'ExecStart="{repo}/.venv/bin/python" -m zervis' in servico.read_text()
     atalho = Path(os.environ["XDG_DATA_HOME"]) / "applications/zervis.desktop"
     assert f'"{repo}/deploy/abrir-painel.sh"' in atalho.read_text()
     assert "@" not in atalho.read_text()
@@ -132,7 +132,7 @@ def test_servidor_preserva_linger_e_primeiro_acesso(instalacao: tuple[Path, Path
     assert resultado.returncode == 0, resultado.stdout + resultado.stderr
     comandos = registro.read_text()
     assert "loginctl enable-linger teste" in comandos
-    assert "uv run python -m jarvis.portal.primeiro_acesso" in comandos
+    assert "uv run python -m zervis.portal.primeiro_acesso" in comandos
     assert "setsid " not in comandos
     assert "import-environment" not in comandos
 

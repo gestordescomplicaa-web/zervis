@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.oficina import arquivos
-from jarvis.oficina.sessoes import SessaoErro, Sessoes, _git
+from zervis.oficina import arquivos
+from zervis.oficina.sessoes import SessaoErro, Sessoes, _git
 
 
 @pytest.fixture

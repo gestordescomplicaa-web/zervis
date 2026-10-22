@@ -9,18 +9,18 @@ from typing import Any
 
 import pytest
 
-from jarvis.memoria import conversas as mc
-from jarvis.memoria import dias as md
-from jarvis.memoria import historico, tempo
-from jarvis.memoria.conversas import FUSO, Conversas, Turno
-from jarvis.memoria.dias import Dias
-from jarvis.memoria.linha import LinhaDoTempo, interpretar_data
+from zervis.memoria import conversas as mc
+from zervis.memoria import dias as md
+from zervis.memoria import historico, tempo
+from zervis.memoria.conversas import FUSO, Conversas, Turno
+from zervis.memoria.dias import Dias
+from zervis.memoria.linha import LinhaDoTempo, interpretar_data
 
 
 def test_publicacao_usa_binario_embutido_e_mesmos_dados(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.memoria import aimemory
+    from zervis.memoria import aimemory
 
     binario = tmp_path / "binario-embutido" / "ai-memory"
     dados = tmp_path / "memoria-longa"
@@ -32,7 +32,7 @@ def test_publicacao_usa_binario_embutido_e_mesmos_dados(
 
     monkeypatch.setattr(aimemory, "binario", lambda: binario)
     monkeypatch.setattr(aimemory, "DADOS", dados)
-    monkeypatch.setattr("jarvis.memoria.conversas.subprocess.run", executar)
+    monkeypatch.setattr("zervis.memoria.conversas.subprocess.run", executar)
     assert mc.publicar("conversas/dia.md", "Registro sintético.", ("voz",))
     comando, opcoes = chamadas[0]
     assert comando[:4] == [str(binario), "--data-dir", str(dados), "write-page"]
@@ -169,7 +169,7 @@ def test_a_busca_ve_as_paginas_do_ze_primeiro(tmp_path: Path) -> None:
 def test_conversa_gravada_no_formato_antigo_continua_legivel(tmp_path: Path) -> None:
     """Antes de 20/10/2026, a fala de quem usa ficava sob outra chave: ela continua sendo lida, e
     as falas novas vão como "pessoa"."""
-    from jarvis.dados.documentos import Documentos
+    from zervis.dados.documentos import Documentos
 
     pasta = tmp_path / "conversas"
     antigo = {

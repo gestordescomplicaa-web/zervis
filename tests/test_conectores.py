@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import conectores, mcp_externo
-from jarvis.cerebro.mcp_externo import McpInvalido
+from zervis.cerebro import conectores, mcp_externo
+from zervis.cerebro.mcp_externo import McpInvalido
 
 TOML = """
 [servidores.navegador]

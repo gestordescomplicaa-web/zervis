@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.oficina import continuidade
-from jarvis.oficina.sessoes import Sessao, Sessoes
+from zervis.oficina import continuidade
+from zervis.oficina.sessoes import Sessao, Sessoes
 
 
 @pytest.fixture

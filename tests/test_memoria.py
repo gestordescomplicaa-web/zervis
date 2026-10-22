@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro.claude import descrever
-from jarvis.cerebro.ferramentas import prechecagem
-from jarvis.memoria.curta import Memoria, MemoriaErro, Mudanca, varrer
+from zervis.cerebro.claude import descrever
+from zervis.cerebro.ferramentas import prechecagem
+from zervis.memoria.curta import Memoria, MemoriaErro, Mudanca, varrer
 
 
 def _memoria(tmp_path: Path, limite: int = 300) -> Memoria:

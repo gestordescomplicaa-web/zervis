@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import base
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo
+from zervis.cerebro import base
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo
 
 
 def test_cerebro_desistiu_a_maquina_sai_da_confirmacao() -> None:

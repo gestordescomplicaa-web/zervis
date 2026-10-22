@@ -38,14 +38,14 @@ o usuário ──voz/texto──▶ Conversa ──▶ Zé (cérebro: via rápid
 
 | Conceito | Código | Dados (`~/.local/share/zervis/`) | Painel |
 |---|---|---|---|
-| Conversa | `jarvis/memoria/conversas.py` | `conversas/` | Início (e Conversa, na fatia 2) |
-| Voz | `jarvis/voz/`, `jarvis/cerebro/rapido.py` | — | Voz |
-| Foco | `jarvis/foco/` | `foco/` | Foco |
-| Sessão e Tarefa | `jarvis/oficina/sessoes.py` | `sessoes/` | Sessões |
-| Automação | `jarvis/automacoes/` | `automacoes/` | Automações |
-| Memória | `jarvis/memoria/` | `memoria/`, `linha-do-tempo.jsonl`, `dias/`, ai-memory | Memória |
-| Skill | `jarvis/habilidades/skills.py` | `skills/` | Skills |
-| Conector | `jarvis/cerebro/mcp_externo.py`, `conectores.py` | `~/.config/zervis/mcp.toml`, `mcp-painel.json` | Conectores |
+| Conversa | `zervis/memoria/conversas.py` | `conversas/` | Início (e Conversa, na fatia 2) |
+| Voz | `zervis/voz/`, `zervis/cerebro/rapido.py` | — | Voz |
+| Foco | `zervis/foco/` | `foco/` | Foco |
+| Sessão e Tarefa | `zervis/oficina/sessoes.py` | `sessoes/` | Sessões |
+| Automação | `zervis/automacoes/` | `automacoes/` | Automações |
+| Memória | `zervis/memoria/` | `memoria/`, `linha-do-tempo.jsonl`, `dias/`, ai-memory | Memória |
+| Skill | `zervis/habilidades/skills.py` | `skills/` | Skills |
+| Conector | `zervis/cerebro/mcp_externo.py`, `conectores.py` | `~/.config/zervis/mcp.toml`, `mcp-painel.json` | Conectores |
 
 ## O que arrumar para chegar nisso
 

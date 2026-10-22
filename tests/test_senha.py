@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.portal.senha import (
+from zervis.portal.senha import (
     LEMBRAR_S,
     PASSO_S,
     SESSAO_S,
@@ -17,7 +17,7 @@ from jarvis.portal.senha import (
     codigo_totp,
     nome_do_aparelho,
 )
-from jarvis.portal.servidor import Portal
+from zervis.portal.servidor import Portal
 
 
 class Relogio:

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from jarvis.cerebro import mcp_externo, navegador
+from zervis.cerebro import mcp_externo, navegador
 
 P = navegador.PREFIXO
 

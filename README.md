@@ -191,7 +191,7 @@ Linux, Python 3.12 a 3.14, Node.js 22+ e [uv](https://docs.astral.sh/uv/):
 uv sync
 npm ci
 make check                 # formatação, lint, tipos e testes
-uv run python -m jarvis    # sobe o Zé; o painel abre em http://127.0.0.1:8795/
+uv run python -m zervis    # sobe o Zé; o painel abre em http://127.0.0.1:8795/
 ```
 
 Na primeira subida, o Zé baixa os modelos de som e a voz (Cadu, 63 MB), confere o SHA-256 de cada

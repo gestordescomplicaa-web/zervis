@@ -108,7 +108,7 @@ mantém a leitura de depuração. Por voz: "abre as configurações".
 
 ## O Zé na própria tela
 
-`jarvis-controle.js` e, no serviço do Zé, `jarvis/rosto/tela.py` com as ferramentas `tela_ver` e
+`jarvis-controle.js` e, no serviço do Zé, `zervis/rosto/tela.py` com as ferramentas `tela_ver` e
 `tela_agir`. O Zé escreve uma lista de ações em `state/tela-comando.json`; a página as
 executa em ordem, com as mesmas animações da mão (meio segundo entre passos) e responde em
 `state/tela-estado.json` (POST `/tela/estado`). O estado também é renovado a cada cinco

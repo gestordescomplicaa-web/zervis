@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.atendimento.agente import Registros
-from jarvis.atendimento.central import Eventos
-from jarvis.dados import Banco
+from zervis.atendimento.agente import Registros
+from zervis.atendimento.central import Eventos
+from zervis.dados import Banco
 
 
 def _escrever(pasta: str, telefone: str) -> None:

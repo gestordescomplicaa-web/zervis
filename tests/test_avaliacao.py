@@ -9,9 +9,9 @@ from typing import Any
 
 import pytest
 
-from jarvis import avaliacao
-from jarvis.avaliacao import Cenario, Rodada
-from jarvis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
+from zervis import avaliacao
+from zervis.avaliacao import Cenario, Rodada
+from zervis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 
 
 class Roteiro:
@@ -141,7 +141,7 @@ def test_cenario_invalido_e_recusado(tmp_path: Path) -> None:
 
 
 def test_resumo_compara_com_a_rodada_anterior() -> None:
-    from jarvis.avaliacao.__main__ import resumo
+    from zervis.avaliacao.__main__ import resumo
 
     def rel(**taxas: list[bool]) -> dict[str, Any]:
         return {"cenarios": [{"arquivo": a, "rodadas": [{"passou": p} for p in v]}
@@ -153,7 +153,7 @@ def test_resumo_compara_com_a_rodada_anterior() -> None:
 
 
 def test_a_persona_da_avaliacao_nao_leva_dados_de_ninguem() -> None:
-    from jarvis.avaliacao.__main__ import persona
+    from zervis.avaliacao.__main__ import persona
 
     texto = persona()
     assert "Você atende Ana." in texto and "Omarchy" in texto
@@ -162,7 +162,7 @@ def test_a_persona_da_avaliacao_nao_leva_dados_de_ninguem() -> None:
 def test_cerebro_sem_responder_fica_sem_nota_e_para_no_limite(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    from jarvis.avaliacao.__main__ import avaliar, resumo
+    from zervis.avaliacao.__main__ import avaliar, resumo
 
     class Limite(Roteiro):
         async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
@@ -178,7 +178,7 @@ def test_cerebro_sem_responder_fica_sem_nota_e_para_no_limite(
 def test_a_referencia_e_a_ultima_rodada_de_cada_cenario(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.avaliacao import __main__ as executor
+    from zervis.avaliacao import __main__ as executor
 
     monkeypatch.setattr(executor, "HISTORICO", tmp_path)
 

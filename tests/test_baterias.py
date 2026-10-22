@@ -4,7 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from jarvis.cerebro.baterias import da_assinatura, do_omniroute
+from zervis.cerebro.baterias import da_assinatura, do_omniroute
 
 AGORA = 1_791_300_000.0  # 06/10/2026
 ISO_AGORA = "2026-10-06T17:28:00.000Z"

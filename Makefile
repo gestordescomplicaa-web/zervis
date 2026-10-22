@@ -5,7 +5,7 @@ check: lint tipos testes wacalls
 
 # A bateria de avaliação do cérebro (docs/avaliacao.md): gasta a conta do Claude, fora do check.
 avaliar:
-	uv run python -m jarvis.avaliacao $(ARGS)
+	uv run python -m zervis.avaliacao $(ARGS)
 
 fmt:
 	uv run ruff format .
@@ -29,7 +29,7 @@ testes:
 # O WaCalls (Go) do atendimento. O instalador prepara o Go no espaço do usuário; na CI,
 # ZE_SEM_PULOS=1 também garante que os testes não sejam ignorados.
 wacalls:
-	@if command -v go >/dev/null; then cd jarvis/atendimento/wacalls && go vet ./... && go test ./...; \
+	@if command -v go >/dev/null; then cd zervis/atendimento/wacalls && go vet ./... && go test ./...; \
 	elif [ -n "$$ZE_SEM_PULOS" ]; then echo "wacalls: sem Go (ZE_SEM_PULOS=1)"; exit 1; \
 	else echo "wacalls: sem Go, testes do Go pulados"; fi
 
@@ -43,7 +43,7 @@ check-imersivo:
 	ZE_TESTES_IMERSIVO=1 uv run --with websockets --with pytest-xdist pytest -q -n 2 tests/imersivo
 
 # Instala o serviço (sem iniciar no login). Os modelos de som são baixados e conferidos pelo
-# próprio Zé na primeira subida (jarvis/preparar.py).
+# próprio Zé na primeira subida (zervis/preparar.py).
 
 PORTA ?= 8795
 CONFIG_HOME = $(or $(XDG_CONFIG_HOME),$(HOME)/.config)

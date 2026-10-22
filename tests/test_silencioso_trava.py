@@ -6,9 +6,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.avisos import modo
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo
+from zervis.avisos import modo
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo
 
 
 class _Captura:

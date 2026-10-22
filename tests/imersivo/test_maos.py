@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2] / 'jarvis' / 'imersivo' / 'web'  # a página
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parent)]
 
-import jarvis.imersivo.maos as jm  # noqa: E402
+import zervis.imersivo.maos as jm  # noqa: E402
 
 V4L2 = """User Controls
 

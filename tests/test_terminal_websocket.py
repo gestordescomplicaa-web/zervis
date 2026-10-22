@@ -10,7 +10,7 @@ from websockets.exceptions import ConnectionClosed, InvalidHandshake
 from websockets.sync.client import connect
 from websockets.typing import Origin
 
-from jarvis.portal.servidor import Portal
+from zervis.portal.servidor import Portal
 
 
 def _url(portal: Portal) -> str:

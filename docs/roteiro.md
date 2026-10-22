@@ -55,19 +55,19 @@ holograma fixo); imersão com câmera fora do PC.
 
 ## Já decidido
 
-- **Dados em três raízes XDG** (`jarvis/lugares.py`): `~/.config/zervis`, `~/.local/share/zervis`,
+- **Dados em três raízes XDG** (`zervis/lugares.py`): `~/.config/zervis`, `~/.local/share/zervis`,
   `~/.local/state/zervis`.
-- **"Quem sou eu"** em `<config>/perfil.json` (nome e sobre), lido por `jarvis/usuario.py`; a
+- **"Quem sou eu"** em `<config>/perfil.json` (nome e sobre), lido por `zervis/usuario.py`; a
   persona recebe isso no começo de cada conversa. Nenhum nome fixo no código.
-- **Fuso** do sistema (`jarvis/fuso.py`), ou `ZERVIS_FUSO` (o antigo `JARVIS_*` ainda vale).
+- **Fuso** do sistema (`zervis/fuso.py`), ou `ZERVIS_FUSO` (o antigo `JARVIS_*` ainda vale).
 - **Voz só pelo Deepgram.** Sem a chave, o Zé não escuta (painel e teclado funcionam).
-- **Acesso ao Claude** (`jarvis/cerebro/acesso.py`): token da assinatura (`claude setup-token`) ou
+- **Acesso ao Claude** (`zervis/cerebro/acesso.py`): token da assinatura (`claude setup-token`) ou
   chave de API colados no painel, senão o que a máquina já tem (variáveis ou login do Claude Code).
   Aplicado no ambiente do processo, vale para cérebro, via rápida, automações, sessões e revisão.
 - **Licença AGPL-3** (ADR 0013).
 - **Piper dentro do Zé** (dependência Python, GPL-3) e a voz Cadu (CC0) baixada e conferida na
   primeira subida: primeiro som em ~150 ms, sem serviço à parte.
-- **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `jarvis/imersivo/`, subido
+- **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `zervis/imersivo/`, subido
   pelo próprio Zé, com estado e manifesto nas pastas de dados.
 - **Memória longa pelo ai-memory embutido** (MIT, ADR 0016): o da máquina, ou o binário oficial
   baixado e conferido pelo Zé; as sessões de código alimentam e consultam a memória comum.
@@ -85,7 +85,7 @@ da liberação. Cada etapa tem um critério que se comprova, e só conta como fe
 | # | Etapa | Pronto quando | Estado |
 |---|---|---|---|
 | 1 | Filtro de qualidade | O painel abre num Chromium de verdade dentro do `make check` (todas as páginas, sem erro no console) e `make check-instalacao` passa numa pasta limpa | Feito em 15/10/2026 |
-| 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `jarvis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
+| 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `zervis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
 | 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | ⬜ |
 | 4 | Eficiência medida | Latência da voz, memória, processos ociosos e tokens por tarefa medidos numa rotina repetível; README com números no lugar de "mais enxuto" | ⬜ |
 | 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | ⬜ |
@@ -434,7 +434,7 @@ Correções da avaliação de maturidade:
 - **Imersivo:** Host e Origin locais; token por instância nos pedidos e nas leituras de estado.
   A página, os cards do núcleo e os comandos `board.sh`/`board-state.sh` enviam a autorização.
   O token de terminal fica na pasta de estado com permissão 0600 (ADR 0019).
-- **Distribuição:** personas em `jarvis/persona/`, incluídas no wheel. Conferido construindo o
+- **Distribuição:** personas em `zervis/persona/`, incluídas no wheel. Conferido construindo o
   pacote, extraindo fora do repositório e importando as personas e o ponto de entrada. Os caminhos
   anteriores em `persona/` são links para os mesmos arquivos, para processos já em execução
   continuarem lendo a persona até o próximo reinício.

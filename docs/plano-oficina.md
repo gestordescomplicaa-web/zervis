@@ -36,7 +36,7 @@ agente disse, as ferramentas usadas, o fim). Nada se apaga sozinho.
 
 ## Fases
 
-1. **Núcleo das sessões e motor Claude** (`jarvis/oficina/sessoes.py`): criar, listar,
+1. **Núcleo das sessões e motor Claude** (`zervis/oficina/sessoes.py`): criar, listar,
    conversar, parar, worktree opcional, política de comandos, aviso ao terminar.
 2. **Painel: aba Sessões** no estilo da referência do Hermes: lista à esquerda (nome, pasta,
    último recado, estado), conversa à direita e a caixa de mensagem com a pasta embaixo; "+"

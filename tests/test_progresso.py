@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.oficina import progresso as mod
-from jarvis.oficina.progresso import Progresso
+from zervis.oficina import progresso as mod
+from zervis.oficina.progresso import Progresso
 
 
 class Relogio:

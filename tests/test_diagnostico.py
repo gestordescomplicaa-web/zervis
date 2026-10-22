@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from jarvis import diagnostico
+from zervis import diagnostico
 
 
 def test_agrupa_falhas_nao_entendi_correcoes_e_o_registro() -> None:

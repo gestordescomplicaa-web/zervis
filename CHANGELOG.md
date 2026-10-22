@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- O pacote se chama `zervis` (era `jarvis`): `python -m zervis`, `from zervis import …`, a pasta
+  `zervis/`. As instalações de antes continuam subindo: a unidade antiga (`python -m jarvis`) e
+  a Central antiga (`python -m jarvis.atendimento`) repassam para o `zervis` até o próximo
+  `make instalar`, que grava a unidade nova. Os dados, a trava do serviço e os nomes que o
+  cérebro usa (o servidor MCP `jarvis`, o alvo de memória `jarvis`) não mudam.
+
 - Variáveis: `ZERVIS_PAINEL_PORTA`, `ZERVIS_PERFIL`, `ZERVIS_RAIZ`, `ZERVIS_FUSO` e
   `ZERVIS_PONTE_API_KEY` são os nomes; os `JARVIS_*` de antes continuam valendo quando o novo não
   existe (as unidades já instaladas têm `JARVIS_PAINEL_PORTA`). O instalador e o atalho gravam o

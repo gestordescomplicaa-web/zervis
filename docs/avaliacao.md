@@ -20,7 +20,7 @@ fica sem nota, e no limite da conta a bateria para.
 
 ## Escrever um cenário
 
-Um arquivo em `jarvis/avaliacao/cenarios/<nome>.toml`, de preferência nascido de um erro real
+Um arquivo em `zervis/avaliacao/cenarios/<nome>.toml`, de preferência nascido de um erro real
 (diga qual, num comentário):
 
 ```toml

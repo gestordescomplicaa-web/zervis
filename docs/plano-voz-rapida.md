@@ -38,7 +38,7 @@ laço de áudio vira candidato a Rust. A escolha de linguagem pesa mesmo no pain
 
 0. **Medir cada turno.** Uma linha por turno com fim da fala, pedido fechado, transcrito,
    primeiro token, primeiro som; resumo diário com mediana e p95. É a régua de tudo.
-1. **Via rápida.** Um cérebro de conversa novo (`jarvis/cerebro/rapido.py`), em fluxo, com
+1. **Via rápida.** Um cérebro de conversa novo (`zervis/cerebro/rapido.py`), em fluxo, com
    prompt enxuto (persona curta, memória curta, data e hora, a última conversa) e só
    ferramentas de leitura rápida. Quando precisa de mais (ferramenta, projeto, máquina,
    raciocínio longo), ele não tenta: passa ao cérebro completo (Claude pelo SDK, como hoje),
@@ -70,12 +70,12 @@ O painel prático (menu lateral, clique e texto, voz opcional; o modo imersivo f
 
 ## Zona protegida
 
-As etapas 1 e 2 tocam `jarvis/config.py` (a seção da via rápida) e talvez
-`jarvis/cerebro/claude.py` (o aviso antes da ferramenta). Precisam da aprovação do usuário.
+As etapas 1 e 2 tocam `zervis/config.py` (a seção da via rápida) e talvez
+`zervis/cerebro/claude.py` (o aviso antes da ferramenta). Precisam da aprovação do usuário.
 
 ## Etapa 1 feita (09/10/2026)
 
-`jarvis/cerebro/rapido.py` (motores e `Roteado`), `jarvis/persona/RAPIDO.md`, `[via_rapida]` na config,
+`zervis/cerebro/rapido.py` (motores e `Roteado`), `zervis/persona/RAPIDO.md`, `[via_rapida]` na config,
 testes em `tests/test_via_rapida.py`. Medido pelo teclado, mesmo caminho até o primeiro som:
 cérebro de 3.144 ms (completo, mediana de 09/10) para 977 ms (via rápida pelo plano, Sonnet);
 primeiro som em 1.562 ms. Medidos também os modelos "rápidos" pelos gateways do OmniRoute

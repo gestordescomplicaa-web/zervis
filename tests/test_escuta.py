@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from jarvis.voz.escuta import Segmentador, ficou_no_meio
+from zervis.voz.escuta import Segmentador, ficou_no_meio
 
 Q = b"\x00" * 2560
 

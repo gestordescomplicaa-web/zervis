@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from jarvis.cerebro.consumo import Consumo
+from zervis.cerebro.consumo import Consumo
 
 TURNO = {
     "input_tokens": 2,

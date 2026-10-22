@@ -7,7 +7,7 @@ After=pipewire-pulse.service
 [Service]
 Type=simple
 # @REPO@ é trocado pela pasta do repositório no `make instalar`.
-ExecStart="@REPO@/.venv/bin/python" -m jarvis
+ExecStart="@REPO@/.venv/bin/python" -m zervis
 Environment=ZERVIS_PAINEL_PORTA=@PORTA@
 # O instalador prepara o Go para o WaCalls neste diretório privado do usuário.
 Environment=PATH=%h/.local/lib/zervis/bin:%h/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin

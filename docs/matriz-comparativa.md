@@ -10,7 +10,7 @@ uma empresa gostaria de ter. Por isso, além das funções, a matriz olha o que 
 (seção 4).
 
 **Método.** Hermes e OpenClaw: o que a documentação oficial afirma em 15/10/2026, sem instalar nem
-executar. Zérvis: o que está no código (`jarvis/`) e foi validado. Medições na
+executar. Zérvis: o que está no código (`zervis/`) e foi validado. Medições na
 [auditoria de 14/10](auditoria/funcionalidades-e-desempenho-2026-10-14.md).
 
 Legenda: **●** tem · **◐** parcial ou sem validação · **—** não tem ou não documentado.

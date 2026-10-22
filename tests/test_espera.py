@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.voz import espera
+from zervis.voz import espera
 
 
 def test_padrao_e_normal_e_grava(tmp_path: Path) -> None:

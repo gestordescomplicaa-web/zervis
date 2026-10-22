@@ -9,10 +9,10 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import contas
-from jarvis.cerebro.ferramentas import LIVRES, SERVIDOR
-from jarvis.cerebro.ferramentas import sessoes as g
-from jarvis.oficina.sessoes import Sessao, Sessoes
+from zervis.cerebro import contas
+from zervis.cerebro.ferramentas import LIVRES, SERVIDOR
+from zervis.cerebro.ferramentas import sessoes as g
+from zervis.oficina.sessoes import Sessao, Sessoes
 
 
 def chamar(ferramentas: dict[str, Any], nome: str, args: dict[str, Any]) -> Any:

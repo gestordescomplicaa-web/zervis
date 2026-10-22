@@ -8,10 +8,10 @@ from typing import Any
 import pytest
 from claude_agent_sdk import SdkMcpTool
 
-from jarvis import atividade
-from jarvis.atividade import Atividade, e_correcao, limpar, titulo_da_ferramenta
-from jarvis.cerebro.ferramentas import auditada
-from jarvis.sistema import catalogo
+from zervis import atividade
+from zervis.atividade import Atividade, e_correcao, limpar, titulo_da_ferramenta
+from zervis.cerebro.ferramentas import auditada
+from zervis.sistema import catalogo
 
 
 def test_segredos_nunca_entram_e_texto_longo_e_cortado() -> None:

@@ -14,9 +14,9 @@
     "strict": false
   },
   "include": [
-    "jarvis/portal/web/painel.js",
-    "jarvis/portal/web/modulos/*.js",
-    "jarvis/portal/web/paginas/*.js",
-    "jarvis/portal/web/tipos.d.ts"
+    "zervis/portal/web/painel.js",
+    "zervis/portal/web/modulos/*.js",
+    "zervis/portal/web/paginas/*.js",
+    "zervis/portal/web/tipos.d.ts"
   ]
 }

@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from jarvis.atendimento import preparar_go
+from zervis.atendimento import preparar_go
 
 
 def _pacote_go() -> bytes:

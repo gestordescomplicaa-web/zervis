@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes, _git
+from zervis.oficina.sessoes import Sessao, SessaoErro, Sessoes, _git
 
 
 def git(pasta: Path, *args: str) -> str:
@@ -188,8 +188,8 @@ def test_api_exige_confirmacao_antes_de_alterar_copia(
 ) -> None:
     from types import SimpleNamespace
 
-    from jarvis.portal.acoes import Acoes
-    from jarvis.portal.servidor import PedidoInvalido
+    from zervis.portal.acoes import Acoes
+    from zervis.portal.servidor import PedidoInvalido
 
     sessoes, s, projeto, onde = copia
     acoes = Acoes(SimpleNamespace(sessoes=sessoes), tmp_path / "latencias", tmp_path / "teste")
@@ -217,7 +217,7 @@ def test_falha_na_limpeza_nao_registra_descarte_concluido(
 ) -> None:
     import subprocess
 
-    from jarvis.oficina import sessoes as modulo
+    from zervis.oficina import sessoes as modulo
 
     sessoes, s, projeto, onde = copia
     mudar(projeto, nome="b.txt")
@@ -259,7 +259,7 @@ def test_aplicar_encerra_terminal_ocioso_antes_de_mudar_arquivos(
 ) -> None:
     import sys
 
-    from jarvis.oficina.terminal import Terminal
+    from zervis.oficina.terminal import Terminal
 
     sessoes, s, _, onde = copia
     mudar(onde)

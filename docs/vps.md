@@ -90,7 +90,7 @@ ssh -N -L 8795:127.0.0.1:8795 ze@<servidor>
 e abra `http://localhost:8795`, com a mesma porta dos dois lados. Pelo túnel, o painel trata você
 como o próprio computador do Zé: tudo fica liberado. Quem tem a sua chave SSH tem o Zé.
 
-Código vencido ou perdido: rode de novo `uv run python -m jarvis.portal.primeiro_acesso` na pasta
+Código vencido ou perdido: rode de novo `uv run python -m zervis.portal.primeiro_acesso` na pasta
 do Zé (só gera um código novo enquanto a senha não existe).
 
 ## 4. Falar com o Zé
@@ -138,7 +138,7 @@ Avisos normais no registro de um servidor:
   chega pelo navegador.
 - `sem a chave do Deepgram: voz desligada`: até a chave ser salva no painel.
 - `modelos de som faltando: ...`: um download falhou; o painel e o texto funcionam, e a voz volta
-  depois de `uv run python -m jarvis.preparar` e de reiniciar o serviço.
+  depois de `uv run python -m zervis.preparar` e de reiniciar o serviço.
 
 Se a rede do servidor bloqueia o HuggingFace (a voz Cadu vem de lá), há dois caminhos:
 

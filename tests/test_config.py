@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.config import ConfigInvalida, carregar
-from jarvis.nucleo.instancia import JaRodando, travar
+from zervis.config import ConfigInvalida, carregar
+from zervis.nucleo.instancia import JaRodando, travar
 
 
 def test_sem_arquivo_usa_os_padroes(tmp_path: Path) -> None:

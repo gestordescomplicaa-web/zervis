@@ -11,12 +11,12 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from jarvis.avisos.fila import Fila
-from jarvis.cerebro.eco import Eco
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo, Status
-from jarvis.voz.escuta import Segmentador
-from jarvis.voz.latencia import Latencias
+from zervis.avisos.fila import Fila
+from zervis.cerebro.eco import Eco
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo, Status
+from zervis.voz.escuta import Segmentador
+from zervis.voz.latencia import Latencias
 
 
 class VozCronometrada:
@@ -233,7 +233,7 @@ def test_fala_durante_o_pensamento_no_ao_vivo_e_contada_e_registrada(
     parecia "surdez": agora o registro e a Atividade dizem quanto foi perdido."""
     registros: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        "jarvis.nucleo.laco.atividade.PADRAO.registrar",
+        "zervis.nucleo.laco.atividade.PADRAO.registrar",
         lambda tipo, titulo, **extra: registros.append((tipo, titulo)),
     )
     n = nucleo
