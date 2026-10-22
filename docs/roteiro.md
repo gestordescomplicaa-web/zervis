@@ -59,7 +59,7 @@ holograma fixo); imersão com câmera fora do PC.
   `~/.local/state/zervis`.
 - **"Quem sou eu"** em `<config>/perfil.json` (nome e sobre), lido por `jarvis/usuario.py`; a
   persona recebe isso no começo de cada conversa. Nenhum nome fixo no código.
-- **Fuso** do sistema (`jarvis/fuso.py`), ou `JARVIS_FUSO`.
+- **Fuso** do sistema (`jarvis/fuso.py`), ou `ZERVIS_FUSO` (o antigo `JARVIS_*` ainda vale).
 - **Voz só pelo Deepgram.** Sem a chave, o Zé não escuta (painel e teclado funcionam).
 - **Acesso ao Claude** (`jarvis/cerebro/acesso.py`): token da assinatura (`claude setup-token`) ou
   chave de API colados no painel, senão o que a máquina já tem (variáveis ou login do Claude Code).

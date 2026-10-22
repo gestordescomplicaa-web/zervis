@@ -211,8 +211,8 @@ Numa VPS, sem tela e sem som, o Zé não oferece o que a máquina não tem.
 | Estado | `~/.local/state/zervis` | o momento: status, tempos, consumo, avisos |
 
 Nada é enviado ao repositório nem a terceiros sem pedido explícito. Nenhum nome, fuso ou caminho de
-alguém fica fixo no código: o que é seu vem da configuração. `JARVIS_PERFIL=<nome>` usa outro
-conjunto de pastas (`zervis-<nome>`); `JARVIS_RAIZ=<pasta>` põe as três dentro de uma pasta só.
+alguém fica fixo no código: o que é seu vem da configuração. `ZERVIS_PERFIL=<nome>` usa outro
+conjunto de pastas (`zervis-<nome>`); `ZERVIS_RAIZ=<pasta>` põe as três dentro de uma pasta só.
 
 ## Documentação
 

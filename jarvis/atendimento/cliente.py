@@ -23,6 +23,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from jarvis import ambiente as variaveis
 from jarvis import lugares
 from jarvis.atendimento import central, whatsapp
 from jarvis.portal import tunel
@@ -33,7 +34,7 @@ UNIDADE = "zervis-atendimento"
 REGISTRO = lugares.ESTADO / "atendimento.log"
 REPASSAR_S = 3600  # ao subir, o que passou para você há menos que isto ainda vira aviso
 SUBIDA_S = 20.0
-_AMBIENTE = ("PATH", "JARVIS_PERFIL", "JARVIS_RAIZ", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+_AMBIENTE = ("PATH", *variaveis.nomes("PERFIL", "RAIZ"), "XDG_CONFIG_HOME", "XDG_DATA_HOME",
              "XDG_STATE_HOME", "XDG_RUNTIME_DIR")  # fmt: skip
 
 

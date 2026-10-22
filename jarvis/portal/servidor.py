@@ -21,7 +21,6 @@ import hmac
 import html
 import json
 import logging
-import os
 import secrets
 import threading
 from collections.abc import Callable
@@ -30,6 +29,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from jarvis import ambiente
 from jarvis.portal.senha import Acesso, SenhaErro
 from jarvis.transporte import websocket
 
@@ -39,7 +39,7 @@ WEB = Path(__file__).with_name("web")
 # pelo qual se entrou deixaria a pessoa trancada fora, ou um invasor sem barreira.
 SEMPRE_NO_PC = frozenset({"acesso/codigo/desligar", "tunel/desativar", "remoto/desativar"})
 LIGAR_CODIGO = frozenset({"acesso/codigo/preparar", "acesso/codigo/confirmar"})
-PORTA = int(os.environ.get("JARVIS_PAINEL_PORTA", "8795"))  # o perfil limpo usa outra
+PORTA = int(ambiente.ler("PAINEL_PORTA", "8795"))  # o perfil limpo usa outra
 IMERSIVO = "http://127.0.0.1:8794"  # o modo imersivo (Barehands), embutido na aba Imersão
 # A sala LiveKit da voz remota: no próprio PC e, pelo celular, a do `tailscale serve` (8443).
 VOZ_REMOTA = "ws://127.0.0.1:7880 http://127.0.0.1:7880 wss://*.ts.net:8443 https://*.ts.net:8443"

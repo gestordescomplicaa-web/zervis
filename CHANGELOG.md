@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Variáveis: `ZERVIS_PAINEL_PORTA`, `ZERVIS_PERFIL`, `ZERVIS_RAIZ`, `ZERVIS_FUSO` e
+  `ZERVIS_PONTE_API_KEY` são os nomes; os `JARVIS_*` de antes continuam valendo quando o novo não
+  existe (as unidades já instaladas têm `JARVIS_PAINEL_PORTA`). O instalador e o atalho gravam o
+  nome novo.
+
 - Nome: o assistente é o Zé em toda parte do código, da interface, das descrições das
   ferramentas e dos documentos atuais (eram 268 "JARVIS"); a persona passa a ser `ZE.md` (o
   caminho antigo continua como link) e o prefixo dos pedidos de manutenção, `[Zé · modo

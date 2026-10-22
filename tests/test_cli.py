@@ -52,9 +52,11 @@ def _ordem(maquina: Maquina, *trechos: str) -> list[int]:
     return [next(i for i, p in enumerate(maquina.pedidos) if p.startswith(t)) for t in trechos]
 
 
-def test_porta_vem_da_unidade_instalada() -> None:
-    cli.unidade().parent.mkdir(parents=True)
-    cli.unidade().write_text("[Service]\nEnvironment=JARVIS_PAINEL_PORTA=8796\n")
+@pytest.mark.parametrize("nome", ["ZERVIS_PAINEL_PORTA", "JARVIS_PAINEL_PORTA"])
+def test_porta_vem_da_unidade_instalada(nome: str) -> None:
+    """A unidade de antes de 20/10/2026 tem o nome antigo da variável."""
+    cli.unidade().parent.mkdir(parents=True, exist_ok=True)
+    cli.unidade().write_text(f"[Service]\nEnvironment={nome}=8796\n")
     assert cli.porta() == 8796
 
 
