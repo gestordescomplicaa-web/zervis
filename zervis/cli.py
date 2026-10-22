@@ -62,7 +62,8 @@ def comando() -> Path:
     return Path.home() / ".local" / "bin" / SERVICO
 
 
-_PORTA = re.compile(r"(?:^|\s)(?:ZERVIS|JARVIS)_PAINEL_PORTA=(\d+)")
+# Depois de um espaço (o ambiente do `systemctl show`) ou de `Environment=` (a unidade).
+_PORTA = re.compile(r"(?<![A-Z_])(?:ZERVIS|JARVIS)_PAINEL_PORTA=(\d+)")
 
 
 def porta(rodar: Rodar = rodar) -> int:

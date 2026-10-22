@@ -57,7 +57,8 @@ def test_porta_vem_da_unidade_instalada(nome: str) -> None:
     """A unidade de antes de 20/10/2026 tem o nome antigo da variável."""
     cli.unidade().parent.mkdir(parents=True, exist_ok=True)
     cli.unidade().write_text(f"[Service]\nEnvironment={nome}=8796\n")
-    assert cli.porta() == 8796
+    sem_systemd = Maquina(**{"systemctl_--user_show": (1, "")})  # nunca o Zé desta máquina
+    assert cli.porta(sem_systemd) == 8796
 
 
 def test_update_avanca_reinicia_e_confere_o_painel(capsys: pytest.CaptureFixture[str]) -> None:
