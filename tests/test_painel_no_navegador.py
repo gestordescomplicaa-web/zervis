@@ -391,7 +391,8 @@ def test_terminal_recorre_ao_http_se_o_websocket_nao_estiver_disponivel(
             await nav.avaliar("document.querySelector('.item-sessao').click()")
             await _esperar(nav, "!!term && !!termId")
             await nav.avaliar("escreverNoTerminal('fallback')")
-            assert await asyncio.to_thread(chegou.wait, 5)
+            # A conexão em tempo real desiste em 5 s; a espera precisa de folga além disso.
+            assert await asyncio.to_thread(chegou.wait, 12)
             assert not nav.erros, nav.erros
 
     with _painel(tmp_path, extras={"terminal/escrever": escrever}) as (
@@ -699,6 +700,10 @@ def test_sessoes_mostram_trava_sem_enviar_teclas_nem_repetir_as_recusadas(tmp_pa
             await _esperar(nav, "!!document.querySelector('.item-sessao')")
             await nav.avaliar("document.querySelector('.item-sessao').click()")
             await _esperar(nav, "!!termId && !!document.querySelector('#reserva-sessoes')")
+            # Enquanto a conexão em tempo real tenta abrir, as teclas esperam numa fila e só vão
+            # pelo HTTP quando ela desiste: digitar antes disso deixava este teste instável
+            # (22/10/2026, na CI). Aqui não há esse servidor; espera ela desistir.
+            await _esperar(nav, "!termWs")
             assert await nav.avaliar("!term.options.disableStdin")
             await nav.avaliar("(async () => { escreverNoTerminal('antes'); await filaEscrita; })()")
             assert escritos == ["antes"]

@@ -7,6 +7,13 @@
   `zervis.service.d`, e a reinstalação sem porta mantém a que já está em uso. Antes, com a
   porta num ajuste, o `update` esperava o painel na porta errada e voltava para a versão
   anterior sem motivo, e o atalho do menu abria uma porta vazia.
+- Nota do dia, revisão das conversas e automações: com a chave da Anthropic do painel recusada
+  (sem crédito ou inválida) e o login da assinatura do Claude disponível, a consulta roda de
+  novo pela assinatura, fica registrada uma vez na Atividade e as próximas vão direto. Antes, a
+  chave sem crédito parou a nota do dia e a revisão por dias, enquanto a conversa (pelo Codex)
+  seguia normal; as notas que faltam são escritas na próxima manhã, a partir das conversas.
+- Testes do terminal no painel: esperam a conexão em tempo real desistir antes de digitar (eram
+  instáveis na CI).
 
 - O pacote se chama `zervis` (era `jarvis`): `python -m zervis`, `from zervis import …`, a pasta
   `zervis/`. As instalações de antes continuam subindo: a unidade antiga (`python -m jarvis`) e

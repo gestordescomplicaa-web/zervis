@@ -255,27 +255,33 @@ async def perguntar_ao_modelo(
         query,
     )
 
-    opcoes = ClaudeAgentOptions(
-        system_prompt=sistema or SISTEMA,  # outra consulta (a nota do dia) traz a sua
-        tools=[],
-        allowed_tools=[],
-        permission_mode="default",
-        setting_sources=[],
-        strict_mcp_config=True,
-        model=modelo,
-        cwd=str(pasta),
-        max_turns=1,
-        # Prova de 06/10/2026 na mesma conversa: pensamento livre gastou 2.744 tokens em 27 s;
-        # sem pensar (4 s) perdeu a correção de estilo; 1.500 de orçamento pegou estilo na
-        # memória e a regra numa skill de classe, como o Hermes, em 11 s com o Haiku.
-        thinking={"type": "enabled", "budget_tokens": pensamento}
-        if pensamento
-        else {"type": "disabled"},
-    )
-    texto, uso = "", None
-    async for msg in query(prompt=prompt, options=opcoes):
-        if isinstance(msg, AssistantMessage):
-            texto += "".join(b.text for b in msg.content if isinstance(b, TextBlock))
-        elif isinstance(msg, ResultMessage):
-            uso = msg.usage
-    return texto, uso
+    from zervis.cerebro import acesso
+
+    async def consultar(ambiente: dict[str, str]) -> tuple[str, dict[str, Any] | None]:
+        opcoes = ClaudeAgentOptions(
+            system_prompt=sistema or SISTEMA,  # outra consulta (a nota do dia) traz a sua
+            tools=[],
+            allowed_tools=[],
+            permission_mode="default",
+            setting_sources=[],
+            strict_mcp_config=True,
+            model=modelo,
+            cwd=str(pasta),
+            max_turns=1,
+            env=ambiente,
+            # Prova de 06/10/2026 na mesma conversa: pensamento livre gastou 2.744 tokens em 27 s;
+            # sem pensar (4 s) perdeu a correção de estilo; 1.500 de orçamento pegou estilo na
+            # memória e a regra numa skill de classe, como o Hermes, em 11 s com o Haiku.
+            thinking={"type": "enabled", "budget_tokens": pensamento}
+            if pensamento
+            else {"type": "disabled"},
+        )
+        texto, uso = "", None
+        async for msg in query(prompt=prompt, options=opcoes):
+            if isinstance(msg, AssistantMessage):
+                texto += "".join(b.text for b in msg.content if isinstance(b, TextBlock))
+            elif isinstance(msg, ResultMessage):
+                uso = msg.usage
+        return texto, uso
+
+    return await acesso.com_reserva(consultar, "a revisão e a nota do dia")

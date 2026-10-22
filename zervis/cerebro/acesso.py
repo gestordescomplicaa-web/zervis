@@ -13,16 +13,18 @@ pelo Agent SDK, que herda o ambiente do processo. Ordem:
    login do Claude Code.
 """
 
+import logging
 import os
 import shutil
 import subprocess
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from zervis.cerebro import contas, rapido
 
+log = logging.getLogger(__name__)
 TOKEN = "CLAUDE_CODE_OAUTH_TOKEN"  # noqa: S105 (nome da variável, não o segredo)
 CHAVE = "ANTHROPIC_API_KEY"
 ORIGINAL = {v: os.environ.get(v, "").strip() for v in (TOKEN, CHAVE)}
@@ -191,3 +193,51 @@ MENSAGENS = {
     "billing_error": "Conta sem créditos.",
     "rate_limit": "Limite de uso atingido.",
 }
+
+
+# --- reserva das consultas de fundo -----------------------------------------------------------
+# A chave colada no painel pode ficar sem crédito ou ser revogada. 22/10/2026: a nota do dia e a
+# revisão das conversas (que usam sempre o Claude) falharam por dias seguidos com "Credit balance
+# is too low", enquanto o login da assinatura respondia. Essas consultas tentam de novo sem a
+# chave (pela assinatura) e, no resto do processo, vão direto por ela. O "Testar" da chave no
+# painel não usa a reserva: ele existe para dizer se a chave funciona.
+
+RECUSAS = ("credit balance", "invalid api key", "invalid x-api-key", "authentication_error")
+_pela_assinatura = False
+
+
+def chave_recusada(erro: BaseException, pasta: Path | None = None) -> bool:
+    texto = str(erro).lower()
+    return escolha(pasta)["metodo"] == "chave" and any(r in texto for r in RECUSAS)
+
+
+def assinatura_disponivel(login: Path | None = None) -> bool:
+    login = login or contas.Contas().em_uso("claude").login
+    return bool(ORIGINAL.get(TOKEN)) or login.is_file()
+
+
+def ambiente_das_consultas() -> dict[str, str]:
+    """O que vai em `ClaudeAgentOptions(env=...)`: sem a chave, depois que ela foi recusada."""
+    return {CHAVE: ""} if _pela_assinatura else {}
+
+
+async def com_reserva[T](consultar: Callable[[dict[str, str]], Awaitable[T]], uso: str) -> T:
+    """Roda a consulta; se a chave do painel for recusada e houver o login da assinatura, roda
+    de novo por ele, deixa isso na Atividade uma vez e segue por ele até o Zé reiniciar."""
+    global _pela_assinatura
+    try:
+        return await consultar(ambiente_das_consultas())
+    except Exception as erro:
+        if _pela_assinatura or not chave_recusada(erro) or not assinatura_disponivel():
+            raise
+    _pela_assinatura = True
+    log.warning("chave da Anthropic do painel recusada em %s: o fundo vai pela assinatura", uso)
+    from zervis import atividade
+
+    atividade.PADRAO.registrar(
+        "falha",
+        "Chave da Anthropic do painel recusada (sem crédito ou inválida): usando a assinatura",
+        origem="acesso",
+        uso=uso,
+    )
+    return await consultar(ambiente_das_consultas())
