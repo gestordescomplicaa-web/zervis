@@ -62,10 +62,18 @@ def comando() -> Path:
     return Path.home() / ".local" / "bin" / SERVICO
 
 
-def porta() -> int:
-    """A porta do serviço instalado (o `make instalar` grava na unidade), senão a do ambiente."""
+_PORTA = re.compile(r"(?:^|\s)(?:ZERVIS|JARVIS)_PAINEL_PORTA=(\d+)")
+
+
+def porta(rodar: Rodar = rodar) -> int:
+    """A porta em que o serviço instalado escuta: o ambiente que o systemd dá a ele, com os
+    ajustes de `zervis.service.d` (22/10/2026: um `porta.conf` dizia 8796, a unidade 8795, e o
+    `update` esperou o painel na porta errada); senão a unidade, senão o ambiente."""
+    efetivo = rodar(["systemctl", "--user", "show", SERVICO, "-p", "Environment", "--value"])
+    if efetivo.returncode == 0 and (achados := _PORTA.findall(efetivo.stdout)):
+        return int(achados[-1])
     try:
-        if achado := re.search(r"(?:ZERVIS|JARVIS)_PAINEL_PORTA=(\d+)", unidade().read_text()):
+        if achado := _PORTA.search(unidade().read_text()):
             return int(achado.group(1))
     except OSError:
         pass
@@ -137,7 +145,7 @@ def verificacoes(rodar: Rodar = rodar, responde: Responde = painel_responde) -> 
             "Início automático", False, "Desligado.", f"systemctl --user enable {SERVICO}"
         )
     )
-    numero = porta()
+    numero = porta(rodar)
     lista.append(
         Verificacao("Painel", True, f"http://127.0.0.1:{numero}/")
         if responde(numero)
@@ -226,7 +234,7 @@ def verificacoes(rodar: Rodar = rodar, responde: Responde = painel_responde) -> 
 
 
 def status(rodar: Rodar = rodar, responde: Responde = painel_responde) -> int:
-    numero = porta()
+    numero = porta(rodar)
     ativo, no_ar = _ativo(rodar), responde(numero)
     print(f"Zérvis {versao(rodar)}")
     print(f"Serviço: {'rodando' if ativo else 'parado'}")
@@ -253,8 +261,10 @@ def _uv() -> str:
     return shutil.which("uv") or str(Path.home() / ".local/bin/uv")
 
 
-def _esperar_painel(responde: Responde, espera_s: float, pausa: Callable[[float], None]) -> bool:
-    numero, fim = porta(), time.monotonic() + espera_s
+def _esperar_painel(
+    responde: Responde, espera_s: float, pausa: Callable[[float], None], rodar: Rodar = rodar
+) -> bool:
+    numero, fim = porta(rodar), time.monotonic() + espera_s
     while time.monotonic() < fim:
         if responde(numero):
             return True
@@ -334,7 +344,7 @@ def update(
         return 1
     if rodar([_uv(), "sync", "--frozen", "--project", str(REPO)]).returncode == 0:
         rodar(["systemctl", "--user", "restart", SERVICO])
-        if _esperar_painel(responde, espera_s, pausa):
+        if _esperar_painel(responde, espera_s, pausa, rodar):
             print(f"Atualizado para {rotulo}. O painel respondeu.")
             return 0
         print("O painel não voltou na versão nova: voltando para a anterior.")
@@ -343,7 +353,7 @@ def update(
     _git(rodar, "reset", "--hard", "--quiet", antes)  # a árvore estava limpa: só desfaz o avanço
     rodar([_uv(), "sync", "--frozen", "--project", str(REPO)])
     rodar(["systemctl", "--user", "restart", SERVICO])
-    voltou = _esperar_painel(responde, espera_s, pausa)
+    voltou = _esperar_painel(responde, espera_s, pausa, rodar)
     estado = "de volta" if voltou else "restaurada, mas o painel não respondeu: zervis logs"
     print(f"Versão anterior ({antes[:7]}) {estado}.")
     return 1

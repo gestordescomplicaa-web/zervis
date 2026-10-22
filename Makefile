@@ -45,7 +45,9 @@ check-imersivo:
 # Instala o serviço (sem iniciar no login). Os modelos de som são baixados e conferidos pelo
 # próprio Zé na primeira subida (zervis/preparar.py).
 
-PORTA ?= 8795
+# Sem PORTA, fica a que o serviço instalado já usa (inclusive por um ajuste em zervis.service.d).
+PORTA_EM_USO := $(shell systemctl --user show zervis -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^[A-Z]*_PAINEL_PORTA=\([0-9]*\)$$/\1/p' | tail -n1)
+PORTA ?= $(or $(PORTA_EM_USO),8795)
 CONFIG_HOME = $(or $(XDG_CONFIG_HOME),$(HOME)/.config)
 DATA_HOME = $(or $(XDG_DATA_HOME),$(HOME)/.local/share)
 
