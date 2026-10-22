@@ -1,4 +1,4 @@
-"""O navegador do JARVIS (08/10/2026): o Playwright MCP num Chromium próprio, em segundo plano.
+"""O navegador do Zé (08/10/2026): o Playwright MCP num Chromium próprio, em segundo plano.
 
 Como o `browser` do Hermes Agent (Chromium headless lido pela árvore de acessibilidade, janela só
 quando pedem), mas pelo servidor MCP oficial da Microsoft (Apache-2.0), ligado em
@@ -87,7 +87,7 @@ def prechecar(nome: str, entrada: dict[str, Any]) -> str | None:
         return None
     motivo = PROIBIDAS.get(nome.removeprefix(PREFIXO))
     if motivo:
-        return f"Recusado: o navegador do JARVIS não pode {motivo}. Faça de outro jeito ou diga."
+        return f"Recusado: o navegador do Zé não pode {motivo}. Faça de outro jeito ou diga."
     return None
 
 

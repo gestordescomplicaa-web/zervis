@@ -1,11 +1,11 @@
-"""Automações do JARVIS (Fase 7; modelo de job do Hermes, enxuto).
+"""Automações do Zé (Fase 7; modelo de job do Hermes, enxuto).
 
 Dois tipos:
 - `lembrete`: na hora, o texto vira aviso falado. Zero modelo (ADR 0011: modo script).
 - `pergunta`: na hora, o cérebro responde o texto numa consulta separada, só com ferramentas de
   leitura, e a resposta vira aviso. Uma execução não cria outra automação (não recebe o
 servidor
-  MCP do JARVIS).
+  MCP do Zé).
 
 SQLite com transações entre processos sobrevive a reinícios; importa o `jobs.json` anterior.
 `ultimo_status` é um conjunto fechado: quem

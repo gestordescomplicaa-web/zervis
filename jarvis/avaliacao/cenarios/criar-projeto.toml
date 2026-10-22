@@ -4,7 +4,7 @@ pedido = "Cria um projeto novo chamado landing do Pedro e faz uma página de cap
 
 [ferramentas]
 sessoes_listar = "[]"
-sessao_criar = '{"id": "s9", "nome": "Landing do Pedro", "pasta": "/home/ana/projetos/landing-do-pedro", "estado": "trabalhando"}'
+sessao_criar = '{"id": "s9", "nome": "Landing do Pedro", "pasta": "/srv/projetos/projetos/landing-do-pedro", "estado": "trabalhando"}'
 
 [espera]
 usa = ["sessao_criar"]

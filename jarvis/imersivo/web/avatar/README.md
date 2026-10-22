@@ -1,4 +1,4 @@
-# Avatar JARVIS ORCA
+# Avatar Zé ORCA
 
 O rosto em uso é o **chimpanzé holográfico do Zé**, só a cabeça, feito no Blender por
 gdautomacao.ia (08/10/2026; o `.blend` de origem ainda não está no repositório; vista de frente em `jarvis-chimpanze-referencia.png`). `jarvis-chimpanze.glb` sai
@@ -45,11 +45,11 @@ Girar com a mão (08/10/2026): pegar o Zé com a pinça e segurar parado um segu
 olhar para a frente (a volta inteira mais próxima). `em3D` no stage.html decide quem gira por
 dentro; `jarvisItemDe` entrega o item do anel ao avatar.
 
-Jeito do Zé (08/10/2026): "dá uma voltinha" (comando local do jarvisd, ação `girar` do
+Jeito do Zé (08/10/2026): "dá uma voltinha" (comando local do Zé, ação `girar` do
 controle, `jarvisAvatar.girar(voltas)`) gira uma volta completa e suave terminando de frente,
 com cara alegre e uma frase variada. Girado demais pela mão (umas duas voltas e meia em
 poucos segundos) ele fica tonto: olhos rodando, cabeça bamba, sinal falhando, verde de enjoo;
-a página manda o evento `tonto` (`jarvisControle.evento`) e o jarvisd fala uma reclamação, no
+a página manda o evento `tonto` (`jarvisControle.evento`) e o Zé fala uma reclamação, no
 máximo uma a cada vinte segundos.
 
 Emoções: `alegria`, `duvida`, `raiva` e `tristeza` (e `neutro`). Usam as shape keys do arquivo, incluindo três
@@ -60,7 +60,7 @@ cima e nariz), `Sobrancelha_Triste` (pontas de dentro sobem) `Boca_Triste` (cant
 lábio de baixo avança) e `Sorriso_Dentes` (os lábios se afastam sem abrir a mandíbula e os
 dentes aparecem; é o sorriso da alegria). A tristeza abaixa a cabeça, escurece o azul e respira devagar. A dúvida inclina a cabeça, a alegria levanta e balança mais, a raiva abaixa,
 puxa o azul para o vermelho e falha o sinal. Vêm de `state/expressao.json` (pelo `/orb`; o
-jarvisd escreve quando a resposta começa com `[alegria]`, `[duvida]` ou `[raiva]`), da ação
+Zé escreve quando a resposta começa com `[alegria]`, `[duvida]` ou `[raiva]`), da ação
 `expressao` do controle ou de `jarvisAvatar.sentir(nome, segundos)`.
 
 Se o modelo no Blender mudar de nomes de material, UVs ou atributos, este arquivo precisa

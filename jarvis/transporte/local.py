@@ -1,7 +1,7 @@
 """Transporte local (modo mesa): microfone MIC FX por `parec` e saída por `paplay`.
 
 "Microfone fechado" é literal: em INATIVO o processo `parec` não existe, então o PipeWire não
-tem nenhum fluxo de gravação do JARVIS (conferível em `pactl list source-outputs`).
+tem nenhum fluxo de gravação do Zé (conferível em `pactl list source-outputs`).
 """
 
 import contextlib

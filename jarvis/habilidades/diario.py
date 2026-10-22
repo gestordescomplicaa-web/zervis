@@ -1,9 +1,9 @@
-"""Diário de aprendizado: o que o JARVIS aprendeu, quando e de onde veio (pedido do usuário,
+"""Diário de aprendizado: o que o Zé aprendeu, quando e de onde veio (pedido do usuário,
 06/10/2026).
 
 Antes, uma sugestão aprovada sumia da lista e só restava a frase na memória, sem data nem a
 conversa de origem. Aqui cada mudança aprovada (sugestão, memória, skill) e cada skill arquivada
-pela curadoria vira uma linha. Só cresce; a pasta do JARVIS no Barehands mostra as últimas.
+pela curadoria vira uma linha. Só cresce; a pasta do Zé no Barehands mostra as últimas.
 """
 
 import json
@@ -14,7 +14,7 @@ from typing import Any
 
 LIMITE_RESUMO = 300
 
-# Rótulo legível de cada tipo de evento (a pasta do JARVIS mostra isso).
+# Rótulo legível de cada tipo de evento (a pasta do Zé mostra isso).
 EVENTOS = {
     "aprovada": "Sugestão aprovada",
     "descartada": "Sugestão descartada",

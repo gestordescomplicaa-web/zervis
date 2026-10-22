@@ -105,7 +105,7 @@
             item.ry=g.de+(g.ate-g.de)*f;item.rvy=0;if(p>=1)item.girando=null;
           }
           // Spun round and round by hand: about two and a half turns within a few seconds and
-          // he gets dizzy, says so (through the JARVIS) and needs a while before it happens again.
+          // he gets dizzy, says so (through the Zé) and needs a while before it happens again.
           if(item.grabbedBy.length&&item.mode==="rotate")ctl.voltas+=Math.abs((item.ry||0)-ctl.ultimoRy);
           ctl.ultimoRy=item.ry||0;ctl.voltas*=Math.exp(-dt/3);
           if(ctl.voltas>2.5*2*Math.PI&&agora>ctl.proximaTontura){

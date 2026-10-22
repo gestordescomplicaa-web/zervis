@@ -23,7 +23,7 @@ from jarvis.nucleo import estados as e
 log = logging.getLogger(__name__)
 ESTADO = lugares.ESTADO
 DADOS = lugares.DADOS
-PERSONA = Path(__file__).resolve().parents[1] / "persona" / "JARVIS.md"
+PERSONA = Path(__file__).resolve().parents[1] / "persona" / "ZE.md"
 PERSONA_RAPIDA = PERSONA.with_name("RAPIDO.md")
 AVISO_RECENTE_S = 600.0  # aviso falado há mais que isso não é contexto do pedido
 BATERIAS_S = 30.0  # releitura das cotas do OmniRoute
@@ -96,7 +96,7 @@ def com_argumento(acoes: list[dict[str, Any]], argumento: str) -> list[dict[str,
     return [{k: argumento if v == "{}" else v for k, v in a.items()} for a in acoes]
 
 
-PASTA_S = 15.0  # a pasta do JARVIS no Barehands (só regrava a nota que mudou)
+PASTA_S = 15.0  # a pasta do Zé no Barehands (só regrava a nota que mudou)
 CURADORIA_S = 6 * 3600.0  # skills paradas vão para o arquivo
 JANELA_FALADA = {"5 h": "na janela de cinco horas", "semana": "na semana", "mês": "no mês"}
 FALHA_NO_CEREBRO = "Tive um problema para responder. Tente de novo em instantes."

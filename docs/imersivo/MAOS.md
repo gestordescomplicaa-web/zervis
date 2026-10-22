@@ -1,4 +1,4 @@
-# JARVIS — calibrador das mãos, câmera e luz
+# Zé — calibrador das mãos, câmera e luz
 
 Arquivos: `jarvis-maos.js` (página), `jarvis_maos.py` (servidor), ganchos em
 `stage.html` e `jarvis-cerebro.js`. Testes: `tests/test_maos.py`.
@@ -86,7 +86,7 @@ aplica um filtro leve na imagem mostrada (brilho 1,1 / 1,2 / 1,35, com um pouco 
 contraste e saturação). A medição dá mais peso ao centro da imagem, onde está a pessoa,
 do que a uma janela clara ao fundo. Fica guardado na janela.
 
-## Cores do JARVIS
+## Cores do Zé
 
 `jarvis-tema.css` e `jarvis-tema.js`. Cinco temas: original, roxo, marinho, esmeralda e
 grafite. Menu D, tecla T (passa para o próximo) ou voz ("tema roxo", "tema azul marinho",
@@ -94,7 +94,7 @@ grafite. Menu D, tecla T (passa para o próximo) ou voz ("tema roxo", "tema azul
 no CSS mais as cores do anel e do grafo no JS; trocar não pesa (uma classe na página, um
 redesenho). O original é exatamente o CSS do Barehands; o roxo existe para telas
 claras e replica o original (vidro transparente, mesmos brilhos e layout) num violeta
-mais escuro e um degrau mais denso, para manter o contraste num ambiente muito claro. As cores do JARVIS (cérebro, HUD, calibrador)
+mais escuro e um degrau mais denso, para manter o contraste num ambiente muito claro. As cores do Zé (cérebro, HUD, calibrador)
 vêm de variáveis `--jv-*`; o anel (canvas) e o grafo (SVG) são recoloridos pelo script.
 
 ## Menu de configurações (tecla D)
@@ -106,10 +106,10 @@ reúne mãos (estado, calibrar, voltar ao padrão), brilho da câmera, cores, as
 cérebros e o consumo de tokens. Funciona com pinça, mouse e teclado; Esc fecha; Shift+D
 mantém a leitura de depuração. Por voz: "abre as configurações".
 
-## O JARVIS na própria tela
+## O Zé na própria tela
 
-`jarvis-controle.js` e, no `jarvisd`, `jarvis/rosto/tela.py` com as ferramentas `tela_ver` e
-`tela_agir`. O JARVIS escreve uma lista de ações em `state/tela-comando.json`; a página as
+`jarvis-controle.js` e, no serviço do Zé, `jarvis/rosto/tela.py` com as ferramentas `tela_ver` e
+`tela_agir`. O Zé escreve uma lista de ações em `state/tela-comando.json`; a página as
 executa em ordem, com as mesmas animações da mão (meio segundo entre passos) e responde em
 `state/tela-estado.json` (POST `/tela/estado`). O estado também é renovado a cada cinco
 segundos: cérebro aberto e modo, item em foco, zoom, áreas e itens por nome e id, menu,
@@ -119,14 +119,14 @@ Ações: abrir/fechar o cérebro, modo (cérebro, trabalho, foco), focar (área 
 sem acento nem maiúscula), localizar, zoom, enquadrar, mover, rolar, voltar, aguardar (para
 passeios), menu, tema, brilho, calibrar as mãos e voltar ao padrão. Um passo inválido volta
 como erro claro e os outros continuam; cada comando roda uma vez; comando com mais de 30 s
-não é repetido. Antes de mostrar, o JARVIS traz a janela para a frente pelo Hyprland
-(escondida, o Chromium pausa as animações). Aberto pelo JARVIS, o cérebro fecha sozinho
+não é repetido. Antes de mostrar, o Zé traz a janela para a frente pelo Hyprland
+(escondida, o Chromium pausa as animações). Aberto pelo Zé, o cérebro fecha sozinho
 90 s depois do último passo; aberto à mão, fica.
 
-## O Núcleo: o JARVIS se reconhece na interface (07/10/2026)
+## O Núcleo: o Zé se reconhece na interface (07/10/2026)
 
-O **Núcleo** (nome escolhido pelo autor) é o anel do JARVIS com os orbes que nascem dele:
-Cérebro, Guia, Memória e Acervo. A janela do JARVIS é onde ele vive (câmera, HUD, menu D).
+O **Núcleo** (nome escolhido pelo autor) é o anel do Zé com os orbes que nascem dele:
+Cérebro, Guia, Memória e Acervo. A janela do Zé é onde ele vive (câmera, HUD, menu D).
 `window.jarvisStage` ganhou `nucleo()`, `abrirNucleo()`, `fecharNucleo()`, `abrir(nome)` e
 `fechar(nome)`: um orbe pelo título ou uma nota pelo nome, sem acento nem caixa e pela raiz da
 palavra ("começar" acha "Comece aqui"); `fechar("tudo")` fecha painéis, notas, cérebro e orbes.
@@ -135,12 +135,12 @@ O controle expõe isso como as ações `nucleo`, `abrir` e `fechar`, e o estado 
 
 Comandos locais (sem o cérebro): "abre o núcleo" (mostra os orbes), "fecha o núcleo" (recolhe),
 "abre o guia (do núcleo)", "abre o acervo", "abre a memória do núcleo", "fecha o guia", "fecha a
-janela do JARVIS" ou "desliga a câmera", "fecha seu cérebro", "mostra os projetos / agentes /
+janela do Zé" ou "desliga a câmera", "fecha seu cérebro", "mostra os projetos / agentes /
 tarefas / conexões / memórias". "Aumenta o brilho" sem dizer de quê é o brilho da câmera só
-quando a janela do JARVIS é a ativa; fora dela, segue para o cérebro (monitor).
+quando a janela do Zé é a ativa; fora dela, segue para o cérebro (monitor).
 
 Rapidez: a página consulta comandos a cada 150 ms, confirma o início (`recebido`) e passeios
-voltam ao JARVIS na hora, seguindo na tela enquanto ele fala; ações rápidas (tema, brilho, menu)
+voltam ao Zé na hora, seguindo na tela enquanto ele fala; ações rápidas (tema, brilho, menu)
 têm 120 ms entre passos. Mãos primeiro: com uma pinça nos últimos 1,5 s, a ação espera a mão
 descansar (até 6 s); o estado publica `maos_em_uso`.
 
@@ -149,7 +149,7 @@ descansar (até 6 s); o estado publica `maos_em_uso`.
 `jarvis-teclado.js`: um ícone de teclado ao lado de CPU · RAM · GPU · VRAM (em `#hud-m`; os
 medidores ficam em `#hud-med`, com `display:contents`, para o ícone sobreviver à atualização)
 abre uma barra de texto. Enter envia por `POST /teclado` (só JSON), que grava
-`state/teclado.json`; o JARVIS lê como fala autorizada e responde em `teclado-resposta.json`,
+`state/teclado.json`; o Zé lê como fala autorizada e responde em `teclado-resposta.json`,
 mostrado embaixo da barra conforme é falado. ↑/↓ recuperam os últimos 20, Esc fecha, "/" abre.
 Digitar nunca dispara atalhos (R, D, C, P, K, B, T): os atalhos ignoram campos de texto. A
 pinça também abre o ícone e aperta os botões da barra. Ação `teclado` no controle.
@@ -163,7 +163,7 @@ pastas. Orbes: Mapa (era Cérebro), Guia, Identidade (era Memória), Acervo e Or
 dá a cada item um endereço (orbe/pasta/item) e um nome falado limpo (`burrinho` para
 `burrinho_refeito_final.glb`); `jarvisStage.abrir(nome, orbe)`, `buscar(nome, orbe)` e
 `fechar(nome)` usam esse catálogo, e o controle expõe `abrir`, `buscar` e `fechar` com `orbe`.
-O Mapa ganhou nomes do glossário: vistas Geral, Trabalho e Foco, JARVIS no centro.
+O Mapa ganhou nomes do glossário: vistas Geral, Trabalho e Foco, Zé no centro.
 
 ## Avatar (07/10/2026)
 

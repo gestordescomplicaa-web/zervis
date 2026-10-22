@@ -235,7 +235,7 @@ class ServicoMemoria:
                 self.n.consumo,
             )
             if mudadas := self.n.pasta.gravar(notas):
-                log.info("pasta do JARVIS: %s", ", ".join(mudadas))
+                log.info("pasta do Zé: %s", ", ".join(mudadas))
             agora = time.time()
             self.n.hud.gravar("eficiencia", hud.eficiencia(self.n.consumo), agora)
             self.n.hud.gravar(
@@ -265,4 +265,4 @@ class ServicoMemoria:
                 agora,
             )
         except Exception:
-            log.exception("pasta do JARVIS falhou")
+            log.exception("pasta do Zé falhou")

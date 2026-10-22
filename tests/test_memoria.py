@@ -67,7 +67,7 @@ def test_varredura_bloqueia_injecao_e_segredos(tmp_path: Path, texto: str) -> No
 
 
 def test_texto_comum_passa_na_varredura() -> None:
-    assert varrer("Prefere que o JARVIS ignore ruído de fundo nas reuniões.") is None
+    assert varrer("Prefere que o Zé ignore ruído de fundo nas reuniões.") is None
     assert varrer("Usa o Orca como oficina e o Codex para revisar.") is None
     assert varrer("Prefere que a senha do wifi fique só com ele.") is None
 
@@ -78,7 +78,7 @@ def test_foto_congelada_com_uso_e_vazio(tmp_path: Path) -> None:
     foto = m.foto()
     assert "### Sobre o usuário [15 de 300 caracteres]" in foto
     assert "- Mora em Recife." in foto
-    assert "(vazio)" in foto  # as notas do JARVIS ainda estão vazias
+    assert "(vazio)" in foto  # as notas do Zé ainda estão vazias
 
 
 def test_prechecagem_recusa_antes_da_pergunta_falada(tmp_path: Path) -> None:

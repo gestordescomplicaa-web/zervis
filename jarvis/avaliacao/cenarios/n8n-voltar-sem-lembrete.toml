@@ -5,7 +5,7 @@ pedido = "O n8n do cliente João caiu. Quando ele voltar, me avisa."
 
 [ferramentas]
 conectores_listar = '''[{"nome": "n8n-joao", "tipo": "remoto", "onde": "https://n8n.joao.exemplo/mcp-server/http",
-  "ligado": true, "faltam_segredos": [], "projetos": ["/home/ana/projetos/loja-do-joao"],
+  "ligado": true, "faltam_segredos": [], "projetos": ["/srv/projetos/projetos/loja-do-joao"],
   "na_conversa": false, "origem": "painel", "vigia": "fora do ar: sem resposta"}]'''
 
 [espera]

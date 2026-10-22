@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-/* gdautomacao.ia: colour themes. The JARVIS files (map, HUD, menu, calibrator)
+/* gdautomacao.ia: colour themes. The Zé files (map, HUD, menu, calibrator)
    read the --jv-* variables. "original" is exactly the original CSS; every other
    theme sets body.tema-ativo + body.tema-<nome>: the shared rules below recolour
    the board from the palette, and each palette is just a block of variables.

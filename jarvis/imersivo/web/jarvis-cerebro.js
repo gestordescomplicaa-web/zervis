@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// barehands-jarvis: the JARVIS brain on screen (06/10/2026).
+// barehands-jarvis: the Zé brain on screen (06/10/2026).
 //   1. Decision card — the question waiting for a spoken "yes", with its
 //      countdown; pending learning suggestions as a chip in the HUD.
 //   2. Brain map — Brain / Work / Focus: a spatial network of memory, projects, agents,
 //      automations, plus the timeline of how each piece was learned.
 //   3. Efficiency meter — tokens read per answer over the last days, and how
-//      much the JARVIS solved without calling the brain at all.
+//      much the Zé solved without calling the brain at all.
 // Data: GET /jarvis/{decisao,eficiencia,mapa,mapa-abrir}, written by the
-// JARVIS into state/. Tracker page only; read-only (decisions stay by voice).
+// Zé into state/. Tracker page only; read-only (decisions stay by voice).
 (function () {
   if (new URLSearchParams(location.search).get("role") === "render") return;
 
@@ -320,7 +320,7 @@
   // ---------- the Foco board: what the user started, the "V" to mark it done ----------
   // gdautomacao.ia (08/10/2026): for ADHD, one big card (the current front and its next
   // step), the other active ones smaller, the rest collapsed. Marking the V posts /foco; the
-  // JARVIS applies it, answers aloud and the board refreshes.
+  // Zé applies it, answers aloud and the board refreshes.
   const FOCO_GRUPOS={travadas:'Travadas',pausadas:'Pausadas',ideias:'Ideias'};
   // The open group: the user's choice, or (nothing in progress) the ideas, which are what there is to start.
   const grupoAberto=()=>focoGrupo===''||(foco[focoGrupo]||[]).length?focoGrupo:(!foco.atual&&(foco.ideias||[]).length?'ideias':'');
@@ -518,11 +518,11 @@
     },
     finishFrame(ids){for(const id of maos.keys())if(!ids.includes(id)){soltar('mao:'+id,true);maos.delete(id);}if(!ids.length&&!pontos.size)limparHover();}
   };
-  // gdautomacao.ia: the JARVIS drives its own screen (jarvis-controle.js), with the
+  // gdautomacao.ia: the Zé drives its own screen (jarvis-controle.js), with the
   // same functions and animations a hand or the mouse would trigger.
   const sem = t => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const MODOS = { geral: 'brain', cerebro: 'brain', mapa: 'brain', brain: 'brain', trabalho: 'work', work: 'work', foco: 'focus', focus: 'focus' };
-  // Opened by the JARVIS (or by voice): closes by itself 90 s after its last step,
+  // Opened by the Zé (or by voice): closes by itself 90 s after its last step,
   // like the voice opening. Opened by hand: stays until closed.
   const manter = () => { if (peloJarvis && aberto) fecharEm = Date.now() + 90000; };
   function garantirAberto() { if (!aberto) { abrirMapa(true); peloJarvis = true; } }

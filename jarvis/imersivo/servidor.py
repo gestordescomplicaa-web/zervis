@@ -1,4 +1,4 @@
-# JARVIS · gdautomacao.ia — a interface do JARVIS movida pelas mãos.
+# Zé · gdautomacao.ia — a interface do Zé movida pelas mãos.
 # Copyright (C) 2026 gdautomacao.ia (versão modificada, desde 2026-10-07)
 # Copyright (C) 2026 Jared Rhodenizer (obra original)
 #
@@ -294,7 +294,7 @@ class Handler(SimpleHTTPRequestHandler):
         ):
             self.send_header("Cache-Control", "no-store")
         elif caminho.startswith(("/jarvis-", "/avatar/")):
-            # barehands-jarvis: the JARVIS's own code and the avatar model change in place; without
+            # barehands-jarvis: the Zé's own code and the avatar model change in place; without
             # this Chrome kept a replaced jarvis-chimpanze.glb for hours (08/10/2026). Revalidating
             # costs a 304 on loopback.
             self.send_header("Cache-Control", "no-cache")
@@ -397,7 +397,7 @@ class Handler(SimpleHTTPRequestHandler):
                         PERFIL.gravar(d.get("perfil"), d.get("origem"), d.get("resumo"))
                     self._json(PERFIL.ler())
                 elif self.path == "/tela/estado":
-                    # gdautomacao.ia: the page's answer to the JARVIS (jarvis-controle.js).
+                    # gdautomacao.ia: the page's answer to the Zé (jarvis-controle.js).
                     destino = ESTADO / "tela-estado.json"
                     tmp = destino.with_suffix(".next")
                     tmp.write_text(
@@ -407,7 +407,7 @@ class Handler(SimpleHTTPRequestHandler):
                     self._json({})
                 elif self.path == "/foco":
                     # gdautomacao.ia: the "V" marked on the Foco board (jarvis-cerebro.js); the
-                    # JARVIS reads only the new lines of state/foco-acoes.jsonl and answers aloud.
+                    # Zé reads only the new lines of state/foco-acoes.jsonl and answers aloud.
                     acao, frente = str(d.get("acao", "")), str(d.get("id", ""))
                     _exigir(acao in ("passo", "concluir", "pausar", "focar"))
                     _exigir(re.fullmatch(r"[a-z0-9-]{1,64}", frente))
@@ -416,7 +416,7 @@ class Handler(SimpleHTTPRequestHandler):
                         f.write(linha)
                     self._json({"ok": True})
                 elif self.path == "/teclado":
-                    # gdautomacao.ia: a typed request (jarvis-teclado.js); the JARVIS reads it
+                    # gdautomacao.ia: a typed request (jarvis-teclado.js); the Zé reads it
                     # like speech and answers in teclado-resposta.json.
                     texto = str(d.get("texto", "")).strip()[:2000]
                     _exigir(texto)
@@ -447,8 +447,8 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == "/cerebro":
             # barehands-jarvis: a tap on a brain chip in the HUD. Only an id
-            # the JARVIS itself listed in state/cerebros.json is accepted; the
-            # JARVIS picks state/escolha.json up and switches. JSON only, so a
+            # the Zé itself listed in state/cerebros.json is accepted; the
+            # Zé picks state/escolha.json up and switches. JSON only, so a
             # random web page cannot fire it without a CORS preflight.
             try:
                 _exigir(self.headers.get("Content-Type", "").startswith("application/json"))
@@ -601,8 +601,8 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(system_stats())
             return
         if self.path == "/cerebros":
-            # barehands-jarvis: brain batteries written by the JARVIS; a stale
-            # file (JARVIS stopped) hides the row instead of lying.
+            # barehands-jarvis: brain batteries written by the Zé; a stale
+            # file (Zé stopped) hides the row instead of lying.
             try:
                 d = json.loads((ESTADO / "cerebros.json").read_text())
                 if time.time() - float(d.get("ts", 0)) > 90:
@@ -619,9 +619,9 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(CAMERA.info((q.get("nome") or [""])[0]))
             return
         if self.path.startswith("/jarvis/"):
-            # barehands-jarvis: the JARVIS brain on screen (decision card,
-            # efficiency meter, brain map), written by the JARVIS into
-            # state/<name>.json. Fixed names only; a stale file (JARVIS
+            # barehands-jarvis: the Zé brain on screen (decision card,
+            # efficiency meter, brain map), written by the Zé into
+            # state/<name>.json. Fixed names only; a stale file (Zé
             # stopped) answers {} so the page hides it instead of lying.
             nome = self.path[len("/jarvis/") :]
             if nome not in (

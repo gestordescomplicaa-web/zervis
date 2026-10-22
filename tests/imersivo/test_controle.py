@@ -1,4 +1,4 @@
-"""The JARVIS driving its own screen: commands in, animations on screen, state back.
+"""The Zé driving its own screen: commands in, animations on screen, state back.
 
 Run: python tests/test_controle.py   (or pytest)
 Reuses the stage harness of test_brain_navigation.py; jarvisd is played by the test,
@@ -231,7 +231,7 @@ async def main():
                             '!document.querySelector(".card.orb") && !document.querySelector(".panel")')
                 assert not r['estado']['nucleo']['aberto']
 
-                # The hands come first: during a pinch the JARVIS waits for the hand to rest.
+                # The hands come first: during a pinch the Zé waits for the hand to rest.
                 await ev('''jarvisMaos.amostra(0,{ratio:.2,ratio3:.1,f8v:1,backMean:1.5,aspect:2.5,tRel:.5,pinched:true,
                     x:1,y:1,hspd:0,now:performance.now(),caixa:[.3,.3,.6,.6]})''')
                 p2 = mandar([{'acao': 'tema', 'alvo': 'roxo'}])

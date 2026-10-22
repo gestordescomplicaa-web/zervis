@@ -46,8 +46,8 @@ PADRAO: dict[str, dict[str, Any]] = {
         # voz fica desligada. A chave fica num arquivo fora do repositório (600).
         "chave_deepgram": str(lugares.CONFIG / "deepgram.key"),
     },
-    # pasta_jarvis: as notas que o JARVIS escreve sobre si (memória, skills, automações,
-    # aprendizado, consumo) para a bolha "JARVIS" do Barehands; só leitura para o usuário.
+    # pasta_jarvis: as notas que o Zé escreve sobre si (memória, skills, automações,
+    # aprendizado, consumo) para a bolha "Zé" do Barehands; só leitura para o usuário.
     # desenvolvedor: o modo imersivo mostra medidores de CPU, GPU, baterias dos modelos e tokens.
     "barehands": {
         "pasta_estado": str(lugares.DADOS / "imersivo/state"),

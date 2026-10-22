@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// gdautomacao.ia: the JARVIS on its own screen. The jarvisd writes a list of
+// gdautomacao.ia: the Zé on its own screen. The jarvisd writes a list of
 // actions to state/tela-comando.json (tools tela_agir / tela_ver); this page runs
 // them in order, with the same animations a hand would trigger, and answers in
 // state/tela-estado.json with what happened and what is on screen. The state is
@@ -96,7 +96,7 @@
     };
   }
   // The last start/answer rides along every post, so the periodic state can never
-  // overwrite an answer before the JARVIS has read it.
+  // overwrite an answer before the Zé has read it.
   let ultimaResposta = {};
   async function enviar(extra = {}) {
     ultimaResposta = { ...ultimaResposta, ...extra };
@@ -138,7 +138,7 @@
       await executar(cmd);
     } catch (e) {} finally { ocupado = false; }
   }
-  // Something that happened on the page for the JARVIS to react to (the Zé got dizzy): rides
+  // Something that happened on the page for the Zé to react to (the Zé got dizzy): rides
   // along every state post, the jarvisd speaks it once by its id.
   const evento = tipo => enviar({ evento: { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tipo, ts: Date.now() / 1000 } });
   window.jarvisControle = { executar, estado, evento, ACOES: Object.keys(ACOES) };

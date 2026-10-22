@@ -565,7 +565,7 @@
       `Luz na mão: ${luz}${reforco > 1 ? " · reforço " + reforco.toFixed(1) + "×" : ""}${hw?.c && luzLigada ? " · ajuste da câmera ligado" : ""}\n\nPince para calibrar · K calibra · Shift+K volta ao padrão`;
     const html = `<span class="jv maos btn${quente ? " quente" : ""}" data-acao="calibrar" title="${esc(dica)}">✋ MÃOS · ${Math.round(qps) || "—"} QPS · LUZ ${esc(luz.toUpperCase())} · ${rotulo}</span>` +
       `<span class="jv brilho btn${brilho ? " ligado" : ""}" data-acao="brilho" title="Brilho da câmera: pince para trocar (B)">☀ BRILHO ${BRILHOS[brilho].nome}</span>` +
-      (window.jarvisTema ? `<span class="jv tema btn" data-acao="tema" title="Cores do JARVIS: pince para trocar (T)">◐ ${esc(window.jarvisTema.rotulo)}</span>` : "");
+      (window.jarvisTema ? `<span class="jv tema btn" data-acao="tema" title="Cores do Zé: pince para trocar (T)">◐ ${esc(window.jarvisTema.rotulo)}</span>` : "");
     if (linha.innerHTML !== html) linha.innerHTML = html;
   }
 
@@ -604,7 +604,7 @@
   window.jarvisMaos = {
     get p() { return perfil; }, get calibrado() { return origem !== "padrao"; }, get origem() { return origem; },
     get calibrando() { return !!calib && calib.fase !== "fim"; },
-    // A pinch in the last 1.5 s: the JARVIS waits instead of moving the screen under it.
+    // A pinch in the last 1.5 s: the Zé waits instead of moving the screen under it.
     get emUso() { return performance.now() - pincaEm < 1500 || !!window.jarvisBrainGestures?.holding?.(0) || !!window.jarvisBrainGestures?.holding?.(1); },
     PADRAO, amostra, entrada, registrar, calibrar, padrao, valido, acionar, mudarBrilho,
     get brilho() { return BRILHOS[brilho].nome; }, get nivelBrilho() { return brilho; },

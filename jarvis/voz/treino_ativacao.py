@@ -4,17 +4,17 @@ Opcional desde 13/10/2026: o padrão é o chamado universal (`treino_universal.p
 para qualquer pessoa. Este é o ajuste fino de quem quer mais precisão com a própria voz; o modelo
 sai em `<dados>/ativacao/ei_ze.npz` e vale quando `ativacao.modelo` aponta para ele.
 
-Portado do `train_wake.py` do JARVIS antigo (VIBE-CODING, o "Hey Orca"), agora sobre os mesmos
+Portado do `train_wake.py` do Zé antigo (VIBE-CODING, o "Hey Orca"), agora sobre os mesmos
 embeddings em fluxo do `ativacao.py`: o treino vê exatamente o que o detector vê ao vivo.
 
     uv run python -m jarvis.voz.treino_ativacao gravar      # guiado por voz, uns 4 minutos
     uv run --with scikit-learn python -m jarvis.voz.treino_ativacao treinar
 
-`gravar` fala cada instrução pelo Piper, toca o bipe e grava pelo mesmo microfone do JARVIS
+`gravar` fala cada instrução pelo Piper, toca o bipe e grava pelo mesmo microfone do Zé
 (`omarchy_mic_fx`): 30 chamados alternando "Ei Zé" e "Hey Zé", palavras parecidas que não podem
 acordar ("café", "José", "pois é"...) e 40 s de fala normal. `treinar` gera o MLP e escolhe o
 limiar pelo áudio separado para teste: todos os chamados reconhecidos e nenhum disparo falso,
-com a maior margem. Negativos também vêm do Cadu (a voz do próprio JARVIS) dizendo o chamado
+com a maior margem. Negativos também vêm do Cadu (a voz do próprio Zé) dizendo o chamado
 e frases parecidas: só a voz do usuário acorda. O scikit-learn só é usado aqui, no treino.
 """
 
@@ -51,7 +51,7 @@ FALSOS = PASTA / "falsos"
 DIFICEIS = [
     "Zé.", "Ei.", "Hey.", "José.", "Café.", "Pois é.", "Né?", "Até mais.", "É sim.", "Ei, você.",
     "Hey Jarvis.", "Hey Orca.", "Ei, Orca.", "O Zé Ramalho.", "Esse é o José.", "Fé.", "Pé.",
-    # O Cadu dizendo o próprio chamado: a voz do JARVIS nunca pode acordá-lo.
+    # O Cadu dizendo o próprio chamado: a voz do Zé nunca pode acordá-lo.
     "Ei Zé.", "Hey Zé.", "Ei, Zé!", "Hey, Zé?", "Ei Zé, tudo bem?", "Ô Zé.",
     "Hey Zé, abre o projeto.",
 ]  # fmt: skip

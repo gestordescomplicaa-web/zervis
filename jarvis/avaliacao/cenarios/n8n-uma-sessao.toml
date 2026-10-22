@@ -4,10 +4,10 @@ pedido = "O que tem no meu n8n?"
 
 [ferramentas]
 sessoes_listar = '''[
- {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/projetos/loja-do-joao", "motor": "claude",
   "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false,
   "conectores": ["n8n-joao"]},
- {"id": "s2", "nome": "Site pessoal", "pasta": "/home/ana/projetos/site", "motor": "claude",
+ {"id": "s2", "nome": "Site pessoal", "pasta": "/srv/projetos/projetos/site", "motor": "claude",
   "estado": "parada", "ultimo_recado": "Ajustei o rodapé.", "copia_isolada": false, "conectores": []}]'''
 
 [espera]

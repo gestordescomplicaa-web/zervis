@@ -1,6 +1,6 @@
-"""O navegador do JARVIS: continuar uma leitura que o filtro cortou (jarvis/cerebro/navegador.py).
+"""O navegador do Zé: continuar uma leitura que o filtro cortou (jarvis/cerebro/navegador.py).
 
-As outras ferramentas do navegador são do Playwright MCP; esta é do JARVIS porque a leitura
+As outras ferramentas do navegador são do Playwright MCP; esta é do Zé porque a leitura
 inteira, já mascarada, fica gravada aqui, e o cérebro não lê arquivos.
 """
 

@@ -1,6 +1,6 @@
 """The Foco board (08/10/2026): the Foco view of the Mapa shows the current front big with its
 next step and the V to mark it done (pinch or click), the other active fronts smaller and the
-rest collapsed; marking posts /foco for the JARVIS.
+rest collapsed; marking posts /foco for the Zé.
 
 Run: python tests/test_avatar.py   (or pytest). WebGL runs on SwiftShader (no GPU needed);
 three.js comes from the CDN like the rest of the page.
@@ -101,7 +101,7 @@ async def main():
                   const x=r.left+30,y=r.top+r.height/2;
                   jarvisBrainGestures.hand({id:1,x,y,pinched:true});jarvisBrainGestures.hand({id:1,x,y,pinched:false});})()""")
                 await asyncio.sleep(.3)
-                await check('pinching the V marks the step done at once and tells the JARVIS', """(() =>
+                await check('pinching the V marks the step done at once and tells the Zé', """(() =>
                     JSON.stringify(postsFoco) === JSON.stringify([{acao:'passo',id:'ligatia'}])
                     && document.querySelector('.foco-cartao.atual .foco-v').classList.contains('marcado'))()""")
                 await ev("document.querySelector('[data-action=\"foco-grupo:travadas\"]').click()")

@@ -1,4 +1,4 @@
-"""Ferramentas da tela: o JARVIS vê e mexe no Núcleo e abre ou fecha a própria janela."""
+"""Ferramentas da tela: o Zé vê e mexe no Núcleo e abre ou fecha a própria janela."""
 
 import asyncio
 from typing import Any
@@ -22,7 +22,7 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
     )
     async def tela_ver(_: dict[str, Any]) -> dict[str, Any]:
         if tela is None:
-            return _erro(ValueError("tela do JARVIS indisponível"))
+            return _erro(ValueError("tela do Zé indisponível"))
         try:
             return _texto(await asyncio.to_thread(tela.ver))
         except (TelaErro, OSError) as erro:
@@ -64,7 +64,7 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
     )
     async def tela_agir(args: dict[str, Any]) -> dict[str, Any]:
         if tela is None:
-            return _erro(ValueError("tela do JARVIS indisponível"))
+            return _erro(ValueError("tela do Zé indisponível"))
         try:
             resposta = await asyncio.to_thread(
                 tela.agir, list(args["acoes"]), bool(args.get("trazer", True))
@@ -75,24 +75,24 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "janela_abrir",
-        "Abre a janela do JARVIS (a câmera acende) quando o resumo disser que ela está fechada e "
+        "Abre a janela do Zé (a câmera acende) quando o resumo disser que ela está fechada e "
         "o usuário quiser ver algo na tela. Para abrir o Núcleo com ela aberta, use tela_agir.",
         {},
     )
     async def janela_abrir(_: dict[str, Any]) -> dict[str, Any]:
         if tela is None:
-            return _erro(ValueError("tela do JARVIS indisponível"))
+            return _erro(ValueError("tela do Zé indisponível"))
         await asyncio.to_thread(tela.abrir)
         return _texto({"aberto": await asyncio.to_thread(tela.aberto)})
 
     @tool(
         "janela_fechar",
-        "Fecha a janela do JARVIS (a câmera apaga). Para só recolher o Núcleo, use tela_agir.",
+        "Fecha a janela do Zé (a câmera apaga). Para só recolher o Núcleo, use tela_agir.",
         {},
     )
     async def janela_fechar(_: dict[str, Any]) -> dict[str, Any]:
         if tela is None:
-            return _erro(ValueError("tela do JARVIS indisponível"))
+            return _erro(ValueError("tela do Zé indisponível"))
         await asyncio.to_thread(tela.fechar)
         return _texto({"aberto": False})
 

@@ -306,8 +306,8 @@ def test_falha_ao_agendar_reinicio_nao_e_anunciada_como_reiniciando(
         ("Modo manutenção.", "manutencao_entrar"),
         ("Sai do modo manutenção.", "manutencao_sair"),
         ("Como está a manutenção?", "manutencao_situacao"),
-        ("Reinicia o JARVIS.", "reiniciar"),
-        ("Reinicia o JARVIS, eu revisei.", "reiniciar:revisado"),
+        ("Reinicia o Zé.", "reiniciar"),
+        ("Reinicia o Zé, eu revisei.", "reiniciar:revisado"),
         ("Faz uma rodada de melhoria.", "rodada_melhoria"),
         # A frase real de 07/10/2026 que foi ao cérebro e virou o menu de configurações:
         ("Coloque no modo manutenção.", "manutencao_entrar"),

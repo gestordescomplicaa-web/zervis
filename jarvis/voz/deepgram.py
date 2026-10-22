@@ -3,8 +3,8 @@
 O áudio vai sendo transcrito enquanto o usuário fala; quando o segmentador fecha o pedido, um
 `Finalize` devolve o resto em frações de segundo, em vez dos ~2 s do Whisper depois do fim.
 
-Privacidade: uma conexão por pedido, aberta só depois do "Hey Orca" (ou na conversa contínua e na
-resposta de uma confirmação) e fechada no fim do pedido; o "Hey Orca" nunca sai da máquina. A
+Privacidade: uma conexão por pedido, aberta só depois do "Ei Zé" (ou na conversa contínua e na
+resposta de uma confirmação) e fechada no fim do pedido; o "Ei Zé" nunca sai da máquina. A
 chave vem só do arquivo `~/.config/zervis/deepgram.key` (600), que o painel grava, e não vai para
 log. Conta nova: https://console.deepgram.com/signup
 """

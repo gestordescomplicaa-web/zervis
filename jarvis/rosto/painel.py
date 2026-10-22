@@ -1,8 +1,8 @@
 """Painel de cérebros no Barehands: baterias e o ativo, e o clique de volta (ADR 0010).
 
-Mesmo contrato do anel: arquivos pequenos em `state/`. O JARVIS escreve `cerebros.json`; o
+Mesmo contrato do anel: arquivos pequenos em `state/`. O Zé escreve `cerebros.json`; o
 `server.py` do Barehands o serve em `GET /cerebros` e, num clique, grava `escolha.json` só com
-um id que esteja na lista. O JARVIS consome a escolha (apaga o arquivo) e faz a troca.
+um id que esteja na lista. O Zé consome a escolha (apaga o arquivo) e faz a troca.
 """
 
 import contextlib
@@ -14,8 +14,8 @@ from pathlib import Path
 from jarvis.cerebro.baterias import Bateria
 from jarvis.cerebro.catalogo import OPCOES
 
-PRAZO_ESCOLHA_S = 30.0  # clique mais velho que isso (JARVIS parado na hora) é ignorado
-RENOVAR_S = 30.0  # o Barehands esconde o painel se o arquivo envelhecer (JARVIS parado)
+PRAZO_ESCOLHA_S = 30.0  # clique mais velho que isso (Zé parado na hora) é ignorado
+RENOVAR_S = 30.0  # o Barehands esconde o painel se o arquivo envelhecer (Zé parado)
 
 
 class Painel:

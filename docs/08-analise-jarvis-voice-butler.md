@@ -29,14 +29,14 @@ Um "mordomo" de voz em inglês que controla um navegador. É montado quase todo 
   Os dois modelos do LiveKit dentro dele (front React e app Flutter) são MIT e podem ser usados
   direto da fonte oficial do LiveKit.
 
-## Comparação com o JARVIS
+## Comparação com o Zé
 
-| Aspecto | voice-butler | JARVIS (plano) |
+| Aspecto | voice-butler | Zé (plano) |
 |---|---|---|
 | Onde roda | Nuvem (Gemini + LiveKit Cloud) | Local, na máquina; só o cérebro chama o provedor |
 | Cérebro | Gemini Live (áudio↔áudio), por chave de API | Claude/Codex por login de assinatura |
 | Voz | A do Gemini, em inglês | Cadu local em pt-BR + normalizador de fala |
-| Ativação | Sessão aberta no app (sem palavra de ativação) | "Hey Orca" pessoal + rosto conectado |
+| Ativação | Sessão aberta no app (sem palavra de ativação) | "Ei Zé" pessoal + rosto conectado |
 | Mãos | Navegador isolado (Playwright) | Máquina inteira (Omarchy), Orca, navegador depois |
 | Memória e skills | Não tem | Núcleo do projeto |
 | Automações | Não tem | Núcleo do projeto |
@@ -48,7 +48,7 @@ Um "mordomo" de voz em inglês que controla um navegador. É montado quase todo 
 1. **Regras de saída para voz no prompt**: texto puro, uma a três frases, uma pergunta por vez, não
    recitar identificadores, explicar a falha uma vez e propor alternativa. Já temos isso na persona
    e no `fala.py`; vale conferir se falta algo (ex.: "não revelar nomes de ferramentas").
-2. **Detector de fim de turno semântico e interrupção adaptativa** do LiveKit: hoje o JARVIS
+2. **Detector de fim de turno semântico e interrupção adaptativa** do LiveKit: hoje o Zé
    decide o fim da fala por silêncio (2 s). Um detector de turno pode cortar a espera pela metade.
    Avaliar na Fase 1 se dá para usar o modelo de turno do LiveKit **localmente**, sem a nuvem.
 3. **Geração antecipada**: começar a pensar enquanto o usuário ainda termina a frase.
@@ -56,7 +56,7 @@ Um "mordomo" de voz em inglês que controla um navegador. É montado quase todo 
    "pede confirmação antes de ação sensível?"). Entra como suíte opcional na Fase 2.
 5. **Navegador isolado e criado só quando necessário** (Playwright, contexto por sessão, fechado
    ao fim), com validação de URL (só http/https, sem credenciais embutidas): boa base para uma
-   futura ferramenta `navegador` do JARVIS.
+   futura ferramenta `navegador` do Zé.
 6. **App Flutter do LiveKit (MIT)** como ponto de partida do cliente Android na fase do celular,
    se o navegador do Android cortar o microfone com a tela bloqueada.
 
@@ -64,7 +64,7 @@ Um "mordomo" de voz em inglês que controla um navegador. É montado quase todo 
 
 - Dependência de nuvem para voz e transporte.
 - **Confirmação decidida pelo próprio modelo** (`confirm_browser_action` é chamada pelo LLM depois
-  que ele "acha" que o usuário confirmou). No JARVIS a confirmação é verificada pelo núcleo, a
+  que ele "acha" que o usuário confirmou). No Zé a confirmação é verificada pelo núcleo, a
   partir da transcrição da fala do usuário, nunca pela palavra do modelo.
 - *Easter eggs* e regras fixas de frase no prompt.
 - Modelo *realtime* áudio↔áudio como cérebro: perderia o Cadu, o normalizador pt-BR, a

@@ -4,4 +4,4 @@ Based on a work at www.triplegangers.com.
 Permissions beyond the scope of this license may be available at http://www.ir-ltd.net/
 Please remember: Do what you want with the files, but always mention where you got them from...
 
-Source: three.js examples (examples/models/gltf/LeePerrySmith, r160), used unmodified as the face of the JARVIS avatar.
+Source: three.js examples (examples/models/gltf/LeePerrySmith, r160), used unmodified as the face of the Zé avatar.

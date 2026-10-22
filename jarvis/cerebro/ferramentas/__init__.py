@@ -49,9 +49,9 @@ LEITURA = [
     "sistema_estado",
     "automacao_lembrete",  # o usuário pediu o lembrete; perguntar "posso?" de novo seria ruído
     "tela_ver",
-    "tela_agir",  # só a própria tela do JARVIS: abrir, mostrar, zoom, tema; tudo reversível
+    "tela_agir",  # só a própria tela do Zé: abrir, mostrar, zoom, tema; tudo reversível
     "janela_fechar",  # fechar a própria janela apaga a câmera; abrir (acende) pede confirmação
-    "navegador_continuar",  # o resto de uma página que o JARVIS já leu (só leitura)
+    "navegador_continuar",  # o resto de uma página que o Zé já leu (só leitura)
     "conectores_listar",
     "conector_testar",  # sobe só o que a pessoa aprovou ao cadastrar
 ]
@@ -128,7 +128,7 @@ def montar(
     tela: Tela | None = None,
     manutencao: Manutencao | None = None,
 ) -> list[SdkMcpTool[Any]]:
-    """As ferramentas do servidor `jarvis` (a pasta do JARVIS lista os nomes como conexões),
+    """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     return [
         auditada(f)

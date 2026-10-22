@@ -6,7 +6,7 @@ uma sessão cria o cache (~3,2 mil). O total do dia vai para o log, o `status.js
 de baterias, para dar para ver quando algo novo (skill, MCP, revisão) começar a pesar.
 
 Ao virar o dia, o dia anterior é arquivado em `consumo.db` (os últimos `DIAS_GUARDADOS`): a
-pasta do JARVIS mostra a média por resposta caindo (ou não) conforme ele aprende.
+pasta do Zé mostra a média por resposta caindo (ou não) conforme ele aprende.
 """
 
 import logging

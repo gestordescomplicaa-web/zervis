@@ -1,4 +1,4 @@
-"""Comandos locais de voz (sem o cérebro): o que cada um faz na tela e o que o JARVIS fala."""
+"""Comandos locais de voz (sem o cérebro): o que cada um faz na tela e o que o Zé fala."""
 
 import tempfile
 import time
@@ -63,7 +63,7 @@ class Registro:
         self.feito.append(("evento", evento))
 
     def resumo(self, agora: float = 0.0) -> str:
-        return "Janela do JARVIS: aberta."
+        return "Janela do Zé: aberta."
 
 
 class ManutencaoFalsa:

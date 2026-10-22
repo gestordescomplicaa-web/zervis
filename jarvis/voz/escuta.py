@@ -1,6 +1,6 @@
-"""Recorte do pedido depois do "Hey Orca": junta quadros de 80 ms até o silêncio final.
+"""Recorte do pedido depois do "Ei Zé": junta quadros de 80 ms até o silêncio final.
 
-Regras herdadas do JARVIS antigo (core.py, 06/10/2026): 0,4 s de áudio antes da primeira voz
+Regras herdadas do Zé antigo (core.py, 06/10/2026): 0,4 s de áudio antes da primeira voz
 (o começo da palavra costuma vir antes do VAD reagir), teto de 60 s, e trechos com menos de
 dois quadros de voz são descartados (estalo, tosse). O fim fixo subiu de 2 s para 3 s de
 silêncio: o usuário pausa para formular o pedido e era cortado no meio.

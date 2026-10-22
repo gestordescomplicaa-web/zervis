@@ -2,7 +2,7 @@
 
 O cérebro chama `sistema_executar(acao, argumentos)`; o `ClaudeBrain` consulta esta política
 antes da pergunta falada:
-- risco 0 e 1: liberado sem perguntar (o JARVIS diz o que fez);
+- risco 0 e 1: liberado sem perguntar (o Zé diz o que fez);
 - risco 2: confirmação falada;
 - risco 3: confirmação com a frase exata ("confirmo reiniciar"); "sim" não basta;
 - risco 4, ação desconhecida ou argumento estranho: recusado antes de perguntar.

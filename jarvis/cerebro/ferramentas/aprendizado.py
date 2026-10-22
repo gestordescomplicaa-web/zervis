@@ -140,7 +140,7 @@ def ferramentas(
 
     @tool(
         "sugestoes_listar",
-        "Sugestões de memória e de skill que o JARVIS aprendeu sozinho e esperam o usuário.",
+        "Sugestões de memória e de skill que o Zé aprendeu sozinho e esperam o usuário.",
         {},
     )
     async def sugestoes_listar(_: dict[str, Any]) -> dict[str, Any]:

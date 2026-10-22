@@ -1,6 +1,6 @@
-"""O cérebro do JARVIS na tela do Barehands (pedido do usuário, 06/10/2026).
+"""O cérebro do Zé na tela do Barehands (pedido do usuário, 06/10/2026).
 
-Mesmo contrato do anel e do painel: o JARVIS escreve JSONs pequenos em `state/` e a página lê.
+Mesmo contrato do anel e do painel: o Zé escreve JSONs pequenos em `state/` e a página lê.
 - `decisao.json`: a pergunta que espera o "sim" agora (com o prazo) e as sugestões pendentes.
 - `eficiencia.json`: tokens lidos por resposta nos últimos dias e o que saiu sem o cérebro.
 - `mapa.json`: o Mapa (perfil, memória, skills e automações) com as ligações de cada correção
@@ -11,7 +11,7 @@ Mesmo contrato do anel e do painel: o JARVIS escreve JSONs pequenos em `state/` 
 - `mapa-abrir.json`: o pedido por voz "mostra o seu cérebro".
 - `maos-pedido.json`: o pedido por voz "calibrar as mãos" ou "volta as mãos ao padrão".
 
-O desenho fica em `jarvis/imersivo/web/` (ADR 0014); aqui só os dados. Arquivo velho (JARVIS
+O desenho fica em `jarvis/imersivo/web/` (ADR 0014); aqui só os dados. Arquivo velho (Zé
 parado) some da tela: por isso a reescrita periódica mesmo sem mudança.
 """
 

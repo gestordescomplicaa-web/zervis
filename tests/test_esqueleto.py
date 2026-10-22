@@ -28,7 +28,7 @@ def test_main_recusa_argumento_desconhecido(capsys: pytest.CaptureFixture[str]) 
 
 
 def test_personas_sao_recursos_do_pacote() -> None:
-    for nome in ("JARVIS", "RAPIDO"):
+    for nome in ("ZE", "RAPIDO"):
         texto = files("jarvis").joinpath("persona", f"{nome}.md").read_text()
         assert texto.startswith("# Zé") and "Como responder" in texto
 
@@ -36,7 +36,8 @@ def test_personas_sao_recursos_do_pacote() -> None:
 def test_personas_do_processo_anterior_continuam_legiveis() -> None:
     # Um serviço já em execução ainda tem o caminho antigo carregado até ser reiniciado.
     raiz = Path(__file__).resolve().parents[1]
-    for nome in ("JARVIS", "RAPIDO"):
-        antigo = raiz / "persona" / f"{nome}.md"
+    # JARVIS.md era o nome da persona até 20/10/2026: o link antigo leva à persona nova.
+    for antigo_nome, nome in (("JARVIS", "ZE"), ("ZE", "ZE"), ("RAPIDO", "RAPIDO")):
+        antigo = raiz / "persona" / f"{antigo_nome}.md"
         atual = files("jarvis").joinpath("persona", f"{nome}.md")
         assert antigo.is_symlink() and antigo.read_text() == atual.read_text()

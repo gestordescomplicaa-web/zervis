@@ -1,4 +1,4 @@
-# JARVIS — Geral, Trabalho e Foco
+# Zé — Geral, Trabalho e Foco
 
 Atualização de 09/10/2026. A interface mantém o avatar e os círculos do Núcleo.
 Código visual AGPL permanece neste repositório; o núcleo fornece JSON.

@@ -2,7 +2,7 @@
 
 Data: 06/10/2026. Máquina: Omarchy 4.0.4 (Arch Linux, Hyprland 0.56, shell Quickshell).
 
-O JARVIS é um sistema **da máquina local**: ele lê o estado do computador e opera o computador.
+O Zé é um sistema **da máquina local**: ele lê o estado do computador e opera o computador.
 Os outros sistemas se adaptam a ele, e não o contrário. O Omarchy torna isso barato, porque já
 expõe quase tudo como comandos documentados.
 
@@ -11,11 +11,11 @@ expõe quase tudo como comandos documentados.
 ### 1. Catálogo de ações legível por máquina
 - `/usr/bin/omarchy-*`: **445 comandos**, dos quais **443** trazem no cabeçalho
   `# omarchy:summary=…`, `# omarchy:args=…` e `# omarchy:examples=…` (alguns com `omarchy:hidden=true`).
-- O JARVIS gera o próprio catálogo lendo esses cabeçalhos, sem lista escrita à mão, e ele se
+- O Zé gera o próprio catálogo lendo esses cabeçalhos, sem lista escrita à mão, e ele se
   atualiza sozinho a cada atualização do Omarchy.
 - Grupos relevantes no dia a dia:
 
-| Grupo | Exemplos | Uso pelo JARVIS |
+| Grupo | Exemplos | Uso pelo Zé |
 |---|---|---|
 | Leitura de estado | `system-stats`, `battery-status`, `network-status`, `monitor-state`, `update-available`, `weather-status`, `theme-current`, `version` | Responder "como está a máquina?" |
 | Áudio e tela | `audio-output-volume`, `audio-output-switch`, `audio-input-mute`, `brightness-display`, `toggle-nightlight` | Comandos de voz rápidos |
@@ -31,9 +31,9 @@ expõe quase tudo como comandos documentados.
 - `omarchy-hook <nome>` roda `~/.config/omarchy/hooks/<nome>` e os scripts em `<nome>.d/`.
 - Pastas já existentes na máquina: `battery-low.d`, `font-set.d`, `post-boot.d`, `post-update.d`,
   `pre-refresh-pacman.d`, `theme-set.d`.
-- O JARVIS pode instalar **um script pequeno em cada pasta `.d`** que só avisa o `jarvisd`
+- O Zé pode instalar **um script pequeno em cada pasta `.d`** que só avisa o serviço do Zé
   (escreve uma linha num socket/FIFO local). Assim "bateria fraca", "atualização terminou" e
-  "tema mudou" viram eventos do JARVIS sem *polling*.
+  "tema mudou" viram eventos do Zé sem *polling*.
 - Instalação desses hooks altera `~/.config/omarchy`: feita uma vez, com aprovação, seguindo a
   skill `omarchy` (nunca editar `/usr/share/omarchy`).
 
@@ -63,8 +63,8 @@ classificado cai no nível 2.
 
 ## Lições do ambiente que entram como regra
 - Serviços com `PartOf=graphical-session.target` caem quando o Hyprland reinicia e não voltam
-  sozinhos (crash de 06/10/2026). O `jarvisd` não usa esse vínculo.
-- Em 06/10/2026 o Hyprland caiu ao criar um teclado virtual (suspeito: fcitx5). O JARVIS **não**
+  sozinhos (crash de 06/10/2026). O serviço do Zé não usa esse vínculo.
+- Em 06/10/2026 o Hyprland caiu ao criar um teclado virtual (suspeito: fcitx5). O Zé **não**
   deve simular teclado (`wtype`/`ydotool`) como forma de agir; prefere comandos e IPC.
 - Processos órfãos de ferramentas de agente já consumiram ~130% de CPU sem ninguém do outro
-  lado. O JARVIS pode vigiar isso (nível 0) e sugerir encerrar (nível 2).
+  lado. O Zé pode vigiar isso (nível 0) e sugerir encerrar (nível 2).

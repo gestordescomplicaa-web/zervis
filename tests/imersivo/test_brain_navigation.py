@@ -1,4 +1,4 @@
-"""Browser regressions for the local JARVIS map patch (no webcam or live writes).
+"""Browser regressions for the local Zé map patch (no webcam or live writes).
 
 Run with Python + websockets: python tests/test_brain_navigation.py
 Uses installed Chromium and an isolated HTTP server/browser profile.
@@ -89,7 +89,7 @@ TRABALHO = {'disponivel': True, 'sessoes': [
 
 
 
-# The Foco board (written by the JARVIS into state/foco.json).
+# The Foco board (written by the Zé into state/foco.json).
 FOCO = {
     'atual': {'id': 'ligatia', 'titulo': 'Lançar o Ligatia', 'proximo_passo': 'comparar provedores SIP',
               'bloqueio': '', 'projeto': 'Ligatia', 'mexida': '08/10 16:00'},

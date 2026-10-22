@@ -2,9 +2,9 @@
 
 Contrato pela pasta de estado do Barehands, como o resto do rosto:
 - `teclado.json`: a página grava `{id, texto, ts}` (POST /teclado) a cada pedido escrito;
-- `teclado-resposta.json`: o JARVIS grava `{pedido, texto, fim}` conforme fala a resposta.
+- `teclado-resposta.json`: o Zé grava `{pedido, texto, fim}` conforme fala a resposta.
 
-O pedido escrito entra na máquina de estados como fala autorizada (`Digitado`); o que o JARVIS
+O pedido escrito entra na máquina de estados como fala autorizada (`Digitado`); o que o Zé
 fala até o fim da resposta (inclusive a pergunta de confirmação) vai para a tela também.
 """
 
@@ -15,7 +15,7 @@ from typing import Any
 
 from jarvis.rosto.hud import Hud
 
-VALIDO_S = 30.0  # pedido escrito mais velho que isso (JARVIS parado, reinício) não roda
+VALIDO_S = 30.0  # pedido escrito mais velho que isso (Zé parado, reinício) não roda
 
 
 class Teclado:

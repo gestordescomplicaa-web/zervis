@@ -1,4 +1,4 @@
-"""O navegador do JARVIS: o que é livre, o que pergunta e o que nunca vai por voz."""
+"""O navegador do Zé: o que é livre, o que pergunta e o que nunca vai por voz."""
 
 from pathlib import Path
 

@@ -1,12 +1,12 @@
 # 01 — Visão e requisitos
 
-Data: 06/10/2026. Fonte: conversas com o usuário na sessão de desenvolvimento do JARVIS.
+Data: 06/10/2026. Fonte: conversas com o usuário na sessão de desenvolvimento do Zé.
 
 ## Visão
 
-Um JARVIS que é um **sistema desta máquina**, não um app: ele lê e opera o computador, e os
-outros sistemas se adaptam a ele. O usuário o usa de fone, sem olhar para a tela: ele fala "Hey Orca",
-pede, ouve a resposta e é avisado do que importa. Com o tempo o JARVIS lembra
+Um Zé que é um **sistema desta máquina**, não um app: ele lê e opera o computador, e os
+outros sistemas se adaptam a ele. O usuário o usa de fone, sem olhar para a tela: ele fala "Ei Zé",
+pede, ouve a resposta e é avisado do que importa. Com o tempo o Zé lembra
 das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 (automações). A interface visual é o Barehands; o Orca é onde o código é feito.
 
@@ -14,17 +14,17 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 
 ### R1 — Liga/desliga pelo rosto
 - R1.1 Há um rosto conectado (janela do Barehands aberta **ou** app do celular conectado) ⇒
-  JARVIS **ativo**: escuta "Hey Orca", responde, avisa — pelo rosto conectado.
-- R1.2 Nenhum rosto conectado ⇒ JARVIS **inativo**: microfones fechados, nenhuma fala, nenhum card.
+  Zé **ativo**: escuta "Ei Zé", responde, avisa — pelo rosto conectado.
+- R1.2 Nenhum rosto conectado ⇒ Zé **inativo**: microfones fechados, nenhuma fala, nenhum card.
   Automações agendadas continuam rodando, mas guardam o resultado em vez de falar.
 - R1.3 Ao reativar, no máximo **um** resumo falado do que ficou pendente (nunca a fila inteira).
 - R1.4 O estado ativo/inativo é visível no próprio anel (cor/forma) e consultável por voz.
 
 ### R2 — Conversa por voz
-- R2.1 Palavra de ativação dedicada (detector pessoal "Hey Orca" já treinado).
+- R2.1 Palavra de ativação dedicada (detector pessoal "Ei Zé" já treinado).
 - R2.2 Resposta falada em português do Brasil natural (normalizador de fala).
 - R2.3 Primeira fala em até ~1 s depois que o cérebro começa a responder (streaming por frase).
-- R2.4 Interromper a fala dizendo "Hey Orca".
+- R2.4 Interromper a fala dizendo "Ei Zé".
 - R2.5 Comandos de console por frase exata (ex.: "silenciar avisos", "parar de escutar").
 
 ### R3 — Cérebro trocável
@@ -32,12 +32,12 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 - R3.1a OmniRoute local (`127.0.0.1:20128`) como terceiro provedor, para usar as rotas que o usuário monta nele ([ADR 0008](adr/0008-omniroute-como-provedor-do-cerebro.md)).
 - R3.2 Uma interface interna única (`Brain`) — o resto do sistema não sabe qual provedor está ativo.
 - R3.3 Troca de provedor por configuração e por voz ("usar o Codex").
-- R3.4 Persona e regras de fala vêm de arquivos do JARVIS, não do provedor.
+- R3.4 Persona e regras de fala vêm de arquivos do Zé, não do provedor.
 
 ### R4 — Memória
 - R4.1 Memória curta e curada sempre carregada (perfil do usuário + fatos do ambiente).
 - R4.2 Busca no histórico de conversas antigas quando a pergunta for sobre o passado.
-- R4.3 Escritas de memória feitas pelo próprio JARVIS ficam **pendentes** até o usuário aprovar
+- R4.3 Escritas de memória feitas pelo próprio Zé ficam **pendentes** até o usuário aprovar
   (por voz ou no front), com opção de liberar categorias seguras depois.
 - R4.4 Proteção contra injeção: nada vindo de sessões, web ou mensagens vira memória sem revisão.
 
@@ -50,18 +50,18 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 
 ### R6 — Automações e avisos
 - R6.1 Tarefas agendadas (uma vez, intervalo, cron, data exata), com ou sem cérebro (script puro).
-- R6.2 Fontes de eventos: agenda, sessões do Orca delegadas pelo JARVIS, pedidos de aprovação, falhas.
-- R6.3 Fila durável de avisos com prioridade, sem repetição e com expiração (já existe no JARVIS atual).
-- R6.4 Um aviso só é falado se o JARVIS estiver ativo; senão vira pendência.
+- R6.2 Fontes de eventos: agenda, sessões do Orca delegadas pelo Zé, pedidos de aprovação, falhas.
+- R6.3 Fila durável de avisos com prioridade, sem repetição e com expiração (já existe no Zé atual).
+- R6.4 Um aviso só é falado se o Zé estiver ativo; senão vira pendência.
 
 ### R7 — Orca como oficina
-- R7.1 O JARVIS delega trabalho de código a sessões do Orca (orquestração nativa: `worker-start`).
+- R7.1 O Zé delega trabalho de código a sessões do Orca (orquestração nativa: `worker-start`).
 - R7.2 Recebe o resultado (`worker_done` com sucesso/falha) e avisa por voz.
 - R7.3 Pedidos de permissão: descrição falada + aprovação por voz com confirmação (já existe).
 - R7.4 Sessões abertas manualmente pelo usuário **não** são narradas; só pedidos de aprovação e falhas delas.
 
 ### R9 — Celular Android (mãos livres longe do PC) — última fase
-- R9.1 Fone no celular, JARVIS no PC: mesma conversa, mesmos comandos, mesmos avisos.
+- R9.1 Fone no celular, Zé no PC: mesma conversa, mesmos comandos, mesmos avisos.
 - R9.2 Funciona em casa (Wi-Fi) e fora (rede móvel), sem expor o PC na internet aberta.
 - R9.3 Caso central: tocar projetos no Orca por voz — perguntar estado, delegar, aprovar, ouvir
   "terminou/falhou/precisa de você".

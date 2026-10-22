@@ -5,7 +5,7 @@ aprovar = false
 
 [ferramentas]
 sessoes_listar = '''[
- {"id": "s1", "nome": "Loja do João", "pasta": "/home/ana/projetos/loja-do-joao", "motor": "claude",
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/projetos/loja-do-joao", "motor": "claude",
   "estado": "parada", "ultimo_recado": "O fluxo de pedidos está pronto para publicar.", "copia_isolada": false,
   "conectores": ["n8n-joao"]}]'''
 

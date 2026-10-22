@@ -2,7 +2,7 @@
 
 Dois arquivos curtos e curados em `~/.local/share/zervis/memoria/`:
 - `USUARIO.md`: quem o usuário é, preferências, jeito de trabalhar;
-- `JARVIS.md`: fatos do ambiente, convenções e lições do próprio JARVIS.
+- `JARVIS.md`: fatos do ambiente, convenções e lições do próprio Zé.
 Entradas separadas por `§`, com limite rígido: memória cheia não compacta sozinha, o erro devolve
 as entradas para o cérebro consolidar (curadoria em vez de acúmulo).
 
@@ -20,7 +20,7 @@ from pathlib import Path
 
 SEPARADOR = "\n§\n"
 ARQUIVOS = {"usuario": "USUARIO.md", "jarvis": "JARVIS.md"}
-TITULOS = {"usuario": "Sobre o usuário", "jarvis": "Notas do JARVIS (ambiente e lições)"}
+TITULOS = {"usuario": "Sobre o usuário", "jarvis": "Notas do Zé (ambiente e lições)"}
 PARECIDO = 0.85
 
 # Padrões que não podem virar prompt de sistema. Reimplementado com testes próprios a partir da

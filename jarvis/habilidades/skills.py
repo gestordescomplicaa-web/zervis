@@ -1,8 +1,8 @@
-"""Skills do JARVIS (Fase 6; docs/02-investigacao-hermes.md, seção 2; ADR 0011).
+"""Skills do Zé (Fase 6; docs/02-investigacao-hermes.md, seção 2; ADR 0011).
 
 Uma pasta por skill em `~/.local/share/zervis/skills/<nome>/` com `SKILL.md` no padrão aberto
 agentskills.io (front matter com `name` e `description`, o mesmo formato do Claude Code, do Codex
-e do Hermes) e arquivos de apoio opcionais. Para dar uma skill ao JARVIS basta pôr a pasta ali.
+e do Hermes) e arquivos de apoio opcionais. Para dar uma skill ao Zé basta pôr a pasta ali.
 
 Carregamento progressivo, como no Hermes, mas mais econômico: no prompt vai só uma linha por
 skill (nome e descrição, com teto total), dentro da foto congelada; o corpo é lido sob demanda.
