@@ -27,21 +27,27 @@ async def executar(
         query,
     )
 
-    opcoes = ClaudeAgentOptions(
-        system_prompt=PERSONA,
-        tools=LEITURA,
-        allowed_tools=LEITURA,
-        permission_mode="default",
-        setting_sources=[],
-        strict_mcp_config=True,
-        model=modelo,
-        cwd=str(pasta),
-        max_turns=6,
-    )
-    texto, uso = "", None
-    async for msg in query(prompt=f"{data_hora} {pedido}", options=opcoes):
-        if isinstance(msg, AssistantMessage):
-            texto = "".join(b.text for b in msg.content if isinstance(b, TextBlock)) or texto
-        elif isinstance(msg, ResultMessage):
-            uso = msg.usage
-    return " ".join(texto.split()), uso
+    from zervis.cerebro import acesso
+
+    async def consultar(ambiente: dict[str, str]) -> tuple[str, dict[str, Any] | None]:
+        opcoes = ClaudeAgentOptions(
+            system_prompt=PERSONA,
+            tools=LEITURA,
+            allowed_tools=LEITURA,
+            permission_mode="default",
+            setting_sources=[],
+            strict_mcp_config=True,
+            model=modelo,
+            cwd=str(pasta),
+            max_turns=6,
+            env=ambiente,
+        )
+        texto, uso = "", None
+        async for msg in query(prompt=f"{data_hora} {pedido}", options=opcoes):
+            if isinstance(msg, AssistantMessage):
+                texto = "".join(b.text for b in msg.content if isinstance(b, TextBlock)) or texto
+            elif isinstance(msg, ResultMessage):
+                uso = msg.usage
+        return " ".join(texto.split()), uso
+
+    return await acesso.com_reserva(consultar, "as automações")
