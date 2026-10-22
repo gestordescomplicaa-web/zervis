@@ -13,7 +13,10 @@ case "${1:-}" in
   *) echo "Uso: $0 [--pc]" >&2; exit 1 ;;
 esac
 UV_VERSAO=0.11.32
-PORTA=${ZERVIS_PAINEL_PORTA:-${JARVIS_PAINEL_PORTA:-8795}}
+# Sem a variável, fica a porta que o serviço já usa (reinstalar não troca o endereço do painel).
+EM_USO=$(systemctl --user show zervis -p Environment --value 2>/dev/null | tr ' ' '\n' \
+  | sed -n 's/^[A-Z]*_PAINEL_PORTA=\([0-9]*\)$/\1/p' | tail -n1)
+PORTA=${ZERVIS_PAINEL_PORTA:-${JARVIS_PAINEL_PORTA:-${EM_USO:-8795}}}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 USUARIO=$(id -un)
 

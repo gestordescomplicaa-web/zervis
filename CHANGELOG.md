@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Porta do painel: o `zervis` (`status`, `doctor` e a espera do `update`), o `make instalar` e o
+  instalador passam a ler a porta que o systemd dá ao serviço, contando os ajustes em
+  `zervis.service.d`, e a reinstalação sem porta mantém a que já está em uso. Antes, com a
+  porta num ajuste, o `update` esperava o painel na porta errada e voltava para a versão
+  anterior sem motivo, e o atalho do menu abria uma porta vazia.
+
 - O pacote se chama `zervis` (era `jarvis`): `python -m zervis`, `from zervis import …`, a pasta
   `zervis/`. As instalações de antes continuam subindo: a unidade antiga (`python -m jarvis`) e
   a Central antiga (`python -m jarvis.atendimento`) repassam para o `zervis` até o próximo
