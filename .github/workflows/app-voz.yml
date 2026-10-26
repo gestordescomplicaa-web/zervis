@@ -3,7 +3,7 @@
 # "app-voz" do repositório, num endereço fixo que o celular baixa direto:
 # https://github.com/<dono>/<repo>/releases/download/app-voz/ze-voz.apk
 # A chave que assina fica nos segredos (ZE_VOZ_KEYSTORE_B64, ZE_VOZ_SENHA): sempre a mesma, cada
-# versão instala por cima da anterior. Sem ela (um fork), sai um APK de depuração.
+# versão instala por cima da anterior. Sem ela, sai (e é publicado) um APK de depuração.
 # Ações fixadas pelo commit (a etiqueta fica no comentário), como no check.yml.
 name: app-voz
 
@@ -70,7 +70,9 @@ jobs:
           path: ${{ runner.temp }}/ze-voz.apk
 
       - name: Publicar na versão app-voz
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master' && env.ZE_VOZ_KEYSTORE != ''
+        # Sem a chave, publica o de depuração: o link do painel funciona desde o primeiro dia; com
+        # a chave criada, reinstala-se uma vez e daí em diante cada versão entra por cima.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

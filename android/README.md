@@ -38,6 +38,7 @@ assina sempre com a mesma chave, criada uma vez por quem mantém:
 
     uv run python android/criar-chave.py
 
-Sem a chave, sai um APK de depuração: funciona, mas cada versão nova pede desinstalar a anterior.
+Sem a chave, sai (e é publicado) um APK de depuração: funciona, mas cada versão nova pede
+desinstalar a anterior. Ao criar a chave, reinstale uma vez; daí em diante as versões entram por cima.
 
 Localmente, com o JDK 21 e o Android SDK: `cd android && gradle assembleDebug`.
