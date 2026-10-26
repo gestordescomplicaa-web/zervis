@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Zé Voz com o microfone do celular e a fala numa caixa de som Bluetooth: o Zé ouvia o final da
+  própria fala e o tomava por um pedido (a conversa contínua volta a ouvir quando o Zé termina de
+  mandar a fala, e a caixa ainda tocava o resto, pelo buffer e pelo atraso do Bluetooth). Agora,
+  ao fim de cada fala, o app manda silêncio no lugar do microfone até a saída terminar, com 0,8 s
+  de folga no Bluetooth como mídia e 0,3 s nos outros. Durante a fala, o "Ei Zé" segue interrompendo.
 - Zé Voz: tela de ajustes (pelo ícone ou tocando na notificação) com o modo de ouvir, o microfone
   de cada aparelho Bluetooth (o do aparelho ou o do celular, com a fala sempre pelo aparelho,
   guardado pelo nome) e a atualização: o app procura versão nova uma vez por dia e avisa; "Atualizar"
