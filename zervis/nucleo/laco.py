@@ -20,7 +20,7 @@ from typing import Any
 
 import numpy as np
 
-from zervis import atividade
+from zervis import atividade, versoes
 from zervis.atendimento import agente, cliente, projeto, whatsapp
 from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
@@ -131,6 +131,7 @@ from zervis.transporte import servidor_livekit
 from zervis.transporte.entrada import Entrada
 from zervis.transporte.local import Captura
 from zervis.transporte.remoto import SalaRemota
+from zervis.versoes import Versoes
 from zervis.voz import chamado, espera, piper
 from zervis.voz.ativacao import (
     VAD,
@@ -308,6 +309,9 @@ class Nucleo(
         self.vigia_n8n = VigiaN8n()  # os n8n dos conectores estão de pé? (ADR 0038)
         self._n8n_em = 0.0
         self._n8n_conferindo = threading.Event()
+        self.versoes = Versoes()  # atualizações pelo painel: a procura diária só avisa
+        self._versoes_em = time.time() - versoes.DIA_S + versoes.PRIMEIRA_S
+        self._versoes_procurando = threading.Event()
         self.consumo = Consumo(DADOS / "consumo.db", legado=ESTADO / "consumo.json")
         self.uso_ferramentas = UsoDeFerramentas(ESTADO / "uso-ferramentas.json")
         self.pergunta = ""  # a última pergunta de aprovação (o card de decisão do Barehands)

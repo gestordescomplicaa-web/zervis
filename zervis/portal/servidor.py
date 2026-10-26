@@ -89,6 +89,7 @@ ARQUIVOS = {
     "/paginas/skills.js": "paginas/skills.js",
     "/paginas/memoria.js": "paginas/memoria.js",
     "/paginas/atendimento.js": "paginas/atendimento.js",
+    "/paginas/atualizacoes.js": "paginas/atualizacoes.js",
     # O ícone na tela inicial do celular (instalar como app).
     "/manifest.webmanifest": "manifest.webmanifest",
     "/icones/ze-192.webp": "icones/ze-192.webp",

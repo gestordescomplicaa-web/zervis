@@ -561,3 +561,5 @@ body.manutencao .marca strong::after { content: "Manutenção"; display: block; 
 /* Entrar na conta pelo painel: o que o agente escreveu, o link e o código. */
 .login-agente { border: 1px solid var(--borda); border-radius: 10px; padding: 12px; margin: 4px 0 10px; }
 .login-texto { max-height: 180px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-size: 12px; margin: 8px 0; }
+.novidades { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 6px; color: var(--texto); }
+.novidades li { line-height: 1.45; }

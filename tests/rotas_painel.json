@@ -18,7 +18,8 @@
     "sessoes",
     "pastas",
     "conectores",
-    "atendimento"
+    "atendimento",
+    "atualizacoes"
   ],
   "escritas": [
     "cerebro",
@@ -126,7 +127,10 @@
     "sessao/excluir",
     "cerebro/escolher",
     "cerebro/modelo",
-    "omniroute/salvar"
+    "omniroute/salvar",
+    "atualizacoes/procurar",
+    "atualizacoes/canal",
+    "atualizacoes/aplicar"
   ],
   "envios": [
     "sessao/anexo"

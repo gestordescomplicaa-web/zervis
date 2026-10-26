@@ -101,6 +101,7 @@ def definicoes() -> list[SdkMcpTool[Any]]:
     serviços são vazios: as fábricas só montam as definições, e os handlers são trocados."""
     from zervis.cerebro.ferramentas import (
         aprendizado,
+        atualizacoes,
         automacoes,
         conectores,
         manutencao,
@@ -122,6 +123,7 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         *manutencao.ferramentas(vazio),
         *navegador.ferramentas(),
         *conectores.ferramentas(),
+        *atualizacoes.ferramentas(),
     ]
 
 

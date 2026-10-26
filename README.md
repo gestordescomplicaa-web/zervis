@@ -183,6 +183,9 @@ túnel SSH. O passo a passo e o login do Claude e do Codex estão em [docs/vps.m
 | `zervis avaliar` | A bateria de avaliação do cérebro: o julgamento do Zé medido em cenários ([como funciona](docs/avaliacao.md)) |
 | `zervis uninstall` | Remove o serviço, o atalho e o comando; os seus dados ficam, a não ser que você peça |
 
+Sem terminal, o mesmo `update` fica em **Ajustes → Atualizações**, no painel: o Zé procura uma vez
+por dia, avisa quando há versão nova, mostra o que muda e atualiza num clique.
+
 ## Desenvolver
 
 Linux, Python 3.12 a 3.14, Node.js 22+ e [uv](https://docs.astral.sh/uv/):

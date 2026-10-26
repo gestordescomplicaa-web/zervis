@@ -70,6 +70,8 @@ SO_NO_PC = {
     "ze/manutencao",
     "omniroute/salvar",
     "ze/descartar",
+    "atualizacoes/canal",
+    "atualizacoes/aplicar",
 }
 
 

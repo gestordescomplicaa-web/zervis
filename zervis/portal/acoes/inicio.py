@@ -41,6 +41,7 @@ class AcoesInicio(Pagina):
         "tem_janela",
         "ultimo_na_tela",
         "ver_sessao",
+        "versoes",
     )
 
     def estado(self) -> dict[str, Any]:
@@ -74,6 +75,7 @@ class AcoesInicio(Pagina):
                 "aguardando": self.n._aplicar_depois is not None,
             },
             "atualizacao": self.n.atualizacao.foto(),
+            "versao": self.n.versoes.foto(),  # a bolinha de "tem atualização" no menu
             "tela": self.n.ultimo_na_tela,  # [quando, texto]: o painel mostra no Silencioso
             "inicio": os.getpid(),  # muda a cada reinício: o painel recarrega sozinho
         }

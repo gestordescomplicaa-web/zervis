@@ -1,7 +1,7 @@
 """Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
-manutencao, navegador, conectores);
+manutencao, navegador, conectores, atualizacoes);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
@@ -18,6 +18,7 @@ from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_serv
 from zervis import atividade
 from zervis.automacoes.jobs import Jobs
 from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
+from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
 from zervis.cerebro.ferramentas import automacoes as g_automacoes
 from zervis.cerebro.ferramentas import conectores as g_conectores
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
@@ -54,6 +55,7 @@ LEITURA = [
     "navegador_continuar",  # o resto de uma página que o Zé já leu (só leitura)
     "conectores_listar",
     "conector_testar",  # sobe só o que a pessoa aprovou ao cadastrar
+    "atualizacoes_ver",  # só lê; atualizar é no painel
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -141,6 +143,7 @@ def montar(
             *g_manutencao.ferramentas(manutencao),
             *g_navegador.ferramentas(),
             *g_conectores.ferramentas(),
+            *g_atualizacoes.ferramentas(),
         ]
     ]
 
