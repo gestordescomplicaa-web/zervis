@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Excluir uma sessão com cópia isolada: os atalhos `zervis-*` que o próprio Zé põe na cópia (as
+  skills marcadas para as sessões, em `.claude/skills` e `.agents/skills`) saem antes da
+  conferência. Antes, só eles, ignorados pelo Git, travavam a exclusão com "A cópia isolada tem
+  alterações", e o "Descartar" da cópia não resolvia, porque preserva os arquivos ignorados.
 - Atualizações pelo painel (Ajustes → Atualizações): o Zé procura uma vez por dia e só avisa
   (bolinha no menu e um aviso); "Atualizar agora" mostra o que muda, tirado do CHANGELOG, e roda o
   mesmo `zervis update` numa unidade própria do systemd (`zervis-atualizar`), fora do Zé, que
