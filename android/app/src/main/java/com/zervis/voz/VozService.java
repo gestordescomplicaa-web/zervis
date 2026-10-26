@@ -15,6 +15,7 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -44,8 +45,10 @@ import okio.ByteString;
  * a fala do Zé volta pelo mesmo canal ({"tipo":"voz","taxa":N}, os pedaços, "fim" ou "parar").
  *
  * Com um fone Bluetooth com microfone, o microfone e a fala vão por ele (o modo de comunicação,
- * como numa ligação). Sem ele (uma caixa de som Bluetooth, o fone com fio, o alto-falante), a fala
- * sai como mídia, por onde o celular toca música, e o microfone é o do celular. No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
+ * como numa ligação). Sem ele (uma caixa de som Bluetooth, o fone com fio, o alto-falante), ou
+ * com o aparelho marcado "microfone do celular" na tela, a fala sai como mídia, por onde o celular
+ * toca música, e o microfone é o do celular, com o cancelamento de eco quando o Android tem.
+ * Uma vez por dia, ao conectar, procura versão nova do app e avisa numa notificação. No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
  * "Falar" na notificação) abre o pedido e, de novo, envia. Cai a rede: tenta de novo, com espera
  * crescente, até a pessoa desconectar.
  */
@@ -54,12 +57,16 @@ public final class VozService extends Service {
     static final String FALAR = "falar";
     static final String MODO = "modo";
     static final String DESLIGAR = "desligar";
+    static final String AJUSTAR = "ajustar"; // a tela mudou o modo ou o microfone
+
+    private static final long DIA_MS = 24L * 60 * 60 * 1000;
 
     private static final int TAXA = 16000;
     private static final int QUADRO = 2560; // 80 ms a 16 kHz, 16 bits
     private static final long[] ESPERAS_MS = {2000, 5000, 15000, 30000, 60000};
     private static final String CANAL = "voz";
     private static final int AVISO = 1;
+    private static final int VERSAO_NOVA = 2;
 
     private final Handler principal = new Handler(Looper.getMainLooper());
     private final ExecutorService tocar = Executors.newSingleThreadExecutor();
@@ -68,6 +75,8 @@ public final class VozService extends Service {
     private volatile WebSocket ws;
     private AudioManager audio;
     private AudioRecord gravador;
+    private AcousticEchoCanceler semEco;
+    private String modoDaConexao = "";
     private Thread captura;
     private AudioTrack falante;
     private int taxaFala;
@@ -119,8 +128,11 @@ public final class VozService extends Service {
                 if (ligado) falar();
                 return START_STICKY;
             case MODO:
-                ajustes.modo(Ajustes.CHAMADO.equals(ajustes.modo()) ? Ajustes.AO_VIVO : Ajustes.CHAMADO);
-                if (ws != null) ws.close(1000, "modo"); // reconecta já no modo novo
+                ajustes.trocarModo();
+                ajustar();
+                return START_STICKY;
+            case AJUSTAR:
+                if (ligado) ajustar();
                 return START_STICKY;
             default:
                 if (!ligado) ligar();
@@ -161,22 +173,21 @@ public final class VozService extends Service {
         conectar();
     }
 
-    /** Um fone Bluetooth com microfone (o perfil de ligação) está conectado? */
-    private boolean temFoneBluetooth() {
-        for (AudioDeviceInfo d : audio.getDevices(AudioManager.GET_DEVICES_INPUTS)) {
-            if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || d.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET) {
-                return true;
-            }
-        }
-        return false;
+    /** A tela mudou algo: o modo novo vale numa conexão nova; o microfone, na hora. */
+    private void ajustar() {
+        escolherSaida();
+        mostrar(estado);
+        if (ws != null && !ajustes.modo().equals(modoDaConexao)) ws.close(1000, "modo");
     }
 
-    /** Fone Bluetooth com microfone: como numa ligação. Senão: a fala como mídia, que vai à caixa
-     * de som Bluetooth, ao fone com fio ou ao alto-falante (no modo de ligação, iria ao fone de
-     * ouvido do celular, o da orelha). Chamado ao ligar e a cada aparelho que entra ou sai. */
+    /** Fone Bluetooth com microfone: como numa ligação. Senão, ou com o aparelho marcado
+     * "microfone do celular": a fala como mídia, que vai ao aparelho Bluetooth, ao fone com fio ou
+     * ao alto-falante (no modo de ligação, iria ao fone da orelha do celular). Chamado ao ligar, a
+     * cada aparelho que entra ou sai e quando a tela muda o microfone. */
     private void escolherSaida() {
         if (!ligado) return;
-        boolean fone = temFoneBluetooth();
+        String aparelho = Rota.aparelho(audio);
+        boolean fone = aparelho != null && Rota.temMicrofone(audio) && !ajustes.microfoneDoCelular(aparelho);
         if (fone) {
             audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
             usarFoneBluetooth(true);
@@ -235,15 +246,17 @@ public final class VozService extends Service {
             @Override
             public void onOpen(WebSocket s, Response resposta) {
                 try {
-                    s.send(new JSONObject().put("taxa", TAXA).put("modo", ajustes.modo()).toString());
+                    modoDaConexao = ajustes.modo();
+                    s.send(new JSONObject().put("taxa", TAXA).put("modo", modoDaConexao).toString());
                 } catch (JSONException erro) {
                     s.close(1011, "json");
                     return;
                 }
                 quedas = 0;
                 falando = false;
-                principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(ajustes.modo()) ? "Ao vivo" : "Diga “Ei Zé” ou toque em Falar"));
+                principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(modoDaConexao) ? "Ao vivo" : "Diga “Ei Zé” ou toque em Falar"));
                 gravar(s);
+                procurarVersao();
             }
 
             @Override
@@ -297,6 +310,11 @@ public final class VozService extends Service {
             return;
         }
         AudioRecord este = gravador;
+        // A fala do Zé na caixa de som volta pelo microfone do celular: o cancelamento de eco tira.
+        if (AcousticEchoCanceler.isAvailable()) {
+            semEco = AcousticEchoCanceler.create(este.getAudioSessionId());
+            if (semEco != null) semEco.setEnabled(true);
+        }
         captura = new Thread(() -> {
             byte[] quadro = new byte[QUADRO];
             este.startRecording();
@@ -311,6 +329,10 @@ public final class VozService extends Service {
     private void pararCaptura() {
         if (captura != null) captura.interrupt();
         captura = null;
+        if (semEco != null) {
+            semEco.release();
+            semEco = null;
+        }
         if (gravador != null) {
             try { gravador.stop(); } catch (IllegalStateException ignorado) { /* já parado */ }
             gravador.release();
@@ -355,6 +377,30 @@ public final class VozService extends Service {
         principal.postDelayed(this::conectar, espera);
     }
 
+    /** Uma vez por dia: se há versão nova do app, uma notificação abre a tela para atualizar. */
+    private void procurarVersao() {
+        long agora = System.currentTimeMillis();
+        if (agora - ajustes.procurouEm() < DIA_MS) return;
+        ajustes.procurou(agora);
+        new Thread(() -> {
+            try {
+                long publicada = Atualizacao.publicada();
+                if (publicada <= Atualizacao.instalada(this)) return;
+                Intent abrir = new Intent(this, MainActivity.class).setAction(MainActivity.ATUALIZAR);
+                Notification nova = new Notification.Builder(this, CANAL)
+                        .setSmallIcon(R.drawable.ic_ze)
+                        .setContentTitle("Atualização do Zé Voz")
+                        .setContentText("Versão 0.1." + publicada + " disponível. Toque para atualizar.")
+                        .setAutoCancel(true)
+                        .setContentIntent(PendingIntent.getActivity(this, 4, abrir, PendingIntent.FLAG_IMMUTABLE))
+                        .build();
+                getSystemService(NotificationManager.class).notify(VERSAO_NOVA, nova);
+            } catch (java.io.IOException semRede) {
+                // tenta de novo amanhã
+            }
+        }, "ze-voz-versao").start();
+    }
+
     /** O botão: a primeira vez abre o pedido (como apertar o botão do painel); a segunda envia. */
     private void falar() {
         WebSocket s = ws;
@@ -394,6 +440,7 @@ public final class VozService extends Service {
                 .setContentText(estado)
                 .setOngoing(true)
                 .setCategory(Notification.CATEGORY_CALL)
+                .setContentIntent(PendingIntent.getActivity(this, 5, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE))
                 .addAction(new Notification.Action.Builder(null, falando ? "Enviar" : "Falar", acao(FALAR, 1)).build())
                 .addAction(new Notification.Action.Builder(null, aoVivo ? "Usar “Ei Zé”" : "Ao vivo", acao(MODO, 2)).build())
                 .addAction(new Notification.Action.Builder(null, "Desconectar", acao(DESLIGAR, 3)).build())
