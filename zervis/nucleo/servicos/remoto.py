@@ -3,6 +3,8 @@
 import logging
 import secrets
 import time
+import urllib.error
+import urllib.request
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
@@ -167,7 +169,13 @@ class ServicoRemoto:
             "codigo": self.n.acesso.tem_codigo,
             "aparelhos": self.n.acesso.aparelhos(),
             "lista": self.n.acesso.lista(),
-            "tunel": {"ativo": self.n.tunel.ativo, "endereco": endereco, "qr": qr},
+            "tunel": {
+                "ativo": self.n.tunel.ativo,
+                "endereco": endereco,
+                "qr": qr,
+                "fixo": tunel.fixo(),
+                "porta": self.n.portal.porta if self.n.portal else 0,
+            },
         }
 
     def _aparelho_entrou(self, nome: str) -> None:
@@ -214,6 +222,55 @@ class ServicoRemoto:
             raise remoto.RemotoErro("O túnel não respondeu. Tente de novo em instantes.")
         return "Acesso de qualquer lugar ativo."
 
+    def fixar_tunel(self, colado: str, digitado: str) -> str:
+        """O túnel fixo, num domínio da pessoa no Cloudflare: guarda o token, troca o túnel e
+        confere se o endereço chega mesmo a este painel."""
+        if self.n.portal is None:
+            raise remoto.RemotoErro("Painel indisponível.")
+        if not (self.n.acesso.tem_senha and self.n.acesso.tem_codigo):
+            raise remoto.RemotoErro("Defina a senha e ligue o código do autenticador antes.")
+        try:
+            endereco = tunel.guardar_fixo(colado, digitado)
+        except tunel.TunelErro as erro:
+            raise remoto.RemotoErro(str(erro)) from None
+        self._trocar_tunel()
+        for _ in range(300):  # o túnel fixo conecta em poucos segundos
+            if self.n.tunel.endereco or not self.n.tunel.ativo:
+                break
+            time.sleep(0.1)
+        if not self.n.tunel.endereco:
+            raise remoto.RemotoErro(
+                "O túnel não conectou ao Cloudflare. Confira se colou o comando do túnel certo."
+            )
+        if not chega_ao_painel(endereco):
+            porta = self.n.portal.porta
+            return (
+                f"O túnel conectou, mas {endereco} ainda não chega ao Zé. No Cloudflare, o "
+                f"endereço público do túnel precisa apontar para HTTP 127.0.0.1:{porta}."
+            )
+        return f"Endereço fixo ativo: {endereco}."
+
+    def tunel_rapido(self) -> str:
+        """Volta ao endereço automático (trycloudflare), que muda a cada reinício."""
+        tunel.esquecer_fixo()
+        if self.n.tunel.ativo or tunel.escolhido():
+            self._trocar_tunel()
+        return "De volta ao endereço automático."
+
+    def _trocar_tunel(self) -> None:
+        """Para o túnel em uso e sobe o escolhido agora (o registro do anterior não vale)."""
+        if self.n.portal is None:
+            raise remoto.RemotoErro("Painel indisponível.")
+        antigo = self.n.tunel.endereco
+        self.n.tunel.parar()
+        if antigo:
+            self.n.portal.proibir(urlsplit(antigo).netloc)
+        try:
+            self.n.tunel.iniciar(self.n.portal.porta, tunel.garantir())
+        except (PrepararErro, OSError) as erro:
+            raise remoto.RemotoErro("Não consegui baixar o túnel do Cloudflare.") from erro
+        tunel.escolher(True)
+
     def desativar_tunel(self) -> str:
         tunel.escolher(False)
         endereco = self.n.tunel.endereco
@@ -255,3 +312,12 @@ class ServicoRemoto:
             "url": self.n.livekit.url,
             "token": servidor_livekit.token(chave, segredo, identidade, usuario.PERFIL.rotulo),
         }
+
+
+def chega_ao_painel(endereco: str, abrir: Any = urllib.request.urlopen) -> bool:
+    """O endereço público responde com o manifesto deste painel (aberto sem entrar)."""
+    try:
+        with abrir(f"{endereco}/manifest.webmanifest", timeout=10) as resposta:
+            return "Zérvis" in resposta.read(4096).decode("utf-8", "replace")
+    except (urllib.error.URLError, OSError, ValueError):
+        return False

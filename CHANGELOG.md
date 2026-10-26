@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Endereço fixo do acesso de qualquer lugar, num domínio da pessoa no Cloudflare (Voz → Acesso de
+  qualquer lugar → "Usar um endereço fixo"): cola-se o comando que o Cloudflare mostra ao criar o
+  túnel e digita-se o endereço. O token vai para `~/.config/zervis/tunel-token` (0600) e o
+  `cloudflared` o lê pelo `--token-file`, nunca na linha de comando. O Zé confere se o endereço
+  chega mesmo ao painel e, se não, diz o que ajustar no Cloudflare. "Voltar ao automático" retorna
+  ao endereço que muda a cada reinício. É a base do app de voz e das notificações do celular.
 - App de voz do Android (`android/`, "Zé Voz"): fala com o Zé com o celular bloqueado, pelo fone,
   sem tela (uma notificação com Falar, Ao vivo e Desconectar). Pareia pelo QR do painel (Voz →
   App de voz), que a câmera do celular abre no app; o Zé dá uma chave só de voz, guarda apenas o

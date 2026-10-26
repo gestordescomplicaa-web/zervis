@@ -27,9 +27,10 @@ PAGINAS.voz = async function() {
             <div class="linha"><label>Código de 6 dígitos<input id="codigo-confirmar" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>${botao("Confirmar", "codigo-confirmar", "", "principal")}</div></div></div>`
             : `<div class="linha">${r.codigo ? botao("Desligar", "codigo-desligar", "", "discreta") : botao("Ligar", "codigo-preparar", r.senha ? "" : "disabled")}</div>`}</div>
         <div class="parte"><div class="cabeca"><h3 class="subtitulo">Acesso de qualquer lugar</h3>${etiqueta(!!r.tunel.endereco, "Ativo", "Inativo")}</div>
-          ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div class="campos"><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">O endereço muda quando o computador reinicia.</p></div></div>`
+          ${r.tunel.endereco ? `<div class="acesso-qr">${r.tunel.qr}<div class="campos"><p>Aponte a câmera do celular para o código, ou abra:</p><p class="mono">${esc(r.tunel.endereco)}</p><p class="nota">${r.tunel.fixo ? "Endereço fixo, no seu domínio." : "O endereço muda quando o computador reinicia."}</p></div></div>`
             : `<p class="nota">${r.senha && r.codigo ? "Abre um endereço seguro pelo Cloudflare, para o Wi-Fi e o 4G." : "Requer a senha e o código do autenticador ligados."}</p>`}
-          <div class="linha">${r.tunel.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.tunel.endereco)}"`) + botao("Desativar", "tunel-desativar", "", "discreta") : botao("Ativar", "tunel-ativar", r.senha && r.codigo ? "" : "disabled", "principal")}</div></div>
+          <div class="linha">${r.tunel.ativo ? botao("Copiar endereço", "remoto-copiar", `data-endereco="${esc(r.tunel.endereco)}"`) + botao("Desativar", "tunel-desativar", "", "discreta") : botao("Ativar", "tunel-ativar", r.senha && r.codigo ? "" : "disabled", "principal")}</div>
+          ${r.senha && r.codigo ? enderecoFixo(r.tunel) : ""}</div>
         ${r.lista.length ? `<div class="parte"><h3 class="subtitulo">Aparelhos conectados</h3>${r.lista.map((a) => `<div class="linha aparelho"><span>${esc(a.aparelho)}</span><small>${new Date(a.desde * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}${a.origem ? ` · ${esc(a.origem)}` : ""}</small>${botao("Desconectar", "aparelho-desconectar", `data-id="${esc(a.id)}"`, "discreta")}</div>`).join("")}</div>` : ""}
         ${r.instalado ? `<div class="parte"><h3 class="subtitulo">Rede privada (Tailscale)</h3>${sub(r.ativo ? `Ativa em <span class="mono">${esc(r.endereco)}</span>` : "Alternativa ao túnel, para quem já usa o Tailscale.")}
           ${r.ativo && r.firewall ? `<p class="aviso">Libere a voz no firewall: <span class="mono">${esc(r.firewall)}</span></p>` : ""}
@@ -39,6 +40,21 @@ PAGINAS.voz = async function() {
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;
   };
+
+/** O túnel fixo num domínio da pessoa: colar o comando do Cloudflare e dizer o endereço.
+ * @param {{fixo: string, porta: number}} t */
+function enderecoFixo(t) {
+  if (t.fixo) return `<p class="nota">Endereço fixo: <span class="mono">${esc(t.fixo)}</span> ${botao("Voltar ao automático", "tunel-rapido", "", "discreta")}</p>`;
+  return `<details class="detalhes" id="fixo-detalhes"><summary>Usar um endereço fixo (um domínio seu no Cloudflare)</summary>
+    <ol class="passos-fixo">
+      <li>No Cloudflare: <strong>Zero Trust → Networks → Tunnels → Create a tunnel</strong>, tipo <strong>Cloudflared</strong>, com um nome (por exemplo, ze).</li>
+      <li>Copie o comando de instalação que ele mostra e cole abaixo. Não precisa rodar o comando.</li>
+      <li>Em <strong>Public Hostname</strong>, escolha o subdomínio (ze) e o domínio; em Service, <strong>HTTP</strong> e <span class="mono">127.0.0.1:${t.porta}</span>.</li>
+    </ol>
+    <label>Comando do Cloudflare<textarea id="fixo-colado" rows="3" placeholder="cloudflared service install eyJhIjoi…" spellcheck="false"></textarea></label>
+    <div class="linha"><label>Endereço<input id="fixo-endereco" placeholder="ze.seudominio.com.br" autocomplete="off" spellcheck="false"></label>${botao("Salvar e ligar", "tunel-fixar", "", "principal")}</div>
+    <p class="resultado" id="resultado-fixo"></p></details>`;
+}
 
 /** O código de pareamento do app de voz que está na tela (some ao recarregar a página).
  * @type {{codigo: string, endereco: string, qr: string} | null} */

@@ -583,7 +583,9 @@
    "tunel": {
     "ativo": true,
     "endereco": "https://exemplo.invalid",
-    "qr": "Exemplo"
+    "qr": "Exemplo",
+    "fixo": "",
+    "porta": 8796
    },
    "app_voz": [
     {

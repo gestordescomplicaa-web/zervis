@@ -52,6 +52,12 @@ class InterfaceRemoto(InterfaceServico):
     def desativar_tunel(self) -> str:
         return servico(self, ServicoRemoto).desativar_tunel()
 
+    def fixar_tunel(self, colado: str, digitado: str) -> str:
+        return servico(self, ServicoRemoto).fixar_tunel(colado, digitado)
+
+    def tunel_rapido(self) -> str:
+        return servico(self, ServicoRemoto).tunel_rapido()
+
     def ativar_remoto(self) -> str:
         return servico(self, ServicoRemoto).ativar_remoto()
 
