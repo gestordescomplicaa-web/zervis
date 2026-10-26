@@ -95,7 +95,21 @@ class ServicoRemoto:
         else:
             return  # saiu uma fonte que já não era a atual
         ligada = self.n._fonte is not None
+        # No Silencioso, o app de voz fala e ouve; quando ele sai, o PC volta a ficar mudo e
+        # com o microfone fechado (sem isto, a entrada aberta religaria o microfone do PC).
+        travado = self.n.microfone_travado
+        if travado:
+            self.n.captura.fechar()
         self.n.captura.remota(ligada)
+        if (
+            self.n.modo_fala == "silencioso"
+            and not travado
+            and self.n.maquina.estado is not e.Estado.INATIVO
+        ):
+            self.n.captura.abrir()  # o app chegou no Silencioso: a entrada fechada passa a ouvi-lo
+        if travado and not self.n.voz.muda:
+            self.n.voz.parar()
+        self.n.voz.muda = travado
         self.n.voz.destino = self.n._fonte.tocador if self.n._fonte is not None else None
         if (anterior is None) != (self.n._fonte is None):
             self.n.rostos.marcar("remoto", ligada)
@@ -112,7 +126,7 @@ class ServicoRemoto:
     def voz_pelo_navegador(self, conexao: Conexao, taxa: int) -> None:
         """O botão Ao vivo do navegador abriu o canal de voz pelo HTTPS do painel (roteiro,
         passo 4.2); fica aqui, na thread da conexão, até ela fechar."""
-        if self.n.microfone_travado:
+        if self.n.modo_fala == "silencioso":
             log.info("voz pelo navegador: recusada no modo Silencioso")
             conexao.fechar()
             return
@@ -130,12 +144,9 @@ class ServicoRemoto:
     ) -> None:
         """O app de voz do Android (`zervis/portal/voz_app.py`): o celular bloqueado, no bolso.
         No modo chamado, o Zé trata o áudio como o do microfone do PC ("Ei Zé" e o botão do
-        fone); ao vivo, como o navegador."""
-        if self.n.microfone_travado:
-            log.info("app de voz: recusado no modo Silencioso")
-            conexao.fechar()
-            return
-        voz = VozNavegador(conexao, taxa, ao_vivo=modo == "ao_vivo")
+        fone); ao vivo, como o navegador. Vale também no Silencioso, que é do PC: conectar o app
+        já é pedir para falar com o Zé (26/10/2026)."""
+        voz = VozNavegador(conexao, taxa, ao_vivo=modo == "ao_vivo", do_app=True)
         log.info("app de voz: %s conectado (%s, %d Hz)", aparelho.get("nome"), modo, voz.taxa)
         self.n._fonte_remota(voz, True)
 

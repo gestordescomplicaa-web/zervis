@@ -55,6 +55,8 @@ class ContextoAvisos(Protocol):
     def _sair_da_fila(self) -> None: ...
     def _tocar_som(self, som: Path) -> None: ...
     def vendo(self, id_: str) -> bool: ...
+    @property
+    def microfone_travado(self) -> bool: ...
 
 
 class ServicoAvisos:
@@ -125,7 +127,9 @@ class ServicoAvisos:
     def mudar_modo_fala(self, modo: str) -> str:
         """Troca o modo de fala na hora; devolve a confirmação curta para a tela e a voz."""
         self.n.modo_fala = modo_fala.gravar(modo)
-        self.n.voz.muda = modo == "silencioso"
+        # Com o app de voz conectado, o Silencioso não cala a voz nem fecha a entrada: as
+        # respostas vão ao celular; os avisos continuam só na tela.
+        self.n.voz.muda = self.n.microfone_travado
         if self.n.voz.muda:
             self.n.voz.parar()
             # Silencioso trava o microfone: nem chamado, nem botão, nem ao vivo (13/10/2026).

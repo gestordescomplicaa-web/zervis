@@ -262,8 +262,12 @@ class ServicoVoz:
 
     @property
     def microfone_travado(self) -> bool:
-        """No Silencioso o Zé não ouve: o microfone fica fechado e o botão não abre."""
-        return getattr(self.n, "modo_fala", "") == "silencioso"
+        """No Silencioso o Zé não ouve: o microfone fica fechado e o botão não abre. O app de voz
+        conectado é a exceção: o Silencioso vale para o PC (26/10/2026)."""
+        fonte = getattr(self.n, "_fonte", None)
+        return getattr(self.n, "modo_fala", "") == "silencioso" and not getattr(
+            fonte, "do_app", False
+        )
 
     def apertar(self) -> None:
         if self.n.microfone_travado:
