@@ -63,11 +63,15 @@ jobs:
             cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/ze-voz.apk"
           fi
           ls -l "$RUNNER_TEMP/ze-voz.apk"
+          # O app procura aqui a versão nova (Atualizacao.java): o número desta compilação.
+          printf '{"codigo": %s}\n' "$VERSAO_CODIGO" > "$RUNNER_TEMP/versao.json"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ze-voz
-          path: ${{ runner.temp }}/ze-voz.apk
+          path: |
+            ${{ runner.temp }}/ze-voz.apk
+            ${{ runner.temp }}/versao.json
 
       - name: Publicar na versão app-voz
         # Sem a chave, publica o de depuração: o link do painel funciona desde o primeiro dia; com
@@ -80,4 +84,6 @@ jobs:
             gh release create app-voz --prerelease --title "Zé Voz: o app de voz do Android" \
               --notes "Baixe ze-voz.apk no celular e instale. Pareie no painel do Zé: Voz → App de voz. Veja android/README.md."
           fi
+          # O APK antes do versao.json: o app só vê a versão nova quando o APK dela já está lá.
           gh release upload app-voz "$RUNNER_TEMP/ze-voz.apk" --clobber
+          gh release upload app-voz "$RUNNER_TEMP/versao.json" --clobber

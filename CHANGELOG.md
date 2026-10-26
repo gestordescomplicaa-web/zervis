@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Zé Voz: tela de ajustes (pelo ícone ou tocando na notificação) com o modo de ouvir, o microfone
+  de cada aparelho Bluetooth (o do aparelho ou o do celular, com a fala sempre pelo aparelho,
+  guardado pelo nome) e a atualização: o app procura versão nova uma vez por dia e avisa; "Atualizar"
+  baixa e entrega ao instalador do Android. A CI publica o `versao.json` junto do APK. Com a fala
+  no alto-falante ou na caixa, liga o cancelamento de eco do Android.
 - App de voz no Silencioso: o Silencioso passa a valer para o PC. Com o app conectado, o Zé ouve
   e responde pelo celular ("Ei Zé", botão do fone, ao vivo); os avisos continuam só na tela, e ao
   desconectar o PC segue mudo, com o microfone fechado. Antes, o Zé recusava o app e ele ficava

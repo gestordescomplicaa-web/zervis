@@ -3,10 +3,13 @@ package com.zervis.voz;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
@@ -20,12 +23,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A única tela: parear e ligar. Aberta pelo QR do painel (zervis-voz://parear), pareia sozinha;
- * aberta pelo ícone, liga a voz e sai. Sem pareamento, pede o endereço e o código.
+ * A única tela. Aberta pelo QR do painel (zervis-voz://parear), pareia sozinha; sem pareamento,
+ * pede o endereço e o código. Pareado, liga a voz e mostra os ajustes: o modo de ouvir, o
+ * microfone de cada aparelho Bluetooth e a atualização do app. Fechar a tela não desliga a voz.
  */
 public final class MainActivity extends Activity {
+    static final String ATUALIZAR = "com.zervis.voz.ATUALIZAR"; // a notificação de versão nova
+
     private Ajustes ajustes;
     private TextView mensagem;
+    private long nova; // a versão publicada mais nova que a instalada (0: nenhuma conhecida)
 
     @Override
     protected void onCreate(Bundle salvo) {
@@ -41,6 +48,10 @@ public final class MainActivity extends Activity {
     }
 
     private void tratar(Intent intent) {
+        if (Atualizacao.RESULTADO.equals(intent.getAction())) {
+            instalado(intent);
+            return;
+        }
         Uri link = intent.getData();
         if (link != null && "zervis-voz".equals(link.getScheme())) {
             String e = link.getQueryParameter("e");
@@ -51,21 +62,43 @@ public final class MainActivity extends Activity {
                 return;
             }
         }
-        if (ajustes.pareado()) {
-            ligar();
-        } else {
+        if (!ajustes.pareado()) {
             formulario("", "");
+            return;
         }
+        ligar();
+        if (ATUALIZAR.equals(intent.getAction())) procurar();
     }
 
-    private void formulario(String endereco, String codigo) {
+    // --- parear ----------------------------------------------------------------------------
+
+    private LinearLayout coluna() {
         LinearLayout tela = new LinearLayout(this);
         tela.setOrientation(LinearLayout.VERTICAL);
         int m = (int) (20 * getResources().getDisplayMetrics().density);
         tela.setPadding(m, m, m, m);
-        TextView titulo = new TextView(this);
-        titulo.setText("Parear com o Zé\nNo painel: Voz → App de voz → Parear celular.");
-        tela.addView(titulo);
+        return tela;
+    }
+
+    private TextView texto(LinearLayout tela, String conteudo) {
+        TextView t = new TextView(this);
+        t.setText(conteudo);
+        tela.addView(t);
+        return t;
+    }
+
+    private Button botao(LinearLayout tela, String rotulo, Runnable ao) {
+        Button b = new Button(this);
+        b.setText(rotulo);
+        b.setAllCaps(false);
+        b.setOnClickListener(v -> ao.run());
+        tela.addView(b);
+        return b;
+    }
+
+    private void formulario(String endereco, String codigo) {
+        LinearLayout tela = coluna();
+        texto(tela, "Parear com o Zé\nNo painel: Voz → App de voz → Parear celular.");
         EditText campoEndereco = new EditText(this);
         campoEndereco.setHint("ze.seudominio.com.br");
         campoEndereco.setText(endereco);
@@ -76,13 +109,9 @@ public final class MainActivity extends Activity {
         campoCodigo.setText(codigo);
         campoCodigo.setInputType(InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
         tela.addView(campoCodigo);
-        Button botao = new Button(this);
-        botao.setText("Parear");
-        botao.setOnClickListener(v -> parear(campoEndereco.getText().toString(), campoCodigo.getText().toString()));
-        tela.addView(botao);
-        mensagem = new TextView(this);
+        botao(tela, "Parear", () -> parear(campoEndereco.getText().toString(), campoCodigo.getText().toString()));
+        mensagem = texto(tela, "");
         mensagem.setGravity(Gravity.CENTER_HORIZONTAL);
-        tela.addView(mensagem);
         setContentView(tela);
     }
 
@@ -104,6 +133,8 @@ public final class MainActivity extends Activity {
         }, "parear").start();
     }
 
+    // --- ligar e ajustar ---------------------------------------------------------------------
+
     private void ligar() {
         List<String> faltam = new ArrayList<>();
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
@@ -120,17 +151,116 @@ public final class MainActivity extends Activity {
         }
         // Com a tela aberta: o Android só deixa um serviço de microfone começar em primeiro plano.
         startForegroundService(new Intent(this, VozService.class).setAction(VozService.LIGAR));
-        finish();
+        painel();
     }
 
     @Override
     public void onRequestPermissionsResult(int pedido, String[] permissoes, int[] resultados) {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             startForegroundService(new Intent(this, VozService.class).setAction(VozService.LIGAR));
-            finish();
+            painel();
         } else {
             Toast.makeText(this, "Sem o microfone, o Zé não ouve.", Toast.LENGTH_LONG).show();
             finish();
         }
+    }
+
+    private void avisarServico() {
+        startService(new Intent(this, VozService.class).setAction(VozService.AJUSTAR));
+    }
+
+    private void painel() {
+        LinearLayout tela = coluna();
+        texto(tela, "Zé Voz " + Atualizacao.nome(this) + "\n" + Uri.parse(ajustes.endereco()).getHost());
+
+        boolean aoVivo = Ajustes.AO_VIVO.equals(ajustes.modo());
+        botao(tela, aoVivo ? "Ouvir: ao vivo" : "Ouvir: “Ei Zé”", () -> {
+            ajustes.trocarModo();
+            avisarServico();
+            painel();
+        });
+
+        AudioManager audio = getSystemService(AudioManager.class);
+        String aparelho = Rota.aparelho(audio);
+        if (aparelho != null) {
+            if (Rota.temMicrofone(audio)) {
+                boolean celular = ajustes.microfoneDoCelular(aparelho);
+                botao(tela, celular ? "Microfone: do celular" : "Microfone: de " + aparelho, () -> {
+                    ajustes.microfoneDoCelular(aparelho, !celular);
+                    avisarServico();
+                    painel();
+                });
+                texto(tela, "Vale para " + aparelho + ". A fala sai sempre por ele.");
+            } else {
+                texto(tela, aparelho + ": a fala sai por ele; o microfone é o do celular.");
+            }
+        }
+
+        botao(tela, nova > Atualizacao.instalada(this) ? "Atualizar para a 0.1." + nova : "Procurar atualização",
+                () -> { if (nova > Atualizacao.instalada(this)) atualizar(); else procurar(); });
+        mensagem = texto(tela, "");
+        mensagem.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        botao(tela, "Desconectar", () -> {
+            startService(new Intent(this, VozService.class).setAction(VozService.DESLIGAR));
+            finish();
+        });
+        botao(tela, "Fechar", this::finish);
+        setContentView(tela);
+    }
+
+    // --- atualização -------------------------------------------------------------------------
+
+    private void procurar() {
+        if (mensagem != null) mensagem.setText("Procurando…");
+        new Thread(() -> {
+            try {
+                long publicada = Atualizacao.publicada();
+                ajustes.procurou(System.currentTimeMillis());
+                runOnUiThread(() -> {
+                    nova = publicada;
+                    painel();
+                    mensagem.setText(publicada > Atualizacao.instalada(this) ? "Versão nova disponível." : "Versão mais recente.");
+                });
+            } catch (IOException erro) {
+                runOnUiThread(() -> { if (mensagem != null) mensagem.setText(erro.getMessage()); });
+            }
+        }, "procurar").start();
+    }
+
+    private void atualizar() {
+        // A primeira vez, o Android pede para deixar o Zé Voz instalar apps; depois, só a confirmação.
+        if (!getPackageManager().canRequestPackageInstalls()) {
+            Toast.makeText(this, "Permita instalar apps do Zé Voz e toque em Atualizar de novo.", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName())));
+            return;
+        }
+        if (mensagem != null) mensagem.setText("Baixando…");
+        new Thread(() -> {
+            try {
+                Atualizacao.instalar(this);
+            } catch (IOException erro) {
+                runOnUiThread(() -> { if (mensagem != null) mensagem.setText(erro.getMessage()); });
+            }
+        }, "atualizar").start();
+    }
+
+    @SuppressWarnings("deprecation") // a versão com a classe é do Android 13; o app vai do 11
+    private void instalado(Intent intent) {
+        int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
+        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+            Intent confirmar = intent.getParcelableExtra(Intent.EXTRA_INTENT);
+            if (confirmar != null) startActivity(confirmar);
+            return;
+        }
+        if (status == PackageInstaller.STATUS_SUCCESS) {
+            Toast.makeText(this, "Zé Voz atualizado.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        String motivo = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
+        if (ajustes.pareado()) painel(); else formulario("", "");
+        if (mensagem != null) mensagem.setText("Não atualizou" + (motivo != null ? ": " + motivo : "."));
     }
 }
