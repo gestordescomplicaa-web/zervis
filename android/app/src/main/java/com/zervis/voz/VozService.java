@@ -23,11 +23,13 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.view.KeyEvent;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -67,6 +69,10 @@ public final class VozService extends Service {
     private static final String CANAL = "voz";
     private static final int AVISO = 1;
     private static final int VERSAO_NOVA = 2;
+    // Depois da fala, quanto a saída ainda toca além do que o app escreveu: o atraso do Bluetooth
+    // como mídia (a caixa de som), e uma folga nos outros (o fone em ligação, o alto-falante).
+    private static final long CAUDA_BLUETOOTH_MS = 800;
+    private static final long CAUDA_MS = 300;
 
     private final Handler principal = new Handler(Looper.getMainLooper());
     private final ExecutorService tocar = Executors.newSingleThreadExecutor();
@@ -80,6 +86,8 @@ public final class VozService extends Service {
     private Thread captura;
     private AudioTrack falante;
     private int taxaFala;
+    private long tocandoAte; // (thread da fala) quando o que já foi escrito termina de tocar
+    private volatile long surdoAte; // até quando o microfone vai como silêncio: o fim da fala
     private MediaSession sessao;
     private PowerManager.WakeLock acordado;
     private volatile boolean ligado;
@@ -267,8 +275,13 @@ public final class VozService extends Service {
                     if ("voz".equals(tipo)) {
                         int taxa = m.optInt("taxa", 22050);
                         tocar.execute(() -> prepararFala(taxa));
+                    } else if ("fim".equals(tipo)) {
+                        tocar.execute(VozService.this::esperarACauda);
                     } else if ("parar".equals(tipo)) {
-                        tocar.execute(() -> { if (falante != null) { falante.pause(); falante.flush(); falante.play(); } });
+                        tocar.execute(() -> {
+                            if (falante != null) { falante.pause(); falante.flush(); falante.play(); }
+                            tocandoAte = 0;
+                        });
                     }
                 } catch (JSONException ignorado) {
                     // outra mensagem de controle: nada a fazer
@@ -278,7 +291,12 @@ public final class VozService extends Service {
             @Override
             public void onMessage(WebSocket s, ByteString pedaco) {
                 byte[] pcm = pedaco.toByteArray();
-                tocar.execute(() -> { if (falante != null) falante.write(pcm, 0, pcm.length); });
+                tocar.execute(() -> {
+                    if (falante == null) return;
+                    long agora = SystemClock.elapsedRealtime();
+                    tocandoAte = Math.max(tocandoAte, agora) + pcm.length / 2 * 1000L / taxaFala;
+                    falante.write(pcm, 0, pcm.length);
+                });
             }
 
             @Override
@@ -320,7 +338,9 @@ public final class VozService extends Service {
             este.startRecording();
             while (ligado && s == ws && !Thread.currentThread().isInterrupted()) {
                 int lidos = este.read(quadro, 0, QUADRO);
-                if (lidos > 0) s.send(ByteString.of(quadro, 0, lidos));
+                if (lidos <= 0) continue;
+                if (SystemClock.elapsedRealtime() < surdoAte) Arrays.fill(quadro, 0, lidos, (byte) 0);
+                s.send(ByteString.of(quadro, 0, lidos));
             }
         }, "ze-voz-microfone");
         captura.start();
@@ -359,6 +379,15 @@ public final class VozService extends Service {
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
         falante.play();
+    }
+
+    /** O fim de uma fala: o Zé volta a ouvir logo (conversa contínua), mas a saída ainda toca o
+     * resto (o que está no buffer e o atraso do Bluetooth), e o microfone do celular pegaria o
+     * final da própria fala como um pedido. Até a saída terminar, o microfone vai como silêncio
+     * (o quadro segue, zerado). Durante a fala ele continua aberto: o "Ei Zé" interrompe. */
+    private void esperarACauda() {
+        long cauda = !chamada && Rota.aparelho(audio) != null ? CAUDA_BLUETOOTH_MS : CAUDA_MS;
+        surdoAte = Math.max(tocandoAte, SystemClock.elapsedRealtime()) + cauda;
     }
 
     private void caiu(WebSocket s, boolean recusado) {

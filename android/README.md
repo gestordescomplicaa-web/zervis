@@ -46,6 +46,9 @@ apps; depois, só a confirmação. Para isso, as versões precisam da mesma assi
   Com vários aparelhos Bluetooth conectados, vale o que o Android usa para o som naquele momento.
 - Com a fala no alto-falante ou na caixa, o app liga o cancelamento de eco do Android (quando o
   celular tem), para o Zé não ouvir a própria voz. Ao vivo, numa caixa alta, o fone ainda é melhor.
+- Ao fim de cada fala, o microfone espera a saída terminar de tocar (na caixa Bluetooth, o atraso
+  passa de meio segundo) antes de voltar a valer: sem isso, na conversa contínua, o Zé ouvia o
+  final da própria fala como um pedido. Durante a fala, o "Ei Zé" continua interrompendo.
 - Caiu a rede: o app tenta de novo sozinho (2 s, 5 s, 15 s, 30 s, 60 s).
 - Segurança: o app não entra no painel. O pareamento dá uma chave só de voz (o Zé guarda apenas
   o resumo dela); remover o celular no painel corta a chave na hora.
