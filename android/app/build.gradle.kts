@@ -1,4 +1,5 @@
-// Sem Kotlin e sem AndroidX: Java e as APIs do próprio Android, mais o OkHttp para o WebSocket.
+// Sem Kotlin: Java e as APIs do próprio Android, mais o OkHttp para o WebSocket (o OkHttp 5 traz
+// um pouco de AndroidX por dentro; o app não usa).
 // A versão vem da CI (VERSAO_CODIGO); a assinatura, da chave guardada nos segredos do repositório,
 // para cada versão nova instalar por cima da anterior.
 plugins {
