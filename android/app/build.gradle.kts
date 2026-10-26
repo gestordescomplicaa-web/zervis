@@ -11,7 +11,7 @@ val loja = System.getenv("ZE_VOZ_KEYSTORE")
 
 android {
     namespace = "com.zervis.voz"
-    compileSdk = 36
+    compileSdk = 37 // o OkHttp 5.5 pede; o comportamento segue o targetSdk
 
     defaultConfig {
         applicationId = "com.zervis.voz"
