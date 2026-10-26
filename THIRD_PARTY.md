@@ -29,6 +29,8 @@ arquivo copiado leva um cabeçalho citando a origem.
 | `zervis/portal/web/icones/ze-192.webp`, `ze-512.webp` (ícone do app) e `zervis/portal/web/imagens/holograma.webp` (a Imersão no celular), recortados de `zervis/imersivo/web/avatar/jarvis-chimpanze-referencia.png` | Criado no Blender para o Zé | AGPL-3.0-or-later, como o Zé | gdautomacao.ia |
 | `zervis/transporte/remoto.py` usa o SDK de tempo real `livekit` 1.1.20 como dependência Python (nenhum código copiado) | LiveKit Python SDK (github.com/livekit/python-sdks) | Apache-2.0 | LiveKit, Inc. |
 | `~/.local/share/zervis/livekit/<versão>/` (fora do repositório; baixado por `zervis/transporte/servidor_livekit.py` quando a máquina não tem o `livekit-server`; v1.13.9, sha256 `0b7fa208…` amd64 e `c5e4e5a6…` arm64), rodado como programa separado | LiveKit server (github.com/livekit/livekit) | Apache-2.0 | LiveKit, Inc. |
+| `android/` (o app de voz "Zé Voz") usa o OkHttp 5.5.1 como dependência para o WebSocket, embutida no APK compilado pela CI (nenhum código copiado) | OkHttp (github.com/square/okhttp) | Apache-2.0 | Square, Inc. |
+| `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp` (ícone do app de voz), cópia de `zervis/portal/web/icones/ze-192.webp` | Criado no Blender para o Zé | AGPL-3.0-or-later, como o Zé | gdautomacao.ia |
 
 Os modelos de som acima (Silero, openWakeWord, Smart Turn e a voz Cadu) também ficam, idênticos e
 conferidos pelo SHA-256, na release `modelos-1` de `gestordescomplicaa-web/zervis-modelos`, com os
@@ -55,5 +57,3 @@ no `claude-agent-sdk`, instalado do PyPI como dependência (ADR 0035).
 [TypeScript](https://github.com/microsoft/TypeScript), Microsoft e colaboradores, Apache-2.0.
 Verifica os comentários JSDoc do painel com `checkJs` e `noEmit`; não entra na página nem exige
 compilação na instalação do usuário. Dependência de desenvolvimento fixada em `package-lock.json`.
-| `android/` (o app de voz "Zé Voz") usa o OkHttp 5.5.1 como dependência para o WebSocket, embutida no APK compilado pela CI (nenhum código copiado) | OkHttp (github.com/square/okhttp) | Apache-2.0 | Square, Inc. |
-| `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp` (ícone do app de voz), cópia de `zervis/portal/web/icones/ze-192.webp` | Criado no Blender para o Zé | AGPL-3.0-or-later, como o Zé | gdautomacao.ia |
