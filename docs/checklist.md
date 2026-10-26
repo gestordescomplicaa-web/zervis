@@ -134,7 +134,7 @@ Conceito: o Zé no navegador do celular, em casa ou fora, com senha e autenticad
 ## 10. Imersão
 
 - ✅ Holograma no PC; desliga ao sair da tela
-- ⬜ Mãos (Barehands) movendo a tela
+- ⬜ Mãos (modo imersivo) movendo a tela
 - ⬜ Holograma no celular reagindo à conversa
 
 ## 11. Atividade

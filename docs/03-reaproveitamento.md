@@ -2,6 +2,11 @@
 
 Data: 06/10/2026. O que entra no projeto novo, de onde vem, em que estado está e sob qual licença.
 
+> **Registro da época.** Este inventário é de quando o Zé nasceu, a partir do Zé antigo, do Orca e do
+> Barehands. Desde então: o chamado é "Ei Zé" (era "Hey Orca"); o Orca saiu e as sessões de código
+> são do próprio Zé (ADR 0015); o Barehands virou o modo imersivo, dentro do painel (ADR 0014). O
+> quadro de hoje está no [README](../README.md#arquitetura).
+
 ## Regra de licenças
 
 | Origem | Licença | O que podemos fazer |
