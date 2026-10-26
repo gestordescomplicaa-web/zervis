@@ -112,6 +112,7 @@ from zervis.portal import senha, tunel
 from zervis.portal.acoes import Acoes
 from zervis.portal.senha import Acesso
 from zervis.portal.servidor import Portal
+from zervis.portal.voz_app import AparelhosDeVoz
 from zervis.presenca import hyprland
 from zervis.presenca import modo as modo_escuta
 from zervis.presenca.hyprland import MonitorPresenca
@@ -481,6 +482,7 @@ class Nucleo(
         self.portal: Portal | None = None
         self.acesso = Acesso(ao_entrar=self._aparelho_entrou)  # quem entra de outro aparelho
         self.tunel = tunel.Tunel(self._tunel_pronto, self._tunel_caiu)  # acesso de qualquer lugar
+        self.aparelhos_voz = AparelhosDeVoz()  # o app de voz do celular, pareado no painel
         self.mensagens = mensagens.Mensagens(
             self._mensagem_importante,
             self._motor_das_mensagens,
@@ -499,6 +501,8 @@ class Nucleo(
                 envios=acoes.envios(),
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
+                voz_app=self.voz_pelo_app,
+                aparelhos_voz=self.aparelhos_voz,
                 entrada_terminal=escritas["terminal/escrever"],
                 so_no_pc=senha.SO_NO_PC,
                 servidor=maquina_atual.detectar().servidor,

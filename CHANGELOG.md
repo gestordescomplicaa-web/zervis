@@ -8,6 +8,13 @@
   `cloudflared` o lê pelo `--token-file`, nunca na linha de comando. O Zé confere se o endereço
   chega mesmo ao painel e, se não, diz o que ajustar no Cloudflare. "Voltar ao automático" retorna
   ao endereço que muda a cada reinício. É a base do app de voz e das notificações do celular.
+- App de voz do Android (`android/`, "Zé Voz"): fala com o Zé com o celular bloqueado, pelo fone,
+  sem tela (uma notificação com Falar, Ao vivo e Desconectar). Pareia pelo QR do painel (Voz →
+  App de voz), que a câmera do celular abre no app; o Zé dá uma chave só de voz, guarda apenas o
+  resumo dela e aceita a voz do app em `/voz-app/ws` com essa chave, sem entrar no painel. No modo
+  chamado, o áudio do app vale como o microfone do PC ("Ei Zé" e o botão do fone, que abre e
+  envia o pedido); ao vivo, como o navegador. Trocar o navegador ao vivo pelo app também troca o
+  modo. A CI compila o APK (`app-voz.yml`) e, na master, publica em `releases/download/app-voz`.
 - Excluir uma sessão com cópia isolada: os atalhos `zervis-*` que o próprio Zé põe na cópia (as
   skills marcadas para as sessões, em `.claude/skills` e `.agents/skills`) saem antes da
   conferência. Antes, só eles, ignorados pelo Git, travavam a exclusão com "A cópia isolada tem

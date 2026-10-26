@@ -62,6 +62,8 @@ SO_NO_PC = {
     "tunel/desativar",
     "tunel/fixar",
     "tunel/rapido",
+    "voz-app/codigo",
+    "voz-app/remover",
     "remoto/ativar",
     "remoto/desativar",
     "ze/aplicar",

@@ -31,6 +31,7 @@ class ContextoRemoto(Protocol):
     captura: Any
     eventos: Any
     livekit: Any
+    maquina: Any
     modo_fala: Any
     portal: Any
     remota: Any
@@ -98,7 +99,11 @@ class ServicoRemoto:
         self.n.voz.destino = self.n._fonte.tocador if self.n._fonte is not None else None
         if (anterior is None) != (self.n._fonte is None):
             self.n.rostos.marcar("remoto", ligada)
-            self.n.eventos.put(e.AoVivo(ligada))  # conectada, a voz é ao vivo (ADR 0023)
+        # Conectada, a voz é ao vivo (ADR 0023), menos a do app no modo chamado; trocar uma pela
+        # outra (o navegador e o app) também troca o modo.
+        desejado = ligada and bool(getattr(self.n._fonte, "ao_vivo", True))
+        if desejado != self.n.maquina.ao_vivo or (anterior is None) != (self.n._fonte is None):
+            self.n.eventos.put(e.AoVivo(desejado))
 
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None:
         if fonte is self.n._fonte and not self.n.microfone_travado:
@@ -119,6 +124,34 @@ class ServicoRemoto:
         finally:
             self.n._fonte_remota(voz, False)
             log.info("voz pelo navegador: desconectada")
+
+    def voz_pelo_app(
+        self, conexao: Conexao, taxa: int, modo: str, aparelho: dict[str, Any]
+    ) -> None:
+        """O app de voz do Android (`zervis/portal/voz_app.py`): o celular bloqueado, no bolso.
+        No modo chamado, o Zé trata o áudio como o do microfone do PC ("Ei Zé" e o botão do
+        fone); ao vivo, como o navegador."""
+        if self.n.microfone_travado:
+            log.info("app de voz: recusado no modo Silencioso")
+            conexao.fechar()
+            return
+        voz = VozNavegador(conexao, taxa, ao_vivo=modo == "ao_vivo")
+        log.info("app de voz: %s conectado (%s, %d Hz)", aparelho.get("nome"), modo, voz.taxa)
+        self.n._fonte_remota(voz, True)
+
+        def controle(mensagem: dict[str, object]) -> None:
+            if voz is not self.n._fonte:
+                return
+            if mensagem.get("tipo") == "apertar" and not self.n.microfone_travado:
+                self.n.eventos.put(e.Apertou())
+            elif mensagem.get("tipo") == "soltar":
+                self.n.eventos.put(e.Soltou())
+
+        try:
+            voz.ouvir(lambda quadro: self.n._quadro_remoto(voz, quadro), controle)
+        finally:
+            self.n._fonte_remota(voz, False)
+            log.info("app de voz: desconectado")
 
     def estado_remoto(self) -> dict[str, Any]:
         rede = remoto.rede(self.n.portal.porta if self.n.portal else 0).para_tela()

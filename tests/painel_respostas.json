@@ -586,7 +586,15 @@
     "qr": "Exemplo",
     "fixo": "",
     "porta": 8796
-   }
+   },
+   "app_voz": [
+    {
+     "id": "a1b2c3d4",
+     "nome": "Android · Zé Voz",
+     "desde": 1791990000.0,
+     "uso": 1792000000.0
+    }
+   ]
   },
   "sessoes": [
    {
