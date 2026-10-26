@@ -233,6 +233,13 @@ const ACOES = {
   "tunel-ativar": async (b) => { const r = await ocupado(b, () => api("tunel/ativar", {})); toast(r.aviso); await recarregar(); },
   whatsapp: async (b) => { const r = await ocupado(b, () => api("mensagens/whatsapp", { ligar: !!b.dataset.ligar })); toast(r.aviso); await recarregar(); },
   "tunel-desativar": async (b) => { const r = await ocupado(b, () => api("tunel/desativar", {})); toast(r.aviso); await recarregar(); },
+  "tunel-fixar": async (b) => {
+    try {
+      const r = await ocupado(b, () => api("tunel/fixar", { colado: valorCampo("fixo-colado").value, endereco: valorCampo("fixo-endereco").value }));
+      toast(r.aviso, 8000); await recarregar();
+    } catch (erro) { mostrar("resultado-fixo", false, erro.message); }
+  },
+  "tunel-rapido": (b) => confirmar(b, "Voltar ao endereço automático?", async () => { const r = await api("tunel/rapido", {}); toast(r.aviso); await recarregar(); }),
   "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
   menu: () => {

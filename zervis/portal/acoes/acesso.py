@@ -22,7 +22,9 @@ class AcoesAcesso(Pagina):
         "desativar_remoto",
         "desativar_tunel",
         "estado_remoto",
+        "fixar_tunel",
         "tunel",
+        "tunel_rapido",
     )
 
     def remoto(self) -> dict[str, Any]:
@@ -38,6 +40,20 @@ class AcoesAcesso(Pagina):
     def ativar_tunel(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
             aviso = self.n.ativar_tunel()
+        except remoto.RemotoErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.painel.remoto(), "aviso": aviso}
+
+    def fixar_tunel(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            aviso = self.n.fixar_tunel(str(dados.get("colado", "")), str(dados.get("endereco", "")))
+        except remoto.RemotoErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.painel.remoto(), "aviso": aviso}
+
+    def tunel_rapido(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            aviso = self.n.tunel_rapido()
         except remoto.RemotoErro as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {**self.painel.remoto(), "aviso": aviso}

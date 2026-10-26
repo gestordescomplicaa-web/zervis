@@ -53,6 +53,8 @@
     "remoto/desativar",
     "tunel/ativar",
     "tunel/desativar",
+    "tunel/fixar",
+    "tunel/rapido",
     "mensagens/whatsapp",
     "whatsapp/conectar",
     "whatsapp/desconectar",

@@ -9,11 +9,17 @@ No celular basta o navegador, a senha do painel e, se quiser, o ícone na tela i
 - O Zé usa o `cloudflared` da máquina, ou baixa o binário oficial na versão fixada e confere o
   SHA-256, só quando a pessoa ativa o acesso.
 - O túnel rápido não pede conta, mas o endereço muda a cada vez que sobe: o painel mostra o novo
-  endereço e o QR. Com um domínio próprio no Cloudflare, o endereço fica fixo (adiante).
+  endereço e o QR.
+- O túnel fixo (26/10/2026) usa um domínio da pessoa no Cloudflare: ela cria o túnel no painel do
+  Cloudflare, cola aqui o comando que ele dá (o token vai para um arquivo 0600, lido pelo
+  `--token-file`, nunca na linha de comando) e diz o endereço. O endereço não muda mais: o app
+  instalado no celular, o app de voz e as notificações dependem disso.
 - Tudo o que chega pelo túnel é de outro aparelho: o painel exige a senha (o cabeçalho do
   Cloudflare marca o pedido como remoto, mesmo que o `Host` diga o contrário).
 """
 
+import base64
+import binascii
 import json
 import logging
 import platform
@@ -51,6 +57,10 @@ PACOTES = {
 PASTA = lugares.DADOS / "cloudflared" / VERSAO
 ESCOLHA = lugares.CONFIG / "tunel.json"
 ENDERECO = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
+TOKEN = lugares.CONFIG / "tunel-token"  # o token do túnel fixo (0600)
+CONECTADO = re.compile(r"Registered tunnel connection")  # o túnel fixo ligou ao Cloudflare
+_TOKEN = re.compile(r"eyJ[A-Za-z0-9_\-+/=]{40,}")
+_NOME = re.compile(r"(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}")
 ESPERA_S = (2.0, 5.0, 15.0, 30.0, 60.0)
 ENCERRADO = frozenset({0, -signal.SIGTERM, -signal.SIGINT})
 
@@ -74,18 +84,82 @@ def garantir(pasta: Path = PASTA, abrir: Any = urllib.request.urlopen) -> Path:
     return pasta / "cloudflared"
 
 
-def escolhido(arquivo: Path = ESCOLHA) -> bool:
+def _escolha(arquivo: Path) -> dict[str, Any]:
     try:
-        return bool(json.loads(arquivo.read_text()).get("ativo"))
-    except (OSError, ValueError, AttributeError):
-        return False
+        dados = json.loads(arquivo.read_text())
+    except (OSError, ValueError):
+        return {}
+    return dados if isinstance(dados, dict) else {}
+
+
+def _gravar_escolha(arquivo: Path, dados: dict[str, Any]) -> None:
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    temporario = arquivo.with_suffix(".next")
+    temporario.write_text(json.dumps(dados))
+    temporario.replace(arquivo)
+
+
+def escolhido(arquivo: Path = ESCOLHA) -> bool:
+    return bool(_escolha(arquivo).get("ativo"))
 
 
 def escolher(ativo: bool, arquivo: Path = ESCOLHA) -> None:
-    arquivo.parent.mkdir(parents=True, exist_ok=True)
-    temporario = arquivo.with_suffix(".next")
-    temporario.write_text(json.dumps({"ativo": ativo}))
-    temporario.replace(arquivo)
+    _gravar_escolha(arquivo, {**_escolha(arquivo), "ativo": ativo})
+
+
+class TunelErro(ValueError):
+    """O que a pessoa colou ou digitou não serve (a mensagem vai para a tela)."""
+
+
+def fixo(arquivo: Path = ESCOLHA, token: Path = TOKEN) -> str:
+    """O endereço do túnel fixo (`https://ze.exemplo.com.br`), ou "" no túnel rápido."""
+    endereco = _escolha(arquivo).get("fixo", "")
+    return endereco if isinstance(endereco, str) and endereco and token.is_file() else ""
+
+
+def ler_token(colado: str) -> str:
+    """O token no que o Cloudflare mostra (`cloudflared service install <token>`, o comando com
+    `--token`, ou só o token), conferido: é um JSON em base64 com a conta, o túnel e o segredo."""
+    achado = _TOKEN.search(colado.strip())
+    if achado is None:
+        raise TunelErro("Não achei o token do túnel. Cole o comando que o Cloudflare mostra.")
+    token = achado.group(0)
+    try:
+        dados = json.loads(base64.b64decode(token + "=" * (-len(token) % 4)))
+    except (binascii.Error, ValueError, UnicodeDecodeError):
+        raise TunelErro("O token do túnel está incompleto. Copie o comando inteiro.") from None
+    if not isinstance(dados, dict) or not {"a", "t", "s"} <= dados.keys():
+        raise TunelErro("Isso não é um token de túnel do Cloudflare.")
+    return token
+
+
+def ler_endereco(digitado: str) -> str:
+    """`ze.exemplo.com.br` ou `https://ze.exemplo.com.br/` vira `https://ze.exemplo.com.br`."""
+    nome = re.sub(r"^https?://", "", digitado.strip().lower()).split("/", 1)[0]
+    if not _NOME.fullmatch(nome) or nome.endswith(".trycloudflare.com"):
+        raise TunelErro("Digite o endereço do seu domínio, como ze.seudominio.com.br.")
+    return f"https://{nome}"
+
+
+def guardar_fixo(colado: str, digitado: str, arquivo: Path = ESCOLHA, token: Path = TOKEN) -> str:
+    """Guarda o token (0600) e o endereço; devolve o endereço."""
+    segredo, endereco = ler_token(colado), ler_endereco(digitado)
+    token.parent.mkdir(parents=True, exist_ok=True)
+    temporario = token.with_suffix(".next")
+    temporario.touch(mode=0o600)
+    temporario.chmod(0o600)
+    temporario.write_text(segredo)
+    temporario.replace(token)
+    _gravar_escolha(arquivo, {**_escolha(arquivo), "fixo": endereco})
+    return endereco
+
+
+def esquecer_fixo(arquivo: Path = ESCOLHA, token: Path = TOKEN) -> None:
+    """Volta ao túnel rápido: o token sai do disco."""
+    token.unlink(missing_ok=True)
+    dados = _escolha(arquivo)
+    dados.pop("fixo", None)
+    _gravar_escolha(arquivo, dados)
 
 
 UNIDADE = "zervis-tunel"  # o serviço do usuário que roda o cloudflared, fora do Zé
@@ -170,6 +244,17 @@ class Systemd:
         self._systemctl("stop", self.unidade)
 
 
+def endereco_pronto(registro: Path, endereco_fixo: str = "") -> str:
+    """O endereço pronto: o que o túnel rápido escreveu, ou o fixo depois de conectar."""
+    if not endereco_fixo:
+        return ultimo_endereco(registro)
+    try:
+        conectou = CONECTADO.search(registro.read_text(errors="replace"))
+    except OSError:
+        return ""
+    return endereco_fixo if conectou else ""
+
+
 def tem_systemd() -> bool:
     usuario = shutil.which("systemd-run") and subprocess.run(
         ["systemctl", "--user", "is-system-running"],  # noqa: S607
@@ -204,8 +289,12 @@ class Tunel:
         ao_cair: Callable[[str], None] | None = None,
         lancador: "Direto | Systemd | None" = None,
         registro: Path = REGISTRO,
+        escolha: Path = ESCOLHA,
+        token: Path = TOKEN,
     ) -> None:
         self.ao_endereco = ao_endereco
+        self.escolha, self.token = escolha, token
+        self.fixo = ""  # o endereço do túnel fixo em uso ("" no túnel rápido)
         self.ao_cair = ao_cair  # recebe o endereço que deixou de valer
         self.lancador = lancador if lancador is not None else lancador_padrao()
         self.registro = registro
@@ -223,15 +312,22 @@ class Tunel:
     def iniciar(self, porta: int, programa: Path) -> None:
         with self._trava:
             self._parado.clear()
-            self._comando = [
-                str(programa),
-                "tunnel",
-                "--no-autoupdate",
-                "--url",
-                f"http://127.0.0.1:{porta}",
-            ]
+            self.fixo = fixo(self.escolha, self.token)
+            # O túnel fixo leva ao painel pelo que a pessoa configurou no Cloudflare (o endereço
+            # público e o serviço http://127.0.0.1:<porta>); o token vem do arquivo, não da linha.
+            self._comando = (
+                [str(programa), "tunnel", "--no-autoupdate", "run", "--token-file", str(self.token)]
+                if self.fixo
+                else [
+                    str(programa),
+                    "tunnel",
+                    "--no-autoupdate",
+                    "--url",
+                    f"http://127.0.0.1:{porta}",
+                ]
+            )
             self.registro.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            if self.lancador.ativo() and (antes := ultimo_endereco(self.registro)):
+            if self.lancador.ativo() and (antes := self._lido()):
                 self.endereco = antes  # o túnel sobreviveu ao reinício do Zé: o mesmo endereço
                 log.info("túnel: já estava no ar em %s", antes)
                 self.ao_endereco(antes)
@@ -253,10 +349,13 @@ class Tunel:
         self.lancador.iniciar(self._comando, self.registro)
         log.info("túnel: subindo")
 
+    def _lido(self) -> str:
+        return endereco_pronto(self.registro, self.fixo)
+
     def _vigiar(self) -> None:
         """Lê o endereço que o cloudflared escreve e percebe quando ele cai."""
         while not self._parado.wait(1.0):
-            atual = ultimo_endereco(self.registro)
+            atual = self._lido()
             if atual and atual != self.endereco:
                 self.endereco, self._quedas = atual, 0
                 log.info("túnel: pronto em %s", atual)

@@ -1,5 +1,9 @@
 """O túnel do Cloudflare (roteiro, passo 4.3): o endereço lido e a escolha guardada."""
 
+import base64
+import io
+import json
+import stat
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -165,3 +169,119 @@ def test_tunel_de_pe_sem_endereco_anotado_sobe_de_novo(tmp_path: Path) -> None:
     t.iniciar(8795, tmp_path / "cloudflared")
     assert lancador.paradas == 1 and lancador.iniciados == 1
     t.soltar()
+
+
+# --- o túnel fixo, num domínio da pessoa (26/10/2026) ---
+
+TOKEN_FALSO = base64.b64encode(
+    json.dumps({"a": "conta-exemplo", "t": "0f0f0f0f-tunel", "s": "segredo-de-exemplo"}).encode()
+).decode()
+
+
+@pytest.mark.parametrize(
+    "colado",
+    [
+        f"sudo cloudflared service install {TOKEN_FALSO}",
+        f"cloudflared.exe service install {TOKEN_FALSO}",
+        f"cloudflared tunnel run --token {TOKEN_FALSO}\n",
+        TOKEN_FALSO.rstrip("="),
+    ],
+)
+def test_le_o_token_do_comando_que_o_cloudflare_mostra(colado: str) -> None:
+    assert tunel.ler_token(colado).rstrip("=") == TOKEN_FALSO.rstrip("=")
+
+
+@pytest.mark.parametrize(
+    "colado",
+    [
+        "",
+        "cloudflared service install",
+        "eyJ" + "A" * 60,
+        base64.b64encode(b'{"x": 1}' * 8).decode(),
+    ],
+)
+def test_recusa_o_que_nao_e_token_de_tunel(colado: str) -> None:
+    with pytest.raises(tunel.TunelErro):
+        tunel.ler_token(colado)
+
+
+@pytest.mark.parametrize(
+    ("digitado", "endereco"),
+    [
+        ("ze.exemplo.com.br", "https://ze.exemplo.com.br"),
+        ("https://Ze.Exemplo.com.br/", "https://ze.exemplo.com.br"),
+        ("http://ze.exemplo.com.br/entrar", "https://ze.exemplo.com.br"),
+    ],
+)
+def test_endereco_digitado_vira_https(digitado: str, endereco: str) -> None:
+    assert tunel.ler_endereco(digitado) == endereco
+
+
+@pytest.mark.parametrize(
+    "digitado", ["", "ze", "abc.trycloudflare.com", "ze exemplo.com", "-x.com"]
+)
+def test_recusa_endereco_que_nao_e_um_dominio(digitado: str) -> None:
+    with pytest.raises(tunel.TunelErro):
+        tunel.ler_endereco(digitado)
+
+
+def test_token_fica_num_arquivo_0600_e_a_escolha_guarda_o_endereco(tmp_path: Path) -> None:
+    escolha, token = tmp_path / "tunel.json", tmp_path / "tunel-token"
+    assert tunel.fixo(escolha, token) == ""
+    endereco = tunel.guardar_fixo(
+        f"cloudflared service install {TOKEN_FALSO}", "ze.exemplo.com.br", escolha, token
+    )
+    assert endereco == tunel.fixo(escolha, token) == "https://ze.exemplo.com.br"
+    assert token.read_text() == TOKEN_FALSO and stat.S_IMODE(token.stat().st_mode) == 0o600
+    assert TOKEN_FALSO not in escolha.read_text()  # o segredo só no arquivo dele
+    tunel.escolher(True, escolha)  # ligar e desligar não apaga o endereço fixo
+    assert tunel.escolhido(escolha) and tunel.fixo(escolha, token)
+    tunel.esquecer_fixo(escolha, token)
+    assert not token.exists() and tunel.fixo(escolha, token) == "" and tunel.escolhido(escolha)
+
+
+def test_tunel_fixo_sobe_pelo_arquivo_do_token_e_fica_pronto_ao_conectar(tmp_path: Path) -> None:
+    escolha, token = tmp_path / "tunel.json", tmp_path / "tunel-token"
+    tunel.guardar_fixo(TOKEN_FALSO, "ze.exemplo.com.br", escolha, token)
+    programa = tmp_path / "cloudflared"
+    programa.write_text(
+        "#!/bin/sh\n"
+        f'echo "$@" > "{tmp_path}/argumentos"\n'
+        "echo 'INF Registered tunnel connection connIndex=0 location=gru' >&2\n"
+        "exec sleep 30\n"
+    )
+    programa.chmod(0o755)
+    prontos: list[str] = []
+    t = tunel.Tunel(prontos.append, None, tunel.Direto(), tmp_path / "cf.log", escolha, token)
+    t.iniciar(8796, programa)
+    try:
+        _esperar(lambda: t.endereco == "https://ze.exemplo.com.br")
+        assert prontos == ["https://ze.exemplo.com.br"]
+        argumentos = (tmp_path / "argumentos").read_text()
+        assert f"run --token-file {token}" in argumentos
+        assert TOKEN_FALSO not in argumentos  # nunca na linha de comando (ps, systemctl)
+    finally:
+        t.parar()
+
+
+def test_confere_se_o_endereco_chega_a_este_painel() -> None:
+    from zervis.nucleo.servicos.remoto import chega_ao_painel
+
+    class Resposta(io.BytesIO):
+        def __enter__(self) -> "Resposta":
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+    assert chega_ao_painel(
+        "https://ze.exemplo.com.br", lambda *_a, **_k: Resposta('{"name": "Zérvis"}'.encode())
+    )
+    assert not chega_ao_painel(
+        "https://ze.exemplo.com.br", lambda *_a, **_k: Resposta(b"<html>outro site")
+    )
+
+    def sem_rede(*_a: object, **_k: object) -> Resposta:
+        raise OSError("sem rede")
+
+    assert not chega_ao_painel("https://ze.exemplo.com.br", sem_rede)

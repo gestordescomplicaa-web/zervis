@@ -31,13 +31,14 @@ def reiniciar_servico() -> None:
 
 def esperar_endereco(
     registro: Path,
+    fixo: str = "",
     espera_s: float = ESPERA_S,
     agora: Callable[[], float] = time.monotonic,
     dormir: Callable[[float], None] = time.sleep,
 ) -> str:
     fim = agora() + espera_s
     while agora() < fim:
-        if endereco := tunel.ultimo_endereco(registro):
+        if endereco := tunel.endereco_pronto(registro, fixo):
             return endereco
         dormir(1.0)
     return ""
@@ -54,7 +55,9 @@ def preparar(
 ) -> list[str]:
     """As linhas para o fim da instalação."""
     if acesso.tem_senha:
-        endereco = tunel.ultimo_endereco(registro) if tunel.escolhido(escolha) else ""
+        endereco = (
+            tunel.endereco_pronto(registro, tunel.fixo(escolha)) if tunel.escolhido(escolha) else ""
+        )
         return [
             "O acesso ao painel já foi criado.",
             f"Abra {endereco} e entre com a senha." if endereco else _tunel_ssh(),
@@ -66,7 +69,7 @@ def preparar(
     if not no_ar:
         registro.write_bytes(b"")  # um endereço antigo anotado não vale: o Zé sobe um novo
     reiniciar()
-    endereco = esperar_endereco(registro, espera_s, dormir=dormir)
+    endereco = esperar_endereco(registro, tunel.fixo(escolha), espera_s, dormir=dormir)
     if not endereco:
         return [
             "O endereço seguro não respondeu. Acesse pelo túnel SSH e use o código abaixo.",

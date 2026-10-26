@@ -123,6 +123,8 @@ class Acoes:
             "remoto/desativar": self.desativar_remoto,
             "tunel/ativar": self.ativar_tunel,
             "tunel/desativar": self.desativar_tunel,
+            "tunel/fixar": self.fixar_tunel,
+            "tunel/rapido": self.tunel_rapido,
             "mensagens/whatsapp": self.mudar_mensagens,
             "whatsapp/conectar": self.conectar_whatsapp,
             "whatsapp/desconectar": self.desconectar_whatsapp,
