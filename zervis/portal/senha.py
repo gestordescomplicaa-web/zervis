@@ -60,6 +60,8 @@ SO_NO_PC = {
     "acesso/codigo/desligar",
     "tunel/ativar",
     "tunel/desativar",
+    "tunel/fixar",
+    "tunel/rapido",
     "remoto/ativar",
     "remoto/desativar",
     "ze/aplicar",

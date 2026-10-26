@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Endereço fixo do acesso de qualquer lugar, num domínio da pessoa no Cloudflare (Voz → Acesso de
+  qualquer lugar → "Usar um endereço fixo"): cola-se o comando que o Cloudflare mostra ao criar o
+  túnel e digita-se o endereço. O token vai para `~/.config/zervis/tunel-token` (0600) e o
+  `cloudflared` o lê pelo `--token-file`, nunca na linha de comando. O Zé confere se o endereço
+  chega mesmo ao painel e, se não, diz o que ajustar no Cloudflare. "Voltar ao automático" retorna
+  ao endereço que muda a cada reinício. É a base do app de voz e das notificações do celular.
 - Excluir uma sessão com cópia isolada: os atalhos `zervis-*` que o próprio Zé põe na cópia (as
   skills marcadas para as sessões, em `.claude/skills` e `.agents/skills`) saem antes da
   conferência. Antes, só eles, ignorados pelo Git, travavam a exclusão com "A cópia isolada tem

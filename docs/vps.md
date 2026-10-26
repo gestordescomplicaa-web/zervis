@@ -73,6 +73,13 @@ Código de primeiro acesso: ABCD-EFGH (vale 1 hora)
 Sem túnel SSH em nenhum momento. O endereço é HTTPS, criado pelo Cloudflare sem conta e sem abrir
 porta no servidor; ele muda quando o servidor reinicia (o painel mostra o novo em Voz).
 
+**Endereço fixo, num domínio seu.** Em Voz → Acesso de qualquer lugar → "Usar um endereço fixo":
+crie um túnel no Cloudflare (Zero Trust → Networks → Tunnels → Create a tunnel, tipo
+Cloudflared), cole o comando de instalação que ele mostra (sem rodar) e, em Public Hostname,
+aponte o endereço (por exemplo `ze.seudominio.com.br`) para HTTP `127.0.0.1:<porta do painel>`.
+O token fica num arquivo `0600` e o `cloudflared` o lê pelo `--token-file`. O endereço não muda
+mais: o mesmo nome serve no PC e, depois, na VPS (mude o serviço do túnel de máquina).
+
 Num servidor, um aparelho que entrou só com a senha pode usar o Zé e ligar o código do
 autenticador, mais nada; os ajustes pedem a entrada com o código. Desligar o código e desativar o
 acesso de qualquer lugar ficam só pelo túnel SSH, para ninguém tirar as proteções pelas quais
