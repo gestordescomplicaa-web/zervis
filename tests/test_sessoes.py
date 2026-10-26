@@ -247,6 +247,33 @@ def test_excluir_copia_preserva_trabalho_sem_commit(
     assert sessoes.ler(s.id).id == s.id and sessoes.mensagens(s.id)
 
 
+def test_excluir_copia_com_os_atalhos_das_skills_do_ze(tmp_path: Path, raiz: Path) -> None:
+    """Os atalhos que o próprio Zé põe na cópia não são trabalho a preservar (26/10/2026)."""
+    from zervis.habilidades.skills import Skills
+    from zervis.oficina.sessoes import ligar_skills_no_projeto
+
+    projeto = raiz / "projetos/loja"
+    for args in (
+        ["init", "-q"],
+        ["config", "user.email", "t@t"],
+        ["config", "user.name", "t"],
+        ["commit", "--allow-empty", "-qm", "base"],
+    ):
+        assert _git(projeto, *args).returncode == 0
+    skills = Skills(tmp_path / "skills")
+    (tmp_path / "skills/deploy").mkdir(parents=True)
+    (tmp_path / "skills/deploy/SKILL.md").write_text(
+        "---\nname: deploy\ndescription: Como publicar\nsessoes: sim\n---\n"
+    )
+    sessoes, _ = nova(tmp_path, raiz, lambda *args: None)
+    s = sessoes.criar("iso", str(projeto), isolada=True)
+    ligar_skills_no_projeto(Path(s.worktree), skills)
+    assert (Path(s.worktree) / ".claude/skills/zervis-deploy").is_symlink()
+    assert "branch" in sessoes.excluir(s.id)
+    assert not Path(s.worktree).exists()
+    assert (tmp_path / "skills/deploy/SKILL.md").is_file()  # a skill do Zé continua
+
+
 def test_excluir_copia_limpa_preserva_branch(tmp_path: Path, raiz: Path) -> None:
     projeto = raiz / "projetos/loja"
     for args in (

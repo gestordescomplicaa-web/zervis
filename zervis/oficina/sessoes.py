@@ -1140,6 +1140,9 @@ class Sessoes:
         # Espera o cancelamento e os callbacks antes de conferir o Git e remover os arquivos.
         self._encerrar_agente(id_)
         if s.worktree and Path(s.worktree).exists():
+            # Os atalhos `zervis-*` das skills são do próprio Zé, não trabalho: saem antes da
+            # conferência (26/10/2026: só eles, ignorados pelo Git, travavam a exclusão).
+            ligar_skills_no_projeto(Path(s.worktree), None)
             estado = _git(
                 Path(s.worktree), "status", "--porcelain", "--untracked-files=all", "--ignored"
             )
