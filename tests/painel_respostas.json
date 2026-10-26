@@ -584,7 +584,15 @@
     "ativo": true,
     "endereco": "https://exemplo.invalid",
     "qr": "Exemplo"
-   }
+   },
+   "app_voz": [
+    {
+     "id": "a1b2c3d4",
+     "nome": "Android · Zé Voz",
+     "desde": 1791990000.0,
+     "uso": 1792000000.0
+    }
+   ]
   },
   "sessoes": [
    {

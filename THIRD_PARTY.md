@@ -55,3 +55,5 @@ no `claude-agent-sdk`, instalado do PyPI como dependência (ADR 0035).
 [TypeScript](https://github.com/microsoft/TypeScript), Microsoft e colaboradores, Apache-2.0.
 Verifica os comentários JSDoc do painel com `checkJs` e `noEmit`; não entra na página nem exige
 compilação na instalação do usuário. Dependência de desenvolvimento fixada em `package-lock.json`.
+| `android/` (o app de voz "Zé Voz") usa o OkHttp 5.5.1 como dependência para o WebSocket, embutida no APK compilado pela CI (nenhum código copiado) | OkHttp (github.com/square/okhttp) | Apache-2.0 | Square, Inc. |
+| `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp` (ícone do app de voz), cópia de `zervis/portal/web/icones/ze-192.webp` | Criado no Blender para o Zé | AGPL-3.0-or-later, como o Zé | gdautomacao.ia |

@@ -34,7 +34,34 @@ PAGINAS.voz = async function() {
         ${r.instalado ? `<div class="parte"><h3 class="subtitulo">Rede privada (Tailscale)</h3>${sub(r.ativo ? `Ativa em <span class="mono">${esc(r.endereco)}</span>` : "Alternativa ao túnel, para quem já usa o Tailscale.")}
           ${r.ativo && r.firewall ? `<p class="aviso">Libere a voz no firewall: <span class="mono">${esc(r.firewall)}</span></p>` : ""}
           ${r.conectado ? `<div class="linha">${r.ativo ? botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar")}</div>` : ""}</div>` : ""}`)}
+      ${appVoz(r)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
       ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;
   };
+
+/** O código de pareamento do app de voz que está na tela (some ao recarregar a página).
+ * @type {{codigo: string, endereco: string, qr: string} | null} */
+let codigoApp = null;
+const APK_VOZ = "https://github.com/gestordescomplicaa-web/zervis/releases/download/app-voz/ze-voz.apk";
+
+/** O app de voz do Android: pareado com a câmera do celular, abre só a voz. */
+function appVoz(r) {
+  const aparelhos = r.app_voz || [];
+  const lista = aparelhos.map((a) => `<div class="linha aparelho"><span>${esc(a.nome)}</span><small>${a.uso ? "usado " + new Date(a.uso * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "pareado"}</small>${botao("Remover", "app-voz-remover", `data-id="${esc(a.id)}"`, "discreta")}</div>`).join("");
+  const pareando = codigoApp ? `<div class="acesso-qr">${codigoApp.qr}<div class="campos"><p>Com o app instalado, aponte a <strong>câmera</strong> do celular para o código: o Android abre o app e ele pareia sozinho.</p>
+      <p class="nota">Ou, no app, digite o endereço e o código: <span class="mono">${esc(codigoApp.endereco)}</span> · <span class="mono">${esc(codigoApp.codigo)}</span>. Vale 10 minutos, uma vez.</p></div></div>` : "";
+  return cartao("", `<div class="cabeca"><h2>App de voz (Android)</h2>${aparelhos.length ? '<span class="etiqueta bom">Pareado</span>' : ""}</div>
+    ${sub("Fale com o Zé com o celular bloqueado, no bolso, pelo fone. Sem tela: uma notificação com Falar e Desconectar.")}
+    <p class="nota">Instale no celular: <a href="${APK_VOZ}" target="_blank" rel="noopener">baixar o ze-voz.apk</a>.</p>
+    ${pareando}
+    <div class="linha">${botao(codigoApp ? "Gerar outro código" : "Parear celular", "app-voz-parear", r.tunel.endereco ? "" : "disabled", aparelhos.length ? "" : "principal")}</div>
+    ${r.tunel.endereco ? "" : '<p class="nota">Requer o acesso de qualquer lugar ativo (acima).</p>'}
+    ${lista ? `<div class="parte"><h3 class="subtitulo">Celulares pareados</h3>${lista}</div>` : ""}`);
+}
+
+Object.assign(ACOES, {
+  "app-voz-parear": async (b) => { codigoApp = await ocupado(b, () => api("voz-app/codigo", {})); await abrir(); },
+  "app-voz-remover": (b) => confirmar(b, "Remover este celular?", async () => { const r = await api("voz-app/remover", { id: b.dataset.id }); toast(r.aviso); await abrir(); }),
+});
+

@@ -2,6 +2,7 @@
 
 import logging
 from typing import Any
+from urllib.parse import urlencode
 
 import segno
 
@@ -17,6 +18,7 @@ log = logging.getLogger(__name__)
 class AcoesAcesso(Pagina):
     dependencias = (
         "acesso",
+        "aparelhos_voz",
         "ativar_remoto",
         "ativar_tunel",
         "desativar_remoto",
@@ -26,7 +28,24 @@ class AcoesAcesso(Pagina):
     )
 
     def remoto(self) -> dict[str, Any]:
-        return dict(self.n.estado_remoto())
+        return {**self.n.estado_remoto(), "app_voz": self.n.aparelhos_voz.lista()}
+
+    def codigo_app_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O código de pareamento do app de voz e o QR que a câmera do celular abre no app."""
+        endereco = self.n.tunel.endereco
+        if not endereco:
+            raise PedidoInvalido("Ative o acesso de qualquer lugar antes: o app usa esse endereço.")
+        codigo = self.n.aparelhos_voz.novo_codigo()
+        link = "zervis-voz://parear?" + urlencode({"e": endereco, "c": codigo})
+        qr = segno.make(link, error="m").svg_inline(
+            scale=5, dark="#070c11", light="#ffffff", border=2
+        )
+        return {"codigo": codigo, "endereco": endereco, "qr": qr}
+
+    def remover_app_voz(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if not self.n.aparelhos_voz.remover(str(dados.get("id", ""))):
+            raise PedidoInvalido("Aparelho não encontrado.")
+        return {**self.painel.remoto(), "aviso": "Aparelho removido: a chave dele não vale mais."}
 
     def ativar_remoto(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:

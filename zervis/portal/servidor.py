@@ -11,6 +11,10 @@ Outro aparelho (celular, outro computador) só chega por um nome permitido (o `t
 repassa o dele) e passa pela tela "Entrar": sem o cookie do aparelho (`zervis/portal/senha.py`),
 só a tela de entrada e o que ela usa ficam abertos.
 
+O app de voz do Android (`zervis/portal/voz_app.py`) também não usa o cookie: pareia em
+`/voz-app/parear` com o código de uso único que o painel mostra e abre a voz em `/voz-app/ws` com
+a chave que recebeu, no cabeçalho `Authorization`. A chave só abre a voz, nada do painel.
+
 A volta do login de um conector (`/oauth/retorno`, ADR 0037) também abre sem o cookie: ela vem
 de outro site, e o cookie `SameSite=Strict` não acompanha. Só serve a quem traz o `state` de um
 login que o próprio painel começou, e o código só vale com o verificador que fica no Zé.
@@ -31,6 +35,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from zervis import ambiente
 from zervis.portal.senha import Acesso, SenhaErro
+from zervis.portal.voz_app import AparelhosDeVoz, PareamentoErro
 from zervis.transporte import websocket
 
 log = logging.getLogger(__name__)
@@ -111,6 +116,8 @@ COOKIE = "ze_acesso"
 
 Leitura = Callable[[], Any]
 Voz = Callable[[websocket.Conexao, int], None]  # o canal de voz do navegador (bloqueia até fechar)
+# O do app de voz: a conexão, a taxa, o modo ("chamado" ou "ao_vivo") e o aparelho pareado.
+VozApp = Callable[[websocket.Conexao, int, str, dict[str, Any]], None]
 Escrita = Callable[[dict[str, Any]], Any]
 Envio = Callable[[bytes, dict[str, str]], Any]  # corpo cru (um arquivo) e os parâmetros da URL
 MAXIMO_ENVIO = 20 * 1024 * 1024
@@ -134,8 +141,12 @@ class Portal:
         so_no_pc: set[str] | None = None,
         servidor: bool = False,
         retorno_oauth: Callable[[str], tuple[bool, str]] | None = None,
+        voz_app: VozApp | None = None,
+        aparelhos_voz: AparelhosDeVoz | None = None,
     ) -> None:
         self.acesso = acesso
+        self.voz_app = voz_app
+        self.aparelhos_voz = aparelhos_voz
         self.retorno_oauth = retorno_oauth
         # Num servidor não há o "próprio PC": quem entrou com a senha e o código do autenticador
         # faz os ajustes de fora (menos desligar as proteções e o acesso pelo qual entrou).
@@ -377,6 +388,56 @@ class Portal:
                     return
                 portal.voz(conexao, taxa)
 
+            def _parear_voz_app(self) -> None:
+                """O app troca o código do painel pela chave só de voz."""
+                if portal.aparelhos_voz is None:
+                    self._json(404, {"erro": "não existe"})
+                    return
+                tamanho = int(self.headers.get("Content-Length") or 0)
+                if tamanho > 4096:
+                    self._json(413, {"erro": "grande demais"})
+                    return
+                try:
+                    dados = json.loads(self.rfile.read(tamanho) or b"{}")
+                    chave = portal.aparelhos_voz.parear(
+                        str(dados.get("codigo", "")), str(dados.get("nome", ""))
+                    )
+                except PareamentoErro as erro:
+                    self._json(403, {"erro": str(erro)})
+                    return
+                except (ValueError, AttributeError):
+                    self._json(400, {"erro": "JSON inválido"})
+                    return
+                log.warning("app de voz: aparelho pareado")
+                self._json(200, {"chave": chave})
+
+            def _voz_app(self) -> None:
+                """A voz do app: a chave do pareamento no cabeçalho, sem cookie nem origem (não é
+                um navegador, e a chave não abre mais nada)."""
+                autorizacao = self.headers.get("Authorization", "")
+                chave = autorizacao[7:] if autorizacao.startswith("Bearer ") else ""
+                aparelho = portal.aparelhos_voz.aparelho(chave) if portal.aparelhos_voz else None
+                if portal.voz_app is None or aparelho is None:
+                    self._json(403, {"erro": "voz"})
+                    return
+                conexao = websocket.aceitar(self)
+                if conexao is None:
+                    self._json(400, {"erro": "esperado WebSocket"})
+                    return
+                try:
+                    self.connection.settimeout(10)
+                    _, primeira = conexao.receber()
+                    self.connection.settimeout(None)
+                    dados = json.loads(primeira)
+                    taxa = int(dados.get("taxa", 16000))
+                    modo = str(dados.get("modo", "chamado"))
+                except (OSError, ValueError, AttributeError, websocket.FechouErro):
+                    conexao.fechar()
+                    return
+                portal.voz_app(
+                    conexao, taxa, modo if modo in ("chamado", "ao_vivo") else "chamado", aparelho
+                )
+
             def _terminal(self) -> None:
                 if portal.entrada_terminal is None:
                     self._json(404, {"erro": "não existe"})
@@ -462,6 +523,9 @@ class Portal:
                 if caminho == "/api/terminal/ws":
                     self._terminal()
                     return
+                if caminho == "/voz-app/ws":
+                    self._voz_app()
+                    return
                 if caminho == "/entrar":
                     if self._entrou():
                         self._ir("/")
@@ -501,6 +565,9 @@ class Portal:
 
             def do_POST(self) -> None:
                 caminho = self.path.split("?", 1)[0]
+                if caminho == "/voz-app/parear" and self._host_local():
+                    self._parear_voz_app()
+                    return
                 if caminho in ("/entrar", "/sair") and self._host_local():
                     if caminho == "/entrar":
                         self._entrar()

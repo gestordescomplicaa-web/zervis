@@ -42,22 +42,34 @@ def reamostrar(pcm: bytes, taxa: int) -> bytes:
 class VozNavegador:
     """Uma conexão de voz aberta pelo botão Ao vivo do navegador."""
 
-    def __init__(self, conexao: Conexao, taxa: int = TAXA) -> None:
+    def __init__(self, conexao: Conexao, taxa: int = TAXA, ao_vivo: bool = True) -> None:
         self.conexao = conexao
         self.taxa = taxa if 8000 <= taxa <= 96000 else TAXA
+        # O navegador é sempre ao vivo (ADR 0023); o app de voz do celular escolhe: ao vivo ou o
+        # chamado ("Ei Zé" e o botão do fone), como o microfone do PC.
+        self.ao_vivo = ao_vivo
 
     @property
     def conectada(self) -> bool:
         return self.conexao.aberta
 
-    def ouvir(self, ao_quadro: Callable[[bytes], None]) -> None:
-        """Entrega o microfone em quadros de 80 ms até a conexão fechar."""
+    def ouvir(
+        self,
+        ao_quadro: Callable[[bytes], None],
+        ao_controle: Callable[[dict[str, object]], None] | None = None,
+    ) -> None:
+        """Entrega o microfone em quadros de 80 ms até a conexão fechar; as mensagens de texto
+        (o botão do fone, no app) vão para `ao_controle`."""
         resto = b""
         ultimo = time.monotonic()
         try:
             while True:
                 tipo, dados = self.conexao.receber()
                 if tipo != BINARIO:
+                    if ao_controle is not None:
+                        with contextlib.suppress(ValueError, UnicodeDecodeError):
+                            if isinstance(mensagem := json.loads(dados), dict):
+                                ao_controle(mensagem)
                     continue
                 agora = time.monotonic()
                 if agora - ultimo > LACUNA_S:

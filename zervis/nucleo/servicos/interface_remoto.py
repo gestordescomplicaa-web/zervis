@@ -26,6 +26,11 @@ class InterfaceRemoto(InterfaceServico):
     def voz_pelo_navegador(self, conexao: Conexao, taxa: int) -> None:
         servico(self, ServicoRemoto).voz_pelo_navegador(conexao, taxa)
 
+    def voz_pelo_app(
+        self, conexao: Conexao, taxa: int, modo: str, aparelho: dict[str, Any]
+    ) -> None:
+        servico(self, ServicoRemoto).voz_pelo_app(conexao, taxa, modo, aparelho)
+
     def estado_remoto(self) -> dict[str, Any]:
         return servico(self, ServicoRemoto).estado_remoto()
 

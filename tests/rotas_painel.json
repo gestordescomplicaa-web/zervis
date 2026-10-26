@@ -53,6 +53,8 @@
     "remoto/desativar",
     "tunel/ativar",
     "tunel/desativar",
+    "voz-app/codigo",
+    "voz-app/remover",
     "mensagens/whatsapp",
     "whatsapp/conectar",
     "whatsapp/desconectar",
