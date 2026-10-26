@@ -22,6 +22,7 @@ from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import DADOS
 from zervis.sistema.vigia import Eventos, Vigia
 from zervis.sistema.vigia_n8n import VigiaN8n
+from zervis.versoes import DIA_S, Versoes
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,9 @@ class ContextoAutomacoes(Protocol):
     vigia_n8n: VigiaN8n
     _n8n_em: Any
     _n8n_conferindo: threading.Event
+    versoes: Versoes
+    _versoes_em: Any
+    _versoes_procurando: threading.Event
 
     def _na_linha(self, tipo: str, texto: str) -> None: ...
     async def _rodar_pergunta(self, job: Job) -> None: ...
@@ -85,14 +89,37 @@ class ServicoAutomacoes:
             self.n._n8n_conferindo.set()
             # Pela rede, com tempo limite: numa thread, para nunca atrasar os lembretes.
             threading.Thread(target=self._vigiar_n8n, name="vigia-n8n", daemon=True).start()
+        if agora - self.n._versoes_em >= DIA_S and not self.n._versoes_procurando.is_set():
+            self.n._versoes_em = agora
+            self.n._versoes_procurando.set()
+            threading.Thread(target=self._procurar_versao, name="versoes", daemon=True).start()
         if agora - self.n._agenda_em >= 30:
             self.n._agenda_em = agora
+            # A atualização pelo painel termina depois que este processo (o novo) subiu.
+            if (atualizou := self.n.versoes.resultado_novo()) is not None:
+                atividade.PADRAO.registrar("execucao", atualizou, origem="atualizacoes")
+                self.n._na_linha("aviso", atualizou)
+                if modo_fala.falar(self.n.modo_fala, "notificacao"):
+                    self.n.eventos.put(e.Aviso(atualizou))
             for texto, expira in self.n.calendario.vencidos(agora):
                 log.info("agenda: %s", texto)
                 if self.n.maquina.estado is e.Estado.ATIVO:
                     self.n.eventos.put(e.Aviso(texto))
                 else:
                     self.n.fila.guardar(texto, "agenda", expira)  # some quando a reunião começa
+
+    def _procurar_versao(self) -> None:
+        """A procura diária de atualização (pela rede, numa thread): na tela e, se o modo de
+        fala deixar, falada. Nunca instala."""
+        try:
+            if (texto := self.n.versoes.procurar_do_dia()) is not None:
+                self.n._na_linha("aviso", texto)
+                if modo_fala.falar(self.n.modo_fala, "notificacao"):
+                    self.n.eventos.put(e.Aviso(texto))
+        except Exception:
+            log.exception("procura de atualização falhou")
+        finally:
+            self.n._versoes_procurando.clear()
 
     def _vigiar_n8n(self) -> None:
         """Os n8n dos conectores (ADR 0038): "fora do ar" e "voltou", na tela, na Atividade e

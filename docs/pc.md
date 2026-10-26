@@ -47,6 +47,17 @@ O instalador põe o comando em `~/.local/bin/zervis` (sem sobrescrever outro de 
 - `zervis logs`, `zervis abrir` e `zervis uninstall` (os dados ficam; `--apagar-dados` pede a
   frase de confirmação).
 
+O `update` também está no painel, em **Ajustes → Atualizações** (`zervis/versoes.py`):
+- **Procurar** busca a origem no canal escolhido ("Versões publicadas", o padrão, ou
+  "Desenvolvimento") e lista o que muda, tirado das entradas novas do `CHANGELOG.md`. O Zé
+  procura sozinho uma vez por dia e só avisa (a bolinha no menu e um aviso); nunca instala.
+- **Atualizar agora** roda o `zervis update` numa unidade própria do systemd
+  (`systemd-run --user --unit=zervis-atualizar`): o update reinicia o Zé, e um processo filho
+  dele morreria junto. O resultado fica em `~/.local/state/zervis/atualizar.json`; o painel
+  recarrega quando o Zé volta e mostra o que houve, com o registro em "Detalhes".
+- Recusa com uma sessão trabalhando (o reinício a cortaria) ou durante o autodesenvolvimento.
+  Num servidor, só de um aparelho que entrou com o código do autenticador.
+
 ## Verificação
 
 Os testes de `tests/test_instalador_pc.py` executam os scripts reais e o `make instalar` em

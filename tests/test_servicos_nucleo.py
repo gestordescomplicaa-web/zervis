@@ -101,6 +101,9 @@ def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
         _agenda_em=agora,
         _n8n_em=agora,  # o vigia do n8n acabou de rodar
         _n8n_conferindo=threading.Event(),
+        _versoes_em=agora,  # a procura de atualização também
+        _versoes_procurando=threading.Event(),
+        versoes=SimpleNamespace(resultado_novo=lambda: None),
     )
     ServicoAutomacoes(contexto)._agendador(agora)
     assert anotadas == ["Reunião."]

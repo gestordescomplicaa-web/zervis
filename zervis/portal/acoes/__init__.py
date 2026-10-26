@@ -13,6 +13,7 @@ from zervis.oficina import arquivos
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.acesso import AcoesAcesso
 from zervis.portal.acoes.atendimento import AcoesAtendimento
+from zervis.portal.acoes.atualizacoes import AcoesAtualizacoes
 from zervis.portal.acoes.cerebro import AcoesCerebro
 from zervis.portal.acoes.conectores import AcoesConectores
 from zervis.portal.acoes.configuracao import AcoesConfiguracao
@@ -46,6 +47,7 @@ class Acoes:
             AcoesMemoria,
             AcoesConectores,
             AcoesInicio,
+            AcoesAtualizacoes,
         ):
             pagina = tipo(
                 self, Servicos({nome: partial(getattr, nucleo, nome) for nome in tipo.dependencias})
@@ -85,6 +87,7 @@ class Acoes:
             "pastas": self.pastas,
             "conectores": self.conectores,
             "atendimento": self.atendimento,
+            "atualizacoes": self.atualizacoes,
         }
 
     def escritas(self) -> dict[str, Escrita]:
@@ -197,6 +200,9 @@ class Acoes:
             "cerebro/escolher": self.escolher_cerebro,
             "cerebro/modelo": self.modelo_do_cerebro,
             "omniroute/salvar": self.salvar_omniroute,
+            "atualizacoes/procurar": self.procurar_atualizacao,
+            "atualizacoes/canal": self.canal_de_atualizacao,
+            "atualizacoes/aplicar": self.aplicar_atualizacao,
         }
 
     def envios(self) -> dict[str, Any]:

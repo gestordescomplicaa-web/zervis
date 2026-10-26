@@ -2,7 +2,7 @@
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
 /** @type {Record<string, string>} */
-const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/melhorias.js","conectores":"/paginas/conectores.js","conversa":"/paginas/conversa.js","skills":"/paginas/skills.js","memoria":"/paginas/memoria.js","atendimento":"/paginas/atendimento.js","sessoes":"/paginas/sessoes.js","inicio":"/paginas/inicio.js","foco":"/paginas/foco.js","automacoes":"/paginas/automacoes.js","modelos":"/paginas/modelos.js","perfil":"/paginas/perfil.js","configurar":"/paginas/configurar.js","voz":"/paginas/voz.js"};
+const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/melhorias.js","conectores":"/paginas/conectores.js","conversa":"/paginas/conversa.js","skills":"/paginas/skills.js","memoria":"/paginas/memoria.js","atendimento":"/paginas/atendimento.js","sessoes":"/paginas/sessoes.js","inicio":"/paginas/inicio.js","foco":"/paginas/foco.js","automacoes":"/paginas/automacoes.js","modelos":"/paginas/modelos.js","perfil":"/paginas/perfil.js","configurar":"/paginas/configurar.js","voz":"/paginas/voz.js","atualizacoes":"/paginas/atualizacoes.js"};
 const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que ocupam a tela
 /** @type {Record<string, string[]>} */
 const DEPENDENCIAS = {
@@ -114,10 +114,11 @@ let cicloAtualizacao = 0;
 /** @param {number} s */
 const relogioMinutos = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, "0")}`;
 const atualizando = () => ["aplicando", "aguardando"].includes(atualizacao?.estado);
+let versaoAplicada = 0; // quando a página Atualizações mandou atualizar (o Zé vai reiniciar)
 // Só a fase de reinício explica a desconexão; nas demais, a faixa continua avisando a queda.
-const reiniciando = () => atualizacao?.estado === "aplicando"
+const reiniciando = () => (atualizacao?.estado === "aplicando"
   && atualizacao.etapas.some((e) => e.id === "reiniciando" && e.estado === "atual")
-  && Date.now() - atualizacaoRecebida < 300000;
+  && Date.now() - atualizacaoRecebida < 300000) || Date.now() - versaoAplicada < 180000;
 
 /** @param {Atualizacao | null} [a] */
 function desenharAtualizacao(a) {
@@ -200,6 +201,7 @@ async function batimento() {
     if (holo && holo.dataset.estado !== e.ze) { holo.dataset.estado = e.ze; $("holo-estado").textContent = ESTADO_HOLO[e.ze] || ""; }
     desenharModoFala(e.modo_fala);
     desenharAtualizacao(e.atualizacao ?? null);
+    $("ponto-atualizacoes").hidden = !e.versao?.disponivel;
     document.body.classList.toggle("manutencao", !!e.manutencao?.ligada); window.desenharManutencao?.(e.manutencao);
     desenharVozRemota();
     if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {

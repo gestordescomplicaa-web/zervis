@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- Atualizações pelo painel (Ajustes → Atualizações): o Zé procura uma vez por dia e só avisa
+  (bolinha no menu e um aviso); "Atualizar agora" mostra o que muda, tirado do CHANGELOG, e roda o
+  mesmo `zervis update` numa unidade própria do systemd (`zervis-atualizar`), fora do Zé, que
+  reinicia no meio. Se a versão nova não subir, ele volta sozinho para a anterior. O painel
+  recarrega quando o Zé volta, mostra o resultado, e o Zé avisa uma vez. O canal é "Versões
+  publicadas" (padrão) ou "Desenvolvimento". Não atualiza com uma sessão trabalhando nem durante
+  o autodesenvolvimento. Pela voz, "tem atualização?" responde (ferramenta `atualizacoes_ver`, só
+  leitura); atualizar é no painel.
 - Porta do painel: o `zervis` (`status`, `doctor` e a espera do `update`), o `make instalar` e o
   instalador passam a ler a porta que o systemd dá ao serviço, contando os ajustes em
   `zervis.service.d`, e a reinstalação sem porta mantém a que já está em uso. Antes, com a

@@ -19,7 +19,7 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from zervis import __version__, ambiente
@@ -279,6 +279,66 @@ def ultima_versao(rodar: Rodar = rodar) -> str:
     return etiquetas[0] if etiquetas else ""
 
 
+@dataclass(frozen=True)
+class Plano:
+    """Para onde o `update` iria. Sem `motivo`, avança de `antes` para `alvo`; com ele, fica
+    (`recusa` quando é um problema a resolver, não só "já está em dia")."""
+
+    antes: str = ""
+    alvo: str = ""
+    rotulo: str = ""
+    motivo: str = ""
+    recusa: bool = False
+
+
+# O que dizer em cada caso em que o update não avança (o painel tem os seus, sem comandos).
+TEXTOS = {
+    "alteracoes": "Há alterações locais no código: o update não mexe nelas. "
+    "Registre-as ou descarte-as.",
+    "sem_origem": "Esta instalação não segue uma branch da origem (veio como pacote?): "
+    "reinstale pelo git clone.",
+    "sem_conexao": "Sem conexão com a origem do código.",
+    "sem_versao": "Ainda não há versão publicada. "
+    "Para seguir a master: zervis update --desenvolvimento",
+    "em_dia": "Já está na versão mais nova ({rotulo}).",
+    "a_frente": "Já está à frente da versão mais nova ({rotulo}), no código em desenvolvimento. "
+    "Para seguir a master: zervis update --desenvolvimento",
+    "commits_locais": "Há commits locais que não estão na origem (melhorias do próprio Zé, por "
+    "exemplo): junte-os numa sessão de autodesenvolvimento antes de atualizar.",
+}
+
+
+def planejar(rodar: Rodar = rodar, desenvolvimento: bool = False) -> Plano:
+    """Busca a origem e decide: avança só se for um avanço limpo (sem alterações nem commits
+    locais por cima), para a versão publicada mais nova ou, em `desenvolvimento`, a master."""
+    if _git(rodar, "status", "--porcelain").stdout.strip():
+        return Plano(motivo="alteracoes", recusa=True)
+    seguida = _git(rodar, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+    if seguida.returncode != 0:
+        return Plano(motivo="sem_origem", recusa=True)
+    if _git(rodar, "fetch", "--quiet", "--tags").returncode != 0:
+        return Plano(motivo="sem_conexao", recusa=True)
+    antes = _git(rodar, "rev-parse", "HEAD").stdout.strip()
+    if desenvolvimento:
+        destino, rotulo = "@{u}", seguida.stdout.strip()
+    else:
+        if not (rotulo := ultima_versao(rodar)):
+            return Plano(antes=antes, motivo="sem_versao")
+        destino = f"{rotulo}^{{commit}}"
+    alvo = _git(rodar, "rev-parse", destino).stdout.strip()
+    plano = Plano(antes=antes, alvo=alvo, rotulo=rotulo)
+    if antes == alvo:
+        return replace(plano, motivo="em_dia")
+    if (
+        not desenvolvimento
+        and _git(rodar, "merge-base", "--is-ancestor", alvo, "HEAD").returncode == 0
+    ):
+        return replace(plano, motivo="a_frente")
+    if _git(rodar, "merge-base", "--is-ancestor", "HEAD", alvo).returncode != 0:
+        return replace(plano, motivo="commits_locais", recusa=True)
+    return plano
+
+
 def update(
     rodar: Rodar = rodar,
     responde: Responde = painel_responde,
@@ -286,54 +346,12 @@ def update(
     pausa: Callable[[float], None] = time.sleep,
     desenvolvimento: bool = False,
 ) -> int:
-    """Avança para a versão publicada mais nova (ou, com `desenvolvimento`, para o código mais
-    novo da branch da origem), só se for um avanço limpo (sem alterações nem commits locais por
-    cima), e só fica nela se o painel voltar."""
-    if _git(rodar, "status", "--porcelain").stdout.strip():
-        print(
-            "Há alterações locais no código: o update não mexe nelas. Registre-as ou descarte-as."
-        )
-        return 1
-    seguida = _git(rodar, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
-    if seguida.returncode != 0:
-        print(
-            "Esta instalação não segue uma branch da origem (veio como pacote?): "
-            "reinstale pelo git clone."
-        )
-        return 1
-    if _git(rodar, "fetch", "--quiet", "--tags").returncode != 0:
-        print("Sem conexão com a origem do código.")
-        return 1
-    antes = _git(rodar, "rev-parse", "HEAD").stdout.strip()
-    if desenvolvimento:
-        destino, rotulo = "@{u}", seguida.stdout.strip()
-    else:
-        if not (rotulo := ultima_versao(rodar)):
-            print(
-                "Ainda não há versão publicada. "
-                "Para seguir a master: zervis update --desenvolvimento"
-            )
-            return 0
-        destino = f"{rotulo}^{{commit}}"
-    alvo = _git(rodar, "rev-parse", destino).stdout.strip()
-    if antes == alvo:
-        print(f"Já está na versão mais nova ({rotulo}).")
-        return 0
-    if (
-        not desenvolvimento
-        and _git(rodar, "merge-base", "--is-ancestor", alvo, "HEAD").returncode == 0
-    ):
-        print(
-            f"Já está à frente da versão mais nova ({rotulo}), no código em desenvolvimento. "
-            "Para seguir a master: zervis update --desenvolvimento"
-        )
-        return 0
-    if _git(rodar, "merge-base", "--is-ancestor", "HEAD", alvo).returncode != 0:
-        print(
-            "Há commits locais que não estão na origem (melhorias do próprio Zé, por exemplo): "
-            "junte-os numa sessão de autodesenvolvimento antes de atualizar."
-        )
-        return 1
+    """Avança como o `planejar` decidir, e só fica na versão nova se o painel voltar."""
+    plano = planejar(rodar, desenvolvimento)
+    if plano.motivo:
+        print(TEXTOS[plano.motivo].format(rotulo=plano.rotulo))
+        return 1 if plano.recusa else 0
+    antes, alvo, rotulo = plano.antes, plano.alvo, plano.rotulo
     novidades = _git(
         rodar, "log", "--oneline", "--no-decorate", f"HEAD..{alvo}"
     ).stdout.splitlines()
