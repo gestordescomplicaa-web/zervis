@@ -86,9 +86,9 @@ da liberação. Cada etapa tem um critério que se comprova, e só conta como fe
 |---|---|---|---|
 | 1 | Filtro de qualidade | O painel abre num Chromium de verdade dentro do `make check` (todas as páginas, sem erro no console) e `make check-instalacao` passa numa pasta limpa | Feito em 15/10/2026 |
 | 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `zervis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
-| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | ⬜ |
+| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | Em parte: a VPS por um comando (16/10/2026); o instalador do PC (`deploy/instalar-pc.sh`) e o comando `zervis` com `status`, `doctor`, `update` (pelas versões publicadas, com volta automática) e `uninstall` (20/10/2026). Falta o `setup` e a prova numa máquina limpa |
 | 4 | Eficiência medida | Latência da voz, memória, processos ociosos e tokens por tarefa medidos numa rotina repetível; README com números no lugar de "mais enxuto" | ⬜ |
-| 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | ⬜ |
+| 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | Em parte: o pacote `zervis` com os aliases (22/10/2026), o README novo, os documentos antigos revisados (26/10/2026), a `v0.1.0`, o repositório público e a CI com o `make check`. Falta o `make check-instalacao` na CI |
 
 Depois da liberação: pacotes de extensão (ADR 0033, etapa E6), mais canais, isolamento em
 contêiner e outras plataformas. A exceção a avaliar é conversar com o Zé pelo WhatsApp, que já
@@ -137,8 +137,10 @@ etapa por vez. Ela absorve os itens 5 (instalação), 6 (SQLite) e 8 (revisão f
    no telefone, separado do Zé principal, com handoff para quem usa. Feito: o WhatsApp pareado
    pelo QR (WaCalls) e as mensagens como fonte dos avisos de lead quente. Falta: a recepcionista
    por ligação, o atendente no texto, montar o agente, assumir ao vivo e a telefonia SIP.
-8. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
-   falam do Orca e do Zé: visão, conceitos, reaproveitamento, plano da oficina).
+8. **Revisão final** antes do primeiro envio público. Feito em 26/10/2026 para os documentos
+   antigos que ainda falavam do Orca e do Barehands como partes de hoje: visão, arquitetura,
+   conceitos e qualidade foram corrigidos; reaproveitamento e os planos ganharam o aviso de que
+   são registros da época.
 
 ## Primeiro teste numa VPS real (16/10/2026)
 
@@ -215,8 +217,8 @@ na ordem em que resolver:
 
 ## Em aberto
 
-- Nome do pacote e das variáveis: o código ainda é o pacote `jarvis` e usa `JARVIS_*`; as pastas
-  de dados e os serviços já se chamam `zervis`.
+- ~~Nome do pacote e das variáveis~~: resolvido em 22/10/2026. O pacote é `zervis` e as
+  variáveis são `ZERVIS_*`; o `python -m jarvis` e os `JARVIS_*` antigos ainda funcionam.
 
 ## Andamento da atualização (15/10/2026)
 

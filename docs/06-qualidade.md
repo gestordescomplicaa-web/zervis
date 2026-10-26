@@ -6,7 +6,7 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
 
 1. Teste automatizado que falharia sem a mudança (ou justificativa escrita de por que não cabe).
 2. `make check` passando: formatação, lint, tipos e testes.
-3. Verificação na máquina real quando a mudança toca voz, rosto, Orca ou systemd. "Os testes
+3. Verificação na máquina real quando a mudança toca voz, rosto, sessões de código ou systemd. "Os testes
    passaram" não basta para hardware e serviços.
 4. Documentação atualizada no mesmo commit (roadmap, arquitetura ou ADR, conforme o caso).
 5. Commit pequeno, mensagem em português dizendo o **porquê**.
@@ -42,8 +42,8 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
 ## Testes
 
 - Unidade para lógica pura (normalizador de fala, máquina de estados, fila, agenda, varredura).
-- Falsos explícitos (`FakeOrca`, `FakeBrain`, `FakeVoz`) em vez de *mocks* mágicos — nomes únicos
-  por arquivo (lição de 06/10/2026: um `FakeOrca` duplicado sobrescreveu outro e quebrou sete testes).
+- Falsos explícitos (`FakeBrain`, `FakeVoz`) em vez de *mocks* mágicos — nomes únicos por arquivo
+  (lição de 06/10/2026: um falso do Orca duplicado sobrescreveu outro e quebrou sete testes).
 - Teste de regressão para cada bug corrigido, com o caso real que o revelou.
 - Provas na máquina real descritas passo a passo no roadmap, com o resultado anotado.
 - O painel abre num Chromium de verdade dentro do `make check`

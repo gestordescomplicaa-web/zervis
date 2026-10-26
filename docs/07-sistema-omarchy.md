@@ -22,7 +22,7 @@ expõe quase tudo como comandos documentados.
 | Janelas e apps | `launch-or-focus`, `launch-browser`, `launch-editor`, `hyprland-focus-app`, `hyprland-window-close-all` | "Abre o navegador", "foca o Orca" |
 | Captura | `capture-screenshot`, `capture-region`, `capture-text` | "Lê o que está na tela" |
 | Notificações | `notification-send`, `notification-dismiss`, `toggle-notification-silencing`, `reminder` | Saída visual quando a voz não cabe |
-| Aparência | `theme-set`, `theme-list`, `theme-bg-next` | O tema do Barehands pode seguir o do sistema |
+| Aparência | `theme-set`, `theme-list`, `theme-bg-next` | O tema do modo imersivo pode seguir o do sistema |
 | Agentes | `agent`, `agent-prompt`, `agent-usage-claude`, `agent-usage-codex` | Ler o uso dos planos Claude/Codex; abrir o agente padrão |
 | Voz do sistema | `voxtype-status`, `voxtype-model` | Convivência com o ditado do F9 |
 | Sistema (risco) | `system-reboot`, `system-shutdown`, `update`, `pkg-install`, `pkg-remove`, `system-factory-reset` | Só com confirmação forte, ou bloqueado |
@@ -45,7 +45,7 @@ expõe quase tudo como comandos documentados.
 ### 4. Hyprland
 - `hyprctl -j` (clientes, workspaces, janela ativa, monitores) para **ler** a mesa de trabalho.
 - Socket de eventos do Hyprland (`.socket2.sock` em `$XDG_RUNTIME_DIR/hypr/<assinatura>/`) para
-  saber, sem *polling*, quando uma janela abre ou fecha, inclusive a do Barehands (candidato ao
+  saber, sem *polling*, quando uma janela abre ou fecha, inclusive a do Zé (candidato ao
   sinal do interruptor, Prova 3).
 
 ## Política de risco das ações do sistema

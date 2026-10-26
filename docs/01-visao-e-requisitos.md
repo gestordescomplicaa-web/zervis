@@ -1,6 +1,8 @@
 # 01 — Visão e requisitos
 
-Data: 06/10/2026. Fonte: conversas com o usuário na sessão de desenvolvimento do Zé.
+Data: 06/10/2026, revisada em 26/10/2026 (o painel no lugar do Barehands, as sessões próprias no
+lugar do Orca e o atendimento no WhatsApp). Fonte: conversas com o usuário na sessão de
+desenvolvimento do Zé.
 
 ## Visão
 
@@ -8,12 +10,14 @@ Um Zé que é um **sistema desta máquina**, não um app: ele lê e opera o comp
 outros sistemas se adaptam a ele. O usuário o usa de fone, sem olhar para a tela: ele fala "Ei Zé",
 pede, ouve a resposta e é avisado do que importa. Com o tempo o Zé lembra
 das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
-(automações). A interface visual é o Barehands; o Orca é onde o código é feito.
+(automações). A interface visual é o painel, com o modo imersivo numa aba (ADR 0014); o código é
+feito nas sessões do próprio Zé, com o Claude Code e o Codex (ADR 0015).
 
 ## Requisitos funcionais
 
 ### R1 — Liga/desliga pelo rosto
-- R1.1 Há um rosto conectado (janela do Barehands aberta **ou** app do celular conectado) ⇒
+- R1.1 Há um rosto conectado (a janela do Zé aberta, a escuta sempre ligada **ou** o celular
+  conectado pela voz remota; ADR 0021) ⇒
   Zé **ativo**: escuta "Ei Zé", responde, avisa — pelo rosto conectado.
 - R1.2 Nenhum rosto conectado ⇒ Zé **inativo**: microfones fechados, nenhuma fala, nenhum card.
   Automações agendadas continuam rodando, mas guardam o resultado em vez de falar.
@@ -28,7 +32,7 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 - R2.5 Comandos de console por frase exata (ex.: "silenciar avisos", "parar de escutar").
 
 ### R3 — Cérebro trocável
-- R3.1 Claude e Codex como provedores iniciais, **por login de assinatura** (como o usuário já usa). Chave de API só como opção futura.
+- R3.1 Claude e Codex como provedores iniciais, **por login de assinatura** (como o usuário já usa). A chave de API da Anthropic colada no painel também vale; se ela for recusada, o fundo segue pela assinatura.
 - R3.1a OmniRoute local (`127.0.0.1:20128`) como terceiro provedor, para usar as rotas que o usuário monta nele ([ADR 0008](adr/0008-omniroute-como-provedor-do-cerebro.md)).
 - R3.2 Uma interface interna única (`Brain`) — o resto do sistema não sabe qual provedor está ativo.
 - R3.3 Troca de provedor por configuração e por voz ("usar o Codex").
@@ -50,20 +54,22 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 
 ### R6 — Automações e avisos
 - R6.1 Tarefas agendadas (uma vez, intervalo, cron, data exata), com ou sem cérebro (script puro).
-- R6.2 Fontes de eventos: agenda, sessões do Orca delegadas pelo Zé, pedidos de aprovação, falhas.
+- R6.2 Fontes de eventos: agenda, sessões de código delegadas pelo Zé, pedidos de aprovação,
+  falhas, o vigia do n8n.
 - R6.3 Fila durável de avisos com prioridade, sem repetição e com expiração (já existe no Zé atual).
 - R6.4 Um aviso só é falado se o Zé estiver ativo; senão vira pendência.
 
-### R7 — Orca como oficina
-- R7.1 O Zé delega trabalho de código a sessões do Orca (orquestração nativa: `worker-start`).
-- R7.2 Recebe o resultado (`worker_done` com sucesso/falha) e avisa por voz.
+### R7 — A oficina (sessões de código próprias)
+- R7.1 O Zé delega trabalho de código às próprias sessões: o Claude Code ou o Codex numa pasta de
+  projeto, com as skills e os conectores daquele projeto (ADR 0015 e 0037). Era o Orca até 10/10.
+- R7.2 Recebe o resultado (terminou, falhou ou precisa de você) e avisa por voz.
 - R7.3 Pedidos de permissão: descrição falada + aprovação por voz com confirmação (já existe).
 - R7.4 Sessões abertas manualmente pelo usuário **não** são narradas; só pedidos de aprovação e falhas delas.
 
 ### R9 — Celular Android (mãos livres longe do PC) — última fase
 - R9.1 Fone no celular, Zé no PC: mesma conversa, mesmos comandos, mesmos avisos.
 - R9.2 Funciona em casa (Wi-Fi) e fora (rede móvel), sem expor o PC na internet aberta.
-- R9.3 Caso central: tocar projetos no Orca por voz — perguntar estado, delegar, aprovar, ouvir
+- R9.3 Caso central: tocar as sessões de código por voz — perguntar estado, delegar, aprovar, ouvir
   "terminou/falhou/precisa de você".
 - R9.4 Funcionar com a tela do celular bloqueada (a confirmar na Prova 4).
 - R9.5 No modo remoto o microfone e os alto-falantes do PC ficam desligados.
@@ -78,7 +84,7 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 
 ## Requisitos não funcionais
 
-- **Desempenho:** núcleo ocioso < 5% de CPU; o custo maior deve ser o Barehands (câmera).
+- **Desempenho:** núcleo ocioso < 5% de CPU; o custo maior deve ser o modo imersivo (câmera).
 - **Confiabilidade:** reinício do processo não perde avisos, pendências nem agendamentos.
 - **Segurança:** segredos só em arquivos 0600 ou chaveiro; nunca em logs, memória ou skills.
 - **Privacidade:** áudio só é transcrito depois da palavra de ativação; nada sai da máquina além
@@ -89,7 +95,9 @@ das preferências, aprende procedimentos (skills) e cuida de rotinas sozinho
 ## Fora do escopo agora
 
 - Ligação telefônica comum (SIP); o celular entra pelo app, não por chamada.
-- Plataformas de mensagem (Telegram, WhatsApp etc.) como canal de conversa. O coletor de
+- Plataformas de mensagem (Telegram, WhatsApp etc.) como canal de conversa **com você**. Atender
+  os seus clientes no WhatsApp é outra coisa e entrou depois, na Central de Atendimento (ADR 0031).
+  O coletor de
   WhatsApp do Hermes segue separado, a serviço do projeto JEV. Exceção (14/10/2026): o Zé lê as
   notificações do WhatsApp deste computador (quem mandou e o começo da mensagem), um modelo sem
   ferramentas julga se é um lead quente (quer comprar ou mostra interesse real: preço, pagamento,
