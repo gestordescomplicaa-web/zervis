@@ -42,12 +42,16 @@ def reamostrar(pcm: bytes, taxa: int) -> bytes:
 class VozNavegador:
     """Uma conexão de voz aberta pelo botão Ao vivo do navegador."""
 
-    def __init__(self, conexao: Conexao, taxa: int = TAXA, ao_vivo: bool = True) -> None:
+    def __init__(
+        self, conexao: Conexao, taxa: int = TAXA, ao_vivo: bool = True, do_app: bool = False
+    ) -> None:
         self.conexao = conexao
         self.taxa = taxa if 8000 <= taxa <= 96000 else TAXA
         # O navegador é sempre ao vivo (ADR 0023); o app de voz do celular escolhe: ao vivo ou o
         # chamado ("Ei Zé" e o botão do fone), como o microfone do PC.
         self.ao_vivo = ao_vivo
+        # O app de voz fala e ouve mesmo com o Zé no Silencioso, que vale para o PC (ADR 0018).
+        self.do_app = do_app
 
     @property
     def conectada(self) -> bool:

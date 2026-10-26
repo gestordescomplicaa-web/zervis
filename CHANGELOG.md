@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- App de voz no Silencioso: o Silencioso passa a valer para o PC. Com o app conectado, o Zé ouve
+  e responde pelo celular ("Ei Zé", botão do fone, ao vivo); os avisos continuam só na tela, e ao
+  desconectar o PC segue mudo, com o microfone fechado. Antes, o Zé recusava o app e ele ficava
+  reconectando com "Sem conexão". No app, a dica diz "Diga “Ei Zé” ou toque em Falar".
+- App de voz numa caixa de som Bluetooth: sem fone com microfone, a fala sai como mídia (caixa de
+  som, fone com fio ou alto-falante) e o microfone é o do celular. Antes, o modo de ligação mandava
+  a fala para o fone da orelha do celular, e a caixa ficava muda. A troca vale ao conectar ou
+  desconectar um aparelho.
 - Endereço fixo do acesso de qualquer lugar, num domínio da pessoa no Cloudflare (Voz → Acesso de
   qualquer lugar → "Usar um endereço fixo"): cola-se o comando que o Cloudflare mostra ao criar o
   túnel e digita-se o endereço. O token vai para `~/.config/zervis/tunel-token` (0600) e o

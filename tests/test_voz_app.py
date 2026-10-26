@@ -14,11 +14,27 @@ from websockets.exceptions import InvalidHandshake
 from websockets.sync.client import connect
 
 from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo
 from zervis.nucleo.servicos.remoto import ServicoRemoto
 from zervis.portal import voz_app
 from zervis.portal.servidor import Portal
+from zervis.transporte.entrada import Entrada
 from zervis.transporte.navegador import BYTES_QUADRO, VozNavegador
 from zervis.transporte.websocket import Conexao
+
+
+class _Local:
+    """O microfone do PC, falso: só diz se está aberto."""
+
+    def __init__(self) -> None:
+        self.quadros: queue.Queue[bytes] = queue.Queue(maxsize=10)
+        self.aberto = False
+
+    def abrir(self) -> None:
+        self.aberto = True
+
+    def fechar(self) -> None:
+        self.aberto = False
 
 
 def test_codigo_de_uso_unico_vira_uma_chave_so_guardada_como_resumo(tmp_path: Path) -> None:
@@ -128,15 +144,21 @@ def test_a_chave_do_app_nao_abre_o_painel(portal: Any) -> None:
     assert erro.value.code == 401
 
 
-def _remoto(ao_vivo_agora: bool = False) -> tuple[ServicoRemoto, Any]:
-    n: Any = SimpleNamespace(
+class _Nucleo(SimpleNamespace):
+    """O núcleo falso: o microfone travado segue a regra de verdade (Silencioso, menos o app)."""
+
+    microfone_travado = Nucleo.microfone_travado
+
+
+def _remoto(ao_vivo_agora: bool = False, modo_fala: str = "avisos") -> tuple[ServicoRemoto, Any]:
+    n: Any = _Nucleo(
         _fonte=None,
-        captura=SimpleNamespace(remota=lambda _l: None),
-        voz=SimpleNamespace(destino=None),
+        modo_fala=modo_fala,
+        captura=Entrada(_Local()),  # type: ignore[arg-type]
+        voz=SimpleNamespace(destino=None, muda=modo_fala == "silencioso", parar=lambda: None),
         rostos=SimpleNamespace(marcar=lambda *_a: None),
         eventos=queue.Queue(),
-        maquina=SimpleNamespace(ao_vivo=ao_vivo_agora),
-        microfone_travado=False,
+        maquina=SimpleNamespace(ao_vivo=ao_vivo_agora, estado=e.Estado.ATIVO),
     )
     servico = ServicoRemoto(n)
     n._fonte_remota = servico._fonte_remota
@@ -183,6 +205,36 @@ def test_app_ao_vivo_liga_e_desliga_o_ao_vivo() -> None:
     servico, n = _remoto()
     servico.voz_pelo_app(ConexaoQueFecha([]), 16000, "ao_vivo", {"nome": "Pixel"})  # type: ignore[arg-type]
     assert _eventos(n) == [e.AoVivo(True), e.AoVivo(False)]
+
+
+class ConexaoQueOlha(ConexaoQueFecha):
+    """Anota, com o app ainda conectado, se o Zé ouve e fala."""
+
+    def __init__(self, n: Any) -> None:
+        super().__init__([json.dumps({"tipo": "apertar"})])
+        self.n = n
+        self.durante: tuple[bool, bool, bool] | None = None
+
+    def receber(self) -> tuple[int, bytes]:
+        if self.durante is None:
+            self.durante = (self.n.captura.aberta, self.n.voz.muda, self.n.captura.local.aberto)
+        return super().receber()
+
+
+def test_app_fala_e_ouve_no_silencioso_e_ao_sair_o_pc_continua_mudo() -> None:
+    servico, n = _remoto(modo_fala="silencioso")
+    conexao = ConexaoQueOlha(n)
+    servico.voz_pelo_app(conexao, 16000, "chamado", {"nome": "Pixel"})  # type: ignore[arg-type]
+    assert conexao.durante == (True, False, False)  # ouve o app, fala, e o microfone do PC fecha
+    assert e.Apertou() in _eventos(n)  # o botão do fone vale no Silencioso
+    assert not n.captura.aberta and not n.captura.local.aberto and n.voz.muda
+
+
+def test_o_navegador_continua_recusado_no_silencioso() -> None:
+    servico, n = _remoto(modo_fala="silencioso")
+    conexao = ConexaoQueFecha([])
+    servico.voz_pelo_navegador(conexao, 16000)  # type: ignore[arg-type]
+    assert not conexao.aberta and n._fonte is None and _eventos(n) == []
 
 
 def test_trocar_o_navegador_ao_vivo_pelo_app_no_chamado_desliga_o_ao_vivo() -> None:

@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
+import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -42,8 +43,9 @@ import okio.ByteString;
  * 80 ms, pelo WebSocket do painel (/voz-app/ws, o mesmo protocolo da voz do navegador, ADR 0024);
  * a fala do Zé volta pelo mesmo canal ({"tipo":"voz","taxa":N}, os pedaços, "fim" ou "parar").
  *
- * Com um fone Bluetooth, o microfone e a fala vão por ele (o modo de comunicação, como numa
- * ligação). No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
+ * Com um fone Bluetooth com microfone, o microfone e a fala vão por ele (o modo de comunicação,
+ * como numa ligação). Sem ele (uma caixa de som Bluetooth, o fone com fio, o alto-falante), a fala
+ * sai como mídia, por onde o celular toca música, e o microfone é o do celular. No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
  * "Falar" na notificação) abre o pedido e, de novo, envia. Cai a rede: tenta de novo, com espera
  * crescente, até a pessoa desconectar.
  */
@@ -74,6 +76,14 @@ public final class VozService extends Service {
     private volatile boolean ligado;
     private volatile boolean falando; // o pedido aberto pelo botão (apertar) ainda não foi enviado
     private int quedas;
+    private volatile boolean chamada; // a fala vai como numa ligação (fone Bluetooth com microfone)
+    private final AudioDeviceCallback aparelhos = new AudioDeviceCallback() {
+        @Override
+        public void onAudioDevicesAdded(AudioDeviceInfo[] novos) { escolherSaida(); }
+
+        @Override
+        public void onAudioDevicesRemoved(AudioDeviceInfo[] saidos) { escolherSaida(); }
+    };
     private String estado = "Conectando…";
 
     static boolean ehBotao(int tecla) {
@@ -127,8 +137,8 @@ public final class VozService extends Service {
         startForeground(AVISO, aviso(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
         acordado = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ze-voz:voz");
         acordado.acquire();
-        audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
-        usarFoneBluetooth(true);
+        escolherSaida();
+        audio.registerAudioDeviceCallback(aparelhos, principal);
         sessao = new MediaSession(this, "ze-voz");
         sessao.setCallback(new MediaSession.Callback() {
             @Override
@@ -149,6 +159,40 @@ public final class VozService extends Service {
                 .build());
         sessao.setActive(true);
         conectar();
+    }
+
+    /** Um fone Bluetooth com microfone (o perfil de ligação) está conectado? */
+    private boolean temFoneBluetooth() {
+        for (AudioDeviceInfo d : audio.getDevices(AudioManager.GET_DEVICES_INPUTS)) {
+            if (d.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || d.getType() == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Fone Bluetooth com microfone: como numa ligação. Senão: a fala como mídia, que vai à caixa
+     * de som Bluetooth, ao fone com fio ou ao alto-falante (no modo de ligação, iria ao fone de
+     * ouvido do celular, o da orelha). Chamado ao ligar e a cada aparelho que entra ou sai. */
+    private void escolherSaida() {
+        if (!ligado) return;
+        boolean fone = temFoneBluetooth();
+        if (fone) {
+            audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            usarFoneBluetooth(true);
+        } else {
+            usarFoneBluetooth(false);
+            audio.setMode(AudioManager.MODE_NORMAL);
+        }
+        if (fone == chamada) return;
+        chamada = fone;
+        tocar.execute(() -> {
+            if (falante == null) return;
+            int taxa = taxaFala;
+            falante.release();
+            falante = null;
+            prepararFala(taxa); // o tipo do áudio decide a saída: refaz o falante no meio da fala
+        });
     }
 
     private void usarFoneBluetooth(boolean usar) {
@@ -198,7 +242,7 @@ public final class VozService extends Service {
                 }
                 quedas = 0;
                 falando = false;
-                principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(ajustes.modo()) ? "Ao vivo" : "Diga “Ei Zé” ou aperte o botão"));
+                principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(ajustes.modo()) ? "Ao vivo" : "Diga “Ei Zé” ou toque em Falar"));
                 gravar(s);
             }
 
@@ -281,7 +325,7 @@ public final class VozService extends Service {
         int minimo = AudioTrack.getMinBufferSize(taxa, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
         falante = new AudioTrack.Builder()
                 .setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setUsage(chamada ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build())
                 .setAudioFormat(new AudioFormat.Builder()
@@ -317,7 +361,7 @@ public final class VozService extends Service {
         if (s == null) return;
         falando = !falando;
         s.send(falando ? "{\"tipo\":\"apertar\"}" : "{\"tipo\":\"soltar\"}");
-        mostrar(falando ? "Ouvindo… aperte de novo para enviar" : "Enviado");
+        mostrar(falando ? "Ouvindo… toque em Enviar" : "Enviado");
     }
 
     private void desligar() {
@@ -329,6 +373,7 @@ public final class VozService extends Service {
         pararCaptura();
         tocar.execute(() -> { if (falante != null) { falante.release(); falante = null; } });
         if (sessao != null) { sessao.release(); sessao = null; }
+        audio.unregisterAudioDeviceCallback(aparelhos);
         usarFoneBluetooth(false);
         audio.setMode(AudioManager.MODE_NORMAL);
         if (acordado != null && acordado.isHeld()) acordado.release();
