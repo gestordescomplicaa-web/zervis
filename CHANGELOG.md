@@ -2,6 +2,165 @@
 
 ## Não lançado
 
+- Zé Voz com o microfone do celular e a fala numa caixa de som Bluetooth: o Zé ouvia o final da
+  própria fala e o tomava por um pedido (a conversa contínua volta a ouvir quando o Zé termina de
+  mandar a fala, e a caixa ainda tocava o resto, pelo buffer e pelo atraso do Bluetooth). Agora,
+  ao fim de cada fala, o app manda silêncio no lugar do microfone até a saída terminar, com 0,8 s
+  de folga no Bluetooth como mídia e 0,3 s nos outros. Durante a fala, o "Ei Zé" segue interrompendo.
+- Zé Voz: tela de ajustes (pelo ícone ou tocando na notificação) com o modo de ouvir, o microfone
+  de cada aparelho Bluetooth (o do aparelho ou o do celular, com a fala sempre pelo aparelho,
+  guardado pelo nome) e a atualização: o app procura versão nova uma vez por dia e avisa; "Atualizar"
+  baixa e entrega ao instalador do Android. A CI publica o `versao.json` junto do APK. Com a fala
+  no alto-falante ou na caixa, liga o cancelamento de eco do Android.
+- App de voz no Silencioso: o Silencioso passa a valer para o PC. Com o app conectado, o Zé ouve
+  e responde pelo celular ("Ei Zé", botão do fone, ao vivo); os avisos continuam só na tela, e ao
+  desconectar o PC segue mudo, com o microfone fechado. Antes, o Zé recusava o app e ele ficava
+  reconectando com "Sem conexão". No app, a dica diz "Diga “Ei Zé” ou toque em Falar".
+- App de voz numa caixa de som Bluetooth: sem fone com microfone, a fala sai como mídia (caixa de
+  som, fone com fio ou alto-falante) e o microfone é o do celular. Antes, o modo de ligação mandava
+  a fala para o fone da orelha do celular, e a caixa ficava muda. A troca vale ao conectar ou
+  desconectar um aparelho.
+- Endereço fixo do acesso de qualquer lugar, num domínio da pessoa no Cloudflare (Voz → Acesso de
+  qualquer lugar → "Usar um endereço fixo"): cola-se o comando que o Cloudflare mostra ao criar o
+  túnel e digita-se o endereço. O token vai para `~/.config/zervis/tunel-token` (0600) e o
+  `cloudflared` o lê pelo `--token-file`, nunca na linha de comando. O Zé confere se o endereço
+  chega mesmo ao painel e, se não, diz o que ajustar no Cloudflare. "Voltar ao automático" retorna
+  ao endereço que muda a cada reinício. É a base do app de voz e das notificações do celular.
+- App de voz do Android (`android/`, "Zé Voz"): fala com o Zé com o celular bloqueado, pelo fone,
+  sem tela (uma notificação com Falar, Ao vivo e Desconectar). Pareia pelo QR do painel (Voz →
+  App de voz), que a câmera do celular abre no app; o Zé dá uma chave só de voz, guarda apenas o
+  resumo dela e aceita a voz do app em `/voz-app/ws` com essa chave, sem entrar no painel. No modo
+  chamado, o áudio do app vale como o microfone do PC ("Ei Zé" e o botão do fone, que abre e
+  envia o pedido); ao vivo, como o navegador. Trocar o navegador ao vivo pelo app também troca o
+  modo. A CI compila o APK (`app-voz.yml`) e, na master, publica em `releases/download/app-voz`.
+- Excluir uma sessão com cópia isolada: os atalhos `zervis-*` que o próprio Zé põe na cópia (as
+  skills marcadas para as sessões, em `.claude/skills` e `.agents/skills`) saem antes da
+  conferência. Antes, só eles, ignorados pelo Git, travavam a exclusão com "A cópia isolada tem
+  alterações", e o "Descartar" da cópia não resolvia, porque preserva os arquivos ignorados.
+- Atualizações pelo painel (Ajustes → Atualizações): o Zé procura uma vez por dia e só avisa
+  (bolinha no menu e um aviso); "Atualizar agora" mostra o que muda, tirado do CHANGELOG, e roda o
+  mesmo `zervis update` numa unidade própria do systemd (`zervis-atualizar`), fora do Zé, que
+  reinicia no meio. Se a versão nova não subir, ele volta sozinho para a anterior. O painel
+  recarrega quando o Zé volta, mostra o resultado, e o Zé avisa uma vez. O canal é "Versões
+  publicadas" (padrão) ou "Desenvolvimento". Não atualiza com uma sessão trabalhando nem durante
+  o autodesenvolvimento. Pela voz, "tem atualização?" responde (ferramenta `atualizacoes_ver`, só
+  leitura); atualizar é no painel.
+- Porta do painel: o `zervis` (`status`, `doctor` e a espera do `update`), o `make instalar` e o
+  instalador passam a ler a porta que o systemd dá ao serviço, contando os ajustes em
+  `zervis.service.d`, e a reinstalação sem porta mantém a que já está em uso. Antes, com a
+  porta num ajuste, o `update` esperava o painel na porta errada e voltava para a versão
+  anterior sem motivo, e o atalho do menu abria uma porta vazia.
+- Nota do dia, revisão das conversas e automações: com a chave da Anthropic do painel recusada
+  (sem crédito ou inválida) e o login da assinatura do Claude disponível, a consulta roda de
+  novo pela assinatura, fica registrada uma vez na Atividade e as próximas vão direto. Antes, a
+  chave sem crédito parou a nota do dia e a revisão por dias, enquanto a conversa (pelo Codex)
+  seguia normal; as notas que faltam são escritas na próxima manhã, a partir das conversas.
+- Testes do terminal no painel: esperam a conexão em tempo real desistir antes de digitar (eram
+  instáveis na CI).
+
+- O pacote se chama `zervis` (era `jarvis`): `python -m zervis`, `from zervis import …`, a pasta
+  `zervis/`. As instalações de antes continuam subindo: a unidade antiga (`python -m jarvis`) e
+  a Central antiga (`python -m jarvis.atendimento`) repassam para o `zervis` até o próximo
+  `make instalar`, que grava a unidade nova. Os dados, a trava do serviço e os nomes que o
+  cérebro usa (o servidor MCP `jarvis`, o alvo de memória `jarvis`) não mudam.
+
+- Variáveis: `ZERVIS_PAINEL_PORTA`, `ZERVIS_PERFIL`, `ZERVIS_RAIZ`, `ZERVIS_FUSO` e
+  `ZERVIS_PONTE_API_KEY` são os nomes; os `JARVIS_*` de antes continuam valendo quando o novo não
+  existe (as unidades já instaladas têm `JARVIS_PAINEL_PORTA`). O instalador e o atalho gravam o
+  nome novo.
+
+- Nome: o assistente é o Zé em toda parte do código, da interface, das descrições das
+  ferramentas e dos documentos atuais (eram 268 "JARVIS"); a persona passa a ser `ZE.md` (o
+  caminho antigo continua como link) e o prefixo dos pedidos de manutenção, `[Zé · modo
+  manutenção · pedido <id>]`. "Hey Orca" vira "Ei Zé" nos textos. ADRs, CHANGELOG e auditorias
+  ficam como foram escritos. Os nomes técnicos (o pacote `jarvis`, as variáveis `JARVIS_*`, o
+  arquivo de memória `JARVIS.md`) mudam depois, com transição.
+- Dados expostos: uma imagem do avatar levava nos metadados o caminho do arquivo de origem, com
+  o usuário da máquina; o fuso de quem desenvolve saiu de uma auditoria. O teste de dados
+  pessoais passa a olhar também `.toml`, `.sh` e os metadados das imagens PNG.
+- Documentos: o registro do serviço é `journalctl --user -u zervis` (estava `jarvisd`, que não
+  existe), e a arquitetura antiga ganha o aviso do que mudou.
+
+- Bateria de avaliação do cérebro (`zervis avaliar`, `docs/avaliacao.md`): cenários em TOML com
+  o pedido, o que as ferramentas respondem e o que se espera (ferramentas, argumentos e
+  resposta); o cérebro de verdade com as ferramentas simuladas, repetições para a taxa de
+  acerto, relatório comparado com a rodada anterior e rodadas sem resposta fora da nota.
+  Referência de 20/10/2026: 91% em 11 cenários.
+- Conversas: a fala de quem usa passa a ser gravada como `pessoa`. Antes, a chave era o nome de
+  uma pessoa, no código público. As conversas já gravadas continuam legíveis, sem migração, e o
+  teste de dados pessoais passa a procurar sem distinguir maiúsculas.
+
+## 0.1.0 (19/10/2026)
+
+A primeira versão publicada. Destaques:
+
+- **Instalação:** no PC (`deploy/instalar-pc.sh`) e na VPS (`deploy/instalar-servidor.sh`, com
+  HTTPS, senha e código do autenticador), e o comando `zervis` (`status`, `doctor`, `update`,
+  `logs`, `abrir`, `uninstall`). O `update` segue as versões publicadas e volta sozinho se o
+  painel não subir.
+- **Voz:** "Ei Zé" treinado com a voz de quem usa, interrupção, fim de turno pela entonação e voz
+  local (Piper, Cadu), pelo PC ou pelo navegador do celular.
+- **Oficina:** sessões Claude Code e Codex num terminal real, com cópia isolada, troca de conta
+  sem perder a conversa e os conectores do projeto.
+- **Integrações:** conectores MCP colados do serviço (JSON ou curl), login OAuth, permissão por
+  ferramenta, separação por cliente; skills `integrar-sistema` e `fluxos-n8n`; vigia do n8n.
+- **Memória, skills, automações, Foco e central de avisos**, com aprovação no que é sensível e
+  tudo registrado na Atividade.
+- **Controle da máquina** no Omarchy, com nível de risco por ação.
+- **Atendimento no WhatsApp**, em teste.
+
+O registro completo, item por item:
+
+- Instalador do PC (`deploy/instalar-pc.sh`): serviço do usuário, atalho no menu e o painel aberto
+  na configuração inicial, com o Go verificado para o WhatsApp.
+- Comando `zervis`: `status`, `doctor` (cada função disponível ou não, com o motivo e como
+  resolver), `update` (avança só um caminho limpo e volta sozinho se o painel não subir), `logs`,
+  `abrir` e `uninstall` (os dados ficam, a não ser com `--apagar-dados` e a frase de confirmação).
+- Conversa com o Zé: o conector ligado a um projeto (o n8n de um cliente) passa a valer só nas
+  sessões daquele projeto, e a conversa recebe só os conectores gerais. Antes, todos iam para a
+  conversa: pela voz, o Zé usava o n8n sem dizer de qual cliente, e as ferramentas de todos
+  custavam tokens em todo turno. A chave "Também na conversa", no cartão, traz um de volta.
+- O Zé acha a sessão certa: `sessoes_listar` mostra os conectores de cada sessão. Pergunta sobre
+  o n8n com uma sessão ligada a ele vai para ela; com mais de uma, o Zé pergunta qual.
+- Atividade: as ferramentas dos conectores MCP usadas pela conversa (Claude e Codex) passam a
+  ser registradas, como as do próprio Zé (essência, item 6).
+- `conectores_listar` traz o estado do vigia em cada n8n (de pé ou fora do ar), e o lembrete
+  avisa ao cérebro que não confere nada: "quando o n8n voltar, me avise" não vira mais um
+  lembrete repetido a cada 5 minutos, porque o vigia já avisa.
+- Vigia do n8n (ADR 0038): todo conector do MCP de um n8n é vigiado sozinho, uma vez por minuto,
+  pelo `/healthz` e pelo `/healthz/readiness` da instância, sem chave e sem modelo. Depois de três
+  falhas seguidas, o aviso "<n8n> fora do ar: sem resposta" (ou "erro do servidor", "banco fora")
+  vai para a tela e para a Atividade, e é falado conforme o modo de fala; a volta avisa
+  "<n8n> voltou". Um aviso por mudança, guardado em SQLite: reiniciar o Zé não repete.
+- Skill inicial `fluxos-n8n` (ADR 0038), também nas sessões: criar, editar, testar, publicar e
+  investigar fluxos pelo MCP do n8n, na ordem que ele pede (boas práticas, tipos dos nós,
+  validação, criação, teste com dados de exemplo). Produção só muda com aprovação; editar guarda
+  a versão para voltar; todo fluxo publicado tem um fluxo de erro; credenciais só no n8n.
+  A `integrar-sistema` aponta para ela e passa a mandar ligar o conector pelo botão da sessão.
+- Sessões: o botão "Conectores", no topo da sessão (e a lista na criação), liga e desliga os MCPs
+  do projeto ali mesmo. A escolha vale para todas as sessões daquela pasta; cada conector mostra
+  em que outros projetos ele já está ("Também em: …"), e salvar reabre o agente com a conversa.
+- Conectores por projeto pelo caminho completo da pasta: dois clientes com pastas de mesmo nome
+  em lugares diferentes não se misturam. O nome sozinho, como era antes, continua valendo.
+- Conectores: etiqueta "MCP" em cada cartão; "Nome" no formulário de colar, e colar o mesmo JSON
+  para outro cliente pede outro nome em vez de sobrescrever. Os projetos saíram do formulário e
+  do cartão (lá, só leitura): quem escolhe é a sessão.
+- Conectores: "Adicionar" agora pede só para colar a configuração que o serviço fornece, o JSON
+  do MCP (`mcpServers`, como o do n8n, do Claude ou do Cursor) ou o comando `curl`, e os
+  projetos. "Salvar e testar" cria o conector, guarda tokens e chaves como segredos (nunca no
+  arquivo de configuração), testa e mostra as ferramentas na hora. Colar de novo num conector
+  existente ("Editar") troca a configuração e mantém as permissões. Os campos ficam em
+  "Preencher campos", para quem precisar.
+- Conectores: uma linha de cabeçalho fora do formato (`Authorization: N8N_AUTH`) era descartada
+  sem aviso, e o conector ficava sem o cabeçalho (no n8n, HTTP 401). Agora o painel avisa
+  "Cabeçalho inválido" e não salva; o valor pode ter `:` depois do primeiro. O token colado no
+  lugar do nome da variável é recusado sem ser repetido na mensagem. O campo mostra o exemplo.
+- Conectores: "Editar" no cartão abre o formulário com o que está gravado (endereço, cabeçalhos,
+  segredos, projetos); os segredos guardados e as permissões continuam. Antes só dava para
+  remover, o que apagava também os segredos.
+- Conectores: "Ferramentas" com HTTP 401 ou 403 mostra "Acesso negado" e, quando o
+  `Authorization` está sem o tipo (o token sem `Bearer `, como pede o n8n), diz isso, sem
+  mostrar o segredo.
 - Skill `integrar-sistema`: numa sessão de código, o agente não instala o conector por conta
   própria (`claude mcp add`, `.mcp.json`): diz à pessoa para pedir ao Zé ou cadastrar em
   Conectores, com o projeto marcado. Quem já instalou a skill atualiza o texto em Skills.

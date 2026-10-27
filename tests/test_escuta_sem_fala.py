@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
-from jarvis.nucleo.laco import PRIMEIRA_FALA_S, Nucleo
+from zervis.nucleo.laco import PRIMEIRA_FALA_S, Nucleo
 
 
 def _n(ouviu: bool, ha: float, segurando: bool = False, ao_vivo: bool = False) -> SimpleNamespace:
@@ -32,7 +32,7 @@ def test_chamado_baixo_demais_e_ignorado() -> None:
     (-53 a -87 dBFS); a pessoa chamando ao microfone ficou entre -22 e -28 dBFS."""
     import numpy as np
 
-    from jarvis.nucleo.laco import nivel_de_pico
+    from zervis.nucleo.laco import nivel_de_pico
 
     t = np.arange(16000) / 16000
     alto = (0.05 * 32767 * np.sin(2 * np.pi * 300 * t)).astype("<i2").tobytes()  # ~ -29 dBFS
@@ -45,7 +45,7 @@ def test_chamado_baixo_demais_e_ignorado() -> None:
 def test_reconhecimento_prefere_o_nome_do_ze() -> None:
     from urllib.parse import parse_qs
 
-    from jarvis.voz import deepgram
+    from zervis.voz import deepgram
 
     termos = parse_qs(deepgram.consulta())["keyterm"]
     assert {"Zé", "Ei Zé", "Hey Zé"} <= set(termos)
@@ -53,8 +53,8 @@ def test_reconhecimento_prefere_o_nome_do_ze() -> None:
 
 def test_o_chamado_universal_vem_no_repositorio(tmp_path: Path) -> None:
     """Quem instala do zero tem o "Ei Zé" sem gravar a própria voz (13/10/2026)."""
-    from jarvis.config import carregar
-    from jarvis.voz.ativacao import ModeloAtivacao, carregar_modelo
+    from zervis.config import carregar
+    from zervis.voz.ativacao import ModeloAtivacao, carregar_modelo
 
     caminho = carregar(tmp_path / "nao-existe.toml").caminho("ativacao", "modelo")
     assert "/voz/modelos/ei_ze.npz" in str(caminho)

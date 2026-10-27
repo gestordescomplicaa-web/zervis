@@ -11,9 +11,9 @@ from websockets.exceptions import InvalidHandshake
 from websockets.sync.client import connect
 from websockets.typing import Origin
 
-from jarvis.portal.servidor import Portal
-from jarvis.transporte.navegador import BYTES_QUADRO, TocadorNavegador, VozNavegador, reamostrar
-from jarvis.transporte.websocket import Conexao
+from zervis.portal.servidor import Portal
+from zervis.transporte.navegador import BYTES_QUADRO, TocadorNavegador, VozNavegador, reamostrar
+from zervis.transporte.websocket import Conexao
 
 
 class Eco:
@@ -116,7 +116,7 @@ def test_buraco_no_audio_do_navegador_vai_para_o_registro(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """O navegador manda um quadro a cada 80 ms; meio segundo sem nenhum é rede ou tela apagada."""
-    from jarvis.transporte.websocket import BINARIO, FechouErro
+    from zervis.transporte.websocket import BINARIO, FechouErro
 
     quadro = bytes(BYTES_QUADRO)
     chegadas = iter([(BINARIO, quadro), (BINARIO, quadro), (BINARIO, quadro)])

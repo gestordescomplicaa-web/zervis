@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from jarvis.voz.saida import Voz, pedacos
+from zervis.voz.saida import Voz, pedacos
 
 
 def test_pedacos_respeitam_frases_e_limite() -> None:
@@ -79,7 +79,7 @@ def test_parar_corta_a_fala_e_descarta_a_fila() -> None:
 
 
 def test_fluxo_do_piper_entrega_frase_a_frase_e_para_ao_fechar() -> None:
-    from jarvis.voz.piper import FluxoGerado
+    from zervis.voz.piper import FluxoGerado
 
     geradas: list[int] = []
 

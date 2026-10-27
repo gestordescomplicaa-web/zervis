@@ -38,23 +38,23 @@ o usuário ──voz/texto──▶ Conversa ──▶ Zé (cérebro: via rápid
 
 | Conceito | Código | Dados (`~/.local/share/zervis/`) | Painel |
 |---|---|---|---|
-| Conversa | `jarvis/memoria/conversas.py` | `conversas/` | Início (e Conversa, na fatia 2) |
-| Voz | `jarvis/voz/`, `jarvis/cerebro/rapido.py` | — | Voz |
-| Foco | `jarvis/foco/` | `foco/` | Foco |
-| Sessão e Tarefa | `jarvis/oficina/sessoes.py` | `sessoes/` | Sessões |
-| Automação | `jarvis/automacoes/` | `automacoes/` | Automações |
-| Memória | `jarvis/memoria/` | `memoria/`, `linha-do-tempo.jsonl`, `dias/`, ai-memory | Memória |
-| Skill | `jarvis/habilidades/skills.py` | `skills/` | Skills |
-| Conector | `jarvis/cerebro/mcp_externo.py`, `conectores.py` | `~/.config/zervis/mcp.toml`, `mcp-painel.json` | Conectores |
+| Conversa | `zervis/memoria/conversas.py` | `conversas/` | Início (e Conversa, na fatia 2) |
+| Voz | `zervis/voz/`, `zervis/cerebro/rapido.py` | — | Voz |
+| Foco | `zervis/foco/` | `foco/` | Foco |
+| Sessão e Tarefa | `zervis/oficina/sessoes.py` | `sessoes/` | Sessões |
+| Automação | `zervis/automacoes/` | `automacoes/` | Automações |
+| Memória | `zervis/memoria/` | `memoria/`, `linha-do-tempo.jsonl`, `dias/`, ai-memory | Memória |
+| Skill | `zervis/habilidades/skills.py` | `skills/` | Skills |
+| Conector | `zervis/cerebro/mcp_externo.py`, `conectores.py` | `~/.config/zervis/mcp.toml`, `mcp-painel.json` | Conectores |
 
 ## O que arrumar para chegar nisso
 
-1. **Tarefa do Orca vira tarefa de sessão.** A `Oficina` de hoje guarda "tarefas" delegadas ao
-   Orca; com a oficina própria, delegar = mandar uma tarefa a uma sessão (o Orca vira um motor).
+1. **Tarefa do Orca vira tarefa de sessão.** Feito: o Orca saiu do Zé (ADR 0015), e delegar é
+   mandar uma tarefa a uma sessão própria (`sessao_criar`, `sessao_enviar`).
 2. **Automação ganha "rotina".** Hoje há `lembrete` e `pergunta`; a rotina que manda uma tarefa
    a uma sessão ("toda segunda, rode os testes do Ligatia") fecha o ciclo.
 3. **Foco se liga a sessões pelo projeto:** a frente mostra as sessões do projeto, e o fim de
-   uma tarefa já atualiza o próximo passo (hoje isso acontece só com o Orca).
+   uma tarefa já atualiza o próximo passo (em 09/10 isso só acontecia com o Orca).
 4. **Sugestões de aprendizado** (`pendencias.json`) são propostas de **Memória** ou de
    **Skill**: aparecem nessas seções para aprovar, não num lugar à parte.
 5. **O painel em três grupos:** *Agora* (Início, Foco, Conversa), *Trabalho* (Sessões,

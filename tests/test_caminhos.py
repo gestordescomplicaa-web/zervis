@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from jarvis import caminhos
+from zervis import caminhos
 
 
 def test_completa_com_shell_e_pastas_sem_repetir(tmp_path: Path) -> None:
@@ -28,9 +28,9 @@ def test_le_o_path_do_shell_de_login(tmp_path: Path) -> None:
 
 def test_sem_claude_no_path_as_sessoes_usam_o_do_sdk(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """Numa VPS nova, o único Claude Code é o que vem com o claude-agent-sdk (16/10/2026)."""
-    monkeypatch.setattr("jarvis.caminhos.shutil.which", lambda nome: f"/usr/bin/{nome}")
+    monkeypatch.setattr("zervis.caminhos.shutil.which", lambda nome: f"/usr/bin/{nome}")
     assert caminhos.claude() == "claude"  # o da pessoa, como antes
-    monkeypatch.setattr("jarvis.caminhos.shutil.which", lambda nome: None)
+    monkeypatch.setattr("zervis.caminhos.shutil.which", lambda nome: None)
     embutido = Path(caminhos.claude())
     assert embutido.name == "claude" and embutido.parent.name == "_bundled"
     assert embutido.is_file()

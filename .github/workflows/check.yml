@@ -37,20 +37,20 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: jarvis/atendimento/wacalls/go.mod
-          cache-dependency-path: jarvis/atendimento/wacalls/go.sum
+          go-version-file: zervis/atendimento/wacalls/go.mod
+          cache-dependency-path: zervis/atendimento/wacalls/go.sum
 
-      # Os modelos de som (~100 MB) mudam só com jarvis/preparar.py, que guarda os SHA-256.
+      # Os modelos de som (~100 MB) mudam só com zervis/preparar.py, que guarda os SHA-256.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/zervis/modelos
-          key: modelos-${{ hashFiles('jarvis/preparar.py') }}
+          key: modelos-${{ hashFiles('zervis/preparar.py') }}
 
       - name: Dependências
         run: uv sync --frozen
 
       - name: Modelos de som
-        run: uv run python -m jarvis.preparar
+        run: uv run python -m zervis.preparar
 
       # O Ubuntu 24.04 restringe namespaces de usuário sem perfil do AppArmor, e o sandbox do
       # Chromium aborta ao abrir. Liberar só na máquina da CI, sem tirar o sandbox do navegador.
@@ -67,6 +67,53 @@ jobs:
         run: |
           set -o pipefail
           make check 2>&1 | tee "$RUNNER_TEMP/check.log"
+
+      # Ubuntu limpo com sessão gráfica virtual e systemd real. Não usa contas nem áudio físico.
+      - name: Instalador de PC
+        run: |
+          set -o pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb x11-utils
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          sudo loginctl enable-linger "$USER"
+          sudo systemctl start "user@$(id -u).service"
+          Xvfb :99 -screen 0 1400x900x24 > "$RUNNER_TEMP/tela.log" 2>&1 &
+          export DISPLAY=:99 PAINEL_DEPURACAO=9336
+          # Espera o servidor gráfico antes de abrir o navegador.
+          for tentativa in $(seq 1 30); do
+            if xdpyinfo -display :99 > /dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          xdpyinfo -display :99 > /dev/null
+          timeout 600 deploy/instalar-pc.sh 2>&1 | tee "$RUNNER_TEMP/instalador.log"
+          systemctl --user is-enabled zervis
+          systemctl --user is-active zervis
+          test -f "$HOME/.local/share/applications/zervis.desktop"
+          uv run python - <<'PY'
+          import json
+          import time
+          import urllib.request
+          # A porta de depuração pode abrir antes da aba; a configuração inicial usa #configurar.
+          for tentativa in range(60):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:9336/json/list", timeout=2) as r:
+                      abas = json.load(r)
+                  if any(a.get("url", "").split("#")[0] == "http://127.0.0.1:8795/" for a in abas):
+                      break
+              except (OSError, ValueError):
+                  pass
+              time.sleep(0.5)
+          else:
+              raise RuntimeError("O instalador não abriu a aba do painel local.")
+          PY
+
+      - name: Registro da instalação
+        if: failure()
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          journalctl --user -u zervis -n 80 --no-pager || true
 
       # O resumo da falha também como anotação: aparece na página do envio e pela API do GitHub.
       - name: Resumo da falha

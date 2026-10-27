@@ -5,8 +5,8 @@ import threading
 import time
 from collections.abc import AsyncIterator
 
-from jarvis.cerebro.base import EventoCerebro, Fim, Frases, Ponte, Texto
-from jarvis.cerebro.eco import Eco
+from zervis.cerebro.base import EventoCerebro, Fim, Frases, Ponte, Texto
+from zervis.cerebro.eco import Eco
 
 
 def test_frases_juntam_pedacos_e_fecham_o_resto() -> None:

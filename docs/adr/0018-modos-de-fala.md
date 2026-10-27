@@ -1,7 +1,7 @@
 # 0018 — Modos de fala: quando o Zé fala sem ser chamado
 
 - Data: 12/10/2026
-- Status: **Aceito**; desde 13/10/2026 o Silencioso trava o microfone (chamado, botão e ao vivo), revendo o [ADR 0022](0022-ativacao-e-segurar-para-falar.md) (pedido do usuário: separar notificação, resposta de sessão e mãos livres; quem
+- Status: **Aceito**; desde 13/10/2026 o Silencioso trava o microfone (chamado, botão e ao vivo; menos o app de voz, desde 26/10/2026), revendo o [ADR 0022](0022-ativacao-e-segurar-para-falar.md) (pedido do usuário: separar notificação, resposta de sessão e mãos livres; quem
   desenvolve digitando, por voz ou misturando os dois escolhe)
 
 ## Contexto
@@ -38,6 +38,13 @@ pessoa olhando a sessão na tela. Para quem digita, incomoda; para quem quer toc
 8. **Andamento:** os comandos e os arquivos que o Claude mexe (hook `PostToolUse`, só Bash e
    edições) entram na conversa do Zé; "como está a Loja?" conta o que ela faz agora. O Codex não
    avisa as ações: dele, ficam os pedidos e as respostas.
+
+## Silencioso e o app de voz (26/10/2026)
+9. O Silencioso vale para o PC (pedido do usuário). Com o app de voz do Android conectado
+   (`android/`), o Zé ouve o celular ("Ei Zé", botão do fone, ao vivo) e responde por ele; os
+   avisos continuam só na tela. Conectar o app já é pedir para falar com o Zé. O "Ao vivo" do
+   navegador continua recusado no Silencioso; ao desconectar o app, o microfone do PC continua
+   fechado e a voz, muda.
 
 ## Próximos passos
 - Confirmação de envio curta, com o nome da sessão, preservando o prompt completo na ferramenta

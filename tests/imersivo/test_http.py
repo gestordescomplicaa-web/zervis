@@ -10,7 +10,7 @@ from pathlib import Path
 
 import websockets
 
-from jarvis.imersivo import servidor
+from zervis.imersivo import servidor
 
 
 async def verificar(tmp_path, monkeypatch):

@@ -8,8 +8,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.automacoes.agenda import FUSO
-from jarvis.voz.latencia import Latencias, ler_turnos, resumir
+from zervis.automacoes.agenda import FUSO
+from zervis.voz.latencia import Latencias, ler_turnos, resumir
 
 
 def test_marcos_sao_unicos_e_atrasados_nao_contaminam_proximo_turno(tmp_path: Path) -> None:

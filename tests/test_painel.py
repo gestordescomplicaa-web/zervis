@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from jarvis.cerebro.baterias import Bateria
-from jarvis.rosto.painel import Painel
+from zervis.cerebro.baterias import Bateria
+from zervis.rosto.painel import Painel
 
 
 def test_mostra_os_cinco_com_o_ativo_e_as_baterias(tmp_path: Path) -> None:
@@ -25,6 +25,6 @@ def test_escolha_vale_uma_vez_e_so_se_recente_e_conhecida(tmp_path: Path) -> Non
     assert painel.escolha(110.0) == "gemini"
     assert painel.escolha(110.0) is None
     arquivo.write_text(json.dumps({"id": "gemini", "ts": 100.0}))
-    assert painel.escolha(200.0) is None  # velha: o JARVIS estava parado na hora do clique
+    assert painel.escolha(200.0) is None  # velha: o Zé estava parado na hora do clique
     arquivo.write_text(json.dumps({"id": "rm -rf", "ts": 100.0}))
     assert painel.escolha(101.0) is None

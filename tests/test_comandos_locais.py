@@ -1,4 +1,4 @@
-"""Comandos locais de voz (sem o cérebro): o que cada um faz na tela e o que o JARVIS fala."""
+"""Comandos locais de voz (sem o cérebro): o que cada um faz na tela e o que o Zé fala."""
 
 import tempfile
 import time
@@ -9,10 +9,10 @@ from typing import Any
 
 import pytest
 
-from jarvis.foco.frentes import Foco
-from jarvis.memoria.linha import LinhaDoTempo
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo, Status
+from zervis.foco.frentes import Foco
+from zervis.memoria.linha import LinhaDoTempo
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo, Status
 
 
 @dataclass
@@ -63,7 +63,7 @@ class Registro:
         self.feito.append(("evento", evento))
 
     def resumo(self, agora: float = 0.0) -> str:
-        return "Janela do JARVIS: aberta."
+        return "Janela do Zé: aberta."
 
 
 class ManutencaoFalsa:

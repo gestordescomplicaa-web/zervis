@@ -25,9 +25,9 @@ from typing import Any
 import pytest
 import websockets
 
-from jarvis.oficina.progresso import Progresso
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import WEB, Escrita, Leitura, PedidoInvalido, Portal
+from zervis.oficina.progresso import Progresso
+from zervis.portal.acoes import Acoes
+from zervis.portal.servidor import WEB, Escrita, Leitura, PedidoInvalido, Portal
 
 RESPOSTAS = Path(__file__).with_name("painel_respostas.json")
 CHROMIUM = next(
@@ -391,7 +391,8 @@ def test_terminal_recorre_ao_http_se_o_websocket_nao_estiver_disponivel(
             await nav.avaliar("document.querySelector('.item-sessao').click()")
             await _esperar(nav, "!!term && !!termId")
             await nav.avaliar("escreverNoTerminal('fallback')")
-            assert await asyncio.to_thread(chegou.wait, 5)
+            # A conexão em tempo real desiste em 5 s; a espera precisa de folga além disso.
+            assert await asyncio.to_thread(chegou.wait, 12)
             assert not nav.erros, nav.erros
 
     with _painel(tmp_path, extras={"terminal/escrever": escrever}) as (
@@ -699,6 +700,10 @@ def test_sessoes_mostram_trava_sem_enviar_teclas_nem_repetir_as_recusadas(tmp_pa
             await _esperar(nav, "!!document.querySelector('.item-sessao')")
             await nav.avaliar("document.querySelector('.item-sessao').click()")
             await _esperar(nav, "!!termId && !!document.querySelector('#reserva-sessoes')")
+            # Enquanto a conexão em tempo real tenta abrir, as teclas esperam numa fila e só vão
+            # pelo HTTP quando ela desiste: digitar antes disso deixava este teste instável
+            # (22/10/2026, na CI). Aqui não há esse servidor; espera ela desistir.
+            await _esperar(nav, "!termWs")
             assert await nav.avaliar("!term.options.disableStdin")
             await nav.avaliar("(async () => { escreverNoTerminal('antes'); await filaEscrita; })()")
             assert escritos == ["antes"]
@@ -757,7 +762,7 @@ def test_autodesenvolvimento_interrompe_troca_agente_e_permite_revisar(tmp_path:
     estado = respostas["leituras"]["estado"]
     estado["manutencao"]["ligada"] = False
     mudancas = respostas["escritas"]["ze/melhorias"]
-    mudancas["protegidos"] = ["jarvis/oficina/manutencao.py"]
+    mudancas["protegidos"] = ["zervis/oficina/manutencao.py"]
     chamadas: list[tuple[str, Any]] = []
 
     def fechar(dados: dict[str, Any]) -> dict[str, str]:
@@ -1165,3 +1170,207 @@ def test_servidor_sem_registro_automatico_abre_o_app_proprio_e_guarda_o_client_i
         fechado, aberto = asyncio.run(conferir(depuracao, endereco))
     assert (fechado, aberto) == (False, True)  # o erro leva ao lugar de resolver
     assert enviados == [{"nome": "notion", "client_id": "meu-app", "client_secret": "s3gr3d0"}]
+
+
+def test_editar_conector_abre_preenchido_e_mantem_as_permissoes(tmp_path: Path) -> None:
+    """O cartão só deixava remover (19/10/2026): Editar abre o formulário com o que está
+    gravado, o nome fixo, e Salvar manda as permissões que já existiam."""
+    salvos: list[dict[str, Any]] = []
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> list[Any]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-editar][data-nome=crm]').click()"
+            )
+            await asyncio.sleep(0.3)
+            campos = await nav.avaliar(
+                "['cx-nome','cx-url','cx-cabecalhos'].map("
+                "(i) => document.getElementById(i).value)"
+                ".concat([document.getElementById('cx-nome').readOnly,"
+                " document.querySelector('#form-conector h2').textContent])"
+            )
+            await nav.avaliar(
+                "document.getElementById('cx-url').value = 'https://n8n.exemplo.com/mcp-server/http';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.6)
+            assert not nav.erros, nav.erros
+            return list(campos)
+
+    with _painel(tmp_path, extras={"conector/salvar": salvar}) as (depuracao, endereco):
+        campos = asyncio.run(conferir(depuracao, endereco))
+    assert campos == [
+        "crm",
+        "https://mcp.exemplo.com/mcp",
+        "Authorization: CRM_TOKEN",
+        True,
+        "Editar crm",
+    ]
+    (enviado,) = salvos
+    assert enviado["url"] == "https://n8n.exemplo.com/mcp-server/http"
+    assert enviado["cabecalhos"] == {"Authorization": "CRM_TOKEN"}
+    assert (enviado["livres"], enviado["bloqueadas"], enviado["projetos"]) == (
+        ["buscar_contatos"],
+        [],
+        ["loja"],
+    )
+
+
+def test_cabecalho_fora_do_formato_avisa_e_nao_salva_calado(tmp_path: Path) -> None:
+    """Uma linha de cabeçalho sem "Nome: VARIAVEL" sumia sem aviso (19/10/2026): o conector do
+    n8n foi salvo sem o Authorization e o teste dava 401."""
+    salvos: list[dict[str, Any]] = []
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> str:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-novo]').click();"
+                "document.querySelector('[data-acao=cx-tipo][data-tipo=http]').click();"
+                "document.getElementById('cx-nome').value = 'n8n';"
+                "document.getElementById('cx-url').value = 'https://n8n.exemplo.com/mcp-server/http';"
+                "document.getElementById('cx-cabecalhos').value = 'Authorization N8N_AUTH';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.5)
+            texto = await nav.avaliar("document.body.innerText") or ""
+            await nav.avaliar(
+                "document.getElementById('cx-cabecalhos').value = 'Authorization: N8N_AUTH';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.5)
+            return str(texto)
+
+    with _painel(tmp_path, extras={"conector/salvar": salvar}) as (depuracao, endereco):
+        texto = asyncio.run(conferir(depuracao, endereco))
+    assert "Cabeçalho inválido" in texto
+    (enviado,) = salvos  # só a segunda tentativa, no formato certo
+    assert enviado["cabecalhos"] == {"Authorization": "N8N_AUTH"}
+
+
+def test_colar_a_configuracao_salva_testa_e_mostra_o_resultado(tmp_path: Path) -> None:
+    """O jeito comum (19/10/2026): colar o JSON que o serviço dá, sem preencher campos."""
+    importados: list[dict[str, Any]] = []
+    colado = '{"mcpServers": {"crm": {"type": "http", "url": "https://mcp.exemplo.com/mcp"}}}'
+
+    def importar(dados: dict[str, Any]) -> dict[str, Any]:
+        importados.append(dados)
+        respostas = json.loads(RESPOSTAS.read_text())
+        ferramentas = [{"nome": "buscar_contatos", "descricao": "Busca"}]
+        teste = {"nome": "crm", "ok": True, "ms": 5, "ferramentas": ferramentas}
+        return {**respostas["leituras"]["conectores"], "testes": [teste]}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            await nav.avaliar(
+                "document.querySelector('[data-acao=conector-novo]').click();"
+                f"document.getElementById('cx-colar').value = {json.dumps(colado)};"
+                "document.getElementById('cx-nome').value = 'crm';"
+                "document.querySelector('[data-acao=cx-salvar]').click()"
+            )
+            await asyncio.sleep(0.8)
+            cartao = await nav.avaliar("document.querySelector('[data-resultado=crm]').textContent")
+            texto = await nav.avaliar("document.body.innerText") or ""
+            assert not nav.erros, nav.erros
+            return str(cartao), str(texto)
+
+    with _painel(tmp_path, extras={"conector/importar": importar}) as (depuracao, endereco):
+        cartao, texto = asyncio.run(conferir(depuracao, endereco))
+    assert importados == [{"texto": colado, "nome": "crm", "novo": True}]
+    assert cartao == "1 ferramenta" and "crm: 1 ferramenta." in texto
+    assert "buscar_contatos" in texto  # as permissões abrem sem outro clique
+
+
+def test_sessao_escolhe_os_conectores_do_projeto(tmp_path: Path) -> None:
+    """O seletor na sessão (19/10/2026): marcar o n8n do cliente ali mesmo, ver onde mais ele
+    está, e salvar reabre o agente com a conversa."""
+    salvos: list[dict[str, Any]] = []
+    lista = {
+        "conectores": [
+            {"nome": "docs", "tipo": "http", "marcado": True, "todos": True, "editavel": False,
+             "outros": []},
+            {"nome": "n8n-joao", "tipo": "http", "marcado": False, "todos": False,
+             "editavel": True, "outros": ["loja-do-joao"]},
+        ]
+    }  # fmt: skip
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        respostas = json.loads(RESPOSTAS.read_text())
+        return {**respostas["escritas"]["sessao/ler"]["sessao"], "aviso": "Conectores: docs."}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await _esperar(nav, "!!document.querySelector('.item-sessao')")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!document.querySelector('[data-acao=sessao-conectores]')")
+            await nav.avaliar("document.querySelector('[data-acao=sessao-conectores]').click()")
+            await _esperar(nav, "!!document.querySelector('[data-conector-sessao=n8n-joao]')")
+            texto = await nav.avaliar("document.getElementById('conectores-da-sessao').innerText")
+            travado = await nav.avaliar(
+                "document.querySelector('[data-conector-sessao=docs]').disabled"
+            )
+            await nav.avaliar(
+                "document.querySelector('[data-conector-sessao=n8n-joao]').click();"
+                "document.querySelector('[data-acao=sessao-conectores-salvar]').click()"
+            )
+            await asyncio.sleep(0.6)
+            assert not nav.erros, nav.erros
+            return str(texto), str(travado)
+
+    with _painel(
+        tmp_path,
+        extras={"sessao/conectores": lambda _d: lista, "sessao/conectores/salvar": salvar},
+    ) as (depuracao, endereco):
+        texto, travado = asyncio.run(conferir(depuracao, endereco))
+    assert "Também em: loja-do-joao" in texto and "Todos os projetos" in texto
+    assert travado == "True"  # o de todos os projetos não sai por uma sessão
+    assert salvos == [{"id": "sessao1", "nomes": ["docs", "n8n-joao"]}]
+
+
+def test_conector_de_projeto_pode_valer_tambem_na_conversa(tmp_path: Path) -> None:
+    """O conector de um cliente sai da conversa com o Zé (19/10/2026); a chave o traz de volta."""
+    salvos: list[dict[str, Any]] = []
+
+    def salvar(dados: dict[str, Any]) -> dict[str, Any]:
+        salvos.append(dados)
+        return {}
+
+    async def conferir(depuracao: str, endereco: str) -> tuple[str, str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conectores")
+            geral = await nav.avaliar(
+                "(() => { const d = document.querySelector('[data-detalhes=notion]');"
+                " d.open = true; return d.innerText; })()"
+            )
+            await nav.avaliar(
+                "document.querySelector('[data-detalhes=crm]').open = true;"
+                "document.querySelector('[data-mudar=conector-conversa][data-nome=crm]').click()"
+            )
+            await asyncio.sleep(0.6)
+            texto = await nav.avaliar("document.body.innerText") or ""
+            assert not nav.erros, nav.erros
+            return str(geral), str(texto)
+
+    with _painel(tmp_path, extras={"conector/salvar": salvar}) as (depuracao, endereco):
+        geral, texto = asyncio.run(conferir(depuracao, endereco))
+    assert "Sempre" in geral  # sem projeto, já está na conversa
+    assert "Vale também na conversa." in texto
+    (enviado,) = salvos
+    assert (enviado["nome"], enviado["conversa"], enviado["projetos"]) == ("crm", True, ["loja"])

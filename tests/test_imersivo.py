@@ -9,9 +9,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.filho import porta_ocupada
-from jarvis.imersivo import Imersivo, tem_acervo
-from jarvis.rosto import manifesto
+from zervis.filho import porta_ocupada
+from zervis.imersivo import Imersivo, tem_acervo
+from zervis.rosto import manifesto
 
 
 def porta_livre() -> int:

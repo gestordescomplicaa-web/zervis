@@ -1,4 +1,4 @@
-"""O JARVIS na própria tela: comando pela pasta, resposta da página, janela trazida."""
+"""O Zé na própria tela: comando pela pasta, resposta da página, janela trazida."""
 
 import json
 import subprocess
@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from jarvis.rosto import tela
+from zervis.rosto import tela
 
 
 def batimento(pasta: Path) -> None:
@@ -88,10 +88,10 @@ def test_janela_fechada_vira_erro_claro(tmp_path: Path, monkeypatch: pytest.Monk
 def test_janela_fechada_e_detectada(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     t = tela.Tela(tmp_path)
     monkeypatch.setattr(t, "trazer", lambda: pytest.fail("fechado: não traz nada"))
-    assert t.resumo() == "Janela do JARVIS: fechada (não há Núcleo na tela)."
-    with pytest.raises(tela.TelaErro, match="janela do JARVIS está fechada"):
+    assert t.resumo() == "Janela do Zé: fechada (não há Núcleo na tela)."
+    with pytest.raises(tela.TelaErro, match="janela do Zé está fechada"):
         t.agir([{"acao": "abrir_mapa"}])
-    with pytest.raises(tela.TelaErro, match="janela do JARVIS está fechada"):
+    with pytest.raises(tela.TelaErro, match="janela do Zé está fechada"):
         t.ver()
 
 
@@ -113,7 +113,7 @@ def test_resumo_diz_onde_esta_e_o_que_mostra(
     (tmp_path / "tela-estado.json").write_text(json.dumps({"estado": estado, "ts": time.time()}))
     monkeypatch.setattr(t, "em_foco", lambda: True)
     assert t.resumo() == (
-        "Janela do JARVIS: aberta, é a janela ativa; "
+        "Janela do Zé: aberta, é a janela ativa; "
         "Núcleo aberto (orbes Mapa, Guia, Identidade, Acervo, Orca); "
         "abertos: Mapa, Guia, nota Comece aqui; Mapa na vista foco, mostrando Projeto Alfa; "
         "o usuário está usando as mãos agora."

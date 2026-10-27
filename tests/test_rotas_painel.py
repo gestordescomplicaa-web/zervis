@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.acoes.pagina import Servicos
+from zervis.portal.acoes import Acoes
+from zervis.portal.acoes.pagina import Servicos
 
 
 def test_rotas_iguais_ao_contrato_anterior(tmp_path: Path) -> None:

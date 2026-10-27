@@ -18,7 +18,8 @@
     "sessoes",
     "pastas",
     "conectores",
-    "atendimento"
+    "atendimento",
+    "atualizacoes"
   ],
   "escritas": [
     "cerebro",
@@ -52,6 +53,10 @@
     "remoto/desativar",
     "tunel/ativar",
     "tunel/desativar",
+    "tunel/fixar",
+    "tunel/rapido",
+    "voz-app/codigo",
+    "voz-app/remover",
     "mensagens/whatsapp",
     "whatsapp/conectar",
     "whatsapp/desconectar",
@@ -86,6 +91,8 @@
     "sessao/ler",
     "sessao/trocar",
     "sessao/modelo",
+    "sessao/conectores",
+    "sessao/conectores/salvar",
     "sessao/interrompida",
     "sessao/copia",
     "sessao/copia/aplicar",
@@ -103,6 +110,7 @@
     "skill/salvar",
     "skill/instalar-sugerida",
     "conector/salvar",
+    "conector/importar",
     "conector/remover",
     "conector/ligar",
     "conector/segredo",
@@ -123,7 +131,10 @@
     "sessao/excluir",
     "cerebro/escolher",
     "cerebro/modelo",
-    "omniroute/salvar"
+    "omniroute/salvar",
+    "atualizacoes/procurar",
+    "atualizacoes/canal",
+    "atualizacoes/aplicar"
   ],
   "envios": [
     "sessao/anexo"

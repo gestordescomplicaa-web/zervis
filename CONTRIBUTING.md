@@ -40,7 +40,7 @@ rápida.
 ```sh
 uv sync && npm ci
 make check
-uv run python -m jarvis     # o painel abre em http://127.0.0.1:8795/
+uv run python -m zervis     # o painel abre em http://127.0.0.1:8795/
 ```
 
 Em um servidor, use o [guia de VPS](docs/vps.md).

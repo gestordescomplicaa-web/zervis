@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from jarvis import filho
+from zervis import filho
 
 
 def _rodar_uma_vez(
     codigo: str, caplog: pytest.LogCaptureFixture, registro: Path | None = None
 ) -> list[logging.LogRecord]:
     f = filho.Filho("teste", [sys.executable, "-c", codigo], {}, registro=registro)
-    with caplog.at_level(logging.INFO, logger="jarvis.filho"):
+    with caplog.at_level(logging.INFO, logger="zervis.filho"):
         f.iniciar()
         fim = time.monotonic() + 10
         while not any("de novo" in r.getMessage() for r in caplog.records):

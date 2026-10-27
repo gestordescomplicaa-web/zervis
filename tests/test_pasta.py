@@ -1,4 +1,4 @@
-"""A pasta do JARVIS: diário de aprendizado, curadoria das skills e as notas do Barehands."""
+"""A pasta do Zé: diário de aprendizado, curadoria das skills e as notas do Barehands."""
 
 import asyncio
 import os
@@ -6,14 +6,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-from jarvis.automacoes.jobs import Jobs
-from jarvis.cerebro import ferramentas
-from jarvis.cerebro.consumo import Consumo
-from jarvis.habilidades import revisao
-from jarvis.habilidades.diario import Diario
-from jarvis.habilidades.skills import Skills
-from jarvis.memoria.curta import Memoria, Mudanca
-from jarvis.rosto import pasta
+from zervis.automacoes.jobs import Jobs
+from zervis.cerebro import ferramentas
+from zervis.cerebro.consumo import Consumo
+from zervis.habilidades import revisao
+from zervis.habilidades.diario import Diario
+from zervis.habilidades.skills import Skills
+from zervis.memoria.curta import Memoria, Mudanca
+from zervis.rosto import pasta
 
 SKILL = "---\nname: {nome}\ndescription: Faz {nome}.\n---\n# {nome}\n"
 
@@ -53,8 +53,8 @@ def test_curadoria_arquiva_so_skill_parada_e_nada_se_perde(tmp_path: Path) -> No
 
 def test_origem_da_sugestao_e_a_fala_com_correcao() -> None:
     turnos = [
-        {"gabriel": "abre os temas", "jarvis": "..."},
-        {"gabriel": "não é assim, prefiro o seletor na tela", "jarvis": "..."},
+        {"pessoa": "abre os temas", "jarvis": "..."},
+        {"pessoa": "não é assim, prefiro o seletor na tela", "jarvis": "..."},
     ]
     assert revisao.origem(turnos) == "não é assim, prefiro o seletor na tela"
     assert revisao.origem(turnos[:1]) == "abre os temas"

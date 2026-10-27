@@ -6,8 +6,8 @@ import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from jarvis.avisos import mensagens as m
-from jarvis.nucleo import estados
+from zervis.avisos import mensagens as m
+from zervis.nucleo import estados
 
 WEB = '<a href="https://web.whatsapp.com/">web.whatsapp.com</a>\n\n'
 

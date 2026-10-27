@@ -6,12 +6,12 @@ from dataclasses import asdict
 from datetime import date, datetime
 from pathlib import Path
 
-from jarvis.atividade import Atividade
-from jarvis.automacoes.jobs import Job, Jobs
-from jarvis.cerebro.consumo import Consumo
-from jarvis.memoria.conversas import FUSO, Conversas
-from jarvis.memoria.linha import LinhaDoTempo
-from jarvis.oficina.sessoes import Sessao, Sessoes
+from zervis.atividade import Atividade
+from zervis.automacoes.jobs import Job, Jobs
+from zervis.cerebro.consumo import Consumo
+from zervis.memoria.conversas import FUSO, Conversas
+from zervis.memoria.linha import LinhaDoTempo
+from zervis.oficina.sessoes import Sessao, Sessoes
 
 
 def test_importa_conversas_linha_atividade_e_preserva_busca(tmp_path: Path) -> None:
@@ -19,7 +19,11 @@ def test_importa_conversas_linha_atividade_e_preserva_busca(tmp_path: Path) -> N
     c.mkdir()
     (c / "2026-10-14.jsonl").write_text(
         json.dumps(
-            {"em": "2026-10-14T10:00:00-03:00", "gabriel": "cadê a proposta?", "ze": "Em revisão."}
+            {
+                "em": "2026-10-14T10:00:00-03:00",
+                "fala_antiga": "cadê a proposta?",
+                "ze": "Em revisão.",
+            }
         )
         + "\n"
     )

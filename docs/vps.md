@@ -40,9 +40,9 @@ deploy/instalar-servidor.sh
 O repositório é público: o `git clone` não pede usuário nem token. Para atualizar depois, entre
 na pasta, rode `git pull` e o instalador de novo.
 
-O instalador confere o que precisa, instala o uv se faltar, baixa os modelos de som, instala o
-serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do SSH e sobe com a
-máquina) e espera o painel responder. Se ele pedir, rode como root uma vez:
+O instalador confere o que precisa, instala o uv e o Go se faltarem, baixa os modelos de som,
+instala o serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do SSH e sobe
+com a máquina) e espera o painel responder. Se ele pedir, rode como root uma vez:
 `loginctl enable-linger ze`.
 
 Sem acesso do servidor ao GitHub, envie o código como pacote: no seu computador,
@@ -73,6 +73,13 @@ Código de primeiro acesso: ABCD-EFGH (vale 1 hora)
 Sem túnel SSH em nenhum momento. O endereço é HTTPS, criado pelo Cloudflare sem conta e sem abrir
 porta no servidor; ele muda quando o servidor reinicia (o painel mostra o novo em Voz).
 
+**Endereço fixo, num domínio seu.** Em Voz → Acesso de qualquer lugar → "Usar um endereço fixo":
+crie um túnel no Cloudflare (Zero Trust → Networks → Tunnels → Create a tunnel, tipo
+Cloudflared), cole o comando de instalação que ele mostra (sem rodar) e, em Public Hostname,
+aponte o endereço (por exemplo `ze.seudominio.com.br`) para HTTP `127.0.0.1:<porta do painel>`.
+O token fica num arquivo `0600` e o `cloudflared` o lê pelo `--token-file`. O endereço não muda
+mais: o mesmo nome serve no PC e, depois, na VPS (mude o serviço do túnel de máquina).
+
 Num servidor, um aparelho que entrou só com a senha pode usar o Zé e ligar o código do
 autenticador, mais nada; os ajustes pedem a entrada com o código. Desligar o código e desativar o
 acesso de qualquer lugar ficam só pelo túnel SSH, para ninguém tirar as proteções pelas quais
@@ -90,7 +97,7 @@ ssh -N -L 8795:127.0.0.1:8795 ze@<servidor>
 e abra `http://localhost:8795`, com a mesma porta dos dois lados. Pelo túnel, o painel trata você
 como o próprio computador do Zé: tudo fica liberado. Quem tem a sua chave SSH tem o Zé.
 
-Código vencido ou perdido: rode de novo `uv run python -m jarvis.portal.primeiro_acesso` na pasta
+Código vencido ou perdido: rode de novo `uv run python -m zervis.portal.primeiro_acesso` na pasta
 do Zé (só gera um código novo enquanto a senha não existe).
 
 ## 4. Falar com o Zé
@@ -113,11 +120,15 @@ agente pedir.
 
 Os projetos ficam no servidor (`~/projetos` por padrão).
 
+O Go 1.27.2 é instalado sem `sudo` no espaço do usuário, a partir do pacote oficial para x86-64
+ou arm64; o SHA-256 é conferido antes da extração ([checksums oficiais](https://go.dev/dl/?mode=json)).
+Na primeira conexão do WhatsApp, o Zé compila o WaCalls e baixa os módulos Go. O mesmo pareamento
+atende mensagens e ligações.
+
 ## Opcionais
 
 | Para | Instale | Por quê |
 |---|---|---|
-| WhatsApp do atendimento | Go 1.21 ou mais novo (Ubuntu 24.04: `sudo apt install golang-go`) | O Zé compila o WaCalls na primeira conexão; o Go baixa sozinho a versão que ele pede |
 | Autodesenvolvimento | Node 18 ou mais novo (Ubuntu 24.04: `sudo apt install nodejs npm`) | O `make check` confere os tipos do painel com o TypeScript |
 
 ## Conferir e manter
@@ -134,7 +145,7 @@ Avisos normais no registro de um servidor:
   chega pelo navegador.
 - `sem a chave do Deepgram: voz desligada`: até a chave ser salva no painel.
 - `modelos de som faltando: ...`: um download falhou; o painel e o texto funcionam, e a voz volta
-  depois de `uv run python -m jarvis.preparar` e de reiniciar o serviço.
+  depois de `uv run python -m zervis.preparar` e de reiniciar o serviço.
 
 Se a rede do servidor bloqueia o HuggingFace (a voz Cadu vem de lá), há dois caminhos:
 

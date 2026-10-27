@@ -7,14 +7,14 @@ from typing import Any
 
 import pytest
 
-from jarvis.nucleo.servicos.atendimento import ServicoAtendimento
-from jarvis.nucleo.servicos.avisos import ServicoAvisos
-from jarvis.nucleo.servicos.cerebro import ServicoCerebro
-from jarvis.nucleo.servicos.foco import ServicoFoco
-from jarvis.nucleo.servicos.memoria import ServicoMemoria
-from jarvis.nucleo.servicos.oficina import ServicoOficina
-from jarvis.nucleo.servicos.remoto import ServicoRemoto
-from jarvis.nucleo.servicos.voz import ServicoVoz
+from zervis.nucleo.servicos.atendimento import ServicoAtendimento
+from zervis.nucleo.servicos.avisos import ServicoAvisos
+from zervis.nucleo.servicos.cerebro import ServicoCerebro
+from zervis.nucleo.servicos.foco import ServicoFoco
+from zervis.nucleo.servicos.memoria import ServicoMemoria
+from zervis.nucleo.servicos.oficina import ServicoOficina
+from zervis.nucleo.servicos.remoto import ServicoRemoto
+from zervis.nucleo.servicos.voz import ServicoVoz
 
 
 def test_atendimento_entrega_evento_sem_acesso_ao_nucleo() -> None:
@@ -80,11 +80,12 @@ def test_foco_sem_sessao_nao_altera_pedido() -> None:
 
 def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
     import queue
+    import threading
     from datetime import datetime
 
-    from jarvis.automacoes.jobs import Job
-    from jarvis.nucleo import estados as e
-    from jarvis.nucleo.servicos.automacoes import ServicoAutomacoes
+    from zervis.automacoes.jobs import Job
+    from zervis.nucleo import estados as e
+    from zervis.nucleo.servicos.automacoes import ServicoAutomacoes
 
     agora = time.time()
     anotadas: list[str] = []
@@ -98,6 +99,11 @@ def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
         eventos_sistema=SimpleNamespace(novos=lambda: []),
         _vigia_em=agora,
         _agenda_em=agora,
+        _n8n_em=agora,  # o vigia do n8n acabou de rodar
+        _n8n_conferindo=threading.Event(),
+        _versoes_em=agora,  # a procura de atualização também
+        _versoes_procurando=threading.Event(),
+        versoes=SimpleNamespace(resultado_novo=lambda: None),
     )
     ServicoAutomacoes(contexto)._agendador(agora)
     assert anotadas == ["Reunião."]
@@ -107,8 +113,8 @@ def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
 def test_oficina_recomeca_o_diagnostico_sem_apagar_a_atividade(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis import atividade
-    from jarvis.nucleo.servicos import oficina
+    from zervis import atividade
+    from zervis.nucleo.servicos import oficina
 
     monkeypatch.setattr(oficina, "ESTADO", tmp_path)
     registro = atividade.Atividade(tmp_path / "atividade.db")

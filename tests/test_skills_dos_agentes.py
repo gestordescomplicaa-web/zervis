@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from jarvis.cerebro import contas
-from jarvis.habilidades import skills
+from zervis.cerebro import contas
+from zervis.habilidades import skills
 
 
 def test_descricao_em_varias_linhas() -> None:

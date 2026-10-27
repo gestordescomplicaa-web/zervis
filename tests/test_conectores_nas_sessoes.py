@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro import conectores, mcp_externo
-from jarvis.cerebro.mcp_externo import McpInvalido
-from jarvis.oficina.sessoes import (
+from zervis.cerebro import conectores, mcp_externo
+from zervis.cerebro.mcp_externo import McpInvalido
+from zervis.oficina.sessoes import (
     Sessao,
     arquivo_de_conectores,
     comando_terminal,
@@ -65,13 +65,15 @@ def test_cada_projeto_recebe_so_os_conectores_dele(arquivos: tuple[Path, Path]) 
     assert "pessoal" in mcp_externo.carregar(toml, env={}, painel=painel).servidores
 
 
-def test_projeto_e_nome_de_pasta(arquivos: tuple[Path, Path]) -> None:
+def test_projeto_e_nome_de_pasta_ou_caminho_inteiro(arquivos: tuple[Path, Path]) -> None:
     toml, painel = arquivos
-    with pytest.raises(McpInvalido, match="projeto"):
-        conectores.salvar("x", {"comando": "y", "projetos": ["/home/a/loja"]}, painel, toml)
-    conectores.salvar("x", {"comando": "y", "projetos": ["loja", " loja ", ""]}, painel, toml)
+    for invalido in ("home/a/loja", "/home/a/../b", "loja*"):
+        with pytest.raises(McpInvalido, match="projeto"):
+            conectores.salvar("x", {"comando": "y", "projetos": [invalido]}, painel, toml)
+    projetos = ["loja", " loja ", "", "/home/a/loja"]
+    conectores.salvar("x", {"comando": "y", "projetos": projetos}, painel, toml)
     (listado,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "x"]
-    assert listado["projetos"] == ["loja"]
+    assert listado["projetos"] == ["loja", "/home/a/loja"]
 
 
 def test_claude_le_os_conectores_de_um_arquivo_0600(
@@ -120,3 +122,117 @@ def test_sem_terminal_so_as_livres(arquivos: tuple[Path, Path]) -> None:
     assert pede_aprovacao("mcp__erp-loja__criar_pedido", externos)
     assert not pede_aprovacao("Bash", externos)
     assert not pede_aprovacao("mcp__outro__qualquer", externos)
+
+
+# --- o seletor da sessão (19/10/2026): o projeto escolhe os conectores, pelo caminho inteiro ---
+
+
+def test_caminho_inteiro_isola_pastas_de_mesmo_nome(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    joao, maria = Path("/clientes/joao/site"), Path("/clientes/maria/site")
+    conectores.salvar("n8n-joao", {"comando": "n8n-mcp"}, painel, toml)
+    assert conectores.ligar_no_projeto(joao, ["n8n-joao"], painel=painel, caminho=toml) == [
+        "docs",
+        "n8n-joao",
+    ]
+    assert "n8n-joao" in mcp_externo.para_projeto(joao, toml, painel, env={}).servidores
+    assert "n8n-joao" not in mcp_externo.para_projeto(maria, toml, painel, env={}).servidores
+    (na_maria,) = [c for c in conectores.do_projeto(maria, toml, painel) if c["nome"] == "n8n-joao"]
+    assert na_maria == {
+        "nome": "n8n-joao",
+        "tipo": "stdio",
+        "marcado": False,
+        "todos": False,
+        "editavel": True,
+        "outros": ["site"],  # já está noutro projeto: o seletor avisa
+    }
+
+
+def test_desmarcar_tira_o_caminho_e_o_nome_antigo_e_preserva_os_outros(
+    arquivos: tuple[Path, Path],
+) -> None:
+    toml, painel = arquivos
+    loja, padaria = Path("/clientes/loja"), Path("/clientes/padaria")
+    conectores.ligar_no_projeto(
+        padaria, ["erp-loja"], so_adicionar=True, painel=painel, caminho=toml
+    )
+    # "loja" (o nome antigo) e a padaria: tirar da loja não tira da padaria.
+    assert conectores.ligar_no_projeto(loja, [], painel=painel, caminho=toml) == ["docs"]
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["projetos"] == ["/clientes/padaria"]
+    # "*" vale em todos e não sai por um projeto; nome desconhecido é recusado.
+    assert "docs" in mcp_externo.para_projeto(loja, toml, painel, env={}).servidores
+    with pytest.raises(McpInvalido, match="desconhecido"):
+        conectores.ligar_no_projeto(loja, ["nao-existe"], painel=painel, caminho=toml)
+
+
+def test_criar_a_sessao_so_soma_conectores(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    loja = Path("/clientes/loja")
+    valendo = conectores.ligar_no_projeto(
+        loja, ["pessoal"], so_adicionar=True, painel=painel, caminho=toml
+    )
+    assert valendo == ["docs", "erp-loja", "pessoal"]  # o erp-loja continua
+
+
+def test_colar_o_mesmo_json_para_outro_cliente_pede_outro_nome(
+    arquivos: tuple[Path, Path],
+) -> None:
+    toml, painel = arquivos
+    colado = '{"mcpServers": {"docs": {"url": "https://mcp.docs.com/v2"}}}'
+    with pytest.raises(McpInvalido, match="Já existe o conector docs"):
+        conectores.importar(colado, painel=painel, caminho=toml, novo=True)
+    assert conectores.importar(colado, "docs-maria", painel=painel, caminho=toml, novo=True) == [
+        "docs-maria"
+    ]
+
+
+# --- a conversa com o Zé (19/10/2026): o conector de um cliente fica nas sessões dele ---------
+
+
+def test_conversa_recebe_so_os_gerais_e_os_marcados(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    assert set(mcp_externo.para_conversa(toml, {}, painel).servidores) == {"pessoal"}
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["conversa"] is False
+    conectores.salvar("erp-loja", {**_dados(erp), "conversa": True}, painel, toml)
+    conversa = mcp_externo.para_conversa(toml, {}, painel)
+    assert set(conversa.servidores) == {"pessoal", "erp-loja"}
+    assert conversa.livres == ["mcp__erp-loja__listar_pedidos", "mcp__pessoal__ver"]
+    assert conversa.bloqueadas == ["mcp__erp-loja__apagar_pedido"]
+    # Tirado do último projeto, volta a ser geral, e a marca some.
+    conectores.ligar_no_projeto(Path("/clientes/loja"), [], painel=painel, caminho=toml)
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["projetos"] == [] and erp["conversa"] is True
+    assert "conversa" not in json.loads(painel.read_text())["servidores"]["erp-loja"]
+
+
+def test_colar_de_novo_mantem_a_marca_da_conversa(arquivos: tuple[Path, Path]) -> None:
+    toml, painel = arquivos
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    conectores.salvar("erp-loja", {**_dados(erp), "conversa": True}, painel, toml)
+    colado = '{"mcpServers": {"x": {"command": "npx", "args": ["-y", "erp-mcp@2"]}}}'
+    conectores.importar(colado, "erp-loja", painel=painel, caminho=toml)
+    (erp,) = [c for c in conectores.listar(toml, painel, env={}) if c["nome"] == "erp-loja"]
+    assert erp["conversa"] is True and erp["argumentos"] == ["-y", "erp-mcp@2"]
+
+
+def test_sessoes_listar_mostra_os_conectores_de_cada_projeto(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from zervis.cerebro.ferramentas import sessoes as ferramentas_sessoes
+
+    def do_projeto(pasta: Path) -> list[dict[str, object]]:
+        marcado = pasta.name == "loja"
+        return [{"nome": "n8n-loja", "marcado": marcado}, {"nome": "docs", "marcado": True}]
+
+    monkeypatch.setattr(conectores, "do_projeto", do_projeto)
+    assert ferramentas_sessoes._conectores("/clientes/loja") == ["n8n-loja", "docs"]
+    assert ferramentas_sessoes._conectores("/clientes/padaria") == ["docs"]
+
+
+def _dados(c: dict[str, object]) -> dict[str, object]:
+    """O conector como o painel manda salvar, a partir do que a lista mostra."""
+    chaves = ("tipo", "comando", "argumentos", "url", "ambiente", "cabecalhos", "livres",
+              "bloqueadas", "projetos")  # fmt: skip
+    return {k: c[k] for k in chaves}

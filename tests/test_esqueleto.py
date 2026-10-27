@@ -5,12 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from jarvis import __version__
-from jarvis.__main__ import main
+from zervis import __version__
+from zervis.__main__ import main
 
 
 def test_versao_vem_do_pyproject() -> None:
-    assert __version__ == "0.0.1"
+    import tomllib
+    from pathlib import Path
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    assert __version__ == tomllib.loads(pyproject.read_text())["project"]["version"]
 
 
 def test_main_mostra_versao(capsys: pytest.CaptureFixture[str]) -> None:
@@ -24,15 +28,16 @@ def test_main_recusa_argumento_desconhecido(capsys: pytest.CaptureFixture[str]) 
 
 
 def test_personas_sao_recursos_do_pacote() -> None:
-    for nome in ("JARVIS", "RAPIDO"):
-        texto = files("jarvis").joinpath("persona", f"{nome}.md").read_text()
+    for nome in ("ZE", "RAPIDO"):
+        texto = files("zervis").joinpath("persona", f"{nome}.md").read_text()
         assert texto.startswith("# Zé") and "Como responder" in texto
 
 
 def test_personas_do_processo_anterior_continuam_legiveis() -> None:
     # Um serviço já em execução ainda tem o caminho antigo carregado até ser reiniciado.
     raiz = Path(__file__).resolve().parents[1]
-    for nome in ("JARVIS", "RAPIDO"):
-        antigo = raiz / "persona" / f"{nome}.md"
-        atual = files("jarvis").joinpath("persona", f"{nome}.md")
+    # JARVIS.md era o nome da persona até 20/10/2026: o link antigo leva à persona nova.
+    for antigo_nome, nome in (("JARVIS", "ZE"), ("ZE", "ZE"), ("RAPIDO", "RAPIDO")):
+        antigo = raiz / "persona" / f"{antigo_nome}.md"
+        atual = files("zervis").joinpath("persona", f"{nome}.md")
         assert antigo.is_symlink() and antigo.read_text() == atual.read_text()

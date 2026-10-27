@@ -9,13 +9,13 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import conectores, mcp_externo
-from jarvis.cerebro.claude import descrever
-from jarvis.cerebro.ferramentas import LIVRES, SERVIDOR
-from jarvis.cerebro.ferramentas import conectores as g
-from jarvis.portal.acoes.conectores import AcoesConectores
-from jarvis.portal.acoes.pagina import Servicos
 from tests.test_conectores import SERVIDOR as SERVIDOR_FALSO
+from zervis.cerebro import conectores, mcp_externo
+from zervis.cerebro.claude import descrever
+from zervis.cerebro.ferramentas import LIVRES, SERVIDOR
+from zervis.cerebro.ferramentas import conectores as g
+from zervis.portal.acoes.conectores import AcoesConectores
+from zervis.portal.acoes.pagina import Servicos
 
 
 @pytest.fixture

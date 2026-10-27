@@ -290,7 +290,8 @@
      },
      "oauth": false,
      "conectado": false,
-     "app_proprio": false
+     "app_proprio": false,
+     "conversa": false
     },
     {
      "nome": "notion",
@@ -308,7 +309,8 @@
      "conectado": false,
      "ligado": true,
      "segredos": {},
-     "app_proprio": false
+     "app_proprio": false,
+     "conversa": true
     }
    ],
    "pendente": false
@@ -455,7 +457,11 @@
    },
    "tela": null,
    "inicio": 1,
-   "atualizacao": null
+   "atualizacao": null,
+   "versao": {
+    "disponivel": true,
+    "rodando": false
+   }
   },
   "foco": {
    "atual": {
@@ -577,8 +583,18 @@
    "tunel": {
     "ativo": true,
     "endereco": "https://exemplo.invalid",
-    "qr": "Exemplo"
-   }
+    "qr": "Exemplo",
+    "fixo": "",
+    "porta": 8796
+   },
+   "app_voz": [
+    {
+     "id": "a1b2c3d4",
+     "nome": "Android · Zé Voz",
+     "desde": 1791990000.0,
+     "uso": 1792000000.0
+    }
+   ]
   },
   "sessoes": [
    {
@@ -673,7 +689,37 @@
     "nome": "skill-exemplo-3",
     "descricao": "Exemplo"
    }
-  ]
+  ],
+  "atualizacoes": {
+   "canal": "desenvolvimento",
+   "ultima": {
+    "canal": "desenvolvimento",
+    "instalada": "0.1.0 (v0.1.0-12-gabc1234)",
+    "destino": "origin/master",
+    "alvo": "def5678def56",
+    "disponivel": true,
+    "motivo": "",
+    "texto": "Há 3 mudanças novas no código em desenvolvimento.",
+    "mudancas": 3,
+    "novidades": [
+     "Atualizações pelo painel: procurar, escolher o canal e atualizar com um clique.",
+     "Documentos antigos revisados."
+    ],
+    "mais": 0,
+    "procurado": 1792000000.0
+   },
+   "resultado": {
+    "estado": "ok",
+    "canal": "desenvolvimento",
+    "inicio": 1791990000.0,
+    "fim": 1791990060.0,
+    "de": "0.1.0 (v0.1.0-9-g1111111)",
+    "para": "0.1.0 (v0.1.0-12-gabc1234)",
+    "registro": "Atualizando 1111111 → origin/master (3 mudanças):\nAtualizado para origin/master. O painel respondeu.",
+    "rodando": false,
+    "texto": "Atualizei o Zé para 0.1.0 (v0.1.0-12-gabc1234)."
+   }
+  }
  },
  "escritas": {
   "ze/sessao": {

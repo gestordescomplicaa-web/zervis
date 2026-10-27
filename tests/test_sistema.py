@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.sistema.catalogo import buscar, carregar, classificar
-from jarvis.sistema.politica import FERRAMENTA, Sistema, frase_confere
+from zervis.sistema.catalogo import buscar, carregar, classificar
+from zervis.sistema.politica import FERRAMENTA, Sistema, frase_confere
 
 
 def _script(pasta: Path, nome: str, cabecalho: str, corpo: str = 'echo "ok $*"') -> None:
@@ -94,8 +94,8 @@ def test_executa_sem_shell_e_recusa_proibido(pasta: Path) -> None:
 def test_cerebro_exige_a_frase_exata(tmp_path: Path) -> None:
     import asyncio
 
-    from jarvis.cerebro.base import Resposta
-    from jarvis.cerebro.claude import ClaudeBrain
+    from zervis.cerebro.base import Resposta
+    from zervis.cerebro.claude import ClaudeBrain
 
     def frase(nome: str, entrada: dict[str, object]) -> str | None:
         return "confirmo reiniciar" if nome == FERRAMENTA else None
@@ -114,7 +114,7 @@ def test_cerebro_exige_a_frase_exata(tmp_path: Path) -> None:
 
 
 def test_eventos_do_hook_viram_avisos_so_os_novos(tmp_path: Path) -> None:
-    from jarvis.sistema.vigia import Eventos
+    from zervis.sistema.vigia import Eventos
 
     arquivo = tmp_path / "eventos.jsonl"
     arquivo.write_text('{"evento":"post-update","arg":"","ts":1}\n')  # antigo: não é novidade
@@ -148,7 +148,7 @@ def test_hook_do_omarchy_anota_o_evento_pelo_nome_da_pasta(tmp_path: Path) -> No
 
 
 def test_vigia_avisa_processo_pesado_uma_vez() -> None:
-    from jarvis.sistema.vigia import TICKS, Vigia
+    from zervis.sistema.vigia import TICKS, Vigia
 
     ticks = {"t": 0}
 
@@ -163,7 +163,7 @@ def test_vigia_avisa_processo_pesado_uma_vez() -> None:
 
 
 def test_acoes_comuns_vao_resumidas_e_menu_e_leve(pasta: Path) -> None:
-    from jarvis.sistema.catalogo import resumo_comuns
+    from zervis.sistema.catalogo import resumo_comuns
 
     _script(
         pasta, "menu", "# omarchy:summary=Control the Omarchy menu\n# omarchy:args=[summon] [route]"
@@ -178,7 +178,7 @@ def test_acoes_comuns_vao_resumidas_e_menu_e_leve(pasta: Path) -> None:
 def test_aviso_falado_vai_como_contexto_do_proximo_pedido() -> None:
     import time
 
-    from jarvis.nucleo.laco import Nucleo
+    from zervis.nucleo.laco import Nucleo
 
     falso = type("N", (), {})()
     falso.avisos_falados = [(time.monotonic(), "Tenho uma sugestão para você aprovar.")]

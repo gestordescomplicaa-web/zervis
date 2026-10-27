@@ -9,11 +9,11 @@ from typing import Any
 
 import pytest
 
-from jarvis.nucleo.laco import Nucleo
-from jarvis.nucleo.servicos.oficina import ServicoOficina
-from jarvis.oficina.progresso import Progresso
-from jarvis.oficina.sessoes import Sessao, SessaoErro, Sessoes
-from jarvis.portal.senha import SO_NO_PC
+from zervis.nucleo.laco import Nucleo
+from zervis.nucleo.servicos.oficina import ServicoOficina
+from zervis.oficina.progresso import Progresso
+from zervis.oficina.sessoes import Sessao, SessaoErro, Sessoes
+from zervis.portal.senha import SO_NO_PC
 
 
 class _Manutencao:

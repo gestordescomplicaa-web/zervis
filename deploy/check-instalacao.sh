@@ -13,6 +13,8 @@ trap 'chmod -R u+w "$TEMP" 2>/dev/null; rm -rf "$TEMP"' EXIT INT TERM
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$(uv cache dir)}"
 command -v npm >/dev/null && export npm_config_cache="${npm_config_cache:-$(npm config get cache)}"
 if command -v go >/dev/null; then
+  go_root=$(go env GOROOT)
+  export PATH="$go_root/bin:$PATH"
   export GOMODCACHE="${GOMODCACHE:-$(go env GOMODCACHE)}" GOCACHE="${GOCACHE:-$(go env GOCACHE)}"
 fi
 
@@ -20,10 +22,17 @@ mkdir -p "$TEMP/zervis" "$TEMP/home"
 git -C "$REPO" archive "$COMMIT" | tar -x -C "$TEMP/zervis"
 export HOME="$TEMP/home"
 export XDG_CONFIG_HOME="$HOME/.config" XDG_DATA_HOME="$HOME/.local/share" XDG_STATE_HOME="$HOME/.local/state"
-unset JARVIS_RAIZ JARVIS_PERFIL VIRTUAL_ENV
+unset ZERVIS_RAIZ ZERVIS_PERFIL JARVIS_RAIZ JARVIS_PERFIL VIRTUAL_ENV
 
 cd "$TEMP/zervis"
 echo "instalação do zero: $(git -C "$REPO" rev-parse --short "$COMMIT") em $TEMP"
 uv sync --frozen
+# A instalação limpa também prepara o Go para que o make check prove o WaCalls sem depender
+# de uma ferramenta que já exista na máquina.
+GO_BIN=$(uv run python -m zervis.atendimento.preparar_go)
+export PATH="$GO_BIN:$PATH"
+# Com HOME vazio, os testes reais de áudio precisam dos modelos, como numa instalação nova.
+# Sem essa preparação, ZE_SEM_PULOS=1 revela que a prova de features ONNX foi pulada.
+uv run python -m zervis.preparar
 make check
 echo "instalação do zero: aprovada"

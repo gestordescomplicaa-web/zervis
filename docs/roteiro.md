@@ -21,8 +21,13 @@ Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro 
 **Para "pronto para local e VPS, conforme a pessoa escolher"**, em ordem:
 
 1. **Instalador de PC** (`deploy/instalar-pc.sh` ou um modo do instalador atual): hoje o PC usa o
-   caminho de desenvolvimento do README. Provar num Ubuntu limpo com tela (o Omarchy é o caso já
-   usado no dia a dia).
+   instalador documentado no README, com serviço, atalho e abertura local do painel. Testes dos
+   scripts e prova na CI em Ubuntu com tela virtual: [docs/pc.md](pc.md). Falta registrar a prova
+   com microfone e saída de som num Ubuntu limpo com tela física (o Omarchy é o caso já usado no
+   dia a dia). Comprovado em 16/10/2026 no Omarchy: serviço e atalho da cópia atual, avatar 3D
+   com as quatro expressões, câmera, captura local e reprodução pelo Piper; contas e dados
+   preservados com backup privado. Detalhes e limites em `docs/pc.md`. O item continua em
+   andamento até a prova no Ubuntu e a confirmação da conversa por voz.
 2. **Revisão da conversa pelo cérebro em uso:** `habilidades/revisao.py` chama sempre o Claude; com
    só o Codex conectado, falha no registro a cada conversa.
 3. **Modelo padrão do Codex** que a conta aceite (o padrão deu "acesso inválido"; o gpt-6-luna
@@ -31,7 +36,9 @@ Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro 
    (`cerebro/agentes_nativos.py`); hoje o da máquina tem a vez e fica sem ferramentas.
 5. **Endereço fixo** para a VPS (domínio próprio ou túnel com nome no Cloudflare): o
    `trycloudflare` muda quando o servidor reinicia.
-6. **Proteção da `master`** no GitHub (ADR 0036): o repositório é público; falta ligar as regras.
+6. **Proteção da `master`** no GitHub (ADR 0036). Feito em 19/10/2026: só entra por PR com a CI
+   verde, também para administradores; sem aprovação obrigatória (mantenedor único), sem
+   force-push nem apagar a branch. A primeira versão publicada é a `v0.1.0`.
 
 **Depois** (sem urgência, decidido com dados): Opus na voz do navegador (o registro de um dia não
 mostrou buracos de áudio); Zé 3D animado no painel remoto, sem a câmera (hoje fora do PC aparece o
@@ -48,19 +55,19 @@ holograma fixo); imersão com câmera fora do PC.
 
 ## Já decidido
 
-- **Dados em três raízes XDG** (`jarvis/lugares.py`): `~/.config/zervis`, `~/.local/share/zervis`,
+- **Dados em três raízes XDG** (`zervis/lugares.py`): `~/.config/zervis`, `~/.local/share/zervis`,
   `~/.local/state/zervis`.
-- **"Quem sou eu"** em `<config>/perfil.json` (nome e sobre), lido por `jarvis/usuario.py`; a
+- **"Quem sou eu"** em `<config>/perfil.json` (nome e sobre), lido por `zervis/usuario.py`; a
   persona recebe isso no começo de cada conversa. Nenhum nome fixo no código.
-- **Fuso** do sistema (`jarvis/fuso.py`), ou `JARVIS_FUSO`.
+- **Fuso** do sistema (`zervis/fuso.py`), ou `ZERVIS_FUSO` (o antigo `JARVIS_*` ainda vale).
 - **Voz só pelo Deepgram.** Sem a chave, o Zé não escuta (painel e teclado funcionam).
-- **Acesso ao Claude** (`jarvis/cerebro/acesso.py`): token da assinatura (`claude setup-token`) ou
+- **Acesso ao Claude** (`zervis/cerebro/acesso.py`): token da assinatura (`claude setup-token`) ou
   chave de API colados no painel, senão o que a máquina já tem (variáveis ou login do Claude Code).
   Aplicado no ambiente do processo, vale para cérebro, via rápida, automações, sessões e revisão.
 - **Licença AGPL-3** (ADR 0013).
 - **Piper dentro do Zé** (dependência Python, GPL-3) e a voz Cadu (CC0) baixada e conferida na
   primeira subida: primeiro som em ~150 ms, sem serviço à parte.
-- **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `jarvis/imersivo/`, subido
+- **Imersivo dentro do Zé** (ADR 0014): holograma, Núcleo e mãos em `zervis/imersivo/`, subido
   pelo próprio Zé, com estado e manifesto nas pastas de dados.
 - **Memória longa pelo ai-memory embutido** (MIT, ADR 0016): o da máquina, ou o binário oficial
   baixado e conferido pelo Zé; as sessões de código alimentam e consultam a memória comum.
@@ -78,10 +85,10 @@ da liberação. Cada etapa tem um critério que se comprova, e só conta como fe
 | # | Etapa | Pronto quando | Estado |
 |---|---|---|---|
 | 1 | Filtro de qualidade | O painel abre num Chromium de verdade dentro do `make check` (todas as páginas, sem erro no console) e `make check-instalacao` passa numa pasta limpa | Feito em 15/10/2026 |
-| 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `jarvis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
-| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | ⬜ |
+| 2 | Estabilidade | Painel sem quedas e terminal correto com duas telas abertas; tarefa retomada depois de reiniciar, sem repetir efeitos; automações validadas no uso; sem a camada de compatibilidade de `zervis/nucleo/servicos/interface_*.py`; nenhum nome de pessoa no código ou nos dados gravados | ⬜ |
+| 3 | Instalação de um comando | `install.sh` e o comando `zervis` (`setup`, `doctor`, `update`, `uninstall`, `status`) numa máquina Linux limpa e numa VPS sem áudio, sem Go nem Node instalados antes (o que precisa vem com o instalador); WaCalls por binário conferido por SHA-256. Plano, dificuldades de quem instala e o PC como estação de um Zé na VPS: [ADR 0034](adr/0034-central-estacoes-e-instalacao.md) | Em parte: a VPS por um comando (16/10/2026); o instalador do PC (`deploy/instalar-pc.sh`) e o comando `zervis` com `status`, `doctor`, `update` (pelas versões publicadas, com volta automática) e `uninstall` (20/10/2026). Falta o `setup` e a prova numa máquina limpa |
 | 4 | Eficiência medida | Latência da voz, memória, processos ociosos e tokens por tarefa medidos numa rotina repetível; README com números no lugar de "mais enxuto" | ⬜ |
-| 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | ⬜ |
+| 5 | Liberação | Pacote `zervis` (com aliases para `jarvis` e `JARVIS_*`), documentos antigos revisados, README para quem chega, CI rodando `make check` e `make check-instalacao`, repositório público | Em parte: o pacote `zervis` com os aliases (22/10/2026), o README novo, os documentos antigos revisados (26/10/2026), a `v0.1.0`, o repositório público e a CI com o `make check`. Falta o `make check-instalacao` na CI |
 
 Depois da liberação: pacotes de extensão (ADR 0033, etapa E6), mais canais, isolamento em
 contêiner e outras plataformas. A exceção a avaliar é conversar com o Zé pelo WhatsApp, que já
@@ -130,8 +137,10 @@ etapa por vez. Ela absorve os itens 5 (instalação), 6 (SQLite) e 8 (revisão f
    no telefone, separado do Zé principal, com handoff para quem usa. Feito: o WhatsApp pareado
    pelo QR (WaCalls) e as mensagens como fonte dos avisos de lead quente. Falta: a recepcionista
    por ligação, o atendente no texto, montar o agente, assumir ao vivo e a telefonia SIP.
-8. **Revisão final** antes do primeiro envio público (inclui os documentos antigos que ainda
-   falam do Orca e do JARVIS: visão, conceitos, reaproveitamento, plano da oficina).
+8. **Revisão final** antes do primeiro envio público. Feito em 26/10/2026 para os documentos
+   antigos que ainda falavam do Orca e do Barehands como partes de hoje: visão, arquitetura,
+   conceitos e qualidade foram corrigidos; reaproveitamento e os planos ganharam o aviso de que
+   são registros da época.
 
 ## Primeiro teste numa VPS real (16/10/2026)
 
@@ -208,8 +217,8 @@ na ordem em que resolver:
 
 ## Em aberto
 
-- Nome do pacote e das variáveis: o código ainda é o pacote `jarvis` e usa `JARVIS_*`; as pastas
-  de dados e os serviços já se chamam `zervis`.
+- ~~Nome do pacote e das variáveis~~: resolvido em 22/10/2026. O pacote é `zervis` e as
+  variáveis são `ZERVIS_*`; o `python -m jarvis` e os `JARVIS_*` antigos ainda funcionam.
 
 ## Andamento da atualização (15/10/2026)
 
@@ -427,7 +436,7 @@ Correções da avaliação de maturidade:
 - **Imersivo:** Host e Origin locais; token por instância nos pedidos e nas leituras de estado.
   A página, os cards do núcleo e os comandos `board.sh`/`board-state.sh` enviam a autorização.
   O token de terminal fica na pasta de estado com permissão 0600 (ADR 0019).
-- **Distribuição:** personas em `jarvis/persona/`, incluídas no wheel. Conferido construindo o
+- **Distribuição:** personas em `zervis/persona/`, incluídas no wheel. Conferido construindo o
   pacote, extraindo fora do repositório e importando as personas e o ponto de entrada. Os caminhos
   anteriores em `persona/` são links para os mesmos arquivos, para processos já em execução
   continuarem lendo a persona até o próximo reinício.

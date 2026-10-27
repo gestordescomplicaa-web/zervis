@@ -1,0 +1,13 @@
+# A persona pede a tarefa como especificação completa: o que fazer, onde e como provar.
+nome = "Projeto novo vira uma sessão com a tarefa completa"
+pedido = "Cria um projeto novo chamado landing do Pedro e faz uma página de captura simples com um formulário de e-mail."
+
+[ferramentas]
+sessoes_listar = "[]"
+sessao_criar = '{"id": "s9", "nome": "Landing do Pedro", "pasta": "/srv/projetos/projetos/landing-do-pedro", "estado": "trabalhando"}'
+
+[espera]
+usa = ["sessao_criar"]
+nao_usa = ["sessao_enviar"]
+entrada = { sessao_criar = ["landing", "formul"] }
+entrada_alguma = { sessao_criar = ["e-mail", "email"] }

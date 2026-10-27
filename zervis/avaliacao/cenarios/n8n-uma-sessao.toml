@@ -1,0 +1,17 @@
+# Pedido sobre o n8n com uma sessão só ligada a ele: o Zé acha a sessão sozinho (19/10/2026).
+nome = "Pergunta sobre o n8n com uma sessão: vai direto nela"
+pedido = "O que tem no meu n8n?"
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false,
+  "conectores": ["n8n-joao"]},
+ {"id": "s2", "nome": "Site pessoal", "pasta": "/srv/projetos/projetos/site", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Ajustei o rodapé.", "copia_isolada": false, "conectores": []}]'''
+
+[espera]
+usa = ["sessoes_listar"]
+usa_alguma = ["sessao_ler", "sessao_enviar"]
+nao_usa = ["sessao_criar"]
+entrada_em_alguma = { sessao_ler = ["s1", "loja"], sessao_enviar = ["s1", "loja"] }  # id ou nome

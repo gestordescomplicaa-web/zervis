@@ -1,0 +1,7 @@
+# A resposta vai para a voz: curta, sem lista nem Markdown (persona, "Como responder").
+nome = "Explicação falada: curta e sem formatação"
+pedido = "Me explica rapidinho a diferença entre MCP e API."
+
+[espera]
+nao_usa = ["sessao_criar", "sessao_enviar", "automacao_lembrete"]
+resposta_alguma = ["MCP"]

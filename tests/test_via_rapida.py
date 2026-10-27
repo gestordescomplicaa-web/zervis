@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
-from jarvis import config
-from jarvis.cerebro import rapido
-from jarvis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
+from zervis import config
+from zervis.cerebro import rapido
+from zervis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 
 
 class MotorFalso:
@@ -123,7 +123,7 @@ def test_pedido_de_acao_passa_ao_completo_com_aviso_e_a_conversa_anterior() -> N
 @pytest.mark.parametrize(
     ("pedido", "completo"),
     [
-        ("[sexta, 09/10/2026, 11:30] (Janela do JARVIS: aberta) Abre o mapa.", True),
+        ("[sexta, 09/10/2026, 11:30] (Janela do Zé: aberta) Abre o mapa.", True),
         ("[x] Zé, pesquisa o preço do dólar", True),
         ("[x] Qual é o meu foco agora?", True),
         ("[x] Lembra que eu prefiro café sem açúcar", True),

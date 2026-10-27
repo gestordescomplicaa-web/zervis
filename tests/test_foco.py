@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.foco import ferramentas
-from jarvis.foco.frentes import LIMITE, Foco, FocoErro, Frente
-from jarvis.nucleo import estados
+from zervis.foco import ferramentas
+from zervis.foco.frentes import LIMITE, Foco, FocoErro, Frente
+from zervis.nucleo import estados
 
 
 def atual(foco: Foco) -> Frente:
@@ -120,7 +120,7 @@ def test_a_ferramenta_ver_resume_para_falar(tmp_path: Path) -> None:
 
 
 def test_o_quadro_da_tela_e_as_marcacoes_do_v(tmp_path: Path) -> None:
-    from jarvis.foco import tela
+    from zervis.foco import tela
 
     foco = novo(tmp_path)
     a = foco.criar("Ligatia", "comparar provedores SIP", "Ligatia")

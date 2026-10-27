@@ -5,11 +5,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from jarvis.memoria.conversas import Conversas
-from jarvis.memoria.linha import LinhaDoTempo, agora
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo
-from jarvis.portal.acoes import Acoes
+from zervis.memoria.conversas import Conversas
+from zervis.memoria.linha import LinhaDoTempo, agora
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo
+from zervis.portal.acoes import Acoes
 
 
 def test_fio_de_hoje_junta_conversa_e_avisos_em_ordem(tmp_path: Path) -> None:

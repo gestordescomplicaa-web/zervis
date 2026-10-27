@@ -1,7 +1,11 @@
 # Porta única de qualidade (docs/06-qualidade.md): formatação, lint, tipos e testes.
-.PHONY: check fmt lint tipos testes check-imersivo check-instalacao wacalls
+.PHONY: check fmt lint tipos testes check-imersivo check-instalacao wacalls avaliar
 
 check: lint tipos testes wacalls
+
+# A bateria de avaliação do cérebro (docs/avaliacao.md): gasta a conta do Claude, fora do check.
+avaliar:
+	uv run python -m zervis.avaliacao $(ARGS)
 
 fmt:
 	uv run ruff format .
@@ -22,10 +26,10 @@ node_modules/.package-lock.json: package.json package-lock.json
 testes:
 	uv run pytest
 
-# O WaCalls (Go) do atendimento; sem o Go na máquina, fica de fora (o Zé também não o usa).
-# Com ZE_SEM_PULOS=1 (a CI), sem Go é falha, como os testes pulados do pytest.
+# O WaCalls (Go) do atendimento. O instalador prepara o Go no espaço do usuário; na CI,
+# ZE_SEM_PULOS=1 também garante que os testes não sejam ignorados.
 wacalls:
-	@if command -v go >/dev/null; then cd jarvis/atendimento/wacalls && go vet ./... && go test ./...; \
+	@if command -v go >/dev/null; then cd zervis/atendimento/wacalls && go vet ./... && go test ./...; \
 	elif [ -n "$$ZE_SEM_PULOS" ]; then echo "wacalls: sem Go (ZE_SEM_PULOS=1)"; exit 1; \
 	else echo "wacalls: sem Go, testes do Go pulados"; fi
 
@@ -39,17 +43,28 @@ check-imersivo:
 	ZE_TESTES_IMERSIVO=1 uv run --with websockets --with pytest-xdist pytest -q -n 2 tests/imersivo
 
 # Instala o serviço (sem iniciar no login). Os modelos de som são baixados e conferidos pelo
-# próprio Zé na primeira subida (jarvis/preparar.py).
+# próprio Zé na primeira subida (zervis/preparar.py).
 
-PORTA ?= 8795
+# Sem PORTA, fica a que o serviço instalado já usa (inclusive por um ajuste em zervis.service.d).
+PORTA_EM_USO := $(shell systemctl --user show zervis -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^[A-Z]*_PAINEL_PORTA=\([0-9]*\)$$/\1/p' | tail -n1)
+PORTA ?= $(or $(PORTA_EM_USO),8795)
+CONFIG_HOME = $(or $(XDG_CONFIG_HOME),$(HOME)/.config)
+DATA_HOME = $(or $(XDG_DATA_HOME),$(HOME)/.local/share)
 
 .PHONY: instalar
 instalar:
 	uv sync --inexact
-	install -d $(HOME)/.config/systemd/user
-	sed 's#@REPO@#$(CURDIR)#' systemd/zervis.service > $(HOME)/.config/systemd/user/zervis.service
-	install -Dm644 deploy/zervis.svg $(HOME)/.local/share/icons/hicolor/scalable/apps/zervis.svg
-	install -d $(HOME)/.local/share/applications
+	install -d "$(CONFIG_HOME)/systemd/user"
+	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' \
+		systemd/zervis.service > "$(CONFIG_HOME)/systemd/user/zervis.service"
+	install -Dm644 deploy/zervis.svg "$(DATA_HOME)/icons/hicolor/scalable/apps/zervis.svg"
+	install -d "$(DATA_HOME)/applications"
 	sed -e 's#@REPO@#$(CURDIR)#' -e 's#@PORTA@#$(PORTA)#' -e 's#@ICONE@#zervis#' \
-		deploy/zervis.desktop > $(HOME)/.local/share/applications/zervis.desktop
+		deploy/zervis.desktop > "$(DATA_HOME)/applications/zervis.desktop"
+	# O comando `zervis` (status, doctor, update...): um atalho para o do projeto, sem
+	# sobrescrever um `zervis` que não seja este.
+	install -d "$(HOME)/.local/bin"
+	if [ ! -e "$(HOME)/.local/bin/zervis" ] || [ -L "$(HOME)/.local/bin/zervis" ]; then \
+		ln -sfn "$(CURDIR)/.venv/bin/zervis" "$(HOME)/.local/bin/zervis"; \
+	else echo "Aviso: já existe um $(HOME)/.local/bin/zervis que não é do Zérvis; ficou como está."; fi
 	systemctl --user daemon-reload

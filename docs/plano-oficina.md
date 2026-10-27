@@ -1,5 +1,8 @@
 # Plano — a oficina própria do Zé (09/10/2026)
 
+> **Registro da época.** Este plano foi feito: as sessões de código próprias estão em
+> `zervis/oficina/` (ADR 0015 a 0017), e o Orca não faz mais parte do Zé.
+
 Pedido do usuário: o Zé não pode depender do Orca para codificar, porque quem instalar o Zé
 não vai ter o Orca. O Orca (MIT) não tem agente de código: ele roda os dos outros (Claude Code,
 Codex, OpenCode) em worktrees e terminais, com orquestração. O Hermes (MIT) cria subagentes
@@ -36,7 +39,7 @@ agente disse, as ferramentas usadas, o fim). Nada se apaga sozinho.
 
 ## Fases
 
-1. **Núcleo das sessões e motor Claude** (`jarvis/oficina/sessoes.py`): criar, listar,
+1. **Núcleo das sessões e motor Claude** (`zervis/oficina/sessoes.py`): criar, listar,
    conversar, parar, worktree opcional, política de comandos, aviso ao terminar.
 2. **Painel: aba Sessões** no estilo da referência do Hermes: lista à esquerda (nome, pasta,
    último recado, estado), conversa à direita e a caixa de mensagem com a pasta embaixo; "+"

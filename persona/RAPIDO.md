@@ -1,1 +1,1 @@
-../jarvis/persona/RAPIDO.md
+../zervis/persona/RAPIDO.md

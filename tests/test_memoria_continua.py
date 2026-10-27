@@ -9,18 +9,18 @@ from typing import Any
 
 import pytest
 
-from jarvis.memoria import conversas as mc
-from jarvis.memoria import dias as md
-from jarvis.memoria import historico, tempo
-from jarvis.memoria.conversas import FUSO, Conversas, Turno
-from jarvis.memoria.dias import Dias
-from jarvis.memoria.linha import LinhaDoTempo, interpretar_data
+from zervis.memoria import conversas as mc
+from zervis.memoria import dias as md
+from zervis.memoria import historico, tempo
+from zervis.memoria.conversas import FUSO, Conversas, Turno
+from zervis.memoria.dias import Dias
+from zervis.memoria.linha import LinhaDoTempo, interpretar_data
 
 
 def test_publicacao_usa_binario_embutido_e_mesmos_dados(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.memoria import aimemory
+    from zervis.memoria import aimemory
 
     binario = tmp_path / "binario-embutido" / "ai-memory"
     dados = tmp_path / "memoria-longa"
@@ -32,7 +32,7 @@ def test_publicacao_usa_binario_embutido_e_mesmos_dados(
 
     monkeypatch.setattr(aimemory, "binario", lambda: binario)
     monkeypatch.setattr(aimemory, "DADOS", dados)
-    monkeypatch.setattr("jarvis.memoria.conversas.subprocess.run", executar)
+    monkeypatch.setattr("zervis.memoria.conversas.subprocess.run", executar)
     assert mc.publicar("conversas/dia.md", "Registro sintético.", ("voz",))
     comando, opcoes = chamadas[0]
     assert comando[:4] == [str(binario), "--data-dir", str(dados), "write-page"]
@@ -49,7 +49,7 @@ def test_cada_fala_fica_com_a_hora_e_o_dia_vira_pagina(tmp_path: Path) -> None:
     c.registrar("Que horas são?", "São dez da manhã.", quando(8, 10, 2))
     c.registrar("E amanhã?", "Quinta.", quando(8, 11, 30))
     c.registrar("Bom dia", "Bom dia!", quando(9, 8))
-    assert [t.gabriel for t in c.do_dia(date(2026, 10, 8))] == ["Que horas são?", "E amanhã?"]
+    assert [t.pessoa for t in c.do_dia(date(2026, 10, 8))] == ["Que horas são?", "E amanhã?"]
     assert c.dias() == [date(2026, 10, 8), date(2026, 10, 9)]
     pagina = c.pagina(date(2026, 10, 8))
     assert pagina.startswith("# Conversas com o Zé — quinta-feira, 08/10/2026")
@@ -66,7 +66,7 @@ def test_juntar_nao_duplica(tmp_path: Path) -> None:
 
 def test_carimbo_e_contexto_aninhado_saem_do_pedido() -> None:
     conteudo = (
-        "[quinta-feira, 08/10/2026, 00:47] (Janela do JARVIS: aberta; Núcleo recolhido "
+        "[quinta-feira, 08/10/2026, 00:47] (Janela do Zé: aberta; Núcleo recolhido "
         "(Mapa, Guia); o usuário está usando as mãos) (Aviso: algo) Quero o mapa."
     )
     assert mc.pedido_do_carimbo(conteudo) == (quando(8, 0, 47), "Quero o mapa.")
@@ -164,3 +164,23 @@ def test_a_busca_ve_as_paginas_do_ze_primeiro(tmp_path: Path) -> None:
             "INSERT INTO pages VALUES (1, 2, 100);"
         )
     assert historico.projetos(banco) == ["Zé", "VIBE-CODING"]
+
+
+def test_conversa_gravada_no_formato_antigo_continua_legivel(tmp_path: Path) -> None:
+    """Antes de 20/10/2026, a fala de quem usa ficava sob outra chave: ela continua sendo lida, e
+    as falas novas vão como "pessoa"."""
+    from zervis.dados.documentos import Documentos
+
+    pasta = tmp_path / "conversas"
+    antigo = {
+        "em": "2026-10-14T10:00:00-03:00",
+        "fala_antiga": "cadê a proposta?",
+        "ze": "Em revisão.",
+    }
+    Documentos(pasta / "conversas.db").guardar("conversas", {**antigo, "dia": "2026-10-14"})
+    c = Conversas(pasta)
+    (turno,) = c.do_dia(date(2026, 10, 14))
+    assert (turno.pessoa, turno.ze) == ("cadê a proposta?", "Em revisão.")
+    assert c.buscar("proposta")[0].pessoa == "cadê a proposta?"
+    novo = c.registrar("e o contrato?", "Assinado.")
+    assert '"pessoa": "e o contrato?"' in novo.para_json()

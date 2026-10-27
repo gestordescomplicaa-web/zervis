@@ -1,6 +1,7 @@
 # Matriz comparativa: Hermes, OpenClaw e Zérvis
 
-Data: 15/10/2026. Norte do [roteiro](roteiro.md): o que cada agente faz que os outros não fazem,
+Data: 15/10/2026, com a coluna do Zérvis revisada em 19/10/2026 (conectores, sessões por
+projeto, vigia do n8n e instalação na VPS). Norte do [roteiro](roteiro.md): o que cada agente faz que os outros não fazem,
 para decidir o que entra no Zérvis com base em referência, e não em ideias soltas. Revisar a cada
 etapa concluída.
 
@@ -9,7 +10,7 @@ uma empresa gostaria de ter. Por isso, além das funções, a matriz olha o que 
 (seção 4).
 
 **Método.** Hermes e OpenClaw: o que a documentação oficial afirma em 15/10/2026, sem instalar nem
-executar. Zérvis: o que está no código (`jarvis/`) e foi validado. Medições na
+executar. Zérvis: o que está no código (`zervis/`) e foi validado. Medições na
 [auditoria de 14/10](auditoria/funcionalidades-e-desempenho-2026-10-14.md).
 
 Legenda: **●** tem · **◐** parcial ou sem validação · **—** não tem ou não documentado.
@@ -88,7 +89,9 @@ Legenda: **●** tem · **◐** parcial ou sem validação · **—** não tem o
 
 | Função | Hermes | OpenClaw | Zérvis |
 |---|---|---|---|
-| Conectores MCP | ● stdio e HTTP | ● stdio, SSE e HTTP | ● stdio e HTTP, pelo painel |
+| Conectores MCP | ● stdio e HTTP | ● stdio, SSE e HTTP | ● stdio e HTTP: colar o JSON ou o curl do serviço, login OAuth com renovação |
+| Conectores por projeto (cliente) | ◐ perfis separados | ◐ agentes e gateways isolados | ● cada sessão liga os do seu projeto; fora da conversa |
+| Vigiar os sistemas dos clientes | ◐ cron sem modelo (`no_agent`) | ◐ heartbeat | ● vigia do n8n: fora do ar e de volta, sem modelo |
 | Política por ferramenta | ● filtro | ● perfis e política | ● livre, com aprovação ou bloqueada |
 | Navegador | ● vários backends | ● | ◐ Playwright MCP sem validação |
 | Busca na web | ● | ● doze provedores | ◐ pelo agente |
@@ -114,14 +117,14 @@ O ponto onde o Zérvis está mais atrás, e o primeiro a fechar.
 
 | Etapa | Hermes | OpenClaw | Zérvis hoje |
 |---|---|---|---|
-| Um comando | `curl …/install.sh \| bash` | `curl …/install.sh \| bash` | — (`git clone`, `uv sync`, `make instalar`) |
+| Um comando | `curl …/install.sh \| bash` | `curl …/install.sh \| bash` | ● na VPS (`deploy/instalar-servidor.sh`); ◐ no PC (`git clone`, `uv sync`, `make instalar`) |
 | Dependências | O instalador traz uv, Python, Node, ripgrep e FFmpeg | O instalador traz o Node | Manual: uv, Go para o WaCalls, modelos baixados na primeira subida |
 | Configuração inicial | Assistente no terminal (`hermes setup`) | `openclaw onboard` | ● pela tela do painel |
 | Serviço do sistema | systemd de usuário, com `loginctl enable-linger` | `--install-daemon`: systemd, launchd ou Tarefa Agendada | ◐ `make instalar` (systemd de usuário) |
 | Verificar a instalação | `hermes doctor` | `openclaw doctor` e `gateway status` | — |
 | Atualizar | Pelo Git gerenciado | Comando próprio | ◐ só pela oficina, com testes |
 | Desinstalar | Documentado | Comando próprio | — |
-| Servidor sem tela (VPS) | Docker e usuário de serviço | Docker, Kubernetes, guias por provedor | — (supõe áudio e janela) |
+| Servidor sem tela (VPS) | Docker e usuário de serviço | Docker, Kubernetes, guias por provedor | ● provado do zero num Ubuntu 24.04: HTTPS, senha e autenticador |
 | Plataformas | Linux, macOS, WSL2, Windows, Android | Linux, macOS, Windows, iOS, Android | Linux |
 
 **O que falta para o Zérvis empatar no Linux e na VPS:**

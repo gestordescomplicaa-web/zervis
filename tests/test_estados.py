@@ -2,8 +2,8 @@
 
 import pytest
 
-from jarvis.nucleo import estados
-from jarvis.nucleo.estados import (
+from zervis.nucleo import estados
+from zervis.nucleo.estados import (
     NAO_ENTENDI,
     PRAZO_CONFIRMACAO_S,
     AbrirMicrofone,
@@ -75,7 +75,7 @@ def test_ciclo_hey_orca_teste() -> None:
     m.tratar(RespostaFim(), 3)
     assert estado(m) is Estado.FALANDO  # ainda falando a última frase
     m.tratar(FalaOcioso(), 4)
-    assert estado(m) is Estado.OUVINDO  # conversa: segue ouvindo sem "Hey Orca"
+    assert estado(m) is Estado.OUVINDO  # conversa: segue ouvindo sem "Ei Zé"
     assert m.tratar(FimDeFala("Ok."), 6) == [Bip()]
     assert estado(m) is Estado.ATIVO
     assert m.historico == [
@@ -328,7 +328,7 @@ def test_confirmacao_entende_a_fala_natural(resposta: str, aprovado: bool) -> No
 
 
 def test_resposta_confusa_pergunta_de_novo_uma_vez_e_depois_nega() -> None:
-    from jarvis.nucleo.estados import REPERGUNTA
+    from zervis.nucleo.estados import REPERGUNTA
 
     m = _confirmando()
     m.tratar(FalaOcioso(), 5)
@@ -461,13 +461,13 @@ def test_comandos_de_console_nao_vao_ao_cerebro(fala: str, nome: str) -> None:
     ],
 )
 def test_frases_parecidas_com_troca_vao_ao_cerebro(fala: str) -> None:
-    from jarvis.nucleo.estados import comando
+    from zervis.nucleo.estados import comando
 
     assert comando(fala) is None
 
 
 def test_aviso_cortado_por_hey_orca_volta_para_a_fila_sem_mexer_no_cerebro() -> None:
-    from jarvis.nucleo.estados import ReterAviso
+    from zervis.nucleo.estados import ReterAviso
 
     m = ativa()
     assert m.tratar(Aviso("O Codex terminou: deu certo."), 1) == [
@@ -499,7 +499,7 @@ def test_brilho_sem_camera_nao_e_comando_local(fala: str) -> None:
         ("Abre o núcleo.", "nucleo_abrir"),
         ("Abra o Núcleo.", "nucleo_abrir"),
         ("Fecha o núcleo.", "nucleo_fechar"),
-        ("Fecha a janela do JARVIS.", "janela_fechar"),
+        ("Fecha a janela do Zé.", "janela_fechar"),
         ("Desliga a câmera.", "janela_fechar"),
         ("Abra o GUIA do núcleo.", "abrir_orbe:Guia"),
         ("Abre o guia.", "abrir_orbe:Guia"),
@@ -608,7 +608,7 @@ def test_escrito_vazio_ou_inativo_nao_faz_nada() -> None:
 
 
 def test_os_orbes_falados_vem_do_manifesto() -> None:
-    from jarvis.rosto import manifesto
+    from zervis.rosto import manifesto
 
     orbes = manifesto.falados(
         (
@@ -647,17 +647,17 @@ def test_a_voltinha_do_ze_e_comando_local(fala: str) -> None:
 
 
 def test_evento_da_tela_e_tratado_uma_vez_e_so_recente() -> None:
-    from jarvis.rosto.tela import evento_novo
+    from zervis.rosto.tela import evento_novo
 
     dados = {"evento": {"id": "a1", "tipo": "tonto", "ts": 100.0}}
     assert evento_novo(dados, "", 105.0) == dados["evento"]
     assert evento_novo(dados, "a1", 105.0) is None  # já falado
-    assert evento_novo(dados, "", 200.0) is None  # velho: o JARVIS estava parado
+    assert evento_novo(dados, "", 200.0) is None  # velho: o Zé estava parado
     assert evento_novo({}, "", 105.0) is None
 
 
 def test_chamado_no_comeco_sai_do_pedido() -> None:
-    from jarvis.nucleo.estados import sem_chamado
+    from zervis.nucleo.estados import sem_chamado
 
     assert sem_chamado("Ei Zé, que horas são?") == "que horas são?"
     assert sem_chamado("Eis é. Tá me ouvindo?") == "Tá me ouvindo?"
@@ -668,7 +668,7 @@ def test_chamado_no_comeco_sai_do_pedido() -> None:
 
 
 def test_chamado_repetido_continua_ouvindo_sem_nao_entendi() -> None:
-    from jarvis.nucleo import estados as e
+    from zervis.nucleo import estados as e
 
     m = e.Maquina()
     m.tratar(e.Presenca(True), 0.0)
@@ -681,7 +681,7 @@ def test_chamado_repetido_continua_ouvindo_sem_nao_entendi() -> None:
 
 
 def test_segurar_para_falar_abre_e_soltar_fecha() -> None:
-    from jarvis.nucleo import estados as e
+    from zervis.nucleo import estados as e
 
     m = e.Maquina()
     assert m.tratar(e.Apertou(), 0.0) == []  # inativo: o botão não abre nada
@@ -694,7 +694,7 @@ def test_segurar_para_falar_abre_e_soltar_fecha() -> None:
 
 
 def test_apertar_durante_a_fala_interrompe_e_ouve() -> None:
-    from jarvis.nucleo import estados as e
+    from zervis.nucleo import estados as e
 
     m = e.Maquina()
     m.tratar(e.Presenca(True), 0.0)
@@ -707,7 +707,7 @@ def test_apertar_durante_a_fala_interrompe_e_ouve() -> None:
 
 
 def test_pedido_pelo_botao_nao_abre_conversa() -> None:
-    from jarvis.nucleo import estados as e
+    from zervis.nucleo import estados as e
 
     m = e.Maquina()
     m.tratar(e.Presenca(True), 0.0)
@@ -721,7 +721,7 @@ def test_pedido_pelo_botao_nao_abre_conversa() -> None:
 
 
 def test_ao_vivo_ouve_sem_parar_e_sem_chamado() -> None:
-    from jarvis.nucleo import estados as e
+    from zervis.nucleo import estados as e
 
     m = e.Maquina()
     m.tratar(e.AoVivo(True), 0.0)  # chega antes do rosto: só guarda
@@ -747,7 +747,7 @@ def test_ao_vivo_ouve_sem_parar_e_sem_chamado() -> None:
 
 
 def test_ao_vivo_liga_com_o_ze_ja_ativo() -> None:
-    from jarvis.nucleo import estados as e
+    from zervis.nucleo import estados as e
 
     m = e.Maquina()
     m.tratar(e.Presenca(True), 0.0)

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro.claude import descrever
-from jarvis.cerebro.mcp_externo import McpInvalido, carregar
+from zervis.cerebro.claude import descrever
+from zervis.cerebro.mcp_externo import McpInvalido, carregar
 
 CONFIG = """
 [servidores.github]
@@ -48,7 +48,7 @@ def test_carrega_com_segredos_do_ambiente(tmp_path: Path) -> None:
 
 
 def test_as_bloqueadas_somem_da_lista_do_cerebro(tmp_path: Path) -> None:
-    from jarvis.cerebro.claude import ClaudeBrain
+    from zervis.cerebro.claude import ClaudeBrain
 
     cerebro = ClaudeBrain("m", [], tmp_path, bloqueadas=["mcp__navegador__browser_evaluate"])
     assert cerebro.opcoes().disallowed_tools == ["mcp__navegador__browser_evaluate"]

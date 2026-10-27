@@ -8,11 +8,11 @@ from typing import Any
 
 import pytest
 
-from jarvis.dados.documentos import Documentos
-from jarvis.nucleo import estados as e
-from jarvis.oficina import manutencao as mod
-from jarvis.oficina.manutencao import Manutencao
-from jarvis.oficina.sessoes import Sessao, SessaoErro
+from zervis.dados.documentos import Documentos
+from zervis.nucleo import estados as e
+from zervis.oficina import manutencao as mod
+from zervis.oficina.manutencao import Manutencao
+from zervis.oficina.sessoes import Sessao, SessaoErro
 
 
 @dataclass
@@ -88,9 +88,9 @@ def git(repo: Path, *args: str) -> None:
 @pytest.fixture
 def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     r = tmp_path / "repo"
-    (r / "jarvis/cerebro/ferramentas").mkdir(parents=True)
+    (r / "zervis/cerebro/ferramentas").mkdir(parents=True)
     (r / "docs").mkdir()
-    (r / "jarvis/cerebro/ferramentas/__init__.py").write_text("LEITURA = []\n")
+    (r / "zervis/cerebro/ferramentas/__init__.py").write_text("LEITURA = []\n")
     (r / "docs/x.md").write_text("x\n")
     git(r, "init", "-q")
     git(r, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "base", "--allow-empty")
@@ -142,27 +142,27 @@ def test_pedido_vai_com_contexto_e_o_combinado_dos_arquivos(repo: Path) -> None:
     assert "Contexto agora: Janela aberta." in texto
     assert str(m.pasta / f"resposta-{pedido}.md") in texto
     assert str(m.pasta / f"pergunta-{pedido}.md") in texto
-    assert "jarvis/cerebro/claude.py" in texto  # a zona protegida vai escrita no pedido
+    assert "zervis/cerebro/claude.py" in texto  # a zona protegida vai escrita no pedido
     assert "docs/essencia.md" in texto and "Escopo: só trabalho sobre o próprio Zérvis" in texto
 
 
 def test_essencia_e_seguranca_na_zona_protegida() -> None:
-    from jarvis.oficina.manutencao import PROTEGIDOS
+    from zervis.oficina.manutencao import PROTEGIDOS
 
     raiz = Path(__file__).resolve().parents[1]
     for arquivo in (
         "docs/essencia.md",
-        "jarvis/portal/senha.py",
-        "jarvis/portal/servidor.py",
-        "jarvis/portal/tunel.py",
-        "jarvis/atividade.py",
-        "jarvis/transporte/websocket.py",
-        "jarvis/cerebro/codex_rpc.py",
-        "jarvis/cerebro/codex.py",
-        "jarvis/cerebro/codex_mcp.py",
+        "zervis/portal/senha.py",
+        "zervis/portal/servidor.py",
+        "zervis/portal/tunel.py",
+        "zervis/atividade.py",
+        "zervis/transporte/websocket.py",
+        "zervis/cerebro/codex_rpc.py",
+        "zervis/cerebro/codex.py",
+        "zervis/cerebro/codex_mcp.py",
     ):
         assert arquivo in PROTEGIDOS and (raiz / arquivo).is_file(), arquivo
-    for pasta in ("jarvis/persona/", "systemd/"):
+    for pasta in ("zervis/persona/", "systemd/"):
         assert pasta in PROTEGIDOS and (raiz / pasta).is_dir(), pasta
 
 
@@ -207,12 +207,12 @@ def test_a_guarda_ve_codigo_novo_e_a_zona_protegida(repo: Path) -> None:
     assert m.guarda(inicio) == (False, ())
     (repo / "docs/x.md").write_text("y\n")
     assert m.guarda(inicio) == (False, ())  # documento: nem reinício nem alarme
-    (repo / "jarvis/novo.py").write_text("")
+    (repo / "zervis/novo.py").write_text("")
     git(repo, "add", "-A")
     git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "codigo")
     assert m.guarda(inicio) == (True, ())
-    (repo / "jarvis/cerebro/ferramentas/__init__.py").write_text("LEITURA = ['tudo']\n")
-    assert m.guarda(inicio) == (True, ("jarvis/cerebro/ferramentas/__init__.py",))
+    (repo / "zervis/cerebro/ferramentas/__init__.py").write_text("LEITURA = ['tudo']\n")
+    assert m.guarda(inicio) == (True, ("zervis/cerebro/ferramentas/__init__.py",))
     mod.CONFIG_DO_USUARIO.write_text("[sistema]\n")
     assert str(mod.CONFIG_DO_USUARIO) in m.guarda(inicio)[1]
 
@@ -229,7 +229,7 @@ def test_reiniciar_recusa_com_zona_protegida_sem_eu_revisei(
     m = nova(repo, SessoesFalsas())
     m.rodando = "abc"
     monkeypatch.setattr(subprocess, "run", rodar)
-    monkeypatch.setattr(m, "guarda", lambda inicio: (True, ("jarvis/cerebro/claude.py",)))
+    monkeypatch.setattr(m, "guarda", lambda inicio: (True, ("zervis/cerebro/claude.py",)))
     ok, fala = m.reiniciar()
     assert not ok and "pelo painel" in fala and not rodou
     ok, fala = m.reiniciar(revisado=True)
@@ -248,7 +248,7 @@ def test_resultado_do_reinicio_e_dito_uma_vez(repo: Path) -> None:
 def test_etapas_acompanham_o_git_e_so_confirmam_depois_do_reinicio(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from jarvis.oficina.progresso import Progresso
+    from zervis.oficina.progresso import Progresso
 
     m = nova(repo, SessoesFalsas())
     m.entrar()
@@ -306,8 +306,8 @@ def test_falha_ao_agendar_reinicio_nao_e_anunciada_como_reiniciando(
         ("Modo manutenção.", "manutencao_entrar"),
         ("Sai do modo manutenção.", "manutencao_sair"),
         ("Como está a manutenção?", "manutencao_situacao"),
-        ("Reinicia o JARVIS.", "reiniciar"),
-        ("Reinicia o JARVIS, eu revisei.", "reiniciar:revisado"),
+        ("Reinicia o Zé.", "reiniciar"),
+        ("Reinicia o Zé, eu revisei.", "reiniciar:revisado"),
         ("Faz uma rodada de melhoria.", "rodada_melhoria"),
         # A frase real de 07/10/2026 que foi ao cérebro e virou o menu de configurações:
         ("Coloque no modo manutenção.", "manutencao_entrar"),
@@ -349,14 +349,14 @@ def test_no_modo_manutencao_o_pedido_vai_para_a_sessao_e_comandos_seguem_locais(
 
 def test_a_guarda_do_reinicio_ve_commits_feitos_fora_de_um_pedido(repo: Path) -> None:
     m = nova(repo, SessoesFalsas())  # o processo subiu nesta versão
-    (repo / "jarvis/cerebro/ferramentas/__init__.py").write_text("LEITURA = ['tudo']\n")
+    (repo / "zervis/cerebro/ferramentas/__init__.py").write_text("LEITURA = ['tudo']\n")
     git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "direto, sem pedido")
-    assert m.guarda(m.rodando) == (True, ("jarvis/cerebro/ferramentas/__init__.py",))
+    assert m.guarda(m.rodando) == (True, ("zervis/cerebro/ferramentas/__init__.py",))
 
 
 def test_o_cerebro_tem_a_ferramenta_e_ela_pede_aprovacao(repo: Path) -> None:
-    from jarvis.cerebro import ferramentas
-    from jarvis.nucleo.laco import Nucleo
+    from zervis.cerebro import ferramentas
+    from zervis.nucleo.laco import Nucleo
 
     m = nova(repo, SessoesFalsas())
     nomes = [t.name for t in ferramentas.g_manutencao.ferramentas(m)]
@@ -392,10 +392,10 @@ def test_melhorias_numa_copia_isolada_aplicar_e_descartar(
         "Não há melhorias para aplicar.",
     )
     _commit(copia, "docs/guia.md", "guia novo\n")
-    _commit(copia, "jarvis/cerebro/ferramentas/__init__.py", "LEITURA = ['tudo']\n")
+    _commit(copia, "zervis/cerebro/ferramentas/__init__.py", "LEITURA = ['tudo']\n")
     mud = m.mudancas()
     assert len(mud["commits"]) == 2 and not (repo / "docs/guia.md").exists()  # o Zé em uso intacto
-    assert mud["protegidos"] == ["jarvis/cerebro/ferramentas/__init__.py"]
+    assert mud["protegidos"] == ["zervis/cerebro/ferramentas/__init__.py"]
     ok, texto = m.aplicar()
     assert not ok and "zona protegida" in texto
     m.testar = lambda pasta: False
@@ -426,9 +426,9 @@ def test_troca_manutencao_preserva_copia_pedidos_e_agente_ao_reabrir(
 ) -> None:
     from types import SimpleNamespace
 
-    from jarvis.cerebro import contas
-    from jarvis.oficina.sessoes import Sessoes
-    from jarvis.portal.acoes import Acoes
+    from zervis.cerebro import contas
+    from zervis.oficina.sessoes import Sessoes
+    from zervis.portal.acoes import Acoes
 
     cs = contas.Contas(repo.parent / "contas.json", repo.parent / "contas")
     monkeypatch.setattr(contas, "Contas", lambda: cs)
@@ -482,11 +482,11 @@ def test_interromper_confirma_fim_do_agente_e_preserva_a_copia(
 ) -> None:
     from types import SimpleNamespace
 
-    from jarvis.cerebro import contas
-    from jarvis.oficina.sessoes import Sessoes
-    from jarvis.oficina.terminal import Terminal
-    from jarvis.portal.acoes import Acoes
-    from jarvis.portal.servidor import PedidoInvalido
+    from zervis.cerebro import contas
+    from zervis.oficina.sessoes import Sessoes
+    from zervis.oficina.terminal import Terminal
+    from zervis.portal.acoes import Acoes
+    from zervis.portal.servidor import PedidoInvalido
 
     cs = contas.Contas(repo.parent / "contas.json", repo.parent / "contas")
     monkeypatch.setattr(contas, "Contas", lambda: cs)

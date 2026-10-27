@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from jarvis.cerebro import contas, logins
+from zervis.cerebro import contas, logins
 
 # Como o `claude auth login`: o link num hiperlink de terminal (OSC 8), com cor, e o pedido do
 # código; com o código, grava o login na pasta da conta.

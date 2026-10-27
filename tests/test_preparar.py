@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from jarvis import preparar
+from zervis import preparar
 
 
 class Resposta(io.BytesIO):

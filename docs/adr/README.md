@@ -3,6 +3,9 @@
 Uma decisão por arquivo, numerada, nunca apagada. Mudou de ideia? Novo ADR que **substitui** o antigo
 e o antigo ganha "Substituído por NNNN" no status.
 
+Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de JARVIS (o nome até
+08/10/2026) e o chamado de "Hey Orca" (hoje, "Ei Zé").
+
 | Nº | Decisão | Status |
 |---|---|---|
 | [0001](0001-nucleo-proprio-com-mecanismos-do-hermes.md) | Núcleo próprio, copiando mecanismos do Hermes | Aceito |

@@ -1,8 +1,8 @@
-"""O navegador do JARVIS: o que é livre, o que pergunta e o que nunca vai por voz."""
+"""O navegador do Zé: o que é livre, o que pergunta e o que nunca vai por voz."""
 
 from pathlib import Path
 
-from jarvis.cerebro import mcp_externo, navegador
+from zervis.cerebro import mcp_externo, navegador
 
 P = navegador.PREFIXO
 

@@ -5,12 +5,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from jarvis.habilidades import revisao
-from jarvis.habilidades.diario import Diario
-from jarvis.habilidades.skills import Skills
-from jarvis.memoria.curta import Memoria
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import PedidoInvalido
+from zervis.habilidades import revisao
+from zervis.habilidades.diario import Diario
+from zervis.habilidades.skills import Skills
+from zervis.memoria.curta import Memoria
+from zervis.portal.acoes import Acoes
+from zervis.portal.servidor import PedidoInvalido
 
 
 def _acoes(tmp_path: Path) -> Acoes:
@@ -52,7 +52,7 @@ def test_descartar_tira_sem_gravar(tmp_path: Path) -> None:
 def test_memoria_dos_projetos_conta_as_paginas(tmp_path: Path) -> None:
     import sqlite3
 
-    from jarvis.memoria import aimemory
+    from zervis.memoria import aimemory
 
     (tmp_path / "db").mkdir()
     with sqlite3.connect(tmp_path / "db" / "memory.sqlite") as con:

@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* gdautomacao.ia: colour themes. The Zé files (map, HUD, menu, calibrator)
+   read the --jv-* variables. "original" is exactly the original CSS; every other
+   theme sets body.tema-ativo + body.tema-<nome>: the shared rules below recolour
+   the board from the palette, and each palette is just a block of variables.
+   Themes replicate the original glass (see-through, same glows and layout) in a
+   darker tone, a step denser so they hold on very light rooms. */
+:root {
+  --jv-acento:#8ff0e4; --jv-acento-rgb:143 240 228; --jv-borda-rgb:140 240 225;
+  --jv-claro:#bffff2; --jv-claro-rgb:210 255 248; --jv-texto:#ecfffa; --jv-suave:#a8d8cf;
+  --jv-vidro-a:rgba(52,108,100,.32); --jv-vidro-b:rgba(14,40,36,.24);
+  --jv-painel:rgba(10,38,31,.94); --jv-escuro:rgba(3,20,16,.5); --jv-bola:rgba(30,70,64,.24);
+  --jv-sombra:rgba(3,18,16,.8);
+}
+
+/* ---- palettes ---- */
+body.tema-roxo {
+  --jv-acento:#c4b5fd; --jv-acento-rgb:196 181 253; --jv-borda-rgb:150 115 245; --jv-brilho-rgb:118 64 232;
+  --jv-claro:#ede9fe; --jv-claro-rgb:237 230 255; --jv-texto:#f3efff; --jv-suave:#c8bdf0;
+  --jv-vidro-a:rgba(48,22,116,.44); --jv-vidro-b:rgba(14,6,38,.36);
+  --jv-card-a:rgba(58,28,138,.42); --jv-card-b:rgba(16,7,44,.30);
+  --jv-painel-a:rgba(52,24,124,.46); --jv-painel-b:rgba(14,6,38,.34);
+  --jv-painel:rgba(18,8,42,.94); --jv-escuro:rgba(10,4,28,.5); --jv-bola:rgba(48,24,104,.24);
+  --jv-sombra:rgba(10,4,26,.85);
+}
+body.tema-marinho {
+  --jv-acento:#a9c8ff; --jv-acento-rgb:169 200 255; --jv-borda-rgb:96 146 240; --jv-brilho-rgb:52 104 224;
+  --jv-claro:#e3eeff; --jv-claro-rgb:227 238 255; --jv-texto:#eef4ff; --jv-suave:#b6c8ec;
+  --jv-vidro-a:rgba(18,40,104,.44); --jv-vidro-b:rgba(6,14,38,.36);
+  --jv-card-a:rgba(22,50,128,.42); --jv-card-b:rgba(6,16,44,.30);
+  --jv-painel-a:rgba(20,44,116,.46); --jv-painel-b:rgba(6,14,38,.34);
+  --jv-painel:rgba(6,14,40,.94); --jv-escuro:rgba(4,10,28,.5); --jv-bola:rgba(20,44,104,.24);
+  --jv-sombra:rgba(4,10,28,.85);
+}
+body.tema-esmeralda {
+  --jv-acento:#9ff0c6; --jv-acento-rgb:159 240 198; --jv-borda-rgb:70 196 138; --jv-brilho-rgb:22 150 98;
+  --jv-claro:#dcfcea; --jv-claro-rgb:220 252 234; --jv-texto:#ecfff4; --jv-suave:#aed8c0;
+  --jv-vidro-a:rgba(10,72,48,.44); --jv-vidro-b:rgba(4,26,18,.36);
+  --jv-card-a:rgba(12,88,58,.42); --jv-card-b:rgba(4,30,20,.30);
+  --jv-painel-a:rgba(10,80,52,.46); --jv-painel-b:rgba(4,26,18,.34);
+  --jv-painel:rgba(4,28,19,.94); --jv-escuro:rgba(2,18,12,.5); --jv-bola:rgba(10,70,46,.24);
+  --jv-sombra:rgba(2,16,10,.85);
+}
+body.tema-grafite {
+  --jv-acento:#e6e9ef; --jv-acento-rgb:230 233 239; --jv-borda-rgb:168 176 190; --jv-brilho-rgb:120 128 145;
+  --jv-claro:#f5f6f8; --jv-claro-rgb:245 246 248; --jv-texto:#f4f5f7; --jv-suave:#bcc2cc;
+  --jv-vidro-a:rgba(34,37,44,.48); --jv-vidro-b:rgba(12,13,16,.40);
+  --jv-card-a:rgba(42,46,54,.46); --jv-card-b:rgba(14,15,18,.34);
+  --jv-painel-a:rgba(38,42,50,.50); --jv-painel-b:rgba(12,13,16,.38);
+  --jv-painel:rgba(18,19,23,.95); --jv-escuro:rgba(10,11,13,.5); --jv-bola:rgba(40,44,52,.24);
+  --jv-sombra:rgba(6,7,9,.85);
+}
+
+/* ---- the board, recoloured from the palette (same structure as the original) ---- */
+body.tema-ativo .card:not(.ringcard):not(.modelcard):not(.fxcard):not(.imgcard) {
+  background:linear-gradient(168deg, var(--jv-card-a), var(--jv-card-b));
+  border-color:rgb(var(--jv-borda-rgb) / .55); color:var(--jv-texto);
+  box-shadow:0 10px 44px rgba(0,0,0,.40), 0 0 26px rgb(var(--jv-brilho-rgb) / .14),
+             inset 0 1px 0 rgb(var(--jv-claro-rgb) / .55), inset 0 -14px 30px rgb(var(--jv-brilho-rgb) / .05); }
+body.tema-ativo .panel {
+  background:linear-gradient(172deg, var(--jv-painel-a), var(--jv-painel-b));
+  border-color:rgb(var(--jv-borda-rgb) / .6); color:var(--jv-texto);
+  box-shadow:0 16px 70px rgba(0,0,0,.5), 0 0 50px rgb(var(--jv-brilho-rgb) / .16), inset 0 1px 0 rgb(var(--jv-claro-rgb) / .55); }
+body.tema-ativo .card.imgcard { border-color:rgb(var(--jv-brilho-rgb) / .5);
+  box-shadow:0 8px 40px rgba(0,0,0,.55), 0 0 30px rgb(var(--jv-brilho-rgb) / .20), inset 0 1px 0 rgb(var(--jv-claro-rgb) / .35); }
+body.tema-ativo .card:not(.ringcard):not(.modelcard):not(.fxcard).grabbed,
+body.tema-ativo .panel.grabbed { border-color:var(--jv-acento);
+  box-shadow:0 12px 60px rgba(0,0,0,.7), 0 0 44px rgb(var(--jv-brilho-rgb) / .35); }
+body.tema-ativo .card h3, body.tema-ativo .panel .bar h3, body.tema-ativo .panel .scroll .h,
+body.tema-ativo .brow .bico, body.tema-ativo .brow.dir .btxt { color:var(--jv-acento); }
+body.tema-ativo .card p, body.tema-ativo .panel .scroll { color:var(--jv-texto); text-shadow:0 1px 3px var(--jv-sombra); }
+body.tema-ativo .card.orb p { color:var(--jv-suave); }
+body.tema-ativo .panel .bar { border-bottom-color:rgb(var(--jv-brilho-rgb) / .3); }
+body.tema-ativo .panel .close { border-color:rgb(var(--jv-brilho-rgb) / .65); color:var(--jv-acento); }
+body.tema-ativo .brow { border-bottom-color:rgb(var(--jv-brilho-rgb) / .12); }
+body.tema-ativo .brow.note .btxt, body.tema-ativo .brow.prop .btxt, body.tema-ativo .brow.widget .btxt { color:var(--jv-texto); }
+
+/* ---- the hand cursor ---- */
+body.tema-ativo .cursor { border-color:rgb(var(--jv-brilho-rgb) / .9); background:rgb(var(--jv-brilho-rgb) / .12); }
+body.tema-ativo .cursor.pinched { background:rgb(var(--jv-brilho-rgb) / .85); box-shadow:0 0 18px rgb(var(--jv-brilho-rgb) / .8); }
+body.tema-ativo .cursor .dwell { background:conic-gradient(var(--jv-acento) calc(var(--p)*360deg), transparent 0); }
+
+/* ---- HUD (same layout and transparency as the original) ---- */
+body.tema-ativo #hint { color:rgb(var(--jv-claro-rgb) / .85); text-shadow:0 1px 6px var(--jv-sombra), 0 0 2px var(--jv-sombra); }
+body.tema-ativo #hint.hud .b { background:rgb(var(--jv-borda-rgb) / .18); }
+body.tema-ativo #hint.hud .b i:not(.hot):not(.max):not(.baixa):not(.vazia) { background:rgb(var(--jv-borda-rgb) / .85); }
+body.tema-ativo #hint.hud .cer.ativo { border-color:rgb(var(--jv-borda-rgb) / .55); background:rgb(var(--jv-borda-rgb) / .08); }
+body.tema-ativo #hint.hud .cer.indo { border-color:rgb(var(--jv-borda-rgb) / .3); }
+body.tema-ativo #hint.hud .cer .p { background:rgb(var(--jv-borda-rgb) / .25); }
+body.tema-ativo #hint.hud .cer.ativo .p { background:rgb(var(--jv-borda-rgb)); box-shadow:0 0 8px rgb(var(--jv-borda-rgb) / .9); }
+body.tema-ativo #toast, body.tema-ativo #debug, body.tema-ativo #boot { color:var(--jv-acento); }

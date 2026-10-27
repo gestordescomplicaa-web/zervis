@@ -8,10 +8,10 @@ from typing import Any
 
 import pytest
 
-from jarvis.atendimento import central as c
-from jarvis.atendimento import cliente as cl
-from jarvis.atendimento import whatsapp as wa_mod
-from jarvis.atendimento.whatsapp import Recebida
+from zervis.atendimento import central as c
+from zervis.atendimento import cliente as cl
+from zervis.atendimento import whatsapp as wa_mod
+from zervis.atendimento.whatsapp import Recebida
 
 
 def test_token_criado_uma_vez_so_para_o_dono(tmp_path: Path) -> None:
@@ -58,7 +58,7 @@ class WhatsAppFalso:
 
 class AtendenteFalso:
     def __init__(self, pasta: Path) -> None:
-        from jarvis.atendimento.agente import Registros
+        from zervis.atendimento.agente import Registros
 
         self.registros = Registros(pasta)
         self.recebidas: list[Recebida] = []

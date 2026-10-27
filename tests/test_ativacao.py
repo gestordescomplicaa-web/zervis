@@ -1,7 +1,7 @@
-"""Detector "Hey Orca": o MLP em numpy e a regra de paciência.
+"""Detector "Ei Zé": o MLP em numpy e a regra de paciência.
 
 A equivalência com o openWakeWord original (diferença 0,0 nas 32 gravações do treino e os
-mesmos 28 de 30 disparos do JARVIS antigo) é medida por provas/prova_ativacao.py, porque usa a
+mesmos 28 de 30 disparos do Zé antigo) é medida por provas/prova_ativacao.py, porque usa a
 voz do usuário, que fica fora do repositório.
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from jarvis.voz.ativacao import (
+from zervis.voz.ativacao import (
     JANELA,
     QUADRO,
     Detector,
@@ -118,7 +118,7 @@ def test_features_reais_de_silencio_sao_estaveis() -> None:
 
 def test_sem_modelo_treinado_o_ze_sobe_e_nunca_dispara(tmp_path: Path) -> None:
     """Instalação nova: sem a voz treinada, atende pelo teclado e pelo painel."""
-    from jarvis.voz.ativacao import SemAtivacao, carregar_modelo
+    from zervis.voz.ativacao import SemAtivacao, carregar_modelo
 
     modelo = carregar_modelo(tmp_path / "nao-existe.npz")
     assert isinstance(modelo, SemAtivacao) and not modelo.treinada

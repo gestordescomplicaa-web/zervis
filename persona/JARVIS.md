@@ -1,1 +1,1 @@
-../jarvis/persona/JARVIS.md
+../zervis/persona/ZE.md

@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from jarvis.cerebro import omniroute
-from jarvis.cerebro.omniroute import OmniErro
+from zervis.cerebro import omniroute
+from zervis.cerebro.omniroute import OmniErro
 
 
 def test_endereco_https_em_qualquer_lugar_http_so_local() -> None:

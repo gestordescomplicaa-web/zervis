@@ -1,0 +1,12 @@
+nome = "Lembrete com hora e assunto, sem prometer o que não faz"
+pedido = "Me lembra amanhã às nove de ligar para o contador."
+
+[ferramentas]
+automacao_lembrete = '{"criada": "Ligar para o contador (lembrete, amanhã 09:00; ativo)", "id": "a1"}'
+
+[espera]
+usa = ["automacao_lembrete"]
+nao_usa = ["automacao_pergunta"]
+entrada = { automacao_lembrete = ["contador"] }
+entrada_alguma = { automacao_lembrete = ["9", "nove"] }
+resposta_nao = ["vou ligar", "liguei"]

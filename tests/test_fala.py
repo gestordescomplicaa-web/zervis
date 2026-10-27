@@ -1,9 +1,9 @@
-"""Normalizador de fala: casos portados do JARVIS antigo (VIBE-CODING/jarvis/tests, 06/10/2026)."""
+"""Normalizador de fala: casos portados do Zé antigo (VIBE-CODING/jarvis/tests, 06/10/2026)."""
 
 import json
 from pathlib import Path
 
-from jarvis.voz import fala
+from zervis.voz import fala
 
 
 def test_numbers_in_words() -> None:
@@ -78,7 +78,7 @@ def test_para_fala_tira_markdown_codigo_e_links() -> None:
     assert "**" not in texto
     assert "x=1" not in texto
     assert "https" not in texto
-    assert "chat" not in texto  # o JARVIS novo não tem chat
+    assert "chat" not in texto  # o Zé novo não tem chat
     assert texto.endswith("Veja o link")
     assert fala.para_fala("Frase. " * 600).endswith("Tem mais; se quiser, eu continuo.")
 
@@ -103,7 +103,7 @@ def test_para_fala_mantem_codigo_curto_e_caminhos_da_home() -> None:
 
 
 def test_a_marca_de_emocao_vira_rosto_e_sai_da_fala(tmp_path: Path) -> None:
-    from jarvis.rosto.anel import Anel, separar_emocao
+    from zervis.rosto.anel import Anel, separar_emocao
 
     assert separar_emocao("[alegria] Deu certo!") == ("alegria", "Deu certo!")
     assert separar_emocao(" [Dúvida]  Qual dos dois?") == ("duvida", "Qual dos dois?")
@@ -121,7 +121,7 @@ def test_a_marca_de_emocao_vira_rosto_e_sai_da_fala(tmp_path: Path) -> None:
 
 
 def test_fontes_da_pesquisa_saem_da_fala() -> None:
-    from jarvis.voz.fala import separar_fontes
+    from zervis.voz.fala import separar_fontes
 
     resposta = (
         "O melhor é o QCY MeloBuds Pro.\n\nFontes:\n- [Melhores fones](https://x.com/a)\n"

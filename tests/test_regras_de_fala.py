@@ -4,9 +4,9 @@ from typing import Any
 
 import pytest
 
-from jarvis.avisos import modo
-from jarvis.nucleo import estados as e
-from jarvis.nucleo.laco import Nucleo
+from zervis.avisos import modo
+from zervis.nucleo import estados as e
+from zervis.nucleo.laco import Nucleo
 
 LONGO = (
     "A sessão de autodesenvolvimento terminou. Proposta um: agrupar os erros pela mensagem final. "
@@ -67,7 +67,7 @@ def _reter(n: Any, texto: str) -> None:
 
 def test_o_mesmo_aviso_nao_se_repete_em_dois_minutos(monkeypatch: pytest.MonkeyPatch) -> None:
     agora = [1000.0]
-    monkeypatch.setattr("jarvis.nucleo.laco.time.monotonic", lambda: agora[0])
+    monkeypatch.setattr("zervis.nucleo.laco.time.monotonic", lambda: agora[0])
     n = _Nucleo()
     texto = "A sessão Loja está esperando sua aprovação."
     assert _regra(n, texto)

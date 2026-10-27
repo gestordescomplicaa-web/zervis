@@ -7,12 +7,12 @@ from typing import Any
 
 import pytest
 
-from jarvis.portal.acoes import Acoes
-from jarvis.portal.servidor import PedidoInvalido
-from jarvis.presenca import hyprland
-from jarvis.presenca import modo as escuta
-from jarvis.presenca.rostos import Rostos
-from jarvis.transporte import local
+from zervis.portal.acoes import Acoes
+from zervis.portal.servidor import PedidoInvalido
+from zervis.presenca import hyprland
+from zervis.presenca import modo as escuta
+from zervis.presenca.rostos import Rostos
+from zervis.transporte import local
 
 
 def test_ativo_enquanto_houver_um_rosto() -> None:
@@ -49,11 +49,11 @@ def test_janela_sem_hyprland_vale_sempre(tmp_path: Path) -> None:
 def test_hyprland_disponivel_so_com_instancia_e_hyprctl(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("jarvis.presenca.hyprland.shutil.which", lambda nome: "/usr/bin/hyprctl")
+    monkeypatch.setattr("zervis.presenca.hyprland.shutil.which", lambda nome: "/usr/bin/hyprctl")
     assert not hyprland.disponivel(tmp_path / "hypr")
     (tmp_path / "hypr" / "assinatura").mkdir(parents=True)
     assert hyprland.disponivel(tmp_path / "hypr")
-    monkeypatch.setattr("jarvis.presenca.hyprland.shutil.which", lambda nome: None)
+    monkeypatch.setattr("zervis.presenca.hyprland.shutil.which", lambda nome: None)
     assert not hyprland.disponivel(tmp_path / "hypr")
 
 
@@ -66,10 +66,10 @@ def _fontes(saida: str) -> Any:
 
 def test_microfone_configurado_ou_o_padrao_do_sistema(monkeypatch: pytest.MonkeyPatch) -> None:
     linhas = "52\tomarchy_mic_fx\tPipeWire\ts16le 1ch 48000Hz\tRUNNING\n"
-    monkeypatch.setattr("jarvis.transporte.local.subprocess.run", _fontes(linhas))
+    monkeypatch.setattr("zervis.transporte.local.subprocess.run", _fontes(linhas))
     assert local.fonte("omarchy_mic_fx") == "omarchy_mic_fx"
     monkeypatch.setattr(
-        "jarvis.transporte.local.subprocess.run", _fontes("60\talsa_input.pci\tPipeWire\n")
+        "zervis.transporte.local.subprocess.run", _fontes("60\talsa_input.pci\tPipeWire\n")
     )
     assert local.fonte("omarchy_mic_fx") == local.PADRAO
     assert local.fonte("") == local.PADRAO
@@ -79,7 +79,7 @@ def test_sem_pactl_tenta_o_configurado(monkeypatch: pytest.MonkeyPatch) -> None:
     def falhar(*_: Any, **__: Any) -> Any:
         raise FileNotFoundError("pactl")
 
-    monkeypatch.setattr("jarvis.transporte.local.subprocess.run", falhar)
+    monkeypatch.setattr("zervis.transporte.local.subprocess.run", falhar)
     assert local.fonte("omarchy_mic_fx") == "omarchy_mic_fx"
 
 

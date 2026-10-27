@@ -5,8 +5,10 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
 
-from jarvis.cerebro.base import EventoCerebro, Fim
-from jarvis.cerebro.claude import FUSO, ClaudeBrain, carimbo, descrever
+import pytest
+
+from zervis.cerebro.base import EventoCerebro, Fim
+from zervis.cerebro.claude import FUSO, ClaudeBrain, carimbo, descrever
 
 
 def test_carimbo_em_portugues_no_fuso_de_recife() -> None:
@@ -73,7 +75,8 @@ def test_o_gancho_depois_troca_a_resposta_que_o_modelo_ve(tmp_path: Path) -> Non
 
     cerebro = ClaudeBrain("m", [], tmp_path, depois=depois)
     assert cerebro.opcoes().hooks is not None
-    assert ClaudeBrain("m", [], tmp_path).opcoes().hooks is None
+    # Sem `depois`, o gancho continua: ele registra os MCPs externos na Atividade.
+    assert ClaudeBrain("m", [], tmp_path).opcoes().hooks is not None
 
     def rodar(nome: str) -> object:
         entrada = {"hook_event_name": "PostToolUse", "tool_name": nome, "tool_response": "longa"}
@@ -101,3 +104,30 @@ def test_limite_real_com_subtipo_success_continua_sendo_erro(tmp_path: Path) -> 
         result="You've hit your session limit",
     )
     assert brain._traduzir(msg) == Fim("limite_de_uso")
+
+
+def test_ferramenta_de_conector_vai_para_a_atividade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O cérebro usou o n8n pela conversa e nada apareceu na Atividade (19/10/2026)."""
+    from zervis import atividade
+
+    registro = atividade.Atividade(tmp_path / "atividade.jsonl")
+    monkeypatch.setattr(atividade, "PADRAO", registro)
+    registro.autorizada("mcp__n8n-teste__search_workflows", "aprovada")
+    cerebro = ClaudeBrain("m", [], tmp_path)
+    for nome, resposta in (
+        ("mcp__n8n-teste__search_workflows", [{"type": "text", "text": "2 fluxos"}]),
+        ("mcp__jarvis__tela_ver", [{"type": "text", "text": "a tela"}]),  # registro próprio
+    ):
+        entrada = {"hook_event_name": "PostToolUse", "tool_name": nome,
+                   "tool_input": {"query": "pedidos"}, "tool_response": resposta}  # fmt: skip
+        asyncio.run(cerebro._depois_da_ferramenta(entrada, "id", {"signal": None}))  # type: ignore[arg-type]
+    (linha,) = registro.listar()
+    assert (linha["tipo"], linha["ferramenta"], linha["autorizacao"], linha["resultado"]) == (
+        "execucao",
+        "mcp__n8n-teste__search_workflows",
+        "aprovada",
+        "2 fluxos",
+    )
+    assert linha["entrada"] == {"query": "pedidos"}
