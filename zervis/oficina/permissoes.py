@@ -26,6 +26,9 @@ from typing import Any
 from urllib.parse import urlsplit
 
 PRAZO_S = 300.0  # quanto o gancho espera; depois, a janela do terminal segue sozinha
+# O Codex só mostra a pergunta dele depois que o gancho volta (prova de 27/10/2026): no
+# terminal, nada aparece enquanto o Zé espera, então a pergunta volta para lá mais cedo.
+PRAZO_CODEX_S = 120.0
 FALAVEL = 160  # um comando maior que isto não se aprova de ouvido: "está na tela"
 DETALHE = 400
 
@@ -100,6 +103,8 @@ def frase(ferramenta: str, entrada: dict[str, Any]) -> tuple[str, bool]:
         if not COMANDO_FALAVEL.fullmatch(comando):
             return f"rodar o comando {comando.split()[0] if comando else ''} (veja na tela)", False
         return f"rodar o comando: {comando}", True
+    if ferramenta == "apply_patch":  # o Codex mudando arquivos
+        return "mudar arquivos do projeto (veja na tela)", False
     if ferramenta in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
         caminho = str(entrada.get("file_path") or entrada.get("notebook_path") or "")
         return f"mudar o arquivo {caminho} (veja na tela)", False
@@ -148,17 +153,19 @@ class Permissoes:
         self.endereco = ""  # a rota do painel; vazio = sem painel, sem gancho
         self._relogio = relogio
         self._chaves: dict[str, str] = {}  # resumo da chave → sessão
+        self._prazos: dict[str, float] = {}  # sessão → prazo próprio (o do Codex é menor)
         self._pedidos: dict[str, Pedido] = {}
         self._mudou = threading.Condition()
 
     # --- chaves ------------------------------------------------------------------------------
 
-    def chave(self, sessao: str) -> str:
+    def chave(self, sessao: str, prazo_s: float | None = None) -> str:
         """Uma chave nova a cada vez que o terminal da sessão abre; a anterior deixa de valer."""
         nova = secrets.token_urlsafe(32)
         with self._mudou:
             self._chaves = {r: s for r, s in self._chaves.items() if s != sessao}
             self._chaves[_resumo(nova)] = sessao
+            self._prazos[sessao] = self.prazo_s if prazo_s is None else prazo_s
         return nova
 
     def esquecer(self, sessao: str, chave: str) -> None:
@@ -194,7 +201,7 @@ class Permissoes:
             detalhe=json.dumps(argumentos, ensure_ascii=False)[:DETALHE],
             falavel=falavel,
             assinatura=assinatura(ferramenta, argumentos),
-            turno=str(entrada.get("prompt_id", "")),
+            turno=str(entrada.get("prompt_id") or entrada.get("turn_id") or ""),  # Claude, Codex
             criado=self._relogio(),
         )
         with self._mudou:
@@ -203,7 +210,7 @@ class Permissoes:
         if self.ao_pedir is not None:
             self.ao_pedir(p)
         with self._mudou:
-            limite = time.monotonic() + self.prazo_s
+            limite = time.monotonic() + self._prazos.get(sessao, self.prazo_s)
             while not p.decisao and (falta := limite - time.monotonic()) > 0:
                 self._mudou.wait(falta)
             if not p.decisao:

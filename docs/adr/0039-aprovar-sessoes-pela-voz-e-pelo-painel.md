@@ -34,6 +34,12 @@ de mentira e o gancho `PermissionRequest`:
 | 8. Os campos do pedido | Traz `prompt_id`, `tool_name`, `tool_input`; **não traz `tool_use_id`** (o exemplo da documentação traz). |
 | 9. O `timeout` do gancho `http` | Em **segundos**: com 15, uma resposta aos 10 s valeu; com 5, não. |
 
+No Codex 0.159 (mesma data): o `PermissionRequest` dispara para ferramentas MCP em `prompt` e
+para comandos fora da caixa de segurança (`tool_name: Bash`), com `turn_id` e sem
+`tool_use_id`; permitir e negar funcionam; a pergunta dele só aparece **depois** que o gancho
+volta sem decisão; no Esc, o gancho não é encerrado, mas o `Interrupt` dispara com o mesmo
+`turn_id`; `approve` libera uma ferramenta (e `auto` não); só há gancho de comando.
+
 Conclusões: o terminal e o Zé valem ao mesmo tempo, e o primeiro que responde decide; nada
 trava se o Zé não responder. O Zé precisa descobrir sozinho que a pessoa já respondeu no
 terminal (teste 5).
@@ -82,9 +88,14 @@ terminal (teste 5).
    continuam proibidos e a voz não os libera.
 8. **Registro.** Cada pedido entra na Atividade: o que foi pedido, quem decidiu e por onde
    (voz, painel, terminal ou prazo).
-9. **Codex fica de fora por agora.** As sessões do Codex rodam por `codex exec`, sem como
-   perguntar; o que pede aprovação não chega a elas (ADR 0037). Levar as sessões para o
-   app-server do Codex, que pede aprovação, é um extra (E3).
+9. **O Codex no terminal pelo mesmo caminho** (27/10/2026, Codex 0.159). Ele tem o mesmo
+   gancho `PermissionRequest`, com a mesma resposta, mas só de comando: um comando fixo do Zé
+   repassa o pedido à mesma rota, com a chave, o endereço, o prazo e o arquivo de eventos no
+   ambiente. Fixo porque o Codex pede para confiar em cada gancho novo ("Hooks need review"):
+   a pessoa confia uma vez por conta, e o Zé avisa quando essa tela aparece. As ferramentas do
+   conector vão todas, por `approval_mode`: livres `approve`, o resto `prompt` (passa pelo
+   gancho), bloqueadas em `disabled_tools`. Sem terminal (`codex exec`), só as livres, como
+   antes.
 
 ## Consequências
 
@@ -93,16 +104,19 @@ terminal (teste 5).
   cérebro; as ações perigosas continuam no conector como aprovação ou bloqueio.
 - A fila e a rota são novas superfícies; a rota só escuta em `127.0.0.1` e cada sessão tem a
   sua chave.
-- Depende do gancho `PermissionRequest` do Claude Code; uma mudança nele quebra a voz, mas não a
-  sessão (a janela do terminal continua).
+- Depende do gancho `PermissionRequest` do Claude Code e do Codex; uma mudança nele quebra a voz,
+  mas não a sessão (a pergunta do terminal continua).
+- No Codex, a pergunta dele só aparece depois que o gancho volta: enquanto o Zé espera, o
+  terminal não pergunta nada. Daí o prazo menor (2 minutos) e a faixa no painel, logo acima do
+  terminal da sessão, para quem está no PC.
 
 ## Plano
 
-| Etapa | Escopo | Pronto quando |
+| Etapa | Escopo | Estado |
 |---|---|---|
 | E0 | Prova no Claude Code real (acima). | Feita em 27/10/2026. |
-| E1 | PR #49 | Provada de ponta a ponta com o Claude Code real em 27/10/2026: aprovado pelo painel, rodou sem tocar no terminal; aprovado no terminal, saiu do painel. |
-| E2 | PR #50 | Provada com o Claude Code real em 27/10/2026 (só o áudio simulado): "Sim, pode." virou o comando local, o Zé respondeu "Aprovado." e a ferramenta rodou. |
-| E1 | Rota, fila e chave por sessão; o gancho nas sessões; Aprovar e Negar no painel; retirar a pergunta quando o terminal responde; Atividade; comandos de teste liberados por projeto. | Uma publicação aprovada pelo painel no celular, e a sessão continua; respondida no terminal, some do painel. |
-| E2 | A pergunta falada (frase do item 3), "sim" e "não", a fila, o Silencioso pelo app. | "Sim" do sofá publica; "não" nega; silêncio deixa no painel. |
-| E3 | Extras, a pedido: "sim, sempre" (libera no conector, depois de o Zé dizer qual); Aprovar e Negar na notificação do Zé Voz; o Codex pelo app-server. | Cada um com a sua prova. |
+| E1 | Rota, fila e chave por sessão; o gancho nas sessões; Aprovar e Negar no painel; retirar a pergunta quando o terminal responde; Atividade; comandos de teste liberados. | PR #49. Provada com o Claude Code real: aprovado pelo painel, rodou sem tocar no terminal; aprovado no terminal, saiu do painel. |
+| E2 | A pergunta falada (item 3), "sim" e "não", a fila, o Silencioso pelo app. | PR #50. Provada com o Claude Code real (só o áudio simulado): "Sim, pode." aprovou e a ferramenta rodou. |
+| Codex | O mesmo no Codex do terminal (item 9). | Provada com o Codex 0.159 real em 27/10/2026: a livre rodou direto, a que pede aprovação esperou o Zé e rodou com o "sim", o Esc retirou o pedido, a bloqueada nem apareceu. |
+| E3 | Extras, a pedido: "sim, sempre" (libera no conector, depois de o Zé dizer qual); Aprovar e Negar na notificação do Zé Voz. | Cada um com a sua prova. |
+

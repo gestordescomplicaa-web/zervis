@@ -38,7 +38,7 @@ from zervis.cerebro import contas, mcp_externo, modelos
 from zervis.dados.documentos import Documentos, linhas_json, objeto_json
 from zervis.memoria import aimemory
 from zervis.oficina import continuidade, fallback
-from zervis.oficina.permissoes import PRAZO_S, Permissoes, assinatura
+from zervis.oficina.permissoes import PRAZO_CODEX_S, PRAZO_S, Permissoes, assinatura
 from zervis.oficina.terminal import Terminal
 
 log = logging.getLogger(__name__)
@@ -222,6 +222,7 @@ class Sessoes:
         self.terminais: dict[str, Terminal] = {}
         self._lidos: dict[str, int] = {}  # quanto do arquivo de eventos de cada sessão já foi lido
         self._limite_visto: set[str] = set()
+        self._ganchos_avisados: set[str] = set()  # o Codex pediu para confiar nos ganchos
         self._saida_limite: dict[str, bytes] = {}  # avisos de limite podem vir em vários quadros
         self.em_foco: tuple[str, float] = ("", 0.0)  # a sessão de que se fala agora, e quando
         self.trava = threading.Lock()
@@ -909,12 +910,21 @@ class Sessoes:
             if s.motor == "claude"
             else None
         )
-        segredos = conectores_codex(externos)[1] if s.motor == "codex" else {}
+        permissao = self.permissoes.endereco
+        segredos = conectores_codex(externos, bool(permissao))[1] if s.motor == "codex" else {}
         # A chave do gancho de permissão vai no ambiente do terminal, nunca na linha de comando.
-        permissao = self.permissoes.endereco if s.motor == "claude" else ""
-        chave = self.permissoes.chave(id_) if permissao else ""
+        # O Codex só aceita gancho de comando, e o comando precisa ser sempre o mesmo (ele pede
+        # para confiar em cada gancho novo): o endereço, o prazo e os eventos vão no ambiente.
+        prazo = PRAZO_CODEX_S if s.motor == "codex" else None
+        chave = self.permissoes.chave(id_, prazo) if permissao else ""
         if chave:
             segredos = {**segredos, VARIAVEL_PERMISSAO: chave}
+            if s.motor == "codex":
+                segredos |= {
+                    "ZE_PERMISSAO_URL": permissao,
+                    "ZE_PERMISSAO_PRAZO": str(int(PRAZO_CODEX_S) + 5),
+                    "ZE_EVENTOS": str(self.eventos(id_)),
+                }
         try:
             self.fallback.inicios[id_] = time.time()
             terminal = Terminal(
@@ -971,6 +981,14 @@ class Sessoes:
 
     def _olhar_saida(self, id_: str, dados: bytes) -> None:
         """A tela só dispara conferência. Histórico e prompts nunca comprovam limite."""
+        junto = self._saida_limite.get(id_, b"")[-64:] + dados  # pode vir partido em dois
+        if id_ not in self._ganchos_avisados and b"Hooks need review" in junto:
+            # O Codex quer que a pessoa confie nos ganchos do Zé (uma vez por conta): sem isso,
+            # a aprovação pela voz e pelo painel não funciona nesta sessão.
+            self._ganchos_avisados.add(id_)
+            if self.ao_avisar is not None:
+                with contextlib.suppress(SessaoErro):
+                    self.ao_avisar(self.ler(id_), GANCHOS_DO_CODEX)
         if id_ in self._limite_visto:
             return
         recente = (self._saida_limite.get(id_, b"") + dados)[-8192:]
@@ -1051,6 +1069,10 @@ class Sessoes:
             self.permissoes.retirar(id_, rodou=rodou)
             if acao := _acao_do_claude(e):
                 self.anotar(id_, "ferramenta", acao)
+        elif nome == "Interrupt":
+            # O Codex foi interrompido (Esc) com o gancho esperando: o gancho não é encerrado, e
+            # o pedido daquele turno sai do painel e da voz.
+            self.permissoes.retirar(id_, do_turno=str(e.get("turn_id", "")))
         elif nome == "Notification" and "permission" in str(e.get("message", "")).lower():
             if self.ao_avisar is not None:
                 self.ao_avisar(self.ler(id_), str(e.get("message", "")))
@@ -1608,6 +1630,22 @@ RESUMO_DO_EVENTO = (
     "print(json.dumps({'hook_event_name':e.get('hook_event_name'),'assinatura':n+':'+h}))"
 )
 VARIAVEL_PERMISSAO = "ZE_PERMISSAO"  # a chave do gancho de permissão, no ambiente do terminal
+# O gancho de permissão do Codex (só comando, não HTTP): repassa o pedido à rota do painel e
+# devolve a resposta; sem o Zé, nada (a pergunta do Codex aparece). Só a biblioteca padrão.
+GANCHO_CODEX = (
+    "import os,sys,urllib.request as u\n"
+    "try:\n"
+    " p=u.Request(os.environ['ZE_PERMISSAO_URL'],data=sys.stdin.buffer.read(),"
+    "headers={'Authorization':'Bearer '+os.environ['ZE_PERMISSAO'],"
+    "'Content-Type':'application/json'})\n"
+    " t=float(os.environ.get('ZE_PERMISSAO_PRAZO','125'))\n"
+    " r=u.build_opener(u.ProxyHandler({})).open(p,timeout=t)\n"
+    " sys.stdout.write(r.read().decode())\n"
+    "except Exception:\n"
+    " pass\n"
+)
+GANCHOS_DO_CODEX = "hooks need review"  # a mensagem do aviso, para quem avisa saber o que é
+NOME_DE_FERRAMENTA = re.compile(r"[A-Za-z0-9_-]{1,64}")
 PRAZO_PERMISSAO_S = PRAZO_S
 # Os comandos de teste e verificação rodam sem pergunta, para a sessão iterar sozinha até o
 # resultado (ADR 0039). O Claude não deixa um prefixo destes cobrir `cmd && outro`.
@@ -1778,16 +1816,22 @@ def _tabela_toml(valores: dict[str, str]) -> str:
     return "{" + ", ".join(f"{json.dumps(k)} = {json.dumps(v)}" for k, v in valores.items()) + "}"
 
 
-def conectores_codex(externos: mcp_externo.Externos) -> tuple[list[str], dict[str, str]]:
+def conectores_codex(
+    externos: mcp_externo.Externos, perguntar: bool = False
+) -> tuple[list[str], dict[str, str]]:
     """Codex: os conectores do projeto em `-c mcp_servers.*` e os segredos no ambiente do
-    processo (`env_vars`, `env_http_headers`), nunca na linha de comando. Só as ferramentas
-    livres (`enabled_tools`): o Codex não pergunta ao Zé antes de usar uma ferramenta MCP."""
+    processo (`env_vars`, `env_http_headers`), nunca na linha de comando. Sem como perguntar ao
+    Zé (`codex exec`), só as ferramentas livres (`enabled_tools`). No terminal, com o gancho de
+    permissão (`perguntar`, ADR 0039): todas pedem aprovação (`prompt`, que passa pelo gancho),
+    as livres já vão aprovadas (`approve`) e as bloqueadas nem aparecem (`disabled_tools`).
+    Conferido no Codex 0.159 em 27/10/2026: `auto` não libera, deixa o Codex decidir."""
     argumentos: list[str] = []
     segredos: dict[str, str] = {}
     for nome, config in externos.servidores.items():
         prefixo = f"mcp__{nome}__"
         livres = [f.removeprefix(prefixo) for f in externos.livres if f.startswith(prefixo)]
-        if not livres:
+        bloqueadas = [f.removeprefix(prefixo) for f in externos.bloqueadas if f.startswith(prefixo)]
+        if not livres and not perguntar:
             continue
         base = f"mcp_servers.{nome}"
         if config["type"] == "stdio":
@@ -1805,8 +1849,33 @@ def conectores_codex(externos: mcp_externo.Externos) -> tuple[list[str], dict[st
                 cabecalhos[cabecalho] = variavel
             if cabecalhos:
                 argumentos += ["-c", f"{base}.env_http_headers={_tabela_toml(cabecalhos)}"]
-        argumentos += ["-c", f"{base}.enabled_tools={json.dumps(livres)}"]
+        if not perguntar:
+            argumentos += ["-c", f"{base}.enabled_tools={json.dumps(livres)}"]
+            continue
+        argumentos += ["-c", f'{base}.default_tools_approval_mode="prompt"']
+        if bloqueadas:
+            argumentos += ["-c", f"{base}.disabled_tools={json.dumps(bloqueadas)}"]
+        for ferramenta in livres:
+            if NOME_DE_FERRAMENTA.fullmatch(ferramenta):  # outra forma de nome segue pedindo
+                argumentos += ["-c", f'{base}.tools.{ferramenta}.approval_mode="approve"']
     return argumentos, segredos
+
+
+def ganchos_codex() -> list[str]:
+    """Os ganchos do Zé no Codex: a permissão repassada à rota do painel e a interrupção nos
+    eventos da sessão. Os comandos são sempre os mesmos (o resto vem do ambiente), então a
+    pessoa confia neles uma vez por conta do Codex ("Hooks need review")."""
+    permissao = f"{shlex.quote(sys.executable)} -c {shlex.quote(GANCHO_CODEX)}"
+    interrupcao = 'cat >> "$ZE_EVENTOS"; echo >> "$ZE_EVENTOS"'
+    prazo = int(PRAZO_CODEX_S) + 10
+    return [
+        "-c",
+        f'hooks.PermissionRequest=[{{matcher="", hooks=[{{type="command", '
+        f"command={json.dumps(permissao)}, timeout={prazo}}}]}}]",
+        "-c",
+        f'hooks.Interrupt=[{{matcher="", hooks=[{{type="command", '
+        f"command={json.dumps(interrupcao)}}}]}}]",
+    ]
 
 
 PASTAS_DE_SKILLS = (".claude/skills", ".agents/skills")  # onde o Claude Code e o Codex procuram
@@ -1914,7 +1983,9 @@ def comando_terminal(
             cmd += ["-m", s.modelo]
         if s.esforco:
             cmd += ["-c", f'model_reasoning_effort="{s.esforco}"']
-        cmd += conectores_codex(externos)[0]
+        cmd += conectores_codex(externos, bool(permissao))[0]
+        if permissao:
+            cmd += ganchos_codex()
         if s.sdk_sessao:
             cmd += ["resume", s.sdk_sessao]
         return [*cmd, *([pedido] if pedido else [])]

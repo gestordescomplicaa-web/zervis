@@ -2,6 +2,16 @@
 
 ## Não lançado
 
+- Aprovar pela voz e pelo painel também nas sessões do Codex (ADR 0039, item 9): o mesmo
+  gancho `PermissionRequest`, por um comando fixo do Zé que repassa o pedido à rota do painel
+  (o Codex só aceita gancho de comando). A chave, o endereço, o prazo e o arquivo de eventos vão
+  no ambiente, então o comando é sempre o mesmo e a pessoa confia nele uma vez por conta do
+  Codex; quando a tela "Hooks need review" aparece, o Zé avisa para escolher "Trust all". As
+  ferramentas do conector passam a ir todas ao Codex do terminal: as livres já aprovadas
+  (`approve`), as que pedem aprovação perguntando pelo Zé (`prompt`) e as bloqueadas fora
+  (`disabled_tools`); sem terminal, só as livres. O Esc no Codex retira o pedido (gancho
+  `Interrupt`, pelo turno). Prazo de 2 minutos, porque o Codex só mostra a pergunta dele depois
+  que o gancho volta. Provado com o Codex 0.159 real.
 - Aprovar pela voz o que as sessões do Claude pedem (ADR 0039, etapa E2): o Zé pergunta em voz
   alta, com o que acontece se aprovar ("A sessão meu-n8n quer publicar o fluxo X: ele passa a
   rodar de verdade. Aprovo?"), e ouve a resposta sem o "Ei Zé". O "sim" e o "não" logo depois
