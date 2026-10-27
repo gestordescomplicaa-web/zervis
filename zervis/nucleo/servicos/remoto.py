@@ -116,11 +116,30 @@ class ServicoRemoto:
         # Conectada, a voz é ao vivo (ADR 0023), menos a do app no modo chamado; trocar uma pela
         # outra (o navegador e o app) também troca o modo.
         desejado = ligada and bool(getattr(self.n._fonte, "ao_vivo", True))
+        self._ligar_live(desejado and not travado)
         if desejado != self.n.maquina.ao_vivo or (anterior is None) != (self.n._fonte is None):
             self.n.eventos.put(e.AoVivo(desejado))
 
+    def _ligar_live(self, ao_vivo: bool) -> None:
+        """Ao vivo pelo navegador ou pelo app (o WebSocket da voz), o Live assume a conversa;
+        sem ele (sem o modelo, sem a chave, a sessão que não abriu), segue o recorte de sempre."""
+        live = getattr(self.n, "live", None)
+        if live is None:
+            return
+        fonte = self.n._fonte
+        if ao_vivo and isinstance(fonte, VozNavegador) and live.disponivel:
+            if live.fonte is not fonte and not live.ligar(fonte):
+                log.warning("Live não abriu (%s): a voz ao vivo usa o recorte", live.erro)
+        elif live.ativo:
+            live.desligar()
+
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None:
-        if fonte is self.n._fonte and not self.n.microfone_travado:
+        if fonte is not self.n._fonte or self.n.microfone_travado:
+            return
+        live = getattr(self.n, "live", None)
+        if live is not None and live.ativo and live.fonte is fonte:
+            live.receber(quadro)  # o Live ouve sem parar, inclusive com o Zé falando
+        else:
             self.n.captura.receber(quadro)
 
     def voz_pelo_navegador(self, conexao: Conexao, taxa: int) -> None:

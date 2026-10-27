@@ -116,6 +116,21 @@ class AoVivo:
     ligado: bool
 
 
+@dataclass(frozen=True)
+class FalaAoVivo:
+    """Uma fala da pessoa pelo Live (ADR 0042): a vez dela fechou e o texto veio junto. Vale
+    como o `FimDeFala`; os instantes alimentam as latências (fim da fala e fim da vez)."""
+
+    texto: str
+    fim_fala_em: float = 0.0
+    fechado_em: float = 0.0
+
+
+@dataclass(frozen=True)
+class Interrompido:
+    """No Live, a pessoa falou por cima do Zé e a fala foi cortada (ADR 0042)."""
+
+
 Evento = (
     Presenca
     | Ativacao
@@ -132,6 +147,8 @@ Evento = (
     | Apertou
     | Soltou
     | AoVivo
+    | FalaAoVivo
+    | Interrompido
 )
 
 # --- efeitos -------------------------------------------------------------------------------
@@ -397,8 +414,11 @@ COMANDOS = {
         ("modo", "aviso"),
         ("modo", "de", "avisos"),
     },
-    "modo_maos_livres": {
-        ("modo", "maos", "livres"),
+    "modo_live": {
+        ("modo", "live"),
+        ("modo", "laive"),
+        ("modo", "ao", "vivo"),
+        ("modo", "maos", "livres"),  # o nome antigo continua valendo
         ("modo", "mao", "livre"),
         ("maos", "livres"),
     },
@@ -1143,13 +1163,17 @@ class Maquina:
                     return []
                 self.segurando = False
                 return [FecharPedido()]
-            case FimDeFala(texto) if self.estado is Estado.OUVINDO and sem_chamado(texto) is None:
+            case FimDeFala(texto) | FalaAoVivo(texto) if (
+                self.estado is Estado.OUVINDO and sem_chamado(texto) is None
+            ):
                 # Só o chamado de novo (não ouviu o bip, ou repetiu): segue ouvindo, sem "não
                 # entendi".
                 self.prazo = agora + PRAZO_ESCUTA_S
                 return [Bip()] if self.autorizado else []
-            case FimDeFala(texto):
+            case FimDeFala(texto) | FalaAoVivo(texto):
                 return self._fim_de_fala(texto)
+            case Interrompido():
+                return self._interrompido(agora)
             case Digitado(texto):
                 return self._digitado(texto)
             case Silencio():
@@ -1396,6 +1420,29 @@ class Maquina:
         else:
             self._ir(Estado.ATIVO)
         return []
+
+    def _interrompido(self, agora: float) -> list[Efeito]:
+        """Live: a pessoa falou por cima. O que o Zé dizia para (o aviso volta para a fila), o
+        cérebro que ainda respondia é interrompido e a vez é dela: o que ela disser é o próximo
+        pedido. Numa confirmação, cortar a pergunta já é começar a responder."""
+        if self.estado is Estado.CONFIRMANDO:
+            if self.pergunta_falando:
+                self.pergunta_falando = False
+                self.prazo = agora + PRAZO_CONFIRMACAO_S
+            return []
+        if self.estado not in (Estado.PENSANDO, Estado.FALANDO):
+            return []
+        efeitos: list[Efeito] = [CortarFala(), *self._aviso_cortado()]
+        if not self.cerebro_terminou:
+            efeitos.append(InterromperCerebro())
+        self.cerebro_terminou = True
+        if self.ao_vivo:
+            self._ouvir_ao_vivo(agora)
+        else:
+            self._ir(Estado.OUVINDO)
+            self.autorizado = self.em_conversa = True
+            self.prazo = agora + self.prazo_conversa_s
+        return efeitos
 
     def _pedido_aprovacao(self, descricao: str) -> list[Efeito]:
         if self.estado not in (Estado.PENSANDO, Estado.FALANDO):

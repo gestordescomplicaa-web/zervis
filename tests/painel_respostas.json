@@ -455,7 +455,7 @@
    "latencia": [],
    "foco": "Exemplo",
    "tela_ts": 1791929788.8202186,
-   "modo_fala": "maos_livres",
+   "modo_fala": "live",
    "escuta": {
     "modo": "sempre",
     "janela": true

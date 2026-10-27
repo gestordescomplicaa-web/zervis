@@ -124,7 +124,7 @@ class ServicoFoco:
             return "Fechei a minha janela; a câmera apagou."
         if nome == "trocar":
             return self.n.trocar_cerebro(argumento)
-        if nome in ("modo_silencioso", "modo_avisos", "modo_maos_livres"):
+        if nome in ("modo_silencioso", "modo_avisos", "modo_live"):
             return self.n.mudar_modo_fala(nome.removeprefix("modo_"))
         if nome in ("permissao_sim", "permissao_nao"):  # o pedido de uma sessão (ADR 0039)
             return self.n._responder_permissao(nome == "permissao_sim")

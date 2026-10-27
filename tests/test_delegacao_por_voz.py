@@ -198,7 +198,7 @@ class AmbienteDeAvisos:
         return falas
 
 
-@pytest.mark.parametrize("modo", ["avisos", "maos_livres"])
+@pytest.mark.parametrize("modo", ["avisos", "live"])
 def test_tres_sessoes_avisam_uma_por_vez_sem_pedir_proximo(tmp_path: Path, modo: str) -> None:
     ambiente = AmbienteDeAvisos(tmp_path, modo)
     oficina = ServicoOficina(ambiente)  # type: ignore[arg-type]

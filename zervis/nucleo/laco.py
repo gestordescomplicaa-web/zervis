@@ -148,6 +148,7 @@ from zervis.voz.escuta import Segmentador
 from zervis.voz.fala import falavel, para_fala
 from zervis.voz.fim_de_turno import FimDeTurno
 from zervis.voz.latencia import Latencias
+from zervis.voz.live import Live
 from zervis.voz.saida import Voz
 
 log = logging.getLogger(__name__)
@@ -200,6 +201,13 @@ TIPOS_DE_SERVICO = (
     ServicoFoco,
     ServicoAutomacoes,
 )
+
+
+def live_ativo(nucleo: object) -> Live | None:
+    """O Live, se ele está com a conversa agora (a voz conectada ao vivo). Por fora da classe: os
+    testes chamam os métodos do núcleo com objetos que não têm o Live."""
+    live: Live | None = getattr(nucleo, "live", None)
+    return live if live is not None and live.ativo else None
 
 
 class Nucleo(
@@ -286,6 +294,19 @@ class Nucleo(
         self._ultima_fala = 0
         self.voz.ao_ficar_ociosa = self._voz_ociosa
         self.voz.muda = self.modo_fala == "silencioso"
+        # O Live (ADR 0042): com a voz conectada ao vivo, os ouvidos, a boca e o revezamento vão
+        # para a sessão do LiveKit Agents; o pedido e a resposta continuam por aqui.
+        self.live = Live(
+            chave=lambda: self.deepgram.chave,
+            motor_voz=self.motor_voz,
+            ao_pedido=lambda texto, fim, fechado: self.eventos.put(
+                e.FalaAoVivo(texto, fim, fechado)
+            ),
+            ao_interromper=lambda: self.eventos.put(e.Interrompido()),
+            ao_ociosa=self._voz_ociosa,
+            espera=lambda: self.espera,
+        )
+        self._pedidos_ao_vivo = 0  # os pedidos do Live que o laço já tratou
         self._vendo: tuple[str, float] = ("", 0.0)  # a sessão aberta no painel, e quando
         self.fila = Fila(ESTADO / "avisos.json")  # durável: reinício não perde aviso
         self.jobs = Jobs(DADOS / "automacoes" / "jobs.json")
@@ -568,6 +589,8 @@ class Nucleo(
             case e.CortarFala():
                 self.voz.parar()
                 self.anel.parar()
+                if (live := live_ativo(self)) is not None:
+                    live.parar()
             case e.Bip():
                 self.status.ativacoes += 1
                 self._tocar_bip()
@@ -634,9 +657,15 @@ class Nucleo(
                     self.latencias.primeiro_som(turno, em, tipo)
                     self.latencias.contexto(turno, voz_por=self.motor_voz.ultimo)
 
-                self._ultima_fala = self.voz.falar(
-                    falavel(para_fala(texto)), ao_iniciar=ao_iniciar if turno else None
-                )
+                falado = falavel(para_fala(texto))
+                if (live := live_ativo(self)) is not None and not self.voz.muda:
+                    self.voz.numero += 1  # a mesma contagem: o aviso de ociosa vale para os dois
+                    self._ultima_fala = self.voz.numero
+                    live.falar(falado, self.voz.numero, ao_iniciar if turno else None)
+                else:
+                    self._ultima_fala = self.voz.falar(
+                        falado, ao_iniciar=ao_iniciar if turno else None
+                    )
             case e.ResponderAprovacao(aprovado, fala):
                 log.info("aprovação respondida: %s", "sim" if aprovado else "não")
                 if not getattr(self.ponte, "aprovacao_pendente", True):
@@ -745,6 +774,8 @@ class Nucleo(
         if isinstance(evento, e.Aviso) and self._pessoa_falando():
             self._guardar(evento.texto)  # ao vivo: o aviso espera a pausa, não atropela
             return
+        if isinstance(evento, e.FalaAoVivo):
+            self._pedido_ao_vivo(evento)
         antes = self.maquina.estado
         agora = time.monotonic()
         self._digitado_em = (
@@ -762,6 +793,12 @@ class Nucleo(
         for efeito in self.maquina.tratar(evento, agora):
             self._executar(efeito)
         self._digitado_em = None
+        if (live := live_ativo(self)) is not None:
+            # A resposta acabou (o cérebro terminou, a pergunta de confirmação saiu ou o pedido não
+            # deu em nada): a vez fecha e o Live volta a ouvir.
+            m = self.maquina
+            acabou = m.cerebro_terminou or m.estado not in (e.Estado.PENSANDO, e.Estado.FALANDO)
+            live.acompanhar(acabou, self._pedidos_ao_vivo)
         depois = self.maquina.estado
         if (
             depois is not antes
@@ -799,6 +836,23 @@ class Nucleo(
                 self._ouvindo_desde, self._ouviu_voz = time.monotonic(), False
             if depois is e.Estado.OUVINDO and antes is e.Estado.FALANDO:
                 self._descartar_escuta()  # conversa contínua: próxima pergunta sem "Ei Zé"
+
+    def _pedido_ao_vivo(self, evento: e.FalaAoVivo) -> None:
+        """Uma fala pelo Live: as latências do pedido (fim da fala, fim da vez, transcrito) e o
+        registro do que foi ouvido, como no recorte de sempre (`_pedido_fechado`, `_transcrito`)."""
+        self._pedidos_ao_vivo += 1
+        if self.maquina.estado is e.Estado.OUVINDO:  # um pedido, não a resposta a uma pergunta
+            self._fechar_latencia("interrompido")
+            turno = self.latencias.iniciar("voz", evento.fim_fala_em)
+            self._turno_atual = turno
+            self.latencias.marcar(turno, "fim_fala", evento.fim_fala_em)
+            self.latencias.marcar(turno, "pedido_fechado", evento.fechado_em)
+            self.latencias.marcar(turno, "transcrito", evento.fechado_em)
+            self.latencias.contexto(turno, fim_por="live", transcricao_por="deepgram")
+        self.status.meio_transcricao = "live"
+        if self.cfg["escuta"]["registrar_texto"]:
+            log.info("transcrição (diagnóstico, live): %r", evento.texto)
+        self._ouvido = evento.texto
 
     def _relatar_fala_perdida(self) -> None:
         """Ao vivo, o que a pessoa diz enquanto o Zé pensa não é ouvido (só o "Ei Zé" interrompe).
@@ -974,6 +1028,10 @@ class Nucleo(
         )
 
     def rodar(self) -> None:
+        if not self.live.preparar():
+            log.info(
+                "Live indisponível (%s): a voz ao vivo usa o recorte de sempre", self.live.erro
+            )
         self.memoria_longa.iniciar()
         self._avisar_interrompidas()
         self._ligar_voz_remota()
@@ -1068,6 +1126,7 @@ class Nucleo(
 
     def desligar(self) -> None:
         self.parar.set()
+        self.live.desligar()
         self._fechar_latencia("servico_parado")
         self.latencias.fechar()
         self._fechar_escuta()
