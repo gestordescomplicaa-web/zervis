@@ -166,7 +166,8 @@ def test_fluxos_n8n_nao_mexe_em_producao_sem_aprovacao() -> None:
 
 def test_fluxos_n8n_segue_a_versao_de_cada_n8n() -> None:
     """Cada cliente tem o seu n8n, cada um numa versão (26/10/2026): a skill diz o que fazer sem
-    cada ferramenta, e não cita as que o MCP do n8n não tem (referência oficial das ferramentas)."""
+    cada ferramenta. A lista do n8n real vale mais que a documentação, que atrasa: `create_folder`
+    e `get_data_table_rows` existem no n8n de teste e ainda não na referência (27/10/2026)."""
     texto = (Path(skills_mod.__file__).parent / "iniciais/fluxos-n8n/SKILL.md").read_text()
     versoes = texto[texto.index("## Cada n8n tem a sua versão") : texto.index("## Antes de mexer")]
     for ferramenta, versao in (("test_workflow", "2.15"), ("search_workflow_executions", "2.20"),
@@ -174,5 +175,7 @@ def test_fluxos_n8n_segue_a_versao_de_cada_n8n() -> None:
                                ("get_workflow_versions_diff", "2.36")):  # fmt: skip
         linha = next(linha for linha in versoes.splitlines() if f"`{ferramenta}`" in linha)
         assert f"| {versao} |" in linha
-    for inexistente in ("create_folder", "move_workflows_to_folder", "2.18.4"):
-        assert inexistente not in texto
+    assert "2.18.4" not in texto
+    for real in ("create_folder", "move_workflows_to_folder", "get_data_table_rows"):
+        assert real in texto
+    assert "não cria pasta" not in texto and "não lê" not in texto

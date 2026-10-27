@@ -29,7 +29,8 @@ Cada cliente pode estar numa versão do n8n, e cada versão traz ferramentas dif
 ferramentas que aparecem nesta sessão são as que este n8n tem: a lista vale, não a suposição, e
 o que valeu no n8n de outro cliente não vale aqui. No começo, compare a lista com a tabela e diga
 à pessoa, numa frase e uma vez, o que falta neste n8n e a versão que traz. A 2.36 ou mais nova
-tem tudo o que esta skill usa.
+tem tudo o que esta skill usa. A documentação do n8n às vezes atrasa: uma ferramenta que aparece
+na lista vale, mesmo fora da tabela (como `create_folder` e `get_data_table_rows`).
 
 | Sem esta ferramenta | Vem na | Faça assim |
 | --- | --- | --- |
@@ -66,7 +67,9 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 5. `validate_node_config` em cada nó, e `validate_workflow` no código inteiro. Corrija até passar.
 6. `create_workflow_from_code`. Nome com o cliente e o que faz ("Loja do João · Pedido novo →
    planilha"). Na pasta do cliente: `search_projects` e `search_folders` dão os IDs, e o fluxo
-   já nasce lá (`projectId`, `folderId`). O MCP não cria pasta: se faltar, a pessoa cria no n8n.
+   já nasce lá (`projectId`, `folderId`). Pasta que falta: `create_folder`; um fluxo que já
+   existe vai para ela com `move_workflows_to_folder`. Sem essas ferramentas, a pessoa cria e
+   move no n8n.
 7. Testar (abaixo). Publicar só depois.
 
 ## Editar um fluxo existente
@@ -108,8 +111,8 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 ## Agentes e tabelas do n8n
 - Os agentes de IA do n8n seguem as mesmas regras: rascunho, `validate_agent`, `call_agent`
   para testar e `publish_agent` com aprovação. Leia `get_agent_builder_reference` antes.
-- Tabelas de dados: criar tabela e coluna e acrescentar linhas (`add_data_table_rows`), sim. O
-  MCP não lê nem apaga linhas. Apagar coluna (`delete_data_table_column`) só a pedido explícito.
+- Tabelas de dados: criar tabela e coluna, ler linhas (`get_data_table_rows`) e acrescentar
+  (`add_data_table_rows`), sim. Apagar coluna (`delete_data_table_column`) só a pedido explícito.
 
 ## Armadilhas
 - `archive_workflow`, `delete_agent` e `delete_data_table_column` apagam: só com a pessoa
