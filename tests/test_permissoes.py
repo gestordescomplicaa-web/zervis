@@ -38,12 +38,14 @@ def esperar(condicao: Any, prazo: float = 3.0) -> None:
 
 
 def em_segundo_plano(p: Permissoes, chave: str, entrada: dict[str, Any]) -> dict[str, Any]:
-    """O gancho esperando, numa thread; devolve onde a resposta vai cair."""
+    """O gancho esperando, numa thread; devolve onde a resposta vai cair. Espera o pedido novo
+    entrar na fila (não só a fila ter algum: o anterior já estava lá)."""
     saida: dict[str, Any] = {}
+    antes = len(p.pendentes())
     threading.Thread(
         target=lambda: saida.update(volta=p.pedir(chave, entrada)), daemon=True
     ).start()
-    esperar(lambda: p.pendentes())
+    esperar(lambda: len(p.pendentes()) > antes)
     return saida
 
 
