@@ -21,7 +21,7 @@ from zervis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.permissoes import Pedido
 from zervis.oficina.progresso import Progresso
-from zervis.oficina.sessoes import Sessao, SessaoErro, Sessoes
+from zervis.oficina.sessoes import GANCHOS_DO_CODEX, Sessao, SessaoErro, Sessoes
 from zervis.rosto import tela
 
 log = logging.getLogger(__name__)
@@ -299,6 +299,15 @@ class ServicoOficina:
     def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
         """O agente parou esperando a aprovação da pessoa. Com o pedido na fila de permissões, a
         pergunta de verdade (o que e o que acontece) já está sendo feita: sem aviso repetido."""
+        if mensagem == GANCHOS_DO_CODEX:
+            self.n._aviso_da_oficina(
+                f"A sessão {sessao.nome} precisa que você confie nos ganchos do Zé, no terminal: "
+                "escolha Trust all. É uma vez só nesta conta do Codex.",
+                "urgente",
+                sessao.id,
+                f"a sessão {sessao.nome} pede para confiar nos ganchos",
+            )
+            return
         if self.n.sessoes.permissoes.pendentes(sessao.id):
             return
         self.n._aviso_da_oficina(

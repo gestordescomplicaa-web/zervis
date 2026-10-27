@@ -83,3 +83,5 @@ sem a pessoa intervir no meio.
 - 19/10/2026: conector ligado a projeto sai da conversa com o Zé e fica só nas sessões do
   projeto ("Também na conversa" o traz de volta); a conversa acha a sessão pelos conectores de
   cada uma. As chamadas a MCPs externos pela conversa entram na Atividade.
+- 27/10/2026: no Codex do terminal, as ferramentas que pedem aprovação passam a chegar e a
+  perguntar pelo Zé (ADR 0039, item 9); sem terminal (`codex exec`), continuam de fora.
