@@ -134,6 +134,7 @@ function contaEmUso(agente) {
 }
 
 function linhaConta(ag, c) {
+  if (c.provedor) return linhaProvedor(c);
   const emUso = ag.em_uso === c.id;
   const estado = emUso && c.logado ? '<span class="etiqueta bom">Em uso</span>'
     : c.logado ? '<span class="etiqueta">Conectada</span>' : '<span class="etiqueta alerta">Sem login</span>';
@@ -144,6 +145,18 @@ function linhaConta(ag, c) {
     + botao(c.logado ? "Trocar login" : "Entrar", "conta-entrar", dados, c.logado ? "discreta" : "principal")
     + (c.padrao ? "" : xis("conta-remover", dados, "Remover conta"));
   return item(esc(c.nome), detalhe, estado + acoes);
+}
+
+// A conta de outro provedor no Claude Code: só a chave, sem login; vale nas sessões.
+function linhaProvedor(c) {
+  const estado = c.logado ? '<span class="etiqueta">Conectada</span>' : '<span class="etiqueta alerta">Sem chave</span>';
+  const detalhe = `${esc(c.plano)} · pago por uso · escolha no agente e conta da sessão`;
+  return item(esc(c.nome), detalhe, estado + xis("conta-remover", `data-id="${esc(c.id)}"`, "Remover conta"));
+}
+
+function adicionarProvedor(p) {
+  return `<div class="add"><input type="password" data-chave-provedor="${esc(p.id)}" placeholder="Chave de API da ${esc(p.nome)} (para usar no Claude Code)" autocomplete="off" spellcheck="false" aria-label="Chave de API da ${esc(p.nome)}">${botao(`Adicionar ${esc(p.nome)}`, "conta-provedor", `data-provedor="${esc(p.id)}"`)}</div>
+    <p class="nota"><a href="${esc(p.criar_chave)}" target="_blank" rel="noopener">Criar chave na ${esc(p.nome)} ↗</a> O Zé testa a chave e lista os modelos dela; o modelo do Claude Code passa a ser o da ${esc(p.nome)}, pago por uso.</p>`;
 }
 
 // --- Entrar na conta pelo painel (ADR 0035): o login do agente roda no Zé, a tela mostra o link
@@ -191,7 +204,8 @@ function desenharContas() {
     ${sub("Contas dos agentes nesta máquina. O login é feito no próprio agente; o Zé só usa.")}
     ${contasTela.agentes.map((ag) => `<h3 class="subtitulo">${esc(ag.nome)}${ag.instalado ? "" : ' <span class="etiqueta">Não instalado</span>'}</h3>
       <div class="itens">${ag.contas.map((c) => linhaConta(ag, c) + caixaLogin(c)).join("")}</div>
-      <div class="add"><input data-nova-conta="${esc(ag.id)}" placeholder="Nome de outra conta do ${esc(ag.nome)}" maxlength="40" autocomplete="off">${botao("Adicionar", "conta-adicionar", `data-agente="${esc(ag.id)}"`)}</div>`).join("")}
+      <div class="add"><input data-nova-conta="${esc(ag.id)}" placeholder="Nome de outra conta do ${esc(ag.nome)}" maxlength="40" autocomplete="off">${botao("Adicionar", "conta-adicionar", `data-agente="${esc(ag.id)}"`)}</div>
+      ${(ag.provedores || []).map(adicionarProvedor).join("")}`).join("")}
     <p class="resultado" id="resultado-contas"></p>`;
 }
 

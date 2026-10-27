@@ -46,7 +46,7 @@ async function formSessao() {
   mostrarLado(true);
   const [pastas, ct] = await Promise.all([api("pastas"), api("contas").catch(() => ({ agentes: [] }))]);
   // O agente de partida é o que tem conta conectada: o Claude, a menos que só o Codex tenha.
-  const logado = (/** @type {string} */ id) => !!ct.agentes?.find((a) => a.id === id)?.contas.some((c) => c.logado);
+  const logado = (/** @type {string} */ id) => !!ct.agentes?.find((a) => a.id === id)?.contas.some((c) => c.logado && !c.provedor);
   const padrao = !logado("claude") && logado("codex") ? "codex" : "claude";
   $("lado-sessao").innerHTML = `<div class="nova-sessao">${cartao("Nova sessão", `
     <label>Nome<input id="ns-nome" placeholder="Ligatia — testes" autocomplete="off"></label>

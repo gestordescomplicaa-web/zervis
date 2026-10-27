@@ -368,6 +368,23 @@
        "logado": true,
        "email": "Exemplo",
        "plano": ""
+      },
+      {
+       "id": "Exemplo-provedor",
+       "nome": "DeepSeek",
+       "padrao": false,
+       "provedor": "deepseek",
+       "comando": "",
+       "logado": true,
+       "email": "",
+       "plano": "DeepSeek · chave de API"
+      }
+     ],
+     "provedores": [
+      {
+       "id": "deepseek",
+       "nome": "DeepSeek",
+       "criar_chave": "https://platform.deepseek.com/api_keys"
       }
      ]
     },
@@ -395,7 +412,8 @@
        "email": "Exemplo",
        "plano": "free"
       }
-     ]
+     ],
+     "provedores": []
     }
    ]
   },

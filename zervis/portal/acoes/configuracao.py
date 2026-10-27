@@ -111,11 +111,19 @@ class AcoesConfiguracao(Pagina):
                             "id": c.id,
                             "nome": c.nome,
                             "padrao": not c.pasta,
+                            "provedor": c.provedor,
                             "comando": " ".join(c.comando_login()[1:]),
                             **contas.quem(c),
                         }
                         for c in cs.listar(agente)
                     ],
+                    # Outros provedores no Claude Code: a pessoa cola a chave (ADR 0016).
+                    "provedores": [
+                        {"id": id_, "nome": p.nome, "criar_chave": p.criar_chave}
+                        for id_, p in contas.PROVEDORES.items()
+                    ]
+                    if agente == "claude"
+                    else [],
                 }
                 for agente, nome in contas.NOMES.items()
             ]
@@ -123,10 +131,20 @@ class AcoesConfiguracao(Pagina):
 
     def adicionar_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
-            c = contas.Contas().adicionar(str(dados.get("agente", "")), str(dados.get("nome", "")))
+            if provedor := str(dados.get("provedor", "")):
+                c = contas.Contas().adicionar_provedor(provedor, str(dados.get("chave", "")))
+                aviso = (
+                    f"Conta {c.nome} criada, chave testada ({len(c.modelos)} modelos). "
+                    "Escolha-a no agente e conta da sessão."
+                )
+            else:
+                c = contas.Contas().adicionar(
+                    str(dados.get("agente", "")), str(dados.get("nome", ""))
+                )
+                aviso = f"Conta {c.nome} criada. Entre nela para usar."
         except (contas.ContaErro, OSError) as erro:
             raise PedidoInvalido(str(erro)) from None
-        return {**self.painel.contas(), "aviso": f"Conta {c.nome} criada. Entre nela para usar."}
+        return {**self.painel.contas(), "aviso": aviso}
 
     def remover_conta(self, dados: dict[str, Any]) -> dict[str, Any]:
         cs = contas.Contas()
@@ -152,6 +170,10 @@ class AcoesConfiguracao(Pagina):
         """O login do agente roda no Zé e aparece no painel: funciona sem tela, numa VPS."""
         try:
             conta = contas.Contas().achar(str(dados.get("id", "")))
+            if conta.provedor:
+                raise contas.ContaErro(
+                    "essa conta usa chave de API; para trocar, remova e cole outra"
+                )
             logins.PADRAO.abrir(conta)
         except contas.ContaErro as erro:
             raise PedidoInvalido(str(erro)) from None

@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- Outros modelos nas sessões pelo próprio Claude Code (ADR 0040), começando pela DeepSeek: em
+  Contas, cole a chave de API e o Zé testa a chave, lista os modelos dela (`deepseek-v4-pro`,
+  `deepseek-flash`) e cria uma conta do Claude Code com pasta própria. Escolhida no agente e
+  conta da sessão, ela abre o Claude Code com a API e o modelo da DeepSeek, pago por uso. A
+  voz, o painel, a aprovação e os conectores ficam iguais. A chave fica num arquivo 0600 e vai só
+  no ambiente do agente. A conta vale só nas sessões (o cérebro do Zé segue no Claude) e a troca
+  automática por limite não a escolhe. Provado com o Claude Code 2.1.291 real e a API da DeepSeek.
 - Digitar no terminal das sessões fica rápido também pela VPS: a tela do agente passa a voltar
   pelo mesmo WebSocket das teclas, assim que sai. Antes ela voltava pela leitura HTTP, e cada
   pedaço do redesenho do Claude Code ou do Codex esperava o navegador abrir outra leitura (uma
