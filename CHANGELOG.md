@@ -2,6 +2,17 @@
 
 ## Não lançado
 
+- Aprovar pelo painel o que as sessões do Claude pedem (ADR 0039, etapa E1): o pedido de
+  permissão chega ao Zé pelo gancho `PermissionRequest` (uma rota local do painel, com uma chave
+  por sessão no ambiente do terminal, nunca na linha de comando) e aparece no cartão da sessão,
+  com o que acontece se aprovar ("publicar o fluxo X: ele passa a rodar de verdade") e os
+  argumentos, com Aprovar e Negar; pelo celular também. O terminal pergunta ao mesmo tempo e o
+  primeiro que responde decide: respondido no terminal, o pedido sai do painel sozinho (pela
+  assinatura da ferramenta que rodou, já que o pedido não traz o `tool_use_id`). Sem resposta
+  em 5 minutos, fica só no terminal, como antes. Cada pedido entra na Atividade, com quem decidiu
+  e por onde. Os comandos de teste (`make check`, `make test`, `npm test`, `npm run test`,
+  `npm run lint`, `uv run pytest`, `pytest`) rodam sem pergunta, para a sessão iterar sozinha.
+  A voz vem na E2.
 - Skill `fluxos-n8n` no mesmo fluxo, pedido após pedido: cada chamada ao modelo relê a conversa
   inteira, e uma sessão longa ficava mais cara a cada pedido (medido: listar os fluxos numa
   conversa de uma semana custou quase o mesmo que construir o fluxo). O que importa vai para um

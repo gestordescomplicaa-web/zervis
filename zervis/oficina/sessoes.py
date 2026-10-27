@@ -20,6 +20,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -37,6 +38,7 @@ from zervis.cerebro import contas, mcp_externo, modelos
 from zervis.dados.documentos import Documentos, linhas_json, objeto_json
 from zervis.memoria import aimemory
 from zervis.oficina import continuidade, fallback
+from zervis.oficina.permissoes import PRAZO_S, Permissoes, assinatura
 from zervis.oficina.terminal import Terminal
 
 log = logging.getLogger(__name__)
@@ -209,6 +211,8 @@ class Sessoes:
         self.raizes = tuple(r.expanduser().resolve() for r in raizes)
         self.ao_terminar = ao_terminar
         self.ao_avisar: Callable[[Sessao, str], None] | None = None  # aprovação pedida no terminal
+        # Os pedidos de permissão do Claude, decididos também fora do terminal (ADR 0039).
+        self.permissoes = Permissoes()
         # Motivo para não aceitar trabalho agora (o Zé vai se atualizar, ADR 0028), ou None.
         self.reservada: Callable[[], str | None] = lambda: None
         # Sem `rodar`, cada sessão é um terminal real (o agente com todos os comandos dele);
@@ -906,6 +910,11 @@ class Sessoes:
             else None
         )
         segredos = conectores_codex(externos)[1] if s.motor == "codex" else {}
+        # A chave do gancho de permissão vai no ambiente do terminal, nunca na linha de comando.
+        permissao = self.permissoes.endereco if s.motor == "claude" else ""
+        chave = self.permissoes.chave(id_) if permissao else ""
+        if chave:
+            segredos = {**segredos, VARIAVEL_PERMISSAO: chave}
         try:
             self.fallback.inicios[id_] = time.time()
             terminal = Terminal(
@@ -916,10 +925,11 @@ class Sessoes:
                     self._contexto(id_, contexto),
                     externos,
                     arquivo_mcp,
+                    permissao,
                 ),
                 s.onde,
                 {**ambiente_da_conta(s), **segredos},
-                ao_sair=lambda codigo: self._terminal_saiu(id_, codigo),
+                ao_sair=lambda codigo: self._terminal_saiu(id_, codigo, chave),
                 ao_ler=lambda dados: self._olhar_saida(id_, dados),
                 colunas=colunas,
                 linhas=linhas,
@@ -947,7 +957,9 @@ class Sessoes:
         arquivo.chmod(0o600)
         return arquivo
 
-    def _terminal_saiu(self, id_: str, codigo: int) -> None:
+    def _terminal_saiu(self, id_: str, codigo: int, chave: str = "") -> None:
+        if chave:  # só a chave deste terminal: o seguinte, se já abriu, tem a dele
+            self.permissoes.esquecer(id_, chave)
         with contextlib.suppress(SessaoErro):
             if codigo not in SAIDAS_NORMAIS:  # fechar o terminal é normal; erro fica na conversa
                 self.anotar(id_, "sistema", f"O agente saiu ({codigo}).")
@@ -1009,6 +1021,8 @@ class Sessoes:
             if Path(str(e.get("transcript_path") or "")).is_file():
                 self._mudar(id_, sdk_sessao=str(e["session_id"]))
         elif nome == "UserPromptSubmit":
+            # Um pedido novo: o que esperava de um turno anterior ficou para trás.
+            self.permissoes.retirar(id_, fora_do_turno=str(e.get("prompt_id", "")))
             if e.get("session_id"):
                 self._mudar(id_, sdk_sessao=str(e["session_id"]))
             pedido = self._pedido(id_, str(e.get("prompt", "")))
@@ -1029,12 +1043,20 @@ class Sessoes:
                 interrompida="",  # um pedido novo: o interrompido ficou para trás
             )
         elif nome == "PostToolUse":
+            # A ferramenta rodou: se esperava permissão, a pessoa aprovou no terminal. O gancho
+            # enxuto (MCP) já manda a assinatura; o completo (comandos, arquivos), a entrada.
+            rodou = str(e.get("assinatura") or "") or assinatura(
+                str(e.get("tool_name", "")), e.get("tool_input")
+            )
+            self.permissoes.retirar(id_, rodou=rodou)
             if acao := _acao_do_claude(e):
                 self.anotar(id_, "ferramenta", acao)
         elif nome == "Notification" and "permission" in str(e.get("message", "")).lower():
             if self.ao_avisar is not None:
                 self.ao_avisar(self.ler(id_), str(e.get("message", "")))
         elif nome == "Stop":
+            # O turno parou: um "não" no terminal termina aqui.
+            self.permissoes.retirar(id_, do_turno=str(e.get("prompt_id", "")))
             if e.get("session_id"):
                 self._mudar(id_, sdk_sessao=str(e["session_id"]))
             resposta = str(e.get("last_assistant_message") or "")  # o hook já traz a resposta
@@ -1576,6 +1598,33 @@ LIMITE_TERMINAL = re.compile(
 HOOKS_DO_ZE = ("SessionStart", "UserPromptSubmit", "Stop", "Notification", "PostToolUse")
 # Do que o agente faz, o Zé guarda o que conta o andamento: comandos e arquivos mexidos.
 ACOES_DO_CLAUDE = "Bash|Edit|MultiEdit|Write|NotebookEdit"
+# As outras ferramentas que podem pedir permissão: delas, o Zé só precisa saber que rodaram.
+OUTRAS_COM_PERMISSAO = "mcp__.*|WebFetch"
+# O mesmo cálculo de `permissoes.assinatura`, sem a resposta da ferramenta.
+RESUMO_DO_EVENTO = (
+    "import hashlib,json,sys;e=json.load(sys.stdin);n=str(e.get('tool_name',''));"
+    "a=e.get('tool_input');a=a if isinstance(a,dict) else {};"
+    "h=hashlib.sha256(json.dumps(a,sort_keys=True).encode()).hexdigest()[:16];"
+    "print(json.dumps({'hook_event_name':e.get('hook_event_name'),'assinatura':n+':'+h}))"
+)
+VARIAVEL_PERMISSAO = "ZE_PERMISSAO"  # a chave do gancho de permissão, no ambiente do terminal
+PRAZO_PERMISSAO_S = PRAZO_S
+# Os comandos de teste e verificação rodam sem pergunta, para a sessão iterar sozinha até o
+# resultado (ADR 0039). O Claude não deixa um prefixo destes cobrir `cmd && outro`.
+COMANDOS_LIVRES = [
+    "Bash(make check)",
+    "Bash(make test)",
+    "Bash(npm test)",
+    "Bash(npm test:*)",
+    "Bash(npm run test)",
+    "Bash(npm run test:*)",
+    "Bash(npm run lint)",
+    "Bash(npm run lint:*)",
+    "Bash(uv run pytest)",
+    "Bash(uv run pytest:*)",
+    "Bash(pytest)",
+    "Bash(pytest:*)",
+]
 FOCO_S = 30 * 60  # depois disso, "a sessão" sem nome não aponta mais para a última
 
 
@@ -1837,11 +1886,13 @@ def comando_terminal(
     contexto: Path | None = None,
     externos: mcp_externo.Externos | None = None,
     arquivo_mcp: Path | None = None,
+    permissao: str = "",
 ) -> list[str]:
     """O agente interativo da sessão: retoma a conversa nativa e conta ao Zé o que acontece.
     `contexto` (a passagem) entra sem virar pedido. As skills do Zé chegam pela pasta do projeto
     (`ligar_skills_no_projeto`); os conectores do projeto, pelo `arquivo_mcp` (Claude) ou pela
-    configuração do Codex, com os segredos no ambiente (`conectores_codex`)."""
+    configuração do Codex, com os segredos no ambiente (`conectores_codex`). Com `permissao` (a
+    rota do painel), os pedidos de permissão do Claude vão também ao Zé (ADR 0039)."""
     externos = externos or mcp_externo.Externos()
     if s.motor == "codex":
         avisar = ["sh", "-c", 'printf "%s\\n" "$1" >> "$0"', str(eventos)]  # + o JSON do Codex
@@ -1882,9 +1933,39 @@ def comando_terminal(
             *hooks.get("SessionStart", []),
             {"matcher": "", "hooks": [entregar]},
         ]
+    if permissao:
+        # A ferramenta que pediu permissão rodou: só a assinatura dela, para o Zé saber que a
+        # pessoa aprovou no terminal (a resposta inteira de um MCP pode ter dados de clientes).
+        resumo = f"{shlex.quote(sys.executable)} -c {shlex.quote(RESUMO_DO_EVENTO)} >> "
+        hooks["PostToolUse"] = [
+            *hooks.get("PostToolUse", []),
+            {
+                "matcher": OUTRAS_COM_PERMISSAO,
+                "hooks": [{"type": "command", "command": resumo + shlex.quote(str(eventos))}],
+            },
+        ]
+        hooks["PermissionRequest"] = [
+            *hooks.get("PermissionRequest", []),
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "http",
+                        "url": permissao,
+                        "headers": {"Authorization": f"Bearer ${{{VARIAVEL_PERMISSAO}}}"},
+                        "allowedEnvVars": [VARIAVEL_PERMISSAO],
+                        "timeout": int(PRAZO_PERMISSAO_S) + 10,
+                    }
+                ],
+            },
+        ]
     ajustes: dict[str, Any] = {"hooks": hooks}
-    if externos.servidores:  # livres sem pergunta, bloqueadas nunca; o resto o Claude pergunta
-        ajustes["permissions"] = {"allow": externos.livres, "deny": externos.bloqueadas}
+    # Livres sem pergunta (as do conector e os comandos de teste, para a sessão iterar sozinha
+    # até o resultado); bloqueadas nunca; o resto o Claude pergunta.
+    ajustes["permissions"] = {
+        "allow": [*COMANDOS_LIVRES, *externos.livres],
+        "deny": externos.bloqueadas,
+    }
     cmd = [caminhos.claude()]
     if arquivo_mcp is not None:  # logo depois do comando: a opção aceita vários arquivos
         cmd += ["--mcp-config", str(arquivo_mcp)]

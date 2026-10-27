@@ -34,6 +34,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from zervis import ambiente
+from zervis.oficina.permissoes import ChaveInvalida, Permissoes
 from zervis.portal.senha import Acesso, SenhaErro
 from zervis.portal.voz_app import AparelhosDeVoz, PareamentoErro
 from zervis.transporte import websocket
@@ -67,6 +68,7 @@ ARQUIVOS = {
     "/modulos/navegacao.js": "modulos/navegacao.js",
     "/modulos/terminal.js": "modulos/terminal.js",
     "/modulos/conectores-sessao.js": "modulos/conectores-sessao.js",
+    "/modulos/permissoes-sessao.js": "modulos/permissoes-sessao.js",
     "/modulos/voz.js": "modulos/voz.js",
     "/paginas/automacoes.js": "paginas/automacoes.js",
     "/paginas/configurar.js": "paginas/configurar.js",
@@ -143,8 +145,10 @@ class Portal:
         retorno_oauth: Callable[[str], tuple[bool, str]] | None = None,
         voz_app: VozApp | None = None,
         aparelhos_voz: AparelhosDeVoz | None = None,
+        permissoes: Permissoes | None = None,
     ) -> None:
         self.acesso = acesso
+        self.permissoes = permissoes  # os pedidos de permissão das sessões (ADR 0039)
         self.voz_app = voz_app
         self.aparelhos_voz = aparelhos_voz
         self.retorno_oauth = retorno_oauth
@@ -411,6 +415,32 @@ class Portal:
                 log.warning("app de voz: aparelho pareado")
                 self._json(200, {"chave": chave})
 
+            def _permissao_da_sessao(self) -> None:
+                """O gancho `PermissionRequest` de uma sessão do Claude: só do próprio PC, com a
+                chave daquela sessão. Espera a decisão (painel, voz) até o prazo; sem decisão,
+                devolve vazio e a janela do terminal segue (ADR 0039)."""
+                if portal.permissoes is None or not self._local():
+                    self._json(403, {"erro": "só do próprio PC"})
+                    return
+                tamanho = int(self.headers.get("Content-Length") or 0)
+                if tamanho > MAXIMO_CORPO:
+                    self._json(413, {"erro": "grande demais"})
+                    return
+                autorizacao = self.headers.get("Authorization", "")
+                chave = autorizacao[7:] if autorizacao.startswith("Bearer ") else ""
+                try:
+                    dados = json.loads(self.rfile.read(tamanho) or b"{}")
+                    if not isinstance(dados, dict):
+                        raise ValueError
+                    resposta = portal.permissoes.pedir(chave, dados)
+                except ChaveInvalida:
+                    self._json(403, {"erro": "chave"})
+                    return
+                except ValueError:
+                    self._json(400, {"erro": "JSON inválido"})
+                    return
+                self._json(200, resposta)
+
             def _voz_app(self) -> None:
                 """A voz do app: a chave do pareamento no cabeçalho, sem cookie nem origem (não é
                 um navegador, e a chave não abre mais nada)."""
@@ -565,6 +595,9 @@ class Portal:
 
             def do_POST(self) -> None:
                 caminho = self.path.split("?", 1)[0]
+                if caminho == "/sessoes/permissao":
+                    self._permissao_da_sessao()
+                    return
                 if caminho == "/voz-app/parear" and self._host_local():
                     self._parear_voz_app()
                     return

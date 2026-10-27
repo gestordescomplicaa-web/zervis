@@ -507,8 +507,12 @@ class Nucleo(
                 so_no_pc=senha.SO_NO_PC,
                 servidor=maquina_atual.detectar().servidor,
                 retorno_oauth=mcp_oauth.concluir_pela_volta,
+                permissoes=self.sessoes.permissoes,
             )
             self.portal.iniciar()
+            # Os pedidos de permissão das sessões do Claude chegam por esta rota (ADR 0039).
+            self.sessoes.permissoes.endereco = f"{self.portal.endereco}sessoes/permissao"
+            self.sessoes.permissoes.ao_decidir = self._permissao_decidida
         except OSError as erro:
             log.warning("painel não subiu: %s", erro)
         self.bip = ESTADO / "bip.wav"

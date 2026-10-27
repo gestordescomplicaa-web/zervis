@@ -156,6 +156,8 @@ const ACOES = {
       <div class="botoes">${botao("Excluir", "sessao-excluir-sim", "", "perigo")}${botao("Cancelar", "sessao-excluir-nao", "", "discreta")}</div></div>`;
   },
   "interrompida-continuar": async (b) => { const r = await ocupado(b, () => api("sessao/interrompida", { id: sessaoAberta, continuar: true })); toast(r.aviso); await abrirSessao(sessaoAberta); },
+  "permissao-aprovar": (b) => decidirPermissao(b, true),
+  "permissao-negar": (b) => decidirPermissao(b, false),
   "interrompida-dispensar": async () => { const r = await api("sessao/interrompida", { id: sessaoAberta }); toast(r.aviso); $("interrompida-sessao")?.remove(); },
   "sessao-excluir-nao": () => { $("excluir-sessao").innerHTML = ""; },
   "sessao-interromper": () => {
