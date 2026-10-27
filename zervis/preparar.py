@@ -169,6 +169,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     for m in MODELOS:
         print(f"ok  {m.nome:28} {m.para_que}")
+    from zervis.voz import live
+
+    try:  # o Live (ADR 0042): o detector de fim de fala (LiveKit Model License), pelo plugin
+        live.garantir_modelo()
+        print(f"ok  {'detector de fim de fala':28} o Live (LiveKit, só dentro do LiveKit Agents)")
+    except Exception as erro:
+        print(f"Falhou: detector do Live: {erro}", file=sys.stderr)
+        return 1
     print(f"Pasta: {pasta}")
     return 0
 

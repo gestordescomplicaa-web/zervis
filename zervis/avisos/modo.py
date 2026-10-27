@@ -9,7 +9,8 @@ Três modos, trocados a qualquer hora (painel, atalho, voz):
 - **Silencioso**: o Zé não fala; tudo fica na tela. Como ele ouve é outra escolha (ADR 0022).
 - **Normal** (padrão; "avisos" na configuração): notificações, urgências e o resumo do resultado
   de cada sessão falados. Chamava-se "Avisos" até 13/10/2026.
-- **Mãos livres**: tudo falado, inclusive a resposta da sessão, resumida.
+- **Live** (era "Mãos livres" até 27/10/2026, ADR 0042): tudo falado, inclusive a resposta da
+  sessão, resumida; com a voz conectada, a conversa é em tempo real, como numa ligação.
 
 Avisos de sessões incluem o resultado mesmo com a sessão aberta, por decisão de 15/10/2026.
 Silencioso continua só na tela. O modo fica em `<config>/fala.json`.
@@ -23,8 +24,9 @@ from typing import Literal
 from zervis import lugares
 
 ARQUIVO = lugares.CONFIG / "fala.json"
-MODOS = ("silencioso", "avisos", "maos_livres")
-NOMES = {"silencioso": "Silencioso", "avisos": "Normal", "maos_livres": "Mãos livres"}
+MODOS = ("silencioso", "avisos", "live")
+NOMES = {"silencioso": "Silencioso", "avisos": "Normal", "live": "Live"}
+ANTIGOS = {"maos_livres": "live"}  # o nome gravado antes de 27/10/2026 continua valendo
 PADRAO = "avisos"
 Tipo = Literal["notificacao", "urgente", "resposta"]
 
@@ -34,6 +36,7 @@ def ler(arquivo: Path = ARQUIVO) -> str:
         modo = json.loads(arquivo.read_text()).get("modo")
     except (OSError, ValueError, AttributeError):
         return PADRAO
+    modo = ANTIGOS.get(modo, modo)
     return modo if modo in MODOS else PADRAO
 
 
@@ -52,7 +55,7 @@ def falar(modo: str, tipo: Tipo, vendo: bool = False) -> bool:
     if modo == "silencioso" or vendo:
         return False
     if tipo == "resposta":
-        return modo == "maos_livres"
+        return modo == "live"
     return True
 
 

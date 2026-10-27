@@ -16,8 +16,8 @@ from zervis.nucleo.estados import comando
         ("avisos", "notificacao", False, True),
         ("avisos", "urgente", False, True),
         ("avisos", "resposta", False, False),  # a resposta, só se a pessoa pedir
-        ("maos_livres", "resposta", False, True),
-        ("maos_livres", "urgente", True, False),  # já está na tela
+        ("live", "resposta", False, True),
+        ("live", "urgente", True, False),  # já está na tela
         ("avisos", "notificacao", True, False),
     ],
 )
@@ -28,8 +28,10 @@ def test_quem_fala_em_cada_modo(m: str, tipo: modo.Tipo, vendo: bool, fala: bool
 def test_ler_e_gravar(tmp_path: Path) -> None:
     arquivo = tmp_path / "fala.json"
     assert modo.ler(arquivo) == "avisos"  # padrão de quem instala do zero
-    modo.gravar("maos_livres", arquivo)
-    assert modo.ler(arquivo) == "maos_livres"
+    modo.gravar("live", arquivo)
+    assert modo.ler(arquivo) == "live"
+    arquivo.write_text('{"modo": "maos_livres"}')  # o nome de antes de 27/10/2026
+    assert modo.ler(arquivo) == "live"
     arquivo.write_text('{"modo": "gritando"}')
     assert modo.ler(arquivo) == "avisos"
     with pytest.raises(ValueError):
@@ -61,7 +63,9 @@ def test_resposta_longa_fica_nas_primeiras_frases() -> None:
     ("fala", "nome"),
     [
         ("Zé, modo silencioso", "modo_silencioso"),
-        ("Ei Zé, modo mãos livres", "modo_maos_livres"),
+        ("Ei Zé, modo mãos livres", "modo_live"),
+        ("Zé, modo live", "modo_live"),
+        ("modo ao vivo", "modo_live"),
         ("modo avisos", "modo_avisos"),
     ],
 )
@@ -104,8 +108,8 @@ def test_fim_de_sessao_em_avisos_inclui_o_resultado() -> None:
     ]
 
 
-def test_fim_de_sessao_em_maos_livres_narra_sem_falar_pela_sessao() -> None:
-    [(tipo, texto)] = _fim("maos_livres")  # sem o modelo do resumo: a citação marcada
+def test_fim_de_sessao_no_live_narra_sem_falar_pela_sessao() -> None:
+    [(tipo, texto)] = _fim("live")  # sem o modelo do resumo: a citação marcada
     assert tipo == "notificacao"
     assert texto == "Resultado da sessão Loja. Ela informou: Corrigi o login em a.ts."
 

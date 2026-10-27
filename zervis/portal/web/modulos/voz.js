@@ -3,7 +3,7 @@
 const MODOS_FALA = [
   { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve. Tudo pela tela." },
   { valor: "avisos", nome: "Normal", curto: "Avisos e resultados", detalhe: "Fala avisos, urgências e um resumo do resultado de cada sessão." },
-  { valor: "maos_livres", nome: "Mãos livres", curto: "Conversa após os avisos", detalhe: "Anuncia os resultados e permite continuar por voz após os avisos." },
+  { valor: "live", nome: "Live", curto: "Conversa em tempo real", detalhe: "Conversa como numa ligação: dá para cortar o Zé falando. Anuncia os resultados e responde na hora." },
 ];
 const MODOS_ESCUTA = [
   { valor: "sempre", nome: "Sempre", detalhe: "Enquanto o Zé estiver em execução." },

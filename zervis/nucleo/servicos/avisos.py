@@ -167,7 +167,7 @@ class ServicoAvisos:
         if id_:
             self.n.sessoes.focar(id_)
         if modo_fala.falar(self.n.modo_fala, tipo):
-            escutar = self.n.modo_fala == "maos_livres" and self.n.chamado == "voz"
+            escutar = self.n.modo_fala == "live" and self.n.chamado == "voz"
             self.n.eventos.put(e.Aviso(texto, escutar=escutar, sequencial=bool(id_)))
 
     def _guardar(self, texto: str) -> None:
@@ -275,6 +275,9 @@ class ServicoAvisos:
 
     def _pessoa_falando(self) -> bool:
         """A pessoa no meio de uma frase ou com o pedido ainda sendo transcrito."""
+        live = getattr(self.n, "live", None)
+        if live is not None and live.ativo and live.pessoa_falando:
+            return True
         return self.n.maquina.estado is e.Estado.OUVINDO and (
             self.n.segmentador.em_fala or self.n.transcrevendo is not None
         )

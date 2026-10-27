@@ -9,7 +9,11 @@ requires-python = ">=3.12,<3.15"
 # Dependências de execução entram fase a fase, sempre com versão exata (docs/06-qualidade.md).
 dependencies = [
     "claude-agent-sdk==0.2.163",
-    "livekit==1.1.20",
+    "livekit==1.1.21",
+    # O Live (ADR 0042): o revezamento do LIGATIA. O detector de fim de fala é da LiveKit Model
+    # License (só dentro do LiveKit Agents; baixado na primeira subida, fora do repositório).
+    "livekit-agents[deepgram,silero,turn-detector]==1.8.9",
+    "requests==2.34.2",  # o livekit-agents importa sem declarar (telemetry/traces.py)
     "numpy==2.4.3",
     "onnxruntime==1.27.0",
     # A voz (Cadu) roda dentro do Zé: GPL-3, compatível com a AGPL do projeto (ADR 0013).

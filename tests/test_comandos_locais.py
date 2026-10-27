@@ -132,7 +132,7 @@ NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
     ("nome", "fala", "acoes"),
     [
         ("nova_conversa", "Certo, começando uma conversa nova.", [("reiniciar", None)]),
-        ("modo_maos_livres", "Modo mãos livres.", []),
+        ("modo_live", "Modo live.", []),
         ("modo_avisos", "Modo normal.", []),
         ("mostrar_mapa", "Está no Núcleo.", [("mapa", None), ("trazer", None)]),
         ("calibrar_maos", "Vamos calibrar. Siga as instruções na tela.", [("maos", "calibrar")]),

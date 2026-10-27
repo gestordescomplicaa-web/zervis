@@ -272,7 +272,7 @@ main.cheio { padding: 0; overflow: hidden; }
 /* --- modo de fala: no menu lateral e na página Voz --- */
 .modo-fala .escolha-botao { width: 100%; max-width: none; justify-content: space-between; }
 .modo-fala[data-modo="silencioso"] .escolha-botao { color: var(--suave); }
-.modo-fala[data-modo="maos_livres"] .escolha-botao { border-color: var(--borda-forte); }
+.modo-fala[data-modo="live"] .escolha-botao { border-color: var(--borda-forte); }
 /* --- barra de voz: rodapé do menu lateral --- */
 .barra-voz { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--borda); }
 .barra-voz .escolha-menu { top: auto; bottom: calc(100% + 8px); }

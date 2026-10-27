@@ -2,6 +2,19 @@
 
 ## Não lançado
 
+- Live: a conversa em tempo real, como numa ligação, com o revezamento do LIGATIA (ADR 0042,
+  etapa 1). Os modos passam a ser Silencioso, Normal ("Ei Zé") e Live, e o Mãos livres vira o
+  Live (o nome antigo continua valendo).
+  - Com a voz conectada ao vivo (o navegador ou o app no Ao vivo), uma sessão do LiveKit Agents
+    roda dentro do Zé: ouve sem parar, transcreve com o Deepgram e percebe o fim da fala também
+    pelo texto, com o detector do LiveKit em português, em cerca de 0,4 s (antes, 1,05 s).
+  - Falar por cima corta o Zé em cerca de 0,5 s e interrompe o cérebro, e a sua fala vira o
+    próximo pedido.
+  - O que você emenda enquanto ele pensa vai junto no mesmo pedido.
+  - Confirmações, avisos e a voz escolhida (Fish, ElevenLabs ou Cadu) seguem iguais.
+  - O detector (LiveKit Model License) baixa na primeira subida; sem ele ou sem a chave do
+    Deepgram, a voz ao vivo segue como antes.
+  - No app do celular, cortar falando por cima chega numa próxima atualização do app.
 - Vozes da nuvem, opcionais (ADR 0041): ElevenLabs e Fish Audio, no lugar do Cadu. Na página
   Voz, escolha o motor e cole a chave de API. O Zé confere a chave e já passa a falar por ele,
   com uma frase de amostra. Dá para trocar a voz ou voltar ao Cadu com um clique.

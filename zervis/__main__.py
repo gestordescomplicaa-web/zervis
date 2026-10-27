@@ -58,6 +58,13 @@ def rodar() -> int:
             log.info("primeira vez: baixei o LiveKit %s", servidor_livekit.VERSAO)
     except (PrepararErro, OSError) as erro:
         log.warning("LiveKit não baixou (%s): a voz remota fica indisponível", erro)
+    from zervis.voz import live
+
+    try:  # opcional: sem ele, a voz ao vivo segue pelo recorte de sempre (ADR 0042)
+        if live.garantir_modelo():
+            log.info("primeira vez: baixei o detector de fim de fala do Live")
+    except Exception as erro:
+        log.warning("o detector do Live não baixou (%s): o Live fica indisponível", erro)
     from zervis.cerebro import agentes_nativos
 
     try:  # o Codex vem com o Zé (ADR 0035); sem ele, o cérebro e as sessões ficam no Claude
