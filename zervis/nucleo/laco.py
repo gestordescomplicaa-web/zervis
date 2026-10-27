@@ -148,7 +148,7 @@ from zervis.voz.escuta import Segmentador
 from zervis.voz.fala import falavel, para_fala
 from zervis.voz.fim_de_turno import FimDeTurno
 from zervis.voz.latencia import Latencias
-from zervis.voz.live import Live
+from zervis.voz.live import Live, live_ativo
 from zervis.voz.saida import Voz
 
 log = logging.getLogger(__name__)
@@ -201,13 +201,6 @@ TIPOS_DE_SERVICO = (
     ServicoFoco,
     ServicoAutomacoes,
 )
-
-
-def live_ativo(nucleo: object) -> Live | None:
-    """O Live, se ele está com a conversa agora (a voz conectada ao vivo). Por fora da classe: os
-    testes chamam os métodos do núcleo com objetos que não têm o Live."""
-    live: Live | None = getattr(nucleo, "live", None)
-    return live if live is not None and live.ativo else None
 
 
 class Nucleo(
@@ -422,6 +415,9 @@ class Nucleo(
         self.maquina.manutencao = lambda: self.manutencao.ligado
         self.maquina.oferta = lambda: time.monotonic() < self._oferta_ate
         self.maquina.permissao = lambda: time.monotonic() < self._permissao_ate
+        self.maquina.ze_perguntou = lambda: (
+            str(getattr(self, "_ultimo_dito", "")).rstrip().endswith("?")
+        )
         # Atualização esperando as outras sessões (ADR 0028): None, ou se a revisão foi feita.
         self._aplicar_depois: bool | None = None
         self.sessoes.reservada = self.atualizacao.reserva

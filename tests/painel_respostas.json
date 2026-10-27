@@ -127,6 +127,7 @@
   "cerebro": {
    "via": {
     "ligada": false,
+    "quando": "live",
     "motor": "plano",
     "modelo": "claude-sonnet-5-5",
     "endereco": "",

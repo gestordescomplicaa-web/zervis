@@ -1,8 +1,9 @@
 # 0042 — Os três modos e o Live: conversa em tempo real, com o revezamento do LIGATIA
 
 - Data: 27/10/2026
-- Status: **Aceito** (pedido da pessoa em 27/10/2026, com as quatro escolhas abaixo). Etapa 1
-  feita: os modos e o motor do Live no Zé. As etapas 2 a 4 estão em "Próximos passos".
+- Status: **Aceito** (pedido da pessoa em 27/10/2026, com as quatro escolhas abaixo). Feitas a
+  etapa 1 (os modos e o motor do Live no Zé) e a etapa 2 (o cérebro rápido no Live). As etapas 3 e
+  4 estão em "Próximos passos".
 - Revê o [ADR 0018](0018-modos-de-fala.md) (o Mãos livres vira o Live) e o
   [ADR 0023](0023-voz-ao-vivo.md) (o ao vivo passa a ser em tempo real). Usa a voz do
   [ADR 0041](0041-vozes-da-nuvem.md).
@@ -92,6 +93,33 @@ cérebro foi simulado com tempo fixo.
 8. **A latência de cada turno** registra `fim_por: "live"`, com o fim da fala e o fim da vez,
    para comparar com o recorte.
 
+## Etapa 2: o cérebro rápido no Live (27/10/2026)
+
+A via rápida (`zervis/cerebro/rapido.py`, desde 09/10/2026) já fazia o que o Live pede:
+- a conversa simples vai a um motor leve, com a persona enxuta;
+- o que precisa de ferramenta passa ao cérebro completo, com um "Deixa eu ver." para não ficar calado.
+
+Faltava ela valer na hora certa. Decisões da pessoa:
+
+1. **Só no Live** (`via_rapida.quando = "live"`, o padrão; "sempre" é a outra opção). No Normal e
+   no teclado, tudo segue para o cérebro completo, como antes. Quando o Live conecta ou sai, o
+   núcleo troca só o motor rápido (`religar`), sem reiniciar o cérebro completo, em segundo plano.
+2. **Assinatura ou API, as duas.** A página Modelos → Respostas rápidas escolhe o motor e o botão
+   Testar mede a primeira palavra. Primeira palavra medida nesta máquina em 27/10/2026, com o
+   motor já aberto:
+
+   | Motor (assinatura, sem custo extra) | Primeira palavra |
+   |---|---|
+   | Claude Sonnet 5.5 (`plano`) | 0,8 a 1,2 s |
+   | Codex GPT-6 Luna (`codex`) | 1,1 a 2,3 s |
+   | Claude Haiku 4.5 (`plano`) | 2,5 a 3,2 s |
+
+   Uma API direta (OpenAI, OpenRouter, Anthropic, ponte) costuma ser mais rápida, por não passar
+   pelo programa do agente. A pessoa pode comparar pelo Testar quando tiver uma chave.
+3. **Concordar não é pedido no Live:** "entendi", "beleza", "tá bom" e "certo" sozinhos (até três
+   palavras) não vão ao cérebro. No teste, "Entendi." foi tomado como pedido e ligou o modo
+   manutenção. Se a última fala do Zé foi uma pergunta, a concordância é a resposta e segue.
+
 ## Consequências
 
 - Mais cerca de 250 MB de bibliotecas: livekit-agents, transformers e av. O Live importa o pacote
@@ -105,10 +133,6 @@ cérebro foi simulado com tempo fixo.
 
 ## Próximos passos
 
-- **Etapa 2, cérebro no Live:**
-  - a conversa pela via rápida, para responder em cerca de 1 s;
-  - o que pedir ferramenta vai ao cérebro sem travar a conversa;
-  - "entendi", "ok" e "beleza" não disparam ação.
 - **Etapa 3, app e navegador:**
   - o microfone ligado durante a fala, com o cancelamento de eco do Android;
   - pausar e retomar no aparelho, para o "hum" virar só uma pausa (`resume_false_interruption`);

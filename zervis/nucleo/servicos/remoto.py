@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -127,11 +128,18 @@ class ServicoRemoto:
         if live is None:
             return
         fonte = self.n._fonte
+        antes = live.ativo
         if ao_vivo and isinstance(fonte, VozNavegador) and live.disponivel:
             if live.fonte is not fonte and not live.ligar(fonte):
                 log.warning("Live não abriu (%s): a voz ao vivo usa o recorte", live.erro)
         elif live.ativo:
             live.desligar()
+        if live.ativo != antes and hasattr(self.n, "aplicar_via_rapida"):
+            # A via rápida só no Live (ADR 0042, etapa 2): o motor entra e sai com ele, sem
+            # reiniciar o cérebro completo; em segundo plano, para a voz não esperar o motor subir.
+            threading.Thread(
+                target=self.n.aplicar_via_rapida, name="via-rapida-live", daemon=True
+            ).start()
 
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None:
         if fonte is not self.n._fonte or self.n.microfone_travado:

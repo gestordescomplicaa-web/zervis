@@ -331,3 +331,21 @@ def test_motor_automatico_usa_proxima_conta() -> None:
         await motor.fechar()
 
     asyncio.run(rodar())
+
+
+def test_so_no_live_por_padrao(tmp_path: Path) -> None:
+    """ADR 0042, etapa 2: a via rápida responde na conversa em tempo real; no Normal e no
+    teclado, tudo vai ao cérebro completo, a menos que a pessoa escolha "sempre"."""
+    via = {**config.PADRAO["via_rapida"], "motor": "ponte", "endereco": "http://127.0.0.1:9/v1"}
+    assert via["quando"] == "live"
+    assert not rapido.vale_agora(via, live=False) and rapido.vale_agora(via, live=True)
+    assert rapido.vale_agora({**via, "quando": "sempre"}, live=False)
+    assert not rapido.vale_agora({**via, "ligada": False}, live=True)
+    completo = CompletoFalso()
+    assert rapido.envolver(completo, via, tmp_path, "P") is completo
+    assert isinstance(rapido.envolver(completo, via, tmp_path, "P", live=True), rapido.Roteado)
+    assert rapido.validar_escolha({"quando": "sempre"}) == {"quando": "sempre"}
+    with pytest.raises(rapido.MotorErro, match="quando"):
+        rapido.validar_escolha({"quando": "as vezes"})
+    with pytest.raises(config.ConfigInvalida, match=r"via_rapida\.quando"):
+        config.validar({"via_rapida": {"quando": "nunca"}}, "t")

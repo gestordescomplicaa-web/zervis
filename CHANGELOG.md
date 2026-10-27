@@ -2,6 +2,15 @@
 
 ## Não lançado
 
+- Live com o cérebro rápido (ADR 0042, etapa 2).
+  - As respostas rápidas passam a valer só no Live, o novo padrão; dá para escolher "Sempre" em
+    Modelos → Respostas rápidas.
+  - No Live, a conversa simples responde pelo motor leve. Pela assinatura, o mais rápido medido
+    foi o Sonnet 5.5, com a primeira palavra entre 0,8 e 1,2 s. O que precisa de ferramenta segue
+    ao cérebro completo, com um "Deixa eu ver.".
+  - O motor entra e sai com o Live sem reiniciar o cérebro.
+  - No Live, "entendi", "beleza" e "tá bom" sozinhos não viram pedido, a não ser que respondam a
+    uma pergunta do Zé.
 - Live: a conversa em tempo real, como numa ligação, com o revezamento do LIGATIA (ADR 0042,
   etapa 1). Os modos passam a ser Silencioso, Normal ("Ei Zé") e Live, e o Mãos livres vira o
   Live (o nome antigo continua valendo).

@@ -140,7 +140,10 @@ class Motor(Protocol):
 
 CHAVES = lugares.CONFIG / "chaves"  # uma por motor, 0600 (o painel grava aqui)
 ESCOLHA = lugares.ESTADO / "via-rapida.json"  # o painel, por cima da config
-AJUSTAVEIS = ("ligada", "motor", "modelo", "endereco", "raciocinio")
+AJUSTAVEIS = ("ligada", "quando", "motor", "modelo", "endereco", "raciocinio")
+# Quando a via rápida responde (ADR 0042, etapa 2): só no Live, a conversa em tempo real (o
+# padrão), ou sempre, também no Normal e no teclado.
+QUANDOS = ("live", "sempre")
 RACIOCINIOS = ("", "minimal", "low", "medium", "high")
 
 
@@ -217,6 +220,9 @@ def validar_escolha(dados: dict[str, Any]) -> dict[str, Any]:
         if chave == "ligada":
             if not isinstance(valor, bool):
                 raise MotorErro("ligada precisa ser verdadeiro ou falso")
+        elif chave == "quando":
+            if valor not in QUANDOS:
+                raise MotorErro("quando deve ser live ou sempre")
         elif not isinstance(valor, str) or len(valor) > 200:
             raise MotorErro(f"{chave} precisa ser texto curto")
         escolha[chave] = valor.strip() if isinstance(valor, str) else valor
@@ -246,6 +252,11 @@ def gravar_escolha(dados: dict[str, Any], arquivo: Path | None = None) -> dict[s
     temporario.write_text(json.dumps(escolha, ensure_ascii=False))
     temporario.replace(arquivo)
     return escolha
+
+
+def vale_agora(via: dict[str, Any], live: bool) -> bool:
+    """A via rápida responde agora? Ligada e, se for só no Live, com o Live conversando."""
+    return bool(via["ligada"]) and (via.get("quando", "live") == "sempre" or live)
 
 
 def efetiva(via_da_config: dict[str, Any], arquivo: Path | None = None) -> dict[str, Any]:
@@ -917,9 +928,10 @@ def envolver(
     pasta: Path,
     persona_rapida: str,
     foto: Callable[[], str] | None = None,
+    live: bool = False,
 ) -> Brain:
-    """O cérebro com a via rápida na frente, se ela estiver ligada e montável."""
-    if not via["ligada"]:
+    """O cérebro com a via rápida na frente, se ela valer agora (`vale_agora`) e for montável."""
+    if not vale_agora(via, live):
         return cerebro
     try:
         motor = criar_motor(via, pasta, foto)

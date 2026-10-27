@@ -974,6 +974,22 @@ CHAMADOS = {
 }
 # Hesitações no começo da fala ("Um, desative o modo manutenção", 08/10/2026).
 VACILOS = {"um", "uh", "hum", "hm", "ah", "ahn", "eh", "e"}
+# Ao vivo, quem conversa concorda enquanto ouve ("entendi", "beleza", "tá"). Sozinha, a
+# concordância não é pedido: mandada ao cérebro, virava ação ("Entendi." ligou o modo manutenção
+# no teste de 27/10/2026). Depois de uma pergunta do Zé, ela é a resposta e segue.
+CONCORDANCIAS = {
+    *("entendi", "entendido", "beleza", "blz", "certo", "ta", "bom", "show", "perfeito"),
+    *("otimo", "legal", "uhum", "aham", "ahan", "sei", "isso", "massa", "joia", "ok", "okay"),
+}
+
+
+def so_concordancia(texto: str) -> bool:
+    p = palavras(texto)
+    return (
+        0 < len(p) <= 3
+        and all(w in CONCORDANCIAS | VACILOS for w in p)
+        and any(w in CONCORDANCIAS for w in p)
+    )
 
 
 def so_chamado(texto: str) -> bool:
@@ -1109,6 +1125,8 @@ class Maquina:
     # A pergunta de permissão de uma sessão acabou de ser feita (ADR 0039): "sim" e "não" a
     # respondem, sem passar pelo cérebro.
     permissao: Callable[[], bool] = field(default=lambda: False)
+    # A última fala do Zé foi uma pergunta ("Quer que eu ligue?"): ao vivo, o "beleza" responde.
+    ze_perguntou: Callable[[], bool] = field(default=lambda: False)
 
     # --- o que o laço consulta ----------------------------------------------------------
 
@@ -1304,8 +1322,12 @@ class Maquina:
             self.cerebro_terminou = False
             return [Comando(nome)]
         so_hesitacao = set(palavras(texto)) <= VACILOS
-        if self.ao_vivo and (encerra(texto) or so_hesitacao or not pedido_valido(texto)):
-            # Ao vivo, "ok", ruído e frase solta não encerram nem pedem repetição: segue ouvindo.
+        concorda = so_concordancia(texto) and not self.ze_perguntou()
+        if self.ao_vivo and (
+            encerra(texto) or so_hesitacao or concorda or not pedido_valido(texto)
+        ):
+            # Ao vivo, "ok", "entendi", ruído e frase solta não encerram nem pedem repetição:
+            # segue ouvindo.
             self.autorizado = True
             return []
         if encerra(texto):
