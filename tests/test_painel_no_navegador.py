@@ -11,6 +11,7 @@ import base64
 import contextlib
 import copy
 import json
+import queue
 import re
 import shutil
 import subprocess
@@ -193,6 +194,7 @@ def _painel(
     estado: Leitura | None = None,
     trocas: dict[str, Any] | None = None,
     entrada_terminal: Escrita | None = None,
+    saida_terminal: Escrita | None = None,
     leituras_vivas: dict[str, Leitura] | None = None,
 ) -> Iterator[tuple[str, str]]:
     """O painel com as respostas de exemplo e um Chromium apontado para ele."""
@@ -214,7 +216,13 @@ def _painel(
     nomes = Acoes(SimpleNamespace(), tmp_path, tmp_path).escritas()
     escritas = {nome: _escrita(respostas["escritas"].get(nome, {})) for nome in nomes}
     escritas.update(extras or {})
-    portal = Portal(leituras, escritas, porta=0, entrada_terminal=entrada_terminal)
+    portal = Portal(
+        leituras,
+        escritas,
+        porta=0,
+        entrada_terminal=entrada_terminal,
+        saida_terminal=saida_terminal,
+    )
     portal.iniciar()
     processo, depuracao = _chromium(tmp_path / "chromium")
     try:
@@ -371,6 +379,63 @@ def test_terminal_envia_teclas_pelo_websocket_e_fecha_ao_trocar_de_pagina(
     with _painel(tmp_path, entrada_terminal=entrada) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
     assert recebidas == ["co", "dex\r"]
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_a_saida_do_terminal_chega_pelo_websocket_e_o_medidor_aparece(tmp_path: Path) -> None:
+    # Caso real de 27/10/2026: na VPS, digitar no terminal ficava lento. As teclas já iam pelo
+    # WebSocket, mas a tela voltava pela leitura HTTP, uma viagem nova por pedaço do redesenho.
+    teclas: queue.Queue[str] = queue.Queue()
+    leituras_http: list[dict[str, Any]] = []
+
+    def saida(dados: dict[str, Any]) -> dict[str, Any]:
+        if dados["desde"] == 0:
+            texto = b"Pronto pelo WebSocket\r\n"
+        else:
+            try:
+                texto = teclas.get(timeout=0.5).encode()  # o agente ecoa a tecla
+            except queue.Empty:
+                return {"posicao": dados["desde"], "vivo": True, "dados": "", "geracao": 3}
+        return {
+            "posicao": dados["desde"] + len(texto),
+            "vivo": True,
+            "geracao": 3,
+            "dados": base64.b64encode(texto).decode(),
+        }
+
+    def ler_http(dados: dict[str, Any]) -> dict[str, Any]:
+        leituras_http.append(dados)
+        return {"posicao": 0, "vivo": True, "dados": ""}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(
+                nav,
+                "!!term && term.buffer.active.getLine(0)?.translateToString(true)"
+                " === 'Pronto pelo WebSocket'",
+            )
+            for tecla in "abc":
+                await nav.avaliar(f"escreverNoTerminal('{tecla}')")
+                await _esperar(
+                    nav,
+                    f"term.buffer.active.getLine(1)?.translateToString(true).endsWith('{tecla}')",
+                )
+            await _esperar(nav, "!!document.getElementById('eco-terminal')")
+            rotulo = await nav.avaliar("document.getElementById('eco-terminal').textContent")
+            assert "tempo real" in rotulo, rotulo
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path,
+        extras={"terminal/ler": ler_http},
+        entrada_terminal=lambda d: teclas.put(str(d["dados"])),
+        saida_terminal=saida,
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+    assert leituras_http == []  # nenhuma leitura HTTP com o WebSocket de pé
 
 
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")

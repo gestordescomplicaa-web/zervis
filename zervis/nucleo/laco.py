@@ -513,6 +513,7 @@ class Nucleo(
                 voz_app=self.voz_pelo_app,
                 aparelhos_voz=self.aparelhos_voz,
                 entrada_terminal=escritas["terminal/escrever"],
+                saida_terminal=escritas["terminal/ler"],
                 so_no_pc=senha.SO_NO_PC,
                 servidor=maquina_atual.detectar().servidor,
                 retorno_oauth=mcp_oauth.concluir_pela_volta,
