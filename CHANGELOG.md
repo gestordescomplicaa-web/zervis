@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Skill `fluxos-n8n` no mesmo fluxo, pedido após pedido: cada chamada ao modelo relê a conversa
+  inteira, e uma sessão longa ficava mais cara a cada pedido (medido: listar os fluxos numa
+  conversa de uma semana custou quase o mesmo que construir o fluxo). O que importa vai para um
+  mapa curto do fluxo (`n8n/<id do fluxo>.md` no projeto: nós, decisões, versão publicada), o
+  pedido seguinte começa numa conversa nova, e o `versionId` diz se alguém mexeu no n8n desde
+  então. Investigar uma falha lê só um item por nó e, se preciso, só o nó que falhou.
 - Skill `fluxos-n8n` por versão do n8n: cada cliente pode ter o seu n8n numa versão, e a skill
   passa a seguir as ferramentas que aquele n8n mostra, com uma tabela do que fazer sem cada uma
   (testar no editor, pedir o número da execução, guardar o fluxo antes de editar). A versão

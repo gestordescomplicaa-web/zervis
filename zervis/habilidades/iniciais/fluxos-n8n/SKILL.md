@@ -82,6 +82,21 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 5. Deu errado depois de publicar: `restore_workflow_version` com a versão anotada no passo 1 e
    publique de novo, com aprovação.
 
+## O mesmo fluxo, pedido após pedido
+Cada chamada ao modelo relê a conversa inteira: numa sessão longa sobre o mesmo fluxo, o custo
+cresce com cada pedido, não com o fluxo. O que precisa sobreviver entre pedidos vai para um mapa,
+e o pedido seguinte começa limpo.
+1. **O mapa:** `n8n/<id do fluxo>.md` na pasta do projeto, curto: o que o fluxo faz, cada nó pelo
+   nome e o seu papel, as decisões e o porquê, e o `versionId` publicado. Nada de credencial,
+   token ou dado de cliente. Pedido sobre um fluxo com mapa: leia o mapa primeiro.
+2. `versionId` diferente do mapa: alguém mexeu no n8n. `get_workflow_versions_diff` (ou a
+   leitura completa) mostra o quê; atualize o mapa antes de editar.
+3. Leia o fluxo (`get_workflow_details`) uma vez por pedido: o MCP não lê um nó só. Depois da
+   edição, confira pelo diff, não por outra leitura completa.
+4. `get_node_types` só para um tipo de nó que o fluxo ainda não tem.
+5. Ao terminar: atualize o mapa e diga à pessoa que o próximo pedido pode começar numa conversa
+   nova (`/clear` no Claude Code, `/new` no Codex). O mapa leva o que importa.
+
 ## Testar
 1. `prepare_workflow_pin_data`: dados de exemplo para o gatilho, os nós com credencial e as
    chamadas HTTP. Use exemplos realistas, sem dados reais de clientes.
@@ -98,8 +113,10 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 
 ## Investigar uma falha
 1. `search_workflow_executions` com o fluxo e o status de erro: quando começou e quantas vezes.
-2. `get_workflow_execution` com os dados da execução (`includeData`, só os nós que importam):
-   em que nó falhou e com qual mensagem.
+2. `get_workflow_execution` (antes da 2.34, `get_execution`) com `includeData` e um item por
+   nó (`truncateData: 1`): em que nó falhou e com qual mensagem. Se precisar ver a entrada,
+   peça só esse nó e o anterior (`nodeNames`). Os dados completos de uma execução podem ser
+   enormes.
 3. Diga a causa provável numa frase, com a evidência: credencial vencida ou sem acesso, API do
    cliente fora do ar ou com limite (429), campo que mudou de nome ou formato, dado faltando na
    entrada, ou erro no próprio fluxo.
