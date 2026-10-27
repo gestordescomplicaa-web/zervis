@@ -2,6 +2,21 @@
 
 ## Não lançado
 
+- Aprovar pela voz o que as sessões do Claude pedem (ADR 0039, etapa E2): o Zé pergunta em voz
+  alta, com o que acontece se aprovar ("A sessão meu-n8n quer publicar o fluxo X: ele passa a
+  rodar de verdade. Aprovo?"), e ouve a resposta sem o "Ei Zé". O "sim" e o "não" logo depois
+  viram um comando local, sem passar pelo cérebro, e respondem só a essa pergunta, por 45
+  segundos. Para não aprovar por engano: só uma resposta curta (até cinco palavras), que não seja
+  uma pergunta; o sim precisa vir no começo e ser claro ("sim", "pode publicar", "ok, manda";
+  "vai chover amanhã?" e "faz um resumo" não decidem); um "não", "espera" ou "mas" nega; "não
+  entendi" repete a pergunta. Silêncio não nega: o pedido fica no painel e no terminal. A
+  qualquer momento, "Ei Zé, aprova" ou "nega" respondem ao pedido que espera (com pedidos de
+  várias sessões, o Zé pede o painel). Pela voz, o Zé diz o nome do fluxo quando o pedido traz,
+  ou em que n8n, nunca um ID; um comando com caminhos, redirecionamento ou aspas (que a fala
+  encurtaria) só avisa: está no painel e no terminal. No Silencioso, pergunta pelo app de voz;
+  sem o app, só a tela. A pergunta que esperou na fila sai quando o pedido é respondido em outro
+  lugar, e não sobrevive a um reinício; o aviso genérico "está esperando sua aprovação" não se
+  repete quando a pergunta já foi feita.
 - Aprovar pelo painel o que as sessões do Claude pedem (ADR 0039, etapa E1): o pedido de
   permissão chega ao Zé pelo gancho `PermissionRequest` (uma rota local do painel, com uma chave
   por sessão no ambiente do terminal, nunca na linha de comando) e aparece no cartão da sessão,

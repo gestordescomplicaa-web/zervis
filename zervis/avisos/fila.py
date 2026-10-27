@@ -98,6 +98,13 @@ class Fila:
             )
             self._gravar(avisos)
 
+    def remover(self, texto: str, sessao: str = "") -> None:
+        """Tira um aviso que deixou de valer (uma pergunta já respondida em outro lugar)."""
+        with self._trava:
+            avisos = self._ler()
+            if any((a.texto, a.sessao) == (texto, sessao) for a in avisos):
+                self._gravar([a for a in avisos if (a.texto, a.sessao) != (texto, sessao)])
+
     def validos(self, agora: float | None = None) -> list[Aviso]:
         """Os que ainda valem, na ordem de fala: prioridade, depois o mais antigo."""
         with self._trava:

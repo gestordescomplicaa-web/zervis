@@ -271,6 +271,18 @@ APROVA = {
     "dale",
 }
 REPERGUNTA = "Não entendi. É sim ou não?"
+RESPOSTA_CURTA = 5  # palavras: "sim", "pode publicar", "não, deixa pra depois"
+# O "sim" de uma permissão vem no começo e é claro: "vai", "faz" e "valeu" começam outras
+# frases ("vai chover?", "faz um resumo", "valeu, Zé").
+APROVA_NO_COMECO = (APROVA | {"aprova", "aprovado", "aprovo"}) - {
+    "vai",
+    "faz",
+    "faca",
+    "valeu",
+    "demorou",
+    "tranquilo",
+    "firmeza",
+}
 
 
 def entender_resposta(texto: str) -> bool | None:
@@ -329,6 +341,26 @@ COMANDOS = {
         ("tem", "algum", "aviso"),
         ("le", "os", "avisos"),
         ("ler", "os", "avisos"),
+    },
+    # O pedido de permissão de uma sessão (ADR 0039), a qualquer momento: o Zé responde ao que
+    # espera (o último que perguntou) e diz se não há nada esperando.
+    "permissao_sim": {
+        ("aprova",),
+        ("aprovar",),
+        ("pode", "aprovar"),
+        ("aprova", "a", "sessao"),
+        ("aprova", "o", "pedido"),
+        ("autoriza",),
+        ("autoriza", "a", "sessao"),
+    },
+    "permissao_nao": {
+        ("nega",),
+        ("negar",),
+        ("nega", "a", "sessao"),
+        ("nega", "o", "pedido"),
+        ("nao", "aprova"),
+        ("nao", "autoriza"),
+        ("recusa",),
     },
     # Repetir a última fala (aviso ou resposta), na hora e igual, sem passar pelo cérebro.
     "repetir": {
@@ -977,6 +1009,19 @@ OFERTA = {
 }
 
 
+def resposta_a_permissao(texto: str) -> str | None:
+    """Logo depois da pergunta de uma sessão ("Aprovo?"), uma resposta curta: o não ganha de
+    tudo (uma negação ou correção em qualquer lugar); o sim precisa vir no começo ("sim",
+    "pode publicar"). A janela dura a pergunta e a escuta, então pergunta ("vai chover
+    amanhã?"), frase longa e "não entendi" seguem como pedido e não decidem nada."""
+    p = sem_nome(palavras(texto))
+    if "?" in texto or p in COMANDOS["repetir"] or not 0 < len(p) <= RESPOSTA_CURTA:
+        return None
+    if set(p) & (NEGA | CORRIGE):
+        return "permissao_nao"
+    return "permissao_sim" if p[0] in APROVA_NO_COMECO else None
+
+
 def resposta_a_oferta(texto: str) -> str | None:
     p = sem_nome(palavras(texto))
     return next((nome for nome, frases in OFERTA.items() if p in frases), None)
@@ -1041,6 +1086,9 @@ class Maquina:
     # Uma oferta de avisos acabou de ser feita ("Começo pela Loja?", ADR 0029): "sim", "próximo"
     # e "depois" respondem a ela, não vão ao cérebro.
     oferta: Callable[[], bool] = field(default=lambda: False)
+    # A pergunta de permissão de uma sessão acabou de ser feita (ADR 0039): "sim" e "não" a
+    # respondem, sem passar pelo cérebro.
+    permissao: Callable[[], bool] = field(default=lambda: False)
 
     # --- o que o laço consulta ----------------------------------------------------------
 
@@ -1226,6 +1274,11 @@ class Maquina:
             return []
         self.autorizado = False  # invariante 2: um pedido por autorização
         texto = sem_chamado(texto) or texto
+        if self.permissao() and (nome := resposta_a_permissao(texto)):
+            # Antes do "ok" que encerra a conversa: "ok, pode" responde à sessão (ADR 0039).
+            self._ir(Estado.PENSANDO)
+            self.cerebro_terminou = False
+            return [Comando(nome)]
         so_hesitacao = set(palavras(texto)) <= VACILOS
         if self.ao_vivo and (encerra(texto) or so_hesitacao or not pedido_valido(texto)):
             # Ao vivo, "ok", ruído e frase solta não encerram nem pedem repetição: segue ouvindo.
@@ -1277,6 +1330,8 @@ class Maquina:
 
     def _pedido(self, texto: str) -> Efeito:
         """Comando local, a sessão de código (modo manutenção) ou o cérebro, nessa ordem."""
+        if self.permissao() and (nome := resposta_a_permissao(texto)):  # o Teclado também
+            return Comando(nome)
         if self.oferta() and (nome := resposta_a_oferta(texto)):
             return Comando(nome)
         if nome := comando(texto, self.nucleo_em_foco(), self.orbes):

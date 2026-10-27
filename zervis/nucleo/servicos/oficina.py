@@ -12,6 +12,7 @@ from typing import Any, Protocol
 from zervis import atividade, diagnostico
 from zervis.avisos import central
 from zervis.avisos import modo as modo_fala
+from zervis.avisos.fila import PRIORIDADES
 from zervis.cerebro import ferramentas
 from zervis.habilidades import evidencias
 from zervis.nucleo import estados as e
@@ -31,6 +32,12 @@ MARCO_DO_DIAGNOSTICO = "diagnostico-desde"
 
 class ContextoOficina(Protocol):
     _aplicar_depois: bool | None
+    _meta: dict[str, dict[str, Any]]
+    _perguntas_permissao: dict[str, tuple[str, str]]
+    _permissao_falada: tuple[str, str] | None
+    _permissao_ate: float
+    chamado: Any
+    fila: Any
     atualizacao: Progresso
     eventos: queue.Queue[e.Evento]
     evidencias: evidencias.Evidencias
@@ -53,6 +60,8 @@ class ContextoOficina(Protocol):
     def _ultima_resposta(self, id_: str) -> str: ...
     def aplicar_melhorias(self, revisado: bool = False) -> str: ...
     def vendo(self, id_: str) -> bool: ...
+    @property
+    def microfone_travado(self) -> bool: ...
 
 
 class ServicoOficina:
@@ -288,7 +297,10 @@ class ServicoOficina:
         )
 
     def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
-        """O agente parou esperando a aprovação da pessoa."""
+        """O agente parou esperando a aprovação da pessoa. Com o pedido na fila de permissões, a
+        pergunta de verdade (o que e o que acontece) já está sendo feita: sem aviso repetido."""
+        if self.n.sessoes.permissoes.pendentes(sessao.id):
+            return
         self.n._aviso_da_oficina(
             f"A sessão {sessao.nome} está esperando sua aprovação, no painel ou no terminal.",
             "urgente",
@@ -296,13 +308,74 @@ class ServicoOficina:
             f"a sessão {sessao.nome} pede aprovação",
         )
 
+    def _nome_da_sessao(self, id_: str) -> str:
+        try:
+            return self.n.sessoes.ler(id_).nome
+        except SessaoErro:
+            return id_
+
+    def _permissao_pedida(self, pedido: Pedido) -> None:
+        """A sessão pediu permissão (ADR 0039, E2): o Zé pergunta em voz alta, com o que acontece
+        se aprovar, e o "sim" ou o "não" logo depois respondem sem passar pelo cérebro. O que não
+        cabe numa frase (um comando com caminhos, uma edição) só avisa: está na tela. No
+        Silencioso, a pergunta vai pelo app de voz; sem ele, só a tela e o terminal."""
+        nome = self._nome_da_sessao(pedido.sessao)
+        if pedido.falavel:
+            texto = f"A sessão {nome} quer {pedido.frase}. Aprovo?"
+        else:
+            o_que = pedido.frase.replace(" (veja na tela)", "")
+            texto = f"A sessão {nome} quer {o_que}. Veja no painel ou no terminal."
+        self.n._perguntas_permissao[texto] = (pedido.sessao, pedido.id)
+        self.n._meta[texto] = {
+            "prioridade": PRIORIDADES["urgente"],
+            "titulo": f"a sessão {nome} pede aprovação",
+            "sessao": pedido.sessao,
+            "detalhe": pedido.detalhe,
+            "toque": True,
+            "expira": time.time() + self.n.sessoes.permissoes.prazo_s,
+            "origem": "permissao",
+        }
+        self.n._na_linha("aviso", texto)
+        if self.n.microfone_travado:
+            return
+        escutar = pedido.falavel and self.n.chamado == "voz"
+        self.n.eventos.put(e.Aviso(texto, escutar=escutar, sequencial=True))
+
+    def _responder_permissao(self, aprovar: bool) -> str:
+        """O "sim" ou o "não" da pessoa: vale para a pergunta que o Zé acabou de fazer; sem
+        ela, para o único pedido esperando. Com pedidos de várias sessões, pede o painel."""
+        permissoes = self.n.sessoes.permissoes
+        self.n._permissao_ate = 0.0
+        falada = self.n._permissao_falada
+        if falada is not None and permissoes.pendente(falada[1]):
+            alvo = falada
+        else:
+            pendentes = permissoes.pendentes()
+            if not pendentes:
+                return "Não há nenhum pedido esperando aprovação."
+            if len({p["sessao"] for p in pendentes}) > 1:
+                return "Há pedidos de mais de uma sessão esperando. Responda no painel."
+            alvo = (pendentes[0]["sessao"], pendentes[0]["id"])
+        try:
+            permissoes.decidir(alvo[0], alvo[1], aprovar, "voz")
+        except KeyError:
+            return "Esse pedido já foi respondido."
+        nome = self._nome_da_sessao(alvo[0])
+        return (
+            f"Aprovado. A sessão {nome} segue." if aprovar else f"Negado. Avisei a sessão {nome}."
+        )
+
     def _permissao_decidida(self, pedido: Pedido) -> None:
         """Cada pedido de permissão de uma sessão vai para a Atividade: o que foi pedido, quem
-        decidiu e por onde (ADR 0039). Respondido no terminal ou sem resposta, também."""
-        try:
-            nome = self.n.sessoes.ler(pedido.sessao).nome
-        except SessaoErro:
-            nome = pedido.sessao
+        decidiu e por onde (ADR 0039). Respondido no terminal ou sem resposta, também. A
+        pergunta falada sai da fila e deixa de valer."""
+        for texto, alvo in list(self.n._perguntas_permissao.items()):
+            if alvo[1] == pedido.id:
+                del self.n._perguntas_permissao[texto]
+                self.n.fila.remover(texto, pedido.sessao)
+        if self.n._permissao_falada and self.n._permissao_falada[1] == pedido.id:
+            self.n._permissao_falada, self.n._permissao_ate = None, 0.0
+        nome = self._nome_da_sessao(pedido.sessao)
         decisoes = {
             "aprovado": ("execucao", "aprovado"),
             "negado": ("negada", "negado"),

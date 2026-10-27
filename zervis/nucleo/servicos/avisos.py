@@ -175,6 +175,8 @@ class ServicoAvisos:
         m = self.n._meta.get(texto, {})
         self.n.fila.guardar(
             texto,
+            origem=str(m.get("origem", "jarvis")),
+            expira=float(m.get("expira", 0.0)),  # uma pergunta de permissão vale só o prazo dela
             prioridade=int(m.get("prioridade", PRIORIDADES["notificacao"])),
             titulo=str(m.get("titulo", "")),
             sessao=str(m.get("sessao", "")),
@@ -188,14 +190,23 @@ class ServicoAvisos:
             return
         texto, aviso = saida
         if aviso is not None:  # um só: volta a ser o aviso de antes
+            perguntas = getattr(self.n, "_perguntas_permissao", {})
+            if aviso.origem == "permissao" and texto not in perguntas:
+                # A pergunta de uma sessão que já foi respondida (ou de antes de um reinício,
+                # quando os pedidos se foram): não se pergunta o que não espera mais.
+                self._sair_da_fila()
+                return
             self.n._meta[texto] = {
                 "prioridade": aviso.prioridade,
                 "titulo": aviso.titulo,
                 "sessao": aviso.sessao,
                 "detalhe": aviso.detalhe,
                 "toque": bool(aviso.sessao),
+                "origem": aviso.origem,
+                "expira": aviso.expira,
             }
-            self.n.eventos.put(e.Aviso(texto, sequencial=True))
+            escutar = texto in perguntas and texto.endswith("Aprovo?") and self.n.chamado == "voz"
+            self.n.eventos.put(e.Aviso(texto, escutar=escutar, sequencial=True))
             return
         self.n._meta[texto] = {"toque": True}
         self.n._oferta_ate = time.monotonic() + OFERTA_S

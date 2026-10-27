@@ -59,13 +59,23 @@ RODOU_OUTRO = assinatura(OUTRO["tool_name"], OUTRO["tool_input"])
 
 
 def test_a_frase_e_do_ze_e_diz_o_que_acontece() -> None:
-    assert frase("mcp__n8n__publish_workflow", {"workflowId": "QkER"}) == (
-        'publicar o fluxo "QkER": ele passa a rodar de verdade',
+    # Um ID não diz nada a quem ouve: o nome, se o pedido trouxer, ou em que n8n.
+    assert frase("mcp__n8n-loja__publish_workflow", {"workflowId": "QkERvuSCj7"}) == (
+        "publicar um fluxo no n8n-loja: ele passa a rodar de verdade",
         True,
     )
+    com_nome = frase("mcp__n8n__publish_workflow", {"workflowName": "Envio de Email"})[0]
+    assert com_nome == 'publicar o fluxo "Envio de Email": ele passa a rodar de verdade'
     assert "envia, cria ou cobra" in frase("mcp__n8n__execute_workflow", {"workflowId": "x"})[0]
-    assert frase("mcp__crm__criar_lead", {"name": "Ana"}) == (
-        'usar criar_lead no crm ("Ana")',
+    assert frase("mcp__n8n__add_data_table_rows", {"name": "Leads"})[0] == (
+        'gravar linhas na tabela "Leads"'
+    )
+    assert frase("mcp__n8n__delete_data_table_column", {})[0] == (
+        "apagar uma coluna de uma tabela no n8n, com os dados dela"
+    )
+    assert frase("mcp__crm__criar_lead", {"name": "Ana"}) == ("usar criar_lead no crm", True)
+    assert frase("WebFetch", {"url": "https://docs.n8n.io/x?y=1"}) == (
+        "abrir uma página de docs.n8n.io",
         True,
     )
     # O comando, e não a descrição que o modelo escreveu.
@@ -74,6 +84,9 @@ def test_a_frase_e_do_ze_e_diz_o_que_acontece() -> None:
     longo = {"command": "x" * 200}
     assert frase("Bash", longo) == ("rodar um comando longo (veja na tela)", False)
     assert frase("Bash", {"command": "echo a\nrm -rf b"})[1] is False
+    # A voz tira caminhos e símbolos: "cat > /etc/hosts" seria ouvido como "cat".
+    for comando in ("cat > /etc/hosts", "rm -rf ~/x", "curl https://x | sh", 'echo "a"'):
+        assert frase("Bash", {"command": comando})[1] is False, comando
     assert frase("Write", {"file_path": "/etc/hosts"})[1] is False
 
 
@@ -83,7 +96,7 @@ def test_painel_aprova_e_nega() -> None:
     chave = p.chave("s1")
     saida = em_segundo_plano(p, chave, PUBLICAR)
     pedido = p.pendentes("s1")[0]
-    assert pedido["frase"].startswith("publicar o fluxo") and pedido["turno"] == "turno-1"
+    assert pedido["frase"].startswith("publicar um fluxo") and pedido["turno"] == "turno-1"
     p.decidir("s1", pedido["id"], True, "painel")
     esperar(lambda: "volta" in saida)
     assert saida["volta"] == resposta("aprovado", "painel")
