@@ -133,7 +133,7 @@ from zervis.transporte.entrada import Entrada
 from zervis.transporte.local import Captura
 from zervis.transporte.remoto import SalaRemota
 from zervis.versoes import Versoes
-from zervis.voz import chamado, elevenlabs, espera, piper
+from zervis.voz import chamado, espera, nuvem, piper
 from zervis.voz.ativacao import (
     VAD,
     Detector,
@@ -278,8 +278,8 @@ class Nucleo(
 
         self.captura = Entrada(Captura(cfg["audio"]["microfone"]))
         self.anel = Anel(cfg.caminho("barehands", "pasta_estado"))
-        # Quem fala: o Cadu, ou o ElevenLabs quando escolhido no painel (com o Cadu de reserva).
-        self.motor_voz = elevenlabs.Motor(piper.PADRAO)
+        # Quem fala: o Cadu, ou a voz da nuvem escolhida no painel (com o Cadu de reserva).
+        self.motor_voz = nuvem.Motor(piper.PADRAO)
         self.voz = Voz(onda=self.anel, abrir_fluxo=self.motor_voz.abrir_fluxo)
         # A voz carrega em segundo plano: a primeira fala já a encontra pronta.
         threading.Thread(target=self._carregar_voz, name="carregar-voz", daemon=True).start()
@@ -930,10 +930,12 @@ class Nucleo(
         )
 
     def _fala_por(self) -> str:
-        if self.motor_voz.nuvem:
-            nome = self.motor_voz.escolha.nome
-            return f"ElevenLabs ({nome}), com o Cadu de reserva" if nome else "ElevenLabs"
-        return "Piper (Cadu)"
+        ativo = self.motor_voz.ativo
+        if ativo is None:
+            return "Piper (Cadu)"
+        nome = self.motor_voz.escolha.voz(ativo).get("nome", "")
+        titulo = self.motor_voz.titulo(ativo)
+        return f"{titulo} ({nome}), com o Cadu de reserva" if nome else titulo
 
     def _gravar_status(self, agora: float) -> None:
         self.hud.gravar(

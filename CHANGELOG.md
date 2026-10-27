@@ -2,13 +2,19 @@
 
 ## Não lançado
 
-- Voz pelo ElevenLabs, opcional (ADR 0041). Na página Voz, cole a chave de API: o Zé confere a
-  chave, lista as vozes da conta (as que falam português primeiro) e já passa a falar pelo
-  ElevenLabs (`eleven_v4_turbo`, em português, em streaming), com uma frase de amostra. Dá para
-  trocar a voz ou voltar ao Cadu com um clique. Sem crédito, sem rede ou com a chave revogada, o
-  Cadu fala no lugar e a Atividade diz por quê. A conexão abre enquanto o cérebro pensa, para a
-  primeira frase não esperar o aperto de mão com o servidor. A página mostra os caracteres do dia,
-  e a latência de cada turno registra quem falou (`voz_por`).
+- Vozes da nuvem, opcionais (ADR 0041): ElevenLabs e Fish Audio, no lugar do Cadu. Na página
+  Voz, escolha o motor e cole a chave de API. O Zé confere a chave e já passa a falar por ele,
+  com uma frase de amostra. Dá para trocar a voz ou voltar ao Cadu com um clique.
+  - ElevenLabs: `eleven_v4_turbo`, em português. As vozes da conta aparecem com as de português
+    primeiro.
+  - Fish Audio: S2.1 Pro com latência baixa, como no LIGATIA. A tela mostra o saldo de API e, sem
+    saldo, usa o S2.1 Pro Free, que é grátis. Aparecem as suas vozes e as mais usadas em
+    português, e qualquer outra entra colando o link dela.
+  - Sem crédito, sem rede ou com a chave revogada, o Cadu fala no lugar e a Atividade diz por quê.
+  - A conexão abre enquanto o cérebro pensa, para a primeira frase não esperar o aperto de mão com
+    o servidor.
+  - A página mostra os caracteres do dia, e a latência de cada turno registra quem falou
+    (`voz_por`).
 - Outros modelos nas sessões pelo próprio Claude Code (ADR 0040), começando pela DeepSeek: em
   Contas, cole a chave de API e o Zé testa a chave, lista os modelos dela (`deepseek-v4-pro`,
   `deepseek-flash`) e cria uma conta do Claude Code com pasta própria. Escolhida no agente e

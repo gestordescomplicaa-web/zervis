@@ -135,7 +135,7 @@ input:focus, select:focus, button:focus-visible, nav a:focus-visible {
 .linha { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .linha > label { flex: 1 1 220px; }
 .linha:has(> label) { align-items: flex-end; } /* o botão na altura do campo, não do rótulo */
-.linha > input[type="password"] { flex: 1 1 260px; }
+.linha > input[type="password"], .linha > input.largo { flex: 1 1 260px; }
 :is(button, a).acao {
   font: inherit; cursor: pointer; padding: 10px 16px; border-radius: 10px;
   color: var(--texto); background: rgb(70 217 222 / .10); border: 1px solid var(--borda-forte);
@@ -286,6 +286,7 @@ main.cheio { padding: 0; overflow: hidden; }
 .modo small { color: var(--suave); font-size: 12.5px; line-height: 1.4; }
 .modo:hover { border-color: var(--borda-forte); }
 .modo[aria-checked="true"] { border-color: var(--acento); background: rgb(70 217 222 / .12); }
+.modo[data-vendo] { border-style: dashed; border-color: var(--acento); }
 .modo:disabled { opacity: .55; cursor: not-allowed; }
 
 /* --- skills e conectores --- */

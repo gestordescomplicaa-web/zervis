@@ -41,21 +41,37 @@ PAGINAS.voz = async function() {
       ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}`;
   };
 
-/** Quem fala as respostas: o Cadu (local) ou o ElevenLabs (nuvem), com a chave e a voz.
- * @param {{motor: string, chave: {tem: boolean, fim: string}, voz: string, nome: string, vozes: {id: string, nome: string, detalhe: string}[], caracteres_hoje: number, erro: string, cadastro: string}} s */
+/** O provedor da nuvem cuja configuração está aberta no cartão (escolhido sem chave ainda). */
+let sinteseVendo = "";
+/** @type {{provedores: Record<string, {chave: {tem: boolean}}>}} */
+let sinteseTela = { provedores: {} };
+
+/** Quem fala as respostas: o Cadu (local) ou um provedor da nuvem, com a chave e a voz.
+ * @param {{motor: string, erro: string, provedores: Record<string, {titulo: string, descricao: string, cadastro: string, chave: {tem: boolean, fim: string}, voz: string, nome: string, vozes: {id: string, nome: string, detalhe: string}[], conta: string, caracteres_hoje: number}>}} s */
 function cartaoSintese(s) {
-  const nuvem = s.motor === "elevenlabs";
+  sinteseTela = s;
+  const ps = s.provedores, vendo = ps[sinteseVendo] ? sinteseVendo : ps[s.motor] ? s.motor : "";
+  const atual = ps[s.motor] ? ps[s.motor].nome || ps[s.motor].titulo : "Cadu";
   const opcoes = [["piper", "Cadu", "Local e grátis. Funciona sem internet."],
-    ["elevenlabs", "ElevenLabs", s.chave.tem ? "Voz mais natural, na nuvem. Paga por caractere." : "Cole a chave abaixo para usar."]];
-  const vozes = s.vozes.map((v) => `<option value="${esc(v.id)}" ${v.id === s.voz ? "selected" : ""}>${esc(v.nome)}${v.detalhe ? " · " + esc(v.detalhe) : ""}</option>`).join("");
-  return cartao("", `<div class="cabeca"><h2>Voz do Zé</h2><span class="etiqueta bom">${nuvem ? esc(s.nome || "ElevenLabs") : "Cadu"}</span><a class="externo" href="${esc(s.cadastro)}" target="_blank" rel="noopener">Obter chave do ElevenLabs ↗</a></div>
-    ${sub("Quem fala as respostas. Se o ElevenLabs falhar, o Cadu fala no lugar.")}
-    <div class="modos-fala" role="radiogroup" aria-label="Voz do Zé">${opcoes.map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="sintese-motor" data-motor="${v}" aria-checked="${v === s.motor}" ${v === "elevenlabs" && !s.chave.tem ? "disabled" : ""}><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>
-    <div class="linha"><input id="chave-sintese" type="password" class="mono" placeholder="${s.chave.tem ? "•••• " + esc(s.chave.fim) : "Chave de API do ElevenLabs"}" autocomplete="off" spellcheck="false" aria-label="Chave de API do ElevenLabs">
-      ${botao("Salvar", "sintese-chave", "", s.chave.tem ? "" : "principal")}${s.chave.tem ? botao("Remover", "sintese-apagar", "", "discreta") : ""}</div>
-    ${s.chave.tem && vozes ? `<div class="linha"><label>Voz<select id="voz-sintese">${vozes}</select></label>${botao("Usar e ouvir", "sintese-voz")}</div>` : ""}
-    ${s.erro ? `<p class="aviso">${esc(s.erro)}</p>` : ""}
-    ${s.chave.tem ? `<p class="nota">Hoje: ${s.caracteres_hoje.toLocaleString("pt-BR")} caracteres pelo ElevenLabs.</p>` : ""}`);
+    ...Object.entries(ps).map(([n, p]) => [n, p.titulo, p.chave.tem ? p.descricao : "Cole a chave para usar."])];
+  const p = ps[vendo];
+  let config = "";
+  if (p) {
+    const lista = p.vozes.some((v) => v.id === p.voz) || !p.voz ? p.vozes : [{ id: p.voz, nome: p.nome, detalhe: "colada" }, ...p.vozes];
+    const vozes = lista.map((v) => `<option value="${esc(v.id)}" ${v.id === p.voz ? "selected" : ""}>${esc(v.nome)}${v.detalhe ? " · " + esc(v.detalhe) : ""}</option>`).join("");
+    const dados = `data-provedor="${vendo}"`;
+    config = `<div class="parte"><div class="cabeca"><h3 class="subtitulo">${esc(p.titulo)}</h3><a class="externo" href="${esc(p.cadastro)}" target="_blank" rel="noopener">Obter chave ↗</a></div>
+      <div class="linha"><input id="chave-sintese" type="password" class="mono" placeholder="${p.chave.tem ? "•••• " + esc(p.chave.fim) : "Chave de API do " + esc(p.titulo)}" autocomplete="off" spellcheck="false" aria-label="Chave de API do ${esc(p.titulo)}">
+        ${botao("Salvar", "sintese-chave", dados, p.chave.tem ? "" : "principal")}${p.chave.tem ? botao("Remover", "sintese-apagar", dados, "discreta") : ""}</div>
+      ${p.chave.tem && vozes ? `<div class="linha"><label>Voz<select id="voz-sintese">${vozes}</select></label>${botao("Usar e ouvir", "sintese-voz", dados)}</div>` : ""}
+      ${p.chave.tem && vendo === "fish" ? `<div class="linha"><input id="voz-colada" class="largo" placeholder="Ou cole o link de uma voz do fish.audio" autocomplete="off" spellcheck="false" aria-label="Link de uma voz do Fish Audio">${botao("Usar e ouvir", "sintese-colar", dados)}</div>` : ""}
+      ${p.conta ? `<p class="nota">${esc(p.conta)}</p>` : ""}
+      ${p.chave.tem ? `<p class="nota">Hoje: ${p.caracteres_hoje.toLocaleString("pt-BR")} caracteres pelo ${esc(p.titulo)}.</p>` : ""}</div>`;
+  }
+  return cartao("", `<div class="cabeca"><h2>Voz do Zé</h2><span class="etiqueta bom">${esc(atual)}</span></div>
+    ${sub("Quem fala as respostas. Se a voz da nuvem falhar, o Cadu fala no lugar.")}
+    <div class="modos-fala" role="radiogroup" aria-label="Voz do Zé">${opcoes.map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="sintese-motor" data-motor="${v}" aria-checked="${v === s.motor}"${v === vendo && v !== s.motor ? ' data-vendo="1"' : ""}><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>
+    ${config}${s.erro ? `<p class="aviso">${esc(s.erro)}</p>` : ""}`);
 }
 
 /** O túnel fixo num domínio da pessoa: colar o comando do Cloudflare e dizer o endereço.
@@ -94,10 +110,17 @@ function appVoz(r) {
 }
 
 Object.assign(ACOES, {
-  "sintese-chave": async (b) => { const r = await ocupado(b, () => api("sintese/chave", { chave: valorCampo("chave-sintese").value })); toast(r.aviso); await abrir(); },
-  "sintese-apagar": (b) => confirmar(b, "Remover a chave do ElevenLabs?", async () => { const r = await api("sintese/apagar", {}); toast(r.aviso); await abrir(); }),
-  "sintese-motor": async (b) => { const r = await ocupado(b, () => api("sintese/escolher", { motor: b.dataset.motor })); toast(r.aviso); await abrir(); },
-  "sintese-voz": async (b) => { const r = await ocupado(b, () => api("sintese/escolher", { motor: "elevenlabs", voz: valorCampo("voz-sintese").value })); toast(r.aviso); await abrir(); },
+  "sintese-chave": async (b) => { const r = await ocupado(b, () => api("sintese/chave", { provedor: b.dataset.provedor, chave: valorCampo("chave-sintese").value })); toast(r.aviso); await abrir(); },
+  "sintese-apagar": (b) => confirmar(b, "Remover a chave?", async () => { const r = await api("sintese/apagar", { provedor: b.dataset.provedor }); toast(r.aviso); await abrir(); }),
+  "sintese-motor": async (b) => {
+    const m = b.dataset.motor;
+    const p = sinteseTela.provedores[m];
+    sinteseVendo = p ? m : "";
+    if (p && !p.chave.tem) { await abrir(); return; } // sem chave: só abre o campo para colar
+    const r = await ocupado(b, () => api("sintese/escolher", { motor: m })); toast(r.aviso); await abrir();
+  },
+  "sintese-voz": async (b) => { const r = await ocupado(b, () => api("sintese/escolher", { motor: b.dataset.provedor, voz: valorCampo("voz-sintese").value })); toast(r.aviso); await abrir(); },
+  "sintese-colar": async (b) => { const r = await ocupado(b, () => api("sintese/escolher", { motor: b.dataset.provedor, voz: valorCampo("voz-colada").value })); toast(r.aviso); await abrir(); },
   "app-voz-parear": async (b) => { codigoApp = await ocupado(b, () => api("voz-app/codigo", {})); await abrir(); },
   "app-voz-remover": (b) => confirmar(b, "Remover este celular?", async () => { const r = await api("voz-app/remover", { id: b.dataset.id }); toast(r.aviso); await abrir(); }),
 });
