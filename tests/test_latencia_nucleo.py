@@ -67,6 +67,7 @@ class NucleoCronometrado(Nucleo):
         self.sessoes = SimpleNamespace(em_foco=("", 0.0))  # type: ignore[assignment]
         self.cerebro, self.provedor = Eco(), "eco"
         self.voz = VozCronometrada()  # type: ignore[assignment]
+        self.motor_voz = SimpleNamespace(aquecer=lambda: None, ultimo="piper")  # type: ignore[assignment]
         self.ponte = SimpleNamespace(  # type: ignore[assignment]
             perguntar=lambda t, m: None,
             interromper=lambda: None,
@@ -212,6 +213,7 @@ def test_confirmacao_mantem_turno_original_e_identifica_primeiro_som(
     r = n.latencias.ultimo
     assert r is not None and r["aprovacao"] is True
     assert r["primeiro_som_tipo"] == "confirmacao"
+    assert r["voz_por"] == "piper"  # quem falou a primeira frase (ADR 0041)
 
 
 def test_comando_local_nao_inventa_latencia_do_cerebro(nucleo: NucleoCronometrado) -> None:

@@ -737,6 +737,51 @@
     "rodando": false,
     "texto": "Atualizei o Zé para 0.1.0 (v0.1.0-12-gabc1234)."
    }
+  },
+  "sintese": {
+   "motor": "fish",
+   "erro": "",
+   "provedores": {
+    "elevenlabs": {
+     "titulo": "ElevenLabs",
+     "descricao": "Voz natural, na nuvem. Paga por caractere.",
+     "cadastro": "https://exemplo.invalid",
+     "chave": {
+      "tem": false,
+      "fim": ""
+     },
+     "voz": "",
+     "nome": "",
+     "caracteres_hoje": 0,
+     "vozes": [],
+     "conta": ""
+    },
+    "fish": {
+     "titulo": "Fish Audio",
+     "descricao": "Voz natural, na nuvem. Tem modelo grátis.",
+     "cadastro": "https://exemplo.invalid",
+     "chave": {
+      "tem": true,
+      "fim": "c3d4"
+     },
+     "voz": "voz-exemplo-1",
+     "nome": "Exemplo",
+     "caracteres_hoje": 1234,
+     "vozes": [
+      {
+       "id": "voz-exemplo-1",
+       "nome": "Exemplo",
+       "detalhe": "sua"
+      },
+      {
+       "id": "voz-exemplo-2",
+       "nome": "Outra",
+       "detalhe": ""
+      }
+     ],
+     "conta": "Saldo de API: US$ 3,20 · S2.1 Pro."
+    }
+   }
   }
  },
  "escritas": {

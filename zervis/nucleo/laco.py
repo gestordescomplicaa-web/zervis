@@ -133,7 +133,7 @@ from zervis.transporte.entrada import Entrada
 from zervis.transporte.local import Captura
 from zervis.transporte.remoto import SalaRemota
 from zervis.versoes import Versoes
-from zervis.voz import chamado, espera, piper
+from zervis.voz import chamado, espera, nuvem, piper
 from zervis.voz.ativacao import (
     VAD,
     Detector,
@@ -278,7 +278,9 @@ class Nucleo(
 
         self.captura = Entrada(Captura(cfg["audio"]["microfone"]))
         self.anel = Anel(cfg.caminho("barehands", "pasta_estado"))
-        self.voz = Voz(onda=self.anel, abrir_fluxo=piper.PADRAO.abrir_fluxo)
+        # Quem fala: o Cadu, ou a voz da nuvem escolhida no painel (com o Cadu de reserva).
+        self.motor_voz = nuvem.Motor(piper.PADRAO)
+        self.voz = Voz(onda=self.anel, abrir_fluxo=self.motor_voz.abrir_fluxo)
         # A voz carrega em segundo plano: a primeira fala já a encontra pronta.
         threading.Thread(target=self._carregar_voz, name="carregar-voz", daemon=True).start()
         self._ultima_fala = 0
@@ -591,6 +593,7 @@ class Nucleo(
                 )
                 self.latencias.marcar(self._turno_atual, "cerebro_enviado")
                 self.ponte.perguntar(pedido, self.marca)
+                self.motor_voz.aquecer()  # a conexão da voz abre enquanto o cérebro pensa
             case e.InterromperCerebro():
                 self.marca += 1
                 self.ponte.interromper()
@@ -629,6 +632,7 @@ class Nucleo(
 
                 def ao_iniciar(em: float) -> None:
                     self.latencias.primeiro_som(turno, em, tipo)
+                    self.latencias.contexto(turno, voz_por=self.motor_voz.ultimo)
 
                 self._ultima_fala = self.voz.falar(
                     falavel(para_fala(texto)), ao_iniciar=ao_iniciar if turno else None
@@ -910,7 +914,7 @@ class Nucleo(
             revisao=f"{catalogo.rotulo(r['modelo'])}, até {r['max_por_dia']} por dia"
             if r["ligada"]
             else "",
-            voz=f"fala pelo {self.cfg['voz']['motor'].capitalize()} (Cadu), escuta pelo {escuta}",
+            voz=f"fala pelo {self._fala_por()}, escuta pelo {escuta}",
             proprias=[
                 (t.name, f"mcp__{ferramentas.SERVIDOR}__{t.name}" in livres) for t in self.proprias
             ],
@@ -924,6 +928,14 @@ class Nucleo(
                 for nome in self.externos.servidores
             },
         )
+
+    def _fala_por(self) -> str:
+        ativo = self.motor_voz.ativo
+        if ativo is None:
+            return "Piper (Cadu)"
+        nome = self.motor_voz.escolha.voz(ativo).get("nome", "")
+        titulo = self.motor_voz.titulo(ativo)
+        return f"{titulo} ({nome}), com o Cadu de reserva" if nome else titulo
 
     def _gravar_status(self, agora: float) -> None:
         self.hud.gravar(
