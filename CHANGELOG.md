@@ -7,7 +7,11 @@
   conversa de uma semana custou quase o mesmo que construir o fluxo). O que importa vai para um
   mapa curto do fluxo (`n8n/<id do fluxo>.md` no projeto: nós, decisões, versão publicada), o
   pedido seguinte começa numa conversa nova, e o `versionId` diz se alguém mexeu no n8n desde
-  então. Investigar uma falha lê só um item por nó e, se preciso, só o nó que falhou.
+  então. Investigar uma falha lê primeiro um item por nó e depois a entrada do nó que falhou.
+  A economia nunca vem antes do resultado: a conversa nova só é sugerida com o pedido terminado
+  e o próximo sendo outro assunto, nunca no meio de uma construção ou correção; o tipo de nó é
+  consultado também para um parâmetro que o fluxo ainda não usa, e um erro de um item
+  específico é lido com todos os itens.
 - Skill `fluxos-n8n` por versão do n8n: cada cliente pode ter o seu n8n numa versão, e a skill
   passa a seguir as ferramentas que aquele n8n mostra, com uma tabela do que fazer sem cada uma
   (testar no editor, pedir o número da execução, guardar o fluxo antes de editar). A versão

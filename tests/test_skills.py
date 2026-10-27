@@ -189,6 +189,8 @@ def test_fluxos_n8n_mesmo_fluxo_sem_conversa_crescendo() -> None:
     mesmo = texto[texto.index("## O mesmo fluxo") : texto.index("## Testar")]
     for regra in ("n8n/<id do fluxo>.md", "versionId", "/clear", "/new"):
         assert regra in mesmo
+    # A economia nunca no meio do trabalho: construir e corrigir seguem na mesma conversa.
+    assert "O resultado vem antes da economia" in mesmo and "Nunca no meio do trabalho" in mesmo
     falha = texto[texto.index("## Investigar") : texto.index("## Agentes")]
     for parametro in ("truncateData", "nodeNames", "get_execution"):
         assert parametro in falha
