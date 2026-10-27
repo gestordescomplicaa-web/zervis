@@ -94,6 +94,7 @@
     "sessao/conectores",
     "sessao/conectores/salvar",
     "sessao/interrompida",
+    "sessao/permissao",
     "sessao/copia",
     "sessao/copia/aplicar",
     "sessao/copia/descartar",

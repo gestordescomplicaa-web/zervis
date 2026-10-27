@@ -18,6 +18,7 @@ from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import ESTADO, Status
 from zervis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from zervis.oficina.manutencao import Manutencao
+from zervis.oficina.permissoes import Pedido
 from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import Sessao, SessaoErro, Sessoes
 from zervis.rosto import tela
@@ -289,10 +290,34 @@ class ServicoOficina:
     def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
         """O agente parou esperando a aprovação da pessoa."""
         self.n._aviso_da_oficina(
-            f"A sessão {sessao.nome} está esperando sua aprovação.",
+            f"A sessão {sessao.nome} está esperando sua aprovação, no painel ou no terminal.",
             "urgente",
             sessao.id,
             f"a sessão {sessao.nome} pede aprovação",
+        )
+
+    def _permissao_decidida(self, pedido: Pedido) -> None:
+        """Cada pedido de permissão de uma sessão vai para a Atividade: o que foi pedido, quem
+        decidiu e por onde (ADR 0039). Respondido no terminal ou sem resposta, também."""
+        try:
+            nome = self.n.sessoes.ler(pedido.sessao).nome
+        except SessaoErro:
+            nome = pedido.sessao
+        decisoes = {
+            "aprovado": ("execucao", "aprovado"),
+            "negado": ("negada", "negado"),
+            "retirado": ("pedido", "respondido no terminal"),
+            "expirou": ("pedido", "sem resposta fora do terminal; ficou no terminal"),
+        }
+        tipo, como = decisoes.get(pedido.decisao, ("falha", pedido.decisao))
+        por = f" pelo {pedido.por}" if pedido.por in ("painel", "voz") else ""
+        atividade.PADRAO.registrar(
+            tipo,
+            f"Sessão {nome}: {pedido.frase}",
+            origem="sessao",
+            ferramenta=pedido.ferramenta,
+            entrada=pedido.detalhe,
+            autorizacao=como + por,
         )
 
     def _avisar_interrompidas(self) -> None:

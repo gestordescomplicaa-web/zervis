@@ -31,7 +31,7 @@ const mostrarLado = (sim) => /** @type {HTMLElement} */ (document.querySelector(
 
 const itemSessao = (s) => `<button type="button" class="item-sessao" data-acao="sessao-abrir" data-id="${s.id}" aria-current="${s.id === sessaoAberta}">
   <span class="avatar ${s.estado === "trabalhando" ? "trabalhando" : ""}" data-matiz="${matiz(s.nome)}">${inicial(s.nome)}</span>
-  <strong>${esc(s.nome)}</strong><time>${ha(s.atualizada)}</time><small>${s.estado === "trabalhando" ? "trabalhando…" : esc(s.resumo || s.pasta)}</small></button>`;
+  <strong>${esc(s.nome)}</strong><time>${ha(s.atualizada)}</time><small>${rotuloSessao(s)}</small></button>`;
 
 async function listaSessoes() {
   const lista = $("lista-sessoes");
@@ -221,6 +221,7 @@ async function acompanharSessao() {
     etiqueta.dataset.copiaEstado = sessao.estado;
     carregarCopia(sessao.id);
   }
+  atualizarPermissao(sessao);
   const faixa = $("limite-sessao");
   const versaoLimite = JSON.stringify([sessao.limite, sessao.conta_id, sessao.motor]);
   if (faixa.dataset.limite !== versaoLimite) {

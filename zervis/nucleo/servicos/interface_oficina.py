@@ -4,6 +4,7 @@ from typing import Any
 
 from zervis.nucleo.servicos.interface import InterfaceServico, servico
 from zervis.nucleo.servicos.oficina import ServicoOficina
+from zervis.oficina.permissoes import Pedido
 from zervis.oficina.sessoes import Sessao
 
 
@@ -44,6 +45,9 @@ class InterfaceOficina(InterfaceServico):
 
     def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
         servico(self, ServicoOficina)._sessao_pede(sessao, mensagem)
+
+    def _permissao_decidida(self, pedido: Pedido) -> None:
+        servico(self, ServicoOficina)._permissao_decidida(pedido)
 
     def _avisar_interrompidas(self) -> None:
         servico(self, ServicoOficina)._avisar_interrompidas()

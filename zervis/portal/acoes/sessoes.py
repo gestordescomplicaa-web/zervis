@@ -48,6 +48,11 @@ class AcoesSessoes(Pagina):
             "interrompida": s.interrompida[:300],
             "resumo": s.resumo,
             "atualizada": s.atualizada,
+            # O que a sessão espera aprovar agora (ADR 0039): a frase do Zé e os argumentos.
+            "permissoes": [
+                {"id": p["id"], "frase": p["frase"], "detalhe": p["detalhe"]}
+                for p in self.n.sessoes.permissoes.pendentes(s.id)
+            ],
         }
 
     def sessoes(self) -> list[dict[str, Any]]:
@@ -175,6 +180,17 @@ class AcoesSessoes(Pagina):
             return {**self.painel._sessao(s), "aviso": "Continuando de onde parou."}
         s = self.painel._chamar(lambda: self.n.sessoes.dispensar_interrompida(id_))
         return {**self.painel._sessao(s), "aviso": "Dispensada."}
+
+    def permissao_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Aprovar ou negar pelo painel (também do celular) o que a sessão pediu no terminal."""
+        id_, pedido = str(dados.get("id", "")), str(dados.get("pedido", ""))
+        aprovar = dados.get("aprovar") is True
+        try:
+            self.n.sessoes.permissoes.decidir(id_, pedido, aprovar, "painel")
+        except KeyError as erro:
+            raise PedidoInvalido("Esse pedido já foi respondido.") from erro
+        s = self.painel._chamar(lambda: self.n.sessoes.ler(id_))
+        return {**self.painel._sessao(s), "aviso": "Aprovado." if aprovar else "Negado."}
 
     def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O modelo dos próximos pedidos da sessão; o agente reabre nele e a conversa continua."""
