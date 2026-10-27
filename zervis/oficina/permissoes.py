@@ -15,6 +15,7 @@ escreve num comando pode dizer uma coisa e o comando fazer outra.
 
 import hashlib
 import json
+import re
 import secrets
 import threading
 import time
@@ -22,27 +23,44 @@ import uuid
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 PRAZO_S = 300.0  # quanto o gancho espera; depois, a janela do terminal segue sozinha
 FALAVEL = 160  # um comando maior que isto não se aprova de ouvido: "está na tela"
 DETALHE = 400
 
 # O que acontece se a pessoa aprovar, por ferramenta do MCP do n8n (as que pedem aprovação).
+# `{obj}` vira "o fluxo "Nome"" quando o pedido traz o nome, ou "um fluxo no n8n-loja": um ID
+# como "QkERvuSCj7yNj5rW" não diz nada a quem ouve (ele fica no detalhe, na tela).
 CONSEQUENCIAS = {
-    "publish_workflow": "publicar o fluxo {alvo}: ele passa a rodar de verdade",
-    "unpublish_workflow": "despublicar o fluxo {alvo}: ele para de rodar",
-    "execute_workflow": "rodar de verdade o fluxo {alvo}: envia, cria ou cobra o que ele fizer",
-    "archive_workflow": "arquivar o fluxo {alvo}",
-    "restore_workflow_version": "voltar o fluxo {alvo} para uma versão anterior",
-    "move_workflows_to_folder": "mover fluxos de pasta",
-    "update_folder": "renomear ou mover a pasta {alvo}",
-    "add_data_table_rows": "gravar linhas na tabela {alvo}",
-    "add_data_table_column": "criar uma coluna na tabela {alvo}",
-    "rename_data_table_column": "renomear uma coluna da tabela {alvo}",
-    "rename_data_table": "renomear a tabela {alvo}",
-    "delete_data_table_column": "apagar uma coluna da tabela {alvo}, com os dados dela",
+    "publish_workflow": ("fluxo", "publicar {obj}: ele passa a rodar de verdade"),
+    "unpublish_workflow": ("fluxo", "despublicar {obj}: ele para de rodar"),
+    "execute_workflow": ("fluxo", "rodar de verdade {obj}: envia, cria ou cobra o que ele fizer"),
+    "archive_workflow": ("fluxo", "arquivar {obj}"),
+    "restore_workflow_version": ("fluxo", "voltar {obj} para uma versão anterior"),
+    "move_workflows_to_folder": ("fluxo", "mover fluxos de pasta"),
+    "update_folder": ("pasta", "renomear ou mover {obj}"),
+    "add_data_table_rows": ("tabela", "gravar linhas {em_obj}"),
+    "add_data_table_column": ("tabela", "criar uma coluna {em_obj}"),
+    "rename_data_table_column": ("tabela", "renomear uma coluna {de_obj}"),
+    "rename_data_table": ("tabela", "renomear {obj}"),
+    "delete_data_table_column": ("tabela", "apagar uma coluna {de_obj}, com os dados dela"),
 }
-ALVOS = ("workflowName", "name", "workflowId", "dataTableId", "folderId", "id")
+ARTIGOS = {"fluxo": ("o", "um"), "pasta": ("a", "uma"), "tabela": ("a", "uma")}
+CONTRACOES = {
+    ("em", "o"): "no",
+    ("em", "a"): "na",
+    ("em", "um"): "num",
+    ("em", "uma"): "numa",
+    ("de", "o"): "do",
+    ("de", "a"): "da",
+    ("de", "um"): "de um",
+    ("de", "uma"): "de uma",
+}
+NOMES = ("workflowName", "name", "nome", "title", "dataTableName", "folderName")
+# Um comando só se aprova de ouvido se a fala não o muda: a voz tira caminhos, links e
+# símbolos, e "cat > /etc/hosts" seria ouvido como "cat".
+COMANDO_FALAVEL = re.compile(r"[\w .,:=@+-]+")
 
 
 @dataclass
@@ -64,31 +82,39 @@ class ChaveInvalida(PermissionError):
     """O gancho chegou com uma chave que não é de nenhuma sessão aberta."""
 
 
-def _alvo(entrada: dict[str, Any]) -> str:
-    for nome in ALVOS:
-        if valor := entrada.get(nome):
-            return f'"{str(valor)[:80]}"'
-    return ""
+def _objeto(tipo: str, entrada: dict[str, Any], conector: str) -> str:
+    definido, indefinido = ARTIGOS[tipo]
+    for campo in NOMES:
+        if nome := str(entrada.get(campo) or "").strip():
+            return f'{definido} {tipo} "{nome[:80]}"'
+    return f"{indefinido} {tipo} no {conector}"
 
 
 def frase(ferramenta: str, entrada: dict[str, Any]) -> tuple[str, bool]:
     """O que a sessão quer fazer, dito pelo Zé, e se cabe ser aprovado de ouvido."""
     if ferramenta == "Bash":
-        comando = " ".join(str(entrada.get("command", "")).split())
-        if len(comando) > FALAVEL or "\n" in str(entrada.get("command", "")):
+        bruto = str(entrada.get("command", ""))
+        comando = " ".join(bruto.split())
+        if len(comando) > FALAVEL or "\n" in bruto.strip():
             return "rodar um comando longo (veja na tela)", False
+        if not COMANDO_FALAVEL.fullmatch(comando):
+            return f"rodar o comando {comando.split()[0] if comando else ''} (veja na tela)", False
         return f"rodar o comando: {comando}", True
     if ferramenta in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
         caminho = str(entrada.get("file_path") or entrada.get("notebook_path") or "")
         return f"mudar o arquivo {caminho} (veja na tela)", False
     if ferramenta == "WebFetch":
-        return f"abrir a página {str(entrada.get('url', ''))[:120]}", True
+        site = urlsplit(str(entrada.get("url", ""))).hostname or "um endereço"
+        return f"abrir uma página de {site}", True
     if ferramenta.startswith("mcp__"):
         _, conector, nome = [*ferramenta.split("__", 2), "", ""][:3]
-        alvo = _alvo(entrada)
-        if modelo := CONSEQUENCIAS.get(nome):
-            return " ".join(modelo.format(alvo=alvo).split()).replace(" :", ":"), True
-        return f"usar {nome} no {conector}" + (f" ({alvo})" if alvo else ""), True
+        if nome in CONSEQUENCIAS:
+            tipo, modelo = CONSEQUENCIAS[nome]
+            obj = _objeto(tipo, entrada, conector)
+            artigo, _, resto = obj.partition(" ")
+            em, de = (f"{CONTRACOES[(p, artigo)]} {resto}" for p in ("em", "de"))
+            return modelo.format(obj=obj, em_obj=em, de_obj=de), True
+        return f"usar {nome} no {conector}", True
     return f"usar a ferramenta {ferramenta}", True
 
 
@@ -117,7 +143,8 @@ class Permissoes:
         relogio: Callable[[], float] = time.time,
     ) -> None:
         self.prazo_s = prazo_s
-        self.ao_decidir = ao_decidir  # a Atividade (e, na E2, a voz)
+        self.ao_decidir = ao_decidir  # a Atividade, e a voz retira a pergunta
+        self.ao_pedir: Callable[[Pedido], None] | None = None  # a voz pergunta (E2)
         self.endereco = ""  # a rota do painel; vazio = sem painel, sem gancho
         self._relogio = relogio
         self._chaves: dict[str, str] = {}  # resumo da chave → sessão
@@ -173,6 +200,9 @@ class Permissoes:
         with self._mudou:
             self._pedidos[p.id] = p
             self._mudou.notify_all()
+        if self.ao_pedir is not None:
+            self.ao_pedir(p)
+        with self._mudou:
             limite = time.monotonic() + self.prazo_s
             while not p.decisao and (falta := limite - time.monotonic()) > 0:
                 self._mudou.wait(falta)
@@ -211,6 +241,11 @@ class Permissoes:
                     continue
                 p.decisao, p.por = "retirado", "terminal"
             self._mudou.notify_all()
+
+    def pendente(self, pedido: str) -> bool:
+        with self._mudou:
+            p = self._pedidos.get(pedido)
+            return p is not None and not p.decisao
 
     def pendentes(self, sessao: str | None = None) -> list[dict[str, Any]]:
         with self._mudou:

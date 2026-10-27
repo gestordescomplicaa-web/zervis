@@ -13,6 +13,7 @@ from zervis.foco.frentes import Foco
 from zervis.memoria.linha import LinhaDoTempo
 from zervis.nucleo import estados as e
 from zervis.nucleo.laco import Nucleo, Status
+from zervis.oficina.permissoes import Permissoes
 
 
 @dataclass
@@ -113,6 +114,9 @@ def rodar(nome: str, janela_aberta: bool = True) -> tuple[str, list[tuple[str, A
     n.ligar_mensagens = lambda ativo: f"whatsapp {ativo}"  # type: ignore[method-assign]
     n.voz = SimpleNamespace(muda=False, parar=lambda: None)  # type: ignore[assignment]
     n._ligar_ativacao = lambda: None  # type: ignore[method-assign]
+    # "aprova" e "nega" (ADR 0039), sem nenhum pedido de sessão esperando.
+    n.sessoes = SimpleNamespace(permissoes=Permissoes())  # type: ignore[assignment]
+    n._permissao_falada, n._permissao_ate = None, 0.0
     n._comando(nome)
     time.sleep(0.1)  # trazer, abrir, fechar e a busca correm numa linha de execução própria
     frases = [ev.texto for tipo, ev in r.feito if tipo == "evento" and isinstance(ev, e.Frase)]

@@ -151,6 +151,9 @@ from zervis.voz.latencia import Latencias
 from zervis.voz.saida import Voz
 
 log = logging.getLogger(__name__)
+# Depois da pergunta de permissão de uma sessão, quanto tempo o "sim" e o "não" valem para ela:
+# a fala da pergunta e a escuta que vem depois (mãos livres), ou um "Ei Zé, sim" logo em seguida.
+JANELA_PERMISSAO_S = 45.0
 # Voz ouvida e descartada enquanto o Zé pensa (ao vivo): acima do ruído de fundo, e só conta
 # quando passa de meio segundo, para um estalo ou uma tosse não virar aviso.
 FALA_PERDIDA_DBFS = -35.0
@@ -304,6 +307,11 @@ class Nucleo(
         self._dito_marca: int | None = None
         self._oferta_ate = 0.0
         self._ultimo_de_sessao: dict[str, Any] | None = None
+        # As perguntas de permissão das sessões (ADR 0039): a fala de cada uma → (sessão,
+        # pedido); a última que o Zé fez e até quando o "sim" e o "não" a respondem.
+        self._perguntas_permissao: dict[str, tuple[str, str]] = {}
+        self._permissao_falada: tuple[str, str] | None = None
+        self._permissao_ate = 0.0
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
         self.vigia = Vigia()
         self._vigia_em = 0.0
@@ -390,6 +398,7 @@ class Nucleo(
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
         self.maquina.manutencao = lambda: self.manutencao.ligado
         self.maquina.oferta = lambda: time.monotonic() < self._oferta_ate
+        self.maquina.permissao = lambda: time.monotonic() < self._permissao_ate
         # Atualização esperando as outras sessões (ADR 0028): None, ou se a revisão foi feita.
         self._aplicar_depois: bool | None = None
         self.sessoes.reservada = self.atualizacao.reserva
@@ -513,6 +522,7 @@ class Nucleo(
             # Os pedidos de permissão das sessões do Claude chegam por esta rota (ADR 0039).
             self.sessoes.permissoes.endereco = f"{self.portal.endereco}sessoes/permissao"
             self.sessoes.permissoes.ao_decidir = self._permissao_decidida
+            self.sessoes.permissoes.ao_pedir = self._permissao_pedida
         except OSError as erro:
             log.warning("painel não subiu: %s", erro)
         self.bip = ESTADO / "bip.wav"
@@ -599,6 +609,12 @@ class Nucleo(
                     self._comecados[texto] = self._comecados.get(texto, 0) + 1
                     self._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
                     self._antes_de_avisar(texto)
+                perguntas = getattr(self, "_perguntas_permissao", {})
+                if (alvo := perguntas.get(texto)) and texto.endswith("Aprovo?"):
+                    # A pergunta de uma sessão (ou ela repetida, "não entendi"): o "sim" e o
+                    # "não" logo depois a respondem, sem passar pelo cérebro (ADR 0039).
+                    self._permissao_falada = alvo
+                    self._permissao_ate = time.monotonic() + JANELA_PERMISSAO_S
                 self.teclado.falou(texto)
                 if texto == e.NAO_ENTENDI:
                     self.evidencias.registrar("nao_entendi", self._ouvido)
