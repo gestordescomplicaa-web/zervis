@@ -37,8 +37,9 @@ O que se aprendeu na pesquisa e na conversa de 19/10/2026:
   | **n8n** | MCP próprio: busca nós, cria, edita, testa com dados de exemplo, publica, histórico de versões e execuções. Há também o n8n-mcp (MIT) da comunidade, com documentação de nós e validação. | Sim | Escolhido. |
   | Make | Maduro, mas as ferramentas de criar e editar só existem nos planos pagos | Não | Motor futuro, se o cliente já usa. |
   | Zapier | "Next Gen Zaps" em acesso antecipado | Não | Caro por execução. |
-  | Activepieces | MCP próprio (cerca de 30 ferramentas) | Sim (MIT) | Plano B open source. |
-  | Kestra, Windmill | Documentação, YAML ou scripts | Sim | Orquestração de dados ou código, fora do perfil. |
+  | Activepieces | MCP próprio (cerca de 30 ferramentas: construir, testar, ver e refazer execuções) | Sim (MIT; Projetos e Git pagos) | Plano B open source. |
+  | Windmill | MCP expõe scripts e fluxos prontos e os jobs; construir é editar arquivos e `wmill sync` | Sim (AGPLv3) | Para integração que é código. |
+  | Kestra | MCP do OSS só chama fluxos marcados como ferramenta; construir é YAML pelo `kestractl` | Sim (Apache 2.0) | Orquestração de dados, fora do perfil. |
 
 - **Licença do n8n** (FAQ oficial): é permitido construir, rodar e manter fluxos de vários
   clientes numa instância própria e cobrar por isso. É proibido revender o n8n com outra marca e
@@ -56,8 +57,14 @@ O que se aprendeu na pesquisa e na conversa de 19/10/2026:
      caminho da pasta). Assim, a sessão do cliente A nunca enxerga o n8n do cliente B.
    - Para construir, a LLM da sessão (Claude ou Codex) usa as ferramentas do n8n: `search_nodes`,
      `get_node_types`, `get_workflow_best_practices`, as ferramentas de criar e atualizar fluxos,
-     `test_workflow` e `publish_workflow`. Versão recomendada: n8n 2.18.4 ou mais nova. O dono
-     liga o MCP na instância e marca cada fluxo como "Available in MCP".
+     `test_workflow` e `publish_workflow`. O dono liga o MCP na instância e marca cada fluxo
+     como "Available in MCP".
+   - **Cada cliente, a sua versão.** Construir pelo MCP pede a 2.12 ou mais nova; a 2.36 tem tudo
+     o que a skill usa (testar com dados de exemplo na 2.15, buscar execuções na 2.20, histórico
+     e volta de versão na 2.29, diferença entre versões na 2.36). A sessão segue as ferramentas
+     que aquele n8n mostra, e a skill diz o que fazer sem cada uma (26/10/2026).
+   - **Um n8n, ou um usuário do n8n, por cliente.** O MCP do n8n separa por usuário, não por
+     cliente: todo cliente MCP conectado com o mesmo usuário vê os mesmos fluxos.
    - Para instância antiga, ou quando faltar documentação de nós e validação, entra o n8n-mcp da
      comunidade (MIT, pela API REST e uma chave), como conector local do mesmo projeto.
 3. **O método é uma skill**, `fluxos-n8n` (inicial, `sessoes: sim`):
@@ -101,6 +108,7 @@ O que se aprendeu na pesquisa e na conversa de 19/10/2026:
 - Motor de fluxos, nós ou fila de execução de cliente dentro do Zé.
 - Passar pelo modelo nas consultas do vigia.
 - Um conector de n8n valendo para todos os projetos (`*`): cada cliente, o seu.
+- Dois clientes no mesmo n8n com o mesmo usuário do MCP: as duas sessões veriam os mesmos fluxos.
 - A LLM criar credenciais ou ver segredos do n8n.
 
 ## Consequências
@@ -111,7 +119,8 @@ O que se aprendeu na pesquisa e na conversa de 19/10/2026:
 - O vigia não vê fluxo com erro nem fluxo que deixou de rodar. Se a pessoa precisar, a próxima
   peça é ler as execuções pela API REST do n8n (com uma chave por instância) ou receber o aviso
   do nó Error Trigger por um webhook (rota aberta, zona protegida); cada uma com ADR curto.
-- Cada cliente precisa de um n8n novo o bastante para o MCP (2.18.4 recomendado).
+- Cada cliente precisa de um n8n novo o bastante para o MCP: a 2.12 para construir, a 2.36 para
+  o ciclo completo. Num n8n mais antigo, a sessão diz o que falta e segue o caminho da skill.
 - Os agentes rodam como o mesmo usuário do Zé (ADR 0037): a separação entre clientes vem dos
   conectores por projeto, não de isolamento do sistema operacional.
 
@@ -128,3 +137,14 @@ O que se aprendeu na pesquisa e na conversa de 19/10/2026:
 - 19/10/2026: F1 provada na máquina real: o JSON do n8n colado em Conectores, ligado na sessão
   pelo botão "Conectores", e uma sessão do Claude criou um fluxo no n8n. Skill `fluxos-n8n`
   (PR #24), com os nomes das ferramentas conferidos na instância.
+- 19/10/2026: F2 (PR #25, `zervis/sistema/vigia_n8n.py`) provada pela pessoa: o n8n derrubado
+  na VPS virou "fora do ar", e a volta, "voltou".
+- 26/10/2026: reavaliação do motor (n8n, Activepieces, Windmill e Kestra, pela documentação
+  oficial e pelo código). O n8n continua: o harness já é independente do motor nos conectores,
+  na política e no vínculo por projeto, e só o vigia e a skill são do n8n; o MCP do n8n é o
+  único com o ciclo inteiro do agente (validar, testar com dados de exemplo, execução por nó,
+  diferença e volta de versão). Reabrir a escolha só com um gatilho: vender uma plataforma em
+  que o cliente monta fluxos ou com outra marca (a licença do n8n proíbe: Activepieces ou
+  Kestra); processos pesados de dados (Kestra ou Windmill ao lado); integração que é
+  basicamente código (Windmill ao lado); ou o MCP do n8n regredir (Activepieces). A skill passou
+  a seguir a versão de cada n8n (PR #44).
