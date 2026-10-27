@@ -31,6 +31,8 @@ de mentira e o gancho `PermissionRequest`:
 | 5. A pessoa responde no terminal antes do gancho | A ferramenta roda; **o gancho não é avisado** e segue até o próprio prazo. |
 | 6. Gancho do tipo `http` para `127.0.0.1`, chave numa variável de ambiente | Funciona; a chave chega no cabeçalho (`${VAR}` com `allowedEnvVars`) e não aparece na linha de comando. |
 | 7. Comando de terminal que pede permissão (`curl`) | Passa pelo mesmo gancho (`tool_name: Bash`). |
+| 8. Os campos do pedido | Traz `prompt_id`, `tool_name`, `tool_input`; **não traz `tool_use_id`** (o exemplo da documentação traz). |
+| 9. O `timeout` do gancho `http` | Em **segundos**: com 15, uma resposta aos 10 s valeu; com 5, não. |
 
 Conclusões: o terminal e o Zé valem ao mesmo tempo, e o primeiro que responde decide; nada
 trava se o Zé não responder. O Zé precisa descobrir sozinho que a pessoa já respondeu no
@@ -41,11 +43,14 @@ terminal (teste 5).
 1. **A ponte.** Cada sessão do Claude ganha um gancho `PermissionRequest` do tipo `http` para
    uma rota local do Zé, com uma chave própria da sessão numa variável de ambiente do terminal.
    A rota só aceita `127.0.0.1` e a chave daquela sessão. O pedido entra numa fila e o gancho
-   espera a decisão até um prazo; sem decisão, responde vazio e a janela do terminal segue.
+   espera a decisão até um prazo (5 minutos); sem decisão, responde vazio e a janela do terminal
+   segue.
 2. **O primeiro que responde decide.** Terminal, painel ou voz. O Zé retira a pergunta quando a
-   ferramenta roda (`PostToolUse` com o mesmo `tool_use_id`; o filtro dos ganchos passa a
-   incluir todas as ferramentas), quando a sessão para ou recebe outro pedido (`Stop`,
-   `UserPromptSubmit`) ou no fim do prazo. Uma decisão atrasada não vale.
+   ferramenta roda (o `PostToolUse` com a mesma assinatura: o nome e o resumo dos argumentos,
+   já que o pedido não traz o `tool_use_id`; para as ferramentas do MCP, um gancho enxuto que
+   não leva a resposta), quando o turno dela para (`Stop` com o mesmo `prompt_id`), quando
+   começa outro turno (`UserPromptSubmit`) ou no fim do prazo. O `prompt_id` impede que um
+   evento lido com atraso leve o pedido de um turno novo. Uma decisão atrasada não vale.
 3. **A frase é do Zé, não do modelo.** Montada da ferramenta e dos argumentos de verdade, nunca
    da `description` que o modelo escreve. Diz o que acontece se aprovar: "publicar: o fluxo
    passa a rodar com clientes reais"; "rodar de verdade: envia, cria, cobra"; um comando, o
@@ -86,6 +91,7 @@ terminal (teste 5).
 | Etapa | Escopo | Pronto quando |
 |---|---|---|
 | E0 | Prova no Claude Code real (acima). | Feita em 27/10/2026. |
+| E1 | (em PR) | Provada de ponta a ponta com o Claude Code real em 27/10/2026: aprovado pelo painel, rodou sem tocar no terminal; aprovado no terminal, saiu do painel. |
 | E1 | Rota, fila e chave por sessão; o gancho nas sessões; Aprovar e Negar no painel; retirar a pergunta quando o terminal responde; Atividade; comandos de teste liberados por projeto. | Uma publicação aprovada pelo painel no celular, e a sessão continua; respondida no terminal, some do painel. |
 | E2 | A pergunta falada (frase do item 3), "sim" e "não", a fila, o Silencioso pelo app. | "Sim" do sofá publica; "não" nega; silêncio deixa no painel. |
 | E3 | Extras, a pedido: "sim, sempre" (libera no conector, depois de o Zé dizer qual); Aprovar e Negar na notificação do Zé Voz; o Codex pelo app-server. | Cada um com a sua prova. |
