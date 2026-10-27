@@ -12,6 +12,8 @@ PAGINAS.modelos = async function() {
       <section class="cartao" id="cartao-acesso" data-contexto="cerebro"></section>
       ${cartao("", `<div class="cabeca"><h2>Respostas rápidas</h2>${liga(c.via.ligada, "via-ligada", "", "Ligada")}</div>
         ${sub("Parte do cérebro: conversa simples com um modelo leve. Pedidos com ação vão ao modelo principal.")}
+        <div class="segmentos" role="group" aria-label="Quando">${[["live", "Só no Live"], ["sempre", "Sempre"]].map(([v, n]) => `<button type="button" data-acao="via-quando" data-quando="${v}" aria-pressed="${v === (c.via.quando || "live")}">${n}</button>`).join("")}</div>
+        <p class="nota">${(c.via.quando || "live") === "live" ? "Responde na conversa em tempo real (o Live); no Normal e no teclado, vai tudo ao modelo principal." : "Responde a conversa simples em qualquer modo."}${c.ativa ? " Em uso agora." : ""}</p>
         <div class="segmentos" role="group" aria-label="Provedor">${c.motores.map((m) => `<button type="button" data-acao="motor" data-motor="${m.id}" data-modelo="${esc(m.modelo)}" aria-pressed="${m.id === c.via.motor}">${esc(NOME_MOTOR[m.id] || m.nome)}</button>`).join("")}</div>
         <div class="linha"><label id="campo-modelo">Modelo${campoModelo(c.via.motor, c.via.modelo)}</label>
           <label id="campo-endereco">Endereço<input id="endereco" class="mono" value="${esc(c.via.endereco)}" placeholder="http://127.0.0.1:20128/v1" autocomplete="off" spellcheck="false"></label></div>

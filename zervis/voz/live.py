@@ -19,6 +19,7 @@ modelos do Zé.
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 import threading
@@ -79,6 +80,13 @@ def garantir_modelo() -> bool:
 
     _EUORunnerMultilingual._download_files()
     return True
+
+
+def live_ativo(nucleo: object) -> "Live | None":
+    """O Live do núcleo, se ele está com a conversa agora (a voz conectada ao vivo). Uma função, não
+    um método: os testes chamam os métodos do núcleo com objetos que não têm o Live."""
+    live: Live | None = getattr(nucleo, "live", None)
+    return live if live is not None and live.ativo else None
 
 
 def pedido_do_turno(falas: list[str], pendente: str) -> str:
@@ -233,8 +241,12 @@ class Live:
         return True
 
     def desligar(self) -> None:
-        if self._laco is not None:
-            asyncio.run_coroutine_threadsafe(self._fechar(), self._laco)
+        """Fecha a sessão e espera (pouco): quem chama já pode contar com o Live desligado."""
+        if self._laco is None or self._sessao is None:
+            return
+        futuro = asyncio.run_coroutine_threadsafe(self._fechar(), self._laco)
+        with contextlib.suppress(Exception):
+            futuro.result(5.0)
 
     async def _abrir(self, fonte: Any) -> None:
         await self._fechar()

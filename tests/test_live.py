@@ -426,6 +426,22 @@ def test_interrompido_na_maquina() -> None:
     assert m.tratar(e.Interrompido(), 10.0) == [] and m.estado is e.Estado.OUVINDO
 
 
+def test_ao_vivo_concordar_nao_vira_pedido_mas_responde_uma_pergunta() -> None:
+    """ "Entendi." mandado ao cérebro virava ação (teste de 27/10/2026); depois de uma pergunta
+    do Zé, o "beleza" é a resposta."""
+    for fala in ("Entendi.", "Beleza!", "Tá bom.", "uhum, certo"):
+        m = e.Maquina(estado=e.Estado.OUVINDO, ao_vivo=True, autorizado=True)
+        assert m.tratar(e.FalaAoVivo(fala), 2.0) == [] and m.estado is e.Estado.OUVINDO, fala
+        assert m.autorizado
+    m = e.Maquina(estado=e.Estado.OUVINDO, ao_vivo=True, autorizado=True)
+    m.ze_perguntou = lambda: True
+    assert m.tratar(e.FalaAoVivo("Beleza."), 2.0) == [e.EnviarAoCerebro("Beleza.")]
+    m = e.Maquina(estado=e.Estado.OUVINDO, ao_vivo=True, autorizado=True)
+    assert m.tratar(e.FalaAoVivo("Entendi, e o n8n?"), 2.0) == [
+        e.EnviarAoCerebro("Entendi, e o n8n?")
+    ]
+
+
 def test_fala_ao_vivo_vale_como_fim_de_fala() -> None:
     m = e.Maquina(estado=e.Estado.OUVINDO, ao_vivo=True, autorizado=True)
     assert m.tratar(e.FalaAoVivo("que horas são", 1.0, 1.4), 2.0) == [
@@ -553,6 +569,19 @@ def test_a_voz_ao_vivo_conectada_vai_para_o_live_e_sai_ao_desconectar() -> None:
     assert live.recebidos == [b"quadro"] and recebidos == []  # o recorte não recebe nada
     servico._fonte_remota(voz, False)
     assert live.chamadas == ["ligar", "desligar"]
+
+
+def test_o_motor_rapido_entra_e_sai_com_o_live() -> None:
+    """A via rápida só no Live: ao conectar e ao sair, o núcleo troca o motor (em segundo plano)."""
+    live = LiveFalso()
+    servico, n, _ = _remoto(live)
+    trocas: queue.Queue[bool] = queue.Queue()
+    n.aplicar_via_rapida = lambda: trocas.put(live.ativo)
+    voz = _voz(ao_vivo=True)
+    servico._fonte_remota(voz, True)
+    assert trocas.get(timeout=2) is True
+    servico._fonte_remota(voz, False)
+    assert trocas.get(timeout=2) is False
 
 
 def test_sem_o_live_ou_no_modo_chamado_segue_o_recorte() -> None:

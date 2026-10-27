@@ -277,6 +277,10 @@ const ESCOLHAS = {
 const MUDAR = {
   automacao: async (el) => { await api("automacao/ativar", { id: el.dataset.id, ativo: el.checked }); await recarregar(); },
   "via-ligada": () => {},
+  "via-quando": (b) => {
+    modelo.quando = b.dataset.quando;
+    document.querySelectorAll('[data-acao="via-quando"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  },
   "cerebro-modelo": async (el) => {
     el.disabled = true; toast("Testando o modelo…");
     try {

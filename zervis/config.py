@@ -111,8 +111,10 @@ PADRAO: dict[str, dict[str, Any]] = {
     # ou da variável do motor (ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY,
     # ZERVIS_PONTE_API_KEY); nunca desta config. raciocinio: só para GPT-5 e série "o".
     # espera_s: sem a primeira palavra nesse tempo, o pedido vai ao cérebro completo.
+    # quando: "live" (só na conversa em tempo real, ADR 0042) ou "sempre".
     "via_rapida": {
         "ligada": True,
+        "quando": "live",
         "motor": "plano",
         "modelo": "claude-sonnet-5-5",
         "endereco": "",
@@ -188,6 +190,8 @@ def validar(dados: dict[str, Any], origem: str) -> Config:
             f"{origem}: via_rapida.motor deve ser plano, codex, contas, "
             "anthropic, openai, openrouter ou ponte"
         )
+    if secoes["via_rapida"]["quando"] not in ("live", "sempre"):
+        raise ConfigInvalida(f"{origem}: via_rapida.quando deve ser live ou sempre")
     if secoes["via_rapida"]["motor"] == "ponte" and not secoes["via_rapida"]["endereco"]:
         raise ConfigInvalida(f"{origem}: via_rapida.endereco é obrigatório na ponte")
     if secoes["voz"]["motor"] != "piper":

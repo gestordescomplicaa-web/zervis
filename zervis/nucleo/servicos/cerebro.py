@@ -29,6 +29,7 @@ from zervis.rosto.quadro import Quadro
 from zervis.sistema import maquina
 from zervis.voz.fala import separar_fontes
 from zervis.voz.latencia import Latencias
+from zervis.voz.live import live_ativo
 
 log = logging.getLogger(__name__)
 
@@ -166,6 +167,7 @@ class ServicoCerebro:
             DADOS / "cerebro-rapido",
             self.n.persona_rapida(),
             self.n._foto_simples,
+            live=live_ativo(self.n) is not None,
         )
 
     def recarregar_conectores(self) -> str:
@@ -246,13 +248,14 @@ class ServicoCerebro:
         )
 
     def aplicar_via_rapida(self) -> str:
-        """O painel mudou a via rápida: troca só o motor, na hora; devolve um aviso ou ""."""
+        """O painel mudou a via rápida, ou o Live conectou ou saiu: troca só o motor, na hora;
+        devolve um aviso ou ""."""
         if isinstance(getattr(self.n.cerebro, "completo", self.n.cerebro), Eco):
             return "Com o cérebro de teste não há via rápida."
         via = rapido.efetiva(self.n.cfg["via_rapida"])
         aviso = ""
         motor: rapido.Motor | None = None
-        if via["ligada"]:
+        if rapido.vale_agora(via, live_ativo(self.n) is not None):
             try:
                 motor = rapido.criar_motor(via, DADOS / "cerebro-rapido", self.n._foto_simples)
             except rapido.MotorErro as erro:

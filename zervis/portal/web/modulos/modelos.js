@@ -240,5 +240,5 @@ function desenharEscuta() {
     <p class="resultado" id="resultado-escuta"></p>`;
 }
 
-const lerModelo = () => ({ ligada: /** @type {HTMLInputElement} */ (document.querySelector('[data-mudar="via-ligada"]')).checked, motor: modelo.motor, modelo: valorCampo("modelo").value.trim(), endereco: valorCampo("endereco").value.trim() });
+const lerModelo = () => ({ ligada: /** @type {HTMLInputElement} */ (document.querySelector('[data-mudar="via-ligada"]')).checked, quando: modelo.quando || "live", motor: modelo.motor, modelo: valorCampo("modelo").value.trim(), endereco: valorCampo("endereco").value.trim() });
 

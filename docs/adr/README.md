@@ -49,4 +49,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0039](0039-aprovar-sessoes-pela-voz-e-pelo-painel.md) | Aprovar os pedidos das sessões pela voz e pelo painel: o gancho do Claude Code, o primeiro que responde decide | Aceito como direção (E0 feita; E1 a E3) |
 | [0040](0040-outros-modelos-pelo-claude-code.md) | Outros modelos (DeepSeek) pelo Claude Code, como conta de provedor; o chat pelo ACP espera | Aceito |
 | [0041](0041-vozes-da-nuvem.md) | Vozes da nuvem (ElevenLabs e Fish Audio), opcionais, em streaming, com o Cadu de reserva | Aceito |
-| [0042](0042-modo-live-tempo-real.md) | Os três modos (Silencioso, Normal, Live) e o Live em tempo real, com o revezamento do LIGATIA (LiveKit Agents) | Aceito (etapa 1 feita; 2 a 4) |
+| [0042](0042-modo-live-tempo-real.md) | Os três modos (Silencioso, Normal, Live) e o Live em tempo real, com o revezamento do LIGATIA (LiveKit Agents) | Aceito (etapas 1 e 2 feitas; 3 e 4) |
