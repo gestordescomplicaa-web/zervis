@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- Digitar no terminal das sessões fica rápido também pela VPS: a tela do agente passa a voltar
+  pelo mesmo WebSocket das teclas, assim que sai. Antes ela voltava pela leitura HTTP, e cada
+  pedaço do redesenho do Claude Code ou do Codex esperava o navegador abrir outra leitura (uma
+  viagem inteira até a VPS por pedaço). Com uma rede simulada de 80 ms de ida e volta, da tecla
+  ao redesenho completo caiu de 170 ms para 88 ms (com 200 ms: de 411 para 207), uma viagem só.
+  Se o WebSocket não abrir ou cair, a leitura HTTP de sempre continua. Embaixo do terminal, um
+  medidor mostra a resposta (mediana das últimas teclas) e se está em tempo real ou no modo
+  compatível.
 - Aprovar pela voz e pelo painel também nas sessões do Codex (ADR 0039, item 9): o mesmo
   gancho `PermissionRequest`, por um comando fixo do Zé que repassa o pedido à rota do painel
   (o Codex só aceita gancho de comando). A chave, o endereço, o prazo e o arquivo de eventos vão

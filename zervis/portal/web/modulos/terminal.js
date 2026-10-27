@@ -31,7 +31,11 @@ async function abrirTerminal(id) {
     $("terminal-fechado").hidden = false;
     return;
   }
-  conectarTerminal(id, parar.signal);
+  ecoTerminal.amostras = [];
+  ecoTerminal.desde = 0;
+  ecoTerminal.via = "";
+  // A saída chega pelo WebSocket; se ele não abrir (ou cair), pela leitura HTTP de sempre.
+  conectarTerminal(id, parar.signal, () => lerTerminal(id, parar.signal));
   term.onData((d) => escreverNoTerminal(d));
   // O tamanho vai ao agente quando a tela para de mudar: cada mudança o faz redesenhar a tela.
   let prazoTamanho = 0;
@@ -42,7 +46,34 @@ async function abrirTerminal(id) {
   termObservador = new ResizeObserver(() => { try { ajuste.fit(); } catch { /* fora da tela */ } });
   termObservador.observe(caixa);
   term.focus();
-  lerTerminal(id, parar.signal);
+}
+
+// O medidor: da tecla enviada até a tela do agente mudar (mediana das últimas). Aparece embaixo do
+// terminal, para comparar o PC com a VPS em números, não no "parece".
+const ecoTerminal = { amostras: [], desde: 0, via: "" };
+
+function ecoChegou(via) {
+  ecoTerminal.via = via;
+  if (!ecoTerminal.desde) return;
+  ecoTerminal.amostras = [...ecoTerminal.amostras.slice(-29), performance.now() - ecoTerminal.desde];
+  ecoTerminal.desde = 0;
+  mostrarEco();
+}
+
+function mostrarEco() {
+  const caixa = $("terminal");
+  if (!caixa || ecoTerminal.amostras.length < 3) return;
+  let rotulo = $("eco-terminal");
+  if (!rotulo) {
+    rotulo = document.createElement("small");
+    rotulo.id = "eco-terminal";
+    rotulo.className = "eco-terminal";
+    caixa.after(rotulo);
+  }
+  const ordem = [...ecoTerminal.amostras].sort((a, b) => a - b);
+  const mediana = Math.round(ordem[Math.floor(ordem.length / 2)]);
+  rotulo.textContent = `Resposta do terminal: ${mediana} ms · ${ecoTerminal.via === "ws" ? "tempo real" : "modo compatível"}`;
+  rotulo.title = `Mediana das últimas ${ordem.length} teclas, da tecla até a tela mudar.`;
 }
 
 function terminalPodeEnviar(id, ciclo) {
@@ -56,27 +87,45 @@ function escreverTerminalHttp(id, dados, ciclo) {
   }).catch((erro) => toast(erro.message));
 }
 
-function conectarTerminal(id, sinal) {
-  if (typeof WebSocket === "undefined") return;
+function conectarTerminal(id, sinal, lerPeloHttp) {
+  let lendoHttp = false;
+  const recorrer = () => {
+    if (lendoHttp || sinal.aborted) return;
+    lendoHttp = true;
+    lerPeloHttp();
+  };
+  if (typeof WebSocket === "undefined") { recorrer(); return; }
   let ws;
   try {
     ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/terminal/ws`);
   } catch {
+    recorrer();
     return;
   }
+  ws.binaryType = "arraybuffer";
   termWs = ws;
   termWsPronto = false;
   filaTerminalWs = [];
-  let recusada = false;
+  let recusada = false, fechouSessao = false;
   prazoTerminalWs = setTimeout(() => {
     if (termWs === ws && !termWsPronto) ws.close();
   }, 5000);
   ws.onopen = () => {
     if (termWs !== ws || sinal.aborted) { ws.close(); return; }
-    try { ws.send(JSON.stringify({ id, token: TOKEN })); } catch { ws.close(); }
+    try { ws.send(JSON.stringify({ id, token: TOKEN, saida: true, desde: termPos })); } catch { ws.close(); }
   };
   ws.onmessage = (evento) => {
-    if (termWs !== ws || typeof evento.data !== "string") return;
+    if (termWs !== ws) return;
+    if (evento.data instanceof ArrayBuffer) {
+      // A saída: 8 bytes com a posição final e os bytes do terminal.
+      if (evento.data.byteLength < 8 || !term) return;
+      termPos = Number(new DataView(evento.data).getBigUint64(0));
+      if (evento.data.byteLength > 8) {
+        term.write(new Uint8Array(evento.data, 8));
+        ecoChegou("ws");
+      }
+      return;
+    }
     let resposta;
     try { resposta = JSON.parse(evento.data); } catch { ws.close(); return; }
     if (resposta.tipo === "erro") {
@@ -86,10 +135,17 @@ function conectarTerminal(id, sinal) {
       ws.close();
       return;
     }
+    if (resposta.tipo === "reiniciado") { term?.reset(); return; }
+    if (resposta.tipo === "fechado") {
+      fechouSessao = true;
+      $("terminal-fechado").hidden = false;
+      return;
+    }
     if (resposta.tipo !== "pronto") return;
     termWsPronto = true;
     clearTimeout(prazoTerminalWs);
     prazoTerminalWs = null;
+    if (!resposta.saida) recorrer(); // servidor antigo ou sem a saída: só as teclas vão por aqui
     while (filaTerminalWs.length && termWs === ws) {
       const entrada = filaTerminalWs[0];
       filaTerminalWs.shift();
@@ -111,6 +167,7 @@ function conectarTerminal(id, sinal) {
     const pendentes = filaTerminalWs;
     filaTerminalWs = [];
     if (!recusada) pendentes.forEach((entrada) => escreverTerminalHttp(entrada.id, entrada.dados, entrada.ciclo));
+    if (!fechouSessao) recorrer();
   };
 }
 
@@ -119,6 +176,7 @@ function escreverNoTerminal(dados) {
   const id = termId;
   const ciclo = cicloAtualizacao;
   if (!id || !terminalPodeEnviar(id, ciclo)) return;
+  if (!ecoTerminal.desde) ecoTerminal.desde = performance.now();
   if (termWs && termWs.readyState !== WebSocket.CLOSED) {
     if (termWsPronto && termWs.readyState === WebSocket.OPEN) {
       try { termWs.send(dados); } catch {
@@ -144,7 +202,10 @@ async function lerTerminal(id, sinal) {
       if (sinal.aborted) return;
       if (r.reiniciado) term.reset();
       geracao = r.geracao || geracao;
-      if (r.dados) term.write(Uint8Array.from(atob(r.dados), (c) => c.charCodeAt(0)));
+      if (r.dados) {
+        term.write(Uint8Array.from(atob(r.dados), (c) => c.charCodeAt(0)));
+        ecoChegou("http");
+      }
       termPos = r.posicao;
       if (!r.vivo && !r.trocando) { $("terminal-fechado").hidden = false; return; }
       if (!r.vivo) await new Promise((ok) => setTimeout(ok, 300));

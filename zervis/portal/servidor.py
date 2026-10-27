@@ -20,13 +20,16 @@ de outro site, e o cookie `SameSite=Strict` não acompanha. Só serve a quem tra
 login que o próprio painel começou, e o código só vale com o verificador que fica no Zé.
 """
 
+import base64
 import contextlib
 import hmac
 import html
 import json
 import logging
 import secrets
+import struct
 import threading
+import time
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -50,6 +53,10 @@ IMERSIVO = "http://127.0.0.1:8794"  # o modo imersivo (Barehands), embutido na a
 # A sala LiveKit da voz remota: no próprio PC e, pelo celular, a do `tailscale serve` (8443).
 VOZ_REMOTA = "ws://127.0.0.1:7880 http://127.0.0.1:7880 wss://*.ts.net:8443 https://*.ts.net:8443"
 MAXIMO_CORPO = 64 * 1024
+# A saída do terminal pelo WebSocket: cada espera no servidor dura até isto (a conexão fechada só
+# é notada na volta), e uma pausa curta enquanto a conta é trocada (o terminal novo ainda sobe).
+ESPERA_SAIDA_S = 10.0
+PAUSA_TROCANDO_S = 0.3
 TIPOS = {
     ".html": "text/html",
     ".css": "text/css",
@@ -140,6 +147,7 @@ class Portal:
         acesso: Acesso | None = None,
         voz: Voz | None = None,
         entrada_terminal: Escrita | None = None,
+        saida_terminal: Escrita | None = None,
         so_no_pc: set[str] | None = None,
         servidor: bool = False,
         retorno_oauth: Callable[[str], tuple[bool, str]] | None = None,
@@ -160,6 +168,8 @@ class Portal:
         self.so_no_pc = so_no_pc or set()
         self.voz = voz
         self.entrada_terminal = entrada_terminal
+        # A leitura do terminal (`terminal/ler`): com ela, a saída também vai pelo WebSocket.
+        self.saida_terminal = saida_terminal
         self.leituras = leituras
         self.escritas = escritas
         self.envios = envios or {}
@@ -498,7 +508,16 @@ class Portal:
                     ):
                         raise ValueError("token")
                     self.connection.settimeout(None)
-                    conexao.texto(json.dumps({"tipo": "pronto"}))
+                    ler = portal.saida_terminal if dados.get("saida") else None
+                    conexao.texto(json.dumps({"tipo": "pronto", "saida": ler is not None}))
+                    if ler is not None:
+                        desde = dados.get("desde", 0)
+                        threading.Thread(
+                            target=self._empurrar_saida,
+                            args=(conexao, id_, desde if isinstance(desde, int) else 0, ler),
+                            name=f"terminal-saida-{id_[:12]}",
+                            daemon=True,
+                        ).start()
                     while True:
                         tipo, entrada = conexao.receber()
                         if tipo != websocket.TEXTO:
@@ -521,6 +540,37 @@ class Portal:
                         conexao.texto(json.dumps({"tipo": "erro", "erro": "Falha no terminal."}))
                 finally:
                     conexao.fechar()
+
+            def _empurrar_saida(
+                self, conexao: websocket.Conexao, id_: str, desde: int, ler: Escrita
+            ) -> None:
+                """Manda a saída do terminal assim que ela sai. Pelo HTTP, cada pedaço do
+                redesenho do agente esperava o navegador abrir outra leitura: uma viagem inteira
+                até a VPS por pedaço, e digitar ficava lento. Cada quadro binário leva a posição
+                final (8 bytes) e os bytes; o texto avisa o terminal novo e o fim."""
+                geracao: Any = 0
+                try:
+                    while conexao.aberta:
+                        pedido = {"id": id_, "desde": desde, "geracao": geracao}
+                        r = ler({**pedido, "espera": ESPERA_SAIDA_S})
+                        if r.get("reiniciado"):
+                            conexao.texto(json.dumps({"tipo": "reiniciado"}))
+                        dados = base64.b64decode(r.get("dados") or "")
+                        posicao = int(r.get("posicao", desde))
+                        geracao = r.get("geracao") or geracao
+                        if dados or posicao != desde:
+                            conexao.binario(struct.pack("!Q", posicao) + dados)
+                        desde = posicao
+                        if not r.get("vivo"):
+                            if not r.get("trocando"):
+                                conexao.texto(json.dumps({"tipo": "fechado"}))
+                                return
+                            time.sleep(PAUSA_TROCANDO_S)
+                except websocket.FechouErro:
+                    pass
+                except Exception:
+                    log.exception("painel: falha na saída do terminal")
+                    conexao.fechar()  # o navegador volta a ler pelo HTTP
 
             def _retorno_oauth(self) -> None:
                 if portal.retorno_oauth is None:

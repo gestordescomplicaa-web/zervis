@@ -224,6 +224,7 @@ main.cheio { padding: 0; overflow: hidden; }
 #copia-sessao h3 { margin: 0; font-size: 14px; }
 #copia-sessao pre { max-height: 130px; overflow: auto; font: 12px/1.5 var(--mono); }
 .conversa.soltando .terminal-sessao { outline: 2px dashed var(--acento); outline-offset: -6px; }
+.eco-terminal { padding: 2px 14px 4px; font-size: 11px; color: var(--suave); text-align: right; background: #070c11; }
 .terminal-fechado { display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--borda); font-size: 13px; }
 .terminal-fechado[hidden] { display: none; }
 .terminal-fechado span { margin-right: auto; color: var(--suave); }
