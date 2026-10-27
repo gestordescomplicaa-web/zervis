@@ -56,6 +56,8 @@ def do_codex(conta: Conta) -> list[dict[str, Any]]:
 
 
 def da_conta(conta: Conta) -> list[dict[str, Any]]:
+    if conta.provedor:  # os do provedor, lidos ao guardar a chave
+        return [{"id": i, "nome": n, "esforcos": [], "padrao": ""} for i, n in conta.modelos]
     return do_codex(conta) if conta.agente == "codex" else list(CLAUDE)
 
 

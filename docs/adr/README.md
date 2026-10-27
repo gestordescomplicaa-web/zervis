@@ -47,3 +47,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0037](0037-integracao-com-sistemas.md) | Integração com sistemas: um método (skill), conectores pelo cérebro e nas sessões, login OAuth | Aceito |
 | [0038](0038-fluxos-no-n8n-ze-constroi-e-vigia.md) | Fluxos dos clientes: o n8n executa; o Zé constrói pelo MCP e vigia se cada n8n está de pé | Aceito como direção (plano F1 a F3) |
 | [0039](0039-aprovar-sessoes-pela-voz-e-pelo-painel.md) | Aprovar os pedidos das sessões pela voz e pelo painel: o gancho do Claude Code, o primeiro que responde decide | Aceito como direção (E0 feita; E1 a E3) |
+| [0040](0040-outros-modelos-pelo-claude-code.md) | Outros modelos (DeepSeek) pelo Claude Code, como conta de provedor; o chat pelo ACP espera | Aceito |

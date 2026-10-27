@@ -70,6 +70,12 @@ const ACOES = {
     const r = await ocupado(b, () => api("conta/adicionar", { agente: b.dataset.agente, nome: campo.value }));
     contasTela = r; desenharContas(); desenharAcesso(); mostrar("resultado-contas", true, r.aviso);
   },
+  "conta-provedor": async (b) => {
+    const campo = /** @type {HTMLInputElement} */ (document.querySelector(`[data-chave-provedor="${b.dataset.provedor}"]`));
+    const r = await ocupado(b, () => api("conta/adicionar", { agente: "claude", provedor: b.dataset.provedor, chave: campo.value }));
+    campo.value = "";
+    contasTela = r; desenharContas(); desenharAcesso(); mostrar("resultado-contas", true, r.aviso);
+  },
   "conta-usar": async (b) => {
     const r = await ocupado(b, () => api("conta/usar", { id: b.dataset.id }));
     contasTela = r; desenharContas(); toast(r.aviso);

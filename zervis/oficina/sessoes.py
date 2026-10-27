@@ -1402,7 +1402,7 @@ def ambiente_da_conta(s: Sessao) -> dict[str, str]:
         return {}
     variavel = contas.VARIAVEIS[conta.agente]
     if conta.pasta:
-        return {variavel: conta.pasta}
+        return {variavel: conta.pasta, **conta.ambiente_do_provedor()}
     # A conta padrão quando o processo aponta para outra: de volta para a padrão.
     return {variavel: str(conta.onde)} if os.environ.get(variavel) else {}
 
