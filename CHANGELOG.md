@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- Skill `fluxos-n8n` por versão do n8n: cada cliente pode ter o seu n8n numa versão, e a skill
+  passa a seguir as ferramentas que aquele n8n mostra, com uma tabela do que fazer sem cada uma
+  (testar no editor, pedir o número da execução, guardar o fluxo antes de editar). A versão
+  recomendada sobe da 2.18.4, que não tinha várias das ferramentas usadas, para a 2.36. Saem as
+  ferramentas que o MCP do n8n não tem (`create_folder`, `move_workflows_to_folder`): o fluxo já
+  nasce na pasta do cliente. Corrigido também: o MCP não lê linhas das tabelas de dados, e
+  `get_instance_context` depende de um recurso ligado na instância.
 - Zé Voz com o microfone do celular e a fala numa caixa de som Bluetooth: o Zé ouvia o final da
   própria fala e o tomava por um pedido (a conversa contínua volta a ouvir quando o Zé termina de
   mandar a fala, e a caixa ainda tocava o resto, pelo buffer e pelo atraso do Bluetooth). Agora,

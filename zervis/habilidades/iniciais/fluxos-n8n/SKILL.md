@@ -11,9 +11,9 @@ Para quando a pessoa pede um fluxo no n8n: "cria um fluxo que…", "ajusta o flu
 esta skill diz a ordem, o que é seguro e o que conta como pronto.
 
 ## Do meu jeito
-- Cada cliente tem o seu n8n e a sua sessão. Antes de tudo, confirme em qual instância você
-  está (`get_instance_context`) e diga o nome à pessoa. Fluxo de um cliente nunca vai para o n8n
-  de outro.
+- Cada cliente tem o seu n8n e a sua sessão. Antes de tudo, diga à pessoa em qual n8n você
+  está (o nome do conector nesta sessão). Fluxo de um cliente nunca vai para o n8n de outro: se
+  `search_workflows` mostrar fluxos de outro cliente neste n8n, pare e avise a pessoa.
 - Produção só muda com a pessoa aprovando: publicar, despublicar, executar de verdade, arquivar
   ou apagar. Editar e testar o rascunho, não.
 - Credenciais a pessoa cria no próprio n8n. Você só lista (`list_credentials`) e referencia pelo
@@ -24,8 +24,32 @@ esta skill diz a ordem, o que é seguro e o que conta como pronto.
   só para uma transformação pequena que nenhum nó nativo faz; nomes de nós que dizem o que fazem
   ("Buscar pedido no ERP", não "HTTP Request1").
 
+## Cada n8n tem a sua versão
+Cada cliente pode estar numa versão do n8n, e cada versão traz ferramentas diferentes. As
+ferramentas que aparecem nesta sessão são as que este n8n tem: a lista vale, não a suposição, e
+o que valeu no n8n de outro cliente não vale aqui. No começo, compare a lista com a tabela e diga
+à pessoa, numa frase e uma vez, o que falta neste n8n e a versão que traz. A 2.36 ou mais nova
+tem tudo o que esta skill usa.
+
+| Sem esta ferramenta | Vem na | Faça assim |
+| --- | --- | --- |
+| `create_workflow_from_code`, `validate_workflow`, `get_node_types` | 2.12 | Este n8n não constrói pelo MCP: diga à pessoa a versão que falta. Não monte o JSON à mão. |
+| `test_workflow`, `prepare_workflow_pin_data` | 2.15 | Entregue sem publicar e peça à pessoa para testar no editor do n8n com um dado de exemplo. |
+| `search_workflow_executions` | 2.20 | Peça o link ou o número da execução que falhou e use `get_workflow_execution`. |
+| `list_credentials` | 2.21 | Pergunte o nome da credencial e deixe o nó para a pessoa escolher a credencial no n8n. |
+| `validate_node_config` | 2.25.1 | Valide o fluxo inteiro com `validate_workflow`. |
+| `get_workflow_best_practices` | 2.26 | Siga `get_workflow_sdk_reference`. |
+| `explore_node_resources` | 2.27 | Pergunte à pessoa os valores da conta (canal, planilha, pipeline). |
+| `get_workflow_history`, `restore_workflow_version` | 2.29 | Antes de editar, guarde o resultado de `get_workflow_details` num arquivo da pasta do projeto: é a volta, com `update_workflow`. |
+| `get_workflow_versions_diff` | 2.36 | Compare você o fluxo guardado com o editado e mostre o que muda. |
+| `get_instance_context`, `get_node_usage` | um recurso ligado na instância, sem versão | Use `search_workflows` e `search_nodes`. |
+| `validate_agent`, `publish_agent` e as outras de agentes | 2.34, com o módulo de agentes ligado | Diga que este n8n não tem agentes pelo MCP. |
+
+Uma ferramenta da tabela que não aparece pode também estar bloqueada no conector: diga à pessoa
+as duas possibilidades (versão anterior ou bloqueio) e não procure outro caminho, nem pela API.
+
 ## Antes de mexer
-1. `get_instance_context`: quais fluxos existem e o que mudou há pouco.
+1. `get_instance_context`, se existir: quais fluxos existem e o que mudou há pouco.
 2. Pedido sobre um fluxo existente: `search_workflows` e `get_workflow_details`. Pedido novo:
    confira se já não existe um fluxo parecido; se existir, pergunte se é para ajustar ou criar.
 3. Pergunte só o que faltar, numa frase: o gatilho (webhook, horário, formulário, outro
@@ -34,19 +58,21 @@ esta skill diz a ordem, o que é seguro e o que conta como pronto.
 ## Criar um fluxo
 Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora dela):
 1. `get_workflow_best_practices` e `get_workflow_sdk_reference`: o plano e o formato do código.
-2. `search_nodes` e `get_node_usage`: os nós do serviço, preferindo os que a instância já usa.
+2. `search_nodes` (e `get_node_usage`, se existir): os nós do serviço, preferindo os que a
+   instância já usa.
 3. `get_node_types` de cada nó escolhido: os nomes exatos dos parâmetros. Não invente parâmetro.
 4. `explore_node_resources` quando o nó pede algo da conta (canal, planilha, pipeline): use os
    valores reais, não suposições.
 5. `validate_node_config` em cada nó, e `validate_workflow` no código inteiro. Corrija até passar.
 6. `create_workflow_from_code`. Nome com o cliente e o que faz ("Loja do João · Pedido novo →
-   planilha"). Organize na pasta do cliente (`search_projects`, `search_folders`,
-   `create_folder`, `move_workflows_to_folder`).
+   planilha"). Na pasta do cliente: `search_projects` e `search_folders` dão os IDs, e o fluxo
+   já nasce lá (`projectId`, `folderId`). O MCP não cria pasta: se faltar, a pessoa cria no n8n.
 7. Testar (abaixo). Publicar só depois.
 
 ## Editar um fluxo existente
 1. `get_workflow_history`: anote a versão atual antes de mexer. É a volta, se precisar.
-2. `update_workflow` com operações pequenas: só os nós e as ligações que o pedido muda.
+2. `update_workflow` com operações pequenas: só os nós e as ligações que o pedido muda. Antes da
+   2.20, ele regrava o fluxo inteiro: mande o fluxo completo, não só a parte nova.
 3. A edição fica no rascunho; produção continua na versão publicada até `publish_workflow`.
 4. `get_workflow_versions_diff` entre a versão publicada e o rascunho, e mostre à pessoa o que
    muda, em linguagem simples, antes de pedir para publicar.
@@ -69,7 +95,8 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 
 ## Investigar uma falha
 1. `search_workflow_executions` com o fluxo e o status de erro: quando começou e quantas vezes.
-2. `get_workflow_execution` com os dados da execução que falhou: em que nó e com qual mensagem.
+2. `get_workflow_execution` com os dados da execução (`includeData`, só os nós que importam):
+   em que nó falhou e com qual mensagem.
 3. Diga a causa provável numa frase, com a evidência: credencial vencida ou sem acesso, API do
    cliente fora do ar ou com limite (429), campo que mudou de nome ou formato, dado faltando na
    entrada, ou erro no próprio fluxo.
@@ -81,25 +108,22 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 ## Agentes e tabelas do n8n
 - Os agentes de IA do n8n seguem as mesmas regras: rascunho, `validate_agent`, `call_agent`
   para testar e `publish_agent` com aprovação. Leia `get_agent_builder_reference` antes.
-- Tabelas de dados: ler e acrescentar linhas, sim; apagar coluna (`delete_data_table_column`) só a
-  pedido explícito.
+- Tabelas de dados: criar tabela e coluna e acrescentar linhas (`add_data_table_rows`), sim. O
+  MCP não lê nem apaga linhas. Apagar coluna (`delete_data_table_column`) só a pedido explícito.
 
 ## Armadilhas
 - `archive_workflow`, `delete_agent` e `delete_data_table_column` apagam: só com a pessoa
   pedindo aquilo, com o nome na frase.
-- Ferramenta que não aparece (por exemplo, publicar no Codex) ficou de fora pela política do
-  conector: diga à pessoa, não procure outro caminho.
 - Ver os detalhes de um fluxo exige que ele esteja como "Available in MCP" no n8n; listar, não.
   Se faltar, peça à pessoa para marcar.
 - O conector do n8n não aparece nesta sessão: ele é ligado pelo botão "Conectores", no topo da
   sessão. Não instale por `claude mcp add`, `codex mcp add` nem `.mcp.json` (skill
   integrar-sistema).
-- Instância antiga, sem as ferramentas de construção: diga a versão que falta (2.18.4 ou mais
-  nova) em vez de montar o JSON do fluxo à mão.
 - Um fluxo por pedido. Não reorganize, renomeie nem "melhore" outros fluxos sem a pessoa pedir.
 
 ## Pronto quando
-- O fluxo passou no `validate_workflow` e no `test_workflow`, inclusive num caso de erro.
+- O fluxo passou no `validate_workflow` e no `test_workflow`, inclusive num caso de erro (ou,
+  num n8n sem `test_workflow`, a pessoa testou no editor).
 - A pessoa viu a entrada de exemplo, a saída e, numa edição, o que muda.
 - Publicado só com aprovação, com o fluxo de erro ligado, e a pessoa sabe como ele dispara.
 - Nada de credencial, token ou dado real de cliente na conversa, no código ou no fluxo.

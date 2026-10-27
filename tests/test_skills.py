@@ -162,3 +162,17 @@ def test_fluxos_n8n_nao_mexe_em_producao_sem_aprovacao() -> None:
     for perigosa in ("archive_workflow", "delete_agent", "execute_workflow"):
         assert perigosa in texto
     assert "fluxos-n8n" in (base / "integrar-sistema/SKILL.md").read_text()
+
+
+def test_fluxos_n8n_segue_a_versao_de_cada_n8n() -> None:
+    """Cada cliente tem o seu n8n, cada um numa versão (26/10/2026): a skill diz o que fazer sem
+    cada ferramenta, e não cita as que o MCP do n8n não tem (referência oficial das ferramentas)."""
+    texto = (Path(skills_mod.__file__).parent / "iniciais/fluxos-n8n/SKILL.md").read_text()
+    versoes = texto[texto.index("## Cada n8n tem a sua versão") : texto.index("## Antes de mexer")]
+    for ferramenta, versao in (("test_workflow", "2.15"), ("search_workflow_executions", "2.20"),
+                               ("get_workflow_history", "2.29"),
+                               ("get_workflow_versions_diff", "2.36")):  # fmt: skip
+        linha = next(linha for linha in versoes.splitlines() if f"`{ferramenta}`" in linha)
+        assert f"| {versao} |" in linha
+    for inexistente in ("create_folder", "move_workflows_to_folder", "2.18.4"):
+        assert inexistente not in texto
