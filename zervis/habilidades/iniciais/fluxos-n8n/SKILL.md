@@ -85,17 +85,21 @@ Na ordem que o próprio n8n pede (as ferramentas falham ou montam errado fora de
 ## O mesmo fluxo, pedido após pedido
 Cada chamada ao modelo relê a conversa inteira: numa sessão longa sobre o mesmo fluxo, o custo
 cresce com cada pedido, não com o fluxo. O que precisa sobreviver entre pedidos vai para um mapa,
-e o pedido seguinte começa limpo.
+e o pedido seguinte começa limpo. **O resultado vem antes da economia:** no meio de uma
+construção ou de uma correção, a conversa continua, porque o contexto vale mais que os tokens.
 1. **O mapa:** `n8n/<id do fluxo>.md` na pasta do projeto, curto: o que o fluxo faz, cada nó pelo
    nome e o seu papel, as decisões e o porquê, e o `versionId` publicado. Nada de credencial,
    token ou dado de cliente. Pedido sobre um fluxo com mapa: leia o mapa primeiro.
 2. `versionId` diferente do mapa: alguém mexeu no n8n. `get_workflow_versions_diff` (ou a
    leitura completa) mostra o quê; atualize o mapa antes de editar.
 3. Leia o fluxo (`get_workflow_details`) uma vez por pedido: o MCP não lê um nó só. Depois da
-   edição, confira pelo diff, não por outra leitura completa.
-4. `get_node_types` só para um tipo de nó que o fluxo ainda não tem.
-5. Ao terminar: atualize o mapa e diga à pessoa que o próximo pedido pode começar numa conversa
-   nova (`/clear` no Claude Code, `/new` no Codex). O mapa leva o que importa.
+   edição, confira pelo diff; sem ele (antes da 2.36), leia de novo.
+4. `get_node_types` para um tipo de nó que o fluxo ainda não tem, ou para um parâmetro, uma
+   operação ou um recurso de um nó que o fluxo ainda não usa. Na dúvida, consulte.
+5. Ao terminar um pedido (testado, ou publicado com aprovação): atualize o mapa. Só então, e só
+   se o próximo pedido for outro assunto, diga que ele pode começar numa conversa nova
+   (`/clear` no Claude Code, `/new` no Codex). Nunca no meio do trabalho: um ajuste depois do
+   teste, uma falha que voltou ou a pessoa ainda decidindo fazem parte do mesmo pedido.
 
 ## Testar
 1. `prepare_workflow_pin_data`: dados de exemplo para o gatilho, os nós com credencial e as
@@ -114,9 +118,10 @@ e o pedido seguinte começa limpo.
 ## Investigar uma falha
 1. `search_workflow_executions` com o fluxo e o status de erro: quando começou e quantas vezes.
 2. `get_workflow_execution` (antes da 2.34, `get_execution`) com `includeData` e um item por
-   nó (`truncateData: 1`): em que nó falhou e com qual mensagem. Se precisar ver a entrada,
-   peça só esse nó e o anterior (`nodeNames`). Os dados completos de uma execução podem ser
-   enormes.
+   nó (`truncateData: 1`): em que nó falhou e com qual mensagem. Depois, a entrada desse nó e
+   do anterior (`nodeNames`), com todos os itens se o erro for de um item específico ("item
+   37", um campo vazio num pedido). Os dados completos de uma execução podem ser enormes, mas
+   a causa certa vem antes da economia.
 3. Diga a causa provável numa frase, com a evidência: credencial vencida ou sem acesso, API do
    cliente fora do ar ou com limite (429), campo que mudou de nome ou formato, dado faltando na
    entrada, ou erro no próprio fluxo.
