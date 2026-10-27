@@ -178,4 +178,18 @@ def test_fluxos_n8n_segue_a_versao_de_cada_n8n() -> None:
     assert "2.18.4" not in texto
     for real in ("create_folder", "move_workflows_to_folder", "get_data_table_rows"):
         assert real in texto
-    assert "não cria pasta" not in texto and "não lê" not in texto
+    assert "não cria pasta" not in texto and "não lê nem apaga linhas" not in texto
+
+
+def test_fluxos_n8n_mesmo_fluxo_sem_conversa_crescendo() -> None:
+    """Pedido após pedido no mesmo fluxo (27/10/2026): cada chamada relê a conversa inteira, então
+    o que importa vai para um mapa do fluxo e o pedido seguinte começa limpo; a execução com
+    falha é lida em pedaços (só o nó que importa)."""
+    texto = (Path(skills_mod.__file__).parent / "iniciais/fluxos-n8n/SKILL.md").read_text()
+    mesmo = texto[texto.index("## O mesmo fluxo") : texto.index("## Testar")]
+    for regra in ("n8n/<id do fluxo>.md", "versionId", "/clear", "/new"):
+        assert regra in mesmo
+    falha = texto[texto.index("## Investigar") : texto.index("## Agentes")]
+    for parametro in ("truncateData", "nodeNames", "get_execution"):
+        assert parametro in falha
+    assert len(texto) < skills_mod.LIMITE_SKILL
