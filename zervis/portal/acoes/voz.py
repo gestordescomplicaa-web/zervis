@@ -5,10 +5,11 @@ from typing import Any
 
 from zervis import atividade
 from zervis.avisos import modo as modo_fala
+from zervis.nucleo import estados as e
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
 from zervis.presenca import modo as modo_escuta
-from zervis.voz import chamado, deepgram, espera
+from zervis.voz import chamado, deepgram, elevenlabs, espera
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +19,9 @@ class AcoesVoz(Pagina):
         "apertar",
         "aplicar_escuta",
         "deepgram",
+        "eventos",
         "modelo_ativacao",
+        "motor_voz",
         "mudar_chamado",
         "mudar_escuta",
         "mudar_espera",
@@ -116,3 +119,69 @@ class AcoesVoz(Pagina):
             return {"ok": False, "mensagem": "Informe a chave."}
         ok, mensagem = deepgram.conferir(chave)
         return {"ok": ok, "mensagem": mensagem}
+
+    # --- quem fala: o Cadu ou o ElevenLabs (ADR 0041) -------------------------------------------
+
+    def sintese(self) -> dict[str, Any]:
+        motor = self.n.motor_voz
+        erro = ""
+        if motor.chave and not motor.vozes:
+            try:
+                motor.vozes = elevenlabs.vozes(motor.chave, motor.endereco)
+            except elevenlabs.ErroVoz as falha:
+                erro = str(falha)
+        situacao = motor.situacao()
+        return {
+            **situacao,
+            "erro": situacao["erro"] or erro,
+            "vozes": motor.vozes,
+            "cadastro": elevenlabs.CADASTRO,
+        }
+
+    def _usar(self, escolha: elevenlabs.Escolha) -> None:
+        motor = self.n.motor_voz
+        elevenlabs.gravar_escolha(escolha, motor.arquivo_escolha)
+        motor.recarregar()
+        log.info("voz: %s %s", escolha.motor, escolha.nome)
+        # Ouvir na hora como ficou. Como aviso, ela respeita o Silencioso e espera a pessoa
+        # terminar de falar; o nome no texto evita que a regra de não repetir a cale.
+        self.n.eventos.put(e.Aviso(elevenlabs.amostra(escolha)))
+
+    def guardar_chave_sintese(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A chave colada: confere listando as vozes e já passa a falar pelo ElevenLabs."""
+        motor = self.n.motor_voz
+        try:
+            motor.vozes = elevenlabs.guardar_chave(motor, str(dados.get("chave", "")))
+        except elevenlabs.ErroVoz as erro:
+            raise PedidoInvalido(str(erro)) from None
+        atual = motor.escolha
+        voz = next((v for v in motor.vozes if v["id"] == atual.voz), motor.vozes[0])
+        self._usar(elevenlabs.Escolha("elevenlabs", voz["id"], voz["nome"]))
+        return {**self.painel.sintese(), "aviso": f"Chave salva. Voz: {voz['nome']}."}
+
+    def apagar_chave_sintese(self, dados: dict[str, Any]) -> dict[str, Any]:
+        motor = self.n.motor_voz
+        motor.arquivo_chave.unlink(missing_ok=True)
+        motor.vozes = []
+        elevenlabs.gravar_escolha(elevenlabs.Escolha(), motor.arquivo_escolha)
+        motor.recarregar()
+        return {**self.painel.sintese(), "aviso": "Chave removida. O Cadu volta a falar."}
+
+    def escolher_sintese(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Cadu ou ElevenLabs, e qual voz; o Zé fala uma frase com a escolha."""
+        motor = self.n.motor_voz
+        nome_motor = str(dados.get("motor", ""))
+        if nome_motor not in elevenlabs.MOTORES:
+            raise PedidoInvalido("motor de voz desconhecido")
+        if nome_motor == "piper":
+            atual = motor.escolha
+            self._usar(elevenlabs.Escolha("piper", atual.voz, atual.nome))
+            return {**self.painel.sintese(), "aviso": "Voz: Cadu."}
+        if not motor.chave:
+            raise PedidoInvalido("Cole a chave do ElevenLabs primeiro.")
+        pedida = str(dados.get("voz", "")) or motor.escolha.voz
+        voz = next((v for v in motor.vozes if v["id"] == pedida), None)
+        if voz is None:
+            raise PedidoInvalido("Voz desconhecida. Atualize a lista.")
+        self._usar(elevenlabs.Escolha("elevenlabs", voz["id"], voz["nome"]))
+        return {**self.painel.sintese(), "aviso": f"Voz: {voz['nome']}."}

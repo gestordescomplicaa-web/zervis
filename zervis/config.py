@@ -56,7 +56,8 @@ PADRAO: dict[str, dict[str, Any]] = {
         # O que o Zé mostra no modo imersivo (orbe Acervo): imagens/ e 3d/.
         "pasta_acervo": str(lugares.DADOS / "acervo"),
     },
-    # motor: "piper" (Cadu pelo Piper, dentro do processo; ADR 0013). Outros motores entram aqui.
+    # motor: "piper" (Cadu pelo Piper, dentro do processo; ADR 0013). O ElevenLabs é escolhido no
+    # painel (página Voz, guardado em <config>/voz.json), com o Cadu de reserva (ADR 0041).
     "voz": {"motor": "piper"},
     # Ações do Omarchy forçadas a um nível (docs/07): "update" pede senha num terminal e, por voz,
     # travaria; vai para proibido (faz-se pelo menu do Omarchy).

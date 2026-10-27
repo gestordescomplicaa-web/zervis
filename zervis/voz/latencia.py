@@ -44,6 +44,7 @@ CAMPOS_GRUPO = (
     "fim_por",
     "aprovacao",
     "primeiro_som_tipo",
+    "voz_por",
 )
 
 
@@ -61,6 +62,7 @@ class Turno:
     aprovacao: bool = False
     erro_cerebro: bool = False
     primeiro_som_tipo: str = "resposta"
+    voz_por: str = ""  # quem falou a primeira frase: piper ou elevenlabs
     marcos: dict[str, float] = field(default_factory=dict)
 
     def registro(self, resultado: str) -> dict[str, Any]:
@@ -85,6 +87,7 @@ class Turno:
             "fim_por": self.fim_por,
             "aprovacao": self.aprovacao,
             "primeiro_som_tipo": self.primeiro_som_tipo,
+            "voz_por": self.voz_por,
             "resultado": resultado,
             "marcos_ms": marcos,
             "etapas_ms": etapas,
@@ -193,6 +196,7 @@ class Latencias:
             "aprovacao",
             "erro_cerebro",
             "primeiro_som_tipo",
+            "voz_por",
         }
         if campos.keys() - permitidos:
             raise ValueError("campo de diagnóstico não permitido")

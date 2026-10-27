@@ -737,6 +737,30 @@
     "rodando": false,
     "texto": "Atualizei o Zé para 0.1.0 (v0.1.0-12-gabc1234)."
    }
+  },
+  "sintese": {
+   "motor": "elevenlabs",
+   "chave": {
+    "tem": true,
+    "fim": "c3d4"
+   },
+   "voz": "voz-exemplo-1",
+   "nome": "Exemplo",
+   "vozes": [
+    {
+     "id": "voz-exemplo-1",
+     "nome": "Exemplo",
+     "detalhe": "masculina"
+    },
+    {
+     "id": "voz-exemplo-2",
+     "nome": "Outra",
+     "detalhe": ""
+    }
+   ],
+   "caracteres_hoje": 1234,
+   "erro": "",
+   "cadastro": "https://exemplo.invalid"
   }
  },
  "escritas": {

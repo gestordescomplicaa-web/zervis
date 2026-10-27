@@ -1,9 +1,10 @@
 // Página voz, carregada sob demanda.
 PAGINAS.voz = async function() {
-    const [e, o, r] = await Promise.all([api("estado"), api("escuta"), api("remoto")]);
+    const [e, o, r, s] = await Promise.all([api("estado"), api("escuta"), api("remoto"), api("sintese")]);
     const etiqueta = (ok, sim, nao) => `<span class="etiqueta ${ok ? "bom" : "alerta"}">${ok ? sim : nao}</span>`;
     const linha = (titulo, estado, texto) => cartao("", `<div class="cabeca"><h2>${titulo}</h2>${estado}</div>${sub(texto)}`);
     return `${cabeca("Voz")}
+      ${cartaoSintese(s)}
       ${cartao("", `<div class="cabeca"><h2>Modo de fala</h2><span class="etiqueta bom">${esc(nomeModo(e.modo_fala))}</span></div>
         ${sub("Quando o Zé fala sem você pedir. Atalho: Alt+M.")}
         <div class="modos-fala" role="radiogroup" aria-label="Modo de fala">${MODOS_FALA.map((m) => `<button type="button" role="radio" class="modo" data-acao="modo-fala" data-modo="${m.valor}" aria-checked="${m.valor === e.modo_fala}"><strong>${m.nome}</strong><small>${m.detalhe}</small></button>`).join("")}</div>`)}
@@ -37,9 +38,25 @@ PAGINAS.voz = async function() {
           ${r.conectado ? `<div class="linha">${r.ativo ? botao("Desativar", "remoto-desativar", "", "discreta") : botao("Ativar", "remoto-ativar")}</div>` : ""}</div>` : ""}`)}
       ${appVoz(r)}
       ${linha("Palavra de ativação", etiqueta(o.ativacao, "Ativa", "Não treinada"), o.ativacao ? "“Ei Zé”." : "“Ei Zé”. Necessária para os comandos de voz.")}
-      ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}
-      ${linha("Síntese de voz", etiqueta(true, "Ativa", ""), "Piper, voz Cadu (pt-BR). Processamento local.")}`;
+      ${linha("Reconhecimento de fala", etiqueta(o.deepgram.tem, "Configurado", "Não configurado"), o.deepgram.tem ? "Deepgram." : 'Deepgram. Configure em <a href="#modelos">Modelos</a>.')}`;
   };
+
+/** Quem fala as respostas: o Cadu (local) ou o ElevenLabs (nuvem), com a chave e a voz.
+ * @param {{motor: string, chave: {tem: boolean, fim: string}, voz: string, nome: string, vozes: {id: string, nome: string, detalhe: string}[], caracteres_hoje: number, erro: string, cadastro: string}} s */
+function cartaoSintese(s) {
+  const nuvem = s.motor === "elevenlabs";
+  const opcoes = [["piper", "Cadu", "Local e grátis. Funciona sem internet."],
+    ["elevenlabs", "ElevenLabs", s.chave.tem ? "Voz mais natural, na nuvem. Paga por caractere." : "Cole a chave abaixo para usar."]];
+  const vozes = s.vozes.map((v) => `<option value="${esc(v.id)}" ${v.id === s.voz ? "selected" : ""}>${esc(v.nome)}${v.detalhe ? " · " + esc(v.detalhe) : ""}</option>`).join("");
+  return cartao("", `<div class="cabeca"><h2>Voz do Zé</h2><span class="etiqueta bom">${nuvem ? esc(s.nome || "ElevenLabs") : "Cadu"}</span><a class="externo" href="${esc(s.cadastro)}" target="_blank" rel="noopener">Obter chave do ElevenLabs ↗</a></div>
+    ${sub("Quem fala as respostas. Se o ElevenLabs falhar, o Cadu fala no lugar.")}
+    <div class="modos-fala" role="radiogroup" aria-label="Voz do Zé">${opcoes.map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="sintese-motor" data-motor="${v}" aria-checked="${v === s.motor}" ${v === "elevenlabs" && !s.chave.tem ? "disabled" : ""}><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>
+    <div class="linha"><input id="chave-sintese" type="password" class="mono" placeholder="${s.chave.tem ? "•••• " + esc(s.chave.fim) : "Chave de API do ElevenLabs"}" autocomplete="off" spellcheck="false" aria-label="Chave de API do ElevenLabs">
+      ${botao("Salvar", "sintese-chave", "", s.chave.tem ? "" : "principal")}${s.chave.tem ? botao("Remover", "sintese-apagar", "", "discreta") : ""}</div>
+    ${s.chave.tem && vozes ? `<div class="linha"><label>Voz<select id="voz-sintese">${vozes}</select></label>${botao("Usar e ouvir", "sintese-voz")}</div>` : ""}
+    ${s.erro ? `<p class="aviso">${esc(s.erro)}</p>` : ""}
+    ${s.chave.tem ? `<p class="nota">Hoje: ${s.caracteres_hoje.toLocaleString("pt-BR")} caracteres pelo ElevenLabs.</p>` : ""}`);
+}
 
 /** O túnel fixo num domínio da pessoa: colar o comando do Cloudflare e dizer o endereço.
  * @param {{fixo: string, porta: number}} t */
@@ -77,6 +94,10 @@ function appVoz(r) {
 }
 
 Object.assign(ACOES, {
+  "sintese-chave": async (b) => { const r = await ocupado(b, () => api("sintese/chave", { chave: valorCampo("chave-sintese").value })); toast(r.aviso); await abrir(); },
+  "sintese-apagar": (b) => confirmar(b, "Remover a chave do ElevenLabs?", async () => { const r = await api("sintese/apagar", {}); toast(r.aviso); await abrir(); }),
+  "sintese-motor": async (b) => { const r = await ocupado(b, () => api("sintese/escolher", { motor: b.dataset.motor })); toast(r.aviso); await abrir(); },
+  "sintese-voz": async (b) => { const r = await ocupado(b, () => api("sintese/escolher", { motor: "elevenlabs", voz: valorCampo("voz-sintese").value })); toast(r.aviso); await abrir(); },
   "app-voz-parear": async (b) => { codigoApp = await ocupado(b, () => api("voz-app/codigo", {})); await abrir(); },
   "app-voz-remover": (b) => confirmar(b, "Remover este celular?", async () => { const r = await api("voz-app/remover", { id: b.dataset.id }); toast(r.aviso); await abrir(); }),
 });
