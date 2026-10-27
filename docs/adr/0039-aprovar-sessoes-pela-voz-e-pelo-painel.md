@@ -62,7 +62,17 @@ terminal (teste 5).
    por vez, na ordem de chegada, com o nome da sessão.
 5. **O que aprova.** Só um "sim" claro; "não" nega. Silêncio ou fim do prazo **não** negam
    aqui: a pergunta sai da voz e fica no painel e no terminal, porque a pessoa pode estar no PC.
-   O Zé não ouve o próprio eco como resposta (como já faz no CONFIRMANDO).
+   O Zé não ouve o próprio eco como resposta (como já faz no CONFIRMANDO). Na prática (E2):
+   - o "sim" e o "não" logo depois da pergunta viram um comando local, sem o cérebro, e valem
+     só para ela, por 45 s (a janela abre quando o Zé fala a pergunta);
+   - a janela pega outras falas, então só uma resposta curta (até cinco palavras) e que não seja
+     pergunta decide; o sim precisa vir no começo e ser claro ("vai chover amanhã?" e "faz um
+     resumo" não aprovam); negação ou correção em qualquer lugar nega; "não entendi" repete;
+   - "ok, pode" responde à sessão antes de virar o "ok" que encerra a conversa;
+   - "Ei Zé, aprova" e "nega" valem a qualquer momento para o pedido que espera; com pedidos de
+     várias sessões, o Zé pede o painel;
+   - pela voz, nunca um ID: o nome do fluxo, se o pedido traz, ou em que n8n; um comando com
+     caminho, redirecionamento ou aspas (que a fala encurtaria) só avisa.
 6. **Rodar sozinho até o resultado.** Os comandos de teste e verificação do projeto passam sem
    pergunta, como regras de permissão do Claude (por exemplo `Bash(make check)`,
    `Bash(uv run pytest:*)`, `Bash(npm test:*)`), escolhidos por projeto. No n8n, testar com dados
@@ -91,7 +101,8 @@ terminal (teste 5).
 | Etapa | Escopo | Pronto quando |
 |---|---|---|
 | E0 | Prova no Claude Code real (acima). | Feita em 27/10/2026. |
-| E1 | (em PR) | Provada de ponta a ponta com o Claude Code real em 27/10/2026: aprovado pelo painel, rodou sem tocar no terminal; aprovado no terminal, saiu do painel. |
+| E1 | PR #49 | Provada de ponta a ponta com o Claude Code real em 27/10/2026: aprovado pelo painel, rodou sem tocar no terminal; aprovado no terminal, saiu do painel. |
+| E2 | PR #50 | Provada com o Claude Code real em 27/10/2026 (só o áudio simulado): "Sim, pode." virou o comando local, o Zé respondeu "Aprovado." e a ferramenta rodou. |
 | E1 | Rota, fila e chave por sessão; o gancho nas sessões; Aprovar e Negar no painel; retirar a pergunta quando o terminal responde; Atividade; comandos de teste liberados por projeto. | Uma publicação aprovada pelo painel no celular, e a sessão continua; respondida no terminal, some do painel. |
 | E2 | A pergunta falada (frase do item 3), "sim" e "não", a fila, o Silencioso pelo app. | "Sim" do sofá publica; "não" nega; silêncio deixa no painel. |
 | E3 | Extras, a pedido: "sim, sempre" (libera no conector, depois de o Zé dizer qual); Aprovar e Negar na notificação do Zé Voz; o Codex pelo app-server. | Cada um com a sua prova. |
