@@ -1,0 +1,12 @@
+# Notícia de agora (ADR 0044): pesquisa direto, sem sessão, e nunca diz que não tem internet.
+nome = "Pesquisa: usa a pesquisa do Zé, sem sessão"
+pedido = "Qual foi a cotação do dólar hoje?"
+
+[ferramentas]
+internet_pesquisar = "Hoje, 28/10/2026, o dólar fechou em R$ 5,31, em queda de 0,4%.\n\nFontes: https://exemplo.com/dolar"
+
+[espera]
+usa = ["internet_pesquisar"]
+nao_usa = ["sessao_criar", "sessao_enviar"]
+resposta_alguma = ["5,31", "cinco"]
+resposta_nao = ["não consigo", "não tenho acesso"]

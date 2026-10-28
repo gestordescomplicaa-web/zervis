@@ -1,0 +1,8 @@
+# Conversa sem ação (28/10/2026: "oi", "blz?", "obrigado" custavam 19 mil tokens cada no Codex):
+# responde curto e não usa ferramenta nenhuma.
+nome = "Conversa simples: responde curto, sem ferramenta"
+pedido = "Opa Zé, beleza? Tudo certo por aí?"
+
+[espera]
+nao_usa = ["sessoes_listar", "sessao_criar", "sessao_enviar", "internet_pesquisar", "ze_sobre", "tela_agir"]
+resposta_nao = ["não consigo", "não tenho acesso"]
