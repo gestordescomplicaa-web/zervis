@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- O Zé pesquisa na internet sozinho, com qualquer cérebro e sem abrir sessão: notícia de agora,
+  um fato recente, um preço ou um assunto resumido, com as fontes na tela (ADR 0044). A pesquisa
+  roda numa consulta à parte, que só lê a internet, então passa sem aprovação. Vai pela conta do
+  Codex e, sem ela, pelo Claude. Antes, com o Codex, ele dizia que não conseguia pesquisar.
 - A Conversa funciona como um chat. A mensagem escrita aparece na hora, o campo limpa e surge o
   "digitando" do Zé (três pontinhos). A resposta aparece enquanto o Zé responde, frase a frase:
   a troca em curso vem do núcleo antes de ir para o histórico, que só a grava no fim. Enquanto

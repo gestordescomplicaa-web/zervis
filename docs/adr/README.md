@@ -51,3 +51,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0041](0041-vozes-da-nuvem.md) | Vozes da nuvem (ElevenLabs e Fish Audio), opcionais, em streaming, com o Cadu de reserva | Aceito |
 | [0042](0042-modo-live-tempo-real.md) | Os três modos (Silencioso, Normal, Live) e o Live em tempo real, com o revezamento do LIGATIA (LiveKit Agents) | Aceito (etapas 1 e 2 feitas; 3 e 4) |
 | [0043](0043-ze-se-conhece.md) | O Zé se conhece: o retrato da própria configuração (ferramenta ze_sobre, via rápida e a nota Quem sou), para qualquer modelo | Aceito |
+| [0044](0044-pesquisa-na-internet-do-ze.md) | A pesquisa na internet do próprio Zé (internet_pesquisar), sem sessão e com qualquer cérebro, numa consulta à parte | Aceito |

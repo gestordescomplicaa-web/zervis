@@ -35,6 +35,14 @@ class Retrato:
     extras: list[str] = field(default_factory=list)
 
 
+# A pesquisa vale com qualquer cérebro (ADR 0044): o Zé dizia "não tenho a ferramenta de pesquisa"
+# com o Codex e, minutos antes, "consigo acessar a internet" (caso real de 27/10/2026).
+PESQUISA = (
+    "sim, direto, sem abrir sessão (internet_pesquisar): notícias, fatos recentes, preços, um "
+    "assunto resumido; as fontes vão para a tela. Vai pela conta do Codex e, sem ela, pelo Claude."
+)
+
+
 def quem_responde(r: Retrato) -> str:
     """A frase de "qual modelo você está usando?", agora."""
     if r.rapidas_agora and r.rapidas_modelo:
@@ -52,6 +60,7 @@ def texto(r: Retrato) -> str:
         f"- **Quem responde:** {quem_responde(r)}",
         *([f"- **Reserva do cérebro:** {r.reserva}"] if r.reserva else []),
         *([f"- **Respostas rápidas:** {r.rapidas}"] if r.rapidas else []),
+        f"- **Pesquisa na internet:** {PESQUISA}",
         *([f"- **Modo de fala:** {r.modo}"] if r.modo else []),
         *([f"- **Live (conversa em tempo real):** {r.live}"] if r.live else []),
         *([f"- **Voz:** {r.voz}"] if r.voz else []),
@@ -81,6 +90,7 @@ def resumo(r: Retrato) -> str:
     return (
         "## Você agora (configuração do Zé)\n"
         + " ".join(partes)
+        + " Pesquisa na internet: sim, pelo cérebro completo; para pesquisar, passe a vez."
         + "\nPerguntas sobre você (modelo, voz, modos, configurações): responda com isto, sem "
         "inventar. Para mudar alguma coisa ou para o que não estiver aqui, passe a vez."
     )

@@ -33,8 +33,9 @@ def codigo_erro(erro: Any) -> str:
     return "falha_codex"
 
 
-def comando(conta: Conta) -> list[str]:
-    # A voz e o cérebro só usam as ferramentas publicadas pelo Zérvis, com sua autorização.
+def comando(conta: Conta, busca: bool = False) -> list[str]:
+    # A voz e o cérebro só usam as ferramentas publicadas pelo Zérvis, com sua autorização. A
+    # pesquisa na internet (ADR 0044) é outra consulta, que só tem ela: `busca`.
     cfg: dict[str, Any] = {
         "features.shell_tool": False,
         "features.unified_exec": False,
@@ -49,7 +50,7 @@ def comando(conta: Conta) -> list[str]:
         # O CLI encaminha ferramentas dinâmicas por este host, inclusive sem code_mode.
         "features.code_mode_host": True,
         "features.goals": False,
-        "web_search": "disabled",
+        "web_search": "live" if busca else "disabled",
         "project_doc_max_bytes": 0,
     }
     try:
@@ -77,8 +78,9 @@ class ClienteCodex:
         pasta: Path,
         ao_evento: Callable[[str, dict[str, Any]], None],
         atender: Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]],
+        busca: bool = False,
     ) -> None:
-        self.conta, self.pasta = conta, pasta
+        self.conta, self.pasta, self.busca = conta, pasta, busca
         self.ao_evento, self.atender = ao_evento, atender
         self.processo: asyncio.subprocess.Process | None = None
         self.leitor: asyncio.Task[None] | None = None
@@ -91,7 +93,7 @@ class ClienteCodex:
         ambiente = dict(os.environ)
         ambiente["CODEX_HOME"] = str(self.conta.onde)
         self.processo = await asyncio.create_subprocess_exec(
-            *comando(self.conta),
+            *comando(self.conta, self.busca),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,

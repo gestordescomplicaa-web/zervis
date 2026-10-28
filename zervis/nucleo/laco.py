@@ -39,11 +39,12 @@ from zervis.cerebro import (
     mcp_oauth,
     navegador,
     omniroute,
+    pesquisa,
     rapido,
 )
 from zervis.cerebro.base import Ponte
 from zervis.cerebro.baterias import Bateria, do_omniroute
-from zervis.cerebro.claude import ClaudeBrain
+from zervis.cerebro.claude import ClaudeBrain, carimbo
 from zervis.cerebro.consumo import Consumo, UsoDeFerramentas
 from zervis.cerebro.ferramentas import sessoes as ferramentas_sessoes
 from zervis.config import Config
@@ -453,6 +454,9 @@ class Nucleo(
             self.tela,
             self.manutencao,
             sobre=lambda: autoconhecimento.texto(self.retrato()),
+            pesquisar=lambda pedido: pesquisa.pesquisar(
+                pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"]
+            ),
         )
         servidor = ferramentas.servidor(self.proprias)
         try:
