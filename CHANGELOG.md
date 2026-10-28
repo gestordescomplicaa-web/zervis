@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- A Conversa funciona como um chat. A mensagem escrita aparece na hora, o campo limpa e surge o
+  "digitando" do Zé (três pontinhos). A resposta aparece enquanto o Zé responde, frase a frase:
+  a troca em curso vem do núcleo antes de ir para o histórico, que só a grava no fim. Enquanto
+  isso, a tela lê o fio a cada 0,3 s, e parada a cada 1,5 s. Um envio recusado fica marcado como
+  "Não enviado" e o texto volta ao campo.
 - No Live, o Zé não bipa mais a cada "sua vez" (depois de um aviso, de uma pergunta de
   confirmação ou do chamado sozinho): numa conversa em tempo real, como numa ligação, o bipe
   atrapalhava. Fica só o bipe de quando a voz conecta.

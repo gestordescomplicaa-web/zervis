@@ -38,6 +38,7 @@ class ContextoMemoria(Protocol):
     _conversa_suja: Any
     _curadoria_em: Any
     _memoria_vista: str | None
+    _turno_gravado: Any
     _na_tela: dict[str, None]
     _notas_em_curso: Any
     _pasta_em: Any
@@ -143,6 +144,7 @@ class ServicoMemoria:
 
     def _registrar_turno(self, turno: dict[str, str]) -> None:
         """O pedido e a resposta, com a hora do pedido; a página do dia sai em segundo plano."""
+        self.n._turno_gravado = turno  # a Conversa deixa de mostrá-lo como em andamento
         pedido = turno["pessoa"]
         if self.n.voz.muda and turno["jarvis"]:
             self.n._mostrar(turno["jarvis"])

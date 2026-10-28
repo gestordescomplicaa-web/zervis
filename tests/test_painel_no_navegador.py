@@ -1439,3 +1439,69 @@ def test_conector_de_projeto_pode_valer_tambem_na_conversa(tmp_path: Path) -> No
     assert "Vale também na conversa." in texto
     (enviado,) = salvos
     assert (enviado["nome"], enviado["conversa"], enviado["projetos"]) == ("crm", True, ["loja"])
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_conversa_funciona_como_chat(tmp_path: Path) -> None:
+    """Pedido de 27/10/2026: escrever e enviar demorava a aparecer. A mensagem sai na hora, com
+    o "digitando"; a resposta aparece enquanto o Zé responde; um envio recusado avisa e devolve o
+    texto ao campo."""
+    fase = {"n": 0, "recusar": False}
+    hora = "2026-10-27T21:00:00-03:00"
+
+    def conversa() -> dict[str, Any]:
+        voce = {"quando": hora, "tipo": "voce", "texto": "Oi Zé, tudo bem?"}
+        ze = {"quando": hora, "tipo": "ze", "texto": "Oi! Tudo certo."}
+        itens = {
+            0: [],
+            1: [{**voce, "pendente": "1"}],
+            2: [{**voce, "pendente": "1"}, {**ze, "texto": "Oi! Tudo", "pendente": "1"}],
+            3: [voce, ze],
+        }[fase["n"]]
+        return {"itens": itens, "esperando": []}
+
+    def escrever(dados: dict[str, Any]) -> dict[str, Any]:
+        time.sleep(0.6)  # a rede até a VPS
+        if fase["recusar"]:
+            return {"aviso": "O Zé está inativo."}
+        fase["n"] = max(fase["n"], 1)  # o teste pode já ter andado enquanto a rede demorava
+        return {"aviso": "Enviado."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conversa")
+            await _esperar(nav, "!!document.getElementById('escrever-texto')")
+            campo = "document.getElementById('escrever-texto')"
+            await nav.avaliar(f"{campo}.value = 'Oi Zé, tudo bem?'")
+            await nav.avaliar("document.getElementById('escrever').requestSubmit()")
+            # Antes de o servidor responder (0,6 s): o balão, o "digitando" e o campo limpo.
+            na_hora = await nav.avaliar(
+                "[document.querySelector('.fala.voce.enviando p')?.textContent,"
+                " !!document.querySelector('.fala.digitando'),"
+                f" {campo}.value]"
+            )
+            assert na_hora == ["Oi Zé, tudo bem?", True, ""], na_hora
+            fase["n"] = 2
+            await _esperar(
+                nav, "document.querySelector('.fala.ze.pendente p')?.textContent === 'Oi! Tudo'"
+            )
+            assert await nav.avaliar("document.querySelectorAll('.fala.voce').length") == 1
+            assert not await nav.avaliar("!!document.querySelector('.fala.digitando')")
+            fase["n"] = 3
+            await _esperar(
+                nav,
+                "!document.querySelector('.pendente') &&"
+                " document.querySelector('.fala.ze p')?.textContent === 'Oi! Tudo certo.'",
+            )
+            fase["recusar"] = True
+            await nav.avaliar(f"{campo}.value = 'Outra mensagem'")
+            await nav.avaliar("document.getElementById('escrever').requestSubmit()")
+            await _esperar(nav, "!!document.querySelector('.fala.voce.erro')")
+            assert await nav.avaliar(f"{campo}.value") == "Outra mensagem"
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path, extras={"conversa/escrever": escrever}, leituras_vivas={"conversa": conversa}
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))

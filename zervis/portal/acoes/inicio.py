@@ -15,6 +15,14 @@ from zervis.portal.servidor import PedidoInvalido
 log = logging.getLogger(__name__)
 
 
+def _item(atual: dict[str, str], tipo: str) -> dict[str, str]:
+    return {
+        "quando": atual["quando"],
+        "tipo": tipo,
+        "texto": atual["pessoa"] if tipo == "voce" else atual["ze"],
+    }
+
+
 class AcoesInicio(Pagina):
     dependencias = (
         "_aplicar_depois",
@@ -25,6 +33,7 @@ class AcoesInicio(Pagina):
         "cfg",
         "chamado",
         "consumo",
+        "conversa_em_andamento",
         "conversas",
         "escrever",
         "espera",
@@ -104,6 +113,13 @@ class AcoesInicio(Pagina):
                     }
                 )
         itens.sort(key=lambda i: i["quando"])  # estável: o pedido antes da resposta
+        andamento = getattr(self.n, "conversa_em_andamento", None)
+        if andamento is not None and (atual := andamento()) is not None:
+            # A troca em curso ainda não está no histórico: vai no fim, marcada, com o que o Zé
+            # já respondeu até aqui.
+            itens.append({**_item(atual, "voce"), "pendente": "1"})
+            if atual["ze"]:
+                itens.append({**_item(atual, "ze"), "pendente": "1"})
         fila = getattr(self.n, "fila", None)
         esperando = [a.titulo or a.texto for a in fila.validos()] if fila is not None else []
         return {"itens": itens[-200:], "esperando": esperando}

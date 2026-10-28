@@ -1186,6 +1186,26 @@ class Nucleo(
         finally:
             self.desligar()
 
+    def conversa_em_andamento(self) -> dict[str, str] | None:
+        """O pedido em curso e o que o Zé já respondeu dele, antes de a troca ir para o histórico
+        (ela só é gravada no fim): a Conversa mostra os dois na hora, como um chat."""
+        estado = self.maquina.estado
+        if not self.turnos or estado not in (
+            e.Estado.PENSANDO,
+            e.Estado.FALANDO,
+            e.Estado.CONFIRMANDO,
+        ):
+            return None
+        turno = self.turnos[-1]
+        if turno is getattr(self, "_turno_gravado", None):
+            return None
+        quando = getattr(self, "_pedido_quando", None)
+        return {
+            "quando": quando.isoformat(timespec="seconds") if quando else "",
+            "pessoa": turno["pessoa"],
+            "ze": turno["jarvis"],
+        }
+
     def escrever(self, texto: str) -> str:
         """Um pedido escrito no painel (Conversa) vira um Digitado, como no Teclado do Núcleo."""
         texto = " ".join(texto.split())[:LIMITE_ESCRITO]
