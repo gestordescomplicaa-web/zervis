@@ -33,6 +33,23 @@ def codigo_erro(erro: Any) -> str:
     return "falha_codex"
 
 
+def uso_do_codex(total: dict[str, Any], antes: dict[str, Any] | None = None) -> dict[str, Any]:
+    """O uso acumulado da conversa do Codex (`tokenUsage.total`) nas chaves do SDK; com `antes`,
+    só o que veio depois dele. O `last` é a última chamada ao modelo: um pedido com ferramentas
+    faz várias, e só a última entrava na conta (visto em 27/10/2026)."""
+
+    def valor(chave: str) -> int:
+        return max(0, int(total.get(chave) or 0) - int((antes or {}).get(chave) or 0))
+
+    cache, criado = valor("cachedInputTokens"), valor("cacheWriteInputTokens")
+    return {
+        "input_tokens": max(0, valor("inputTokens") - cache - criado),
+        "cache_read_input_tokens": cache,
+        "cache_creation_input_tokens": criado,
+        "output_tokens": valor("outputTokens"),
+    }
+
+
 def comando(conta: Conta, busca: bool = False) -> list[str]:
     # A voz e o cérebro só usam as ferramentas publicadas pelo Zérvis, com sua autorização. A
     # pesquisa na internet (ADR 0044) é outra consulta, que só tem ela: `busca`.

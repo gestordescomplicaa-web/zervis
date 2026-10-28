@@ -39,6 +39,7 @@ class ContextoMemoria(Protocol):
     _curadoria_em: Any
     _memoria_vista: str | None
     _turno_gravado: Any
+    _gasto_do_turno: Any
     _na_tela: dict[str, None]
     _notas_em_curso: Any
     _pasta_em: Any
@@ -152,8 +153,9 @@ class ServicoMemoria:
         if atividade.e_correcao(pedido):
             atividade.PADRAO.registrar("correcao", pedido)
         try:
+            gasto, self.n._gasto_do_turno = getattr(self.n, "_gasto_do_turno", None), None
             feito = self.n.conversas.registrar(
-                turno["pessoa"], turno["jarvis"], self.n._pedido_quando
+                turno["pessoa"], turno["jarvis"], self.n._pedido_quando, gasto
             )
         except OSError as erro:
             log.warning("conversas: %s", erro)

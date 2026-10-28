@@ -1505,3 +1505,57 @@ def test_conversa_funciona_como_chat(tmp_path: Path) -> None:
         tmp_path, extras={"conversa/escrever": escrever}, leituras_vivas={"conversa": conversa}
     ) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_conversa_mostra_o_gasto_de_cada_resposta_e_do_dia(tmp_path: Path) -> None:
+    """Pedido de 27/10/2026: ver na Conversa como o Zé gasta os tokens a cada mensagem."""
+    hora = "2026-10-27T21:00:00-03:00"
+    partes = [
+        {"rotulo": "rapida", "modelo": "claude-haiku-4-5", "entrada": 900, "cache_lido": 3000,
+         "cache_criado": 0, "saida": 5},
+        {"rotulo": "completo", "modelo": "gpt-5.6-luna", "entrada": 1200, "cache_lido": 9000,
+         "cache_criado": 0, "saida": 180},
+        {"rotulo": "pesquisa", "modelo": "Codex gpt-5.6", "entrada": 4000, "cache_lido": 0,
+         "cache_criado": 0, "saida": 300},
+    ]  # fmt: skip
+    gasto = {"provedor": "codex", "partes": partes, "ferramentas": ["internet_pesquisar"]}
+
+    def conversa() -> dict[str, Any]:
+        return {
+            "itens": [
+                {"quando": hora, "tipo": "voce", "texto": "Qual o dólar hoje?"},
+                {"quando": hora, "tipo": "ze", "texto": "R$ 5,34.", "gasto": gasto},
+            ],
+            "esperando": [],
+            "consumo": {
+                "locais": 3,
+                "fundo": {"entrada": 2000, "cache_lido": 0, "cache_criado": 0, "saida": 100},
+                "fundo_vezes": 2,
+            },
+        }
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#conversa")
+            await _esperar(nav, "!!document.querySelector('.fala.ze .gasto')")
+            linha = await nav.avaliar("document.querySelector('.gasto summary').textContent")
+            assert linha == "19 mil tokens · 66% em cache", linha
+            dia = await nav.avaliar("document.getElementById('consumo-dia').textContent")
+            assert dia == (
+                "Hoje: 1 resposta · 19 mil tokens · 66% em cache · média de 19 mil por "
+                "resposta · 3 sem modelo · segundo plano: 2,1 mil tokens em 2 tarefas"
+            ), dia
+            await nav.avaliar("document.querySelector('.gasto summary').click()")
+            detalhe = await nav.avaliar("document.querySelector('.gasto ul').innerText")
+            assert "Respostas rápidas · claude-haiku-4-5" in detalhe, detalhe
+            assert "Cérebro · gpt-5.6-luna" in detalhe and "Pesquisa na internet" in detalhe
+            assert "internet_pesquisar" in detalhe
+            # A releitura do fio (a cada 1,5 s) não fecha o detalhe aberto.
+            await asyncio.sleep(2)
+            assert await nav.avaliar("document.querySelector('.gasto').open")
+            assert not nav.erros, nav.erros
+
+    with _painel(tmp_path, leituras_vivas={"conversa": conversa}) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))

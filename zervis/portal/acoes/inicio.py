@@ -94,12 +94,15 @@ class AcoesInicio(Pagina):
         from zervis.memoria.linha import agora
 
         hoje = agora()
-        itens: list[dict[str, str]] = []
+        itens: list[dict[str, Any]] = []
         for t in self.n.conversas.do_dia(hoje.date()):
             quando = t.em.isoformat(timespec="seconds")
             itens.append({"quando": quando, "tipo": "voce", "texto": t.pessoa})
             if t.ze:
-                itens.append({"quando": quando, "tipo": "ze", "texto": t.ze})
+                resposta: dict[str, Any] = {"quando": quando, "tipo": "ze", "texto": t.ze}
+                if gasto := getattr(t, "gasto", None):
+                    resposta["gasto"] = gasto
+                itens.append(resposta)
         inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)
         for ev in self.n.linha.entre(inicio, hoje, {"aviso", "lembrete", "manutencao"}):
             # Um lembrete é gravado ao ser criado, com a hora em que vai tocar.
@@ -122,7 +125,28 @@ class AcoesInicio(Pagina):
                 itens.append({**_item(atual, "ze"), "pendente": "1"})
         fila = getattr(self.n, "fila", None)
         esperando = [a.titulo or a.texto for a in fila.validos()] if fila is not None else []
-        return {"itens": itens[-200:], "esperando": esperando}
+        return {
+            "itens": itens[-200:],
+            "esperando": esperando,
+            "consumo": self._consumo_de_hoje(),
+        }
+
+    def _consumo_de_hoje(self) -> dict[str, Any]:
+        """O dia inteiro: as mensagens, o que saiu sem modelo e o que o Zé gastou sozinho, em
+        segundo plano (avisos, notas, revisões e automações)."""
+        from zervis.cerebro.consumo import CAMPOS, FUNDO
+
+        consumo = getattr(self.n, "consumo", None)
+        if consumo is None:
+            return {}
+        hoje = consumo.hoje
+        origens = hoje.get("origens") or {}
+        fundo = {nome: sum(int(origens.get(o, {}).get(nome, 0)) for o in FUNDO) for nome in CAMPOS}
+        return {
+            "locais": int(hoje.get("locais", 0)),
+            "fundo": fundo,
+            "fundo_vezes": sum(int(origens.get(o, {}).get("respostas", 0)) for o in FUNDO),
+        }
 
     def escrever(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Um pedido escrito no painel: o mesmo caminho da fala."""

@@ -78,23 +78,33 @@ def test_sem_o_codex_a_pesquisa_vai_pelo_claude(
 ) -> None:
     caminho: list[str] = []
 
-    async def codex(_conta: Conta, _texto: str, _pasta: Path) -> str:
+    async def codex(_conta: Conta, _texto: str, _pasta: Path, gastou: Any) -> str:
         caminho.append("codex")
+        gastou({"input_tokens": 50}, "Codex")  # a tentativa que falhou também gastou
         raise CodexErro("limite_de_uso")
 
-    async def claude(texto: str, _pasta: Path, modelo: str) -> str:
+    async def claude(texto: str, _pasta: Path, modelo: str, gastou: Any) -> str:
         caminho.append(f"claude:{modelo}")
+        gastou({"input_tokens": 70}, "Claude")
         assert texto.startswith("[terça-feira, 27/10/2026, 22:03] ")
         return "Resumo.\n\nFontes: https://exemplo.com"
 
     monkeypatch.setattr(pesquisa, "_conta_codex", lambda: Conta("codex:x", "codex", "X", "/"))
     monkeypatch.setattr(pesquisa, "_pelo_codex", codex)
     monkeypatch.setattr(pesquisa, "_pelo_claude", claude)
+    gastos: list[tuple[int, str]] = []
     texto = asyncio.run(
-        pesquisa.pesquisar("notícias", "[terça-feira, 27/10/2026, 22:03]", tmp_path, "sonnet")
+        pesquisa.pesquisar(
+            "notícias",
+            "[terça-feira, 27/10/2026, 22:03]",
+            tmp_path,
+            "sonnet",
+            lambda uso, por: gastos.append((uso["input_tokens"], por)),
+        )
     )
     assert texto.startswith("Resumo.")
     assert caminho == ["codex", "claude:sonnet"]
+    assert gastos == [(50, "Codex"), (70, "Claude")]
 
 
 def test_o_ze_sabe_que_pesquisa_na_internet() -> None:

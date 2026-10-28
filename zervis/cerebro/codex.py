@@ -14,7 +14,7 @@ from zervis.cerebro import contas
 from zervis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 from zervis.cerebro.claude import ClaudeBrain, carimbo
 from zervis.cerebro.codex_mcp import FerramentasCodex
-from zervis.cerebro.codex_rpc import ClienteCodex, CodexErro, codigo_erro
+from zervis.cerebro.codex_rpc import ClienteCodex, CodexErro, codigo_erro, uso_do_codex
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class CodexBrain(ClaudeBrain):
         self.turno = ""
         self.fila: asyncio.Queue[tuple[str, dict[str, Any]]] = asyncio.Queue()
         self.ponte_mcp: FerramentasCodex | None = None
+        self._total: dict[str, Any] = {}  # o uso acumulado da conversa do Codex até aqui
 
     async def start(self, persona: str, aprovar: Aprovar | None = None) -> None:
         self.persona, self.aprovar = persona, aprovar
@@ -145,6 +146,7 @@ class CodexBrain(ClaudeBrain):
         try:
             rpc = await self._conectar_codex()
             self.fila = asyncio.Queue()
+            antes = dict(self._total)
             resultado = await rpc.pedir(
                 "turn/start",
                 {
@@ -170,15 +172,8 @@ class CodexBrain(ClaudeBrain):
                     falou = falou or bool(delta.strip())
                     yield Texto(delta)
                 elif metodo == "thread/tokenUsage/updated":
-                    uso = dados["tokenUsage"].get("last", {})
-                    cache = int(uso.get("cachedInputTokens", 0))
-                    criado = int(uso.get("cacheWriteInputTokens", 0))
-                    self.uso = {
-                        "input_tokens": max(0, int(uso.get("inputTokens", 0)) - cache - criado),
-                        "cache_read_input_tokens": cache,
-                        "cache_creation_input_tokens": criado,
-                        "output_tokens": int(uso.get("outputTokens", 0)),
-                    }
+                    self._total = dict(dados["tokenUsage"].get("total") or {})
+                    self.uso = uso_do_codex(self._total, antes)
                 elif metodo == "turn/completed":
                     turno = dados["turn"]
                     self.turno = ""
@@ -217,6 +212,7 @@ class CodexBrain(ClaudeBrain):
             await self.ponte_mcp.fechar()
             self.ponte_mcp = None
         self.fio = self.turno = ""
+        self._total = {}
         self.fila = asyncio.Queue()
 
     async def close(self) -> None:

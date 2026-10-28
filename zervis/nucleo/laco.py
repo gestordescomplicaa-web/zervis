@@ -45,7 +45,7 @@ from zervis.cerebro import (
 from zervis.cerebro.base import Ponte
 from zervis.cerebro.baterias import Bateria, do_omniroute
 from zervis.cerebro.claude import ClaudeBrain, carimbo
-from zervis.cerebro.consumo import Consumo, UsoDeFerramentas
+from zervis.cerebro.consumo import Consumo, UsoDeFerramentas, gasto
 from zervis.cerebro.ferramentas import sessoes as ferramentas_sessoes
 from zervis.config import Config
 from zervis.foco import ferramentas as foco_ferramentas
@@ -359,6 +359,8 @@ class Nucleo(
         self.uso_ferramentas = UsoDeFerramentas(ESTADO / "uso-ferramentas.json")
         self.pergunta = ""  # a última pergunta de aprovação (o card de decisão do Barehands)
         self.turnos: list[dict[str, str]] = []  # a conversa atual, para a revisão
+        self._gasto_do_turno: dict[str, Any] | None = None  # vai com a troca para a Conversa
+        self._gastos_extras: list[dict[str, Any]] = []
         self._revisoes = ("", 0)  # (dia, quantas) — teto diário do ADR 0011
         self.pendencias = revisao.Pendencias(cfg.caminho("revisao", "pendencias"))
         # Memória contínua (08/10/2026): cada fala com a hora, a linha do tempo e a nota do dia.
@@ -455,7 +457,7 @@ class Nucleo(
             self.manutencao,
             sobre=lambda: autoconhecimento.texto(self.retrato()),
             pesquisar=lambda pedido: pesquisa.pesquisar(
-                pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"]
+                pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
             ),
         )
         servidor = ferramentas.servidor(self.proprias)
@@ -622,6 +624,7 @@ class Nucleo(
                 self._pedido_em = time.monotonic()
                 self._conversa_suja = True
                 self.turnos.append({"pessoa": texto, "jarvis": ""})
+                self._gastos_extras = []  # o que as ferramentas desta mensagem gastarem
                 self._pedido_quando = datetime.now(FUSO)
                 pedido = self._com_memoria(
                     self._com_foco(self._com_avisos(self._com_nucleo(texto)))
@@ -717,6 +720,13 @@ class Nucleo(
                 # Fila durável (Fase 7): o aviso sai quando o Zé voltar a ATIVO.
                 log.info("aviso retido até ficar ativo: %d caracteres", len(texto))
                 self._guardar(texto)
+
+    def _gastou(self, uso: dict[str, Any], por: str) -> None:
+        """Uma ferramenta que chama um modelo por fora (a pesquisa na internet): o gasto entra no
+        consumo do dia e na mensagem em que ela rodou."""
+        self.consumo.somar(uso, "pesquisa")
+        if parte := gasto(uso, "pesquisa", por):
+            self._gastos_extras.append(parte)
 
     def _comando(self, nome: str) -> None:
         log.info("comando: %s", nome)

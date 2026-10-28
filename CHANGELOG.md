@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- A Conversa mostra o que cada resposta gastou de tokens: uma linha curta embaixo dela ("27 mil
+  tokens · 73% em cache") e, ao abrir, cada parte, com o modelo (as respostas rápidas, o cérebro e
+  a pesquisa na internet) e as ferramentas usadas. No topo, o dia: respostas, total, média por
+  resposta, o que saiu sem modelo e o que rodou em segundo plano (avisos, notas, revisões).
+- A conta de tokens ficou certa. O Codex somava só a última chamada ao modelo de cada resposta, e
+  uma resposta com ferramentas faz várias (na prova, 15,9 mil contados de 31,6 mil). A via rápida
+  que passava a vez ao cérebro não entrava, nem a pesquisa, nem as respostas rápidas pela chave.
 - As sessões pesquisam e abrem páginas sem pedir aprovação: só leem a internet. Uma sessão de
   pesquisa pedia aprovação a cada busca e a cada site (nove pedidos numa só).
 - "Aprova tudo" pela voz aprova de uma vez os pedidos da sessão que cabem numa frase; o resto

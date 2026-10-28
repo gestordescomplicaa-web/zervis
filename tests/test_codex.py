@@ -93,7 +93,8 @@ class RpcFluxo:
             {
                 "threadId": "fio",
                 "tokenUsage": {
-                    "last": {"inputTokens": 100, "cachedInputTokens": 80, "outputTokens": 1}
+                    "last": {"inputTokens": 100, "cachedInputTokens": 80, "outputTokens": 1},
+                    "total": {"inputTokens": 100, "cachedInputTokens": 80, "outputTokens": 1},
                 },
             },
         )

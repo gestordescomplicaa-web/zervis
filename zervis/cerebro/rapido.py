@@ -40,6 +40,7 @@ from zervis.cerebro import contas
 from zervis.cerebro.base import Aprovar, Brain, EventoCerebro, Fim, Texto
 from zervis.cerebro.claude import ClaudeBrain
 from zervis.cerebro.codex import CodexBrain
+from zervis.cerebro.consumo import gasto, somar_usos
 
 log = logging.getLogger(__name__)
 PASSAR = "[completo]"
@@ -429,6 +430,9 @@ class MotorOpenAI:
             corpo["max_completion_tokens"] = self.max_tokens
         else:
             corpo["max_tokens"] = self.max_tokens
+        if self.http.host in ("api.openai.com", "openrouter.ai"):
+            # O último pedaço traz o uso (outras pontes podem recusar a opção).
+            corpo["stream_options"] = {"include_usage": True}
         if self.raciocinio and _raciocina(self.modelo):
             if self.http.host == "openrouter.ai":
                 corpo["reasoning"] = {"effort": self.raciocinio}
@@ -439,9 +443,17 @@ class MotorOpenAI:
     async def gerar(self, sistema: str, mensagens: list[dict[str, str]]) -> AsyncIterator[str]:
         cab = {"Authorization": f"Bearer {self.chave}"} if self.chave else {}
         linhas = self.http.linhas("/chat/completions", self.corpo(sistema, mensagens), cab)
+        self.uso = None
         async for dados in _dados_sse(linhas):
             if erro := dados.get("error"):
                 raise MotorErro(str(erro)[:200])
+            if uso := dados.get("usage"):
+                cache = int((uso.get("prompt_tokens_details") or {}).get("cached_tokens") or 0)
+                self.uso = {
+                    "input_tokens": max(0, int(uso.get("prompt_tokens") or 0) - cache),
+                    "cache_read_input_tokens": cache,
+                    "output_tokens": int(uso.get("completion_tokens") or 0),
+                }
             for escolha in dados.get("choices") or []:
                 if texto := (escolha.get("delta") or {}).get("content"):
                     yield texto
@@ -483,10 +495,16 @@ class MotorAnthropic:
             "stream": True,
         }
         cab = {"x-api-key": self.chave, "anthropic-version": "2023-06-01"}
+        self.uso = None
         async for dados in _dados_sse(self.http.linhas("/messages", corpo, cab)):
             tipo = dados.get("type")
             if tipo == "error":
                 raise MotorErro(str(dados.get("error"))[:200])
+            if tipo == "message_start":  # a entrada no começo; a saída cresce até o fim
+                self.uso = dict((dados.get("message") or {}).get("usage") or {})
+            elif tipo == "message_delta" and self.uso is not None:
+                saida = (dados.get("usage") or {}).get("output_tokens")
+                self.uso["output_tokens"] = saida or self.uso.get("output_tokens", 0)
             delta = dados.get("delta") or {}
             texto = delta.get("text") if delta.get("type") == "text_delta" else None
             if tipo == "content_block_delta" and texto:
@@ -730,6 +748,8 @@ class Roteado:
         self.uso: dict[str, Any] | None = None
         self.ferramentas_usadas: list[str] = []
         self.modelo_usado: str | None = None
+        self.gastos: list[dict[str, Any]] = []
+        self._uso_rapida: dict[str, Any] | None = None
         self._parando: asyncio.Future[None] | None = None
 
     # --- o que o núcleo lê do cérebro, como antes ------------------------------------------
@@ -797,8 +817,14 @@ class Roteado:
             self.visto_completo = max(0, self.visto_completo - corte)
             self.visto_motor = max(0, self.visto_motor - corte)
 
+    def _gasto_rapida(self) -> list[dict[str, Any]]:
+        parte = gasto(self.motor.uso, "rapida", self.motor.modelo)
+        return [parte] if parte else []
+
     async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
         self.uso, self.ferramentas_usadas, self.via = None, [], ""
+        # Cada chamada desta mensagem, para a Conversa mostrar como o Zé gastou os tokens.
+        self.gastos, self._uso_rapida = [], None
         falou = False
         if self.motor_ok and not precisa_do_completo(texto):
             resposta = ""
@@ -819,6 +845,7 @@ class Roteado:
                 self._parando = asyncio.ensure_future(self._parar_motor())
                 if falou:
                     self.uso, self.via = self.motor.uso, "rapida"
+                    self.gastos = self._gasto_rapida()
                     self._guardar(texto, resposta, "rapida")
                     yield Fim(
                         "tempo_esgotado" if isinstance(erro, TimeoutError) else "falha_resposta"
@@ -826,6 +853,7 @@ class Roteado:
                     return
             if not passar:
                 self.uso, self.via = self.motor.uso, "rapida"
+                self.gastos = self._gasto_rapida()
                 self.modelo_usado = self.motor.modelo
                 self._guardar(texto, resposta, "rapida")
                 if self.motor.com_estado:
@@ -834,6 +862,8 @@ class Roteado:
                 return
             if self.motor.com_estado:
                 self.visto_motor = len(self.turnos)  # ele viu o pedido, não a resposta
+            # A via rápida leu o pedido para decidir passar a vez: isso também gastou.
+            self.gastos, self._uso_rapida = self._gasto_rapida(), self.motor.uso
         async for evento in self._completo(texto, aviso=not falou):
             yield evento
 
@@ -913,9 +943,13 @@ class Roteado:
             elif isinstance(evento, Fim):
                 erro = evento.erro
             yield evento
-        self.uso = getattr(self.completo, "uso", None)
+        uso_completo = getattr(self.completo, "uso", None)
         self.ferramentas_usadas = list(getattr(self.completo, "ferramentas_usadas", []))
         self.modelo_usado = getattr(self.completo, "modelo_usado", None)
+        modelo = str(self.modelo_usado or getattr(self.completo, "modelo", "") or "")
+        self.uso = somar_usos(self._uso_rapida, uso_completo)
+        if parte := gasto(uso_completo, "completo", modelo):
+            self.gastos = [*self.gastos, parte]
         self.via = "completo"
         if not erro:
             self._guardar(texto, resposta, "completo")

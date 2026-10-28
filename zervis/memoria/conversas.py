@@ -14,7 +14,7 @@ import logging
 import re
 import subprocess
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -38,12 +38,20 @@ class Turno:
     em: datetime
     pessoa: str  # o que quem usa disse
     ze: str
+    # O que a resposta gastou, por parte (via rápida, cérebro, pesquisa); só a Conversa mostra.
+    gasto: dict[str, Any] | None = field(default=None, compare=False)
 
     def para_json(self) -> str:
         return json.dumps(
             {"em": self.em.isoformat(timespec="seconds"), "pessoa": self.pessoa, "ze": self.ze},
             ensure_ascii=False,
         )
+
+    @property
+    def chave_do_gasto(self) -> str:
+        """O gasto fica noutra coleção: na das conversas, a busca acharia "Codex" ou "cache" em
+        todas as trocas."""
+        return f"{self.em.isoformat(timespec='seconds')}|{self.pessoa[:200]}"
 
 
 _CAMPOS = {"em", "ze", "dia", "pessoa"}
@@ -80,16 +88,32 @@ class Conversas:
     def _arquivo(self, dia: date) -> Path:
         return self.pasta / f"{dia:%Y-%m-%d}.jsonl"
 
-    def registrar(self, pessoa: str, ze: str, em: datetime | None = None) -> Turno:
-        turno = Turno((em or datetime.now(FUSO)).astimezone(FUSO), pessoa.strip(), ze.strip())
-        self._dados.guardar(
-            "conversas", {**json.loads(turno.para_json()), "dia": turno.em.date().isoformat()}
+    def registrar(
+        self,
+        pessoa: str,
+        ze: str,
+        em: datetime | None = None,
+        gasto: dict[str, Any] | None = None,
+    ) -> Turno:
+        turno = Turno(
+            (em or datetime.now(FUSO)).astimezone(FUSO), pessoa.strip(), ze.strip(), gasto
         )
+        dia = turno.em.date().isoformat()
+        with self._dados.banco.transacao():
+            self._dados.guardar("conversas", {**json.loads(turno.para_json()), "dia": dia})
+            if gasto:
+                chave = turno.chave_do_gasto
+                self._dados.guardar("gastos", {"dia": dia, "chave": chave, "gasto": gasto}, chave)
         return turno
 
     def do_dia(self, dia: date) -> list[Turno]:
         dados = self._dados.filtrar("conversas", "dia", [dia.isoformat()], -1)
-        return sorted((_turno(d) for d in dados), key=lambda t: t.em)
+        turnos = sorted((_turno(d) for d in dados), key=lambda t: t.em)
+        gastos = {
+            str(g.get("chave")): g.get("gasto")
+            for g in self._dados.filtrar("gastos", "dia", [dia.isoformat()], -1)
+        }
+        return [replace(t, gasto=gastos.get(t.chave_do_gasto)) for t in turnos]
 
     def dias(self) -> list[date]:
         return sorted({date.fromisoformat(d["dia"]) for d in self._dados.listar("conversas")})
