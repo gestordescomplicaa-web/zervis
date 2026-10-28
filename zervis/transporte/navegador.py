@@ -40,7 +40,7 @@ def reamostrar(pcm: bytes, taxa: int) -> bytes:
 
 
 class VozNavegador:
-    """Uma conexão de voz aberta pelo botão Ao vivo do navegador."""
+    """Uma conexão de voz aberta pelo botão "Conectar voz" do navegador (antes, "Ao vivo")."""
 
     def __init__(
         self, conexao: Conexao, taxa: int = TAXA, ao_vivo: bool = True, do_app: bool = False

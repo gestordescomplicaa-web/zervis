@@ -276,7 +276,8 @@ main.cheio { padding: 0; overflow: hidden; }
 /* --- barra de voz: rodapé do menu lateral --- */
 .barra-voz { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--borda); }
 .barra-voz .escolha-menu { top: auto; bottom: calc(100% + 8px); }
-.botoes-voz { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.botoes-voz { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 8px; }
+.botoes-voz .acao { padding-inline: 8px; white-space: nowrap; }
 .botoes-voz:has(.voz-remota[hidden]) { grid-template-columns: minmax(0, 1fr); }
 .botoes-voz button { width: 100%; white-space: nowrap; touch-action: none; user-select: none; }
 .botoes-voz button[aria-pressed="true"] { background: var(--acento); color: #041417; border-color: var(--acento); }

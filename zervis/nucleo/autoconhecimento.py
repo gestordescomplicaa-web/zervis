@@ -90,7 +90,8 @@ def resumo(r: Retrato) -> str:
 MAPA = """## Onde mudar
 - **Modo de fala** (Silencioso, Normal, Live): página Voz, o atalho Alt+M ou por voz ("modo
   silencioso", "modo normal", "modo live").
-- **Live:** no navegador, o botão Ao vivo; no app do celular, "Ao vivo" na notificação. Sem a
+- **Live:** o modo Live, com a voz do aparelho conectada: no navegador, o botão "Conectar voz"
+  (embaixo do menu, ao lado de "Falar"); no app do celular, "Ao vivo" na notificação. Sem a
   chave do Deepgram ou o detector de fim de fala baixado, a voz ao vivo segue sem o tempo real.
 - **Voz do Zé** (Cadu, ElevenLabs, Fish Audio e a voz de cada um): página Voz → Voz do Zé.
 - **Espera e ativação** ("Ei Zé" ou só o botão): página Voz.
