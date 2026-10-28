@@ -605,3 +605,33 @@ def test_sem_o_live_ou_no_modo_chamado_segue_o_recorte() -> None:
         servico._fonte_remota(voz, True)
         servico._quadro_remoto(voz, b"quadro")
         assert live.chamadas == [] and recebidos == [b"quadro"]
+
+
+def test_no_live_so_o_bipe_de_conectar(tmp_path: Path) -> None:
+    """Teste de 27/10/2026: no Live o Zé bipava a cada "sua vez" (depois de um aviso, de uma
+    pergunta, do chamado sozinho). Numa conversa contínua, fica só o bipe de conectar."""
+    from types import SimpleNamespace
+
+    from tests.test_latencia_nucleo import NucleoCronometrado
+
+    bipes: list[int] = []
+
+    class Nucleo(NucleoCronometrado):
+        def _tocar_bip(self) -> None:
+            bipes.append(1)
+
+    n = Nucleo(tmp_path)
+    n._pedidos_ao_vivo = 0
+    n.live = SimpleNamespace(  # type: ignore[assignment]
+        ativo=True, parar=lambda: None, acompanhar=lambda *a: None, falar=lambda *a: None
+    )
+    n.tratar(e.AoVivo(True))
+    assert bipes == [1]  # conectou: o bipe de "pronto"
+    n.tratar(e.FalaAoVivo("Zé?"))  # o chamado sozinho
+    n.maquina.estado = e.Estado.FALANDO  # um aviso do Mãos livres (hoje o Live) no fim
+    n.maquina.aviso_falando, n.maquina.escutar_depois = "A sessão Loja terminou.", True
+    n.tratar(e.FalaOcioso())  # o fim do aviso, que abria a escuta com bipe
+    assert bipes == [1]
+    n.live = None  # type: ignore[assignment]
+    n.tratar(e.FalaAoVivo("Zé?"))  # fora do Live, o bipe de "estou ouvindo" continua
+    assert bipes == [1, 1]

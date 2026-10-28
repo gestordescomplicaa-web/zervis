@@ -804,7 +804,12 @@ class Nucleo(
             isinstance(evento, (e.Ativacao, e.FimDeFala)) and antes is not e.Estado.CONFIRMANDO
         ):
             self.teclado.terminou()  # a resposta escrita acabou, ou começou um pedido por voz
+        tempo_real = live_ativo(self) is not None and not isinstance(evento, e.AoVivo)
         for efeito in self.maquina.tratar(evento, agora):
+            if tempo_real and isinstance(efeito, e.Bip):
+                # No Live a conversa é contínua, como numa ligação: o bipe de "sua vez" (depois de
+                # um aviso, de uma pergunta, do chamado sozinho) só atrapalha. Fica o de conectar.
+                continue
             self._executar(efeito)
         self._digitado_em = None
         if (live := live_ativo(self)) is not None:
@@ -1025,7 +1030,7 @@ class Nucleo(
                 "dá para cortar o Zé falando por cima"
             )
         elif self.live.disponivel:
-            estado_live = "pronto; liga ao conectar a voz ao vivo (o botão Ao vivo)"
+            estado_live = 'pronto; liga ao conectar a voz do aparelho (o botão "Conectar voz")'
         else:
             estado_live = f"indisponível ({self.live.erro or 'sem a chave do Deepgram'})"
         m = maquina_atual.detectar()

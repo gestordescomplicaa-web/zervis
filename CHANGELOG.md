@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- No Live, o Zé não bipa mais a cada "sua vez" (depois de um aviso, de uma pergunta de
+  confirmação ou do chamado sozinho): numa conversa em tempo real, como numa ligação, o bipe
+  atrapalhava. Fica só o bipe de quando a voz conecta.
+- O botão "Ao vivo", embaixo do menu, passa a se chamar "Conectar voz" (e "Voz conectada", quando
+  ligado). Ele liga o microfone e o alto-falante deste aparelho ao Zé; o modo (Live, Normal) é a
+  outra escolha, logo acima. O nome antigo confundia com o modo Live.
 - O Zé se conhece (ADR 0043). Ele responde, por voz também, sobre a própria configuração, sem
   inventar: qual modelo responde agora, a voz, o modo, o Live, as contas, o acesso e a versão.
   Também diz onde mudar cada coisa. O cérebro completo (Claude, Codex ou outro) consulta a

@@ -151,7 +151,7 @@ class ServicoRemoto:
             self.n.captura.receber(quadro)
 
     def voz_pelo_navegador(self, conexao: Conexao, taxa: int) -> None:
-        """O botão Ao vivo do navegador abriu o canal de voz pelo HTTPS do painel (roteiro,
+        """O botão "Conectar voz" do navegador abriu o canal de voz pelo HTTPS do painel (roteiro,
         passo 4.2); fica aqui, na thread da conexão, até ela fechar."""
         if self.n.modo_fala == "silencioso":
             log.info("voz pelo navegador: recusada no modo Silencioso")

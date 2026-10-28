@@ -3,7 +3,7 @@
 const MODOS_FALA = [
   { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve. Tudo pela tela." },
   { valor: "avisos", nome: "Normal", curto: "Avisos e resultados", detalhe: "Fala avisos, urgências e um resumo do resultado de cada sessão." },
-  { valor: "live", nome: "Live", curto: "Conversa em tempo real", detalhe: "Conversa como numa ligação: dá para cortar o Zé falando. Anuncia os resultados e responde na hora." },
+  { valor: "live", nome: "Live", curto: "Conversa em tempo real", detalhe: "Com a voz conectada, conversa como numa ligação: dá para cortar o Zé falando. Anuncia os resultados e responde na hora." },
 ];
 const MODOS_ESCUTA = [
   { valor: "sempre", nome: "Sempre", detalhe: "Enquanto o Zé estiver em execução." },
@@ -34,7 +34,9 @@ let salaVoz = null, vozConectando = false, codigoPreparado = null;
 
 function desenharVozRemota() {
   const on = !!salaVoz;
-  const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz ao vivo" : "Conectar a voz ao vivo: ouve sem parar até desconectar"}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : "Ao vivo"}</button>`;
+  // O botão liga o microfone e o alto-falante deste aparelho ao Zé; o modo (Fala: Live, Normal)
+  // é outra escolha. Chamava-se "Ao vivo" e confundia com o modo Live (27/10/2026).
+  const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz deste aparelho" : "Conectar o microfone e o alto-falante deste aparelho ao Zé"}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : on ? "Voz conectada" : "Conectar voz"}</button>`;
   for (const caixa of [$("voz-remota"), $("voz-holo")]) {
     if (!caixa) continue;
     caixa.hidden = false;
@@ -163,7 +165,7 @@ async function conectarVoz(religando) {
       }
     };
     salaVoz = conexao; manterTela(true);
-    toast(religando ? "Voz reconectada." : "Voz ao vivo."); avisarVoz("conectou", `${captura.sampleRate} Hz`);
+    toast(religando ? "Voz reconectada." : "Voz conectada."); avisarVoz("conectou", `${captura.sampleRate} Hz`);
   } catch (erro) {
     if (!salaVoz) mic?.getTracks().forEach((t) => t.stop());
     avisarVoz("falhou", `${erro.name}: ${erro.message}`);
@@ -201,7 +203,7 @@ async function apertarFalar() {
   if (travado) return soltarFalar(true);
   if (falando) return;
   // Fora do PC, sem a voz conectada, quem ouviria é o microfone do PC.
-  if (!salaVoz && !NO_PC) return toast("Conecte o Ao vivo para falar por aqui.");
+  if (!salaVoz && !NO_PC) return toast("Conecte a voz para falar por aqui.");
   falando = true; apertouEm = Date.now(); marcarFalar();
   api("voz/apertar", {}).catch((erro) => toast(erro.message));
 }
