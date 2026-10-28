@@ -11,6 +11,7 @@ Apagar não existe aqui de propósito: excluir uma sessão é no painel (decisã
 
 import dataclasses
 import time
+from collections.abc import Callable
 from typing import Any
 
 from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_server
@@ -25,6 +26,7 @@ from zervis.cerebro.ferramentas import manutencao as g_manutencao
 from zervis.cerebro.ferramentas import navegador as g_navegador
 from zervis.cerebro.ferramentas import sessoes as g_sessoes
 from zervis.cerebro.ferramentas import sistema as g_sistema
+from zervis.cerebro.ferramentas import sobre as g_sobre
 from zervis.cerebro.ferramentas import tela as g_tela
 from zervis.cerebro.ferramentas.comum import _mudanca, _skill_nova
 from zervis.habilidades import revisao
@@ -56,6 +58,7 @@ LEITURA = [
     "conectores_listar",
     "conector_testar",  # sobe só o que a pessoa aprovou ao cadastrar
     "atualizacoes_ver",  # só lê; atualizar é no painel
+    "ze_sobre",  # o retrato do próprio Zé, sem segredos (ADR 0043)
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -129,6 +132,7 @@ def montar(
     diario: Diario | None = None,
     tela: Tela | None = None,
     manutencao: Manutencao | None = None,
+    sobre: Callable[[], str] | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
@@ -144,6 +148,7 @@ def montar(
             *g_navegador.ferramentas(),
             *g_conectores.ferramentas(),
             *g_atualizacoes.ferramentas(),
+            *g_sobre.ferramentas(sobre),
         ]
     ]
 

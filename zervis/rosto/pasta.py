@@ -46,6 +46,7 @@ class Conexoes:
     proprias: list[tuple[str, bool]] = field(default_factory=list)  # (ferramenta, livre)
     embutidas: list[str] = field(default_factory=list)
     externos: dict[str, list[str]] = field(default_factory=dict)  # servidor -> livres
+    agora: str = ""  # o retrato do autoconhecimento (ADR 0043); vazio: o resumo de antes
 
 
 def _quando(epoca: float | int | None) -> str:
@@ -69,11 +70,17 @@ def quem_sou(c: Conexoes) -> str:
         "Sou o Zé desta máquina. Esta pasta é escrita por mim e serve só para ler: "
         "mudanças passam pela sua aprovação por voz.",
         "",
-        "## Cérebro agora",
-        f"- **Quem responde:** {c.cerebro or '-'}",
-        f"- **Reserva:** {c.reserva or '-'}",
-        f"- **Revisão em segundo plano:** {c.revisao or 'desligada'}",
-        f"- **Voz e escuta:** {c.voz or '-'}",
+        *(
+            [c.agora.rstrip()]
+            if c.agora
+            else [
+                "## Cérebro agora",
+                f"- **Quem responde:** {c.cerebro or '-'}",
+                f"- **Reserva:** {c.reserva or '-'}",
+                f"- **Revisão em segundo plano:** {c.revisao or 'desligada'}",
+                f"- **Voz e escuta:** {c.voz or '-'}",
+            ]
+        ),
         "",
         "## Conexões",
         "",
