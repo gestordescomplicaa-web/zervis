@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- As sessões pesquisam e abrem páginas sem pedir aprovação: só leem a internet. Uma sessão de
+  pesquisa pedia aprovação a cada busca e a cada site (nove pedidos numa só).
+- "Aprova tudo" pela voz aprova de uma vez os pedidos da sessão que cabem numa frase; o resto
+  fica no painel. "Aprovo" e "aprove" também valem a qualquer momento. Antes, "pode aprovar tudo"
+  ia ao cérebro, que respondia "aprovado" sem aprovar nada; agora ele nunca diz isso.
+- O autodesenvolvimento volta a funcionar depois de o Zé mudar de pasta. A sessão de antes
+  ficava presa à pasta antiga e o modo manutenção respondia sempre "a cópia central está
+  indisponível". Agora ela fica no painel com o histórico, e a próxima abre na pasta atual.
 - O Zé pesquisa na internet sozinho, com qualquer cérebro e sem abrir sessão: notícia de agora,
   um fato recente, um preço ou um assunto resumido, com as fontes na tela (ADR 0044). A pesquisa
   roda numa consulta à parte, que só lê a internet, então passa sem aprovação. Vai pela conta do

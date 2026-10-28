@@ -1455,7 +1455,7 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
         allowed_tools=list(externos.livres),
         resume=s.sdk_sessao or None,
         model=s.modelo or None,
-        disallowed_tools=["Task", "Agent", "WebSearch", *externos.bloqueadas],
+        disallowed_tools=["Task", "Agent", *externos.bloqueadas],
         # O ai-memory recebe o que a sessão faz (ADR 0016): os hooks dele só nesta sessão.
         settings=json.dumps(hooks) if (hooks := aimemory.hooks_claude()) else None,
         env=ambiente_da_conta(s),
@@ -1621,7 +1621,7 @@ HOOKS_DO_ZE = ("SessionStart", "UserPromptSubmit", "Stop", "Notification", "Post
 # Do que o agente faz, o Zé guarda o que conta o andamento: comandos e arquivos mexidos.
 ACOES_DO_CLAUDE = "Bash|Edit|MultiEdit|Write|NotebookEdit"
 # As outras ferramentas que podem pedir permissão: delas, o Zé só precisa saber que rodaram.
-OUTRAS_COM_PERMISSAO = "mcp__.*|WebFetch"
+OUTRAS_COM_PERMISSAO = "mcp__.*"
 # O mesmo cálculo de `permissoes.assinatura`, sem a resposta da ferramenta.
 RESUMO_DO_EVENTO = (
     "import hashlib,json,sys;e=json.load(sys.stdin);n=str(e.get('tool_name',''));"
@@ -1649,6 +1649,9 @@ NOME_DE_FERRAMENTA = re.compile(r"[A-Za-z0-9_-]{1,64}")
 PRAZO_PERMISSAO_S = PRAZO_S
 # Os comandos de teste e verificação rodam sem pergunta, para a sessão iterar sozinha até o
 # resultado (ADR 0039). O Claude não deixa um prefixo destes cobrir `cmd && outro`.
+# Pesquisar e ler páginas só leem a internet: uma sessão de pesquisa pedia aprovação a cada
+# busca e a cada site, nove pedidos numa só (caso real de 27/10/2026).
+INTERNET_LIVRE = ["WebSearch", "WebFetch"]
 COMANDOS_LIVRES = [
     "Bash(make check)",
     "Bash(make test)",
@@ -2034,7 +2037,7 @@ def comando_terminal(
     # Livres sem pergunta (as do conector e os comandos de teste, para a sessão iterar sozinha
     # até o resultado); bloqueadas nunca; o resto o Claude pergunta.
     ajustes["permissions"] = {
-        "allow": [*COMANDOS_LIVRES, *externos.livres],
+        "allow": [*INTERNET_LIVRE, *COMANDOS_LIVRES, *externos.livres],
         "deny": externos.bloqueadas,
     }
     cmd = [caminhos.claude()]

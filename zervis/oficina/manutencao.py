@@ -145,6 +145,7 @@ class Manutencao:
         self.pasta.mkdir(parents=True, exist_ok=True)
         self.estado = self._carregar()
         self.central = Central(sessoes, repo, pasta)
+        self._esquecer_de_outra_pasta()
         if self.estado.sessao and not self.central.registro().get("sessao"):
             try:
                 self.central.resolver(self.estado.sessao, self.estado.agente)
@@ -173,6 +174,34 @@ class Manutencao:
             )
         except (OSError, ValueError, TypeError):
             return Estado()
+
+    def _esquecer_de_outra_pasta(self) -> None:
+        """O Zé mudou de pasta: a sessão de antes é de outro repositório e a central a recusava
+        para sempre ("a cópia central está indisponível", caso real de 27/10/2026, depois de o
+        código ir para outra pasta). Ela fica no painel, com a cópia e o histórico, e a próxima
+        manutenção abre uma sessão nova aqui. Os pedidos em andamento eram dela e saem."""
+        if not self.estado.sessao:
+            return
+        try:
+            antiga = self.sessoes.ler(self.estado.sessao)
+        except SessaoErro:
+            return  # ausente é outro caso: a recuperação é pelo painel
+        if Path(antiga.pasta).resolve() == self.repo.resolve():
+            return
+        log.warning(
+            "manutenção: a sessão %s é de outra pasta (%s); abro outra aqui",
+            antiga.id,
+            antiga.pasta,
+        )
+        atividade.PADRAO.registrar(
+            "execucao",
+            "Autodesenvolvimento: a sessão anterior era de outra pasta; a próxima abre aqui",
+            origem="sistema",
+            sessao=antiga.id,
+            pasta=antiga.pasta,
+        )
+        self.estado.sessao, self.estado.pendentes = "", []
+        self._gravar()
 
     def _gravar(self) -> None:
         arquivo = self.pasta / "estado.json"

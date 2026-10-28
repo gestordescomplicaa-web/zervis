@@ -288,6 +288,7 @@ APROVA = {
     "dale",
 }
 REPERGUNTA = "Não entendi. É sim ou não?"
+TUDO = {"tudo", "todos", "todas"}  # "sim, aprova tudo": todos os pedidos da sessão
 RESPOSTA_CURTA = 5  # palavras: "sim", "pode publicar", "não, deixa pra depois"
 # O "sim" de uma permissão vem no começo e é claro: "vai", "faz" e "valeu" começam outras
 # frases ("vai chover?", "faz um resumo", "valeu, Zé").
@@ -364,12 +365,22 @@ COMANDOS = {
     "permissao_sim": {
         ("aprova",),
         ("aprovar",),
+        ("aprovo",),
+        ("aprove",),
         ("pode", "aprovar"),
         ("aprova", "a", "sessao"),
         ("aprova", "o", "pedido"),
         ("autoriza",),
         ("autoriza", "a", "sessao"),
     },
+    # Todos os pedidos que esperam, da mesma sessão: uma pesquisa pedia um por site e o "aprova
+    # tudo" ia para o cérebro, que dizia "aprovado" sem aprovar nada (caso real de 27/10/2026).
+    "permissao_tudo": {
+        (verbo, *resto)
+        for verbo in ("aprova", "aprovar", "aprovo", "aprove", "autoriza", "autorizo")
+        for resto in (("tudo",), ("todos",), ("todas",), ("tudo", "ai"), ("todos", "eles"))
+    }
+    | {("pode", "aprovar", "tudo"), ("pode", "aprovar", "todos"), ("pode", "autorizar", "tudo")},
     "permissao_nao": {
         ("nega",),
         ("negar",),
@@ -1055,7 +1066,9 @@ def resposta_a_permissao(texto: str) -> str | None:
         return None
     if set(p) & (NEGA | CORRIGE):
         return "permissao_nao"
-    return "permissao_sim" if p[0] in APROVA_NO_COMECO else None
+    if p[0] not in APROVA_NO_COMECO:
+        return None
+    return "permissao_tudo" if set(p) & TUDO else "permissao_sim"
 
 
 def resposta_a_oferta(texto: str) -> str | None:

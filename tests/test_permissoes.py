@@ -187,6 +187,8 @@ def test_o_claude_recebe_o_gancho_sem_a_chave_na_linha_de_comando(tmp_path: Path
     assert "tool_response" not in pos[0]["hooks"][0]["command"]
     # Os testes rodam sozinhos; sem o painel, nada de gancho.
     assert set(COMANDOS_LIVRES) <= set(ajustes["permissions"]["allow"])
+    # Pesquisar e ler páginas só leem: uma sessão de pesquisa pedia nove aprovações (27/10/2026).
+    assert {"WebSearch", "WebFetch"} <= set(ajustes["permissions"]["allow"])
     sem = json.loads(comando_terminal(s, "", tmp_path / "e")[-1])
     assert "PermissionRequest" not in sem["hooks"]
 

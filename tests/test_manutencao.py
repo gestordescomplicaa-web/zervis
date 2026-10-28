@@ -523,3 +523,35 @@ def test_interromper_confirma_fim_do_agente_e_preserva_a_copia(
         assert arquivo.read_text() == "rascunho"
     finally:
         terminal.encerrar()
+
+
+def test_o_ze_mudou_de_pasta_e_a_manutencao_abre_sessao_nova_aqui(
+    repo: Path, tmp_path: Path
+) -> None:
+    """Caso real de 27/10/2026: o código foi para outra pasta e a sessão de autodesenvolvimento
+    continuou presa à antiga. "Entrar no modo manutenção" respondia sempre "a cópia central está
+    indisponível", e cinco pedidos de semanas antes seguiam "em andamento"."""
+    antiga = tmp_path / "pasta-antiga"
+    antiga.mkdir()
+    sessoes = SessoesFalsas()
+    velha = sessoes.criar("Zé · autodesenvolvimento", str(antiga), "codex", "manutencao")
+    m = nova(repo, sessoes)
+    m.estado.sessao = velha.id
+    m.estado.pendentes = [mod.Pedido("29bd525f", "diagnóstico", 1.0, "abc", True)]
+    m._gravar()
+
+    m = nova(repo, sessoes)  # o Zé sobe na pasta nova
+    assert m.estado.sessao == "" and m.estado.pendentes == []
+    assert m.situacao(2.0) == "O modo manutenção está desligado."
+    assert m.entrar("codex").startswith("Modo manutenção ligado, com o Codex.")
+    atual = sessoes.ler(m.estado.sessao)
+    assert atual.id != velha.id and atual.pasta == str(repo) and atual.worktree
+    assert sessoes.ler(velha.id).pasta == str(antiga)  # a antiga fica, com o histórico
+
+
+def test_a_sessao_da_mesma_pasta_continua(repo: Path) -> None:
+    sessoes = SessoesFalsas()
+    m = nova(repo, sessoes)
+    m.entrar("codex")
+    id_ = m.estado.sessao
+    assert nova(repo, sessoes).estado.sessao == id_
