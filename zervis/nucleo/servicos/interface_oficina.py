@@ -49,8 +49,8 @@ class InterfaceOficina(InterfaceServico):
     def _permissao_pedida(self, pedido: Pedido) -> None:
         servico(self, ServicoOficina)._permissao_pedida(pedido)
 
-    def _responder_permissao(self, aprovar: bool) -> str:
-        return servico(self, ServicoOficina)._responder_permissao(aprovar)
+    def _responder_permissao(self, aprovar: bool, tudo: bool = False) -> str:
+        return servico(self, ServicoOficina)._responder_permissao(aprovar, tudo)
 
     def _permissao_decidida(self, pedido: Pedido) -> None:
         servico(self, ServicoOficina)._permissao_decidida(pedido)

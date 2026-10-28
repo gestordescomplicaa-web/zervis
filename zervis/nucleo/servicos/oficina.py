@@ -350,9 +350,10 @@ class ServicoOficina:
         escutar = pedido.falavel and self.n.chamado == "voz"
         self.n.eventos.put(e.Aviso(texto, escutar=escutar, sequencial=True))
 
-    def _responder_permissao(self, aprovar: bool) -> str:
+    def _responder_permissao(self, aprovar: bool, tudo: bool = False) -> str:
         """O "sim" ou o "não" da pessoa: vale para a pergunta que o Zé acabou de fazer; sem
-        ela, para o único pedido esperando. Com pedidos de várias sessões, pede o painel."""
+        ela, para o único pedido esperando. Com pedidos de várias sessões, pede o painel.
+        "Aprova tudo" vale para todos os que esperam na mesma sessão e cabem na voz."""
         permissoes = self.n.sessoes.permissoes
         self.n._permissao_ate = 0.0
         falada = self.n._permissao_falada
@@ -365,6 +366,8 @@ class ServicoOficina:
             if len({p["sessao"] for p in pendentes}) > 1:
                 return "Há pedidos de mais de uma sessão esperando. Responda no painel."
             alvo = (pendentes[0]["sessao"], pendentes[0]["id"])
+        if tudo:
+            return self._aprovar_todos(alvo[0])
         try:
             permissoes.decidir(alvo[0], alvo[1], aprovar, "voz")
         except KeyError:
@@ -373,6 +376,35 @@ class ServicoOficina:
         return (
             f"Aprovado. A sessão {nome} segue." if aprovar else f"Negado. Avisei a sessão {nome}."
         )
+
+    def _aprovar_todos(self, sessao: str) -> str:
+        permissoes = self.n.sessoes.permissoes
+        aprovados = na_tela = 0
+        for p in permissoes.pendentes(sessao):
+            if not p["falavel"]:  # o que não cabe numa frase não se aprova pela voz
+                na_tela += 1
+                continue
+            with contextlib.suppress(KeyError):  # respondido no terminal enquanto isso
+                permissoes.decidir(sessao, p["id"], True, "voz")
+                aprovados += 1
+        nome = self._nome_da_sessao(sessao)
+        if not aprovados:
+            return (
+                "Os pedidos que esperam estão na tela; aprove no painel."
+                if na_tela
+                else "Não há nenhum pedido esperando aprovação."
+            )
+        feito = (
+            f"Aprovei o pedido da sessão {nome}."
+            if aprovados == 1
+            else f"Aprovei os {aprovados} pedidos da sessão {nome}."
+        )
+        resto = (
+            f" {na_tela} ficaram na tela."
+            if na_tela > 1
+            else (" Um ficou na tela." if na_tela else "")
+        )
+        return feito + resto
 
     def _permissao_decidida(self, pedido: Pedido) -> None:
         """Cada pedido de permissão de uma sessão vai para a Atividade: o que foi pedido, quem

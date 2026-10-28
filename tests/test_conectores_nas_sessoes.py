@@ -12,6 +12,7 @@ from zervis.cerebro import conectores, mcp_externo
 from zervis.cerebro.mcp_externo import McpInvalido
 from zervis.oficina.sessoes import (
     COMANDOS_LIVRES,
+    INTERNET_LIVRE,
     Sessao,
     arquivo_de_conectores,
     comando_terminal,
@@ -91,7 +92,7 @@ def test_claude_le_os_conectores_de_um_arquivo_0600(
     assert cmd[1:3] == ["--mcp-config", str(arquivo)]
     ajustes = json.loads(cmd[cmd.index("--settings") + 1])
     assert ajustes["permissions"] == {
-        "allow": [*COMANDOS_LIVRES, *externos.livres],
+        "allow": [*INTERNET_LIVRE, *COMANDOS_LIVRES, *externos.livres],
         "deny": externos.bloqueadas,
     }
     assert not any("segredo" in parte for parte in cmd)

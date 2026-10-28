@@ -77,6 +77,9 @@ terminal (teste 5).
    - "ok, pode" responde à sessão antes de virar o "ok" que encerra a conversa;
    - "Ei Zé, aprova" e "nega" valem a qualquer momento para o pedido que espera; com pedidos de
      várias sessões, o Zé pede o painel;
+   - "aprova tudo" (ou "sim, aprova tudo" logo depois da pergunta) aprova todos os pedidos que
+     esperam na mesma sessão e cabem numa frase; o resto fica no painel (27/10/2026). O cérebro
+     não aprova nem nega: um "aprova" que chega até ele não aprova nada, e ele diz isso;
    - pela voz, nunca um ID: o nome do fluxo, se o pedido traz, ou em que n8n; um comando com
      caminho, redirecionamento ou aspas (que a fala encurtaria) só avisa.
 6. **Rodar sozinho até o resultado.** Os comandos de teste e verificação do projeto passam sem
@@ -84,6 +87,8 @@ terminal (teste 5).
    `Bash(uv run pytest:*)`, `Bash(npm test:*)`), escolhidos por projeto. No n8n, testar com dados
    de exemplo (`test_workflow`) já é livre. A sessão itera sozinha e só pergunta o que mexe
    fora do rascunho.
+   Pesquisar e abrir páginas (WebSearch e WebFetch) também passam sem pergunta (27/10/2026): só
+   leem, e uma sessão de pesquisa pedia aprovação a cada site, nove numa só.
 7. **O que não muda.** O bloqueado no conector nunca chega; os comandos proibidos do Zé
    continuam proibidos e a voz não os libera.
 8. **Registro.** Cada pedido entra na Atividade: o que foi pedido, quem decidiu e por onde

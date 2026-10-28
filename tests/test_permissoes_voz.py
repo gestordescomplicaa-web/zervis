@@ -43,6 +43,10 @@ PUBLICAR: dict[str, Any] = {
         ("não entendi", None),
         ("repete", None),
         ("sim, e me diz também quanto falta para terminar", None),  # longa demais
+        ("Aprovo", "permissao_sim"),
+        ("Sim, aprova tudo", "permissao_tudo"),
+        ("Pode aprovar tudo.", "permissao_tudo"),
+        ("não aprova tudo", "permissao_nao"),
     ],
 )
 def test_so_uma_resposta_curta_e_clara_decide(fala: str, decisao: str | None) -> None:
@@ -74,6 +78,11 @@ def test_aprova_e_nega_a_qualquer_momento_sao_comandos() -> None:
     assert e.comando("pode aprovar") == "permissao_sim"
     assert e.comando("nega a sessão") == "permissao_nao"
     assert e.comando("não aprova") == "permissao_nao"
+    assert e.comando("Aprovo.") == "permissao_sim"
+    # O caso real de 27/10/2026: estes iam ao cérebro, que dizia "aprovado" sem aprovar.
+    assert e.comando("Pode aprovar tudo.") == "permissao_tudo"
+    assert e.comando("Ei Zé, aprova tudo") == "permissao_tudo"
+    assert e.comando("aprova todos") == "permissao_tudo"
 
 
 class Sessoes:
@@ -234,3 +243,34 @@ def test_a_janela_abre_quando_o_ze_fala_a_pergunta() -> None:
     assert (
         antes + JANELA_PERMISSAO_S - 1 < n._permissao_ate <= time.monotonic() + JANELA_PERMISSAO_S
     )
+
+
+def test_aprova_tudo_aprova_os_pedidos_da_sessao_que_cabem_na_voz(tmp_path: Path) -> None:
+    """Uma sessão de pesquisa pedia uma página por vez e a pessoa dizia "aprova tudo"."""
+    n = contexto(tmp_path)
+    oficina = ServicoOficina(n)
+    saidas = [
+        pedir(n, "s1", {**PUBLICAR, "tool_input": {"workflowName": nome}})[1]
+        for nome in ("Pedido novo", "Boleto", "Estoque")
+    ]
+    _, longo = pedir(n, "s1", {"tool_name": "Bash", "tool_input": {"command": "cat > /etc/x"}})
+    resposta = oficina._responder_permissao(True, tudo=True)
+    assert resposta == "Aprovei os 3 pedidos da sessão Loja. Um ficou na tela."
+    for saida in saidas:
+        esperar(lambda saida=saida: "volta" in saida)
+        assert saida["volta"]["hookSpecificOutput"]["decision"]["behavior"] == "allow"
+    assert "volta" not in longo  # o comando fica para o painel ou o terminal
+    assert [p["ferramenta"] for p in n.sessoes.permissoes.pendentes()] == ["Bash"]
+    assert oficina._responder_permissao(True, tudo=True) == (
+        "Os pedidos que esperam estão na tela; aprove no painel."
+    )
+    n.sessoes.permissoes.retirar("s1")
+    assert oficina._responder_permissao(True, tudo=True) == (
+        "Não há nenhum pedido esperando aprovação."
+    )
+
+
+def test_o_cerebro_nao_aprova_pedido_de_sessao() -> None:
+    persona = (Path(__file__).parents[1] / "zervis/persona/ZE.md").read_text()
+    persona = " ".join(persona.split())
+    assert 'basta dizer "aprova tudo". Nunca diga "aprovado".' in persona
