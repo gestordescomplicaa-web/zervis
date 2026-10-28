@@ -27,6 +27,30 @@ CAMPOS = {
 }
 
 
+# O que não é resposta de uma mensagem: o Zé faz sozinho, em segundo plano.
+FUNDO = ("aviso", "nota do dia", "revisão", "automação")
+
+
+def gasto(uso: dict[str, Any] | None, rotulo: str, modelo: str = "") -> dict[str, Any] | None:
+    """Uma parte do gasto de uma mensagem (pedido de 27/10/2026: ver na Conversa como o Zé gasta
+    os tokens): quem respondeu e os tokens, nos nomes curtos do consumo."""
+    if not uso:
+        return None
+    return {
+        "rotulo": rotulo,
+        "modelo": modelo,
+        **{nome: int(uso.get(chave) or 0) for nome, chave in CAMPOS.items()},
+    }
+
+
+def somar_usos(*usos: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Os usos de várias chamadas como um só (nas chaves do SDK), para o consumo do dia."""
+    validos = [u for u in usos if u]
+    if not validos:
+        return None
+    return {chave: sum(int(u.get(chave) or 0) for u in validos) for chave in CAMPOS.values()}
+
+
 class Consumo:
     def __init__(self, arquivo: Path, legado: Path | None = None) -> None:
         self._dados = Documentos(arquivo)
@@ -82,6 +106,13 @@ class Consumo:
             for nome, valor in turno.items():
                 hoje[nome] += valor
             hoje["respostas"] += 1
+            # Por origem: o cérebro das mensagens, a pesquisa e o que roda em segundo plano.
+            origem = hoje.setdefault("origens", {}).setdefault(
+                provedor, {"respostas": 0, **dict.fromkeys(CAMPOS, 0)}
+            )
+            origem["respostas"] += 1
+            for nome, valor in turno.items():
+                origem[nome] = origem.get(nome, 0) + valor
             self._salvar()
         log.info(
             "consumo (%s): leu %d (cache %d, criou %d), escreveu %d",

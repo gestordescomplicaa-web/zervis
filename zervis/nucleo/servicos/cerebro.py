@@ -15,7 +15,7 @@ from zervis.cerebro import acesso, catalogo, mcp_externo, omniroute, rapido
 from zervis.cerebro import modelos as modelos_dos_agentes
 from zervis.cerebro.base import Brain, Ponte
 from zervis.cerebro.baterias import Bateria, da_assinatura
-from zervis.cerebro.consumo import Consumo, UsoDeFerramentas
+from zervis.cerebro.consumo import Consumo, UsoDeFerramentas, gasto
 from zervis.cerebro.eco import Eco
 from zervis.config import Config
 from zervis.habilidades import evidencias, revisao
@@ -37,6 +37,8 @@ log = logging.getLogger(__name__)
 
 class ContextoCerebro(Protocol):
     _fontes: tuple[int, list[str]]
+    _gasto_do_turno: Any
+    _gastos_extras: list[dict[str, Any]]
     _revisoes: Any
     _turno_cerebro: tuple[int, str | None]
     anel: Anel
@@ -114,6 +116,21 @@ class ServicoCerebro:
                 self.n.turnos[-1]["jarvis"] = (self.n.turnos[-1]["jarvis"] + " " + frase).strip()
             self.n.eventos.put(e.Frase(frase))
 
+    def _gasto_do_turno(self) -> dict[str, Any] | None:
+        """O que esta mensagem gastou, por parte: a via rápida, o cérebro e o que as ferramentas
+        gastaram por fora (a pesquisa), para a Conversa (pedido de 27/10/2026)."""
+        cerebro = self.n.cerebro
+        partes = list(getattr(cerebro, "gastos", None) or [])
+        if not partes:
+            modelo = str(getattr(cerebro, "modelo_usado", None) or getattr(cerebro, "modelo", ""))
+            if parte := gasto(getattr(cerebro, "uso", None), "completo", modelo):
+                partes = [parte]
+        partes += getattr(self.n, "_gastos_extras", [])
+        if not partes:
+            return None
+        ferramentas = [n.rsplit("__", 1)[-1] for n in getattr(cerebro, "ferramentas_usadas", [])]
+        return {"provedor": self.n.provedor, "partes": partes, "ferramentas": ferramentas}
+
     def _pedido_de_aprovacao(self, marca: int, descricao: str) -> None:
         if marca == self.n.marca:
             self.n.latencias.contexto(self.n._latencia_do_cerebro(marca), aprovacao=True)
@@ -143,6 +160,7 @@ class ServicoCerebro:
         self.n.latencias.marcar(turno, "fim_cerebro")
         self.n.latencias.contexto(turno, erro_cerebro=bool(erro))
         if not erro and self.n.turnos and self.n.turnos[-1]["jarvis"]:
+            self.n._gasto_do_turno = self._gasto_do_turno()
             self.n._registrar_turno(self.n.turnos[-1])
         if self.n._fontes[0] == marca and self.n._fontes[1]:
             corpo = "\n".join(self.n._fontes[1])

@@ -5,9 +5,12 @@
 // Funciona como um chat (pedido de 27/10/2026): a mensagem escrita aparece na hora, com o "digitando"
 // do Zé; a resposta aparece enquanto ele responde (a troca em curso vem marcada como pendente, antes
 // de ir para o histórico) e, nesse meio-tempo, o fio é lido a cada 0,3 s em vez de 1,5 s.
+//
+// Cada resposta mostra o que gastou (pedido de 27/10/2026: entender como o Zé gasta os tokens),
+// por parte: a via rápida, o cérebro e a pesquisa; no topo, o dia e o que rodou em segundo plano.
 
 PAGINAS.conversa = async () => `<div class="pagina-conversa">
-  <header class="conversa-cabeca">${cabeca("Conversa")}${sub("O que você falou com o Zé hoje, as respostas e os avisos.")}<p class="esperando" id="esperando" hidden></p></header>
+  <header class="conversa-cabeca">${cabeca("Conversa")}${sub("O que você falou com o Zé hoje, as respostas e os avisos.")}<p class="consumo-dia" id="consumo-dia" hidden></p><p class="esperando" id="esperando" hidden></p></header>
   <div class="fio" id="fio" aria-live="polite"></div>
   <form class="escrever" id="escrever">
     <textarea id="escrever-texto" rows="1" placeholder="Escreva para o Zé" autocomplete="off" aria-label="Mensagem"></textarea>
@@ -21,16 +24,50 @@ let fioTimer = null;
  * de novo, a mensagem fica como entregue, sem o "digitando".
  * @type {{texto: string, quando: string, em: number, erro: boolean, entregue: boolean}[]} */
 let enviadas = [];
-let ultimoFio = { itens: [], esperando: [] };
+let ultimoFio = { itens: [], esperando: [], consumo: null };
 const horaFio = (q) => q.slice(11, 16);
 const agoraIso = () => { const d = new Date(), z = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`; };
 const digitando = '<div class="fala ze digitando" aria-label="O Zé está respondendo"><p><i></i><i></i><i></i></p></div>';
+
+const ROTULOS_DO_GASTO = { rapida: "Respostas rápidas", completo: "Cérebro", pesquisa: "Pesquisa na internet" };
+/** 840, "14,2 mil", "1,3 mi". */
+const tokens = (n) => n < 1000 ? String(n) : n < 1e6 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: n < 1e4 ? 1 : 0 })} mil` : `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
+const lidos = (p) => (p.entrada || 0) + (p.cache_lido || 0) + (p.cache_criado || 0);
+const somaPartes = (partes) => partes.reduce((t, p) => ({ lidos: t.lidos + lidos(p), cache: t.cache + (p.cache_lido || 0), saida: t.saida + (p.saida || 0) }), { lidos: 0, cache: 0, saida: 0 });
+const emCache = (t) => t.lidos ? Math.round(100 * t.cache / t.lidos) : 0;
+
+/** A linha do gasto de uma resposta e, ao abrir, cada parte. */
+function gastoDaResposta(g) {
+  if (!g?.partes?.length) return "";
+  const t = somaPartes(g.partes);
+  const partes = g.partes.map((p) => `<li><b>${esc(ROTULOS_DO_GASTO[p.rotulo] || p.rotulo)}</b>${p.modelo ? ` · ${esc(p.modelo)}` : ""}<br>${tokens(lidos(p))} lidos (${tokens(p.cache_lido || 0)} em cache${p.cache_criado ? `, ${tokens(p.cache_criado)} gravados no cache` : ""}) · ${tokens(p.saida || 0)} gerados</li>`).join("");
+  const ferramentas = g.ferramentas?.length ? `<li><b>Ferramentas</b><br>${esc(g.ferramentas.join(", "))}</li>` : "";
+  return `<details class="gasto"><summary>${tokens(t.lidos + t.saida)} tokens · ${emCache(t)}% em cache</summary><ul>${partes}${ferramentas}</ul></details>`;
+}
+
+/** O dia: as respostas com gasto, as resolvidas sem modelo e o segundo plano. */
+function consumoDoDia(itens, consumo) {
+  const gastos = itens.filter((i) => i.gasto?.partes?.length).map((i) => somaPartes(i.gasto.partes));
+  const t = gastos.reduce((a, g) => ({ lidos: a.lidos + g.lidos, cache: a.cache + g.cache, saida: a.saida + g.saida }), { lidos: 0, cache: 0, saida: 0 });
+  const partes = [];
+  if (gastos.length) {
+    const total = t.lidos + t.saida;
+    partes.push(`Hoje: ${gastos.length} ${gastos.length === 1 ? "resposta" : "respostas"} · ${tokens(total)} tokens · ${emCache(t)}% em cache · média de ${tokens(Math.round(total / gastos.length))} por resposta`);
+  }
+  if (consumo?.locais) partes.push(`${consumo.locais} sem modelo`);
+  const f = consumo?.fundo;
+  if (f && consumo.fundo_vezes) partes.push(`segundo plano: ${tokens(lidos(f) + (f.saida || 0))} tokens em ${consumo.fundo_vezes} ${consumo.fundo_vezes === 1 ? "tarefa" : "tarefas"}`);
+  return partes.join(" · ");
+}
 
 /** O fio na tela: o histórico, a troca em curso e as mensagens que acabaram de sair daqui. */
 function montarFio() {
   const fio = $("fio");
   if (!fio) return;
-  const { itens, esperando } = ultimoFio;
+  const { itens, esperando, consumo } = ultimoFio;
+  const dia = $("consumo-dia");
+  const resumo = consumoDoDia(itens, consumo);
+  dia.hidden = !resumo; dia.textContent = resumo;
   const fila = $("esperando");
   fila.hidden = !esperando.length;
   fila.textContent = esperando.length ? `Esperando: ${esperando.join(" · ")}.` : "";
@@ -42,12 +79,13 @@ function montarFio() {
   const respondendo = itens.some((i) => i.pendente && i.tipo === "ze");
   const esperandoResposta = enviadas.some((m) => !m.erro && !m.entregue) || (pensando && !respondendo) || (itens.at(-1)?.pendente && !respondendo);
   const marca = JSON.stringify([itens.length, itens.at(-1), enviadas, esperandoResposta]);
+  const abertos = new Set([...fio.querySelectorAll("details.gasto[open]")].map((d) => /** @type {HTMLElement} */ (d).dataset.quando));
   if (marca === fioVisto) return;
   fioVisto = marca;
   const embaixo = fio.scrollHeight - fio.scrollTop - fio.clientHeight < 80;
   const balao = (i) => i.tipo === "aviso"
     ? `<div class="fala aviso"><span>Aviso · ${horaFio(i.quando)}</span><p>${esc(i.texto)}</p></div>`
-    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}"><p>${esc(i.texto)}</p><span>${horaFio(i.quando)}</span></div>`;
+    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}"><p>${esc(i.texto)}</p><span>${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
   const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}"><p>${esc(m.texto)}</p><span>${m.erro ? "Não enviado" : horaFio(m.quando)}</span></div>`);
   const tudo = [...itens.map(balao), ...minhas, ...(esperandoResposta ? [digitando] : [])];
   fio.innerHTML = tudo.length ? tudo.join("") : vazio("Nada por aqui hoje.");
@@ -107,6 +145,14 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .pagina-conversa { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-width: 0; flex: 1 1 auto; max-width: 860px; }
 .conversa-cabeca { padding: 18px 20px 10px; }
 .conversa-cabeca .sub { margin: 4px 0 0; }
+.consumo-dia { margin: 6px 0 0; font-size: 12.5px; color: var(--suave); font-variant-numeric: tabular-nums; }
+.gasto { font-size: 11.5px; color: var(--suave); padding: 0 4px; font-variant-numeric: tabular-nums; }
+.gasto summary { cursor: pointer; list-style: none; width: fit-content; }
+.gasto summary::-webkit-details-marker { display: none; }
+.gasto summary::after { content: " ▾"; opacity: .7; }
+.gasto[open] summary::after { content: " ▴"; }
+.gasto ul { margin: 6px 0 2px; padding: 8px 10px; list-style: none; display: grid; gap: 6px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo-2); }
+.gasto b { color: var(--texto); font-weight: 600; }
 .esperando { margin: 8px 0 0; padding: 6px 10px; border-radius: 10px; font-size: 13.5px; color: var(--alerta); border: 1px solid rgb(239 190 124 / .4); }
 .fio { overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
 .fala { max-width: 78%; display: grid; gap: 2px; }
