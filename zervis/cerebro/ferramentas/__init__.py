@@ -1,7 +1,7 @@
 """Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
-manutencao, navegador, conectores, atualizacoes);
+manutencao, navegador, conectores, atualizacoes, pesquisa);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
@@ -11,7 +11,7 @@ Apagar não existe aqui de propósito: excluir uma sessão é no painel (decisã
 
 import dataclasses
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_server
@@ -24,6 +24,7 @@ from zervis.cerebro.ferramentas import automacoes as g_automacoes
 from zervis.cerebro.ferramentas import conectores as g_conectores
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
 from zervis.cerebro.ferramentas import navegador as g_navegador
+from zervis.cerebro.ferramentas import pesquisa as g_pesquisa
 from zervis.cerebro.ferramentas import sessoes as g_sessoes
 from zervis.cerebro.ferramentas import sistema as g_sistema
 from zervis.cerebro.ferramentas import sobre as g_sobre
@@ -59,6 +60,7 @@ LEITURA = [
     "conector_testar",  # sobe só o que a pessoa aprovou ao cadastrar
     "atualizacoes_ver",  # só lê; atualizar é no painel
     "ze_sobre",  # o retrato do próprio Zé, sem segredos (ADR 0043)
+    "internet_pesquisar",  # só lê a internet, numa consulta à parte (ADR 0044)
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -133,6 +135,7 @@ def montar(
     tela: Tela | None = None,
     manutencao: Manutencao | None = None,
     sobre: Callable[[], str] | None = None,
+    pesquisar: Callable[[str], Awaitable[str]] | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
@@ -149,6 +152,7 @@ def montar(
             *g_conectores.ferramentas(),
             *g_atualizacoes.ferramentas(),
             *g_sobre.ferramentas(sobre),
+            *g_pesquisa.ferramentas(pesquisar),
         ]
     ]
 
