@@ -523,7 +523,7 @@ class MotorPlano:
             pasta,
             tempo_limite_s=15.0,
             foto=foto,
-            env={"CLAUDE_CONFIG_DIR": str(conta.onde)},
+            env={"CLAUDE_CONFIG_DIR": str(conta.onde), **pela_assinatura(conta)},
         )
 
     @property
@@ -552,6 +552,14 @@ class MotorPlano:
 
     async def fechar(self) -> None:
         await self.cerebro.close()
+
+
+def pela_assinatura(conta: contas.Conta) -> dict[str, str]:
+    """O motor "plano" é a assinatura: com o login do Claude feito, a chave de API do painel não
+    entra (ela tem a vez sobre o login e, sem crédito, derrubava toda resposta rápida no Live:
+    teste de 27/10/2026)."""
+    tem_login = conta.login.is_file() or bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
+    return {"ANTHROPIC_API_KEY": ""} if tem_login else {}
 
 
 class MotorCodex(MotorPlano):
@@ -722,6 +730,7 @@ class Roteado:
         self.uso: dict[str, Any] | None = None
         self.ferramentas_usadas: list[str] = []
         self.modelo_usado: str | None = None
+        self._parando: asyncio.Future[None] | None = None
 
     # --- o que o núcleo lê do cérebro, como antes ------------------------------------------
 
@@ -803,10 +812,11 @@ class Roteado:
                     resposta += pedaco
                     yield Texto(pedaco)
             except (MotorErro, TimeoutError) as erro:
-                log.warning("via rápida falhou (%s)", type(erro).__name__)
+                log.warning("via rápida falhou (%s: %s)", type(erro).__name__, str(erro)[:160])
                 passar = True
-                with contextlib.suppress(Exception):
-                    await self.motor.interromper()
+                # Em segundo plano: parar o motor travado levava 5 s (TimeoutError do SDK) e o
+                # cérebro completo só começava depois (teste de 27/10/2026).
+                self._parando = asyncio.ensure_future(self._parar_motor())
                 if falou:
                     self.uso, self.via = self.motor.uso, "rapida"
                     self._guardar(texto, resposta, "rapida")
@@ -826,6 +836,10 @@ class Roteado:
                 self.visto_motor = len(self.turnos)  # ele viu o pedido, não a resposta
         async for evento in self._completo(texto, aviso=not falou):
             yield evento
+
+    async def _parar_motor(self) -> None:
+        with contextlib.suppress(Exception):
+            await self.motor.interromper()
 
     async def _rapida(self, texto: str) -> AsyncIterator[str | None]:
         """Os pedaços da via rápida; None = passar a vez ao completo (nada foi falado)."""
@@ -908,8 +922,11 @@ class Roteado:
         self.visto_completo = len(self.turnos)
 
     async def interrupt(self) -> None:
-        await self.motor.interromper()
-        await self.completo.interrupt()
+        # Juntos: no Live, falar por cima interrompe; um motor lento para parar não pode segurar
+        # o completo (cada um tem o seu prazo).
+        await asyncio.gather(
+            self.motor.interromper(), self.completo.interrupt(), return_exceptions=True
+        )
 
     async def reset(self) -> None:
         self.turnos, self.visto_completo, self.visto_motor = [], 0, 0

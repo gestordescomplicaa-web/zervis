@@ -349,3 +349,43 @@ def test_so_no_live_por_padrao(tmp_path: Path) -> None:
         rapido.validar_escolha({"quando": "as vezes"})
     with pytest.raises(config.ConfigInvalida, match=r"via_rapida\.quando"):
         config.validar({"via_rapida": {"quando": "nunca"}}, "t")
+
+
+class MotorQueFalha(MotorFalso):
+    """O motor da assinatura que recusa (a chave sem crédito) e leva 5 s para parar."""
+
+    async def gerar(self, sistema: str, mensagens: list[dict[str, str]]) -> AsyncIterator[str]:
+        raise rapido.MotorErro("acesso_invalido")
+        yield ""  # pragma: no cover (só para ser gerador)
+
+    async def interromper(self) -> None:
+        await asyncio.sleep(5)
+
+
+def test_motor_que_falha_nao_atrasa_o_completo() -> None:
+    """Teste de 27/10/2026: cada falha da via rápida esperava 5 s o motor parar antes de o
+    cérebro completo começar."""
+    import time
+
+    async def rodar() -> float:
+        roteado = rapido.Roteado(CompletoFalso(), MotorQueFalha([]), "P")
+        roteado.motor_ok = True
+        inicio = time.monotonic()
+        async for evento in roteado.ask("oi, tudo bem?"):
+            if isinstance(evento, Fim):
+                break
+        return time.monotonic() - inicio
+
+    assert asyncio.run(rodar()) < 1.0
+
+
+def test_o_motor_da_assinatura_nao_usa_a_chave_do_painel(tmp_path: Path) -> None:
+    """Com o login do Claude feito, a chave de API (que tem a vez sobre o login) não entra no
+    motor "plano"; sem login, fica o que houver."""
+    from zervis.cerebro import contas
+
+    conta = contas.Conta("claude:principal", "claude", "Principal", pasta=str(tmp_path))
+    assert rapido.pela_assinatura(conta) == {}
+    conta.login.parent.mkdir(parents=True, exist_ok=True)
+    conta.login.write_text("{}")
+    assert rapido.pela_assinatura(conta) == {"ANTHROPIC_API_KEY": ""}

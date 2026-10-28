@@ -244,6 +244,9 @@ class Laco:
             if marca == self.marca:
                 self.eventos.put(e.PedidoAprovacao("Vou apagar o arquivo. Aprovo?"))
             return
+        if "curta" in texto:  # como a via rápida passando a vez: o aviso, e o resto bem depois
+            self.eventos.put(e.Frase("Deixa eu ver."))
+            time.sleep(2.0)
         resposta = ["Uma resposta bem comprida, que leva alguns segundos."] * (
             3 if "longa" in texto else 1
         )
@@ -334,6 +337,17 @@ def test_a_fala_vira_pedido_e_a_resposta_volta_pela_voz(conversa: Any) -> None:
     tipos = [m["tipo"] for m in aparelho.recebido]
     assert tipos[0] == "voz" and "fim" in tipos and "parar" not in tipos
     assert "Interrompido" not in laco.historia
+
+
+def test_frase_curta_vai_a_voz_sem_esperar_o_resto(conversa: Any) -> None:
+    """ "Deixa eu ver." sai na hora, mesmo com o resto da resposta 2 s depois."""
+    laco, aparelho, roteiro = conversa
+    laco.pensa_s = 0.0
+    _vez(laco, aparelho, roteiro, "Uma pergunta curta.")
+    assert laco.esperar(lambda: "Falar" in laco.historia)
+    falou = time.monotonic()
+    assert laco.esperar(lambda: aparelho.tocando, 1.5), "a frase curta esperou o resto"
+    assert time.monotonic() - falou < 1.5
 
 
 def test_falar_por_cima_corta_o_ze_e_interrompe_o_cerebro(conversa: Any) -> None:

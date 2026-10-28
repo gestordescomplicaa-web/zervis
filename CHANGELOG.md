@@ -2,6 +2,17 @@
 
 ## Não lançado
 
+- O Zé se conhece (ADR 0043). Ele responde, por voz também, sobre a própria configuração, sem
+  inventar: qual modelo responde agora, a voz, o modo, o Live, as contas, o acesso e a versão.
+  Também diz onde mudar cada coisa. O cérebro completo (Claude, Codex ou outro) consulta a
+  ferramenta nova `ze_sobre`, a via rápida recebe o resumo ao subir e a nota "Quem sou" usa o
+  mesmo retrato. Nada de segredo entra.
+- O Live mais rápido, com as correções do teste de 27/10/2026, em que cada resposta levava de 9 a
+  11 s:
+  - as respostas rápidas pela assinatura não usam mais a chave da Anthropic do painel (sem
+    crédito, ela derrubava todo turno);
+  - uma falha da via rápida não espera mais 5 s antes do cérebro completo;
+  - frases curtas, como "Deixa eu ver.", vão à voz na hora, sem esperar o resto da resposta.
 - Live com o cérebro rápido (ADR 0042, etapa 2).
   - As respostas rápidas passam a valer só no Live, o novo padrão; dá para escolher "Sempre" em
     Modelos → Respostas rápidas.

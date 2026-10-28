@@ -8,6 +8,7 @@ uma fila curta: se o laço atrasar, os mais velhos caem, mas o laço nunca esper
 import collections
 import concurrent.futures
 import contextlib
+import dataclasses
 import logging
 import os
 import queue
@@ -20,7 +21,7 @@ from typing import Any
 
 import numpy as np
 
-from zervis import atividade, versoes
+from zervis import __version__, atividade, versoes
 from zervis.atendimento import agente, cliente, projeto, whatsapp
 from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
@@ -32,11 +33,13 @@ from zervis.avisos.fila import Fila
 from zervis.cerebro import (
     acesso,
     catalogo,
+    contas,
     ferramentas,
     mcp_externo,
     mcp_oauth,
     navegador,
     omniroute,
+    rapido,
 )
 from zervis.cerebro.base import Ponte
 from zervis.cerebro.baterias import Bateria, do_omniroute
@@ -56,6 +59,7 @@ from zervis.memoria.conversas import Conversas
 from zervis.memoria.curta import Memoria
 from zervis.memoria.dias import Dias
 from zervis.memoria.linha import LinhaDoTempo
+from zervis.nucleo import autoconhecimento
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import AJUSTES_DA_TELA as AJUSTES_DA_TELA
 from zervis.nucleo.apoio import AVISO_RECENTE_S as AVISO_RECENTE_S
@@ -201,6 +205,19 @@ TIPOS_DE_SERVICO = (
     ServicoFoco,
     ServicoAutomacoes,
 )
+
+
+# Como o retrato diz cada motor das respostas rápidas (ADR 0043).
+NOMES_DOS_MOTORES = {
+    "plano": "o Claude pela assinatura",
+    "codex": "o Codex pela assinatura",
+    "contas": "as contas dos agentes",
+    "anthropic": "a API da Anthropic",
+    "openai": "a API da OpenAI",
+    "openrouter": "o OpenRouter",
+    "ponte": "uma ponte compatível com a OpenAI",
+    "omniroute": "o OmniRoute",
+}
 
 
 class Nucleo(
@@ -435,6 +452,7 @@ class Nucleo(
             self.diario,
             self.tela,
             self.manutencao,
+            sobre=lambda: autoconhecimento.texto(self.retrato()),
         )
         servidor = ferramentas.servidor(self.proprias)
         try:
@@ -958,13 +976,15 @@ class Nucleo(
         reserva = catalogo.OPCOES.get(c["reserva"])
         escuta = "Deepgram" if self.deepgram.disponivel else "desligada (sem chave do Deepgram)"
         livres = set(ferramentas.LIVRES)
+        revisao = (
+            f"{catalogo.rotulo(r['modelo'])}, até {r['max_por_dia']} por dia" if r["ligada"] else ""
+        )
         return pasta.Conexoes(
             cerebro=f"{nome}, com o {modelo}" if modelo else nome,
             reserva=reserva.nome if reserva else c["reserva"],
-            revisao=f"{catalogo.rotulo(r['modelo'])}, até {r['max_por_dia']} por dia"
-            if r["ligada"]
-            else "",
+            revisao=revisao,
             voz=f"fala pelo {self._fala_por()}, escuta pelo {escuta}",
+            agora=self._agora_para_a_pasta(revisao),
             proprias=[
                 (t.name, f"mcp__{ferramentas.SERVIDOR}__{t.name}" in livres) for t in self.proprias
             ],
@@ -978,6 +998,74 @@ class Nucleo(
                 for nome in self.externos.servidores
             },
         )
+
+    def retrato(self) -> autoconhecimento.Retrato:
+        """O Zé agora, para ele mesmo responder e ajudar (ADR 0043). Sem segredos."""
+        c = self.cfg["cerebro"]
+        opcao = catalogo.OPCOES.get(self.provedor)
+        nome = opcao.nome if opcao else self.provedor
+        modelo = self.modelos().get(self.provedor, "")
+        reserva = catalogo.OPCOES.get(c["reserva"])
+        via = rapido.efetiva(self.cfg["via_rapida"])
+        cerebro = self.cerebro
+        roteado = isinstance(cerebro, rapido.Roteado) and cerebro.motor_ok
+        modelo_rapido = str(cerebro.motor.modelo) if isinstance(cerebro, rapido.Roteado) else ""
+        if via["ligada"]:
+            quando = "só no Live" if via.get("quando", "live") == "live" else "sempre"
+            motor = NOMES_DOS_MOTORES.get(str(via["motor"]), str(via["motor"]))
+            rapidas = f"{motor}, com o {catalogo.rotulo(str(via['modelo']))}, {quando}"
+            rapidas += "; respondendo agora" if roteado else ""
+        else:
+            rapidas = "desligadas (tudo vai ao cérebro completo)"
+        live = live_ativo(self)
+        if live is not None:
+            onde = "o app do celular" if getattr(live.fonte, "do_app", False) else "o navegador"
+            estado_live = (
+                f"conectado agora, por {onde}: percebe o fim da fala pelo detector do LiveKit e "
+                "dá para cortar o Zé falando por cima"
+            )
+        elif self.live.disponivel:
+            estado_live = "pronto; liga ao conectar a voz ao vivo (o botão Ao vivo)"
+        else:
+            estado_live = f"indisponível ({self.live.erro or 'sem a chave do Deepgram'})"
+        m = maquina_atual.detectar()
+        endereco = getattr(getattr(self, "tunel", None), "endereco", "")
+        cs = contas.Contas()
+        return autoconhecimento.Retrato(
+            cerebro=f"{nome}, com o {catalogo.rotulo(modelo)}" if modelo else nome,
+            reserva=reserva.nome if reserva else str(c["reserva"]),
+            rapidas=rapidas,
+            rapidas_agora=roteado,
+            rapidas_modelo=catalogo.rotulo(modelo_rapido) if roteado else "",
+            voz=self._fala_por(),
+            escuta=(
+                "Deepgram nova-3, em português"
+                if self.deepgram.disponivel
+                else "desligada (sem a chave do Deepgram)"
+            ),
+            live=estado_live,
+            modo=modo_fala.NOMES.get(self.modo_fala, self.modo_fala),
+            ativacao=chamado.NOMES.get(self.chamado, self.chamado),
+            espera=espera.NOMES.get(self.espera, self.espera),
+            acesso=(
+                f"pelo celular no endereço {endereco}, com senha e código"
+                if endereco
+                else "neste computador (o acesso de qualquer lugar está desligado)"
+            ),
+            contas=f"Claude: {cs.em_uso('claude').nome}; Codex: {cs.em_uso('codex').nome}",
+            maquina=("um servidor sem tela" if m.servidor else "este computador")
+            + f" ({m.sistema}{', com Omarchy' if m.omarchy else ''})",
+            versao=__version__,
+        )
+
+    def _agora_para_a_pasta(self, revisao: str) -> str:
+        try:
+            r = self.retrato()
+        except Exception:  # a nota não pode derrubar a pasta: sem retrato, o resumo de antes
+            log.debug("retrato do Zé falhou", exc_info=True)
+            return ""
+        extras = [f"**Revisão em segundo plano:** {revisao or 'desligada'}"]
+        return autoconhecimento.texto(dataclasses.replace(r, extras=extras))
 
     def _fala_por(self) -> str:
         ativo = self.motor_voz.ativo

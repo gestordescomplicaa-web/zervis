@@ -21,6 +21,7 @@ from zervis.config import Config
 from zervis.habilidades import evidencias, revisao
 from zervis.habilidades.skills import Skills
 from zervis.memoria.curta import Memoria
+from zervis.nucleo import autoconhecimento
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import DADOS, FALHA_NO_CEREBRO, JANELA_FALADA, PERSONA, PERSONA_RAPIDA
 from zervis.rosto import manifesto, tela
@@ -245,7 +246,23 @@ class ServicoCerebro:
             + usuario.PERFIL.para_persona()
             + "\n\n"
             + maquina.detectar().para_persona()
+            + self._voce_agora()
         )
+
+    def _voce_agora(self) -> str:
+        """O retrato do Zé para a via rápida (ADR 0043): ela sobe só quando vai responder, então
+        é ela quem responde, com o modelo escolhido."""
+        retrato = getattr(self.n, "retrato", None)
+        if retrato is None:
+            return ""
+        try:
+            r = retrato()
+        except Exception:
+            log.debug("retrato do Zé falhou", exc_info=True)
+            return ""
+        modelo = catalogo.rotulo(str(rapido.efetiva(self.n.cfg["via_rapida"])["modelo"]))
+        agora = dataclasses.replace(r, rapidas_agora=True, rapidas_modelo=modelo)
+        return "\n\n" + autoconhecimento.resumo(agora)
 
     def aplicar_via_rapida(self) -> str:
         """O painel mudou a via rápida, ou o Live conectou ou saiu: troca só o motor, na hora;

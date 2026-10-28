@@ -506,8 +506,14 @@ def _agente(live: Live) -> Any:
                 for m in chat_ctx.items
                 if getattr(m, "role", None) == "user" and (m.text_content or "").strip()
             ]
+            from livekit.agents.types import FlushSentinel
+
             async for frase in live._vez(falas):
                 yield frase
+                # Cada frase do laço já está inteira: vai à voz na hora. Sem isto, o separador de
+                # frases do LiveKit (mínimo de 20 caracteres) segurava "Deixa eu ver." até o
+                # resto da resposta chegar: 1,4 a 4 s até o primeiro som (teste de 27/10/2026).
+                yield FlushSentinel()
 
     return AgenteDoZe(instructions="O Zé responde pelo próprio cérebro.")
 
