@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- O Zé da Imersão virou uma constelação de luz: o chimpanzé feito de pontos ligados aos vizinhos,
+  com pulsos correndo pelas ligações, brilho na borda, varredura, falhas de sinal e a montagem
+  quando ele aparece, na cor do tema. Gestos, boca, piscar, emoções e tontura seguem iguais.
+- Os testes da Imersão (`make check-imersivo`) voltaram a abrir a página: desde a troca de nome do
+  pacote, procuravam a pasta antiga e nada provava os gestos, as mãos e o avatar.
 - Em Modelos → Respostas rápidas, "Só no Live" e "Sempre" voltam a funcionar e valem no
   clique, sem o Salvar. O botão não fazia nada: ficava sempre em "Só no Live".
 - A bateria de avaliação (`zervis avaliar`) roda com o cérebro escolhido no Zé (Claude ou Codex,

@@ -11,6 +11,10 @@
 // scan lines, flicker, a rolling interference bar and brief signal glitches.
 // Speech and emotions (alegria, duvida, raiva, tristeza) drive the file's own shape keys, including the
 // variations avatar/expressoes_blender.py adds on top of the untouched base mesh.
+// Since 29/10/2026 the default look is the constellation (jarvis-constelacao.js), in the theme colour;
+// the Blender-style skin above stays as estilo "classico" until the new look is approved.
+import { constelacao } from "./jarvis-constelacao.js";
+
 const URL_MODELO = new URL("./jarvis-chimpanze.glb", import.meta.url).href;
 const VISTAS = ["frente", "perfil", "costas"].map(v => new URL(`./jarvis-chimpanze-${v}.png`, import.meta.url).href);
 const CIANO = { r: 0, g: .79, b: 1 }, AZUL = { r: 0, g: .18, b: 1 };  // linear, as in Blender
@@ -219,11 +223,12 @@ function pelo(T, malha, uniformes) {
   return fios;
 }
 
-export async function criarChimpanze(T, GLTFLoader) {
+export async function criarChimpanze(T, GLTFLoader, { estilo = "constelacao" } = {}) {
+  const classico = estilo === "classico";
   const carregarVista = url => new T.TextureLoader().loadAsync(url).then(t => {
     t.flipY = false; t.colorSpace = T.NoColorSpace; return t;  // glTF UV convention, raw detail data
   });
-  const [gltf, ...vistas] = await Promise.all([new GLTFLoader().loadAsync(URL_MODELO), ...VISTAS.map(carregarVista)]);
+  const [gltf, ...vistas] = await Promise.all([new GLTFLoader().loadAsync(URL_MODELO), ...(classico ? VISTAS.map(carregarVista) : [])]);
   const grupo = new T.Group(); grupo.name = "JARVIS_CHIMPANZE";
   const cabeca = gltf.scene; grupo.add(cabeca);
   const cor = new T.Color(CIANO.r, CIANO.g, CIANO.b), fundo = new T.Color(AZUL.r, AZUL.g, AZUL.b);
@@ -244,15 +249,17 @@ export async function criarChimpanze(T, GLTFLoader) {
     // three.js declares uv..uv3 itself; aliases keep the four Blender UV maps under our names.
     ["uv", "uv1", "uv2", "uv3"].forEach((n, i) => o.geometry.setAttribute("jv_uv" + i, o.geometry.attributes[n]));
     const nome = tipo(o.material.name);
+    if (nome === "CHIMP2_Holograma") pele = o;
+    if (!classico) return;  // the constellation reads the original material names, then hides the meshes
     if (!materiais.has(nome)) materiais.set(nome, holograma(T, nome, uniformes));
     o.material = materiais.get(nome);
-    if (nome === "CHIMP2_Holograma") pele = o;
     o.renderOrder = ordem(nome);
   });
   if (!rostos.length || !pele) throw new Error("o chimpanzé veio sem shape keys ou sem a pele");
+  const visual = classico ? null : constelacao(T, cabeca, uniformes);
   antigos.forEach(m => { for (const v of Object.values(m)) if (v?.isTexture) v.dispose(); m.dispose(); });
-  const fundoDaPele = profundidade(T, uniformes);
-  for (const o of [...rostos]) {
+  const fundoDaPele = classico ? profundidade(T, uniformes) : null;
+  for (const o of classico ? [...rostos] : []) {
     if (!o.material.name.startsWith("CHIMP2_") && o.material.name !== "CHIMP_Anatomia") continue;
     const d = new T.SkinnedMesh(o.geometry, fundoDaPele);
     d.name = o.name + "_profundidade"; d.frustumCulled = false; d.renderOrder = -1;
@@ -263,30 +270,33 @@ export async function criarChimpanze(T, GLTFLoader) {
 
   // precise=true applies the skin: the rig moves the head away from the raw geometry bounds.
   cabeca.updateMatrixWorld(true);
-  const fios = pelo(T, pele, uniformes); fios.renderOrder = 4; cabeca.add(fios);
-  // A dark backing just behind the lips: through an open mouth or its corners one sees the inside
-  // of a mouth, never the room. Placed from the skinned lip line, like the fur.
-  const posPele = pele.geometry.attributes.position, labio = new T.Vector3(), v = new T.Vector3();
-  let frenteLabio = -Infinity;
-  for (let i = 0; i < posPele.count; i++) {
-    if (Math.abs(posPele.getY(i) - .639) > .003 || Math.abs(posPele.getX(i)) > .006) continue;
-    pele.getVertexPosition(i, v).applyMatrix4(pele.matrixWorld);
-    if (v.z > frenteLabio) { frenteLabio = v.z; labio.copy(v); }
+  const fios = classico ? pelo(T, pele, uniformes) : null;
+  if (fios) { fios.renderOrder = 4; cabeca.add(fios); }
+  if (classico) {
+    // A dark backing just behind the lips: through an open mouth or its corners one sees the inside
+    // of a mouth, never the room. Placed from the skinned lip line, like the fur.
+    const posPele = pele.geometry.attributes.position, labio = new T.Vector3(), v = new T.Vector3();
+    let frenteLabio = -Infinity;
+    for (let i = 0; i < posPele.count; i++) {
+      if (Math.abs(posPele.getY(i) - .639) > .003 || Math.abs(posPele.getX(i)) > .006) continue;
+      pele.getVertexPosition(i, v).applyMatrix4(pele.matrixWorld);
+      if (v.z > frenteLabio) { frenteLabio = v.z; labio.copy(v); }
+    }
+    // A soft ellipse the size of the mouth, faded when seen from the side (through the cheeks).
+    const fundoBoca = new T.Mesh(new T.PlaneGeometry(.1, .07), new T.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      vertexShader: `varying vec2 vU; varying float vFrente;
+        void main() { vU = uv; vec4 mv = modelViewMatrix * vec4(position, 1.);
+          vFrente = abs(dot(normalize(normalMatrix * vec3(0., 0., 1.)), normalize(-mv.xyz)));
+          gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `varying vec2 vU; varying float vFrente;
+        void main() { float d = length((vU - .5) * 2.);
+          gl_FragColor = vec4(.004, .012, .025, (1. - smoothstep(.7, 1., d)) * smoothstep(.55, .85, vFrente)); }`,
+    }));
+    fundoBoca.name = "fundo_da_boca"; fundoBoca.renderOrder = 1;
+    fundoBoca.position.set(labio.x, labio.y - .01, labio.z - .03);
+    if (Number.isFinite(frenteLabio)) cabeca.add(fundoBoca);
   }
-  // A soft ellipse the size of the mouth, faded when seen from the side (through the cheeks).
-  const fundoBoca = new T.Mesh(new T.PlaneGeometry(.1, .07), new T.ShaderMaterial({
-    transparent: true, depthWrite: false,
-    vertexShader: `varying vec2 vU; varying float vFrente;
-      void main() { vU = uv; vec4 mv = modelViewMatrix * vec4(position, 1.);
-        vFrente = abs(dot(normalize(normalMatrix * vec3(0., 0., 1.)), normalize(-mv.xyz)));
-        gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `varying vec2 vU; varying float vFrente;
-      void main() { float d = length((vU - .5) * 2.);
-        gl_FragColor = vec4(.004, .012, .025, (1. - smoothstep(.7, 1., d)) * smoothstep(.55, .85, vFrente)); }`,
-  }));
-  fundoBoca.name = "fundo_da_boca"; fundoBoca.renderOrder = 1;
-  fundoBoca.position.set(labio.x, labio.y - .01, labio.z - .03);
-  if (Number.isFinite(frenteLabio)) cabeca.add(fundoBoca);
   const caixa = new T.Box3().setFromObject(cabeca, true), tamanho = caixa.getSize(new T.Vector3());
   const escala = Math.min(ALTURA / tamanho.y, LARGURA / tamanho.x);
   cabeca.scale.setScalar(escala);
@@ -318,10 +328,15 @@ export async function criarChimpanze(T, GLTFLoader) {
   let abertura = 0, fase = 0, emocao = "", peso = 0, proximaFalha = 3, fimDaFalha = 0, inclinar = 0, baixar = 0;
   const brilhoBase = new T.Color(), fundoAlvo = new T.Color();
   return {
-    grupo, modelo: "chimpanze", expressoes: nomes, fios: FIOS,
+    grupo, modelo: "chimpanze", estilo: classico ? "classico" : "constelacao", expressoes: nomes,
+    fios: classico ? FIOS : 0, pontos: visual?.pontos ?? 0, ligacoes: visual?.ligacoes ?? 0,
+    // The drawing-buffer height: the constellation sizes its points in pixels from it.
+    tela(px) { visual?.tela(px); },
+    montar() { visual?.montar(); },
     get emocao() { return peso > .5 ? emocao : ""; },
     atualizar(t, dt, amplitude, estado, corEstado, reduzir, sentimento = "") {
       uniformes.jvTempo.value = t; uniformes.jvEnergia.value = amplitude; agoraT = t;
+      visual?.atualizar(t, dt, estado, reduzir);
       // Dizzy (spun too much by hand): fades in fast, out over the last second.
       tonto = reduzir || t > tontoAte ? 0 : Math.min(1, (tontoAte - t) / 1, (t - tontoInicio) / .3);
       // An emotion fades in and out; a change of emotion first fades the old one.
@@ -392,7 +407,8 @@ export async function criarChimpanze(T, GLTFLoader) {
       // Blender's own colours (build_chimpanze_holograma.py: CIANO and AZUL), not the ring's theme:
       // the head must look like the Blender render. Anger pulls it toward red, joy brightens it,
       // sadness dims it toward the deep blue.
-      brilhoBase.copy(CIANO);
+      // The constellation follows the ring's theme colour instead (approved in the lab, 29/10/2026).
+      brilhoBase.copy(!classico && corEstado ? corEstado : CIANO);
       if (emocao === "raiva") brilhoBase.lerp(new T.Color(1, .22, .08), .7 * e);
       if (emocao === "tristeza") brilhoBase.lerp(AZUL, .4 * e);
       if (tonto) brilhoBase.lerp(new T.Color(.45, 1, .5), .35 * tonto);  // a little seasick green
@@ -409,7 +425,8 @@ export async function criarChimpanze(T, GLTFLoader) {
     tontear(segundos = 3.5) { tontoInicio = agoraT; tontoAte = agoraT + segundos; },
     chave(nome) { return atual[nome] ?? null; },
     descartar() {
-      const gs = new Set(), ms = new Set([...materiais.values(), haloMat, marcasMat, fios.material]);
+      const gs = new Set(), ms = new Set([...materiais.values(), haloMat, marcasMat, ...(fios ? [fios.material] : [])]);
+      visual?.descartar();
       grupo.traverse(o => { if (o.geometry) gs.add(o.geometry); });
       gs.forEach(g => g.dispose()); ms.forEach(m => m.dispose()); vistas.forEach(v => v.dispose());
     },

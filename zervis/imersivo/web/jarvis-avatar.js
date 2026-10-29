@@ -85,7 +85,7 @@
         const dt=Math.min(.12,(agora-ultimo)/1000 || .033); ultimo=agora;
         // Cap fill rate: the hand tracker needs the same integrated GPU.
         const w=Math.min(lado,Math.max(280,Math.round((canvas.clientWidth||440)*Math.min(devicePixelRatio||1,1.5))));
-        if(canvas.width!==w) renderer.setSize(w,w,false);
+        if(canvas.width!==w){renderer.setSize(w,w,false);robo.tela?.(w);}
         const r=window.jarvisRing||{},estado=r.data?.state||"idle";
         // The ring's visual decay can outlast a syllable. Silence in the actual PCM
         // must close the jaw promptly, even when frames are slow or speech is interrupted.
@@ -155,7 +155,7 @@
     get montados(){return vivos.size;},
     get quadros(){let n=0;vivos.forEach(c=>n+=c.quadros);return n;},
     diagnostico(){return [...vivos.values()].map(c=>({
-      modelo:c.robo.modelo,estado:c.estado,giro:c.giro||0,tonto:c.robo.tonto,girando:!!window.jarvisItemDe?.(c.el)?.girando,boca:c.robo.abertura,
+      modelo:c.robo.modelo,estilo:c.robo.estilo,pontos:c.robo.pontos,ligacoes:c.robo.ligacoes,estado:c.estado,giro:c.giro||0,tonto:c.robo.tonto,girando:!!window.jarvisItemDe?.(c.el)?.girando,boca:c.robo.abertura,
       bocaAberta:c.robo.chave("Boca_Aberta"),piscar:c.robo.chave("Piscar"),expressoes:c.robo.expressoes,
       emocao:c.robo.emocao,sorriso:c.robo.chave("Sorriso_Dentes"),rosnar:c.robo.chave("Rosnar"),duvida:c.robo.chave("Sobrancelha_Duvida"),tristeza:c.robo.chave("Boca_Triste"),pulso:c.robo.pulso,olharCima:c.robo.chave("Olhar_Cima"),
       gpu:c.placa,triangulos:c.renderer.info.render.triangles,chamadas:c.renderer.info.render.calls,
