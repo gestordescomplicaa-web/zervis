@@ -18,7 +18,7 @@ import urllib.request
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2] / 'jarvis' / 'imersivo' / 'web'  # a página
+ROOT = Path(__file__).resolve().parents[2] / 'zervis' / 'imersivo' / 'web'  # a página
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).resolve().parent)]
 
 import test_brain_navigation as tb  # noqa: E402
