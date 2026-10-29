@@ -12,13 +12,27 @@
 
   const css = document.createElement("style");
   css.textContent = `
-  #jv-teclado-btn { display:inline-flex; align-items:center; justify-content:center; width:56px; height:56px;
-    border-radius:6px; cursor:pointer; color:rgb(var(--jv-borda-rgb, 140 240 225) / .9);
-    border:1px solid rgb(var(--jv-borda-rgb, 140 240 225) / .3); background:rgb(var(--jv-borda-rgb, 140 240 225) / .06);
-    transition:background .15s, border-color .15s; }
-  #jv-teclado-btn svg { width:18px; height:12px; }
-  #jv-teclado-btn:hover, #jv-teclado-btn.ativo, #jv-teclado-btn.apontado { background:rgb(var(--jv-borda-rgb, 140 240 225) / .18);
-    border-color:var(--jv-acento, #8ff0e4); }
+  /* The HUD look of the presentation panels (29/10/2026, the person's review note "mude o teclado"):
+     corner brackets, scan lines and a glow when pointed at. Same 56 px target for the pinch. */
+  #jv-teclado-btn { --c:var(--jv-acento, #8ff0e4); position:relative; display:inline-flex; align-items:center; justify-content:center;
+    width:56px; height:56px; border-radius:2px; cursor:pointer; color:var(--jv-claro, #bffff2);
+    border:1px solid rgb(var(--jv-borda-rgb, 140 240 225) / .2);
+    background:
+      linear-gradient(var(--c), var(--c)) top left / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) top left / 1px 10px no-repeat,
+      linear-gradient(var(--c), var(--c)) top right / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) top right / 1px 10px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom left / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) bottom left / 1px 10px no-repeat,
+      linear-gradient(var(--c), var(--c)) bottom right / 10px 1px no-repeat, linear-gradient(var(--c), var(--c)) bottom right / 1px 10px no-repeat,
+      repeating-linear-gradient(0deg, rgb(200 255 248 / .04) 0 1px, transparent 1px 3px),
+      linear-gradient(160deg, rgb(12 58 54 / .55), rgb(2 16 15 / .7));
+    box-shadow:inset 0 0 18px rgb(var(--jv-acento-rgb, 143 240 228) / .08), 0 0 18px rgb(var(--jv-acento-rgb, 143 240 228) / .08);
+    transition:box-shadow .2s, border-color .2s, color .2s; }
+  #jv-teclado-btn svg { width:20px; height:14px; filter:drop-shadow(0 0 4px rgb(var(--jv-acento-rgb, 143 240 228) / .7)); }
+  #jv-teclado-btn:hover, #jv-teclado-btn.ativo, #jv-teclado-btn.apontado { border-color:rgb(var(--jv-acento-rgb, 143 240 228) / .7); color:#fff;
+    box-shadow:inset 0 0 22px rgb(var(--jv-acento-rgb, 143 240 228) / .18), 0 0 26px rgb(var(--jv-acento-rgb, 143 240 228) / .35); }
+  #jv-teclado-btn.ativo::after { content:""; position:absolute; inset:-5px; border:1px solid rgb(var(--jv-acento-rgb, 143 240 228) / .5);
+    animation:jv-tecla-pulso 1.6s ease-out infinite; pointer-events:none; }
+  @keyframes jv-tecla-pulso { from { opacity:.9; transform:scale(.92); } to { opacity:0; transform:scale(1.18); } }
+  @media (prefers-reduced-motion: reduce) { #jv-teclado-btn.ativo::after { animation:none; opacity:.6; } }
   #jv-teclado { position:absolute; left:50%; bottom:calc(100% + 12px); transform:translateX(-50%);
     width:min(640px, calc(100vw - 32px)); box-sizing:border-box; padding:10px 12px 12px; border-radius:14px; text-align:left;
     background:var(--jv-painel, rgba(10,38,31,.94)); border:1px solid rgb(var(--jv-borda-rgb, 140 240 225) / .45);
