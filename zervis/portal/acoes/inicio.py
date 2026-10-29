@@ -156,6 +156,10 @@ class AcoesInicio(Pagina):
         """O que o Zé fez e onde tropeçou (ADR 0025), do mais recente ao mais antigo."""
         return {"itens": atividade.PADRAO.listar(300), "resumo": atividade.PADRAO.resumo()}
 
+    def autoconhecimento(self) -> dict[str, Any]:
+        """O Zé por ele mesmo, em dados (ADR 0045): as apresentações da Imersão saem daqui."""
+        return dict(self.n.autoconhecimento())
+
     def registro_tecnico(self, dados: dict[str, Any]) -> dict[str, Any]:
         """As últimas linhas do registro do serviço, sem segredos; `nivel`: erros, avisos, tudo.
         O nível sai do texto da linha: o journal guarda tudo o que o Zé escreve num nível só."""

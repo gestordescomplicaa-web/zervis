@@ -783,6 +783,103 @@
      "conta": "Saldo de API: US$ 3,20 · S2.1 Pro."
     }
    }
+  },
+  "autoconhecimento": {
+   "agora": {
+    "quem_responde": "Quem responde é o cérebro completo: Exemplo, com o Modelo Exemplo.",
+    "cerebro": "Exemplo, com o Modelo Exemplo",
+    "modelo": "Modelo Exemplo",
+    "provedor": "Exemplo",
+    "reserva": "Exemplo",
+    "rapidas": "Exemplo, com o Modelo Rápido, sempre",
+    "rapidas_agora": false,
+    "modelo_das_rapidas": "Modelo Rápido",
+    "voz": "Exemplo",
+    "escuta": "Exemplo",
+    "live": "Exemplo",
+    "modo": "Normal",
+    "ativacao": "Exemplo",
+    "espera": "Exemplo",
+    "maquina": "este computador (Linux)",
+    "versao": "0.0.0"
+   },
+   "capacidades": {
+    "ferramentas": 2,
+    "grupos": [
+     {
+      "chave": "sessoes",
+      "nome": "Sessões de código",
+      "faz": "abre, acompanha e conduz sessões com os agentes",
+      "ferramentas": [
+       "sessoes_listar",
+       "sessao_criar"
+      ],
+      "livres": 1
+     }
+    ],
+    "skills": [
+     {
+      "nome": "exemplo",
+      "descricao": "Exemplo",
+      "usos": 2
+     }
+    ],
+    "conectores": [
+     {
+      "nome": "exemplo",
+      "livres": 3,
+      "bloqueadas": 1
+     }
+    ],
+    "sessoes": [
+     {
+      "nome": "Exemplo",
+      "agente": "Claude",
+      "estado": "parada"
+     }
+    ],
+    "automacoes": [
+     {
+      "nome": "Exemplo",
+      "agenda": "todo dia 08:00",
+      "ativa": true
+     }
+    ],
+    "lembrancas": 3,
+    "paginas": 10,
+    "whatsapp": "desligado"
+   },
+   "historico": {
+    "dias": 7,
+    "contagem": {
+     "execucao": 4,
+     "negada": 0,
+     "falha": 1,
+     "nao_entendi": 0,
+     "correcao": 0,
+     "pedido": 6
+    },
+    "por_dia": [
+     {
+      "dia": "2026-01-01",
+      "registros": 11,
+      "falhas": 1
+     }
+    ],
+    "mais_usadas": [
+     {
+      "ferramenta": "sessoes_listar",
+      "vezes": 3
+     }
+    ],
+    "recentes": [
+     {
+      "quando": 1767225600.0,
+      "tipo": "pedido",
+      "titulo": "Exemplo"
+     }
+    ]
+   }
   }
  },
  "escritas": {

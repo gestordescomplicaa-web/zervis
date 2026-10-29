@@ -72,6 +72,7 @@ class Acoes:
             "conversa": self.conversa,
             "remoto": self.remoto,
             "atividade": self.atividade,
+            "autoconhecimento": self.autoconhecimento,
             "configuracao": self.configuracao,
             "contas": self.contas,
             "inicio": self.inicio,

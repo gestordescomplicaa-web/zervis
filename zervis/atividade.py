@@ -19,6 +19,8 @@ descarte eventos.
 import re
 import threading
 import time
+from collections import Counter
+from datetime import datetime, timedelta, tzinfo
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +108,34 @@ class Atividade:
                 break
             contagem[item["tipo"]] = contagem.get(item["tipo"], 0) + 1
         return contagem
+
+    def balanco(self, dias: int = 7, fuso: tzinfo | None = None, top: int = 8) -> dict[str, Any]:
+        """Os últimos `dias` dias (hoje incluso) numa passada só, para o Zé dizer o que fez (ADR
+        0045): quantos de cada tipo, registros e falhas por dia no fuso de quem usa, e as
+        ferramentas que mais rodaram."""
+        zona = fuso or datetime.now().astimezone().tzinfo
+        hoje = datetime.now(zona).date()
+        datas = [hoje - timedelta(days=i) for i in range(dias - 1, -1, -1)]
+        por_dia = {d: [0, 0] for d in datas}
+        contagem = dict.fromkeys(TIPOS, 0)
+        usadas: Counter[str] = Counter()
+        for item in self.listar(limite=100_000):
+            dia = datetime.fromtimestamp(float(item.get("quando", 0)), zona).date()
+            if dia < datas[0]:
+                break
+            if dia not in por_dia:  # registro de um relógio adiantado
+                continue
+            tipo = item["tipo"]
+            contagem[tipo] = contagem.get(tipo, 0) + 1
+            por_dia[dia][0] += 1
+            por_dia[dia][1] += tipo == "falha"
+            if tipo in ("execucao", "falha") and item.get("ferramenta"):
+                usadas[str(item["ferramenta"])] += 1
+        return {
+            "contagem": contagem,
+            "por_dia": [(d.isoformat(), n, f) for d, (n, f) in por_dia.items()],
+            "mais_usadas": usadas.most_common(top),
+        }
 
 
 PADRAO = Atividade()  # o registro do Zé em execução (os testes apontam o arquivo para outro lugar)

@@ -119,3 +119,32 @@ def test_suspender_existe_com_confirmacao_falada(tmp_path: Path) -> None:
     acao = catalogo.carregar(tmp_path)["system-suspend"]
     assert (acao.risco, acao.fixos, acao.caminho.name) == (2, ("suspend",), "systemctl")
     assert "system-suspend" not in catalogo.carregar(tmp_path / "vazia")
+
+
+def test_balanco_conta_por_dia_no_fuso_e_as_mais_executadas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import time as relogio
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    fuso = ZoneInfo("America/Sao_Paulo")
+    agora = datetime(2026, 10, 29, 10, 0, tzinfo=fuso)
+    a = Atividade(tmp_path / "atividade.jsonl")
+    for quando, tipo, ferramenta in [
+        (agora - timedelta(days=9), "execucao", "velha"),  # fora da janela
+        (agora - timedelta(days=1), "execucao", "sessoes_listar"),
+        (agora - timedelta(days=1), "falha", "sessoes_listar"),
+        ((agora - timedelta(days=1)).replace(hour=22, minute=30), "pedido", ""),  # 29 em UTC
+        (agora, "execucao", "mcp__n8n__criar"),
+    ]:
+        monkeypatch.setattr(relogio, "time", lambda q=quando: q.timestamp())
+        a.registrar(tipo, "x", ferramenta=ferramenta)
+    monkeypatch.setattr(
+        atividade, "datetime", type("D", (datetime,), {"now": lambda tz=None: agora})
+    )
+    b = a.balanco(7, fuso)
+    assert b["por_dia"][-1] == ("2026-10-29", 1, 0) and b["por_dia"][-2] == ("2026-10-28", 3, 1)
+    assert len(b["por_dia"]) == 7 and b["por_dia"][0][0] == "2026-10-23"
+    assert b["contagem"]["execucao"] == 2 and b["contagem"]["pedido"] == 1
+    assert b["mais_usadas"] == [("sessoes_listar", 2), ("mcp__n8n__criar", 1)]
