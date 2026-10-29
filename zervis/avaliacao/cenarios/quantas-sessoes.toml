@@ -1,0 +1,14 @@
+# Pergunta sobre o estado real (caso de 28/10/2026): consulta, não inventa.
+nome = "Quantas sessões: consulta e responde com o número"
+pedido = "Quantas sessões temos em aberto?"
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "estado": "parada"},
+ {"id": "s2", "nome": "Notícias", "estado": "parada"},
+ {"id": "s3", "nome": "Site da Clínica", "estado": "trabalhando"}]'''
+
+[espera]
+usa = ["sessoes_listar"]
+nao_usa = ["sessao_criar", "sessao_enviar"]
+resposta_alguma = ["três", "3"]

@@ -5,7 +5,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -191,3 +191,57 @@ def test_a_referencia_e_a_ultima_rodada_de_cada_cenario(
     (tmp_path / "3.json").write_text(rel(b=None))  # o "b" sem nota não conta
     anterior = {c["arquivo"]: c["rodadas"][0]["passou"] for c in executor._anterior()["cenarios"]}
     assert anterior == {"a": True, "b": True}
+
+
+def test_cada_rodada_anota_os_tokens_por_parte() -> None:
+    """Pedido de 28/10/2026: medir qualidade e custo juntos, antes e depois de cada corte."""
+
+    class ComUso(Roteiro):
+        uso: ClassVar[dict[str, int]] = {
+            "input_tokens": 300,
+            "cache_read_input_tokens": 15000,
+            "output_tokens": 20,
+        }
+        modelo = "gpt-5.6-luna"
+
+    rodada = asyncio.run(avaliacao.rodar(_cenario(), lambda f: ComUso(f, [], "Oi."), "P"))
+    assert rodada.tokens == 15320 and rodada.via == "completo"
+    assert rodada.gastos[0]["modelo"] == "gpt-5.6-luna"
+
+    class Roteado(Roteiro):
+        gastos: ClassVar[list[dict[str, Any]]] = [
+            {"rotulo": "rapida", "modelo": "s", "entrada": 4, "cache_lido": 1400,
+             "cache_criado": 0, "saida": 20},
+        ]  # fmt: skip
+
+    rodada = asyncio.run(avaliacao.rodar(_cenario(), lambda f: Roteado(f, [], "Oi."), "P"))
+    assert rodada.tokens == 1424 and rodada.via == "rapida"
+
+
+def test_resumo_mostra_os_tokens_e_compara_os_mesmos_cenarios() -> None:
+    from zervis.avaliacao.__main__ import resumo
+
+    def rel(**tokens: int) -> dict[str, Any]:
+        return {"cenarios": [{"arquivo": a, "rodadas": [{"passou": True, "tokens": t}]}
+                             for a, t in tokens.items()]}  # fmt: skip
+
+    texto = resumo(rel(a=1500, b=30000), rel(a=16000, c=99000))
+    assert "Tokens: 15,8 mil por cenário, em média (antes 16,0 mil → agora 1,5 mil nos mesmos)" in (
+        texto
+    )
+
+
+def test_a_referencia_e_do_mesmo_cerebro(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from zervis.avaliacao import __main__ as executor
+
+    monkeypatch.setattr(executor, "HISTORICO", tmp_path)
+
+    def rel(rotulo: str, passou: bool) -> str:
+        return json.dumps(
+            {"rotulo": rotulo, "cenarios": [{"arquivo": "a", "rodadas": [{"passou": passou}]}]}
+        )
+
+    (tmp_path / "1.json").write_text(rel("codex:gpt", True))
+    (tmp_path / "2.json").write_text(rel("claude:sonnet", False))
+    assert executor._anterior("codex:gpt")["cenarios"][0]["rodadas"][0]["passou"] is True
+    assert executor._anterior("claude:sonnet")["cenarios"][0]["rodadas"][0]["passou"] is False

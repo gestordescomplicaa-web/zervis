@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- A bateria de avaliação (`zervis avaliar`) roda com o cérebro escolhido no Zé (Claude ou Codex,
+  `--cerebro`) e com as respostas rápidas na frente (`--rapidas`), e anota os tokens de cada
+  cenário: a nota e o custo juntos, comparados com a rodada anterior do mesmo cérebro. Três
+  cenários novos: conversa simples, "quantas sessões temos?" e pesquisa na internet. Primeira
+  rodada no Codex (28/10/2026): 100%, 38 mil tokens por cenário; com as rápidas, 93% (a falha é
+  do próprio Codex, que também erra 1 em 3 sem elas) e a conversa simples cai de 15,9 mil para
+  1,4 mil tokens.
 - A Conversa mostra o que cada resposta gastou de tokens: uma linha curta embaixo dela ("27 mil
   tokens · 73% em cache") e, ao abrir, cada parte, com o modelo (as respostas rápidas, o cérebro e
   a pesquisa na internet) e as ferramentas usadas. No topo, o dia: respostas, total, média por

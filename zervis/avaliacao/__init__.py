@@ -58,6 +58,18 @@ class Rodada:
     aprovacoes: list[str] = field(default_factory=list)
     erro: str = ""
     segundos: float = 0.0
+    # O que a resposta gastou, por parte (a via rápida, o cérebro), como na Conversa.
+    gastos: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def tokens(self) -> int:
+        return sum(
+            g["entrada"] + g["cache_lido"] + g["cache_criado"] + g["saida"] for g in self.gastos
+        )
+
+    @property
+    def via(self) -> str:
+        return "+".join(g["rotulo"] for g in self.gastos)
 
 
 @dataclass(frozen=True)
@@ -106,8 +118,10 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         conectores,
         manutencao,
         navegador,
+        pesquisa,
         sessoes,
         sistema,
+        sobre,
         tela,
     )
     from zervis.sistema import catalogo
@@ -124,7 +138,13 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         *navegador.ferramentas(),
         *conectores.ferramentas(),
         *atualizacoes.ferramentas(),
+        *sobre.ferramentas(lambda: ""),
+        *pesquisa.ferramentas(_sem_pesquisa),
     ]
+
+
+async def _sem_pesquisa(_pedido: str) -> str:
+    return ""  # só a definição; quem responde é o cenário
 
 
 def simuladas(cenario: Cenario, rodada: Rodada) -> list[SdkMcpTool[Any]]:
@@ -176,10 +196,22 @@ async def rodar(cenario: Cenario, criar: CriarCerebro, persona: str) -> Rodada:
             elif isinstance(evento, Fim) and evento.erro:
                 rodada.erro = evento.erro
         rodada.resposta = "".join(partes).strip()
+        rodada.gastos = _gastos(cerebro)
     finally:
         await cerebro.close()
         rodada.segundos = time.monotonic() - inicio
     return rodada
+
+
+def _gastos(cerebro: Cerebro) -> list[dict[str, Any]]:
+    """As partes do gasto: a via rápida já as separa; o cérebro sozinho é uma parte só."""
+    from zervis.cerebro.consumo import gasto
+
+    if partes := list(getattr(cerebro, "gastos", None) or []):
+        return partes
+    modelo = str(getattr(cerebro, "modelo_usado", None) or getattr(cerebro, "modelo", "") or "")
+    parte = gasto(getattr(cerebro, "uso", None), "completo", modelo)
+    return [parte] if parte else []
 
 
 # --- julgar -------------------------------------------------------------------------------------
