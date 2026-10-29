@@ -59,17 +59,24 @@ function materiais(T, uniformes) {
           vA *= smoothstep(.05, .3, jvBoca);  // teeth only with the lips apart
         #endif
         gl_PointSize = aSel * .0193 * jvPx * (.7 + .6 * aRnd.x) * (1. + faixa * 1.4 + boca * .8) / (-mv.z);
+        #ifdef JV_HALO
+          gl_PointSize *= 3.4; vA *= .11;  // the soft glow around each point (bloom, without a post pass)
+        #endif
       }`,
     fragmentShader: `uniform vec3 jvCor; uniform float jvGanho, jvTremor; varying float vA, vQuente;
       void main() {
         float d = length(gl_PointCoord - .5); if (d > .5) discard;
         float a = smoothstep(.5, 0., d); a *= a;
+        #ifdef JV_HALO
+          a = exp(-d * d * 16.);
+        #endif
         vec3 c = mix(jvCor, vec3(1.), vQuente * .75) * a * vA * jvGanho * jvTremor;
         gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)));` + SAIDA + "}",
   });
   return {
     pontos: pontos({}),
     dentes: pontos({ JV_DENTES: 1 }),
+    halo: pontos({ JV_HALO: 1 }),
     linhas: new T.ShaderMaterial({
       ...luz, uniforms: uniformes,
       vertexShader: VERTICE + `
@@ -212,6 +219,7 @@ export function constelacao(T, cabeca, uniformes, densidade = DENSIDADE) {
     geometrias.push(gl); ligacoes += pares.length / 2;
     junta(new T.LineSegments(gl, M.linhas), 4);
     junta(new T.Points(g, M.pontos), 5);
+    if (tipo !== "pescoco") junta(new T.Points(g, M.halo), 2);
     if (tipo === "pele") {  // the mouth glows with the voice: centre of what Boca_Aberta moves most
       const alvo = g.morphAttributes.position?.[m.morphTargetDictionary?.Boca_Aberta];
       if (alvo) {
@@ -237,7 +245,88 @@ export function constelacao(T, cabeca, uniformes, densidade = DENSIDADE) {
     tela(px) { uniformes.jvPx.value = px; },
     descartar() {
       geometrias.forEach(g => g.dispose());
-      [M.pontos, M.dentes, M.linhas, M.oclusor, ...brilhos].forEach(m => m.dispose());
+      [M.pontos, M.dentes, M.halo, M.linhas, M.oclusor, ...brilhos].forEach(m => m.dispose());
     },
+  };
+}
+
+// The projector under the Zé and the rings around him (the lab's scene, sized to the avatar: the head
+// is ALTURA = 3.15 units tall, centred a little below 0). It stays still while the head sways and
+// spins; the rings turn faster with the links (jvFluxo).
+export function projetor(T, uniformes) {
+  const luz = { transparent: true, depthWrite: false, blending: T.CustomBlending, blendSrc: T.OneFactor, blendDst: T.OneFactor };
+  const grupo = new T.Group(); grupo.name = "projetor";
+  const materiais = [], geometrias = [];
+  const anel = (r1, r2, { dash = 1, fill = 1, speed = 0, alpha = .5 } = {}) => {
+    const m = new T.ShaderMaterial({
+      ...luz, side: T.DoubleSide,
+      uniforms: { ...uniformes, uDash: { value: dash }, uFill: { value: fill }, uSpeed: { value: speed }, uAlpha: { value: alpha } },
+      vertexShader: "varying vec3 vP; void main() { vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
+      fragmentShader: `uniform vec3 jvCor; uniform float jvTempo, jvFluxo, jvGanho, uDash, uFill, uSpeed, uAlpha; varying vec3 vP;
+        void main() { float a = atan(vP.y, vP.x) / 6.2831853 + .5;
+          float on = step(fract(a * uDash + jvTempo * uSpeed * (.6 + jvFluxo)), uFill);
+          vec3 c = jvCor * on * uAlpha * jvGanho; gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)));` + SAIDA + "}",
+    });
+    const g = new T.RingGeometry(r1, r2, 192, 1); materiais.push(m); geometrias.push(g);
+    return new T.Mesh(g, m);
+  };
+  const BASE = -2.05;
+  const chao = new T.Group(); chao.rotation.x = -Math.PI / 2; chao.position.y = BASE; grupo.add(chao);
+  chao.add(anel(.95, .962, { alpha: .55 }), anel(1.13, 1.18, { dash: 48, fill: .55, speed: .02, alpha: .4 }),
+    anel(1.32, 1.34, { dash: 3, fill: .7, speed: -.03, alpha: .45 }), anel(1.58, 1.67, { dash: 120, fill: .18, speed: .008, alpha: .3 }),
+    anel(1.95, 1.958, { dash: 6, fill: .08, speed: .05, alpha: .55 }));
+  const disco = new T.Mesh(new T.CircleGeometry(.95, 96), new T.ShaderMaterial({
+    ...luz, uniforms: uniformes,
+    vertexShader: "varying vec2 vP; void main() { vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }",
+    fragmentShader: `uniform vec3 jvCor; uniform float jvEnergia, jvGanho; varying vec2 vP;
+      void main() { float r = length(vP) / .95; vec3 c = jvCor * (.1 + .25 * jvEnergia) * pow(1. - r, 1.5) * jvGanho;
+        gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)));` + SAIDA + "}",
+  }));
+  chao.add(disco); materiais.push(disco.material); geometrias.push(disco.geometry);
+  // The light beam from the projector up through the head.
+  const feixe = new T.Mesh(new T.CylinderGeometry(1.73, .95, 3.9, 96, 1, true), new T.ShaderMaterial({
+    ...luz, side: T.DoubleSide, uniforms: uniformes,
+    vertexShader: `varying vec2 vUv; varying vec3 vN, vV; void main() { vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.);
+      vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 jvCor; uniform float jvTempo, jvEnergia, jvGanho; varying vec2 vUv; varying vec3 vN, vV;
+      void main() { float borda = pow(1. - abs(dot(normalize(vN), normalize(vV))), 1.4);
+        float risco = .55 + .45 * sin(vUv.x * 6.2831853 * 36. + jvTempo * .6) * sin(vUv.x * 6.2831853 * 7. - jvTempo * .3);
+        vec3 c = jvCor * pow(1. - vUv.y, 1.8) * (.15 + borda) * risco * (.03 + .04 * jvEnergia) * jvGanho;
+        gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)));` + SAIDA + "}",
+  }));
+  feixe.position.y = BASE + 1.95; grupo.add(feixe); materiais.push(feixe.material); geometrias.push(feixe.geometry);
+  // Motes rising in the beam.
+  const N = 320, sem = new Float32Array(N * 4);
+  for (let i = 0; i < sem.length; i++) sem[i] = aleatorio();
+  const gm = new T.BufferGeometry();
+  gm.setAttribute("position", new T.BufferAttribute(new Float32Array(N * 3), 3));
+  gm.setAttribute("aS", new T.BufferAttribute(sem, 4));
+  const motes = new T.Points(gm, new T.ShaderMaterial({
+    ...luz, uniforms: uniformes,
+    vertexShader: `attribute vec4 aS; uniform float jvTempo, jvEnergia, jvPx; varying float vA;
+      void main() { float y = fract(aS.y + jvTempo * (.03 + .05 * aS.z) * (.6 + jvEnergia));
+        float r = (.95 + .7 * y) * sqrt(aS.x), an = aS.w * 6.2831853 + jvTempo * .08 * (aS.z - .5);
+        vec4 mv = modelViewMatrix * vec4(cos(an) * r, ${BASE.toFixed(2)} + y * 3.9, sin(an) * r, 1.); gl_Position = projectionMatrix * mv;
+        vA = smoothstep(0., .1, y) * (1. - y) * (.4 + .6 * aS.z); gl_PointSize = (2. + 3. * aS.x) * jvPx * .0008 / (-mv.z) * 11.7; }`,
+    fragmentShader: `uniform vec3 jvCor; uniform float jvGanho; varying float vA;
+      void main() { float d = length(gl_PointCoord - .5); if (d > .5) discard;
+        vec3 c = jvCor * smoothstep(.5, 0., d) * vA * .7 * jvGanho; gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)));` + SAIDA + "}",
+  }));
+  motes.frustumCulled = false; grupo.add(motes); materiais.push(motes.material); geometrias.push(gm);
+  // Rings orbiting the head.
+  const orbita = new T.Group(); orbita.position.y = -.05; grupo.add(orbita);
+  const o1 = anel(2.08, 2.095, { dash: 4, fill: .62, speed: .04, alpha: .4 }), o2 = anel(2.33, 2.355, { dash: 90, fill: .25, speed: -.015, alpha: .28 });
+  const o3 = anel(2.5, 2.507, { dash: 2, fill: .15, speed: .07, alpha: .5 });
+  o1.rotation.x = o2.rotation.x = Math.PI / 2 - .22; o3.rotation.set(Math.PI / 2 - .5, .35, 0);
+  orbita.add(o1, o2, o3);
+  return {
+    grupo,
+    atualizar(dt, reduzir) {
+      if (reduzir) return;
+      const f = uniformes.jvFluxo?.value ?? .3;
+      orbita.rotation.y += dt * .15 * (.6 + f); o3.rotation.z += dt * .25 * (.6 + f);
+      orbita.scale.setScalar(1 + (uniformes.jvEnergia?.value ?? 0) * .03);
+    },
+    descartar() { geometrias.forEach(g => g.dispose()); materiais.forEach(m => m.dispose()); },
   };
 }

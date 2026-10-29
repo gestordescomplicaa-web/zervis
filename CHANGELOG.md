@@ -4,7 +4,11 @@
 
 - O Zé da Imersão virou uma constelação de luz: o chimpanzé feito de pontos ligados aos vizinhos,
   com pulsos correndo pelas ligações, brilho na borda, varredura, falhas de sinal e a montagem
-  quando ele aparece, na cor do tema. Gestos, boca, piscar, emoções e tontura seguem iguais.
+  quando ele aparece, na cor do tema, sobre um projetor com feixe de luz e anéis orbitando. Gestos,
+  boca, piscar, emoções e tontura seguem iguais.
+- Fundo da Imersão: a câmera, como antes, ou o escuro animado (grade em perspectiva e uma rede de
+  pontos que se conectam), na tecla F ou em Configurações → Fundo. No escuro a câmera continua
+  lendo as mãos; só a imagem some. A escolha fica guardada.
 - Os testes da Imersão (`make check-imersivo`) voltaram a abrir a página: desde a troca de nome do
   pacote, procuravam a pasta antiga e nada provava os gestos, as mãos e o avatar.
 - Em Modelos → Respostas rápidas, "Só no Live" e "Sempre" voltam a funcionar e valem no

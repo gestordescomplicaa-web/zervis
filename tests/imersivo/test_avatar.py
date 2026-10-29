@@ -218,6 +218,23 @@ async def main():
                 await asyncio.sleep(.8)
                 await check('rapid visual changes leave one live scene and one label', '''jarvisAvatar.montados===1
                     &&document.querySelectorAll('.jv-avatar-cena').length===1&&document.querySelectorAll('.jv-avatar-identidade').length===1''')
+                # The background (29/10/2026): the camera or the dark animated scene; the video only
+                # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
+                await ev('jarvisFundo.usar("escuro")')
+                await asyncio.sleep(.5)
+                await check('the dark background hides the camera image and draws its own scene', '''(() => {
+                    const cam = document.getElementById("cam"), cena = document.getElementById("jv-fundo-cena");
+                    return document.body.classList.contains("jv-escuro") && cam.getBoundingClientRect().width <= 2
+                      && getComputedStyle(cena).display === "block" && cena.width > 0
+                      && localStorage.getItem("jv-fundo") === "escuro"; })()''')
+                await ev('jarvisConfig.abrir()')
+                await check('the D menu marks Fundo: Escuro', 'document.querySelector("[data-config=\'fundo:escuro\']").classList.contains("ativo")')
+                await ev('jarvisConfig.alternar();document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"f",bubbles:true}))')
+                await asyncio.sleep(.3)
+                await check('F brings the camera back', '!document.body.classList.contains("jv-escuro") && jarvisFundo.modo === "camera"')
+                await check('the constellation draws past the card, the card keeps its size', '''(() => {
+                    const r = document.querySelector(".ringcard").getBoundingClientRect(), c = document.querySelector("canvas.jv-avatar-cena").getBoundingClientRect();
+                    return c.width > r.width * 1.3; })()''')
                 await ev('document.querySelector(".ringcard").remove()')
                 await asyncio.sleep(.3)
                 await check('removing the widget releases the live scene', 'jarvisAvatar.montados===0')

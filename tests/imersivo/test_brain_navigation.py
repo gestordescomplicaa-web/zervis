@@ -107,7 +107,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/stage.html'):
             body, kind = HARNESS.encode(), 'text/html'
-        elif self.path in ['/jarvis-paineis.js', '/jarvis-cerebro.js', '/jarvis-grafo.js', '/jarvis-workspace.css', '/jarvis-maos.js', '/jarvis-tema.js', '/jarvis-tema.css', '/jarvis-config.js', '/jarvis-controle.js', '/jarvis-teclado.js', '/jarvis-avatar.js', '/avatar/jarvis-chimpanze.js', '/avatar/jarvis-constelacao.js', '/avatar/jarvis-chimpanze.glb', '/avatar/jarvis-chimpanze-frente.png', '/avatar/jarvis-chimpanze-perfil.png', '/avatar/jarvis-chimpanze-costas.png']:
+        elif self.path in ['/jarvis-paineis.js', '/jarvis-cerebro.js', '/jarvis-grafo.js', '/jarvis-workspace.css', '/jarvis-maos.js', '/jarvis-tema.js', '/jarvis-fundo.js', '/jarvis-tema.css', '/jarvis-config.js', '/jarvis-controle.js', '/jarvis-teclado.js', '/jarvis-avatar.js', '/avatar/jarvis-chimpanze.js', '/avatar/jarvis-constelacao.js', '/avatar/jarvis-chimpanze.glb', '/avatar/jarvis-chimpanze-frente.png', '/avatar/jarvis-chimpanze-perfil.png', '/avatar/jarvis-chimpanze-costas.png']:
             body, kind = (ROOT / self.path.removeprefix('/')).read_bytes(), 'text/css' if self.path.endswith('.css') else 'model/gltf-binary' if self.path.endswith('.glb') else 'image/png' if self.path.endswith('.png') else 'text/javascript'
         elif self.path.startswith('/jarvis/'):
             name = self.path.removeprefix('/jarvis/')

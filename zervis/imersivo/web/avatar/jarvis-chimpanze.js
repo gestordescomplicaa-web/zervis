@@ -13,7 +13,7 @@
 // variations avatar/expressoes_blender.py adds on top of the untouched base mesh.
 // Since 29/10/2026 the default look is the constellation (jarvis-constelacao.js), in the theme colour;
 // the Blender-style skin above stays as estilo "classico" until the new look is approved.
-import { constelacao } from "./jarvis-constelacao.js";
+import { constelacao, projetor } from "./jarvis-constelacao.js";
 
 const URL_MODELO = new URL("./jarvis-chimpanze.glb", import.meta.url).href;
 const VISTAS = ["frente", "perfil", "costas"].map(v => new URL(`./jarvis-chimpanze-${v}.png`, import.meta.url).href);
@@ -257,6 +257,7 @@ export async function criarChimpanze(T, GLTFLoader, { estilo = "constelacao" } =
   });
   if (!rostos.length || !pele) throw new Error("o chimpanzé veio sem shape keys ou sem a pele");
   const visual = classico ? null : constelacao(T, cabeca, uniformes);
+  const cenario = classico ? null : projetor(T, uniformes);  // the avatar adds it outside the spin
   antigos.forEach(m => { for (const v of Object.values(m)) if (v?.isTexture) v.dispose(); m.dispose(); });
   const fundoDaPele = classico ? profundidade(T, uniformes) : null;
   for (const o of classico ? [...rostos] : []) {
@@ -332,11 +333,13 @@ export async function criarChimpanze(T, GLTFLoader, { estilo = "constelacao" } =
     fios: classico ? FIOS : 0, pontos: visual?.pontos ?? 0, ligacoes: visual?.ligacoes ?? 0,
     // The drawing-buffer height: the constellation sizes its points in pixels from it.
     tela(px) { visual?.tela(px); },
+    cenario: cenario?.grupo ?? null,
+    get falha() { return uniformes.jvFalha.value; },
     montar() { visual?.montar(); },
     get emocao() { return peso > .5 ? emocao : ""; },
     atualizar(t, dt, amplitude, estado, corEstado, reduzir, sentimento = "") {
       uniformes.jvTempo.value = t; uniformes.jvEnergia.value = amplitude; agoraT = t;
-      visual?.atualizar(t, dt, estado, reduzir);
+      visual?.atualizar(t, dt, estado, reduzir); cenario?.atualizar(dt, reduzir);
       // Dizzy (spun too much by hand): fades in fast, out over the last second.
       tonto = reduzir || t > tontoAte ? 0 : Math.min(1, (tontoAte - t) / 1, (t - tontoInicio) / .3);
       // An emotion fades in and out; a change of emotion first fades the old one.
@@ -426,7 +429,7 @@ export async function criarChimpanze(T, GLTFLoader, { estilo = "constelacao" } =
     chave(nome) { return atual[nome] ?? null; },
     descartar() {
       const gs = new Set(), ms = new Set([...materiais.values(), haloMat, marcasMat, ...(fios ? [fios.material] : [])]);
-      visual?.descartar();
+      visual?.descartar(); cenario?.descartar();
       grupo.traverse(o => { if (o.geometry) gs.add(o.geometry); });
       gs.forEach(g => g.dispose()); ms.forEach(m => m.dispose()); vistas.forEach(v => v.dispose());
     },
