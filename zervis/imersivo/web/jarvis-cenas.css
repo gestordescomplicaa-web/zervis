@@ -98,3 +98,8 @@
 @media (prefers-reduced-motion: reduce) {
   .jv-c-titulo .traco, .jv-c-titulo p, .jv-c-etapas .etapa, .jv-c-tempo .trilho, .jv-c-tempo .marco { animation-duration: .01s; }
   .jv-c-tempo .luz { animation: none; } }
+
+/* bars spread over the panel instead of piling at the top */
+.jv-cena-barras .jv-h-corpo > div:first-child { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.jv-cena-barras .jv-barras { gap: clamp(7px, 4cqh, 18px); }
+.jv-cena-barras .jv-barra { font-size: clamp(11px, 3.4cqh, 14px); }

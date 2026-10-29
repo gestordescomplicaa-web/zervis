@@ -15,7 +15,9 @@
   Vai para o canto, e os blocos aparecem um a um, ligados a ele: título, número que conta,
   barras, linha, rosca, etapas acendendo, rede com pacotes, ondas que se somam, formas 3D (hélice
   do DNA, átomo, rede neural, galáxia, superfície ondulando), globo com arcos, comparação, lista e
-  linha do tempo. Número sem fonte aparece como ILUSTRATIVO. A tecla E mostra os exemplos.
+  linha do tempo. Número sem fonte aparece como ILUSTRATIVO. A tecla E mostra os exemplos. Perguntas
+  sobre ele mesmo ("mostra num gráfico o que você fez", "quanto você falha") viram cena com os
+  números dele.
 - Fundo da Imersão: a câmera, como antes, ou o escuro animado (grade em perspectiva e uma rede de
   pontos que se conectam), na tecla F ou em Configurações → Fundo. No escuro a câmera continua
   lendo as mãos; só a imagem some. A escolha fica guardada.

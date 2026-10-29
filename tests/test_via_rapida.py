@@ -132,6 +132,10 @@ def test_pedido_de_acao_passa_ao_completo_com_aviso_e_a_conversa_anterior() -> N
         ("[x] Quanto é dezessete vezes três?", False),
         ("[x] Me conta uma curiosidade sobre polvos", False),
         ("[x] Valeu", False),
+        # Explicar com a janela aberta é uma cena na tela (ADR 0047); fechada, fica falado.
+        ("[x] (Janela do Zé: aberta, é a janela ativa) Zé, me explica o que é MCP", True),
+        ("[x] (Janela do Zé: aberta, em segundo plano) Se apresenta", True),
+        ("[x] (Janela do Zé: fechada (não há Núcleo na tela).) Me explica o que é MCP", False),
     ],
 )
 def test_acao_clara_vai_direto_ao_completo(pedido: str, completo: bool) -> None:

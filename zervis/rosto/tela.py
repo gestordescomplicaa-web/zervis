@@ -49,7 +49,8 @@ ACOES = {
     "girar": "valor: voltas (1 a 3, padrão 1). O Zé dá uma volta completa na tela",
     "apresentar": "valor: quem (o Zé vai para o canto e mostra, em painéis holográficos, os "
     "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente) "
-    "ou encerrar (recolhe os painéis). Para 'se apresenta', 'mostra o que você faz'",
+    "ou encerrar (recolhe os painéis). Só para 'se apresenta' sem assunto; um aspecto seu (um "
+    "gráfico do que fez, conexões, falhas) é ze_sobre e tela_explicar",
     "expressao": "valor: alegria, duvida, raiva, tristeza ou neutro; segundos (opcional, "
     "padrão 6). O rosto do avatar; numa resposta, prefira a marca no começo do texto",
     "tema": "alvo: original, roxo, marinho, esmeralda ou grafite",

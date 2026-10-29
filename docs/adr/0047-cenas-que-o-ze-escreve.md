@@ -32,6 +32,24 @@ efeitos, ondas e 3D animados, no estilo do laboratório do holograma. Quer tamb�
    vira a ação `explicar` com a cena; a tecla E passa pelos exemplos (MCP, som, DNA, rede neural);
    `?cena=<exemplo>` abre um direto.
 
+6. **O pedido chega ao cérebro que tem a ferramenta.** As respostas rápidas não têm ferramentas;
+   com a janela aberta, "explica", "ensina" e "apresenta" vão direto ao cérebro completo
+   (`rapido.precisa_do_completo`). Com a janela fechada, a explicação continua falada e rápida.
+7. **Sobre ele mesmo, os números vêm do `ze_sobre`.** Qualquer aspecto ("mostra num gráfico o que
+   você fez", "quanto você falha", "com quem você está ligado") é `ze_sobre` e depois uma cena
+   com fonte "meus dados"; só "se apresenta", sem assunto, é a apresentação pronta do ADR 0046.
+
+## Teste com o cérebro de verdade (29/10/2026)
+
+16 pedidos com a janela aberta, ferramentas simuladas como na bateria, o retrato real no
+`ze_sobre`, Codex (gpt-5.6-luna). Na primeira rodada o modelo mandou só o tipo e o título de cada
+bloco: o esquema listava apenas esses campos, e ele segue o esquema à risca. Com todos os campos
+no esquema, os 8 temas gerais (energia solar, juros compostos, n8n, Revolução Francesa, buraco
+negro, funil de vendas, vacina, história da internet) viraram cenas com blocos variados, de 6 a
+10 s e uns 35 mil tokens. Sobre ele mesmo, três pedidos caíram no Mapa ou na apresentação pronta
+e um buscou no histórico das conversas; com a regra 7, os 7 viraram cenas com os números do
+retrato (uns 55 mil tokens: o `ze_sobre` é uma chamada a mais), e "se apresenta" ficou na pronta.
+
 ## Consequências
 
 - A fala de cada passo é a legenda; o Zé diz as mesmas frases na resposta, e a página anda pelo

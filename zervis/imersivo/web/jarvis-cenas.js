@@ -26,7 +26,7 @@
   const lista = (v, n) => (Array.isArray(v) ? v : []).slice(0, n);
   const COM_NUMEROS = new Set(["numero", "barras", "linha", "rosca"]);
   const TIPOS = {
-    titulo: b => b.texto && { texto: texto(b.texto, 70), subtitulo: texto(b.subtitulo, 110) },
+    titulo: b => (b.texto || b.titulo) && { texto: texto(b.texto || b.titulo, 70), subtitulo: texto(b.subtitulo, 110) },
     numero: b => numero(b.valor) != null && { valor: numero(b.valor), unidade: texto(b.unidade, 16), prefixo: texto(b.prefixo, 6),
       rotulo: texto(b.rotulo || b.titulo, 60), detalhe: texto(b.detalhe, 90), de: numero(b.de) },
     barras: b => { const itens = lista(b.itens, 8).map(i => ({ nome: texto(i?.nome, 40), valor: numero(i?.valor) })).filter(i => i.nome && i.valor != null);
@@ -64,12 +64,18 @@
         const f = TIPOS[b?.tipo], ok = f && total < 16 && f(b || {});
         if (!ok) { ignorados.push(String(b?.tipo ?? "?")); continue; }
         total++;
-        blocos.push({ tipo: b.tipo, titulo: texto(b.titulo, 48), fonte: texto(b.fonte, 40), ilustrativo: !!b.ilustrativo, ...ok });
+        // "exemplo ilustrativo" written as a source is the ILUSTRATIVO tag, not a source
+        const fonte = texto(b.fonte, 40), deExemplo = /ilustrativ|exemplo|hipot[eé]tic/i.test(fonte);
+        blocos.push({ tipo: b.tipo, titulo: texto(b.titulo, 48), fonte: deExemplo ? "" : fonte, ilustrativo: !!b.ilustrativo || deExemplo, ...ok });
       }
       if (blocos.length || p?.fala) passos.push({ fala: texto(p?.fala, 240), blocos, limpar: !!p?.limpar });
     }
     if (!passos.length) throw new Error("cena sem passos que a tela saiba desenhar");
-    return { titulo: texto(cena.titulo, 70), passos, ignorados };
+    // a scene without a title block opens with its own title
+    const titulo = texto(cena.titulo, 70);
+    if (titulo && !passos.some(p => p.blocos.some(b => b.tipo === "titulo")) && passos[0].blocos.length < 4)
+      passos[0].blocos.unshift({ tipo: "titulo", titulo: "", fonte: "", ilustrativo: false, texto: titulo, subtitulo: "" });
+    return { titulo, passos, ignorados };
   }
 
   // ---- layout: a page holds a title and up to four blocks, to the right of the Zé ----
@@ -467,7 +473,6 @@
         };
       }),
     }));
-    if (c.titulo && !c.passos.some(p => p.blocos.some(b => b.tipo === "titulo"))) passos.unshift({ fala: c.titulo });
     atual = c.titulo || "cena";
     palco.roteiro(id, passos);
     return { explicando: true, cena: atual, blocos: n, paginas, ...(c.ignorados.length ? { ignorados: c.ignorados } : {}) };

@@ -11,17 +11,91 @@ from zervis.rosto.tela import ACOES as ACOES_DA_TELA
 from zervis.rosto.tela import CENA, Tela, TelaErro
 
 TAMANHO_DA_CENA = 16_000  # caracteres do JSON; a página ainda limita passos e blocos
-BLOCOS = (
-    "titulo{texto,subtitulo}; numero{valor,unidade,prefixo,rotulo,detalhe,de (o total, desenha o "
-    "anel cheio até valor/de)}; barras{itens:[{nome,valor}],unidade}; "
-    "linha{pontos:[{rotulo,valor}],unidade}; rosca{fatias:[{nome,valor}],centro}; "
-    "etapas{etapas:[{nome,texto}]} (2 a 6); rede{centro,nos:[{nome,texto}]}; "
-    "onda{ondas:[{nome,frequencia 0.3 a 8,amplitude 0 a 1}],soma}; forma3d{forma: esfera, toro, "
-    "helice (DNA), cubo, atomo, galaxia, terreno (superfície ondulando), neural (camadas ligadas) "
-    "ou plexo (rede de pontos), legenda}; globo{pontos:[{nome,lat,lon}],ligar (arcos do primeiro "
-    "aos outros)}; comparar{lados:[{nome,itens:[texto]}] (dois)}; lista{itens:[texto]}; "
-    "linha_tempo{marcos:[{quando,nome}]}"
-)
+FORMAS = ["esfera", "toro", "helice", "cubo", "atomo", "galaxia", "terreno", "neural", "plexo"]
+TIPOS = ["titulo", "numero", "barras", "linha", "rosca", "etapas", "rede", "onda", "forma3d"]
+TIPOS += ["globo", "comparar", "lista", "linha_tempo"]
+
+
+def _texto_(descricao: str = "") -> dict[str, Any]:
+    return {"type": "string", **({"description": descricao} if descricao else {})}
+
+
+def _num(descricao: str = "") -> dict[str, Any]:
+    return {"type": "number", **({"description": descricao} if descricao else {})}
+
+
+def _lista_de(descricao: str, **campos: dict[str, Any]) -> dict[str, Any]:
+    item = {"type": "object", "properties": campos}
+    return {"type": "array", "description": descricao, "items": item}
+
+
+NOME, TEXTO = _texto_(), _texto_()
+# Cada campo diz a que tipo serve: é o esquema que o modelo segue à risca, então o conteúdo de
+# todos os blocos tem de estar aqui (sem ele, o modelo manda só o tipo e o título).
+BLOCO: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "tipo": {"type": "string", "enum": TIPOS},
+        "titulo": _texto_("o nome do painel"),
+        "fonte": _texto_("de onde vêm os números: seus dados, a pesquisa, valor de referência"),
+        "ilustrativo": {"type": "boolean", "description": "números de exemplo, não medidos"},
+        "texto": _texto_("titulo: a frase grande"),
+        "subtitulo": _texto_("titulo"),
+        "valor": _num("numero: o valor"),
+        "de": _num("numero: o total (o anel enche até valor/de)"),
+        "unidade": _texto_("numero, barras, linha"),
+        "prefixo": _texto_("numero: R$, US$"),
+        "rotulo": _texto_("numero: o que o número mede"),
+        "detalhe": _texto_("numero: uma frase curta"),
+        "itens": {
+            "type": "array",
+            "description": "barras: [{nome, valor}]; lista: [texto]",
+            "items": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "object", "properties": {"nome": NOME, "valor": _num()}},
+                ]
+            },
+        },
+        "pontos": _lista_de(
+            "linha: [{rotulo, valor}] em ordem; globo: [{nome, lat, lon}], o primeiro é a origem",
+            rotulo=TEXTO,
+            valor=_num(),
+            nome=NOME,
+            lat=_num(),
+            lon=_num(),
+        ),
+        "fatias": _lista_de("rosca: [{nome, valor}]", nome=NOME, valor=_num()),
+        "centro": _texto_("rosca: o texto no meio; rede: o nó central"),
+        "etapas": _lista_de("etapas: 2 a 6, em ordem", nome=NOME, texto=TEXTO),
+        "nos": _lista_de("rede: até 10, em volta do centro", nome=NOME, texto=TEXTO),
+        "ondas": _lista_de(
+            "onda: até 3",
+            nome=NOME,
+            frequencia=_num("0.3 a 8, relativa"),
+            amplitude=_num("0 a 1"),
+        ),
+        "soma": {"type": "boolean", "description": "onda: desenha a soma das ondas"},
+        "forma": {
+            "type": "string",
+            "enum": FORMAS,
+            "description": "forma3d: helice é o DNA; terreno, uma superfície ondulando; neural, "
+            "camadas ligadas; plexo, uma rede de pontos",
+        },
+        "legenda": _texto_("forma3d: uma frase embaixo"),
+        "ligar": {"type": "boolean", "description": "globo: arcos do primeiro ponto aos outros"},
+        "lados": {
+            "type": "array",
+            "description": "comparar: exatamente dois",
+            "items": {
+                "type": "object",
+                "properties": {"nome": NOME, "itens": {"type": "array", "items": _texto_()}},
+            },
+        },
+        "marcos": _lista_de("linha_tempo: em ordem", quando=TEXTO, nome=NOME),
+    },
+    "required": ["tipo"],
+}
 
 
 def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
@@ -95,12 +169,11 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
         "ou mostrar um assunto e a janela estiver aberta. De 2 a 6 passos; cada passo tem fala "
         "(curta, as mesmas frases que você diz, na mesma ordem) e até 4 blocos; a tela pagina "
         "sozinha (limpar=true começa uma página nova). O primeiro passo costuma ter um titulo. "
-        "Todo bloco aceita titulo. Tipos: "
-        + BLOCOS
-        + ". Números (numero, barras, linha, rosca) levam fonte (de onde vêm: seus dados, a "
-        "pesquisa, um valor de referência) ou ilustrativo=true; nunca mostre número inventado "
-        "como medido. Para conceito, prefira etapas, rede, onda, forma3d, comparar e lista. A "
-        "tecla A ou outra cena tira esta.",
+        "Preencha o conteúdo de cada bloco nos campos do tipo dele (o esquema diz qual campo é "
+        "de qual tipo). Números (numero, barras, linha, rosca) levam fonte (de onde vêm: seus "
+        "dados, a pesquisa, um valor de referência) ou ilustrativo=true; nunca mostre número "
+        "inventado como medido. Para conceito, prefira etapas, rede, onda, forma3d, comparar e "
+        "lista. A tecla A ou outra cena tira esta.",
         {
             "type": "object",
             "properties": {
@@ -112,36 +185,7 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
                         "properties": {
                             "fala": {"type": "string"},
                             "limpar": {"type": "boolean"},
-                            "blocos": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "tipo": {
-                                            "type": "string",
-                                            "enum": [
-                                                "titulo",
-                                                "numero",
-                                                "barras",
-                                                "linha",
-                                                "rosca",
-                                                "etapas",
-                                                "rede",
-                                                "onda",
-                                                "forma3d",
-                                                "globo",
-                                                "comparar",
-                                                "lista",
-                                                "linha_tempo",
-                                            ],
-                                        },
-                                        "titulo": {"type": "string"},
-                                        "fonte": {"type": "string"},
-                                        "ilustrativo": {"type": "boolean"},
-                                    },
-                                    "required": ["tipo"],
-                                },
-                            },
+                            "blocos": {"type": "array", "items": BLOCO},
                         },
                     },
                 },
