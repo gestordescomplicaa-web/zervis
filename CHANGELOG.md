@@ -11,6 +11,11 @@
   por feixes de luz, com uma legenda: Identidade, Atividade (com os números e os registros por
   dia), Conexões (num grafo vivo), Mais executadas e Recentes. Tudo vem do autoconhecimento dele.
   Os painéis são cartões: a mão pega, move, amplia e arremessa para fechar.
+- "Zé, me explica X": com a Imersão aberta, ele monta uma cena animada para explicar o assunto.
+  Vai para o canto, e os blocos aparecem um a um, ligados a ele: título, número que conta,
+  barras, linha, rosca, etapas acendendo, rede com pacotes, ondas que se somam, formas 3D (hélice
+  do DNA, átomo, rede neural, galáxia, superfície ondulando), globo com arcos, comparação, lista e
+  linha do tempo. Número sem fonte aparece como ILUSTRATIVO. A tecla E mostra os exemplos.
 - Fundo da Imersão: a câmera, como antes, ou o escuro animado (grade em perspectiva e uma rede de
   pontos que se conectam), na tecla F ou em Configurações → Fundo. No escuro a câmera continua
   lendo as mãos; só a imagem some. A escolha fica guardada.

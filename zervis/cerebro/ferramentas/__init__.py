@@ -54,6 +54,7 @@ LEITURA = [
     "automacao_lembrete",  # o usuário pediu o lembrete; perguntar "posso?" de novo seria ruído
     "tela_ver",
     "tela_agir",  # só a própria tela do Zé: abrir, mostrar, zoom, tema; tudo reversível
+    "tela_explicar",  # uma cena animada na própria tela; some com a tecla A ou outra cena
     "janela_fechar",  # fechar a própria janela apaga a câmera; abrir (acende) pede confirmação
     "navegador_continuar",  # o resto de uma página que o Zé já leu (só leitura)
     "conectores_listar",

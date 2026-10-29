@@ -57,6 +57,7 @@ ACOES = {
     "calibrar_maos": "começa a calibração guiada das mãos",
     "maos_padrao": "volta à calibração e à câmera originais",
 }
+CENA = "explicar"  # a cena animada (tela_explicar), com a cena em JSON no lugar de alvo e valor
 JANELA = r"class:^(chrome-127\.0\.0\.1__(stage\.html.*|-Default))$"  # o imersivo ou o painel
 CLASSE_PAINEL = "chrome-127.0.0.1__-Default"
 CLASSE = "chrome-127.0.0.1__stage.html"
@@ -178,7 +179,7 @@ class Tela:
         """Executa as ações em ordem. Passeios (com 'aguardar' ou longos) voltam assim que a
         página confirma o início, para o Zé falar enquanto a tela anda."""
         for a in acoes:
-            if a.get("acao") not in ACOES:
+            if a.get("acao") not in ACOES and a.get("acao") != CENA:
                 raise TelaErro(f"ação desconhecida: {a.get('acao')}")
         if acoes and not self.aberto():
             raise TelaErro("a janela do Zé está fechada; ofereça abrir (janela_abrir)")

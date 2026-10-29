@@ -58,6 +58,12 @@
       const v = sem(a.valor ?? a.alvo ?? "quem");
       return v === "encerrar" || v === "fechar" ? window.jarvisApresentacao.encerrar() : window.jarvisApresentacao.apresentar(v || "quem");
     },
+    // A scene the Zé wrote to explain something (ADR 0047): cena = {titulo, passos}; or valor =
+    // the name of one of the examples (mcp, som, dna, ia).
+    explicar: a => {
+      if (!window.jarvisCenas) throw new Error("cenas indisponíveis");
+      return a.cena ? window.jarvisCenas.explicar(a.cena) : window.jarvisCenas.exemplo(sem(a.valor ?? a.alvo));
+    },
     expressao: a => {
       if (!window.jarvisAvatar) throw new Error("avatar indisponível");
       return window.jarvisAvatar.sentir(a.valor ?? a.alvo, a.segundos);
@@ -96,7 +102,7 @@
       teclado: { aberto: !!window.jarvisTeclado?.aberto },
       visual: window.jarvisAvatar ? (window.jarvisAvatar.ativo ? "avatar" : "anel") : "anel",
       fundo: window.jarvisFundo?.modo ?? "camera",
-      apresentacao: { ativa: !!window.jarvisApresentacao?.apresentando, paineis: window.jarvisApresentacao?.paineis ?? [] },
+      apresentacao: { ativa: !!window.jarvisApresentacao?.apresentando, paineis: window.jarvisApresentacao?.paineis ?? [], cena: window.jarvisCenas?.atual ?? null },
       tema: { atual: window.jarvisTema?.nome ?? null, opcoes: window.jarvisTema?.lista.map(t => t.id) ?? [] },
       brilho_camera: M?.brilho ?? null,
       maos: e ? { calibracao: e.origem, calibrando: M.calibrando, quadros_por_segundo: Math.round(e.qps), luz: e.luz } : null,

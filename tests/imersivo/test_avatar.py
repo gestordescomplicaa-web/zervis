@@ -248,6 +248,28 @@ async def main():
                 await check('encerrar clears the panels and the beams, and the Zé goes back', f'''(() => {{
                     const r = jarvisStage.anel(); return Math.abs(r.x - {antes["x"]}) < 3 && !document.querySelector(".card.jv-holo")
                       && !document.querySelector("#jv-feixes .feixe") && !jarvisApresentacao.apresentando; }})()''')
+                # A scene the Zé writes (ADR 0047): cleaned on the page, unknown blocks dropped, numbers
+                # without a source tagged ILUSTRATIVO, the blocks drawn on board items.
+                cena = {'titulo': 'Teste', 'passos': [
+                    {'fala': 'Um.', 'blocos': [{'tipo': 'titulo', 'texto': 'Teste'}, {'tipo': 'numero', 'valor': 42, 'unidade': 'm/s'}]},
+                    {'fala': 'Dois.', 'blocos': [{'tipo': 'forma3d', 'forma': 'neural'}, {'tipo': 'barras', 'fonte': 'medição', 'itens': [{'nome': 'a', 'valor': 2}]},
+                                                 {'tipo': 'video', 'url': 'x'}]}]}
+                r = await ev(f'jarvisApresentacao.ritmo=.03;jarvisControle.executar({{id:"c1",acoes:[{{acao:"explicar",cena:{json.dumps(cena)}}}]}}).then(()=>1)')
+                quatro = '''(() => { const els = [...document.querySelectorAll(".card.jv-holo.jv-cena")];
+                    return els.length === 4 && els.every(el => jarvisItemDe(el)?.type === "holo")
+                      && !!document.querySelector(".jv-cena-forma3d canvas") && !!document.querySelector(".jv-cena-titulo h1"); })()'''
+                for _ in range(150):
+                    if await ev(quatro):
+                        break
+                    await asyncio.sleep(.1)
+                await check('a written scene becomes four drawn blocks on the board (the unknown one dropped)', quatro)
+                await check('a number without a source says ILUSTRATIVO, one with a source says it, a scheme says ESQUEMA', '''(() => {
+                    const f = t => document.querySelector(".jv-cena-" + t + " .jv-h-fonte").textContent;
+                    return f("numero") === "ILUSTRATIVO" && f("barras") === "FONTE · MEDIÇÃO" && f("forma3d") === "ESQUEMA"; })()''')
+                await check('the screen state names the running scene', '''(() => { const e = jarvisControle.estado();
+                    return e.apresentacao.cena === "Teste" && e.apresentacao.ativa; })()''')
+                await ev('jarvisApresentacao.encerrar()')
+                await asyncio.sleep(.6)
                 # The background (29/10/2026): the camera or the dark animated scene; the video only
                 # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
                 await ev('jarvisFundo.usar("escuro")')

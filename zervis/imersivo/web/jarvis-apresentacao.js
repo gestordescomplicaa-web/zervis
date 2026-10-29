@@ -40,14 +40,16 @@
   // ---- panels ----
   const paineis = new Map();  // id -> {it, el, feixe, pacote, fase, quadro?}
   const vw = () => innerWidth, vh = () => innerHeight;
-  function painel(id, { cod, titulo, x, y, w, h, corpo = "" }) {
+  // fonte: what the bottom-right tag says (AO VIVO for his own data); ilustrativo marks a scene
+  // whose numbers are an example, not a measurement.
+  function painel(id, { cod, titulo, x, y, w, h, corpo = "", fonte = "AO VIVO", ilustrativo = false, classe = "" }) {
     if (paineis.has(id)) return paineis.get(id);
     const el = document.createElement("div");
-    el.className = "card jv-holo"; el.dataset.titulo = titulo;
+    el.className = "card jv-holo" + (classe ? " " + classe : ""); el.dataset.titulo = titulo;
     el.style.width = Math.round(w * vw()) + "px"; el.style.height = Math.round(h * vh()) + "px";
     el.setAttribute("role", "region"); el.setAttribute("aria-label", titulo);
     el.innerHTML = `<div class="jv-h-conteudo"><div class="jv-h-varre"></div>
-      <header><span class="jv-h-cod">${esc(cod)}</span><h2>${esc(titulo)}</h2><span class="jv-h-fonte"><i></i>AO VIVO</span></header>
+      <header><span class="jv-h-cod">${esc(cod)}</span><h2>${esc(titulo)}</h2><span class="jv-h-fonte${ilustrativo ? " ilustrativo" : ""}"><i></i>${esc(ilustrativo ? "ILUSTRATIVO" : fonte)}</span></header>
       <div class="jv-h-regua"></div><div class="jv-h-corpo">${corpo}</div></div>`;
     const it = window.jarvisStage.adicionar(el, { x: (x + w / 2) * vw(), y: (y + h / 2) * vh() });
     it.ry = -.12;  // turned a little towards the Zé on the left
@@ -236,30 +238,41 @@
   }
 
   // ---- the script runner ----
+  // A step: {mostrar: [() => painel], foco, fala, limpar}. limpar takes the panels already on the
+  // board away first (a scene with more blocks than fit goes page by page). Used by "quem" here
+  // and by the scenes the Zé writes (jarvis-cenas.js).
   let rodada = 0, apresentando = false;
-  async function apresentar(tema = "quem") {
-    if (tema !== "quem") throw new Error("apresentar: quem ou encerrar");
+  function comecar() {
     const id = ++rodada;
     for (const r of [...paineis.values()]) tirar(r);
-    let d = {};
-    try { const resp = await fetch("/autoconhecimento"); d = resp.ok ? await resp.json() : {}; } catch (_) { d = {}; }
-    if (id !== rodada) return { apresentando: false };
-    if (!d.agora) { dizer("Autoconhecimento indisponível."); setTimeout(() => id === rodada && dizer(""), 4000); return { apresentando: false, erro: "sem autoconhecimento" }; }
+    return id;
+  }
+  function roteiro(id, passos) {
     const q = quadro(); if (q && feixes.parentNode !== q) q.insertBefore(feixes, q.firstChild);
     apresentando = true; paraOCanto(); tom(110, 1.2, .03, "sawtooth", 440); tom(880, .4, .025, "sine", 0, 1);
     (async () => {
       await espera(700);
-      for (const passo of quem(d)) {
+      for (const passo of passos) {
         if (id !== rodada) return;
+        if (passo.limpar) { for (const r of [...paineis.values()]) tirar(r); await espera(380); }
         (passo.mostrar || []).forEach((f, i) => setTimeout(() => id === rodada && f(), i * 260));
-        if (passo.mostrar) await espera(450);
+        if (passo.mostrar?.length) await espera(450);
         focar(passo.foco || null);
-        dizer(passo.fala);
-        await espera(Math.max(2600, passo.fala.length * 62));
+        dizer(passo.fala || "");
+        await espera(Math.max(2600, (passo.fala || "").length * 62));
       }
       if (id === rodada) { focar(null); setTimeout(() => id === rodada && dizer(""), 2500); }
     })();
     return { apresentando: true };
+  }
+  async function apresentar(tema = "quem") {
+    if (tema !== "quem") throw new Error("apresentar: quem ou encerrar");
+    const id = comecar();
+    let d = {};
+    try { const resp = await fetch("/autoconhecimento"); d = resp.ok ? await resp.json() : {}; } catch (_) { d = {}; }
+    if (id !== rodada) return { apresentando: false };
+    if (!d.agora) { dizer("Autoconhecimento indisponível."); setTimeout(() => id === rodada && dizer(""), 4000); return { apresentando: false, erro: "sem autoconhecimento" }; }
+    return roteiro(id, quem(d));
   }
   function encerrar() {
     rodada++; apresentando = false;
@@ -306,5 +319,8 @@
     get paineis() { return [...paineis.keys()]; },
     get ritmo() { return ritmo; }, set ritmo(v) { ritmo = Math.max(.01, Number(v) || 1); },
     apresentar, encerrar,
+    // what the scenes (jarvis-cenas.js) build with
+    palco: { painel, focar, dizer, tom, contar, colunas, barras, grafo, mostrarDica, esconderDica, comecar, roteiro,
+      get rodada() { return rodada; } },
   };
 })();
