@@ -1559,3 +1559,48 @@ def test_conversa_mostra_o_gasto_de_cada_resposta_e_do_dia(tmp_path: Path) -> No
 
     with _painel(tmp_path, leituras_vivas={"conversa": conversa}) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_sempre_nas_respostas_rapidas_vale_no_clique(tmp_path: Path) -> None:
+    """Caso real de 28/10/2026: o botão "Sempre" não fazia nada (o handler estava no MUDAR, que
+    só ouve campos que mudam). O clique grava, aplica e explica; uma recusa volta ao anterior."""
+    respostas = json.loads(RESPOSTAS.read_text())
+    cerebro = copy.deepcopy(respostas["leituras"]["cerebro"])
+    gravados: list[dict[str, Any]] = []
+    recusar = {"sim": False}
+
+    def gravar(dados: dict[str, Any]) -> dict[str, Any]:
+        if recusar["sim"]:
+            raise ValueError("Sem conexão com o motor.")
+        gravados.append(dados)
+        cerebro["via"] = {**cerebro["via"], **dados}
+        return {**copy.deepcopy(cerebro), "ativa": True, "aviso": "Em uso."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#modelos")
+            await _esperar(nav, "!!document.querySelector('[data-quando=\"sempre\"]')")
+            await nav.avaliar("document.querySelector('[data-quando=\"sempre\"]').click()")
+            nota = "document.getElementById('nota-quando').textContent"
+            await _esperar(
+                nav, nota + ".startsWith('Responde a conversa simples em qualquer modo')"
+            )
+            assert gravados and gravados[-1]["quando"] == "sempre"
+            pressionado = (
+                'document.querySelector(\'[data-acao="via-quando"][aria-pressed="true"]\')'
+                ".dataset.quando"
+            )
+            assert await nav.avaliar(pressionado) == "sempre"
+            assert "Em uso agora." in await nav.avaliar(
+                "document.getElementById('nota-quando').textContent"
+            )
+            recusar["sim"] = True
+            await nav.avaliar("document.querySelector('[data-quando=\"live\"]').click()")
+            await asyncio.sleep(0.5)
+            assert await nav.avaliar(pressionado) == "sempre"  # recusado: fica como estava
+            assert len(gravados) == 1
+
+    with _painel(tmp_path, extras={"cerebro": gravar}) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
