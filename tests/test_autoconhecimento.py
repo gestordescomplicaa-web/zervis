@@ -232,3 +232,14 @@ def test_o_painel_entrega_o_autoconhecimento_do_nucleo(tmp_path: Any) -> None:
     retrato = {"agora": {"modelo": "GPT-6 Luna"}}
     acoes = Acoes(SimpleNamespace(autoconhecimento=lambda: retrato), tmp_path, tmp_path)
     assert acoes.leituras()["autoconhecimento"]() == retrato
+
+
+def test_a_nota_quem_sou_traz_o_que_sabe_fazer_e_o_que_fez() -> None:
+    from zervis.nucleo.laco import Nucleo
+
+    falso = SimpleNamespace(
+        retrato=lambda: RETRATO, capacidades=lambda: CAPACIDADES, historico=lambda: HISTORICO
+    )
+    nota = Nucleo._agora_para_a_pasta(falso, "ligada")  # type: ignore[arg-type]
+    assert "## O que eu sei fazer" in nota and "## O que eu fiz" in nota
+    assert "Revisão em segundo plano:** ligada" in nota
