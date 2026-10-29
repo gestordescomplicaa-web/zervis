@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Em Modelos → Respostas rápidas, "Só no Live" e "Sempre" voltam a funcionar e valem no
+  clique, sem o Salvar. O botão não fazia nada: ficava sempre em "Só no Live".
 - A bateria de avaliação (`zervis avaliar`) roda com o cérebro escolhido no Zé (Claude ou Codex,
   `--cerebro`) e com as respostas rápidas na frente (`--rapidas`), e anota os tokens de cada
   cenário: a nota e o custo juntos, comparados com a rodada anterior do mesmo cérebro. Três

@@ -240,5 +240,8 @@ function desenharEscuta() {
     <p class="resultado" id="resultado-escuta"></p>`;
 }
 
+/** O que "Só no Live" e "Sempre" querem dizer, e se as respostas rápidas estão em uso agora. */
+const notaDoQuando = (quando, ativa) => ((quando || "live") === "live" ? "Responde na conversa em tempo real (o Live); no Normal e no teclado, vai tudo ao modelo principal." : "Responde a conversa simples em qualquer modo.") + (ativa ? " Em uso agora." : "");
+
 const lerModelo = () => ({ ligada: /** @type {HTMLInputElement} */ (document.querySelector('[data-mudar="via-ligada"]')).checked, quando: modelo.quando || "live", motor: modelo.motor, modelo: valorCampo("modelo").value.trim(), endereco: valorCampo("endereco").value.trim() });
 

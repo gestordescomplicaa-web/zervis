@@ -39,6 +39,23 @@ const ACOES = {
     $("campo-modelo").innerHTML = "Modelo" + campoModelo(modelo.motor, b.dataset.modelo);
     desenharChave();
   },
+  // "Só no Live" ou "Sempre": vale na hora, sem o Salvar. Ficava no MUDAR, que só ouve campos
+  // que mudam: o clique no botão não fazia nada (28/10/2026).
+  "via-quando": async (b) => {
+    const antes = modelo.quando || "live";
+    const marcar = (quando) => document.querySelectorAll('[data-acao="via-quando"]').forEach((x) => x.setAttribute("aria-pressed", String(/** @type {HTMLElement} */ (x).dataset.quando === quando)));
+    modelo.quando = b.dataset.quando;
+    marcar(modelo.quando);
+    try {
+      const c = await ocupado(b, () => api("cerebro", lerModelo()));
+      modelo.chaves = c.chaves;
+      $("nota-quando").textContent = notaDoQuando(c.via.quando, c.ativa);
+      toast(c.aviso || "Salvo.");
+    } catch (erro) {
+      modelo.quando = antes; marcar(antes);
+      throw erro;
+    }
+  },
   "modelo-salvar": async (b) => {
     const c = await ocupado(b, () => api("cerebro", lerModelo()));
     modelo.chaves = c.chaves;
@@ -277,10 +294,6 @@ const ESCOLHAS = {
 const MUDAR = {
   automacao: async (el) => { await api("automacao/ativar", { id: el.dataset.id, ativo: el.checked }); await recarregar(); },
   "via-ligada": () => {},
-  "via-quando": (b) => {
-    modelo.quando = b.dataset.quando;
-    document.querySelectorAll('[data-acao="via-quando"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-  },
   "cerebro-modelo": async (el) => {
     el.disabled = true; toast("Testando o modelo…");
     try {
