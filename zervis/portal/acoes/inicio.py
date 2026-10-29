@@ -28,6 +28,7 @@ class AcoesInicio(Pagina):
         "_aplicar_depois",
         "_fonte",
         "atualizacao",
+        "autoconhecimento",
         "central",
         "cerebro",
         "cfg",

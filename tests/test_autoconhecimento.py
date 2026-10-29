@@ -222,3 +222,13 @@ def test_o_nucleo_le_o_historico_da_atividade(tmp_path: Any, monkeypatch: Any) -
     assert h.contagem["execucao"] == 1 and h.contagem["pedido"] == 1
     assert h.mais_usadas == (("sessoes_listar", 1),) and len(h.por_dia) == 7
     assert [t for _, t, _ in h.recentes] == ["pedido", "execucao"]
+
+
+def test_o_painel_entrega_o_autoconhecimento_do_nucleo(tmp_path: Any) -> None:
+    """Regressão de 29/10/2026: a rota respondia 500 no Zé de verdade porque a página Início não
+    declarava o serviço; o teste do painel usa respostas de exemplo e não passava pelo núcleo."""
+    from zervis.portal.acoes import Acoes
+
+    retrato = {"agora": {"modelo": "GPT-6 Luna"}}
+    acoes = Acoes(SimpleNamespace(autoconhecimento=lambda: retrato), tmp_path, tmp_path)
+    assert acoes.leituras()["autoconhecimento"]() == retrato
