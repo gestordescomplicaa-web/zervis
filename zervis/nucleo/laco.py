@@ -1178,7 +1178,9 @@ class Nucleo(
             log.debug("retrato do Zé falhou", exc_info=True)
             return ""
         extras = [f"**Revisão em segundo plano:** {revisao or 'desligada'}"]
-        return autoconhecimento.texto(dataclasses.replace(r, extras=extras))
+        return autoconhecimento.texto(
+            dataclasses.replace(r, extras=extras), self.capacidades(), self.historico()
+        )
 
     def _fala_por(self) -> str:
         ativo = self.motor_voz.ativo
