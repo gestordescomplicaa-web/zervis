@@ -16,7 +16,7 @@ from pathlib import Path
 
 import websockets
 
-ROOT = Path(__file__).resolve().parents[2] / 'jarvis' / 'imersivo' / 'web'  # a página
+ROOT = Path(__file__).resolve().parents[2] / 'zervis' / 'imersivo' / 'web'  # a página
 EVENTS = [
     {'em': 1791330000 - i * 3600, 'evento': 'aprovada', 'rotulo': 'Sugestão aprovada',
      'resumo': f'guardar a lição {i}', 'origem': f'correção {i}', 'item': None} for i in range(1, 25)]
