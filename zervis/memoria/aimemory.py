@@ -158,21 +158,23 @@ class AiMemory:
 
 
 def situacao(url: str = URL, dados: Path = DADOS) -> dict[str, Any]:
-    """Para a página Memória: se a memória dos projetos está no ar e quantas páginas guarda
-    (lido só para contar, sem mexer no banco do ai-memory)."""
+    """Para a página Memória: se a memória dos projetos está no ar e quantas páginas guarda."""
+    return {"ativa": no_ar(url), "paginas": paginas(dados)}
+
+
+def paginas(dados: Path = DADOS) -> int | None:
+    """Quantas páginas a memória dos projetos guarda, lido só para contar, sem rede e sem mexer
+    no banco do ai-memory (o autoconhecimento lê isto a cada pergunta)."""
     import sqlite3
 
-    paginas = None
     banco = dados / "db" / "memory.sqlite"
-    if banco.is_file():
-        try:
-            with sqlite3.connect(f"file:{banco}?mode=ro", uri=True, timeout=1) as con:
-                paginas = int(
-                    con.execute("select count(*) from pages where is_latest").fetchone()[0]
-                )
-        except sqlite3.Error:
-            paginas = None
-    return {"ativa": no_ar(url), "paginas": paginas}
+    if not banco.is_file():
+        return None
+    try:
+        with sqlite3.connect(f"file:{banco}?mode=ro", uri=True, timeout=1) as con:
+            return int(con.execute("select count(*) from pages where is_latest").fetchone()[0])
+    except sqlite3.Error:
+        return None
 
 
 def hooks_claude(url: str = URL, dados: Path = DADOS) -> dict[str, Any]:

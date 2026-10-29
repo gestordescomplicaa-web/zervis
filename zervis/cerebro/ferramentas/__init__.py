@@ -139,22 +139,42 @@ def montar(
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
-    return [
-        auditada(f)
-        for f in [
-            *g_sessoes.ferramentas(sessoes),
-            *g_tela.ferramentas(tela),
-            *g_sistema.ferramentas(sistema),
-            *g_automacoes.ferramentas(jobs),
-            *g_aprendizado.ferramentas(memoria, skills, pendencias, diario),
-            *g_manutencao.ferramentas(manutencao),
-            *g_navegador.ferramentas(),
-            *g_conectores.ferramentas(),
-            *g_atualizacoes.ferramentas(),
-            *g_sobre.ferramentas(sobre),
-            *g_pesquisa.ferramentas(pesquisar),
-        ]
-    ]
+    grupos = por_grupo(
+        sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
+        pesquisar,
+    )  # fmt: skip
+    return [f for fs in grupos.values() for f in fs]
+
+
+def por_grupo(
+    sessoes: Sessoes | None,
+    memoria: Memoria,
+    skills: Skills,
+    pendencias: revisao.Pendencias | None = None,
+    jobs: Jobs | None = None,
+    sistema: Sistema | None = None,
+    diario: Diario | None = None,
+    tela: Tela | None = None,
+    manutencao: Manutencao | None = None,
+    sobre: Callable[[], str] | None = None,
+    pesquisar: Callable[[str], Awaitable[str]] | None = None,
+) -> dict[str, list[SdkMcpTool[Any]]]:
+    """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
+    área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
+    grupos = {
+        "sessoes": g_sessoes.ferramentas(sessoes),
+        "tela": g_tela.ferramentas(tela),
+        "sistema": g_sistema.ferramentas(sistema),
+        "automacoes": g_automacoes.ferramentas(jobs),
+        "aprendizado": g_aprendizado.ferramentas(memoria, skills, pendencias, diario),
+        "manutencao": g_manutencao.ferramentas(manutencao),
+        "navegador": g_navegador.ferramentas(),
+        "conectores": g_conectores.ferramentas(),
+        "atualizacoes": g_atualizacoes.ferramentas(),
+        "sobre": g_sobre.ferramentas(sobre),
+        "pesquisa": g_pesquisa.ferramentas(pesquisar),
+    }
+    return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 
 
 def auditada(ferramenta: SdkMcpTool[Any]) -> SdkMcpTool[Any]:

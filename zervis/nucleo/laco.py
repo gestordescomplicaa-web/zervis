@@ -15,13 +15,14 @@ import queue
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from zervis import __version__, atividade, versoes
+from zervis import __version__, atividade, fuso, versoes
 from zervis.atendimento import agente, cliente, projeto, whatsapp
 from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
@@ -33,6 +34,7 @@ from zervis.avisos.fila import Fila
 from zervis.cerebro import (
     acesso,
     catalogo,
+    conectores,
     contas,
     ferramentas,
     mcp_externo,
@@ -54,7 +56,7 @@ from zervis.habilidades import evidencias, revisao
 from zervis.habilidades.diario import Diario
 from zervis.habilidades.skills import Skills
 from zervis.imersivo import Imersivo
-from zervis.memoria import tempo
+from zervis.memoria import aimemory, tempo
 from zervis.memoria.aimemory import AiMemory
 from zervis.memoria.conversas import Conversas
 from zervis.memoria.curta import Memoria
@@ -445,7 +447,7 @@ class Nucleo(
             cfg.caminho("barehands", "pasta_estado").parent / "barehands.json"
         )
         self.maquina.orbes = manifesto.falados(self.orbes)
-        self.proprias = ferramentas.montar(
+        self.ferramentas_por_grupo = ferramentas.por_grupo(
             self.sessoes,
             self.memoria,
             self.skills,
@@ -455,11 +457,14 @@ class Nucleo(
             self.diario,
             self.tela,
             self.manutencao,
-            sobre=lambda: autoconhecimento.texto(self.retrato()),
+            sobre=lambda: autoconhecimento.texto(
+                self.retrato(), self.capacidades(), self.historico()
+            ),
             pesquisar=lambda pedido: pesquisa.pesquisar(
                 pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
             ),
         )
+        self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
         try:
             externos = mcp_externo.para_conversa(painel=mcp_externo.PAINEL)
@@ -1052,6 +1057,9 @@ class Nucleo(
         cs = contas.Contas()
         return autoconhecimento.Retrato(
             cerebro=f"{nome}, com o {catalogo.rotulo(modelo)}" if modelo else nome,
+            modelo=catalogo.rotulo(modelo) if modelo else "",
+            provedor=nome,
+            modelo_das_rapidas=catalogo.rotulo(str(via["modelo"])) if via["ligada"] else "",
             reserva=reserva.nome if reserva else str(c["reserva"]),
             rapidas=rapidas,
             rapidas_agora=roteado,
@@ -1076,6 +1084,92 @@ class Nucleo(
             + f" ({m.sistema}{', com Omarchy' if m.omarchy else ''})",
             versao=__version__,
         )
+
+    def capacidades(self) -> autoconhecimento.Capacidades:
+        """O que o Zé sabe fazer agora (ADR 0045). Cada parte que falhar fica vazia: a pergunta
+        "o que você faz?" nunca cai por causa de um arquivo ilegível."""
+
+        def tentar(fazer: Callable[[], Any], padrao: Any) -> Any:
+            try:
+                return fazer()
+            except Exception:
+                log.debug("autoconhecimento: parte das capacidades falhou", exc_info=True)
+                return padrao
+
+        livres = {nome.rsplit("__", 1)[-1] for nome in ferramentas.LIVRES}
+        por_grupo = {g: [f.name for f in fs] for g, fs in self.ferramentas_por_grupo.items()}
+
+        def skills() -> tuple[autoconhecimento.Skill, ...]:
+            uso = self.skills.uso()
+            lista = [
+                autoconhecimento.Skill(nome, descricao, int((uso.get(nome) or {}).get("usos", 0)))
+                for nome, descricao in self.skills.listar()
+            ]
+            return tuple(sorted(lista, key=lambda s: -s.usos))
+
+        def externos() -> tuple[autoconhecimento.Conector, ...]:
+            return tuple(
+                autoconhecimento.Conector(
+                    str(c["nome"]), len(c.get("livres") or []), len(c.get("bloqueadas") or [])
+                )
+                for c in conectores.listar()
+            )
+
+        def sessoes() -> tuple[autoconhecimento.Sessao, ...]:
+            ativas = set(self.sessoes.trabalhando())
+            return tuple(
+                autoconhecimento.Sessao(
+                    s.nome,
+                    contas.NOMES.get(s.motor, s.motor),
+                    "trabalhando" if s.id in ativas else s.estado,
+                )
+                for s in self.sessoes.listar()
+                if s.origem != "manutencao"
+            )
+
+        def automacoes() -> tuple[autoconhecimento.Automacao, ...]:
+            return tuple(
+                autoconhecimento.Automacao(j.nome, j.agenda, j.ativo) for j in self.jobs.listar()
+            )
+
+        lembrancas = tentar(
+            lambda: len(self.memoria.entradas("usuario")) + len(self.memoria.entradas("jarvis")),
+            0,
+        )
+        central = getattr(self, "central", None)
+        return autoconhecimento.Capacidades(
+            grupos=autoconhecimento.grupos(por_grupo, livres),
+            skills=tentar(skills, ()),
+            conectores=tentar(externos, ()),
+            sessoes=tentar(sessoes, ()),
+            automacoes=tentar(automacoes, ()),
+            lembrancas=lembrancas,
+            paginas=tentar(aimemory.paginas, None),
+            whatsapp=(("conectado" if central.whatsapp_ativo else "desligado") if central else ""),
+        )
+
+    def historico(self, dias: int = 7) -> autoconhecimento.Historico:
+        """O que o Zé fez nos últimos dias, da Atividade (ADR 0045)."""
+        try:
+            b = atividade.PADRAO.balanco(dias, fuso.local())
+            recentes = atividade.PADRAO.listar(5)
+        except Exception:
+            log.debug("autoconhecimento: a atividade não abriu", exc_info=True)
+            return autoconhecimento.Historico(dias=dias)
+        return autoconhecimento.Historico(
+            dias=dias,
+            contagem=b["contagem"],
+            por_dia=tuple(autoconhecimento.Dia(*d) for d in b["por_dia"]),
+            mais_usadas=tuple(b["mais_usadas"]),
+            recentes=tuple(
+                (float(i.get("quando", 0)), str(i.get("tipo", "")), str(i.get("titulo", "")))
+                for i in recentes
+            ),
+        )
+
+    def autoconhecimento(self) -> dict[str, Any]:
+        """O retrato inteiro em dados, para a tela (ADR 0045)."""
+        return autoconhecimento.dados(self.retrato(), self.capacidades(), self.historico())
 
     def _agora_para_a_pasta(self, revisao: str) -> str:
         try:
