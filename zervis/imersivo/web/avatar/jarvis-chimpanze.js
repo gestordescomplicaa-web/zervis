@@ -304,7 +304,8 @@ export async function criarChimpanze(T, GLTFLoader, { estilo = "constelacao" } =
   cabeca.position.copy(caixa.getCenter(new T.Vector3()).multiplyScalar(-escala));
   cabeca.position.y -= .1;
 
-  const halo = new T.Group(); halo.position.set(0, -.05, -.9); grupo.add(halo);
+  // The constellation goes without it: the person asked to take the turning circle away (29/10/2026).
+  const halo = new T.Group(); halo.position.set(0, -.05, -.9); halo.visible = classico; grupo.add(halo);
   const haloMat = new T.MeshBasicMaterial({ color: 0x75dce9, transparent: true, opacity: .42, toneMapped: false });
   for (let i = 0; i < 4; i++) {
     const o = new T.Mesh(new T.TorusGeometry(1.98, .009, 5, 64, Math.PI * .43), haloMat);

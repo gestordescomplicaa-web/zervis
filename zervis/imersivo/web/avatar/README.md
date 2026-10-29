@@ -10,7 +10,7 @@ continuam vindo da mesma lógica de `jarvis-chimpanze.js`, pelos mesmos uniforme
 comporta como antes. A cor segue o tema do anel (a raiva puxa para o vermelho, a tristeza para o
 azul). O rig é estático, então a pose do esqueleto é calculada uma vez; as shape keys continuam
 deformando na placa de vídeo. Embaixo dele, um projetor (feixe de luz, anéis na base e partículas
-subindo) e anéis orbitando a cabeça (`projetor()`), parados enquanto a cabeça balança e gira. O
+subindo, `projetor()`), parado enquanto a cabeça balança e gira; sem anéis em volta da cabeça. O
 desenho passa da borda do cartão (1,44 vez o cartão), e o cartão que a mão pega mantém o tamanho.
 O fundo escuro da Imersão fica em `../jarvis-fundo.js`. O visual de antes, descrito abaixo, continua como estilo
 `"classico"` (`criarChimpanze(T, GLTFLoader, { estilo: "classico" })`) até o novo ser aprovado.

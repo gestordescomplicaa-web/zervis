@@ -250,9 +250,9 @@ export function constelacao(T, cabeca, uniformes, densidade = DENSIDADE) {
   };
 }
 
-// The projector under the Zé and the rings around him (the lab's scene, sized to the avatar: the head
-// is ALTURA = 3.15 units tall, centred a little below 0). It stays still while the head sways and
-// spins; the rings turn faster with the links (jvFluxo).
+// The projector under the Zé (the lab's scene, sized to the avatar: the head is ALTURA = 3.15 units
+// tall, centred a little below 0). It stays still while the head sways and spins; its rings turn
+// faster with the links (jvFluxo). No rings around the head: the person had them removed (29/10/2026).
 export function projetor(T, uniformes) {
   const luz = { transparent: true, depthWrite: false, blending: T.CustomBlending, blendSrc: T.OneFactor, blendDst: T.OneFactor };
   const grupo = new T.Group(); grupo.name = "projetor";
@@ -313,20 +313,9 @@ export function projetor(T, uniformes) {
         vec3 c = jvCor * smoothstep(.5, 0., d) * vA * .7 * jvGanho; gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)));` + SAIDA + "}",
   }));
   motes.frustumCulled = false; grupo.add(motes); materiais.push(motes.material); geometrias.push(gm);
-  // Rings orbiting the head.
-  const orbita = new T.Group(); orbita.position.y = -.05; grupo.add(orbita);
-  const o1 = anel(2.08, 2.095, { dash: 4, fill: .62, speed: .04, alpha: .4 }), o2 = anel(2.33, 2.355, { dash: 90, fill: .25, speed: -.015, alpha: .28 });
-  const o3 = anel(2.5, 2.507, { dash: 2, fill: .15, speed: .07, alpha: .5 });
-  o1.rotation.x = o2.rotation.x = Math.PI / 2 - .22; o3.rotation.set(Math.PI / 2 - .5, .35, 0);
-  orbita.add(o1, o2, o3);
   return {
     grupo,
-    atualizar(dt, reduzir) {
-      if (reduzir) return;
-      const f = uniformes.jvFluxo?.value ?? .3;
-      orbita.rotation.y += dt * .15 * (.6 + f); o3.rotation.z += dt * .25 * (.6 + f);
-      orbita.scale.setScalar(1 + (uniformes.jvEnergia?.value ?? 0) * .03);
-    },
+    atualizar() {},
     descartar() { geometrias.forEach(g => g.dispose()); materiais.forEach(m => m.dispose()); },
   };
 }

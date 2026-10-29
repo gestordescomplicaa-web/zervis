@@ -4,7 +4,7 @@
 
 - O Zé da Imersão virou uma constelação de luz: o chimpanzé feito de pontos ligados aos vizinhos,
   com pulsos correndo pelas ligações, brilho na borda, varredura, falhas de sinal e a montagem
-  quando ele aparece, na cor do tema, sobre um projetor com feixe de luz e anéis orbitando. Gestos,
+  quando ele aparece, na cor do tema, sobre um projetor com feixe de luz e anéis na base. Gestos,
   boca, piscar, emoções e tontura seguem iguais.
 - O Zé se apresenta na Imersão (tecla A, Configurações → Apresentação ou "Zé, se apresenta"): ele
   vai para o canto, vira para o quadro, e os painéis holográficos aparecem um a um, ligados a ele
