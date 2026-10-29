@@ -19,7 +19,7 @@
     body.jv-escuro #cam { width:2px; height:2px; opacity:.01; pointer-events:none; }
     #jv-fundo-cena { position:fixed; inset:0; width:100%; height:100%; pointer-events:none; display:none; }
     body.jv-escuro #jv-fundo-cena { display:block; }
-    body.jv-escuro::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:1;
+    body.jv-escuro::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
       background:radial-gradient(ellipse at 50% 45%, transparent 40%, rgb(0 0 0 / .55) 100%),
         repeating-linear-gradient(0deg, rgb(255 255 255 / .018) 0 1px, transparent 1px 3px); }`;
   document.head.appendChild(css);

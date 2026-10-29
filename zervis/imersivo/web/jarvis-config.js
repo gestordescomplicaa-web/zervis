@@ -6,11 +6,12 @@
 (() => {
   if (new URLSearchParams(location.search).get("role") === "render") return;
   const BRILHOS = ["Desligado", "Suave", "Médio", "Forte"];
-  // The keys of the page (stage.html, jarvis-maos.js, jarvis-teclado.js); the Guia has the same list.
+  // The keys of the page (stage.html, jarvis-maos.js, jarvis-teclado.js); the Guia has the same list,
+  // plus A and F, shown in the titles of their own sections below.
   const ATALHOS = [
     ["D", "Configurações"], ["K", "Calibrar as mãos"], ["Shift + K", "Mãos no padrão"],
     ["B", "Mais brilho na câmera"], ["Shift + B", "Menos brilho na câmera"], ["T", "Trocar as cores"],
-    ["F", "Fundo: câmera ou escuro"], ["/", "Escrever para o Zé"], ["R", "Recarregar a tela"], ["C", "Trocar a câmera"], ["Esc", "Fechar"],
+    ["/", "Escrever para o Zé"], ["R", "Recarregar a tela"], ["C", "Trocar a câmera"], ["Esc", "Fechar"],
   ];
   const ENGRENAGEM = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>';
   // The gear (top-left, always there): the menu by hand, mouse or touch, not only by the D key.
@@ -37,7 +38,12 @@
         ${seg("tema", 3, (window.jarvisTema?.lista || [{ id: "original", nome: "Original" }]).map(t => `<button data-config="tema:${t.id}">${t.nome}</button>`).join(""))}</section>
       <section><h3>Visual</h3>
         ${seg("visual", 2, '<button data-config="visual:avatar">Avatar</button><button data-config="visual:anel">Anel</button>')}</section>
-      <section><h3>Fundo</h3>
+      <!-- The keys of these two sit in the titles: one more row of shortcuts pushed the brightness
+           buttons out of the menu's view on a 900 px screen, out of the hand's reach (29/10/2026). -->
+      <section><h3>Apresentação <kbd>A</kbd></h3>
+        <div class="seg" style="--n:2"><button data-config="apresentar:quem">Apresentar</button>
+        <button data-config="apresentar:encerrar">Encerrar</button></div></section>
+      <section><h3>Fundo <kbd>F</kbd></h3>
         ${seg("fundo", 2, '<button data-config="fundo:camera">Câmera</button><button data-config="fundo:escuro">Escuro</button>')}</section>
       <section class="opcional"><h3>Cérebro</h3><div class="slot" data-slot="cerebros"></div></section>
       <section class="opcional"><h3>Consumo</h3><div class="slot" data-slot="consumo"></div></section>
@@ -137,6 +143,8 @@
     else if (acao.startsWith("tema:")) window.jarvisTema?.usar(acao.slice(5));
     else if (acao.startsWith("visual:")) window.jarvisAvatar?.usar(acao.slice(7) === "avatar");
     else if (acao.startsWith("fundo:")) window.jarvisFundo?.usar(acao.slice(6));
+    else if (acao === "apresentar:quem") { fechar(); window.jarvisApresentacao?.apresentar("quem").catch(() => {}); }
+    else if (acao === "apresentar:encerrar") window.jarvisApresentacao?.encerrar();
     marcar();
   }
   menu.addEventListener("click", ev => { const b = ev.target.closest("[data-config]"); if (b) acionar(b.dataset.config); });

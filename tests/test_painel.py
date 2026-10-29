@@ -28,3 +28,23 @@ def test_escolha_vale_uma_vez_e_so_se_recente_e_conhecida(tmp_path: Path) -> Non
     assert painel.escolha(200.0) is None  # velha: o Zé estava parado na hora do clique
     arquivo.write_text(json.dumps({"id": "rm -rf", "ts": 100.0}))
     assert painel.escolha(101.0) is None
+
+
+def test_autoconhecimento_para_a_imersao_uma_vez_por_minuto(tmp_path: Path) -> None:
+    """ADR 0045: as apresentações da Imersão leem só o retrato que o Zé grava aqui."""
+    painel, chamadas = Painel(tmp_path), []
+
+    def montar() -> dict[str, object]:
+        chamadas.append(1)
+        return {"agora": {"modelo": "GPT-6 Luna"}}
+
+    painel.autoconhecimento(montar, 100.0)
+    painel.autoconhecimento(montar, 130.0)  # antes de um minuto: não remonta (lê a Atividade)
+    dados = json.loads((tmp_path / "autoconhecimento.json").read_text())
+    assert dados == {"agora": {"modelo": "GPT-6 Luna"}, "ts": 100.0} and chamadas == [1]
+
+    def quebrado() -> dict[str, object]:
+        raise OSError("atividade ilegível")
+
+    painel.autoconhecimento(quebrado, 200.0)  # a falha deixa o arquivo anterior
+    assert json.loads((tmp_path / "autoconhecimento.json").read_text())["ts"] == 100.0

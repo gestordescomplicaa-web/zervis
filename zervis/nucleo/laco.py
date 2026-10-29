@@ -977,6 +977,7 @@ class Nucleo(
             log.info("troca pedida no Barehands: %s", escolha)
             self.trocar_cerebro(escolha)
         self.painel.mostrar(self.provedor, self.baterias(), self.modelos(), agora)
+        self.painel.autoconhecimento(self.autoconhecimento, agora)
         self._mostrar_decisao(agora)
 
     def _mostrar_decisao(self, agora: float) -> None:

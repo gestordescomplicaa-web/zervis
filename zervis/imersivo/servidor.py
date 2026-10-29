@@ -489,6 +489,7 @@ class Handler(SimpleHTTPRequestHandler):
             "/maos/perfil",
             "/orb",
             "/state",
+            "/autoconhecimento",
         )
         if leitura and not self._autorizado():
             self._json({"erro": "Pedido não autorizado."}, 403)
@@ -599,6 +600,14 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == "/stats":
             self._json(system_stats())
+            return
+        if self.path == "/autoconhecimento":
+            # gdautomacao.ia: the Zé by himself, as data (ADR 0045), written by the Zé once a
+            # minute; the presentations show only this. Missing or unreadable: empty.
+            try:
+                self._json(json.loads((ESTADO / "autoconhecimento.json").read_text()))
+            except (OSError, ValueError):
+                self._json({})
             return
         if self.path == "/cerebros":
             # barehands-jarvis: brain batteries written by the Zé; a stale

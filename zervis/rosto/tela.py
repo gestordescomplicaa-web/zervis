@@ -47,6 +47,9 @@ ACOES = {
     "foco": "mostra o quadro do Foco (as frentes, a atual em destaque, com o V para marcar)",
     "visual": "valor: avatar (o busto holográfico que fala, no lugar do anel) ou anel",
     "girar": "valor: voltas (1 a 3, padrão 1). O Zé dá uma volta completa na tela",
+    "apresentar": "valor: quem (o Zé vai para o canto e mostra, em painéis holográficos, os "
+    "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente) "
+    "ou encerrar (recolhe os painéis). Para 'se apresenta', 'mostra o que você faz'",
     "expressao": "valor: alegria, duvida, raiva, tristeza ou neutro; segundos (opcional, "
     "padrão 6). O rosto do avatar; numa resposta, prefira a marca no começo do texto",
     "tema": "alvo: original, roxo, marinho, esmeralda ou grafite",

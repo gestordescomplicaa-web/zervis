@@ -52,6 +52,12 @@
       if (!window.jarvisAvatar) throw new Error("avatar indisponível");
       return window.jarvisAvatar.girar(a.valor ?? a.voltas ?? 1);
     },
+    // The Zé presents himself with his own data (ADR 0045): quem, or encerrar.
+    apresentar: a => {
+      if (!window.jarvisApresentacao) throw new Error("apresentação indisponível");
+      const v = sem(a.valor ?? a.alvo ?? "quem");
+      return v === "encerrar" || v === "fechar" ? window.jarvisApresentacao.encerrar() : window.jarvisApresentacao.apresentar(v || "quem");
+    },
     expressao: a => {
       if (!window.jarvisAvatar) throw new Error("avatar indisponível");
       return window.jarvisAvatar.sentir(a.valor ?? a.alvo, a.segundos);
@@ -89,6 +95,8 @@
       menu_configuracoes: { aberto: !!window.jarvisConfig?.aberto },
       teclado: { aberto: !!window.jarvisTeclado?.aberto },
       visual: window.jarvisAvatar ? (window.jarvisAvatar.ativo ? "avatar" : "anel") : "anel",
+      fundo: window.jarvisFundo?.modo ?? "camera",
+      apresentacao: { ativa: !!window.jarvisApresentacao?.apresentando, paineis: window.jarvisApresentacao?.paineis ?? [] },
       tema: { atual: window.jarvisTema?.nome ?? null, opcoes: window.jarvisTema?.lista.map(t => t.id) ?? [] },
       brilho_camera: M?.brilho ?? null,
       maos: e ? { calibracao: e.origem, calibrando: M.calibrando, quadros_por_segundo: Math.round(e.qps), luz: e.luz } : null,

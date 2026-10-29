@@ -218,6 +218,36 @@ async def main():
                 await asyncio.sleep(.8)
                 await check('rapid visual changes leave one live scene and one label', '''jarvisAvatar.montados===1
                     &&document.querySelectorAll('.jv-avatar-cena').length===1&&document.querySelectorAll('.jv-avatar-identidade').length===1''')
+                # The presentation (ADR 0045): the Zé moves aside and his own data materializes as
+                # real board items, linked to him by beams; encerrar brings everything back.
+                antes = await ev('(()=>{const r=jarvisStage.anel();return {x:r.x,y:r.y};})()')
+                await ev('jarvisApresentacao.ritmo=.03;jarvisControle.executar({id:"a1",acoes:[{acao:"apresentar",valor:"quem"}]})')
+                cinco = '''(() => {
+                    const els = [...document.querySelectorAll(".card.jv-holo")];
+                    return els.length === 5 && els.every(el => jarvisItemDe(el)?.type === "holo")
+                      && document.querySelectorAll("#jv-feixes .feixe").length === 5
+                      && document.querySelector(".jv-holo h2").textContent === "Identidade"
+                      && !!document.querySelector(".jv-holo .jv-grafo canvas"); })()'''
+                for _ in range(150):  # slow software frames: the graph draws a moment after its panel
+                    if await ev(cinco):
+                        break
+                    await asyncio.sleep(.1)
+                await check('the presentation shows five panels from the self-knowledge, as board items', cinco)
+                for _ in range(40):
+                    if await ev('document.querySelector(".jv-heroi b").textContent === "6"'):
+                        break
+                    await asyncio.sleep(.1)
+                await check('the numbers are the Zé\'s own (the sample: 6 requests)', 'document.querySelector(".jv-heroi b").textContent === "6"')
+                await check('the Zé moved to the left, a caption tells what is shown', '''(() => {
+                    const r = jarvisStage.anel(); return r.x < innerWidth * .3 && document.getElementById("jv-legenda-ze").textContent.length > 0; })()''')
+                await ev('jarvisControle.executar({id:"a2",acoes:[{acao:"apresentar",valor:"encerrar"}]})')
+                for _ in range(150):
+                    if await ev(f'(()=>{{const r=jarvisStage.anel();return Math.abs(r.x-{antes["x"]})<3 && !document.querySelector(".card.jv-holo");}})()'):
+                        break
+                    await asyncio.sleep(.1)
+                await check('encerrar clears the panels and the beams, and the Zé goes back', f'''(() => {{
+                    const r = jarvisStage.anel(); return Math.abs(r.x - {antes["x"]}) < 3 && !document.querySelector(".card.jv-holo")
+                      && !document.querySelector("#jv-feixes .feixe") && !jarvisApresentacao.apresentando; }})()''')
                 # The background (29/10/2026): the camera or the dark animated scene; the video only
                 # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
                 await ev('jarvisFundo.usar("escuro")')

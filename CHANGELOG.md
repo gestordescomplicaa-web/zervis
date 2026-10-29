@@ -6,6 +6,11 @@
   com pulsos correndo pelas ligações, brilho na borda, varredura, falhas de sinal e a montagem
   quando ele aparece, na cor do tema, sobre um projetor com feixe de luz e anéis orbitando. Gestos,
   boca, piscar, emoções e tontura seguem iguais.
+- O Zé se apresenta na Imersão (tecla A, Configurações → Apresentação ou "Zé, se apresenta"): ele
+  vai para o canto, vira para o quadro, e os painéis holográficos aparecem um a um, ligados a ele
+  por feixes de luz, com uma legenda: Identidade, Atividade (com os números e os registros por
+  dia), Conexões (num grafo vivo), Mais executadas e Recentes. Tudo vem do autoconhecimento dele.
+  Os painéis são cartões: a mão pega, move, amplia e arremessa para fechar.
 - Fundo da Imersão: a câmera, como antes, ou o escuro animado (grade em perspectiva e uma rede de
   pontos que se conectam), na tecla F ou em Configurações → Fundo. No escuro a câmera continua
   lendo as mãos; só a imagem some. A escolha fica guardada.
