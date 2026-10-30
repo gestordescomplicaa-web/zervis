@@ -50,11 +50,13 @@
     lista: b => { const itens = lista(b.itens, 7).map(i => texto(i, 90)).filter(Boolean); return itens.length && { itens }; },
     // a real 3D object (jarvis-holograma.js): the pinch lock turns it, two hands scale it
     holograma: b => window.jarvisHolograma?.limpar(b) || null,
+    // a ready-made model downloaded to the Acervo (modelo3d_baixar): its path there
+    modelo: b => { const f = String(b.arquivo || ""); return /^[\w\-./ ]+\.(glb|gltf)$/i.test(f) && !f.split("/").includes("..") && { arquivo: f, estilo: b.estilo === "solido" ? "solido" : "holograma" }; },
     linha_tempo: b => { const marcos = lista(b.marcos, 8).map(i => ({ quando: texto(i?.quando, 14), nome: texto(i?.nome, 40) })).filter(i => i.nome);
       return marcos.length > 1 && { marcos }; },
   };
   const NOME = { titulo: "TÍTULO", numero: "NÚMERO", barras: "COMPARAÇÃO", linha: "EVOLUÇÃO", rosca: "DIVISÃO", etapas: "ETAPAS", rede: "CONEXÕES",
-    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", globo: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
+    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", modelo: "MODELO 3D", globo: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
   function limpar(cena) {
     if (typeof cena === "string") { try { cena = JSON.parse(cena); } catch (_) { cena = null; } }
     if (!cena || typeof cena !== "object") throw new Error("cena: um objeto com titulo e passos");
@@ -464,6 +466,13 @@
       limpar: p.limpar, fala: p.fala, foco: p.blocos[0] ? `cena-${n + (p.blocos[0].tipo === "titulo" && p.blocos[1] ? 1 : 0)}` : null,
       mostrar: p.blocos.map(b => {
         const nome = `cena-${n++}`, ordem = String(n).padStart(2, "0");
+        if (b.tipo === "modelo") return () => {   // a downloaded model, in the same card
+          const { x, y, w, h } = b.caixa, W = innerWidth, H = innerHeight;
+          const it = window.jarvisStage.mostrarModelo(b.arquivo, b.titulo || c.titulo,
+            { x: (x + w / 2) * W, y: (y + h / 2) * H, tam: Math.min(w * W, h * H) * 1.05, estilo: b.estilo === "solido" ? "solido" : "holo" });
+          it.rx = -.25; it.ry = .5;
+          return palco.anexar(nome, it);
+        };
         if (b.tipo === "holograma") return () => {   // a model card, not a panel
           const { x, y, w, h } = b.caixa, W = innerWidth, H = innerHeight;
           // without a title of its own, the hologram is named after the scene ("fecha o foguete")

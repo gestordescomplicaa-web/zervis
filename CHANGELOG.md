@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- "Zé, mostra um cavalo em 3D": ele busca um modelo pronto e livre (CC0) no 3DAssets.dev, baixa
+  para o Acervo e mostra em holograma, com as cores do modelo, para travar com a pinça e girar.
+  Serve para objetos reais (animais, carros, aviões, órgãos); esquemas como o sistema solar
+  continuam montados com peças. O download só aceita a fonte permitida e arquivos `.glb` válidos,
+  e guarda a licença e o autor ao lado.
 - Hologramas 3D de verdade na Imersão: "Zé, mostra o sistema solar em 3D" e ele monta o objeto com
   peças (esferas, cilindros, cones, anéis, hélices, ligações, partículas), com cores, rótulos e
   movimento (órbitas, giro, pulso). Ele vira um cartão holográfico: a pinça trava e gira em todos

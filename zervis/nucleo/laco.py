@@ -461,6 +461,7 @@ class Nucleo(
             pesquisar=lambda pedido: pesquisa.pesquisar(
                 pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
             ),
+            acervo=self.imersivo.acervo,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)

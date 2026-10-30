@@ -117,6 +117,7 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         automacoes,
         conectores,
         manutencao,
+        modelos,
         navegador,
         pesquisa,
         sessoes,
@@ -140,6 +141,7 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         *atualizacoes.ferramentas(),
         *sobre.ferramentas(lambda: ""),
         *pesquisa.ferramentas(_sem_pesquisa),
+        *modelos.ferramentas(Path("/nao-existe"), vazio),
     ]
 
 
