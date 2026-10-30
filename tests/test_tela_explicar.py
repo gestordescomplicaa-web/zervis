@@ -90,6 +90,6 @@ def test_o_mapa_pede_so_o_que_destacar_e_os_contornos_vem_do_arquivo() -> None:
     passo = ferramenta.input_schema["properties"]["passos"]["items"]
     campos = passo["properties"]["blocos"]["items"]["properties"]
     assert "mapa" in campos["tipo"]["enum"]
-    assert {"regiao", "destaques", "relevo", "pontos", "ligar"} <= set(campos)
+    assert {"regiao", "destaques", "relevo", "isolar", "pontos", "ligar"} <= set(campos)
     assert set(campos["destaques"]["items"]["properties"]) == {"nome", "valor", "rotulo"}
     assert "nunca desenhe mapa com peças" in ferramenta.description
