@@ -48,3 +48,12 @@ mil tokens cada; todos os nomes foram achados no arquivo.
 - Municípios, bairros e mapas de outros países por estado ficam de fora (o arquivo cresceria
   muito); entram como arquivos à parte, baixados sob demanda, se fizerem falta.
 - Países muito pequenos (ilhotas abaixo de 0,02 grau²) não aparecem no mapa do mundo.
+
+## Ajustes do uso real (30/10/2026)
+
+- "Mostra o mapa do Nordeste" chegou a mostrar o mundo: a região escrita de outro jeito não era
+  reconhecida. Agora `regiao` é lida por inteiro primeiro (Rio Grande do Norte é estado, Coreia
+  do Sul é país), depois por continente, região do Brasil e "brasil" no meio da frase; o que não
+  for reconhecido volta em `ignorados` como "mapa: regiao X".
+- A região sem destaques acende sozinha (o Nordeste, a Bahia, a Argentina).
+- `isolar` mostra só a região ou os destaques, sem o resto ("só o Nordeste, não o Brasil").

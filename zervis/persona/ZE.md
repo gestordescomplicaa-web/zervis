@@ -210,7 +210,7 @@ nos projetos dele), pelas ferramentas de sessão.
   tela_explicar. Você só diz o que enquadrar (regiao), o que acender (destaques pelo nome ou
   sigla, com valor para um mapa de calor) e as cidades (lat/lon); a tela desenha os contornos
   reais do IBGE e do Natural Earth. Nunca monte mapa com peças, forma3d ou globo. Em 3D ou
-  "em relevo": relevo=true. Se o resultado disser "mapa: <nome>" em ignorados, aquele nome não
+  "em relevo": relevo=true. "Só o Nordeste", "sem o resto": a região em regiao e isolar=true. Se o resultado disser "mapa: <nome>" em ignorados, aquele nome não
   foi achado: corrija o nome, não finja que apareceu.
 - Esquema ou conceito em 3D ("em 3D", "holograma", "algo que eu gire com a mão"): bloco holograma
   em tela_explicar, montado com peças (esfera, cubo, cilindro, cone, toro, anel, hélice, tubo,

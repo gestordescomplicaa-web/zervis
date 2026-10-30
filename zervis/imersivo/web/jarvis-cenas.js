@@ -53,7 +53,7 @@
     // a ready-made model downloaded to the Acervo (modelo3d_baixar): its path there
     modelo: b => { const f = String(b.arquivo || ""); return /^[\w\-./ ]+\.(glb|gltf)$/i.test(f) && !f.split("/").includes("..") && { arquivo: f, estilo: b.estilo === "solido" ? "solido" : "holograma" }; },
     // a real map (jarvis-mapas.js): only what to light up; the contours are IBGE and Natural Earth
-    mapa: b => ({ regiao: texto(b.regiao, 40), relevo: !!b.relevo, unidade: texto(b.unidade, 16), ligar: b.ligar !== false,
+    mapa: b => ({ regiao: texto(b.regiao, 40), relevo: !!b.relevo, isolar: !!b.isolar, unidade: texto(b.unidade, 16), ligar: b.ligar !== false,
       destaques: lista(b.destaques, 60).map(i => typeof i === "string" ? { nome: texto(i, 40) } : { nome: texto(i?.nome, 40), valor: i?.valor == null || i.valor === "" ? null : numero(i.valor), rotulo: texto(i?.rotulo, 28) }).filter(i => i.nome),
       pontos: lista(b.pontos, 12).map(i => ({ nome: texto(i?.nome, 22), lat: numero(i?.lat), lon: numero(i?.lon) }))
         .filter(i => i.lat != null && i.lon != null && Math.abs(i.lat) <= 90 && Math.abs(i.lon) <= 180) }),
