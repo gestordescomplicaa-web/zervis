@@ -118,7 +118,12 @@ def rodar(nome: str, janela_aberta: bool = True) -> tuple[str, list[tuple[str, A
     n.sessoes = SimpleNamespace(permissoes=Permissoes())  # type: ignore[assignment]
     n._permissao_falada, n._permissao_ate = None, 0.0
     n._comando(nome)
-    time.sleep(0.1)  # trazer, abrir, fechar e a busca correm numa linha de execução própria
+    # Trazer, abrir, fechar, a busca e a manutenção correm numa linha de execução própria: espera o
+    # fim de verdade (um tempo fixo falhava no CI, mais lento), e mais um instante para o resto.
+    limite = time.monotonic() + 3
+    while ("evento", e.RespostaFim()) not in r.feito and time.monotonic() < limite:
+        time.sleep(0.02)
+    time.sleep(0.1)
     frases = [ev.texto for tipo, ev in r.feito if tipo == "evento" and isinstance(ev, e.Frase)]
     assert ("evento", e.RespostaFim()) in r.feito and n.marca == 1
     acoes = [(t, v) for t, v in r.feito if t != "evento"]

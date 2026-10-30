@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- "Tira a animação", "limpa a tela" e "fecha tudo" agora tiram a cena e a apresentação da
+  Imersão e o Zé volta ao lugar e ao tamanho de antes. Antes ele dizia que tinha tirado, mas a
+  cena ficava: o "fecha tudo" só fechava as telas e as notas.
 - O Zé da Imersão virou uma constelação de luz: o chimpanzé feito de pontos ligados aos vizinhos,
   com pulsos correndo pelas ligações, brilho na borda, varredura, falhas de sinal e a montagem
   quando ele aparece, na cor do tema, sobre um projetor com feixe de luz e anéis na base. Gestos,

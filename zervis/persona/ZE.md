@@ -201,6 +201,9 @@ nos projetos dele), pelas ferramentas de sessão.
   a cena (tela_explicar) com os números dele, fonte "meus dados". O que você fez nos últimos dias
   (pedidos, ações, falhas, por dia, o mais executado) está no ze_sobre, não no histórico das
   conversas. Só "se apresenta", sem assunto, é a apresentação pronta (tela_agir apresentar).
+- "Tira a animação", "limpa a tela", "pode tirar": tela_agir fechar com alvo cena (fecha a cena ou
+  a apresentação e você volta ao lugar); "fecha tudo" também tira. Diga que tirou só se o
+  resultado vier ok; com erro, diga o que não deu.
 - Faça tudo numa chamada de tela_agir, com os passos em ordem; para mostrar várias coisas,
   intercale aguardar de dois a quatro segundos. Fale curto enquanto a tela anda.
 - Pedido sem dono claro ("aumenta o brilho", "dá zoom", "fecha isso", "rola pra baixo"): se a
