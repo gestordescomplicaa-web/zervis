@@ -2,6 +2,30 @@
 
 ## Não lançado
 
+- O Zé da Imersão virou uma constelação de luz: o chimpanzé feito de pontos ligados aos vizinhos,
+  com pulsos correndo pelas ligações, brilho na borda, varredura, falhas de sinal e a montagem
+  quando ele aparece, na cor do tema, sobre um projetor com feixe de luz e anéis na base. Gestos,
+  boca, piscar, emoções e tontura seguem iguais.
+- O Zé se apresenta na Imersão (tecla A, Configurações → Apresentação ou "Zé, se apresenta"): ele
+  vai para o canto, vira para o quadro, e os painéis holográficos aparecem um a um, ligados a ele
+  por feixes de luz, com uma legenda: Identidade, Atividade (com os números e os registros por
+  dia), Conexões (num grafo vivo), Mais executadas e Recentes. Tudo vem do autoconhecimento dele.
+  Os painéis são cartões: a mão pega, move, amplia e arremessa para fechar.
+- "Zé, me explica X": com a Imersão aberta, ele monta uma cena animada para explicar o assunto.
+  Vai para o canto, e os blocos aparecem um a um, ligados a ele: título, número que conta,
+  barras, linha, rosca, etapas acendendo, rede com pacotes, ondas que se somam, formas 3D (hélice
+  do DNA, átomo, rede neural, galáxia, superfície ondulando), globo com arcos, comparação, lista e
+  linha do tempo. Número sem fonte aparece como ILUSTRATIVO. A tecla E mostra os exemplos. Perguntas
+  sobre ele mesmo ("mostra num gráfico o que você fez", "quanto você falha") viram cena com os
+  números dele.
+- A Imersão não tem mais o Núcleo em volta do Zé: tocar nele não abre os círculos. Mapa, Hoje,
+  Trabalho, Acervo e Guia abrem pelo nome ("abre o Mapa", "mostra o meu dia"), como antes pela voz.
+  "Abre o Núcleo" e "fecha o Núcleo" deixaram de ser comandos.
+- Fundo da Imersão: a câmera, como antes, ou o escuro animado (grade em perspectiva e uma rede de
+  pontos que se conectam), na tecla F ou em Configurações → Fundo. No escuro a câmera continua
+  lendo as mãos; só a imagem some. A escolha fica guardada.
+- Os testes da Imersão (`make check-imersivo`) voltaram a abrir a página: desde a troca de nome do
+  pacote, procuravam a pasta antiga e nada provava os gestos, as mãos e o avatar.
 - Em Modelos → Respostas rápidas, "Só no Live" e "Sempre" voltam a funcionar e valem no
   clique, sem o Salvar. O botão não fazia nada: ficava sempre em "Só no Live".
 - A bateria de avaliação (`zervis avaliar`) roda com o cérebro escolhido no Zé (Claude ou Codex,

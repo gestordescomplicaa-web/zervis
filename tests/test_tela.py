@@ -101,11 +101,11 @@ def test_resumo_diz_onde_esta_e_o_que_mostra(
     t = tela.Tela(tmp_path)
     estado = {
         "nucleo": {
-            "aberto": True,
             "orbes": ["Mapa", "Guia", "Identidade", "Acervo", "Orca"],
             "orbes_abertos": ["Mapa", "Guia"],
             "notas_abertas": ["Comece aqui"],
         },
+        "apresentacao": {"ativa": True, "cena": "Como funciona o MCP"},
         "cerebro": {"aberto": True, "modo": "focus", "foco": {"nome": "Projeto Alfa"}},
         "menu_configuracoes": {"aberto": False},
         "maos_em_uso": True,
@@ -114,8 +114,8 @@ def test_resumo_diz_onde_esta_e_o_que_mostra(
     monkeypatch.setattr(t, "em_foco", lambda: True)
     assert t.resumo() == (
         "Janela do Zé: aberta, é a janela ativa; "
-        "Núcleo aberto (orbes Mapa, Guia, Identidade, Acervo, Orca); "
-        "abertos: Mapa, Guia, nota Comece aqui; Mapa na vista foco, mostrando Projeto Alfa; "
+        "abertos: Mapa, Guia, nota Comece aqui; cena na tela: Como funciona o MCP; "
+        "Mapa na vista foco, mostrando Projeto Alfa; "
         "o usuário está usando as mãos agora."
     )
 

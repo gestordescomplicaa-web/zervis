@@ -1,5 +1,5 @@
 """The avatar: the Zé's holographic chimpanzee (Blender glTF) inside the ring
-widget (tap still blooms the Núcleo), switchable back to the ring from the D menu, by the
+widget (a tap only pulses him: no Núcleo orbs since 29/10/2026), switchable back to the ring from the D menu, by the
 Zé (action visual) or by voice.
 
 Run: python tests/test_avatar.py   (or pytest). WebGL runs on SwiftShader (no GPU needed);
@@ -108,7 +108,10 @@ async def main():
                 shot = await call('Page.captureScreenshot', {'format': 'png'})
                 Path('/tmp/jarvis-chimpanze-falando.png').write_bytes(base64.b64decode(shot['data']))
                 await ev('clearInterval(avatarFeed);window.avatarFeed=setInterval(()=>{jarvisRing.data={state:"speaking",wave:Array(64).fill(0)};},20)')
-                await asyncio.sleep(1.2)
+                for _ in range(60):  # the mouth eases shut frame by frame: slower frames, longer wait
+                    if await ev('jarvisAvatar.diagnostico()[0].boca<.025'):
+                        break
+                    await asyncio.sleep(.1)
                 await check('silence during speech closes the mouth', 'jarvisAvatar.diagnostico()[0].boca<.025')
                 await ev('clearInterval(avatarFeed);window.avatarFeed=setInterval(()=>{jarvisRing.data={state:"listening",wave:Array(64).fill(.9)};},20)')
                 await asyncio.sleep(.4)
@@ -144,7 +147,9 @@ async def main():
                     const r = document.querySelector(".ringcard"), d = jarvisAvatar.diagnostico()[0];
                     return Math.abs(d.giro - 2.2) < .05 && !/rotateY/.test(r.style.transform); })()''')
                 await ev('(()=>{const it=jarvisItemDe(document.querySelector(".ringcard"));it.ry=.8;it.grabbedBy=[];it.mode=null;})()')
-                for _ in range(120):  # slow software frames under the parallel suite
+                # The board steps at most 0.05 s per frame: at the ~3 fps of software WebGL under the
+                # parallel suite, the 1.4 s settle takes up to ~10 s of wall time, so wait up to 30.
+                for _ in range(300):
                     if await ev('Math.abs(jarvisAvatar.diagnostico()[0].giro - 2*Math.PI) < .1 || Math.abs(jarvisAvatar.diagnostico()[0].giro) < .1'):
                         break
                     await asyncio.sleep(.1)
@@ -195,7 +200,7 @@ async def main():
                 await check('it keeps drawing on its own', f'jarvisAvatar.quadros - {n0} >= 5')
                 await ev('document.querySelector(".ringcard").click()')
                 await asyncio.sleep(.8)
-                await check('tapping it still blooms the Núcleo', 'document.querySelectorAll(".card.orb").length === 5')
+                await check('tapping it blooms no orbs (the Núcleo opens by name)', '!document.querySelector(".card.orb")')
                 r = await ev('jarvisControle.executar({id: "v1", acoes: [{acao: "visual", valor: "anel"}]}).then(() => jarvisControle.estado())')
                 await asyncio.sleep(.3)
                 await check('the Zé can bring the ring back ("volta o anel")', '''!document.querySelector("canvas.jv-avatar-cena")
@@ -213,11 +218,81 @@ async def main():
                     && localStorage.getItem("jv-visual") === "avatar" && document.querySelector("[data-config='visual:avatar']").classList.contains("ativo")''')
                 await ev('jarvisConfig.alternar();stagePinch(".ringcard")')
                 await asyncio.sleep(.7)
-                await check('the original pinch still closes the orbital menu through the avatar', '!jarvisStage.nucleo().aberto')
+                await check('a pinch tap on the avatar is measured for the calibration and opens nothing',
+                            '!document.querySelector(".card.orb") && !document.querySelector(".panel")')
                 await ev('jarvisAvatar.usar(false);jarvisAvatar.usar(true);jarvisAvatar.usar(false);jarvisAvatar.usar(true)')
                 await asyncio.sleep(.8)
                 await check('rapid visual changes leave one live scene and one label', '''jarvisAvatar.montados===1
                     &&document.querySelectorAll('.jv-avatar-cena').length===1&&document.querySelectorAll('.jv-avatar-identidade').length===1''')
+                # The presentation (ADR 0045): the Zé moves aside and his own data materializes as
+                # real board items, linked to him by beams; encerrar brings everything back.
+                antes = await ev('(()=>{const r=jarvisStage.anel();return {x:r.x,y:r.y};})()')
+                await ev('jarvisApresentacao.ritmo=.03;jarvisControle.executar({id:"a1",acoes:[{acao:"apresentar",valor:"quem"}]})')
+                cinco = '''(() => {
+                    const els = [...document.querySelectorAll(".card.jv-holo")];
+                    return els.length === 5 && els.every(el => jarvisItemDe(el)?.type === "holo")
+                      && document.querySelectorAll("#jv-feixes .feixe").length === 5
+                      && document.querySelector(".jv-holo h2").textContent === "Identidade"
+                      && !!document.querySelector(".jv-holo .jv-grafo canvas"); })()'''
+                for _ in range(150):  # slow software frames: the graph draws a moment after its panel
+                    if await ev(cinco):
+                        break
+                    await asyncio.sleep(.1)
+                await check('the presentation shows five panels from the self-knowledge, as board items', cinco)
+                for _ in range(40):
+                    if await ev('document.querySelector(".jv-heroi b").textContent === "6"'):
+                        break
+                    await asyncio.sleep(.1)
+                await check('the numbers are the Zé\'s own (the sample: 6 requests)', 'document.querySelector(".jv-heroi b").textContent === "6"')
+                await check('the Zé moved to the left, a caption tells what is shown', '''(() => {
+                    const r = jarvisStage.anel(); return r.x < innerWidth * .3 && document.getElementById("jv-legenda-ze").textContent.length > 0; })()''')
+                await ev('jarvisControle.executar({id:"a2",acoes:[{acao:"apresentar",valor:"encerrar"}]})')
+                for _ in range(150):
+                    if await ev(f'(()=>{{const r=jarvisStage.anel();return Math.abs(r.x-{antes["x"]})<3 && !document.querySelector(".card.jv-holo");}})()'):
+                        break
+                    await asyncio.sleep(.1)
+                await check('encerrar clears the panels and the beams, and the Zé goes back', f'''(() => {{
+                    const r = jarvisStage.anel(); return Math.abs(r.x - {antes["x"]}) < 3 && !document.querySelector(".card.jv-holo")
+                      && !document.querySelector("#jv-feixes .feixe") && !jarvisApresentacao.apresentando; }})()''')
+                # A scene the Zé writes (ADR 0047): cleaned on the page, unknown blocks dropped, numbers
+                # without a source tagged ILUSTRATIVO, the blocks drawn on board items.
+                cena = {'titulo': 'Teste', 'passos': [
+                    {'fala': 'Um.', 'blocos': [{'tipo': 'titulo', 'texto': 'Teste'}, {'tipo': 'numero', 'valor': 42, 'unidade': 'm/s'}]},
+                    {'fala': 'Dois.', 'blocos': [{'tipo': 'forma3d', 'forma': 'neural'}, {'tipo': 'barras', 'fonte': 'medição', 'itens': [{'nome': 'a', 'valor': 2}]},
+                                                 {'tipo': 'video', 'url': 'x'}]}]}
+                r = await ev(f'jarvisApresentacao.ritmo=.03;jarvisControle.executar({{id:"c1",acoes:[{{acao:"explicar",cena:{json.dumps(cena)}}}]}}).then(()=>1)')
+                quatro = '''(() => { const els = [...document.querySelectorAll(".card.jv-holo.jv-cena")];
+                    return els.length === 4 && els.every(el => jarvisItemDe(el)?.type === "holo")
+                      && !!document.querySelector(".jv-cena-forma3d canvas") && !!document.querySelector(".jv-cena-titulo h1"); })()'''
+                for _ in range(150):
+                    if await ev(quatro):
+                        break
+                    await asyncio.sleep(.1)
+                await check('a written scene becomes four drawn blocks on the board (the unknown one dropped)', quatro)
+                await check('a number without a source says ILUSTRATIVO, one with a source says it, a scheme says ESQUEMA', '''(() => {
+                    const f = t => document.querySelector(".jv-cena-" + t + " .jv-h-fonte").textContent;
+                    return f("numero") === "ILUSTRATIVO" && f("barras") === "FONTE · MEDIÇÃO" && f("forma3d") === "ESQUEMA"; })()''')
+                await check('the screen state names the running scene', '''(() => { const e = jarvisControle.estado();
+                    return e.apresentacao.cena === "Teste" && e.apresentacao.ativa; })()''')
+                await ev('jarvisApresentacao.encerrar()')
+                await asyncio.sleep(.6)
+                # The background (29/10/2026): the camera or the dark animated scene; the video only
+                # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
+                await ev('jarvisFundo.usar("escuro")')
+                await asyncio.sleep(.5)
+                await check('the dark background hides the camera image and draws its own scene', '''(() => {
+                    const cam = document.getElementById("cam"), cena = document.getElementById("jv-fundo-cena");
+                    return document.body.classList.contains("jv-escuro") && cam.getBoundingClientRect().width <= 2
+                      && getComputedStyle(cena).display === "block" && cena.width > 0
+                      && localStorage.getItem("jv-fundo") === "escuro"; })()''')
+                await ev('jarvisConfig.abrir()')
+                await check('the D menu marks Fundo: Escuro', 'document.querySelector("[data-config=\'fundo:escuro\']").classList.contains("ativo")')
+                await ev('jarvisConfig.alternar();document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"f",bubbles:true}))')
+                await asyncio.sleep(.3)
+                await check('F brings the camera back', '!document.body.classList.contains("jv-escuro") && jarvisFundo.modo === "camera"')
+                await check('the constellation draws past the card, the card keeps its size', '''(() => {
+                    const r = document.querySelector(".ringcard").getBoundingClientRect(), c = document.querySelector("canvas.jv-avatar-cena").getBoundingClientRect();
+                    return c.width > r.width * 1.3; })()''')
                 await ev('document.querySelector(".ringcard").remove()')
                 await asyncio.sleep(.3)
                 await check('removing the widget releases the live scene', 'jarvisAvatar.montados===0')

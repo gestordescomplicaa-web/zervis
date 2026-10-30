@@ -1,6 +1,7 @@
 """A tela do Zé (Barehands) e o Núcleo nela. Ver, agir, abrir e fechar.
 
-O Núcleo é o anel do Zé com os orbes que nascem dele (Mapa, Hoje, Trabalho, Acervo, Guia).
+O Núcleo são as telas do manifesto (Mapa, Hoje, Trabalho, Acervo, Guia). Desde 29/10/2026 não há
+orbes em volta do Zé (ADR 0047): cada uma abre pelo nome, por voz ou pelo cérebro.
 A janela do Zé é onde ele vive: com ela fechada, a câmera fica apagada e não há Núcleo.
 
 Contrato pela pasta de estado do Barehands, como o resto do rosto:
@@ -23,10 +24,9 @@ from pathlib import Path
 from typing import Any
 
 ACOES = {
-    "nucleo": "valor: abrir (mostra os orbes ao redor do anel) ou fechar (recolhe)",
     "abrir": "alvo: um orbe (pelo nome ou apelido) ou qualquer item do Núcleo pelo nome falado: "
     "nota, arquivo do Acervo ou pasta; orbe (opcional) restringe a "
-    "busca a um orbe. Abre exatamente aquilo, abrindo o Núcleo antes se precisar",
+    "busca a um orbe. Abre exatamente aquilo",
     "buscar": "alvo: um nome; orbe (opcional). Lista o que existe com esse nome: nome, orbe, "
     "tipo e endereço (orbe/pasta/item). Use antes de abrir quando não souber o nome exato",
     "fechar": "alvo: um orbe, um item aberto (nota ou arquivo), ou tudo",
@@ -47,13 +47,18 @@ ACOES = {
     "foco": "mostra o quadro do Foco (as frentes, a atual em destaque, com o V para marcar)",
     "visual": "valor: avatar (o busto holográfico que fala, no lugar do anel) ou anel",
     "girar": "valor: voltas (1 a 3, padrão 1). O Zé dá uma volta completa na tela",
+    "apresentar": "valor: quem (o Zé vai para o canto e mostra, em painéis holográficos, os "
+    "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente) "
+    "ou encerrar (recolhe os painéis). Só para 'se apresenta' sem assunto; um aspecto seu (um "
+    "gráfico do que fez, conexões, falhas) é ze_sobre e tela_explicar",
     "expressao": "valor: alegria, duvida, raiva, tristeza ou neutro; segundos (opcional, "
     "padrão 6). O rosto do avatar; numa resposta, prefira a marca no começo do texto",
     "tema": "alvo: original, roxo, marinho, esmeralda ou grafite",
-    "brilho": "valor: 0 desligado, 1 suave, 2 médio, 3 forte (é o brilho da câmera do Núcleo)",
+    "brilho": "valor: 0 desligado, 1 suave, 2 médio, 3 forte (é o brilho da câmera da sua janela)",
     "calibrar_maos": "começa a calibração guiada das mãos",
     "maos_padrao": "volta à calibração e à câmera originais",
 }
+CENA = "explicar"  # a cena animada (tela_explicar), com a cena em JSON no lugar de alvo e valor
 JANELA = r"class:^(chrome-127\.0\.0\.1__(stage\.html.*|-Default))$"  # o imersivo ou o painel
 CLASSE_PAINEL = "chrome-127.0.0.1__-Default"
 CLASSE = "chrome-127.0.0.1__stage.html"
@@ -141,17 +146,13 @@ class Tela:
         ]
         n = estado.get("nucleo") or {}
         if n:
-            orbes = ", ".join(n.get("orbes") or [])
-            partes.append(
-                f"Núcleo aberto (orbes {orbes})"
-                if n.get("aberto")
-                else f"Núcleo recolhido ({orbes})"
-            )
             abertos = list(n.get("orbes_abertos") or [])
             abertos += [f"nota {t}" for t in n.get("notas_abertas") or []]
             abertos += [f"arquivo {t}" for t in n.get("arquivos_abertos") or []]
             if abertos:
                 partes.append("abertos: " + ", ".join(abertos))
+        if (a := estado.get("apresentacao") or {}).get("ativa"):
+            partes.append(f"cena na tela: {a['cena']}" if a.get("cena") else "apresentação na tela")
         c = estado.get("cerebro") or {}
         if c.get("aberto"):
             foco = c.get("foco") or {}
@@ -175,7 +176,7 @@ class Tela:
         """Executa as ações em ordem. Passeios (com 'aguardar' ou longos) voltam assim que a
         página confirma o início, para o Zé falar enquanto a tela anda."""
         for a in acoes:
-            if a.get("acao") not in ACOES:
+            if a.get("acao") not in ACOES and a.get("acao") != CENA:
                 raise TelaErro(f"ação desconhecida: {a.get('acao')}")
         if acoes and not self.aberto():
             raise TelaErro("a janela do Zé está fechada; ofereça abrir (janela_abrir)")

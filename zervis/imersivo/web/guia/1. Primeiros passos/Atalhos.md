@@ -10,6 +10,8 @@ A **engrenagem** no canto superior esquerdo abre as configurações, com esta li
 | **B** | Aumenta o brilho da câmera |
 | **Shift + B** | Diminui o brilho da câmera |
 | **T** | Troca as cores |
+| **F** | Troca o fundo: a câmera ou o escuro animado (as mãos continuam sendo lidas) |
+| **A** | O Zé se apresenta com os próprios dados (de novo, encerra) |
 | **/** | Escrever para o Zé, sem falar |
 | **R** | Recarrega a tela (relê o Guia e o Acervo) |
 | **C** | Troca a câmera |

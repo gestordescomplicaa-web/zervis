@@ -75,6 +75,10 @@ ASSUNTOS_DE_FERRAMENTA = {
     *("site", "navegador", "internet", "noticia", "noticias", "preco", "dolar", "clima"),
     *("tempo", "previsao", "volume", "computador", "janela", "arquivo", "pasta"),
 }
+# Com a janela do Zé aberta, explicar vira uma cena na tela (tela_explicar, ADR 0047): só o
+# completo tem a ferramenta. Fechada, a explicação fica na via rápida, falada.
+EXPLICAR = {"explica", "explique", "explicar", "ensina", "ensine", "apresenta", "apresente"}
+JANELA_ABERTA = "janela do ze aberta"
 FALADO = re.compile(r"^\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*")
 MARCA = re.compile(r"\s*\[[a-zà-ú_]{2,12}\]\s*", re.IGNORECASE)
 ENDERECOS = {
@@ -115,6 +119,8 @@ def precisa_do_completo(pedido: str) -> bool:
         p = p[1:]
     if not p:
         return False
+    if any(w in EXPLICAR for w in p[:3]) and JANELA_ABERTA in " ".join(palavras(pedido)):
+        return True
     return p[0] in VERBOS_DE_ACAO or any(w in ASSUNTOS_DE_FERRAMENTA for w in p)
 
 

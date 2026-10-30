@@ -6,7 +6,8 @@
 (() => {
   if (new URLSearchParams(location.search).get("role") === "render") return;
   const BRILHOS = ["Desligado", "Suave", "Médio", "Forte"];
-  // The keys of the page (stage.html, jarvis-maos.js, jarvis-teclado.js); the Guia has the same list.
+  // The keys of the page (stage.html, jarvis-maos.js, jarvis-teclado.js); the Guia has the same list,
+  // plus A and F, shown in the titles of their own sections below.
   const ATALHOS = [
     ["D", "Configurações"], ["K", "Calibrar as mãos"], ["Shift + K", "Mãos no padrão"],
     ["B", "Mais brilho na câmera"], ["Shift + B", "Menos brilho na câmera"], ["T", "Trocar as cores"],
@@ -37,6 +38,13 @@
         ${seg("tema", 3, (window.jarvisTema?.lista || [{ id: "original", nome: "Original" }]).map(t => `<button data-config="tema:${t.id}">${t.nome}</button>`).join(""))}</section>
       <section><h3>Visual</h3>
         ${seg("visual", 2, '<button data-config="visual:avatar">Avatar</button><button data-config="visual:anel">Anel</button>')}</section>
+      <!-- The keys of these two sit in the titles: one more row of shortcuts pushed the brightness
+           buttons out of the menu's view on a 900 px screen, out of the hand's reach (29/10/2026). -->
+      <section><h3>Apresentação <kbd>A</kbd></h3>
+        <div class="seg" style="--n:2"><button data-config="apresentar:quem">Apresentar</button>
+        <button data-config="apresentar:encerrar">Encerrar</button></div></section>
+      <section><h3>Fundo <kbd>F</kbd></h3>
+        ${seg("fundo", 2, '<button data-config="fundo:camera">Câmera</button><button data-config="fundo:escuro">Escuro</button>')}</section>
       <section class="opcional"><h3>Cérebro</h3><div class="slot" data-slot="cerebros"></div></section>
       <section class="opcional"><h3>Consumo</h3><div class="slot" data-slot="consumo"></div></section>
     </div>`;
@@ -115,6 +123,8 @@
     menu.querySelectorAll("[data-grupo=tema] button").forEach(b => b.classList.toggle("ativo", b.dataset.config === "tema:" + tema));
     const visual = window.jarvisAvatar?.ativo === false ? "anel" : "avatar";
     menu.querySelectorAll("[data-grupo=visual] button").forEach(b => b.classList.toggle("ativo", b.dataset.config === "visual:" + visual));
+    const fundo = window.jarvisFundo?.modo || "camera";
+    menu.querySelectorAll("[data-grupo=fundo] button").forEach(b => b.classList.toggle("ativo", b.dataset.config === "fundo:" + fundo));
   }
   let antes = null;
   function abrir() {
@@ -132,12 +142,15 @@
     else if (acao.startsWith("brilho:")) M?.mudarBrilho(Number(acao.slice(7)));
     else if (acao.startsWith("tema:")) window.jarvisTema?.usar(acao.slice(5));
     else if (acao.startsWith("visual:")) window.jarvisAvatar?.usar(acao.slice(7) === "avatar");
+    else if (acao.startsWith("fundo:")) window.jarvisFundo?.usar(acao.slice(6));
+    else if (acao === "apresentar:quem") { fechar(); window.jarvisApresentacao?.apresentar("quem").catch(() => {}); }
+    else if (acao === "apresentar:encerrar") window.jarvisApresentacao?.encerrar();
     marcar();
   }
   menu.addEventListener("click", ev => { const b = ev.target.closest("[data-config]"); if (b) acionar(b.dataset.config); });
   addEventListener("keydown", ev => { if (ev.key === "Escape" && !menu.hidden && !ev.target.closest?.("#jv-teclado")) { ev.preventDefault(); fechar(); } });
   addEventListener("jv-tema", marcar);
-  addEventListener("jv-visual", marcar);
+  addEventListener("jv-visual", marcar); addEventListener("jv-fundo", marcar);
   window.jarvisConfig = {
     get aberto() { return !menu.hidden; }, abrir, fechar, acionar,
     alternar() { menu.hidden ? abrir() : fechar(); },

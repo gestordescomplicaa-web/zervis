@@ -53,3 +53,5 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0043](0043-ze-se-conhece.md) | O Zé se conhece: o retrato da própria configuração (ferramenta ze_sobre, via rápida e a nota Quem sou), para qualquer modelo | Aceito |
 | [0044](0044-pesquisa-na-internet-do-ze.md) | A pesquisa na internet do próprio Zé (internet_pesquisar), sem sessão e com qualquer cérebro, numa consulta à parte | Aceito |
 | [0045](0045-ze-se-conhece-inteiro.md) | O Zé se conhece por inteiro: o que sabe fazer (ferramentas, skills, conectores, sessões) e o que fez (a Atividade), em texto e em dados para a tela | Aceito |
+| [0046](0046-apresentacoes-da-imersao.md) | As apresentações da Imersão: o Zé vai para o canto e mostra os próprios dados em painéis holográficos que a mão pega | Aceito como direção |
+| [0047](0047-cenas-que-o-ze-escreve.md) | Cenas que o Zé escreve: "me explica X" vira gráficos, ondas e 3D na Imersão, de um catálogo de blocos | Em validação |

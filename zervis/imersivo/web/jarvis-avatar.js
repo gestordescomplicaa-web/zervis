@@ -26,6 +26,11 @@
     @media (prefers-reduced-motion: reduce) { .ringcard.jv-preparando::after { animation:none; opacity:.8 } }
     .ringcard > canvas.jv-avatar-cena { position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
       filter:drop-shadow(0 0 2px rgb(var(--jv-brilho, 100 225 240) / .45)) drop-shadow(0 0 9px rgb(var(--jv-brilho, 100 225 240) / .3)); }
+    /* The constellation draws past the card (projector below, rings around): only the drawing grows,
+       the card the hand grabs keeps its size. A signal glitch splits the colours for a few frames. */
+    .ringcard > canvas.jv-avatar-cena.jv-constelacao { inset:auto; left:-22%; top:-22%; width:144%; height:144%; }
+    .ringcard > canvas.jv-avatar-cena.jv-falha { transform:translateX(3px);
+      filter:drop-shadow(4px 0 rgb(255 60 110 / .6)) drop-shadow(-4px 0 rgb(60 230 255 / .6)) drop-shadow(0 0 9px rgb(var(--jv-brilho, 100 225 240) / .3)); }
     .ringcard > .jv-avatar-identidade { position:absolute; bottom:0; left:0; right:0; pointer-events:none;
       text-align:center; color:#d6f6fa; text-shadow:0 1px 7px #001019,0 0 12px #001019;
       font:600 12px ui-monospace,'SF Mono',monospace; letter-spacing:.32em; }
@@ -54,7 +59,7 @@
       const software=/swiftshader|llvmpipe|software/i.test(placa);
       if (!FORCAR && software) throw new Error("WebGL por software; anel mantido");
       // Forced software rendering (the tests) draws less so the other browser tests keep their CPU.
-      const intervalo=software?100:32,lado=software?280:840;
+      let intervalo=software?100:32,lado=software?280:840;
       renderer.setClearColor(0x000000,0); renderer.outputColorSpace=T.SRGBColorSpace;
       renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=1.35;
       const cena=new T.Scene();
@@ -67,6 +72,10 @@
       if (pedido.cancelado || !ativo || !el.isConnected) { limpar(); return null; }
       // The hand's spin (stage.html "spin mode") turns the Zé inside the scene, never the flat card.
       const giro=new T.Group(); giro.add(robo.grupo); cena.add(giro);
+      if(robo.cenario){  // the constellation: a canvas 1.44x the card, the camera pulled back to keep the head size
+        cena.add(robo.cenario); canvas.classList.add("jv-constelacao"); lado=software?280:1100;
+        camera.position.set(0,.12*1.44,8.15*1.44); camera.lookAt(0,-.3,0);
+      }
       // Feathered backdrop keeps the face legible against the real camera.
       const fundo=new T.Mesh(new T.PlaneGeometry(4.7,4.7),new T.ShaderMaterial({
         transparent:true,depthWrite:false,
@@ -85,7 +94,7 @@
         const dt=Math.min(.12,(agora-ultimo)/1000 || .033); ultimo=agora;
         // Cap fill rate: the hand tracker needs the same integrated GPU.
         const w=Math.min(lado,Math.max(280,Math.round((canvas.clientWidth||440)*Math.min(devicePixelRatio||1,1.5))));
-        if(canvas.width!==w) renderer.setSize(w,w,false);
+        if(canvas.width!==w){renderer.setSize(w,w,false);robo.tela?.(w);}
         const r=window.jarvisRing||{},estado=r.data?.state||"idle";
         // The ring's visual decay can outlast a syllable. Silence in the actual PCM
         // must close the jaw promptly, even when frames are slow or speech is interrupted.
@@ -98,6 +107,7 @@
         if(brilho!==ultimoBrilho){canvas.style.setProperty("--jv-brilho",brilho);ultimoBrilho=brilho;}
         const sentimento=agora<sentida.ate?sentida.nome:(r.data?.expressao||"");
         robo.atualizar((agora-inicio)/1000,dt,amplitude,estado,cor,reduzir.matches,sentimento);
+        canvas.classList.toggle("jv-falha",!!robo.falha);
         const item=window.jarvisItemDe?.(el);
         if(item){
           if(item.girando){  // "dê uma voltinha": a full turn, eased, ending facing front
@@ -155,7 +165,7 @@
     get montados(){return vivos.size;},
     get quadros(){let n=0;vivos.forEach(c=>n+=c.quadros);return n;},
     diagnostico(){return [...vivos.values()].map(c=>({
-      modelo:c.robo.modelo,estado:c.estado,giro:c.giro||0,tonto:c.robo.tonto,girando:!!window.jarvisItemDe?.(c.el)?.girando,boca:c.robo.abertura,
+      modelo:c.robo.modelo,estilo:c.robo.estilo,pontos:c.robo.pontos,ligacoes:c.robo.ligacoes,estado:c.estado,giro:c.giro||0,tonto:c.robo.tonto,girando:!!window.jarvisItemDe?.(c.el)?.girando,boca:c.robo.abertura,
       bocaAberta:c.robo.chave("Boca_Aberta"),piscar:c.robo.chave("Piscar"),expressoes:c.robo.expressoes,
       emocao:c.robo.emocao,sorriso:c.robo.chave("Sorriso_Dentes"),rosnar:c.robo.chave("Rosnar"),duvida:c.robo.chave("Sobrancelha_Duvida"),tristeza:c.robo.chave("Boca_Triste"),pulso:c.robo.pulso,olharCima:c.robo.chave("Olhar_Cima"),
       gpu:c.placa,triangulos:c.renderer.info.render.triangles,chamadas:c.renderer.info.render.calls,

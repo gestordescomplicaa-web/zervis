@@ -487,6 +487,14 @@ def test_aviso_falado_inteiro_nao_volta() -> None:
     assert m.aviso_falando is None
 
 
+@pytest.mark.parametrize("fala", ["Abre o núcleo.", "Fecha o Núcleo."])
+def test_o_nucleo_sem_orbes_nao_e_comando_local(fala: str) -> None:
+    # Desde 29/10/2026 não há orbes para abrir ou recolher (ADR 0047): o cérebro explica.
+    from zervis.nucleo.estados import comando
+
+    assert comando(fala) is None
+
+
 @pytest.mark.parametrize("fala", ["Aumenta o brilho.", "Aumenta o brilho da tela."])
 def test_brilho_sem_camera_nao_e_comando_local(fala: str) -> None:
     # O brilho da tela não é o filtro da câmera: segue para o cérebro.
@@ -496,9 +504,6 @@ def test_brilho_sem_camera_nao_e_comando_local(fala: str) -> None:
 @pytest.mark.parametrize(
     ("fala", "nome"),
     [
-        ("Abre o núcleo.", "nucleo_abrir"),
-        ("Abra o Núcleo.", "nucleo_abrir"),
-        ("Fecha o núcleo.", "nucleo_fechar"),
         ("Fecha a janela do Zé.", "janela_fechar"),
         ("Desliga a câmera.", "janela_fechar"),
         ("Abra o GUIA do núcleo.", "abrir_orbe:Guia"),

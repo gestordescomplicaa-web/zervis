@@ -125,9 +125,6 @@ def rodar(nome: str, janela_aberta: bool = True) -> tuple[str, list[tuple[str, A
     return frases[0], acoes
 
 
-NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
-
-
 @pytest.mark.parametrize(
     ("nome", "fala", "acoes"),
     [
@@ -137,16 +134,10 @@ NUCLEO = [{"acao": "nucleo", "valor": "abrir"}]
         ("mostrar_mapa", "Está no Núcleo.", [("mapa", None), ("trazer", None)]),
         ("calibrar_maos", "Vamos calibrar. Siga as instruções na tela.", [("maos", "calibrar")]),
         ("maos_padrao", "Pronto, voltei à calibração e à câmera originais.", [("maos", "padrao")]),
-        ("nucleo_abrir", "Núcleo aberto.", [("tela", NUCLEO), ("trazer", None)]),
         (
             "teclado_abrir",
             "Teclado aberto; pode escrever.",
             [("tela", [{"acao": "teclado", "valor": "abrir"}]), ("trazer", None)],
-        ),
-        (
-            "nucleo_fechar",
-            "Núcleo recolhido.",
-            [("tela", [{"acao": "nucleo", "valor": "fechar"}])],
         ),
         ("janela_fechar", "Fechei a minha janela; a câmera apagou.", [("fechar", None)]),
         (
@@ -229,7 +220,7 @@ def test_com_a_janela_fechada_mostrar_abre_e_fechar_nao_faz_nada() -> None:
         [("abrir", None), ("tela", [{"acao": "abrir", "alvo": "Guia"}])],
     )
     assert rodar("fechar_alvo:Guia", janela_aberta=False) == ("A minha janela já está fechada.", [])
-    assert rodar("nucleo_fechar", janela_aberta=False) == ("A minha janela já está fechada.", [])
+    assert rodar("mapa_fechar", janela_aberta=False) == ("A minha janela já está fechada.", [])
 
 
 @pytest.mark.parametrize(

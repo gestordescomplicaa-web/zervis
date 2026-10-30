@@ -1,5 +1,20 @@
 # Avatar Zé ORCA
 
+**Visual atual: a constelação (29/10/2026).** O mesmo chimpanzé do Blender desenhado como uma
+constelação de luz, aprovada no laboratório do holograma: cerca de 4 mil pontos espalhados por
+igual na cabeça, ligados aos vizinhos mais próximos (cerca de 7 mil ligações), com pulsos de luz
+correndo pelas ligações, um brilho na borda, a faixa de varredura, as falhas de sinal e uma
+"montagem" quando ele aparece (os pontos chegam voando e formam a cabeça). Fica em
+`jarvis-constelacao.js` e só desenha: a boca, o piscar, as emoções, o pulso, a tontura e o giro
+continuam vindo da mesma lógica de `jarvis-chimpanze.js`, pelos mesmos uniformes, então ele se
+comporta como antes. A cor segue o tema do anel (a raiva puxa para o vermelho, a tristeza para o
+azul). O rig é estático, então a pose do esqueleto é calculada uma vez; as shape keys continuam
+deformando na placa de vídeo. Embaixo dele, um projetor (feixe de luz, anéis na base e partículas
+subindo, `projetor()`), parado enquanto a cabeça balança e gira; sem anéis em volta da cabeça. O
+desenho passa da borda do cartão (1,44 vez o cartão), e o cartão que a mão pega mantém o tamanho.
+O fundo escuro da Imersão fica em `../jarvis-fundo.js`. O visual de antes, descrito abaixo, continua como estilo
+`"classico"` (`criarChimpanze(T, GLTFLoader, { estilo: "classico" })`) até o novo ser aprovado.
+
 O rosto em uso é o **chimpanzé holográfico do Zé**, só a cabeça, feito no Blender por
 gdautomacao.ia (08/10/2026; o `.blend` de origem ainda não está no repositório; vista de frente em `jarvis-chimpanze-referencia.png`). `jarvis-chimpanze.glb` sai
 dele por `expressoes_blender.py`, que também cria as expressões novas como variações, sem

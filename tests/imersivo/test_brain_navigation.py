@@ -107,8 +107,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/stage.html'):
             body, kind = HARNESS.encode(), 'text/html'
-        elif self.path in ['/jarvis-paineis.js', '/jarvis-cerebro.js', '/jarvis-grafo.js', '/jarvis-workspace.css', '/jarvis-maos.js', '/jarvis-tema.js', '/jarvis-tema.css', '/jarvis-config.js', '/jarvis-controle.js', '/jarvis-teclado.js', '/jarvis-avatar.js', '/avatar/jarvis-chimpanze.js', '/avatar/jarvis-chimpanze.glb', '/avatar/jarvis-chimpanze-frente.png', '/avatar/jarvis-chimpanze-perfil.png', '/avatar/jarvis-chimpanze-costas.png']:
+        elif self.path in ['/jarvis-paineis.js', '/jarvis-cerebro.js', '/jarvis-grafo.js', '/jarvis-workspace.css', '/jarvis-maos.js', '/jarvis-tema.js', '/jarvis-fundo.js', '/jarvis-tema.css', '/jarvis-config.js', '/jarvis-controle.js', '/jarvis-teclado.js', '/jarvis-avatar.js', '/jarvis-apresentacao.js', '/jarvis-apresentacao.css', '/jarvis-cenas.js', '/jarvis-cenas.css', '/avatar/jarvis-chimpanze.js', '/avatar/jarvis-constelacao.js', '/avatar/jarvis-chimpanze.glb', '/avatar/jarvis-chimpanze-frente.png', '/avatar/jarvis-chimpanze-perfil.png', '/avatar/jarvis-chimpanze-costas.png']:
             body, kind = (ROOT / self.path.removeprefix('/')).read_bytes(), 'text/css' if self.path.endswith('.css') else 'model/gltf-binary' if self.path.endswith('.glb') else 'image/png' if self.path.endswith('.png') else 'text/javascript'
+        elif self.path == '/autoconhecimento':  # the sample the panel test also uses, no one's data
+            body = json.dumps(json.loads((Path(__file__).parents[1] / 'painel_respostas.json').read_text())['leituras']['autoconhecimento']).encode()
+            kind = 'application/json'
         elif self.path.startswith('/jarvis/'):
             name = self.path.removeprefix('/jarvis/')
             data = {'mapa': MAP, 'decisao': {'pergunta': None, 'sugestoes': SUGGESTIONS},
@@ -212,26 +215,25 @@ async def main():
                       && getComputedStyle(r.querySelector("canvas")).opacity === "1"; })()''')
                 await check('original ring is the entry, without a fullscreen dashboard',
                             '!!document.querySelector(".ringcard canvas") && !jarvisBrainGestures.active && !document.querySelector("#jv-mapa .navegacao")')
+                # No orbs around the Zé since 29/10/2026 (ADR 0047): a tap blooms nothing, and each
+                # screen of the manifest opens by name, as the voice does.
                 await ev('document.querySelector(".ringcard").click()')
                 await asyncio.sleep(.7)
-                await check('ring blooms the orbs of the Núcleo manifest',
-                            '[...document.querySelectorAll(".card.orb h3")].map(e=>e.textContent).join(",")==="Mapa,Guia,Hoje,Trabalho,Acervo"')
-                await check('orbital circles remain connected to the original ring',
-                            'document.querySelectorAll("#jv-cabos path").length===5')
-                await ev('window.savedCable=document.querySelector("#jv-cabos path");window.savedCableD=savedCable.getAttribute("d");jarvisItemDe(document.querySelector(".ringcard")).x+=30')
-                await asyncio.sleep(.15)
-                await check('moving the ring updates existing cables without rebuilding them',
-                            'savedCable.isConnected && savedCable===document.querySelector("#jv-cabos path") && savedCable.getAttribute("d")!==savedCableD')
-                await ev('stagePinch(\'[data-orb="brain"]\')')
+                await check('tapping the Zé blooms no orbs', '!document.querySelector(".card.orb") && !document.querySelector("#jv-cabos path")')
+                await ev('jarvisStage.abrir("Mapa").then(() => 1)')
                 await asyncio.sleep(.4)
-                await check('original stage pinch opens the brain expansion', 'jarvisBrainGestures.active')
+                await check('the Mapa opens by name into the brain expansion', 'jarvisBrainGestures.active')
                 await check('the expansion leaves the original ring visible',
                             '''const a=document.querySelector(".ringcard").getBoundingClientRect(),b=document.querySelector("#jv-mapa").getBoundingClientRect();
                             b.left>a.right && b.width<innerWidth && document.querySelector("#jv-mapa").getAttribute("aria-modal")==="false"''')
                 await check('three circular modes use the original glass language',
                             'document.querySelectorAll("#jv-mapa .modos button").length===3 && getComputedStyle(document.querySelector(".modos button")).borderRadius==="50%" && !document.querySelector("#jv-mapa .marca")')
-                await check('brain circle connects to the neural board',
+                await check('the Zé connects to the neural board',
                             '!!document.querySelector(\'#jv-cabos [data-connection="workspace"]\')')
+                await ev('window.savedCable=document.querySelector(\'#jv-cabos [data-connection="workspace"]\');window.savedCableD=savedCable.getAttribute("d");jarvisItemDe(document.querySelector(".ringcard")).y+=30')
+                await asyncio.sleep(.15)
+                await check('moving the Zé updates the existing cable without rebuilding it',
+                            'savedCable.isConnected && savedCable===document.querySelector(\'#jv-cabos [data-connection="workspace"]\') && savedCable.getAttribute("d")!==savedCableD')
                 await check('the Mapa has three areas around the Zé: Memória, Sessões, Automações',
                             '[...document.querySelectorAll(\'[data-node^="area:"]\')].map(e=>e.dataset.node).sort().join()==="area:automacoes,area:memoria,area:sessoes"')
                 screenshot = await call('Page.captureScreenshot', {'format': 'png'})
@@ -305,14 +307,11 @@ async def main():
                 await call('Emulation.setEmulatedMedia', {'features':[{'name':'prefers-reduced-motion','value':'reduce'}]})
                 await asyncio.sleep(.1)
                 await check('reduced motion stops floating', 'document.querySelector(".mundo").dataset.motion==="paused"')
-                await ev('jarvisBrainGestures.finishFrame([]);stagePinch(".ringcard")')
+                await ev('jarvisBrainGestures.finishFrame([]);jarvisStage.fechar("Mapa")')
                 await asyncio.sleep(.4)
-                await check('original ring retracts the circles and the expansion together',
-                            '!jarvisBrainGestures.active && document.querySelectorAll(".card.orb").length===0')
-                await ev('stagePinch(".ringcard")')
+                await check('the Mapa closes by name', '!jarvisBrainGestures.active')
+                await ev('jarvisStage.abrir("Guia").then(() => 1)')
                 await asyncio.sleep(.6)
-                await ev('stagePinch(\'[data-orb="1"]\')')
-                await asyncio.sleep(.3)
                 await check('Guia continues to open through the original file browser',
                             '!!document.querySelector(".panel.browser") && !jarvisBrainGestures.active')
                 assert not errors, errors

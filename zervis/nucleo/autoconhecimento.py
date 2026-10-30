@@ -241,7 +241,9 @@ def texto_do_historico(h: Historico) -> str:
             + (f" ({d.falhas} falhas)" if d.falhas else "")
             for d in h.por_dia
         ]
-        linhas.append(f"- **Por dia:** {'; '.join(dias)}.")
+        linhas.append(
+            f"- **Registros por dia (pedidos, ações e falhas juntos):** {'; '.join(dias)}."
+        )
     return "\n".join(linhas)
 
 

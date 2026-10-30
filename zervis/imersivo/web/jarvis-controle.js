@@ -20,10 +20,9 @@
     return window.jarvisStage;
   };
   const ACOES = {
-    // The Núcleo: the ring and its orbs (the manifest). abrir takes an orb or any item by
-    // its spoken name, optionally inside one orb (orbe); buscar lists matches; fechar
-    // takes an orb, an open item, or "tudo".
-    nucleo: a => sem(a.valor ?? a.alvo) === "fechar" ? S().fecharNucleo() : S().abrirNucleo(),
+    // The Núcleo: what the manifest describes (Mapa, Hoje, Trabalho, Acervo, Guia), with no
+    // orbs on screen since 29/10/2026. abrir takes one of them or any item by its spoken name,
+    // optionally inside one (orbe); buscar lists matches; fechar takes one, an open item, or "tudo".
     abrir: a => S().abrir(a.alvo ?? a.valor, a.orbe),
     buscar: a => S().buscar(a.alvo ?? a.valor, a.orbe),
     fechar: a => S().fechar(a.alvo ?? a.valor),
@@ -51,6 +50,18 @@
     girar: a => {
       if (!window.jarvisAvatar) throw new Error("avatar indisponível");
       return window.jarvisAvatar.girar(a.valor ?? a.voltas ?? 1);
+    },
+    // The Zé presents himself with his own data (ADR 0045): quem, or encerrar.
+    apresentar: a => {
+      if (!window.jarvisApresentacao) throw new Error("apresentação indisponível");
+      const v = sem(a.valor ?? a.alvo ?? "quem");
+      return v === "encerrar" || v === "fechar" ? window.jarvisApresentacao.encerrar() : window.jarvisApresentacao.apresentar(v || "quem");
+    },
+    // A scene the Zé wrote to explain something (ADR 0047): cena = {titulo, passos}; or valor =
+    // the name of one of the examples (mcp, som, dna, ia).
+    explicar: a => {
+      if (!window.jarvisCenas) throw new Error("cenas indisponíveis");
+      return a.cena ? window.jarvisCenas.explicar(a.cena) : window.jarvisCenas.exemplo(sem(a.valor ?? a.alvo));
     },
     expressao: a => {
       if (!window.jarvisAvatar) throw new Error("avatar indisponível");
@@ -89,6 +100,8 @@
       menu_configuracoes: { aberto: !!window.jarvisConfig?.aberto },
       teclado: { aberto: !!window.jarvisTeclado?.aberto },
       visual: window.jarvisAvatar ? (window.jarvisAvatar.ativo ? "avatar" : "anel") : "anel",
+      fundo: window.jarvisFundo?.modo ?? "camera",
+      apresentacao: { ativa: !!window.jarvisApresentacao?.apresentando, paineis: window.jarvisApresentacao?.paineis ?? [], cena: window.jarvisCenas?.atual ?? null },
       tema: { atual: window.jarvisTema?.nome ?? null, opcoes: window.jarvisTema?.lista.map(t => t.id) ?? [] },
       brilho_camera: M?.brilho ?? null,
       maos: e ? { calibracao: e.origem, calibrando: M.calibrando, quadros_por_segundo: Math.round(e.qps), luz: e.luz } : null,

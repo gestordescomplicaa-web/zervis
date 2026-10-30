@@ -164,3 +164,12 @@ def test_token_local_tem_permissao_restrita_e_comandos_continuam_funcionando(
         check=False,
     )
     assert leitura.returncode == 0 and "EMPTY" in leitura.stdout
+
+
+def test_autoconhecimento_so_para_a_pagina_e_vazio_sem_o_arquivo(api_imersivo: ApiImersivo) -> None:
+    """ADR 0045: o retrato do Zé chega às apresentações só com o token, e sem arquivo vem vazio."""
+    assert api_imersivo.pedir("GET", "/autoconhecimento", autorizado=False)[0] == 403
+    assert api_imersivo.pedir("GET", "/autoconhecimento") == (200, b"{}")
+    (api_imersivo.estado / "autoconhecimento.json").write_text('{"agora": {"modelo": "X"}}')
+    status, corpo = api_imersivo.pedir("GET", "/autoconhecimento")
+    assert status == 200 and json.loads(corpo) == {"agora": {"modelo": "X"}}

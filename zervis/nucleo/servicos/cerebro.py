@@ -145,7 +145,7 @@ class ServicoCerebro:
             list(getattr(self.n.cerebro, "ferramentas_usadas", [])), time.time()
         )
         usadas = {n.rsplit("__", 1)[-1] for n in getattr(self.n.cerebro, "ferramentas_usadas", [])}
-        if usadas and usadas <= {"tela_agir", "tela_ver"} and self.n.turnos:
+        if usadas and usadas <= {"tela_agir", "tela_ver", "tela_explicar"} and self.n.turnos:
             self.n.evidencias.registrar("so_tela", self.n.turnos[-1]["pessoa"])
         if erro:
             self.n.evidencias.registrar("falha_cerebro", erro)

@@ -173,7 +173,6 @@ FALA_PERDIDA_MIN_S = 0.5
 # Comandos que falam com a sessão de manutenção ou rodam os testes: respondem quando terminarem.
 # Os que mostram algo no Núcleo (abrem a janela se ela estiver fechada): nome -> (ações, fala).
 MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
-    "nucleo_abrir": ([{"acao": "nucleo", "valor": "abrir"}], "Núcleo aberto."),
     "teclado_abrir": ([{"acao": "teclado", "valor": "abrir"}], "Teclado aberto; pode escrever."),
     "foco_mostrar": ([{"acao": "foco"}], "Seu foco na tela."),
     "visual_avatar": ([{"acao": "visual", "valor": "avatar"}], "Pronto, este sou eu."),
@@ -190,7 +189,6 @@ MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
 }
 # Os que fecham algo (com a janela fechada, não há o que fechar): nome -> (ações, fala).
 FECHAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
-    "nucleo_fechar": ([{"acao": "nucleo", "valor": "fechar"}], "Núcleo recolhido."),
     "teclado_fechar": ([{"acao": "teclado", "valor": "fechar"}], "Teclado fechado."),
     "fechar_alvo": ([{"acao": "fechar", "alvo": "{}"}], "Fechado."),
     "mapa_fechar": ([{"acao": "fechar_mapa"}], "Fechado."),
@@ -977,6 +975,7 @@ class Nucleo(
             log.info("troca pedida no Barehands: %s", escolha)
             self.trocar_cerebro(escolha)
         self.painel.mostrar(self.provedor, self.baterias(), self.modelos(), agora)
+        self.painel.autoconhecimento(self.autoconhecimento, agora)
         self._mostrar_decisao(agora)
 
     def _mostrar_decisao(self, agora: float) -> None:
