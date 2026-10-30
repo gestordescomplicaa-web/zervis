@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Com o Zé numa caixa de som (app do celular ou navegador), ele não ouve mais a própria voz: o Zé
+  tira do microfone o que ele mesmo falou, com cancelamento de eco e redução de ruído. Dá para
+  falar de longe do celular e interromper pela voz enquanto ele fala.
 - "Zé, mostra o mapa do Brasil": ele mostra o mapa de verdade, com os contornos oficiais dos 27
   estados (IBGE) e dos países (Natural Earth), em vez de um esboço. Acende estados, regiões e
   países pelo nome, pinta pelo valor ("a população de cada estado"), marca cidades com arcos
