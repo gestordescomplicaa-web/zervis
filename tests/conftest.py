@@ -43,3 +43,12 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
         terminalreporter.write_line(
             f"ZE_SEM_PULOS: {len(pulados)} teste(s) pulado(s) contam como falha.", red=True
         )
+
+
+@pytest.fixture(autouse=True)
+def _voz_remota_sem_eco(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O cancelador de eco da voz remota (ADR 0051) filtra o áudio: fora dos testes dele, a voz
+    passa intacta, para os testes do transporte compararem os bytes."""
+    if request.module.__name__.endswith("test_eco"):
+        return
+    monkeypatch.setattr("zervis.transporte.eco._modulo", lambda ruido: None)

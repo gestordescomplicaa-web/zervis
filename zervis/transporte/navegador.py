@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
+from zervis.transporte.eco import Eco
 from zervis.transporte.websocket import BINARIO, Conexao, FechouErro
 
 log = logging.getLogger(__name__)
@@ -43,7 +44,12 @@ class VozNavegador:
     """Uma conexão de voz aberta pelo botão "Conectar voz" do navegador (antes, "Ao vivo")."""
 
     def __init__(
-        self, conexao: Conexao, taxa: int = TAXA, ao_vivo: bool = True, do_app: bool = False
+        self,
+        conexao: Conexao,
+        taxa: int = TAXA,
+        ao_vivo: bool = True,
+        do_app: bool = False,
+        eco: Eco | None = None,
     ) -> None:
         self.conexao = conexao
         self.taxa = taxa if 8000 <= taxa <= 96000 else TAXA
@@ -52,6 +58,8 @@ class VozNavegador:
         self.ao_vivo = ao_vivo
         # O app de voz fala e ouve mesmo com o Zé no Silencioso, que vale para o PC (ADR 0018).
         self.do_app = do_app
+        # A fala do Zé que volta pelo microfone (caixa de som, alto-falante) sai aqui (ADR 0051).
+        self.eco = eco if eco is not None else Eco()
 
     @property
     def conectada(self) -> bool:
@@ -83,7 +91,9 @@ class VozNavegador:
                 ultimo = agora
                 resto += reamostrar(dados[: len(dados) // 2 * 2], self.taxa)
                 while len(resto) >= BYTES_QUADRO:
-                    ao_quadro(resto[:BYTES_QUADRO])
+                    # (o quadro chega inteiro com este pacote: termina agora, menos o que sobrou)
+                    fim = agora - (len(resto) - BYTES_QUADRO) / 2 / TAXA
+                    ao_quadro(self.eco.limpar(resto[:BYTES_QUADRO], fim))
                     resto = resto[BYTES_QUADRO:]
         except FechouErro:
             return
@@ -120,6 +130,7 @@ class TocadorNavegador:
         self.inicio: float | None = None
         self._resto = b""
         self._parado = threading.Event()
+        self._toca_ate = 0.0  # quando o que já foi mandado acaba de tocar no aparelho
         voz.controle(tipo="voz", taxa=taxa)
 
     def write(self, dados: bytes) -> int:
@@ -131,12 +142,18 @@ class TocadorNavegador:
         if not corte:
             return len(dados)
         amostras = np.frombuffer(junto[:corte], "<f4")
+        pcm = (np.clip(amostras, -1, 1) * 32767).astype("<i2").tobytes()
         try:
-            self.voz.conexao.binario((np.clip(amostras, -1, 1) * 32767).astype("<i2").tobytes())
+            self.voz.conexao.binario(pcm)
         except FechouErro as erro:
             raise BrokenPipeError from erro
+        agora = time.monotonic()
         if self.inicio is None:
-            self.inicio = time.monotonic()
+            self.inicio = agora
+        # O aparelho toca cada pedaço depois do anterior, ou assim que chega se a fala atrasou.
+        toca_em = max(self._toca_ate, agora)
+        self._toca_ate = toca_em + len(amostras) / self.taxa
+        self.voz.eco.referencia(reamostrar(pcm, self.taxa), toca_em)
         self.enviado_s += len(amostras) / self.taxa
         adiante = self.enviado_s - (time.monotonic() - self.inicio) - FOLGA_S
         if adiante > 0 and self._parado.wait(adiante):
@@ -165,3 +182,4 @@ class TocadorNavegador:
         self.codigo = -9
         self._parado.set()
         self.voz.controle(tipo="parar")
+        self.voz.eco.cortar(time.monotonic())
