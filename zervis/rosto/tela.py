@@ -49,6 +49,8 @@ ACOES = {
     "foco": "mostra o quadro do Foco (as frentes, a atual em destaque, com o V para marcar)",
     "visual": "valor: avatar (o busto holográfico que fala, no lugar do anel) ou anel",
     "girar": "valor: voltas (1 a 3, padrão 1). O Zé dá uma volta completa na tela",
+    "mostrar_modelo": "alvo: o arquivo no Acervo que modelo3d_baixar devolveu "
+    "(3d/baixados/...glb); valor: o título. Mostra o modelo 3D em holograma, que a pinça gira",
     "apresentar": "valor: quem (o Zé vai para o canto e mostra, em painéis holográficos, os "
     "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente) "
     "ou encerrar (recolhe os painéis). Só para 'se apresenta' sem assunto; um aspecto seu (um "

@@ -12,6 +12,7 @@ Apagar não existe aqui de propósito: excluir uma sessão é no painel (decisã
 import dataclasses
 import time
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any
 
 from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_server
@@ -23,6 +24,7 @@ from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
 from zervis.cerebro.ferramentas import automacoes as g_automacoes
 from zervis.cerebro.ferramentas import conectores as g_conectores
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
+from zervis.cerebro.ferramentas import modelos as g_modelos
 from zervis.cerebro.ferramentas import navegador as g_navegador
 from zervis.cerebro.ferramentas import pesquisa as g_pesquisa
 from zervis.cerebro.ferramentas import sessoes as g_sessoes
@@ -62,6 +64,8 @@ LEITURA = [
     "atualizacoes_ver",  # só lê; atualizar é no painel
     "ze_sobre",  # o retrato do próprio Zé, sem segredos (ADR 0043)
     "internet_pesquisar",  # só lê a internet, numa consulta à parte (ADR 0044)
+    "modelo3d_buscar",  # só lê um acervo livre de modelos (ADR 0049)
+    "modelo3d_baixar",  # só grava no próprio Acervo, de uma fonte permitida, e mostra na tela
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -137,12 +141,13 @@ def montar(
     manutencao: Manutencao | None = None,
     sobre: Callable[[], str] | None = None,
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
+    acervo: Path | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
-        pesquisar,
+        pesquisar, acervo,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -159,6 +164,7 @@ def por_grupo(
     manutencao: Manutencao | None = None,
     sobre: Callable[[], str] | None = None,
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
+    acervo: Path | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -174,6 +180,7 @@ def por_grupo(
         "atualizacoes": g_atualizacoes.ferramentas(),
         "sobre": g_sobre.ferramentas(sobre),
         "pesquisa": g_pesquisa.ferramentas(pesquisar),
+        "modelos": g_modelos.ferramentas(acervo, tela),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

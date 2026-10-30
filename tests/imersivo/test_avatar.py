@@ -319,6 +319,35 @@ async def main():
                         break
                     await asyncio.sleep(.1)
                 await check('and "tira a animação" takes the hologram away', '!document.querySelector(".card.modelcard") && !jarvisApresentacao.apresentando')
+                # A downloaded model (ADR 0049): opened from the Acervo in the hologram glass; a path
+                # that climbs out of the Acervo is refused.
+                r = await ev('jarvisControle.executar({id:"m1",acoes:[{acao:"mostrar_modelo",alvo:"3d/baixados/cavalo.glb",valor:"Cavalo"},'
+                             '{acao:"mostrar_modelo",alvo:"../../etc/passwd.glb"}]}).then(() => 1)')
+                modelo = '''(() => { const el = document.querySelector(".card.modelcard"), it = el && jarvisItemDe(el);
+                    return !!it && it.def.src === "/media/3d/baixados/cavalo.glb" && it.def.mmode === "holo" && it.def.title === "Cavalo"
+                      && document.querySelectorAll(".card.modelcard").length === 1; })()'''
+                for _ in range(60):
+                    if await ev(modelo):
+                        break
+                    await asyncio.sleep(.1)
+                await check('mostrar_modelo opens the Acervo file as a hologram, and only inside the Acervo', modelo)
+                await ev('document.querySelector(".card.modelcard").click()')
+                for _ in range(60):
+                    if await ev('!document.querySelector(".card.modelcard")'):
+                        break
+                    await asyncio.sleep(.1)
+                cena_m = {'titulo': 'Cavalo', 'passos': [{'fala': 'Um.', 'blocos': [{'tipo': 'modelo', 'arquivo': '3d/baixados/cavalo.glb'}, {'tipo': 'modelo', 'arquivo': '../x.glb'}]}]}
+                await ev(f'jarvisApresentacao.ritmo=.03;jarvisControle.executar({{id:"m2",acoes:[{{acao:"explicar",cena:{json.dumps(cena_m)}}}]}})')
+                no_feixe = '''(() => { const el = document.querySelector(".card.modelcard"), it = el && jarvisItemDe(el);
+                    return !!it && it.def.src === "/media/3d/baixados/cavalo.glb" && document.querySelectorAll(".card.modelcard").length === 1
+                      && jarvisApresentacao.paineis.length === 2; })()'''
+                for _ in range(150):
+                    if await ev(no_feixe):
+                        break
+                    await asyncio.sleep(.1)
+                await check('a modelo block hangs the downloaded model on the Zé\'s beam (the bad path dropped)', no_feixe)
+                await ev('jarvisApresentacao.encerrar()')
+                await asyncio.sleep(.6)
                 # The background (29/10/2026): the camera or the dark animated scene; the video only
                 # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
                 await ev('jarvisFundo.usar("escuro")')

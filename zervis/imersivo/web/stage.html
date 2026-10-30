@@ -909,7 +909,7 @@ function loadThree() {
 
 // gdautomacao.ia: receita = a hologram the Zé built from pieces (jarvis-holograma.js, ADR 0048):
 // { construir(THREE) -> {obj, animar(t)} } in place of a .glb; everything else is the same card.
-async function buildModelScene(el, src, mm, lift, receita) {
+async function buildModelScene(el, src, mm, lift, receita, cores) {
   try {
     const { THREE, GLTFLoader, RoomEnvironment } = await loadThree();
     const canvas = el.querySelector("canvas");
@@ -1117,7 +1117,18 @@ async function buildModelScene(el, src, mm, lift, receita) {
         }
         return tons.get(hex);
       };
-      obj.traverse(n => { if (n.isMesh) n.material = n.userData.cor ? tom(n.userData.cor) : ghost; });
+      // (cores: a downloaded model keeps its own colours too, when they are colours and not
+      // near-white or grey, so "the arteries in red" is still true in the glass)
+      const corDe = m => {
+        const c = (Array.isArray(m) ? m[0] : m)?.color; if (!c) return null;
+        const hsl = {}; c.getHSL(hsl);
+        return hsl.s > .25 && hsl.l > .08 && hsl.l < .9 ? "#" + c.getHexString() : null;
+      };
+      obj.traverse(n => {
+        if (!n.isMesh) return;
+        const hex = n.userData.cor || (cores ? corDe(n.material) : null);
+        n.material = hex ? tom(hex) : ghost;
+      });
       ghostMat = ghost;
       ghostMat.beamSpan = Math.max(bsz.y * fit, 0.2);
     } else {
@@ -1177,7 +1188,7 @@ function disposeScene(sc) {
   } catch (e) {}
 }
 
-function makeModel(src, title, mode, lift, receita) {
+function makeModel(src, title, mode, lift, receita, cores) {
   const mm = modelModeFor(src, mode);
   const el = document.createElement("div");
   el.className = "card modelcard" + (mm === "holo" ? " holo" : "");
@@ -1195,7 +1206,7 @@ function makeModel(src, title, mode, lift, receita) {
     x: innerWidth * 0.5, y: innerHeight * 0.42, scale: 1,
     rx: -0.15, ry: 0.6, rz: 0, rvy: 0, vx: 0, vy: 0,
     grabbedBy: [], ox: 0, oy: 0, flying: false, stretch: null };
-  buildModelScene(el, src, mm, lift, receita).then(sc => {
+  buildModelScene(el, src, mm, lift, receita, cores).then(sc => {
     if (sc) {
       sc.it = it; MSCENES.set(it.id, sc);
       if (sc.exParts && sc.exParts.length > 2) it.exCap = 1;
@@ -1413,6 +1424,18 @@ window.jarvisStage = {
     return it;
   },
   remover(it) { killItem(it); },
+  // gdautomacao.ia: a ready-made model the Zé downloaded to the Acervo (modelos3d.py, ADR 0049),
+  // shown in the hologram glass whatever its folder: arquivo is its path in the Acervo
+  // ("3d/baixados/cavalo.glb"). Same card, pinch lock and two-hand scale as everything else.
+  mostrarModelo(arquivo, titulo = "", { x = innerWidth * .6, y = innerHeight * .45, tam = MODEL_PX, estilo = "holo" } = {}) {
+    const f = String(arquivo || "").replace(/^\/?(media\/)?/, "");
+    if (!/^[\w\-./ ]+\.(glb|gltf)$/i.test(f) || f.split("/").includes("..")) throw new Error("arquivo de modelo inválido: " + arquivo);
+    const it = makeModel("/media/" + f.split("/").map(encodeURIComponent).join("/"), titulo || nomeFalado(f), estilo === "solido" ? "solid" : "holo", 0, null, true);
+    it.x = x; it.y = y; it.scale = Math.max(.3, Math.min(2.5, tam / MODEL_PX));
+    it.anim = { k: "in", t: 0 }; it.el.style.opacity = "0.05";
+    items.push(it);
+    return it;
+  },
   // gdautomacao.ia: a real 3D hologram the Zé built (jarvis-holograma.js, ADR 0048), as a model
   // card: the pinch lock turns it on every axis, two hands scale it, a tap closes it. tam: the
   // card's side in pixels. Returns the board item, or throws if the recipe has nothing to draw.

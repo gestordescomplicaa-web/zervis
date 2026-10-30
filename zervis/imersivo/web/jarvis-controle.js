@@ -68,6 +68,11 @@
       const v = sem(a.valor ?? a.alvo ?? "quem");
       return v === "encerrar" || v === "fechar" ? window.jarvisApresentacao.encerrar() : window.jarvisApresentacao.apresentar(v || "quem");
     },
+    // A ready-made model from the Acervo (ADR 0049): alvo = its path there, valor = a title.
+    mostrar_modelo: a => {
+      const it = S().mostrarModelo(a.alvo ?? a.arquivo, a.valor ?? a.titulo ?? "");
+      return { mostrou: it.def.title, arquivo: String(a.alvo ?? a.arquivo) };
+    },
     // A scene the Zé wrote to explain something (ADR 0047): cena = {titulo, passos}; or valor =
     // the name of one of the examples (mcp, som, dna, ia).
     explicar: a => {

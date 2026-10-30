@@ -60,6 +60,7 @@ GRUPOS = {
     "atualizacoes": ("Atualizações", "verifica se há versão nova do Zé"),
     "sobre": ("Autoconhecimento", "descreve a própria configuração, capacidades e atividade"),
     "pesquisa": ("Pesquisa na internet", "pesquisa notícias e assuntos, com as fontes"),
+    "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
 }
 
 
