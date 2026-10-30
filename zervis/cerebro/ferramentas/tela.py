@@ -13,7 +13,9 @@ from zervis.rosto.tela import CENA, Tela, TelaErro
 TAMANHO_DA_CENA = 16_000  # caracteres do JSON; a página ainda limita passos e blocos
 FORMAS = ["esfera", "toro", "helice", "cubo", "atomo", "galaxia", "terreno", "neural", "plexo"]
 TIPOS = ["titulo", "numero", "barras", "linha", "rosca", "etapas", "rede", "onda", "forma3d"]
-TIPOS += ["globo", "comparar", "lista", "linha_tempo"]
+TIPOS += ["globo", "comparar", "lista", "linha_tempo", "holograma"]
+PECAS = ["esfera", "cubo", "caixa", "cilindro", "cone", "piramide", "toro", "anel", "capsula"]
+PECAS += ["helice", "tubo", "linha", "ligacao", "particulas"]
 
 
 def _texto_(descricao: str = "") -> dict[str, Any]:
@@ -27,6 +29,46 @@ def _num(descricao: str = "") -> dict[str, Any]:
 def _lista_de(descricao: str, **campos: dict[str, Any]) -> dict[str, Any]:
     item = {"type": "object", "properties": campos}
     return {"type": "array", "description": descricao, "items": item}
+
+
+def _peca(com_filhos: bool) -> dict[str, Any]:
+    trio = {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3}
+    props: dict[str, Any] = {
+        "forma": {"type": "string", "enum": PECAS},
+        "nome": _texto_(),
+        "rotulo": _texto_("texto que flutua sobre a peça"),
+        "cor": _texto_(
+            "#rrggbb ou azul, vermelho, verde, amarelo, laranja, roxo, rosa, branco, "
+            "ciano, dourado, cinza, marrom, prata"
+        ),
+        "pos": {**trio, "description": "[x, y, z] em relação ao pai"},
+        "tam": {
+            **trio,
+            "description": "[largura, altura, profundidade]; esfera: o diâmetro nos três",
+        },
+        "rot": {**trio, "description": "[x, y, z] em graus"},
+        "anim": {"type": "string", "enum": ["girar", "pulsar", "flutuar", "orbitar"]},
+        "velocidade": _num("1 é o normal"),
+        "orbita": {
+            "type": "object",
+            "description": "gira em volta do centro do pai",
+            "properties": {
+                "raio": _num(),
+                "velocidade": _num("1 = uma volta a cada 8 s"),
+                "inclinacao": _num("graus"),
+                "trilha": {"type": "boolean"},
+            },
+        },
+        "de": {**trio, "description": "ligacao: um ponta"},
+        "ate": {**trio, "description": "ligacao: a outra ponta (o cilindro se orienta sozinho)"},
+        "pontos": {"type": "array", "items": trio, "description": "tubo e linha: o caminho"},
+        "voltas": _num("helice"),
+        "espessura": _num("toro, anel, helice, tubo e ligacao: 0.01 a 1"),
+        "quantidade": _num("particulas: até 3000, numa nuvem do tamanho de tam"),
+    }
+    if com_filhos:
+        props["filhos"] = {"type": "array", "items": _peca(False)}
+    return {"type": "object", "properties": props, "required": ["forma"]}
 
 
 NOME, TEXTO = _texto_(), _texto_()
@@ -93,6 +135,18 @@ BLOCO: dict[str, Any] = {
             },
         },
         "marcos": _lista_de("linha_tempo: em ordem", quando=TEXTO, nome=NOME),
+        "estilo": {
+            "type": "string",
+            "enum": ["holograma", "solido"],
+            "description": "holograma: vidro holográfico com as cores das peças (padrão); solido: "
+            "material de verdade",
+        },
+        "pecas": {
+            "type": "array",
+            "description": "holograma: o objeto 3D montado com peças (até 80), na unidade que "
+            "quiser (a tela enquadra). Use filhos para o que se move junto (a Lua na Terra).",
+            "items": _peca(True),
+        },
     },
     "required": ["tipo"],
 }
@@ -172,7 +226,9 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
         "Preencha o conteúdo de cada bloco nos campos do tipo dele (o esquema diz qual campo é "
         "de qual tipo). Números (numero, barras, linha, rosca) levam fonte (de onde vêm: seus "
         "dados, a pesquisa, um valor de referência) ou ilustrativo=true; nunca mostre número "
-        "inventado como medido. Para conceito, prefira etapas, rede, onda, forma3d, comparar e "
+        "inventado como medido. Pediram 3D, holograma, modelo ou algo para girar com a mão: bloco "
+        "holograma, montado com peças (é 3D de verdade; forma3d é só um desenho). Para conceito, "
+        "prefira etapas, rede, onda, comparar e "
         'lista. Para tirar a cena ("tira isso", "limpa a tela"): tela_agir fechar com alvo cena.',
         {
             "type": "object",

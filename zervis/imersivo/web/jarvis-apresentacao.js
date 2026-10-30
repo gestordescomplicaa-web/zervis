@@ -61,6 +61,17 @@
     tom(1760, .12, .02, "sine", 0, .18); tom(420, .3, .015, "triangle", 1200);
     return reg;
   }
+  // Any other board item (a 3D hologram's model card) joins the show: beam, focus, cleared with it.
+  function anexar(id, it) {
+    if (paineis.has(id)) return paineis.get(id);
+    const f = document.createElementNS(NS, "path"); f.setAttribute("class", "feixe");
+    const p = document.createElementNS(NS, "circle"); p.setAttribute("r", "2.4"); p.setAttribute("class", "pacote");
+    feixes.append(f, p);
+    const reg = { id, it, el: it.el, feixe: f, pacote: p, fase: Math.random() };
+    paineis.set(id, reg);
+    tom(1320, .18, .02, "sine", 0, .1); tom(330, .5, .02, "triangle", 990);
+    return reg;
+  }
   function tirar(reg) {
     paineis.delete(reg.id); reg.feixe.remove(); reg.pacote.remove();
     if (reg.el.isConnected) window.jarvisStage.remover(reg.it);
@@ -319,7 +330,7 @@
     get ritmo() { return ritmo; }, set ritmo(v) { ritmo = Math.max(.01, Number(v) || 1); },
     apresentar, encerrar,
     // what the scenes (jarvis-cenas.js) build with
-    palco: { painel, focar, dizer, tom, contar, colunas, barras, grafo, mostrarDica, esconderDica, comecar, roteiro,
+    palco: { painel, anexar, focar, dizer, tom, contar, colunas, barras, grafo, mostrarDica, esconderDica, comecar, roteiro,
       get rodada() { return rodada; } },
   };
 })();

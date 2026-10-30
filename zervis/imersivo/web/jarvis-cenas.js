@@ -48,11 +48,13 @@
     comparar: b => { const lados = lista(b.lados, 2).map(l => ({ nome: texto(l?.nome, 28), itens: lista(l?.itens, 6).map(i => texto(i, 60)).filter(Boolean) }));
       return lados.length === 2 && lados.every(l => l.nome) && { lados }; },
     lista: b => { const itens = lista(b.itens, 7).map(i => texto(i, 90)).filter(Boolean); return itens.length && { itens }; },
+    // a real 3D object (jarvis-holograma.js): the pinch lock turns it, two hands scale it
+    holograma: b => window.jarvisHolograma?.limpar(b) || null,
     linha_tempo: b => { const marcos = lista(b.marcos, 8).map(i => ({ quando: texto(i?.quando, 14), nome: texto(i?.nome, 40) })).filter(i => i.nome);
       return marcos.length > 1 && { marcos }; },
   };
   const NOME = { titulo: "TÍTULO", numero: "NÚMERO", barras: "COMPARAÇÃO", linha: "EVOLUÇÃO", rosca: "DIVISÃO", etapas: "ETAPAS", rede: "CONEXÕES",
-    onda: "ONDAS", forma3d: "FORMA", globo: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
+    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", globo: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
   function limpar(cena) {
     if (typeof cena === "string") { try { cena = JSON.parse(cena); } catch (_) { cena = null; } }
     if (!cena || typeof cena !== "object") throw new Error("cena: um objeto com titulo e passos");
@@ -462,6 +464,12 @@
       limpar: p.limpar, fala: p.fala, foco: p.blocos[0] ? `cena-${n + (p.blocos[0].tipo === "titulo" && p.blocos[1] ? 1 : 0)}` : null,
       mostrar: p.blocos.map(b => {
         const nome = `cena-${n++}`, ordem = String(n).padStart(2, "0");
+        if (b.tipo === "holograma") return () => {   // a model card, not a panel
+          const { x, y, w, h } = b.caixa, W = innerWidth, H = innerHeight;
+          // without a title of its own, the hologram is named after the scene ("fecha o foguete")
+          const it = window.jarvisStage.holograma({ ...b, titulo: b.titulo || c.titulo }, { x: (x + w / 2) * W, y: (y + h / 2) * H, tam: Math.min(w * W, h * H) * 1.05 });
+          return palco.anexar(nome, it);
+        };
         return () => {
           const { x, y, w, h } = b.caixa, esquema = !COM_NUMEROS.has(b.tipo);
           const reg = palco.painel(nome, { cod: `${ordem} · ${NOME[b.tipo]}`, titulo: b.titulo || (b.tipo === "titulo" ? b.texto : NOME[b.tipo][0] + NOME[b.tipo].slice(1).toLowerCase()),
@@ -524,6 +532,32 @@
           { tipo: "linha_tempo", titulo: "Marcos", marcos: [{ quando: "1958", nome: "Perceptron" }, { quando: "1986", nome: "Retropropagação" }, { quando: "2012", nome: "AlexNet" }, { quando: "2017", nome: "Transformer" }] }] },
     ] },
   };
+  EXEMPLOS.solar = { titulo: "O sistema solar em 3D", passos: [
+    { fala: "Este é o sistema solar em holograma. Pegue com a pinça e gire para ver de todos os lados.",
+      blocos: [{ tipo: "titulo", texto: "Sistema solar", subtitulo: "Holograma 3D: pinça para girar, duas mãos para ampliar" },
+        { tipo: "holograma", titulo: "Sistema solar", pecas: [
+          { forma: "esfera", nome: "Sol", rotulo: "Sol", cor: "#ffc955", tam: 1.6, anim: "pulsar", velocidade: .6 },
+          { forma: "esfera", nome: "Mercúrio", cor: "#cfd8df", tam: .18, orbita: { raio: 1.5, velocidade: 2.4 } },
+          { forma: "esfera", nome: "Vênus", cor: "#ffd38a", tam: .3, orbita: { raio: 2.1, velocidade: 1.6 } },
+          { forma: "esfera", nome: "Terra", rotulo: "Terra", cor: "#4aa3ff", tam: .34, orbita: { raio: 2.9, velocidade: 1.1 }, anim: "girar",
+            filhos: [{ forma: "esfera", nome: "Lua", cor: "#e6eef2", tam: .1, orbita: { raio: .38, velocidade: 4, trilha: false } }] },
+          { forma: "esfera", nome: "Marte", cor: "#ff5a4f", tam: .24, orbita: { raio: 3.6, velocidade: .8 } },
+          { forma: "esfera", nome: "Saturno", rotulo: "Saturno", cor: "#e8c88a", tam: .62, orbita: { raio: 5, velocidade: .4, inclinacao: 6 },
+            filhos: [{ forma: "anel", cor: "#f1dcae", tam: 1.35, rot: [22, 0, 0], espessura: .2 }] },
+          { forma: "particulas", nome: "Estrelas", cor: "#bffff2", tam: 13, quantidade: 900 },
+        ] }] },
+  ] };
+  EXEMPLOS.agua = { titulo: "A molécula de água", passos: [
+    { fala: "A molécula de água tem um oxigênio no meio e dois hidrogênios, num ângulo de cerca de cento e quatro graus.",
+      blocos: [{ tipo: "holograma", titulo: "H₂O", pecas: [
+        { forma: "esfera", nome: "Oxigênio", rotulo: "O", cor: "#ff5a4f", tam: 1, anim: "pulsar", velocidade: .5 },
+        { forma: "ligacao", cor: "#cfd8df", de: [0, 0, 0], ate: [-.95, -.75, 0], espessura: .3 },
+        { forma: "ligacao", cor: "#cfd8df", de: [0, 0, 0], ate: [.95, -.75, 0], espessura: .3 },
+        { forma: "esfera", nome: "Hidrogênio", rotulo: "H", cor: "#f4fbff", tam: .6, pos: [-.95, -.75, 0] },
+        { forma: "esfera", nome: "Hidrogênio", rotulo: "H", cor: "#f4fbff", tam: .6, pos: [.95, -.75, 0] },
+        { forma: "particulas", cor: "#5ff2e6", tam: 3.4, quantidade: 500 },
+      ] }, { tipo: "numero", titulo: "Ângulo entre as ligações", valor: 104.5, unidade: "°", rotulo: "H-O-H", fonte: "valor de referência da química" }] },
+  ] };
   let proximo = 0;
   const exemplo = nome => explicar(EXEMPLOS[nome] || EXEMPLOS[Object.keys(EXEMPLOS)[proximo++ % Object.keys(EXEMPLOS).length]]);
 

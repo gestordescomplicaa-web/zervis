@@ -907,7 +907,9 @@ function loadThree() {
   return _three;
 }
 
-async function buildModelScene(el, src, mm, lift) {
+// gdautomacao.ia: receita = a hologram the Zé built from pieces (jarvis-holograma.js, ADR 0048):
+// { construir(THREE) -> {obj, animar(t)} } in place of a .glb; everything else is the same card.
+async function buildModelScene(el, src, mm, lift, receita) {
   try {
     const { THREE, GLTFLoader, RoomEnvironment } = await loadThree();
     const canvas = el.querySelector("canvas");
@@ -923,7 +925,8 @@ async function buildModelScene(el, src, mm, lift) {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
     camera.position.set(0, 0, 3.2);
-    const gltf = await new GLTFLoader().loadAsync(src);
+    const montado = receita ? await receita.construir(THREE) : null;
+    const gltf = montado ? { scene: montado.obj, animations: [] } : await new GLTFLoader().loadAsync(src);
     const obj = gltf.scene;
     let nLift = 0, ghostMat = null;
     // SKELETON-AWARE LOAD (an AI-generated model's export-skeleton
@@ -940,9 +943,9 @@ async function buildModelScene(el, src, mm, lift) {
     // envelope is remembered per file, so the invisible rehearsal
     // below runs ONCE per model per browser — every later load reads
     // the box instantly.
-    const bkey = "barehands-box:" + src;
+    const bkey = receita ? null : "barehands-box:" + src;   // a built hologram is measured each time
     let cachedBox = null;
-    try { cachedBox = JSON.parse(localStorage.getItem(bkey) || "null"); }
+    try { cachedBox = bkey && JSON.parse(localStorage.getItem(bkey) || "null"); }
     catch (e) {}
     if (cachedBox && cachedBox.min && cachedBox.max) {
       box.min.fromArray(cachedBox.min);
@@ -963,7 +966,8 @@ async function buildModelScene(el, src, mm, lift) {
       } catch (e) {}
       // belt + suspenders (round 2): union the skeleton-posed box with
       // the plain measurement — whichever method sees more body wins
-      try { box.union(new THREE.Box3().setFromObject(obj)); } catch (e) {}
+      // (a built hologram is framed by its solids only: a starfield or a label never shrinks it)
+      if (!receita) try { box.union(new THREE.Box3().setFromObject(obj)); } catch (e) {}
       // round 3 ("it's still catching"): the ANIMATION escapes any
       // load-pose snapshot — play every clip invisibly and union a
       // dozen sampled frames each; the box becomes the true envelope
@@ -992,7 +996,7 @@ async function buildModelScene(el, src, mm, lift) {
         }
       } catch (e) {}
       try {
-        if (!box.isEmpty())
+        if (bkey && !box.isEmpty())
           localStorage.setItem(bkey, JSON.stringify(
             { min: box.min.toArray(), max: box.max.toArray() }));
       } catch (e) {}
@@ -1031,7 +1035,7 @@ async function buildModelScene(el, src, mm, lift) {
     // 1.3 fit (was 1.7): real breathing room inside the square render
     // window, so animation strides and pose swings don't overflow its
     // edges — models rest smaller, and stretching covers the rest
-    const fit = 1.3 / (bsz.length() || 1);
+    const fit = (receita ? 1.6 : 1.3) / (bsz.length() || 1);   // a built hologram fills a little more
     const group = new THREE.Group();
     group.scale.setScalar(fit);
     group.add(obj);
@@ -1100,7 +1104,20 @@ async function buildModelScene(el, src, mm, lift) {
             gl_FragColor = vec4(col, a);
           }`,
         transparent: true, depthWrite: false, side: THREE.DoubleSide });
-      obj.traverse(n => { if (n.isMesh) n.material = ghost; });
+      // gdautomacao.ia: a built hologram keeps each piece's colour in the glass; the beam and the
+      // other dials stay shared (the same uniform objects), so one scan beam runs through all.
+      const tons = new Map();
+      const tom = hex => {
+        if (!tons.has(hex)) {
+          const c = new THREE.Color(hex);
+          tons.set(hex, new THREE.ShaderMaterial({ vertexShader: ghost.vertexShader, fragmentShader: ghost.fragmentShader,
+            uniforms: { ...ghost.uniforms, cBase: { value: c.clone().multiplyScalar(.75) },
+                        cRim: { value: c.clone().lerp(new THREE.Color(1, 1, 1), .55) } },
+            transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+        }
+        return tons.get(hex);
+      };
+      obj.traverse(n => { if (n.isMesh) n.material = n.userData.cor ? tom(n.userData.cor) : ghost; });
       ghostMat = ghost;
       ghostMat.beamSpan = Math.max(bsz.y * fit, 0.2);
     } else {
@@ -1133,7 +1150,7 @@ async function buildModelScene(el, src, mm, lift) {
       ? buildBloomRig(THREE, renderer, { k: 0.85, sat: 1.0, spread: 2.2 })
       : nLift ? buildBloomRig(THREE, renderer, { k: 2.2, sat: 2.6, spread: 2.6 })
       : null;
-    return { renderer, scene, camera, group, canvas, mixer, post, THREE, ghostMat,
+    return { renderer, scene, camera, group, canvas, mixer, post, THREE, ghostMat, animar: montado?.animar,
              exParts, exSpread, exC: 0,
              bufSize: Math.round(MODEL_PX * Math.min(devicePixelRatio || 1, 2)) };
   } catch (e) {
@@ -1160,7 +1177,7 @@ function disposeScene(sc) {
   } catch (e) {}
 }
 
-function makeModel(src, title, mode, lift) {
+function makeModel(src, title, mode, lift, receita) {
   const mm = modelModeFor(src, mode);
   const el = document.createElement("div");
   el.className = "card modelcard" + (mm === "holo" ? " holo" : "");
@@ -1178,7 +1195,7 @@ function makeModel(src, title, mode, lift) {
     x: innerWidth * 0.5, y: innerHeight * 0.42, scale: 1,
     rx: -0.15, ry: 0.6, rz: 0, rvy: 0, vx: 0, vy: 0,
     grabbedBy: [], ox: 0, oy: 0, flying: false, stretch: null };
-  buildModelScene(el, src, mm, lift).then(sc => {
+  buildModelScene(el, src, mm, lift, receita).then(sc => {
     if (sc) {
       sc.it = it; MSCENES.set(it.id, sc);
       if (sc.exParts && sc.exParts.length > 2) it.exCap = 1;
@@ -1211,6 +1228,7 @@ function renderModels() {
     sc.group.rotation.y = sc.it.ry || 0;
     sc.group.rotation.z = sc.it.rz || 0;
     applyExplode(sc, sc.it.ex || 0);
+    if (sc.animar) sc.animar(performance.now() / 1000);   // a built hologram's own motion
     if (sc.mixer) {
       const mnow = performance.now();
       sc.mixer.update(Math.min((mnow - (sc.mt || mnow)) / 1000, 0.05));
@@ -1395,6 +1413,20 @@ window.jarvisStage = {
     return it;
   },
   remover(it) { killItem(it); },
+  // gdautomacao.ia: a real 3D hologram the Zé built (jarvis-holograma.js, ADR 0048), as a model
+  // card: the pinch lock turns it on every axis, two hands scale it, a tap closes it. tam: the
+  // card's side in pixels. Returns the board item, or throws if the recipe has nothing to draw.
+  holograma(receita, { x = innerWidth * .6, y = innerHeight * .45, tam = MODEL_PX } = {}) {
+    const H = window.jarvisHolograma, r = H?.limpar(receita);
+    if (!r) throw new Error("holograma sem peças que a tela saiba montar");
+    const it = makeModel("holograma:" + (r.titulo || "objeto"), r.titulo, r.estilo === "solido" ? "solid" : "holo", 0,
+      { construir: T => H.construir(T, r) });
+    it.x = x; it.y = y; it.scale = Math.max(.3, Math.min(2.5, tam / MODEL_PX));
+    it.rx = -.5; it.ry = .35;   // seen a little from above, so orbits and rings read as circles
+    it.anim = { k: "in", t: 0 }; it.el.style.opacity = "0.05";
+    items.push(it);
+    return it;
+  },
   // The Zé himself (the ring widget, with or without the avatar), or null.
   anel() {
     return items.find(i => i.type === "widget" && i.def.w === "ring" && i.el.isConnected && i.anim?.k !== "out") || null;
@@ -3626,6 +3658,7 @@ if (ROLE === "render") {
 <script src="jarvis-teclado.js"></script>
 <script src="jarvis-avatar.js"></script>
 <script src="jarvis-apresentacao.js"></script>
+<script src="jarvis-holograma.js"></script>
 <script src="jarvis-cenas.js"></script>
 </body>
 </html>

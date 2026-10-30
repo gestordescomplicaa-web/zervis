@@ -55,3 +55,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0045](0045-ze-se-conhece-inteiro.md) | O Zé se conhece por inteiro: o que sabe fazer (ferramentas, skills, conectores, sessões) e o que fez (a Atividade), em texto e em dados para a tela | Aceito |
 | [0046](0046-apresentacoes-da-imersao.md) | As apresentações da Imersão: o Zé vai para o canto e mostra os próprios dados em painéis holográficos que a mão pega | Aceito como direção |
 | [0047](0047-cenas-que-o-ze-escreve.md) | Cenas que o Zé escreve: "me explica X" vira gráficos, ondas e 3D na Imersão, de um catálogo de blocos | Em validação |
+| [0048](0048-hologramas-3d-montados-com-pecas.md) | Hologramas 3D de verdade, montados com peças, no cartão de modelo que a pinça gira em todos os eixos | Em validação |

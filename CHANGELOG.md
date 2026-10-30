@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Hologramas 3D de verdade na Imersão: "Zé, mostra o sistema solar em 3D" e ele monta o objeto com
+  peças (esferas, cilindros, cones, anéis, hélices, ligações, partículas), com cores, rótulos e
+  movimento (órbitas, giro, pulso). Ele vira um cartão holográfico: a pinça trava e gira em todos
+  os eixos, as duas mãos ampliam, e "tira a animação" o remove. A tecla E mostra os exemplos do
+  sistema solar e da molécula de água.
 - "Tira a animação", "limpa a tela" e "fecha tudo" agora tiram a cena e a apresentação da
   Imersão e o Zé volta ao lugar e ao tamanho de antes. Antes ele dizia que tinha tirado, mas a
   cena ficava: o "fecha tudo" só fechava as telas e as notas.
