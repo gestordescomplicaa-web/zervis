@@ -20,10 +20,9 @@
     return window.jarvisStage;
   };
   const ACOES = {
-    // The Núcleo: the ring and its orbs (the manifest). abrir takes an orb or any item by
-    // its spoken name, optionally inside one orb (orbe); buscar lists matches; fechar
-    // takes an orb, an open item, or "tudo".
-    nucleo: a => sem(a.valor ?? a.alvo) === "fechar" ? S().fecharNucleo() : S().abrirNucleo(),
+    // The Núcleo: what the manifest describes (Mapa, Hoje, Trabalho, Acervo, Guia), with no
+    // orbs on screen since 29/10/2026. abrir takes one of them or any item by its spoken name,
+    // optionally inside one (orbe); buscar lists matches; fechar takes one, an open item, or "tudo".
     abrir: a => S().abrir(a.alvo ?? a.valor, a.orbe),
     buscar: a => S().buscar(a.alvo ?? a.valor, a.orbe),
     fechar: a => S().fechar(a.alvo ?? a.valor),

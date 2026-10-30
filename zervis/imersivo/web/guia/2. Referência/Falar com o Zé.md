@@ -5,7 +5,6 @@ modelo de linguagem.
 
 ## Na tela
 
-- "Abre o Núcleo" e "fecha o Núcleo": as esferas
 - "Abre o Mapa", "abre o Guia", "abre o Acervo"
 - "Mostra o meu dia" ou "mostra o meu foco": o quadro do Foco
 - "Mostra as sessões", "mostra os lembretes", "mostra a memória"
@@ -19,6 +18,12 @@ modelo de linguagem.
 - "Aumenta o brilho da câmera", "diminui o brilho da câmera"
 - "Tema roxo", "tema marinho", "tema esmeralda", "tema grafite", "cores originais"
 - "Abre as configurações"
+
+## Explicações (vão ao cérebro)
+
+- "Me explica…", "me ensina…": uma cena com gráficos, etapas, ondas e 3D ao lado do Zé
+- "Se apresenta": os números dele; "mostra num gráfico o que você fez", "quanto você falha"
+- Aperte **A** para tirar a cena da tela
 
 ## O resto
 

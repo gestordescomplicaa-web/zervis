@@ -68,7 +68,6 @@ LIMITE_ESCRITO = 4000  # caracteres de um pedido escrito no painel
 EM_SEGUNDO_PLANO = ("manutencao_entrar", "manutencao_pedido", "rodada_melhoria", "reiniciar")
 # Os que mostram algo no Núcleo (abrem a janela se ela estiver fechada): nome -> (ações, fala).
 MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
-    "nucleo_abrir": ([{"acao": "nucleo", "valor": "abrir"}], "Núcleo aberto."),
     "teclado_abrir": ([{"acao": "teclado", "valor": "abrir"}], "Teclado aberto; pode escrever."),
     "foco_mostrar": ([{"acao": "foco"}], "Seu foco na tela."),
     "visual_avatar": ([{"acao": "visual", "valor": "avatar"}], "Pronto, este sou eu."),
@@ -85,7 +84,6 @@ MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
 }
 # Os que fecham algo (com a janela fechada, não há o que fechar): nome -> (ações, fala).
 FECHAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
-    "nucleo_fechar": ([{"acao": "nucleo", "valor": "fechar"}], "Núcleo recolhido."),
     "teclado_fechar": ([{"acao": "teclado", "valor": "fechar"}], "Teclado fechado."),
     "fechar_alvo": ([{"acao": "fechar", "alvo": "{}"}], "Fechado."),
     "mapa_fechar": ([{"acao": "fechar_mapa"}], "Fechado."),

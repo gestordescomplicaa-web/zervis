@@ -129,11 +129,11 @@ async def main():
                 await check('window fit enlarges the frame within the display', "document.querySelector('#jv-mapa').getBoundingClientRect().width>=innerWidth-26")
                 shot=await call('Page.captureScreenshot', {'format':'png'})
                 Path('/tmp/jarvis-interacao-foco.png').write_bytes(base64.b64decode(shot['data']))
-                await ev("pinch('[data-action=\"close\"]');jarvisStage.abrirNucleo()")
+                await ev("pinch('[data-action=\"close\"]')")
                 await asyncio.sleep(.5)
-                await ev("document.querySelector('[data-orb=\"5\"]').click()")
+                await ev("jarvisStage.abrir('Nova orbe').then(() => 1)")
                 await asyncio.sleep(.6)
-                await check('a new manifest orb inherits the same panel controls', 'document.querySelectorAll(".panel .panel-tools button").length===4')
+                await check('a new manifest screen inherits the same panel controls', 'document.querySelectorAll(".panel .panel-tools button").length===4')
                 await ev("window.pane=document.querySelector('.panel');window.it=jarvisItemDe(pane);window.oldScale=it.scale;pinch('.panel [data-panel-action=\"larger\"]')")
                 await asyncio.sleep(.2)
                 await check('hand zoom changes the panel without closing it', "it.scale>oldScale&&it.anim?.k!=='out'")
@@ -149,7 +149,7 @@ async def main():
                 await asyncio.sleep(.2)
                 await ev("""const p=rect('.panel .bar h3'),cur={...p,history:[]};testGrab(it,91,cur);testRelease(it,91,cur);""")
                 await check('a short hand pinch on the title does not close the panel', "it.anim?.k!=='out'")
-                await ev("""document.querySelector('[data-orb="1"]').click()""")
+                await ev("jarvisStage.abrir('Guia').then(() => 1)")
                 for _ in range(40):
                     if await ev("document.querySelectorAll('.panel').length===2"):
                         break

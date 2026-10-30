@@ -18,6 +18,9 @@
   linha do tempo. Número sem fonte aparece como ILUSTRATIVO. A tecla E mostra os exemplos. Perguntas
   sobre ele mesmo ("mostra num gráfico o que você fez", "quanto você falha") viram cena com os
   números dele.
+- A Imersão não tem mais o Núcleo em volta do Zé: tocar nele não abre os círculos. Mapa, Hoje,
+  Trabalho, Acervo e Guia abrem pelo nome ("abre o Mapa", "mostra o meu dia"), como antes pela voz.
+  "Abre o Núcleo" e "fecha o Núcleo" deixaram de ser comandos.
 - Fundo da Imersão: a câmera, como antes, ou o escuro animado (grade em perspectiva e uma rede de
   pontos que se conectam), na tecla F ou em Configurações → Fundo. No escuro a câmera continua
   lendo as mãos; só a imagem some. A escolha fica guardada.

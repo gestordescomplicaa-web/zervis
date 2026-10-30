@@ -101,7 +101,7 @@ BLOCO: dict[str, Any] = {
 def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
     @tool(
         "tela_ver",
-        "O que está na sua tela agora: o Núcleo (aberto ou recolhido, orbes, painéis, notas e "
+        "O que está na sua tela agora: o Núcleo (as telas do manifesto, painéis, notas e "
         "arquivos abertos), o Mapa aberto e a vista (geral, trabalho, foco), item em foco, zoom, "
         "áreas e itens com nome e id, menu de configurações, tema, brilho da câmera, mãos e "
         "câmera, se o usuário está usando as mãos e se a janela é a ativa. O resumo de cada "
@@ -118,8 +118,8 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "tela_agir",
-        "Mexe na sua tela, em ordem e com animação, numa chamada só: abrir ou recolher o Núcleo "
-        "(o anel com os orbes do manifesto), abrir exatamente um orbe ou qualquer item dele pelo "
+        "Mexe na sua tela, em ordem e com animação, numa chamada só: abrir exatamente uma tela "
+        "do Núcleo (os orbes do manifesto) ou qualquer item dela pelo "
         "nome falado ('burrinho' acha o arquivo do Acervo), buscar por nome, fechar, a vista do "
         "Mapa, focar, zoom, mover, rolar, menu de configurações, teclado, tema, brilho da câmera, "
         "calibrar as mãos. Só quando o usuário pedir para ver ou mudar algo no Núcleo. Para um "
@@ -213,7 +213,7 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
     @tool(
         "janela_abrir",
         "Abre a janela do Zé (a câmera acende) quando o resumo disser que ela está fechada e "
-        "o usuário quiser ver algo na tela. Para abrir o Núcleo com ela aberta, use tela_agir.",
+        "o usuário quiser ver algo na tela. Com ela aberta, mostrar algo é tela_agir.",
         {},
     )
     async def janela_abrir(_: dict[str, Any]) -> dict[str, Any]:
@@ -224,7 +224,7 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
 
     @tool(
         "janela_fechar",
-        "Fecha a janela do Zé (a câmera apaga). Para só recolher o Núcleo, use tela_agir.",
+        "Fecha a janela do Zé (a câmera apaga). Para fechar só uma tela, use tela_agir.",
         {},
     )
     async def janela_fechar(_: dict[str, Any]) -> dict[str, Any]:

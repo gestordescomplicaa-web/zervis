@@ -167,20 +167,21 @@ async def main():
                 await check('and put everything back', '''document.getElementById("jv-config").hidden && !document.body.classList.contains("tema-ativo")
                     && !jarvisBrainGestures.active''')
 
-                # The Núcleo is the ring and its orbs: open it, open the Guia, a note by stem.
+                # The Núcleo is the manifest's screens, with no orbs since 29/10/2026 (ADR 0047): the
+                # Guia opens by name, a note by stem; the old "nucleo" action is gone.
                 p = mandar([{'acao': 'nucleo', 'valor': 'abrir'}, {'acao': 'abrir', 'alvo': 'guia'}])
                 r = await resposta(p)
-                assert all(x['ok'] for x in r['resultados']), r['resultados']
+                assert [x['ok'] for x in r['resultados']] == [False, True], r['resultados']
                 await asyncio.sleep(.8)
-                await check('"abre o guia do núcleo" opens the orbs and exactly the Guia pane',
-                            '''document.querySelectorAll(".card.orb").length===5
+                await check('"abre o guia do núcleo" opens exactly the Guia pane, and no orbs',
+                            '''!document.querySelector(".card.orb")
                     && [...document.querySelectorAll(".panel.browser h3")].map(h=>h.textContent).join()==="GUIA"''')
                 p = mandar([{'acao': 'abrir', 'alvo': 'primeiro'}])
                 r = await resposta(p)
                 assert r['resultados'][0]['ok'] and r['resultados'][0]['abriu'] == 'Primeiros passos', r['resultados']
                 n = r['estado']['nucleo']
-                assert n['aberto'] and n['orbes_abertos'] == ['Guia'] and n['notas_abertas'] == ['Primeiros passos'], n
-                passed.append('a note opens by a spoken stem, and the state lists orbs, panes and notes')
+                assert 'aberto' not in n and n['orbes_abertos'] == ['Guia'] and n['notas_abertas'] == ['Primeiros passos'], n
+                passed.append('a note opens by a spoken stem, and the state lists panes and notes')
                 p = mandar([{'acao': 'abrir', 'alvo': 'acervo'}, {'acao': 'fechar', 'alvo': 'Guia'},
                             {'acao': 'abrir', 'alvo': 'planilha'}])
                 r = await resposta(p)
@@ -227,9 +228,9 @@ async def main():
                 p = mandar([{'acao': 'fechar', 'alvo': 'tudo'}])
                 r = await resposta(p)
                 await asyncio.sleep(.8)
-                await check('and "fecha tudo" closes panes, notes and the orbs',
-                            '!document.querySelector(".card.orb") && !document.querySelector(".panel")')
-                assert not r['estado']['nucleo']['aberto']
+                await check('and "fecha tudo" closes panes and notes',
+                            '!document.querySelector(".panel")')
+                assert r['resultados'][0]['ok'] and not r['estado']['nucleo']['orbes_abertos'], r
 
                 # The hands come first: during a pinch the Zé waits for the hand to rest.
                 await ev('''jarvisMaos.amostra(0,{ratio:.2,ratio3:.1,f8v:1,backMean:1.5,aspect:2.5,tRel:.5,pinched:true,

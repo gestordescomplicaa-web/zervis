@@ -1,5 +1,5 @@
 """The avatar: the Zé's holographic chimpanzee (Blender glTF) inside the ring
-widget (tap still blooms the Núcleo), switchable back to the ring from the D menu, by the
+widget (a tap only pulses him: no Núcleo orbs since 29/10/2026), switchable back to the ring from the D menu, by the
 Zé (action visual) or by voice.
 
 Run: python tests/test_avatar.py   (or pytest). WebGL runs on SwiftShader (no GPU needed);
@@ -195,7 +195,7 @@ async def main():
                 await check('it keeps drawing on its own', f'jarvisAvatar.quadros - {n0} >= 5')
                 await ev('document.querySelector(".ringcard").click()')
                 await asyncio.sleep(.8)
-                await check('tapping it still blooms the Núcleo', 'document.querySelectorAll(".card.orb").length === 5')
+                await check('tapping it blooms no orbs (the Núcleo opens by name)', '!document.querySelector(".card.orb")')
                 r = await ev('jarvisControle.executar({id: "v1", acoes: [{acao: "visual", valor: "anel"}]}).then(() => jarvisControle.estado())')
                 await asyncio.sleep(.3)
                 await check('the Zé can bring the ring back ("volta o anel")', '''!document.querySelector("canvas.jv-avatar-cena")
@@ -213,7 +213,8 @@ async def main():
                     && localStorage.getItem("jv-visual") === "avatar" && document.querySelector("[data-config='visual:avatar']").classList.contains("ativo")''')
                 await ev('jarvisConfig.alternar();stagePinch(".ringcard")')
                 await asyncio.sleep(.7)
-                await check('the original pinch still closes the orbital menu through the avatar', '!jarvisStage.nucleo().aberto')
+                await check('a pinch tap on the avatar is measured for the calibration and opens nothing',
+                            '!document.querySelector(".card.orb") && !document.querySelector(".panel")')
                 await ev('jarvisAvatar.usar(false);jarvisAvatar.usar(true);jarvisAvatar.usar(false);jarvisAvatar.usar(true)')
                 await asyncio.sleep(.8)
                 await check('rapid visual changes leave one live scene and one label', '''jarvisAvatar.montados===1

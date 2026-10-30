@@ -117,11 +117,6 @@ SPDX-License-Identifier: AGPL-3.0-or-later
   .card.ringcard.grabbed canvas {
       filter:brightness(calc(1.12 + var(--ch,0)*0.3)); }
   body.on-air .card.ringcard.grabbed canvas { filter:none; }
-  .card.orb { width:150px; height:150px; border-radius:50%; padding:0;
-      display:flex; flex-direction:column; align-items:center;
-      justify-content:center; text-align:center; gap:2px; }
-  .card.orb h3 { margin:0; font-size:16px; }
-  .card.orb p { font-size:11.5px; color:#a8d8cf; margin:0; }
   .card.imgcard { padding:6px; width:auto; overflow:hidden;
       border-color:rgba(111,229,214,0.5);
       box-shadow:0 8px 40px rgba(0,0,0,0.55), 0 0 30px rgba(111,229,214,0.20),
@@ -549,13 +544,9 @@ function makeRing() {
   const el = document.createElement("div");
   el.className = "card ringcard";
   el.innerHTML = `<canvas></canvas>`;
-  el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", "Zé — abrir menu circular");
-  const tapRing = () => ringToggle(it);
-  el.addEventListener("click", tapRing);
-  el.addEventListener("keydown", ev => {
-    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); tapRing(); }
-  });
+  // gdautomacao.ia: no orbs around the Zé any more (29/10/2026, ADR 0047): tapping him is just
+  // a tap; Mapa, Hoje, Trabalho, Acervo and Guia open by voice (jarvisStage.abrir).
+  el.setAttribute("aria-label", "Zé");
   BEHIND.appendChild(el);
   const it = { el, id: UID++, type: "widget",
     def: { title: (CFG.name || "Ring"), file: "", w: "ring" },
@@ -1390,75 +1381,6 @@ function endPresent() {
   presented = null;
 }
 
-// ---- THE ORBITAL BLOOM: the board boots EMPTY except THE RING.
-// Tap the ring → the configured folders bloom as glass ORBS around it
-// (fat circular tap targets); tap an orb → its browser pane grows
-// FROM the orb's spot; tap the ring again → the orbs retract.
-function makeOrb(def) {
-  const el = document.createElement("div");
-  el.className = "card orb";
-  el.innerHTML = (def.kind === "brain" ? '<span class="orb-icone" aria-hidden="true">◉</span>' : '') +
-    `<h3>${escT(def.title)}</h3><p>${escT(def.body || "")}</p>`;
-  el.dataset.orb = String(def.orb); el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", def.title);
-  const tapOrb = () => openBrowser(def.orb, o.x, o.y);
-  el.addEventListener("click", tapOrb);
-  el.addEventListener("keydown", ev => {
-    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); tapOrb(); }
-  });
-  BEHIND.appendChild(el);
-  const o = { el, id: UID++, type: "orb", def, x: 0, y: 0, scale: 1,
-           vx: 0, vy: 0, grabbedBy: [], ox: 0, oy: 0, flying: false,
-           stretch: null };
-  return o;
-}
-
-function ringToggle(ring) {
-  const up = items.filter(i => i.type === "orb" && i.el.isConnected && i.anim?.k !== "out");
-  if (up.length) {
-    window.jarvisWorkspace?.close();
-    up.forEach(killItem); ring.el.setAttribute("aria-expanded", "false"); return;
-  }
-  ring.el.setAttribute("aria-expanded", "true");
-  // gdautomacao.ia: the orbs come from the Núcleo's manifest (barehands.json).
-  const defs = (CFG.orbs || []).map((o, i) => {
-    const title = o.title || "Orbe";
-    if (o.kind === "brain") return { title, body: "Geral · trabalho · foco", orb: "brain", kind: "brain" };
-    if (o.kind === "media") {
-      const n = treeCounts(PROPSTREE, true).leaves;
-      return { title, body: `${n} ${n === 1 ? "arquivo" : "arquivos"}`, orb: "props" };
-    }
-    if (o.kind === "hoje") {
-      const atual = FOCO?.atual?.titulo;
-      return { title, body: atual ? atual : "Foco e lembretes", orb: "hoje", kind: "hoje" };
-    }
-    if (o.kind === "trabalho") {
-      const n = (TRABALHO?.sessoes || []).length;
-      return { title, body: `${n} ${n === 1 ? "sessão" : "sessões"}`, orb: "trabalho", kind: "trabalho" };
-    }
-    const n = treeCounts(TREES[i], false).leaves;
-    return { title, body: `${n} ${n === 1 ? "nota" : "notas"}`, orb: i };
-  });
-  defs.sort((a, b) => Number(b.kind === "brain") - Number(a.kind === "brain"));
-  const side = ring.x < innerWidth / 2 ? 1 : -1;   // bloom toward center
-  defs.forEach((def, i) => {
-    def.ang = (i - (defs.length - 1) / 2) *
-              (defs.length > 3 ? 0.72 : 0.96);     // even fan, any count
-    def.side = side;
-    const o = makeOrb(def);
-    // the ORBITAL CONSTRAINT in physics() owns their position from
-    // here — spawn at the current target so the bloom lands true
-    const R = 200 * (ring.scale || 1) + 130;
-    o.x = ring.x + side * Math.cos(def.ang) * R;
-    o.y = ring.y + Math.sin(def.ang) * R;
-    o.anim = { k: "in", t: 0, d: i * 0.07 };       // staggered bloom
-    o.el.style.opacity = "0.05";
-    items.push(o);
-  });
-}
-
-
-// Zé expansions share the original ring and orbital menu.
 let workspacePose = null;
 window.jarvisStage = {
   // barehands-jarvis: the Zé's presentations (jarvis-apresentacao.js, ADR 0045) put their
@@ -1477,42 +1399,36 @@ window.jarvisStage = {
   anel() {
     return items.find(i => i.type === "widget" && i.def.w === "ring" && i.el.isConnected && i.anim?.k !== "out") || null;
   },
+  // The Zé on the board (he comes back if he was thrown away).
   ensureMenu() {
-    let ring = items.find(i => i.type === "widget" && i.def.w === "ring" && i.el.isConnected && i.anim?.k !== "out");
-    if (!ring) ring = makeRing();
-    if (!items.some(i => i.type === "orb" && i.el.isConnected && i.anim?.k !== "out")) ringToggle(ring);
-    return ring;
+    return items.find(i => i.type === "widget" && i.def.w === "ring" && i.el.isConnected && i.anim?.k !== "out") || makeRing();
   },
   prepareWorkspace() {
     const ring = this.ensureMenu();
     if (!workspacePose) {
-      workspacePose = { ring, x: ring.x, y: ring.y, scale: ring.scale,
-        orbs: items.filter(i => i.type === "orb").map(o => ({ o, side: o.def.side, scale: o.scale })) };
+      workspacePose = { ring, x: ring.x, y: ring.y, scale: ring.scale };
       ring.vx = 0; ring.vy = 0;
-      workspacePose.orbs.forEach(({ o }) => { o.def.side = -1; });
     }
     if (innerWidth < 1250) {
       ring.scale = Math.min(workspacePose.scale, innerWidth < 750 ? .5 : .65);
       ring.x = Math.min(workspacePose.x, innerWidth < 750 ? 125 : innerWidth * .25);
     }
-    workspacePose.orbs.forEach(({ o, scale }) => { o.scale = innerWidth < 1250 ? Math.min(scale, .6) : scale; });
     return { x: ring.x, y: ring.y, radius: 220 * ring.scale };
   },
   restoreWorkspace() {
     if (!workspacePose) return;
-    const { ring, x, y, scale, orbs } = workspacePose;
+    const { ring, x, y, scale } = workspacePose;
     if (ring.el.isConnected) { ring.x = x; ring.y = y; ring.scale = scale; }
-    orbs.forEach(({ o, side, scale }) => { o.def.side = side; o.scale = scale; });
     workspacePose = null;
   },
-  // gdautomacao.ia: the NÚCLEO is the ring and its orbs, described by the manifest
-  // (barehands.json): Mapa, Guia, Identidade, Acervo, Orca. Every item has an address
+  // gdautomacao.ia: the NÚCLEO is what the manifest (barehands.json) describes: Mapa, Hoje,
+  // Trabalho, Acervo, Guia. Since 29/10/2026 there are no orbs on screen: each one opens by
+  // voice, in the place it always opened. Every item has an address
   // (orb/folder/item) and a clean spoken name, and one catalogue searches them all:
   // "abre o burrinho" finds Acervo/models/burrinho_refeito_final.glb.
   nucleo() {
     const vivo = i => i.el.isConnected && i.anim?.k !== "out";
     return {
-      aberto: items.some(i => i.type === "orb" && vivo(i)),
       orbes: (CFG.orbs || []).map(o => o.title),
       orbes_abertos: [
         ...(window.jarvisCerebro?.estado().aberto ? [orbeDe("brain")?.title || "Mapa"] : []),
@@ -1522,12 +1438,6 @@ window.jarvisStage = {
       arquivos_abertos: items.filter(i => (i.type === "img" || i.type === "model") && vivo(i) && i.def?.src?.startsWith("/media/"))
         .map(i => i.def.title || nomeFalado(i.def.src)),
     };
-  },
-  abrirNucleo() { this.ensureMenu(); return { nucleo: "aberto" }; },
-  fecharNucleo() {
-    const ring = items.find(i => i.type === "widget" && i.def.w === "ring" && i.el.isConnected && i.anim?.k !== "out");
-    if (ring && items.some(i => i.type === "orb" && i.el.isConnected && i.anim?.k !== "out")) ringToggle(ring);
-    return { nucleo: "fechado" };
   },
   async buscar(termo, orbe) {
     await loadTree();
@@ -1557,7 +1467,7 @@ window.jarvisStage = {
     if (normaliza(nome) === "tudo") {
       [...items.filter(i => i.type === "browser" && vivo(i)), ...abertos()].forEach(killItem);
       window.jarvisCerebro?.fechar();
-      return this.fecharNucleo();
+      return { fechou: "tudo" };
     }
     const o = acharOrbe(nome);
     if (o) {
@@ -1627,10 +1537,7 @@ function abrirOrbe(o) {
   if (o.chave === "brain") { window.jarvisCerebro?.abrir(); return null; }
   if (abrirVista(o.chave)) return null;
   let b = items.find(i => i.type === "browser" && i.bkind === o.chave && i.el.isConnected && i.anim?.k !== "out");
-  if (!b) {
-    const orb = items.find(i => i.type === "orb" && i.def.orb === o.chave);
-    openBrowser(o.chave, orb?.x, orb?.y);
-  }
+  if (!b) openBrowser(o.chave);
   return b;
 }
 async function abrirPasta(o, chaveDir) {
@@ -1695,13 +1602,10 @@ function drawStageConnections() {
     const m = (x1 + x2) / 2;
     paths.push({key, d: `M${x1} ${y1} C${m} ${y1} ${m} ${y2} ${x2} ${y2}`});
   }
-  const orbs = items.filter(i => i.type === "orb" && i.el.isConnected && i.anim?.k !== "out");
-  orbs.forEach(o => line(root, middle(o.el), String(o.def.orb)));
   const pane = document.getElementById("jv-mapa");
   if (pane?.classList.contains("on")) {
-    const origin = orbs.find(o => o.def.orb === "brain");
     const r = pane.getBoundingClientRect();
-    line(origin ? middle(origin.el) : root, { x: r.left, y: r.top + 70, r: 0 }, "workspace");
+    line(root, { x: r.left, y: r.top + 70, r: 0 }, "workspace");
   }
   // Read all geometry first; retain paths and only write changed connections.
   const viewBox = `0 0 ${innerWidth} ${innerHeight}`;
@@ -2125,12 +2029,7 @@ function beginGrab(c, i, cur) {
     // still (80px tremor room, timer re-anchors on drift instead of
     // punishing) PROMOTES to move — the note glows and latches to the
     // hand. Cards move immediately as always.
-    if (c.type === "orb") {
-      // bloom orbs are pinned TAP targets (Phase 2): pinchable, a quick
-      // release opens their pane, but they never move — transient furniture
-      c.mode = "pinned";
-      c.tapX = cur.x; c.tapY = cur.y;
-    } else if (c.type === "panel" || c.type === "browser") {
+    if (c.type === "panel" || c.type === "browser") {
       // v3.3/v3.8 (field note: "I need a dedicated place I can grab...
       // make the same rules apply to notes"): THE GRIP BAR on notes
       // AND folder panes — pinch the title bar = immediate MOVE, no
@@ -2227,14 +2126,13 @@ function endGrab(c, i, cur) {
                                cur.y - (c.tapY || cur.y));
       if (xMs < tapMs(300) && xTrav < tapTr(26)) killItem(c);
     }
-    // PHASE 2 quick-tap releases: the RING toggles its orbital bloom;
-    // an ORB grows into its browser pane (same discrimination gate as
-    // the browser-row tap: short grip, near-zero travel)
+    // A quick tap on the Zé (short grip, near-zero travel) only pulses him; it is still
+    // measured, because the hand calibration learns the taps from it.
     {
       const qMs = performance.now() - (cur.grabT || 0);
       const qTr = Math.hypot(cur.x - (c.tapX ?? cur.x),
                              cur.y - (c.tapY ?? cur.y));
-      if ((c.type === "orb" || (c.type === "widget" && c.def.w === "ring")) && !cur.probKill)
+      if (c.type === "widget" && c.def.w === "ring" && !cur.probKill)
         window.jarvisMaos?.registrar({ resultado: qMs < tapMs(350) && qTr < tapTr(24) ? "abriu" : qTr >= tapTr(24) ? "moveu" : "demorou",
           viagem: Math.round(qTr), dur: Math.round(qMs), x: Math.round(c.x), y: Math.round(c.y), alvo: true, quadro: true });
       if (qMs < tapMs(350) && qTr < tapTr(24)) {
@@ -2242,9 +2140,6 @@ function endGrab(c, i, cur) {
             c.mode === "move") {
           const sc = RINGS.get(c.id);
           if (sc) sc.tapT = Date.now() / 1000;   // the ring's tap pulse
-          ringToggle(c);
-        } else if (c.type === "orb") {
-          openBrowser(c.def.orb, c.x, c.y);
         }
       }
     }
@@ -2335,23 +2230,6 @@ function physics(dt) {
     if (!c.expires) return;
     if (c.grabbedBy.length || items.some(k => k.type === "panel" && k.def === c.def)) { c.expires = null; return; }
     if (nowMs > c.expires) { c.expires = null; killItem(c); }
-  });
-  // THE ORBITAL CONSTRAINT (round 5, the law: the orbs keep a
-  // CONSTANT clearance from the ring's EDGE wherever it is and
-  // whatever size it is — satellites, riding moves + stretches live)
-  const sun = items.find(i => i.type === "widget" &&
-                              i.def.w === "ring" && i.el.isConnected);
-  items.forEach(o => {
-    if (o.type !== "orb" || !o.el.isConnected) return;
-    if (!sun) { killItem(o); return; }       // no ring, no bloom
-    const R = 200 * (sun.scale || 1) + 130;  // rim + gap + orb radius
-    const pad = workspacePose ? 75 * o.scale + 10 : 90;
-    const tx = Math.min(innerWidth - pad, Math.max(pad,
-      sun.x + o.def.side * Math.cos(o.def.ang) * R));
-    const ty = Math.min(innerHeight - pad, Math.max(pad,
-      sun.y + Math.sin(o.def.ang) * R));
-    const k = Math.min(1, dt * 10);
-    o.x += (tx - o.x) * k; o.y += (ty - o.y) * k;
   });
   // the spotlight ends itself: a grab or the item leaving the board
   if (presented && (!presented.el.isConnected || presented.grabbedBy.length))
@@ -3127,7 +3005,7 @@ async function boot() {
                 // v3.9.33 (field note: "I need to be able to claw the
                 // folders"): browser panes join the claw's menu; orbs
                 // stay out (pinned furniture), notes stay out.
-                if (t.type === "orb" || t.type === "panel") return;
+                if (t.type === "panel") return;
                 const vx = t.x - cur.x, vy = t.y - cur.y;
                 if (Math.hypot(vx, vy) < 160) return;   // close = pinch
                 const proj = vx * dx + vy * dy;
@@ -3434,7 +3312,7 @@ function pushState(now) {
         id: i.id, type: i.type,
         title: i.type === "panel"
                ? i.def.file.split("/").pop().replace(".md", "") : i.def.title,
-        body: (i.type === "card" || i.type === "orb") ? i.def.body : undefined,
+        body: i.type === "card" ? i.def.body : undefined,
         src: (i.type === "img" || i.type === "model") ? i.def.src : undefined,
         w: i.type === "widget" ? i.def.w : undefined,
         mm: i.type === "model" ? i.def.mmode : undefined,
@@ -3526,28 +3404,10 @@ async function renderLoop() {
           el = document.createElement("div");
           el.className = "card modelcard" + (it.mm === "holo" ? " holo" : "");
           el.innerHTML = `<canvas></canvas>`;
-  el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", "Zé — abrir menu circular");
-  const tapRing = () => ringToggle(it);
-  el.addEventListener("click", tapRing);
-  el.addEventListener("keydown", ev => {
-    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); tapRing(); }
-  });
         } else if (it.type === "widget") {
           el = document.createElement("div");    // THE RING, self-animating
           el.className = "card ringcard";
           el.innerHTML = `<canvas></canvas>`;
-  el.setAttribute("role", "button"); el.tabIndex = 0;
-  el.setAttribute("aria-label", "Zé — abrir menu circular");
-  const tapRing = () => ringToggle(it);
-  el.addEventListener("click", tapRing);
-  el.addEventListener("keydown", ev => {
-    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); tapRing(); }
-  });
-        } else if (it.type === "orb") {
-          el = document.createElement("div");
-          el.className = "card orb";
-          el.innerHTML = `<h3>${escT(it.title)}</h3><p>${escT(it.body || "")}</p>`;
         } else if (it.type === "browser") {
           el = document.createElement("div");
           el.className = "panel browser";

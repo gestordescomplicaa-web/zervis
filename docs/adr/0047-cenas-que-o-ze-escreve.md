@@ -39,6 +39,11 @@ efeitos, ondas e 3D animados, no estilo do laboratório do holograma. Quer tamb�
    você fez", "quanto você falha", "com quem você está ligado") é `ze_sobre` e depois uma cena
    com fonte "meus dados"; só "se apresenta", sem assunto, é a apresentação pronta do ADR 0046.
 
+8. **Sem os orbes do Núcleo.** A pedido, o anel não abre mais os círculos em volta do Zé; o espaço
+   fica para as cenas. As telas do manifesto continuam e abrem pelo nome (`jarvisStage.abrir`, a
+   ação `abrir`, os comandos de voz); saem a ação `nucleo` e os comandos "abre/fecha o Núcleo".
+   O toque no Zé só pulsa (e segue medido para a calibração das mãos).
+
 ## Teste com o cérebro de verdade (29/10/2026)
 
 16 pedidos com a janela aberta, ferramentas simuladas como na bateria, o retrato real no

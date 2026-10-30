@@ -538,31 +538,9 @@ COMANDOS = {
             ("o", "menu", "de", "configuracoes"),
         )
     },
-    # O Núcleo (o anel do Zé com os orbes), 07/10/2026: abrir e recolher sem o cérebro. A
-    # janela do Zé é outra coisa: fechá-la apaga a câmera.
-    "nucleo_abrir": {
-        (*verbo, *alvo)
-        for verbo in (("abre",), ("abra",), ("abrir",), ("mostra",), ("mostre",), ("me", "mostra"))
-        for alvo in (
-            ("o", "nucleo"),
-            ("nucleo",),
-            ("seu", "nucleo"),
-            ("o", "seu", "nucleo"),
-            ("a", "sua", "interface"),
-            ("sua", "interface"),
-        )
-    },
-    "nucleo_fechar": {
-        (*verbo, *alvo)
-        for verbo in (("fecha",), ("feche",), ("fechar",), ("recolhe",), ("esconde",))
-        for alvo in (
-            ("o", "nucleo"),
-            ("nucleo",),
-            ("seu", "nucleo"),
-            ("o", "seu", "nucleo"),
-            ("a", "sua", "interface"),
-        )
-    },
+    # Sem "abre/fecha o Núcleo" desde 29/10/2026: não há mais orbes em volta do Zé (ADR 0047);
+    # cada tela do Núcleo abre pelo nome ("abre o Guia"). A janela do Zé é outra coisa:
+    # fechá-la apaga a câmera.
     "janela_fechar": {
         (*verbo, *alvo)
         for verbo in (("fecha",), ("feche",), ("fechar",), ("desliga",))

@@ -76,7 +76,6 @@
   let pose = null, alvo = null;
   function paraOCanto() {
     const anel = window.jarvisStage?.anel(); if (!anel) return;
-    if (window.jarvisStage.nucleo?.().aberto) window.jarvisStage.fecharNucleo?.();
     pose ||= { x: anel.x, y: anel.y, scale: anel.scale };
     alvo = { x: vw() * .16, y: vh() * .48, scale: Math.min(.85, vh() / 1000), ry: .38 };
   }

@@ -15,11 +15,14 @@ sobe o servidor no uso normal; parâmetros como resolução e câmera são opcio
 
 ## Na tela
 
-- **O avatar robótico do Zé**, com boca articulada acompanhando a fala e o menu
-  de círculos do Núcleo (Mapa, Guia, Identidade, Acervo e Orca). Em Configurações → Visual
-  é possível escolher o anel. Modelo e referência em [avatar/README.md](avatar/README.md).
+- **O Zé em holograma** (uma constelação de pontos), com a boca acompanhando a fala. Em
+  Configurações → Visual é possível escolher o anel. Modelo e referência em
+  [avatar/README.md](avatar/README.md).
+- **As telas do Núcleo** (Mapa, Hoje, Trabalho, Acervo e Guia) abrem pelo nome, por voz ou pelo
+  cérebro. Desde 29/10/2026 não há círculos em volta do Zé (ADR 0047).
+- **As cenas**: "me explica X" vira gráficos, ondas e 3D ao lado do Zé; "se apresenta" mostra os
+  próprios dados (ADRs 0046 e 0047).
 - **A linha CPU · RAM · GPU · VRAM.** Todo o resto fica no menu de configurações.
-- **O cérebro** (Cérebro, Trabalho e Foco) abre pelo círculo Cérebro ou por voz.
 
 ## Configurações — tecla D
 
