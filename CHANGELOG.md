@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- "Zé, mostra o mapa do Brasil": ele mostra o mapa de verdade, com os contornos oficiais dos 27
+  estados (IBGE) e dos países (Natural Earth), em vez de um esboço. Acende estados, regiões e
+  países pelo nome, pinta pelo valor ("a população de cada estado"), marca cidades com arcos
+  entre elas e, pedido "em 3D", faz o mapa em relevo, com cada lugar subindo pelo valor, para
+  girar com a pinça. A tecla E mostra os exemplos do Brasil e dos voos saindo de São Paulo.
+- Os hologramas montados e o mapa em relevo agora aparecem vistos de cima; antes o cartão os
+  mostrava por baixo.
 - "Zé, mostra um cavalo em 3D": ele busca um modelo pronto e livre (CC0) no 3DAssets.dev, baixa
   para o Acervo e mostra em holograma, com as cores do modelo, para travar com a pinça e girar.
   Serve para objetos reais (animais, carros, aviões, órgãos); esquemas como o sistema solar

@@ -1439,13 +1439,17 @@ window.jarvisStage = {
   // gdautomacao.ia: a real 3D hologram the Zé built (jarvis-holograma.js, ADR 0048), as a model
   // card: the pinch lock turns it on every axis, two hands scale it, a tap closes it. tam: the
   // card's side in pixels. Returns the board item, or throws if the recipe has nothing to draw.
-  holograma(receita, { x = innerWidth * .6, y = innerHeight * .45, tam = MODEL_PX } = {}) {
+  holograma(receita, opcoes = {}) {
     const H = window.jarvisHolograma, r = H?.limpar(receita);
     if (!r) throw new Error("holograma sem peças que a tela saiba montar");
-    const it = makeModel("holograma:" + (r.titulo || "objeto"), r.titulo, r.estilo === "solido" ? "solid" : "holo", 0,
-      { construir: T => H.construir(T, r) });
+    return this.construido("holograma:" + (r.titulo || "objeto"), r.titulo, T => H.construir(T, r), { ...opcoes, estilo: r.estilo });
+  },
+  // gdautomacao.ia: any three.js object built in the page (a hologram, a map in relief,
+  // jarvis-mapas.js), in the same model card. construir(THREE) -> {obj, animar(t)}, may be async.
+  construido(src, titulo, construir, { x = innerWidth * .6, y = innerHeight * .45, tam = MODEL_PX, estilo = "holograma", rx = .5, ry = .35 } = {}) {
+    const it = makeModel(src, titulo, estilo === "solido" ? "solid" : "holo", 0, { construir });
     it.x = x; it.y = y; it.scale = Math.max(.3, Math.min(2.5, tam / MODEL_PX));
-    it.rx = -.5; it.ry = .35;   // seen a little from above, so orbits and rings read as circles
+    it.rx = rx; it.ry = ry;   // seen a little from above, so orbits, rings and maps read flat
     it.anim = { k: "in", t: 0 }; it.el.style.opacity = "0.05";
     items.push(it);
     return it;
@@ -3682,6 +3686,7 @@ if (ROLE === "render") {
 <script src="jarvis-avatar.js"></script>
 <script src="jarvis-apresentacao.js"></script>
 <script src="jarvis-holograma.js"></script>
+<script src="jarvis-mapas.js"></script>
 <script src="jarvis-cenas.js"></script>
 </body>
 </html>

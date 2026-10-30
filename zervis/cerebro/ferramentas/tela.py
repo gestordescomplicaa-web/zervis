@@ -13,7 +13,7 @@ from zervis.rosto.tela import CENA, Tela, TelaErro
 TAMANHO_DA_CENA = 16_000  # caracteres do JSON; a página ainda limita passos e blocos
 FORMAS = ["esfera", "toro", "helice", "cubo", "atomo", "galaxia", "terreno", "neural", "plexo"]
 TIPOS = ["titulo", "numero", "barras", "linha", "rosca", "etapas", "rede", "onda", "forma3d"]
-TIPOS += ["globo", "comparar", "lista", "linha_tempo", "holograma", "modelo"]
+TIPOS += ["globo", "mapa", "comparar", "lista", "linha_tempo", "holograma", "modelo"]
 PECAS = ["esfera", "cubo", "caixa", "cilindro", "cone", "piramide", "toro", "anel", "capsula"]
 PECAS += ["helice", "tubo", "linha", "ligacao", "particulas"]
 
@@ -85,7 +85,7 @@ BLOCO: dict[str, Any] = {
         "subtitulo": _texto_("titulo"),
         "valor": _num("numero: o valor"),
         "de": _num("numero: o total (o anel enche até valor/de)"),
-        "unidade": _texto_("numero, barras, linha"),
+        "unidade": _texto_("numero, barras, linha, mapa"),
         "prefixo": _texto_("numero: R$, US$"),
         "rotulo": _texto_("numero: o que o número mede"),
         "detalhe": _texto_("numero: uma frase curta"),
@@ -100,7 +100,8 @@ BLOCO: dict[str, Any] = {
             },
         },
         "pontos": _lista_de(
-            "linha: [{rotulo, valor}] em ordem; globo: [{nome, lat, lon}], o primeiro é a origem",
+            "linha: [{rotulo, valor}] em ordem; globo e mapa: cidades [{nome, lat, lon}], a "
+            "primeira é a origem dos arcos",
             rotulo=TEXTO,
             valor=_num(),
             nome=NOME,
@@ -125,7 +126,28 @@ BLOCO: dict[str, Any] = {
             "camadas ligadas; plexo, uma rede de pontos",
         },
         "legenda": _texto_("forma3d: uma frase embaixo"),
-        "ligar": {"type": "boolean", "description": "globo: arcos do primeiro ponto aos outros"},
+        "ligar": {
+            "type": "boolean",
+            "description": "globo e mapa: arcos do primeiro ponto aos outros",
+        },
+        "regiao": _texto_(
+            "mapa: o que enquadrar. brasil (os 27 estados), norte, nordeste, centro-oeste, "
+            "sudeste, sul (estados), mundo, america do sul, america do norte, america central, "
+            "europa, africa, asia, oriente medio, oceania (países), ou um país pelo nome (ele e "
+            "os vizinhos)"
+        ),
+        "destaques": _lista_de(
+            "mapa: o que acender, pelo nome ou sigla (SP, Bahia, Argentina, Nordeste). Com "
+            "valor, vira um mapa de calor (mais claro = maior) e leva fonte ou ilustrativo",
+            nome=NOME,
+            valor=_num(),
+            rotulo=_texto_("o texto no mapa, se não for o nome"),
+        ),
+        "relevo": {
+            "type": "boolean",
+            "description": "mapa: em 3D, cada lugar sobe pela altura do valor, num cartão que a "
+            "mão gira",
+        },
         "lados": {
             "type": "array",
             "description": "comparar: exatamente dois",
@@ -229,7 +251,10 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
         "dados, a pesquisa, um valor de referência) ou ilustrativo=true; nunca mostre número "
         "inventado como medido. Objeto real em 3D (cavalo, carro): modelo3d_buscar e "
         "modelo3d_baixar, e o bloco modelo com o arquivo. Esquema ou conceito em 3D (sistema "
-        "solar, átomo): bloco holograma, montado com peças (forma3d é só um desenho). Para "
+        "solar, átomo): bloco holograma, montado com peças (forma3d é só um desenho). Mapa "
+        "(do Brasil, de estados, países, continentes, onde fica algo): bloco mapa, com regiao, "
+        "destaques pelo nome e cidades com lat/lon; os contornos são reais, então nunca desenhe "
+        "mapa com peças, forma3d ou globo (relevo=true para o mapa em 3D). Para "
         "conceito, prefira etapas, rede, onda, comparar e "
         'lista. Para tirar a cena ("tira isso", "limpa a tela"): tela_agir fechar com alvo cena.',
         {

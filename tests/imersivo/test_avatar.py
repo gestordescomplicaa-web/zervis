@@ -319,6 +319,34 @@ async def main():
                         break
                     await asyncio.sleep(.1)
                 await check('and "tira a animação" takes the hologram away', '!document.querySelector(".card.modelcard") && !jarvisApresentacao.apresentando')
+                # A real map (ADR 0050): the Zé names places, the contours come from the IBGE and
+                # Natural Earth file; a name the file lacks comes back to him in ignorados.
+                cena_mapa = {'titulo': 'Mapas', 'passos': [{'fala': 'Um.', 'blocos': [
+                    {'tipo': 'mapa', 'regiao': 'nordeste', 'destaques': ['Bahia', 'PE', 'Atlântida']},
+                    {'tipo': 'mapa', 'regiao': 'america do sul', 'destaques': [{'nome': 'Paraguai', 'valor': 7}]},
+                    {'tipo': 'mapa', 'titulo': 'Relevo', 'relevo': True, 'destaques': [{'nome': 'SP', 'valor': 44}, {'nome': 'Nordeste', 'valor': 9}]}]}]}
+                r = await ev(f'jarvisApresentacao.ritmo=.03;jarvisMapas.carregar().then(() => jarvisCenas.explicar({json.dumps(cena_mapa)}))')
+                await check('a place the map file lacks comes back to the Zé, the real ones do not',
+                            f'{json.dumps(r.get("ignorados"))}?.join() === "mapa: Atlântida"')
+                mapas = '''(() => { const p = [...document.querySelectorAll(".card.jv-cena-mapa")], it = jarvisItemDe(document.querySelector(".card.modelcard"));
+                    return p.length === 2 && p.every(el => el.querySelector(".jv-c-mapa canvas")) && !!it && it.def.src === "mapa:Relevo" && it.def.mmode === "solid"; })()'''
+                for _ in range(150):
+                    if await ev(mapas):
+                        break
+                    await asyncio.sleep(.1)
+                await check('two maps drawn on panels and one in relief on a model card', mapas)
+                await check('a map without numbers cites its contours, one with numbers and no source says ILUSTRATIVO', '''(() => {
+                    const f = [...document.querySelectorAll(".card.jv-cena-mapa .jv-h-fonte")].map(e => e.textContent);
+                    return f[0] === "FONTE · IBGE" && f[1] === "ILUSTRATIVO"; })()''')
+                await check('names, abbreviations, nicknames and regions all resolve; the base follows the names',
+                            '''["Nordeste", "sp", "Estado de São Paulo"].every(n => !jarvisMapas.conferir({regiao: "", destaques: [{nome: n}], pontos: []}).length)
+                    && !jarvisMapas.conferir({regiao: "mundo", destaques: [{nome: "EUA"}, {nome: "Timor-Leste"}], pontos: []}).length
+                    && jarvisMapas.conferir({regiao: "", destaques: [{nome: "EUA"}, {nome: "Bahia"}], pontos: []}).join() === "Bahia"''')
+                await ev('jarvisControle.executar({id:"mp2",acoes:[{acao:"fechar",alvo:"cena"}]})')
+                for _ in range(150):
+                    if await ev('!document.querySelector(".card.modelcard") && !jarvisApresentacao.apresentando'):
+                        break
+                    await asyncio.sleep(.1)
                 # A downloaded model (ADR 0049): opened from the Acervo in the hologram glass; a path
                 # that climbs out of the Acervo is refused.
                 r = await ev('jarvisControle.executar({id:"m1",acoes:[{acao:"mostrar_modelo",alvo:"3d/baixados/cavalo.glb",valor:"Cavalo"},'

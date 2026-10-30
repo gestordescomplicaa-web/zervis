@@ -103,3 +103,9 @@
 .jv-cena-barras .jv-h-corpo > div:first-child { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .jv-cena-barras .jv-barras { gap: clamp(7px, 4cqh, 18px); }
 .jv-cena-barras .jv-barra { font-size: clamp(11px, 3.4cqh, 14px); }
+
+/* the real map (jarvis-mapas.js): a canvas over the whole panel body */
+.jv-c-mapa { position: absolute; inset: 0; }
+.jv-c-mapa .carregando { position: absolute; inset: 0; display: grid; place-items: center; font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: .2em; color: rgb(var(--jv-acento-rgb, 143 240 228) / .55); animation: jv-c-pisca 1s steps(2) infinite; }
+@keyframes jv-c-pisca { 50% { opacity: .35; } }
