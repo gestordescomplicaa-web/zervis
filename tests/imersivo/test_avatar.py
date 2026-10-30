@@ -274,8 +274,28 @@ async def main():
                     return f("numero") === "ILUSTRATIVO" && f("barras") === "FONTE · MEDIÇÃO" && f("forma3d") === "ESQUEMA"; })()''')
                 await check('the screen state names the running scene', '''(() => { const e = jarvisControle.estado();
                     return e.apresentacao.cena === "Teste" && e.apresentacao.ativa; })()''')
-                await ev('jarvisApresentacao.encerrar()')
-                await asyncio.sleep(.6)
+                # "Tira a animação": fechar with alvo cena (or "fecha tudo") clears the board and
+                # puts the Zé back where and how big he was.
+                await ev('jarvisControle.executar({id:"c2",acoes:[{acao:"fechar",alvo:"a animação"}]})')
+                limpo = f'''(() => {{ const r = jarvisStage.anel();
+                    return !document.querySelector(".card.jv-holo") && !document.querySelector("#jv-feixes .feixe")
+                      && Math.abs(r.x - {antes["x"]}) < 3 && !jarvisApresentacao.apresentando; }})()'''
+                for _ in range(150):
+                    if await ev(limpo):
+                        break
+                    await asyncio.sleep(.1)
+                await check('"tira a animação" clears the scene and the Zé goes back to his place', limpo)
+                await ev(f'jarvisApresentacao.ritmo=.03;jarvisControle.executar({{id:"c3",acoes:[{{acao:"explicar",cena:{json.dumps(cena)}}}]}})')
+                for _ in range(150):
+                    if await ev(quatro):
+                        break
+                    await asyncio.sleep(.1)
+                await ev('jarvisControle.executar({id:"c4",acoes:[{acao:"fechar",alvo:"tudo"}]})')
+                for _ in range(150):
+                    if await ev(limpo):
+                        break
+                    await asyncio.sleep(.1)
+                await check('and "fecha tudo" clears it too', limpo)
                 # The background (29/10/2026): the camera or the dark animated scene; the video only
                 # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
                 await ev('jarvisFundo.usar("escuro")')

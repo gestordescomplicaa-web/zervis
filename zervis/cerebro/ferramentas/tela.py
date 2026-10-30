@@ -173,7 +173,7 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
         "de qual tipo). Números (numero, barras, linha, rosca) levam fonte (de onde vêm: seus "
         "dados, a pesquisa, um valor de referência) ou ilustrativo=true; nunca mostre número "
         "inventado como medido. Para conceito, prefira etapas, rede, onda, forma3d, comparar e "
-        "lista. A tecla A ou outra cena tira esta.",
+        'lista. Para tirar a cena ("tira isso", "limpa a tela"): tela_agir fechar com alvo cena.',
         {
             "type": "object",
             "properties": {

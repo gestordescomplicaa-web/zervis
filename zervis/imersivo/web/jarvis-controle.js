@@ -25,7 +25,18 @@
     // optionally inside one (orbe); buscar lists matches; fechar takes one, an open item, or "tudo".
     abrir: a => S().abrir(a.alvo ?? a.valor, a.orbe),
     buscar: a => S().buscar(a.alvo ?? a.valor, a.orbe),
-    fechar: a => S().fechar(a.alvo ?? a.valor),
+    // "Fecha tudo" also takes the scene or the presentation away and puts the Zé back where
+    // and how big he was; so do its title or "a cena", "a animação", "a apresentação".
+    fechar: a => {
+      const alvo = a.alvo ?? a.valor, v = sem(alvo).replace(/^(a|o|essa|esse|esta|este) /, "");
+      const P = window.jarvisApresentacao, cena = sem(window.jarvisCenas?.atual || "");
+      const daCena = /^(cena|animacao|apresentacao|explicacao|paineis|painel|graficos?)( da tela| na tela)?$/.test(v) || (cena && v === cena);
+      if (P?.apresentando && daCena) return { fechou: "cena", ...P.encerrar() };
+      if (v !== "tudo") return S().fechar(alvo);
+      const r = S().fechar(alvo);
+      if (P?.apresentando) P.encerrar();
+      return { ...r, cena: "fechada" };
+    },
     foco: () => C().mostrarFoco(),
     abrir_mapa: () => C().abrir(),
     fechar_mapa: () => C().fechar(),

@@ -29,7 +29,9 @@ ACOES = {
     "busca a um orbe. Abre exatamente aquilo",
     "buscar": "alvo: um nome; orbe (opcional). Lista o que existe com esse nome: nome, orbe, "
     "tipo e endereço (orbe/pasta/item). Use antes de abrir quando não souber o nome exato",
-    "fechar": "alvo: um orbe, um item aberto (nota ou arquivo), ou tudo",
+    "fechar": "alvo: um orbe, um item aberto (nota ou arquivo), cena (a cena ou apresentação na "
+    "tela, que também sai pelo título dela) ou tudo (fecha tudo, inclusive a cena, e o Zé volta "
+    "ao lugar)",
     "abrir_mapa": "abre o Mapa (o mesmo que abrir Mapa)",
     "fechar_mapa": "fecha o Mapa",
     "modo": "valor: a vista do Mapa: geral, trabalho ou foco",
