@@ -82,3 +82,14 @@ def test_o_holograma_3d_tem_as_pecas_no_esquema_sem_referencias() -> None:
         "ligacao" in peca["forma"]["enum"] and "filhos" not in peca["filhos"]["items"]["properties"]
     )
     assert "$ref" not in json.dumps(esquema)
+
+
+def test_o_mapa_pede_so_o_que_destacar_e_os_contornos_vem_do_arquivo() -> None:
+    # ADR 0050: o modelo nunca desenha o mapa; diz a região, os destaques pelo nome e as cidades.
+    ferramenta = next(f for f in ferramentas_da_tela.ferramentas(None) if f.name == "tela_explicar")
+    passo = ferramenta.input_schema["properties"]["passos"]["items"]
+    campos = passo["properties"]["blocos"]["items"]["properties"]
+    assert "mapa" in campos["tipo"]["enum"]
+    assert {"regiao", "destaques", "relevo", "pontos", "ligar"} <= set(campos)
+    assert set(campos["destaques"]["items"]["properties"]) == {"nome", "valor", "rotulo"}
+    assert "nunca desenhe mapa com peças" in ferramenta.description

@@ -52,11 +52,16 @@
     holograma: b => window.jarvisHolograma?.limpar(b) || null,
     // a ready-made model downloaded to the Acervo (modelo3d_baixar): its path there
     modelo: b => { const f = String(b.arquivo || ""); return /^[\w\-./ ]+\.(glb|gltf)$/i.test(f) && !f.split("/").includes("..") && { arquivo: f, estilo: b.estilo === "solido" ? "solido" : "holograma" }; },
+    // a real map (jarvis-mapas.js): only what to light up; the contours are IBGE and Natural Earth
+    mapa: b => ({ regiao: texto(b.regiao, 40), relevo: !!b.relevo, unidade: texto(b.unidade, 16), ligar: b.ligar !== false,
+      destaques: lista(b.destaques, 60).map(i => typeof i === "string" ? { nome: texto(i, 40) } : { nome: texto(i?.nome, 40), valor: i?.valor == null || i.valor === "" ? null : numero(i.valor), rotulo: texto(i?.rotulo, 28) }).filter(i => i.nome),
+      pontos: lista(b.pontos, 12).map(i => ({ nome: texto(i?.nome, 22), lat: numero(i?.lat), lon: numero(i?.lon) }))
+        .filter(i => i.lat != null && i.lon != null && Math.abs(i.lat) <= 90 && Math.abs(i.lon) <= 180) }),
     linha_tempo: b => { const marcos = lista(b.marcos, 8).map(i => ({ quando: texto(i?.quando, 14), nome: texto(i?.nome, 40) })).filter(i => i.nome);
       return marcos.length > 1 && { marcos }; },
   };
   const NOME = { titulo: "TÍTULO", numero: "NÚMERO", barras: "COMPARAÇÃO", linha: "EVOLUÇÃO", rosca: "DIVISÃO", etapas: "ETAPAS", rede: "CONEXÕES",
-    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", modelo: "MODELO 3D", globo: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
+    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", modelo: "MODELO 3D", globo: "GLOBO", mapa: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
   function limpar(cena) {
     if (typeof cena === "string") { try { cena = JSON.parse(cena); } catch (_) { cena = null; } }
     if (!cena || typeof cena !== "object") throw new Error("cena: um objeto com titulo e passos");
@@ -68,6 +73,7 @@
         const f = TIPOS[b?.tipo], ok = f && total < 16 && f(b || {});
         if (!ok) { ignorados.push(String(b?.tipo ?? "?")); continue; }
         total++;
+        if (b.tipo === "mapa") ignorados.push(...(window.jarvisMapas?.conferir(ok) || []).map(n => "mapa: " + n));   // a name it could not find
         // "exemplo ilustrativo" written as a source is the ILUSTRATIVO tag, not a source
         const fonte = texto(b.fonte, 40), deExemplo = /ilustrativ|exemplo|hipot[eé]tic/i.test(fonte);
         blocos.push({ tipo: b.tipo, titulo: texto(b.titulo, 48), fonte: deExemplo ? "" : fonte, ilustrativo: !!b.ilustrativo || deExemplo, ...ok });
@@ -401,6 +407,7 @@
         });
       };
     },
+    mapa(reg, caixa, b) { window.jarvisMapas.desenhar(reg, caixa, b, { dica: P().mostrarDica, semDica: P().esconderDica }); },
     comparar(reg, caixa, b) {
       caixa.innerHTML = `<div class="jv-c-comparar">${b.lados.map((l, j) => `<div class="lado"><h3>${esc(l.nome)}</h3><ul>${l.itens.map((i, n) =>
         `<li style="animation-delay:${.4 + j * .25 + n * .14}s">${esc(i)}</li>`).join("")}</ul></div>`).join('<div class="vs"><i></i><b>VS</b><i></i></div>')}</div>`;
@@ -473,6 +480,12 @@
           it.rx = -.25; it.ry = .5;
           return palco.anexar(nome, it);
         };
+        if (b.tipo === "mapa" && b.relevo) return () => {   // the map in relief, in a model card
+          const { x, y, w, h } = b.caixa, W = innerWidth, H = innerHeight;
+          const it = window.jarvisStage.construido("mapa:" + (b.titulo || c.titulo), b.titulo || c.titulo, T => window.jarvisMapas.construir(T, b),
+            { x: (x + w / 2) * W, y: (y + h / 2) * H, tam: Math.min(w * W, h * H) * 1.05, rx: .8, ry: 0, estilo: "solido" });
+          return palco.anexar(nome, it);
+        };
         if (b.tipo === "holograma") return () => {   // a model card, not a panel
           const { x, y, w, h } = b.caixa, W = innerWidth, H = innerHeight;
           // without a title of its own, the hologram is named after the scene ("fecha o foguete")
@@ -480,10 +493,13 @@
           return palco.anexar(nome, it);
         };
         return () => {
-          const { x, y, w, h } = b.caixa, esquema = !COM_NUMEROS.has(b.tipo);
+          // a map with values is a chart (source or ILUSTRATIVO); without, its source is the contours
+          const comValores = b.tipo === "mapa" && b.destaques.some(d => d.valor != null), contornos = b.tipo === "mapa" && !comValores;
+          if (contornos) b.fonte ||= window.jarvisMapas?.fonteDe(b) || "";
+          const { x, y, w, h } = b.caixa, esquema = !COM_NUMEROS.has(b.tipo) && !comValores && !contornos;
           const reg = palco.painel(nome, { cod: `${ordem} · ${NOME[b.tipo]}`, titulo: b.titulo || (b.tipo === "titulo" ? b.texto : NOME[b.tipo][0] + NOME[b.tipo].slice(1).toLowerCase()),
             x, y, w, h, classe: `jv-cena jv-cena-${b.tipo}`, fonte: esquema ? "ESQUEMA" : b.fonte ? "FONTE · " + b.fonte.toUpperCase() : "",
-            ilustrativo: !esquema && (b.ilustrativo || !b.fonte) });
+            ilustrativo: !esquema && !contornos && (b.ilustrativo || !b.fonte) });
           const caixa = reg.el.querySelector(".jv-h-corpo");
           setTimeout(() => { if (reg.el.isConnected && !caixa.childElementCount) try { BLOCOS[b.tipo](reg, caixa, b); } catch (e) { caixa.textContent = "—"; console.error(e); } }, 320);
           return reg;
@@ -566,6 +582,25 @@
         { forma: "esfera", nome: "Hidrogênio", rotulo: "H", cor: "#f4fbff", tam: .6, pos: [.95, -.75, 0] },
         { forma: "particulas", cor: "#5ff2e6", tam: 3.4, quantidade: 500 },
       ] }, { tipo: "numero", titulo: "Ângulo entre as ligações", valor: 104.5, unidade: "°", rotulo: "H-O-H", fonte: "valor de referência da química" }] },
+  ] };
+  // Censo 2022 (IBGE), in millions of people
+  const POPULACAO = { SP: 44.41, MG: 20.54, RJ: 16.05, BA: 14.14, PR: 11.44, RS: 10.88, PE: 9.06, CE: 8.79, PA: 8.12, SC: 7.61, GO: 7.06,
+    MA: 6.78, PB: 3.97, AM: 3.94, ES: 3.83, MT: 3.66, RN: 3.3, PI: 3.27, AL: 3.13, DF: 2.82, MS: 2.76, SE: 2.21, RO: 1.58, TO: 1.51, AC: .83, AP: .73, RR: .64 };
+  const POR_ESTADO = Object.entries(POPULACAO).map(([nome, valor]) => ({ nome, valor }));
+  EXEMPLOS.brasil = { titulo: "Onde mora o Brasil", passos: [
+    { fala: "Este é o Brasil com os contornos reais dos vinte e sete estados. Quanto mais claro, mais gente mora ali.",
+      blocos: [{ tipo: "titulo", texto: "Onde mora o Brasil", subtitulo: "População por estado, Censo 2022" },
+        { tipo: "mapa", titulo: "População por estado", regiao: "brasil", unidade: "mi", fonte: "IBGE, Censo 2022", destaques: POR_ESTADO }] },
+    { fala: "Só o Sudeste guarda quase metade das pessoas.", limpar: true,
+      blocos: [{ tipo: "mapa", titulo: "O Sudeste", regiao: "brasil", destaques: ["Sudeste"] },
+        { tipo: "barras", titulo: "Os quatro do Sudeste", unidade: "mi", fonte: "IBGE, Censo 2022", itens: ["SP", "MG", "RJ", "ES"].map(nome => ({ nome, valor: POPULACAO[nome] })) }] },
+    { fala: "E em relevo: cada estado sobe conforme a população. Pegue com a pinça e gire.", limpar: true,
+      blocos: [{ tipo: "mapa", titulo: "População em relevo", regiao: "brasil", relevo: true, unidade: "mi", fonte: "IBGE, Censo 2022", destaques: POR_ESTADO }] },
+  ] };
+  EXEMPLOS.vizinhos = { titulo: "Voos saindo de São Paulo", passos: [
+    { fala: "Daqui de São Paulo, os voos diretos para as capitais vizinhas.",
+      blocos: [{ tipo: "mapa", titulo: "América do Sul", regiao: "america do sul", destaques: ["Brasil"], pontos: [{ nome: "São Paulo", lat: -23.55, lon: -46.63 },
+        { nome: "Buenos Aires", lat: -34.6, lon: -58.38 }, { nome: "Santiago", lat: -33.45, lon: -70.67 }, { nome: "Lima", lat: -12.05, lon: -77.04 }, { nome: "Bogotá", lat: 4.71, lon: -74.07 }] }] },
   ] };
   let proximo = 0;
   const exemplo = nome => explicar(EXEMPLOS[nome] || EXEMPLOS[Object.keys(EXEMPLOS)[proximo++ % Object.keys(EXEMPLOS).length]]);

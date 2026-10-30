@@ -161,5 +161,5 @@
     return { obj: raiz, animar };
   }
 
-  window.jarvisHolograma = { limpar, construir, FORMAS, ANIMS, cores: Object.keys(CORES) };
+  window.jarvisHolograma = { limpar, construir, rotulo, FORMAS, ANIMS, cores: Object.keys(CORES) };
 })();
