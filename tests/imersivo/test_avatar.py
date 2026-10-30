@@ -108,7 +108,10 @@ async def main():
                 shot = await call('Page.captureScreenshot', {'format': 'png'})
                 Path('/tmp/jarvis-chimpanze-falando.png').write_bytes(base64.b64decode(shot['data']))
                 await ev('clearInterval(avatarFeed);window.avatarFeed=setInterval(()=>{jarvisRing.data={state:"speaking",wave:Array(64).fill(0)};},20)')
-                await asyncio.sleep(1.2)
+                for _ in range(60):  # the mouth eases shut frame by frame: slower frames, longer wait
+                    if await ev('jarvisAvatar.diagnostico()[0].boca<.025'):
+                        break
+                    await asyncio.sleep(.1)
                 await check('silence during speech closes the mouth', 'jarvisAvatar.diagnostico()[0].boca<.025')
                 await ev('clearInterval(avatarFeed);window.avatarFeed=setInterval(()=>{jarvisRing.data={state:"listening",wave:Array(64).fill(.9)};},20)')
                 await asyncio.sleep(.4)
@@ -144,7 +147,9 @@ async def main():
                     const r = document.querySelector(".ringcard"), d = jarvisAvatar.diagnostico()[0];
                     return Math.abs(d.giro - 2.2) < .05 && !/rotateY/.test(r.style.transform); })()''')
                 await ev('(()=>{const it=jarvisItemDe(document.querySelector(".ringcard"));it.ry=.8;it.grabbedBy=[];it.mode=null;})()')
-                for _ in range(120):  # slow software frames under the parallel suite
+                # The board steps at most 0.05 s per frame: at the ~3 fps of software WebGL under the
+                # parallel suite, the 1.4 s settle takes up to ~10 s of wall time, so wait up to 30.
+                for _ in range(300):
                     if await ev('Math.abs(jarvisAvatar.diagnostico()[0].giro - 2*Math.PI) < .1 || Math.abs(jarvisAvatar.diagnostico()[0].giro) < .1'):
                         break
                     await asyncio.sleep(.1)
