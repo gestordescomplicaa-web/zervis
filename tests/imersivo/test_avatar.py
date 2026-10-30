@@ -296,6 +296,29 @@ async def main():
                         break
                     await asyncio.sleep(.1)
                 await check('and "fecha tudo" clears it too', limpo)
+                # A real 3D hologram (ADR 0048): built from pieces into a model card the pinch lock
+                # turns on every axis; it hangs on the Zé's beam and leaves with the scene.
+                cena3d = {'titulo': 'Teste 3D', 'passos': [{'fala': 'Um.', 'blocos': [{'tipo': 'holograma', 'pecas': [
+                    {'forma': 'esfera', 'cor': 'azul', 'tam': 1, 'rotulo': 'Terra', 'filhos': [{'forma': 'esfera', 'tam': .3, 'orbita': {'raio': 1.5}}]},
+                    {'forma': 'ligacao', 'de': [0, 0, 0], 'ate': [1, 1, 0], 'cor': '#ff0000'}, {'forma': 'nada'}]}]}]}
+                await ev(f'jarvisApresentacao.ritmo=.03;jarvisControle.executar({{id:"h1",acoes:[{{acao:"explicar",cena:{json.dumps(cena3d)}}}]}})')
+                holo = '''(() => { const el = document.querySelector(".card.modelcard"), it = el && jarvisItemDe(el);
+                    return !!it && it.type === "model" && it.def.src === "holograma:Teste 3D" && it.def.mmode === "holo"
+                      && document.querySelectorAll("#jv-feixes .feixe").length === 2; })()'''  # the scene's title and the hologram
+                for _ in range(150):
+                    if await ev(holo):
+                        break
+                    await asyncio.sleep(.1)
+                await check('a hologram block becomes a 3D model card on the Zé\'s beam', holo)
+                await check('its recipe is cleaned: the unknown piece dropped, the child kept',
+                            '''(() => { const r = jarvisHolograma.limpar({pecas: [{forma: "esfera", filhos: [{forma: "cubo"}]}, {forma: "nada"}, {forma: "ligacao"}]});
+                    return r.pecas.length === 1 && r.pecas[0].filhos.length === 1 && r.estilo === "holograma"; })()''')
+                await ev('jarvisControle.executar({id:"h2",acoes:[{acao:"fechar",alvo:"cena"}]})')
+                for _ in range(150):
+                    if await ev('!document.querySelector(".card.modelcard") && !jarvisApresentacao.apresentando'):
+                        break
+                    await asyncio.sleep(.1)
+                await check('and "tira a animação" takes the hologram away', '!document.querySelector(".card.modelcard") && !jarvisApresentacao.apresentando')
                 # The background (29/10/2026): the camera or the dark animated scene; the video only
                 # shrinks out of sight, so the hands keep being tracked, and the choice is remembered.
                 await ev('jarvisFundo.usar("escuro")')

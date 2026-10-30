@@ -67,3 +67,18 @@ def test_explicar_e_aceito_pela_tela_e_livre_como_as_outras_da_tela(tmp_path: Pa
     except TelaErro as erro:
         assert "fechada" in str(erro)  # passou da checagem das ações; só a janela está fechada
     assert "tela_explicar" in LEITURA
+
+
+def test_o_holograma_3d_tem_as_pecas_no_esquema_sem_referencias() -> None:
+    # O modelo só preenche o que o esquema lista (teste de 29/10/2026): as peças precisam estar
+    # lá por extenso, e sem $ref, que nem todo cliente de ferramentas resolve.
+    ferramenta = next(f for f in ferramentas_da_tela.ferramentas(None) if f.name == "tela_explicar")
+    esquema = ferramenta.input_schema
+    bloco = esquema["properties"]["passos"]["items"]["properties"]["blocos"]["items"]
+    assert "holograma" in bloco["properties"]["tipo"]["enum"]
+    peca = bloco["properties"]["pecas"]["items"]["properties"]
+    assert {"forma", "pos", "tam", "cor", "anim", "orbita", "de", "ate", "filhos"} <= set(peca)
+    assert (
+        "ligacao" in peca["forma"]["enum"] and "filhos" not in peca["filhos"]["items"]["properties"]
+    )
+    assert "$ref" not in json.dumps(esquema)
