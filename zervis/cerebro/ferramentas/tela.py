@@ -143,6 +143,11 @@ BLOCO: dict[str, Any] = {
             valor=_num(),
             rotulo=_texto_("o texto no mapa, se não for o nome"),
         ),
+        "isolar": {
+            "type": "boolean",
+            "description": "mapa: mostra só a região ou os destaques, sem o resto do país ou do "
+            'mundo em volta ("só o Nordeste")',
+        },
         "relevo": {
             "type": "boolean",
             "description": "mapa: em 3D, cada lugar sobe pela altura do valor, num cartão que a "

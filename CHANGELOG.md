@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Mapas: "só o Nordeste" mostra só os nove estados, sem o resto do Brasil, em 2D e em relevo. A
+  região é lida como se fala ("Nordeste brasileiro", "região Sul", "Bahia", "Coreia do Sul"):
+  antes, um jeito diferente de escrever fazia aparecer o mapa do mundo inteiro. "O mapa do
+  Nordeste" já acende a região sozinho, e uma região que não existe volta para o Zé corrigir.
 - "Zé, mostra o mapa do Brasil": ele mostra o mapa de verdade, com os contornos oficiais dos 27
   estados (IBGE) e dos países (Natural Earth), em vez de um esboço. Acende estados, regiões e
   países pelo nome, pinta pelo valor ("a população de cada estado"), marca cidades com arcos

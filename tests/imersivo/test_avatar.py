@@ -342,6 +342,17 @@ async def main():
                             '''["Nordeste", "sp", "Estado de São Paulo"].every(n => !jarvisMapas.conferir({regiao: "", destaques: [{nome: n}], pontos: []}).length)
                     && !jarvisMapas.conferir({regiao: "mundo", destaques: [{nome: "EUA"}, {nome: "Timor-Leste"}], pontos: []}).length
                     && jarvisMapas.conferir({regiao: "", destaques: [{nome: "EUA"}, {nome: "Bahia"}], pontos: []}).join() === "Bahia"''')
+                # The region as people say it (seen in real use, 30/10/2026): "Nordeste brasileiro"
+                # drew the world; a state named after a region stays a state.
+                await check('the region is read loosely; a whole name wins over the words in it', """(() => {
+                    const r = (regiao, x = {}) => jarvisMapas.resolver({regiao, destaques: [], pontos: [], ...x});
+                    const ne = r("Nordeste brasileiro"), rn = r("Rio Grande do Norte"), kr = r("Coreia do Sul"), sul = r("região sul");
+                    return ne.base === "brasil" && ne.destaques.size === 9 && rn.destaques.has("RN") && rn.destaques.size === 1
+                      && kr.base === "mundo" && kr.destaques.has("KR") && sul.destaques.size === 3
+                      && r("Atlântida").naoAchei.join() === "regiao Atlântida" && r("América do Sul").base === "mundo"; })()""")
+                await check('isolar draws only the place, nothing around it', """(() => {
+                    const r = jarvisMapas.resolver({regiao: "nordeste", isolar: true, destaques: [], pontos: []});
+                    return r.isolado && r.regioes.length === 9 && r.regioes.every(x => x.grupo === "Nordeste"); })()""")
                 await ev('jarvisControle.executar({id:"mp2",acoes:[{acao:"fechar",alvo:"cena"}]})')
                 for _ in range(150):
                     if await ev('!document.querySelector(".card.modelcard") && !jarvisApresentacao.apresentando'):
