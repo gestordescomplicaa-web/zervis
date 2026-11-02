@@ -60,36 +60,68 @@
   setTimeout(() => carregar().catch(() => {}), 800);
 
   // ---- what the block asks for, resolved against the real names ----
+  // "regiao" read loosely, as people say it: "Nordeste brasileiro", "região Sul", "mapa da Europa",
+  // "Bahia", "Argentina". Continents first, so "América do Sul" never becomes Brazil's Sul.
+  const VAZIAS = /\b(mapa|regiao|regioes|da|do|de|das|dos|o|a|os|as|e|so|somente|apenas|inteiro|inteira|todo|toda|brasileir[oa]s?)\b/g;
+  const enxuta = s => chave(s).replace(VAZIAS, " ").replace(/\s+/g, " ").trim();
+  const CONTINENTE_ENXUTO = Object.fromEntries(Object.entries(CONTINENTE).map(([n, id]) => [enxuta(n), id]).sort((a, z) => z[0].length - a[0].length));
+  const GRUPO_ENXUTO = Object.entries(GRUPOS_BR).sort((a, z) => z[0].length - a[0].length);
+  function lerRegiao(texto) {
+    const k = enxuta(texto), palavras = ` ${k} `;
+    if (!k) return null;
+    // a whole name first: Rio Grande do Norte is a state, Coreia do Sul a country
+    if (k === "brasil") return { base: "brasil" };
+    const estado = dados.brasil.indice.get(chave(texto)) || dados.brasil.indice.get(k);
+    if (estado) return { base: "brasil", estado };
+    const pais = dados.mundo.indice.get(chave(texto)) || dados.mundo.indice.get(k);
+    if (pais) return { base: "mundo", pais };
+    for (const [n, id] of Object.entries(CONTINENTE_ENXUTO)) if (palavras.includes(` ${n} `)) return { base: "mundo", continente: id };
+    for (const [n, grupo] of GRUPO_ENXUTO) if (palavras.includes(` ${n} `)) return { base: "brasil", grupo };
+    if (palavras.includes(" brasil ")) return { base: "brasil" };
+    return { base: null, desconhecida: true };
+  }
   function resolver(b) {
-    const reg = chave(b.regiao), grupoBr = GRUPOS_BR[reg];
+    const naoAchei = [], lida = b.regiao ? lerRegiao(b.regiao) : null;
+    if (lida?.desconhecida) naoAchei.push("regiao " + b.regiao);
     const achaBr = n => dados.brasil.indice.get(chave(n)) || (GRUPOS_BR[chave(n)] && dados.brasil.regioes.filter(r => r.grupo === GRUPOS_BR[chave(n)]));
     const achaMundo = n => dados.mundo.indice.get(chave(n)) || (CONTINENTE[chave(n)] && dados.mundo.regioes.filter(r => r.grupo === CONTINENTE[chave(n)]));
-    // the base: the states of Brazil, or the countries of the world
-    let base = reg === "brasil" || grupoBr ? "brasil" : reg ? "mundo" : null;
+    // the base: the states of Brazil, or the countries of the world; the names decide when the
+    // region does not
+    let base = lida?.base;
     if (!base) base = b.destaques.length && b.destaques.every(d => achaBr(d.nome)) ? "brasil" : b.destaques.length ? "mundo"
       : b.pontos.length && b.pontos.every(p => p.lat < 6 && p.lat > -34 && p.lon > -74 && p.lon < -34) ? "brasil" : "mundo";
     const acha = base === "brasil" ? achaBr : achaMundo, regioes = dados[base].regioes;
-    const destaques = new Map(), naoAchei = [];
+    const destaques = new Map();
     for (const d of b.destaques) {
       const r = acha(d.nome);
       if (!r) { naoAchei.push(d.nome); continue; }
       for (const x of Array.isArray(r) ? r : [r]) if (!destaques.has(x.id)) destaques.set(x.id, { ...d, nome: Array.isArray(r) ? x.nome : d.rotulo || x.nome });
     }
+    // the place the region names: lit by itself when nothing else is ("o mapa do Nordeste")
+    const doLugar = lida?.grupo ? regioes.filter(r => r.grupo === lida.grupo) : lida?.estado ? [lida.estado]
+      : lida?.pais ? [lida.pais] : lida?.continente && lida.continente !== "mundo" ? regioes.filter(r => r.grupo === lida.continente) : [];
+    if (!destaques.size && doLugar.length && !lida?.continente) for (const x of doLugar) destaques.set(x.id, { nome: x.nome, valor: null });
+    // isolar: only the place (or what is lit), nothing around it
+    const foco = destaques.size ? [...destaques.keys()].map(id => regioes.find(r => r.id === id)) : doLugar;
+    const isolado = !!b.isolar && foco.length > 0;
     // the frame: a fixed one for continents and the world, else the place itself with some room around
     const juntar = cs => cs.reduce((a, c) => [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[2], c[2]), Math.max(a[3], c[3])], [Infinity, Infinity, -Infinity, -Infinity]);
     const folga = (c, f, min) => { const w = Math.max(min, (c[2] - c[0]) * (1 + f)), h = Math.max(min * .6, (c[3] - c[1]) * (1 + f)), x = (c[0] + c[2]) / 2, y = (c[1] + c[3]) / 2;
       return [x - w / 2, y - h / 2, x + w / 2, y + h / 2]; };
     let quadro;
-    if (base === "brasil") quadro = juntar(regioes.filter(r => !grupoBr || r.grupo === grupoBr).map(r => r.caixa));
-    else if (QUADROS[CONTINENTE[reg]]) quadro = QUADROS[CONTINENTE[reg]];
-    else if (reg && dados.mundo.indice.get(reg)) quadro = folga(dados.mundo.indice.get(reg).caixa, .5, 10);
+    if (isolado) quadro = folga(juntar(foco.map(r => r.caixa)), .08, base === "brasil" ? 3 : 6);
+    else if (lida?.continente) quadro = QUADROS[lida.continente];
+    else if (lida?.grupo) quadro = juntar(doLugar.map(r => r.caixa));
+    else if (lida?.estado) quadro = folga(lida.estado.caixa, .6, 5);
+    else if (lida?.pais) quadro = folga(lida.pais.caixa, .5, 10);
+    else if (base === "brasil") quadro = juntar(regioes.map(r => r.caixa));
     else {
       const cs = [...destaques.keys()].map(id => regioes.find(r => r.id === id).caixa).concat(b.pontos.map(p => [p.lon, p.lat, p.lon, p.lat]));
       quadro = cs.length ? folga(juntar(cs), .35, 18) : QUADROS.mundo;
     }
     quadro = [Math.max(-180, quadro[0]), Math.max(-60, quadro[1]), Math.min(180, quadro[2]), Math.min(85, quadro[3])];
     const valores = [...destaques.values()].map(d => d.valor).filter(v => v != null);
-    return { base, regioes, destaques, naoAchei, quadro, fonte: dados.fontes[base], valores,
+    return { base, regioes: isolado ? foco : regioes, destaques, naoAchei, quadro, fonte: dados.fontes[base], valores, isolado,
       min: Math.min(...valores), max: Math.max(...valores) };
   }
   // the names the screen could not find, so the Zé hears it in the tool result
@@ -285,7 +317,7 @@
     for (const g of r.regioes) {
       if (!g.caixas.some(c => dentro(c, r.quadro, 0))) continue;
       const d = r.destaques.get(g.id), f = forca(r, d);
-      const altura = d ? (d.valor != null ? .03 + .4 * f : .1) : comDestaque ? .015 : .05;
+      const altura = d ? (d.valor != null ? .03 + .32 * f : .1) : comDestaque ? .015 : .05;
       g.polys.forEach((poly, i) => {
         if (!dentro(g.caixas[i], r.quadro, .05)) return;
         const pts = a => { const v = []; for (let j = 0; j < a.length; j += 2) v.push(new T.Vector2(...xy(a[j], a[j + 1]))); return v; };
@@ -340,5 +372,5 @@
     return { obj: raiz, animar };
   }
 
-  window.jarvisMapas = { carregar, desenhar, construir, conferir, fonteDe, get pronto() { return !!dados; } };
+  window.jarvisMapas = { carregar, desenhar, construir, conferir, fonteDe, resolver: b => dados && resolver(b), get pronto() { return !!dados; } };
 })();
