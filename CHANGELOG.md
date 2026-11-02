@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- "Zé, mostra o Hubble em 3D": naves, sondas, foguetes e astronautas agora vêm dos modelos oficiais
+  da NASA (domínio público), e a Imersão abre os modelos comprimidos. Para os outros objetos, o Zé
+  olha a prévia de cada modelo antes de escolher e diz quando não achou um bom, em vez de mostrar
+  um modelo tosco.
 - "Zé, mostra o mapa do Brasil": ele mostra o mapa de verdade, com os contornos oficiais dos 27
   estados (IBGE) e dos países (Natural Earth), em vez de um esboço. Acende estados, regiões e
   países pelo nome, pinta pelo valor ("a população de cada estado"), marca cidades com arcos
