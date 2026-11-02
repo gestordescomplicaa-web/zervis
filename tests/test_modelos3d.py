@@ -5,6 +5,7 @@ import json
 import struct
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 
@@ -55,14 +56,19 @@ class Fonte:
 
 
 def test_a_busca_tira_o_que_a_imersao_nao_le_e_mantem_a_ordem_da_fonte() -> None:
-    dados = [asset("cavalo-hd", triangles=20000), asset("cavalo-draco", hasDraco=True),
-             asset("cavalo-meshopt", extensionsUsed=["EXT_meshopt_compression"]),
+    dados = [asset("cavalo-hd", triangles=20000), asset("cavalo-ktx2", hasKTX2=True),
+             asset("cavalo-basis", extensionsUsed=["KHR_texture_basisu"]),
+             asset("cavalo-draco", hasDraco=True, triangles=20000),
              asset("../fora"), asset("potro", triangles=500)]  # fmt: skip
     fonte = Fonte({m.API + "/assets?": json.dumps({"data": dados}).encode()})
     achados = m.buscar("  horse  ", ler=fonte)
-    assert [a.id for a in achados] == ["3dassets:cavalo-hd", "3dassets:potro"]
+    assert [a.id for a in achados] == [
+        "3dassets:cavalo-hd",
+        "3dassets:cavalo-draco",
+        "3dassets:potro",
+    ]
     assert achados[0].licenca == "CC0 1.0 Universal" and achados[0].triangulos == 20000
-    assert "q=horse" in fonte.pedidos[0]
+    assert any("q=horse" in p for p in fonte.pedidos)
     with pytest.raises(m.ModeloErro):
         m.buscar("   ", ler=fonte)
 
@@ -72,7 +78,7 @@ def test_so_entra_glb_inteiro_em_si_e_sem_compressao_nao_lida() -> None:
     ruins = [
         b"PK\x03\x04 um zip qualquer",
         glb({"meshes": [{}], "buffers": [{"uri": "fora.bin"}]}),
-        glb({"meshes": [{}], "extensionsRequired": ["KHR_draco_mesh_compression"]}),
+        glb({"meshes": [{}], "extensionsRequired": ["KHR_texture_basisu"]}),
         glb({"asset": {}}),
         glb()[:30],
     ]
@@ -81,6 +87,10 @@ def test_so_entra_glb_inteiro_em_si_e_sem_compressao_nao_lida() -> None:
             m.conferir_glb(dados)
     assert m.conferir_glb(
         glb({"meshes": [{}], "buffers": [{"uri": "data:application/octet-stream;base64,AA=="}]})
+    )
+    # a Imersão abre Draco e meshopt (quase todos os modelos da NASA são Draco)
+    assert m.conferir_glb(
+        glb({"meshes": [{}], "extensionsRequired": ["KHR_draco_mesh_compression"]})
     )
 
 
@@ -120,7 +130,11 @@ def test_baixar_recusa_id_estranho_e_arquivo_que_nao_e_modelo(tmp_path: Path) ->
 
 def test_so_https_e_so_os_dominios_da_fonte() -> None:
     m._conferir_url("https://cdn.3dassets.dev/assets/1/v1/model.glb")
+    m._conferir_url(m.NASA_ARVORE)
+    m._conferir_url(m.NASA_ARQUIVOS + "3D%20Models/Saturn%20V/Saturn%20V.glb")
     for url in (
+        "https://raw.githubusercontent.com/outra/coisa/master/x.glb",  # só o repositório da NASA
+        "https://api.github.com/repos/outra/coisa",
         "http://3dassets.dev/x",
         "https://exemplo.invalid/x.glb",
         "file:///etc/passwd",
@@ -172,3 +186,68 @@ def test_baixar_com_mostrar_poe_o_modelo_na_tela(
     ]
     assert {"modelo3d_buscar", "modelo3d_baixar"} <= set(LEITURA)
     assert ferramentas_de_modelos.ferramentas(None, tela) == []
+
+
+HUBBLE = "3D Models/Hubble Space Telescope (A)/Hubble Space Telescope (A)"
+ARVORE_NASA = json.dumps({"tree": [
+    {"path": HUBBLE + ".glb", "type": "blob", "size": 1000},
+    {"path": HUBBLE + ".png", "type": "blob", "size": 500},
+    {"path": "3D Models/Saturn V/Saturn V.glb", "type": "blob", "size": 900},
+    {"path": "3D Models/Enorme/Enorme.glb", "type": "blob", "size": m.MAX_BYTES + 1},
+]}).encode()  # fmt: skip
+
+
+def test_a_nasa_vem_primeiro_com_previa_e_o_indice_fica_guardado(tmp_path: Path) -> None:
+    fonte = Fonte(
+        {m.NASA_ARVORE: ARVORE_NASA, m.API + "/assets?": json.dumps({"data": []}).encode()}
+    )
+    achados = m.buscar("Hubble telescope", acervo=tmp_path, ler=fonte)
+    assert [a.id for a in achados] == ["nasa:hubble-space-telescope-a"]
+    assert not any("3dassets" in p for p in fonte.pedidos)  # o oficial certo dispensa o resto
+    a = achados[0]
+    assert (
+        a.fonte == "NASA" and a.qualidade == "oficial" and a.licenca.startswith("Domínio público")
+    )
+    assert a.previa == m.NASA_ARQUIVOS + quote(HUBBLE) + ".png"
+    assert not m.buscar("enorme", acervo=tmp_path, ler=fonte)  # grande demais para baixar
+    assert fonte.pedidos.count(m.NASA_ARVORE) == 1  # a semana inteira com uma leitura só
+
+
+def test_baixa_da_nasa_com_a_ficha(tmp_path: Path) -> None:
+    fonte = Fonte({m.NASA_ARVORE: ARVORE_NASA, m.NASA_ARQUIVOS + "3D%20Models/Saturn%20V/": glb()})
+    r = m.baixar("nasa:saturn-v", tmp_path, ler=fonte)
+    assert r["arquivo"] == "3d/baixados/nasa-saturn-v.glb" and r["fonte"] == "NASA"
+    assert r["autor"] == "NASA" and not r["credito_obrigatorio"]
+    assert m.baixar("nasa:saturn-v", tmp_path, ler=fonte)["reusado"]
+    with pytest.raises(m.ModeloErro):
+        m.baixar("nasa:nao-existe", tmp_path, ler=fonte)
+
+
+def test_o_simples_e_o_feito_por_ia_vao_para_o_fim() -> None:
+    por_ia = {**asset("cavalo-ia", triangles=30000), "aiGenerated": True}
+    dados = [asset("potro", triangles=500), por_ia,
+             asset("cavalo-hd", triangles=30000)]  # fmt: skip
+    fonte = Fonte({m.API + "/assets?": json.dumps({"data": dados}).encode()})
+    achados = m.buscar("horse", ler=fonte)
+    assert [a.id for a in achados] == ["3dassets:cavalo-hd", "3dassets:potro", "3dassets:cavalo-ia"]
+    assert [a.qualidade for a in achados] == ["detalhado", "simples", "detalhado, feito por IA"]
+
+
+def test_a_busca_mostra_as_previas_ao_ze(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    achado = m.Achado("nasa:saturn-v", "Saturn V", "", "Domínio público (NASA)", False, "NASA", 0,
+                      False, False, "", "NASA", "oficial", "https://x/saturn.png")  # fmt: skip
+    monkeypatch.setattr(m, "buscar", lambda busca, quantos, acervo: [achado])
+    monkeypatch.setattr(
+        m, "previas", lambda achados: [("nasa:saturn-v", b"\x89PNG\r\n\x1a\nresto")]
+    )
+    buscar = next(
+        f for f in ferramentas_de_modelos.ferramentas(tmp_path, None) if f.name == "modelo3d_buscar"
+    )
+
+    async def rodar() -> dict[str, Any]:
+        return await buscar.handler({"busca": "saturn v"})
+
+    conteudo = asyncio.run(rodar())["content"]
+    assert json.loads(conteudo[0]["text"])["achados"][0]["qualidade"] == "oficial"
+    assert conteudo[1] == {"type": "text", "text": "Prévia de nasa:saturn-v:"}
+    assert conteudo[2]["type"] == "image" and conteudo[2]["mimeType"] == "image/png"

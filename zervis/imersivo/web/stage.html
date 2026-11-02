@@ -902,8 +902,15 @@ function loadThree() {
     import("three"),
     import("three/addons/loaders/GLTFLoader.js"),
     import("three/addons/environments/RoomEnvironment.js"),
-  ]).then(([T, L, E]) => ({ THREE: T, GLTFLoader: L.GLTFLoader,
-                            RoomEnvironment: E.RoomEnvironment }));
+    import("three/addons/loaders/DRACOLoader.js"),
+    import("three/addons/libs/meshopt_decoder.module.js"),
+  ]).then(([T, L, E, D, M]) => {
+    // gdautomacao.ia: compressed models (most of NASA's are Draco, ADR 0052) open too; the
+    // decoder comes from the same three.js release as the rest
+    const draco = new D.DRACOLoader().setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/");
+    const novoLoader = () => new L.GLTFLoader().setDRACOLoader(draco).setMeshoptDecoder(M.MeshoptDecoder);
+    return { THREE: T, GLTFLoader: L.GLTFLoader, novoLoader, RoomEnvironment: E.RoomEnvironment };
+  });
   return _three;
 }
 
@@ -911,7 +918,7 @@ function loadThree() {
 // { construir(THREE) -> {obj, animar(t)} } in place of a .glb; everything else is the same card.
 async function buildModelScene(el, src, mm, lift, receita, cores) {
   try {
-    const { THREE, GLTFLoader, RoomEnvironment } = await loadThree();
+    const { THREE, novoLoader, RoomEnvironment } = await loadThree();
     const canvas = el.querySelector("canvas");
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true,
                                                antialias: true });
@@ -926,7 +933,7 @@ async function buildModelScene(el, src, mm, lift, receita, cores) {
     const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
     camera.position.set(0, 0, 3.2);
     const montado = receita ? await receita.construir(THREE) : null;
-    const gltf = montado ? { scene: montado.obj, animations: [] } : await new GLTFLoader().loadAsync(src);
+    const gltf = montado ? { scene: montado.obj, animations: [] } : await novoLoader().loadAsync(src);
     const obj = gltf.scene;
     let nLift = 0, ghostMat = null;
     // SKELETON-AWARE LOAD (an AI-generated model's export-skeleton

@@ -3,6 +3,8 @@ holograma. Só lê a internet numa fonte permitida e só grava no próprio Acerv
 perguntar; as travas do download estão em `zervis/imersivo/modelos3d.py`."""
 
 import asyncio
+import base64
+import json
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,28 @@ from zervis.cerebro.ferramentas.comum import _erro, _texto
 from zervis.imersivo import modelos3d
 from zervis.rosto.tela import Tela, TelaErro
 
+TIPOS_DE_IMAGEM = {b"\x89PNG": "image/png", b"\xff\xd8\xff": "image/jpeg", b"RIFF": "image/webp"}
+
+
+def _tipo(imagem: bytes) -> str | None:
+    if imagem[:4] == b"RIFF" and imagem[8:12] != b"WEBP":
+        return None
+    return next((t for m, t in TIPOS_DE_IMAGEM.items() if imagem.startswith(m)), None)
+
+
+def _com_previas(dados: dict[str, Any], vistas: list[tuple[str, bytes]]) -> dict[str, Any]:
+    """O resultado em texto e, depois, a prévia de cada achado, rotulada pelo id."""
+    conteudo: list[dict[str, Any]] = [
+        {"type": "text", "text": json.dumps(dados, ensure_ascii=False)}
+    ]
+    for id_, imagem in vistas:
+        if tipo := _tipo(imagem):
+            conteudo.append({"type": "text", "text": f"Prévia de {id_}:"})
+            conteudo.append(
+                {"type": "image", "data": base64.b64encode(imagem).decode(), "mimeType": tipo}
+            )
+    return {"content": conteudo}
+
 
 def ferramentas(acervo: Path | None, tela: Tela | None) -> list[SdkMcpTool[Any]]:
     if acervo is None:
@@ -19,13 +43,16 @@ def ferramentas(acervo: Path | None, tela: Tela | None) -> list[SdkMcpTool[Any]]
 
     @tool(
         "modelo3d_buscar",
-        "Busca modelos 3D prontos e livres (CC0) para mostrar em holograma: um objeto real e "
-        "reconhecível, como cavalo, carro, avião, coração, prédio, planta. Busque em inglês "
-        "(horse, car, airplane): a fonte é em inglês. Devolve id, título, resumo, licença, "
-        "triângulos (mais é mais detalhado) e se foi feito por IA; escolha o que corresponde ao "
-        "pedido e "
-        "baixe com modelo3d_baixar. Para um esquema ou conceito (sistema solar, átomo, molécula), "
-        "monte com o bloco holograma em vez disso.",
+        "Busca modelos 3D prontos e livres para mostrar em holograma: um objeto real e "
+        "reconhecível, como cavalo, carro, avião, coração, prédio, planta; naves, sondas, "
+        "foguetes e astronautas vêm oficiais da NASA (Hubble, ISS, Saturn V, space shuttle, "
+        "Perseverance). Busque em inglês (horse, car, space station). Devolve cada achado com "
+        "fonte, qualidade (oficial, detalhado, médio, simples; e se foi feito por IA) e, "
+        "quando houver, a prévia em imagem logo depois. Olhe as prévias e escolha o que parece "
+        "de verdade com o pedido; um modelo simples ou feito por IA só se não houver outro. Se "
+        "nenhum prestar, diga isso em vez de mostrar um feio. Escolha em silêncio: o que você "
+        "escreve entre as ferramentas é falado. Baixe com modelo3d_baixar. Para um esquema ou "
+        "conceito (sistema solar, átomo, molécula), monte com o bloco holograma.",
         {
             "type": "object",
             "properties": {
@@ -38,13 +65,17 @@ def ferramentas(acervo: Path | None, tela: Tela | None) -> list[SdkMcpTool[Any]]
     async def modelo3d_buscar(args: dict[str, Any]) -> dict[str, Any]:
         try:
             achados = await asyncio.to_thread(
-                modelos3d.buscar, str(args.get("busca", "")), int(args.get("quantos") or 6)
+                modelos3d.buscar,
+                str(args.get("busca", "")),
+                int(args.get("quantos") or 6),
+                acervo=acervo,
             )
         except (modelos3d.ModeloErro, ValueError) as erro:
             return _erro(erro)
         if not achados:
             return _texto({"achados": [], "dica": "nada que a tela leia; tente outra palavra"})
-        return _texto({"achados": modelos3d.para_resposta(achados)})
+        vistas = await asyncio.to_thread(modelos3d.previas, achados)
+        return _com_previas({"achados": modelos3d.para_resposta(achados)}, vistas)
 
     @tool(
         "modelo3d_baixar",
@@ -56,7 +87,7 @@ def ferramentas(acervo: Path | None, tela: Tela | None) -> list[SdkMcpTool[Any]]
         {
             "type": "object",
             "properties": {
-                "id": {"type": "string", "description": "O id da busca, como 3dassets:slug"},
+                "id": {"type": "string", "description": "O id da busca: nasa:slug, 3dassets:slug"},
                 "titulo": {"type": "string", "description": "Em português, para a tela: Cavalo"},
                 "mostrar": {"type": "boolean"},
             },

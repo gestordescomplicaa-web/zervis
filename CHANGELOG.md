@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- "Zé, mostra o Hubble em 3D": naves, sondas, foguetes e astronautas agora vêm dos modelos oficiais
+  da NASA (domínio público), e a Imersão abre os modelos comprimidos. Para os outros objetos, o Zé
+  olha a prévia de cada modelo antes de escolher e diz quando não achou um bom, em vez de mostrar
+  um modelo tosco.
 - Com o Zé numa caixa de som (app do celular ou navegador), ele não ouve mais a própria voz: o Zé
   tira do microfone o que ele mesmo falou, com cancelamento de eco e redução de ruído. Dá para
   falar de longe do celular e interromper pela voz enquanto ele fala.
