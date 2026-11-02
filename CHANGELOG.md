@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Com o Zé numa caixa de som (app do celular ou navegador), ele não ouve mais a própria voz: o Zé
+  tira do microfone o que ele mesmo falou, com cancelamento de eco e redução de ruído. Dá para
+  falar de longe do celular e interromper pela voz enquanto ele fala.
 - Mapas: "só o Nordeste" mostra só os nove estados, sem o resto do Brasil, em 2D e em relevo. A
   região é lida como se fala ("Nordeste brasileiro", "região Sul", "Bahia", "Coreia do Sul"):
   antes, um jeito diferente de escrever fazia aparecer o mapa do mundo inteiro. "O mapa do
