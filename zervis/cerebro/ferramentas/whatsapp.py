@@ -3,9 +3,11 @@ escreveu, quem espera resposta, os leads, responder ditado e "já vi".
 
 Ler (o estado, as conversas, uma conversa, os leads) e dispensar um lembrete passam sem
 perguntar. Responder envia uma mensagem a outra pessoa: passa pela aprovação falada, com o
-destinatário e o texto na pergunta, e só numa conversa privada que já está na caixa (alguém que
-escreveu nos últimos 7 dias) ou de um lead. O texto dos outros é de terceiros: vai entre <<< e
->>>, como dado. O agente de atendimento (a persona que responde sozinho) é outra coisa, à parte.
+destinatário e o texto na pergunta, numa conversa privada que já está na caixa ou de um lead.
+Começar uma conversa nova, com quem nunca escreveu (ADR 0061), é pelo número: a aprovação falada
+diz o nome, o número e o texto, e o WhatsApp confere se o número existe antes de enviar. Grupo,
+nunca. O texto dos outros é de terceiros: vai entre <<< e >>>, como dado. O agente de atendimento
+(a persona que responde sozinho) é outra coisa, à parte.
 """
 
 import asyncio
@@ -20,6 +22,7 @@ from zervis.avisos.pendentes import Pendentes
 from zervis.avisos.prioridade import Prioridade, digitos, mesmo_numero
 
 RESPONDER = "mcp__jarvis__whatsapp_responder"
+ENVIAR = "mcp__jarvis__whatsapp_enviar"
 ESQUECER = "mcp__jarvis__whatsapp_esquecer"
 TEXTO_MAXIMO = 2000
 CONVERSAS = 10  # na lista falada; o resto, pelo nome
@@ -34,6 +37,7 @@ class Nucleo(Protocol):
     prioridade: Prioridade
 
     def responder_whatsapp(self, chat: str, nome: str, texto: str) -> str: ...
+    def iniciar_whatsapp(self, telefone: str, nome: str, texto: str) -> str: ...
     def dispensar_lead(self, ident: str) -> str: ...
     def estado_whatsapp(self) -> dict[str, Any]: ...
 
@@ -237,12 +241,49 @@ def _alvo(n: Nucleo, entrada: dict[str, Any]) -> tuple[tuple[str, str] | None, s
     return destino, texto, ""
 
 
+def numero(dito: str) -> str:
+    """O número com o código do país, só dígitos; vazio se não for um número. Sem o "+", 10 ou
+    11 dígitos são do Brasil (DDD e número) e ganham o 55."""
+    d = digitos(dito)
+    if not dito.strip().startswith("+") and len(d) in (10, 11) and not d.startswith("0"):
+        d = "55" + d
+    elif d.startswith("0055"):
+        d = d[2:]
+    return d if 11 <= len(d) <= 15 and not d.startswith("0") else ""
+
+
+def numero_falado(telefone: str) -> str:
+    """Para a pergunta da aprovação: "11 98765-4321" (do Brasil) ou "+1 4155551234"."""
+    if telefone.startswith("55") and len(telefone) in (12, 13):
+        local = telefone[4:]
+        return f"{telefone[2:4]} {local[:-4]}-{local[-4:]}"
+    return f"+{telefone}"
+
+
+def _novo(entrada: dict[str, Any]) -> tuple[str, str, str, str]:
+    """(o número, o nome, o texto, o problema) de uma conversa nova; o problema é a recusa."""
+    telefone = numero(str(entrada.get("numero", "")))
+    nome = " ".join(str(entrada.get("nome", "")).split())[:80]
+    texto = str(entrada.get("texto", "")).strip()
+    if not telefone:
+        return "", nome, texto, "Número inválido: passe com o DDD (e o + do país, se for de fora)."
+    if not nome:
+        return telefone, nome, texto, "Diga para quem é (o nome da pessoa ou da empresa)."
+    if not texto:
+        return telefone, nome, texto, "Falta o texto da mensagem."
+    if len(texto) > TEXTO_MAXIMO:
+        return telefone, nome, texto, "Mensagem longa demais para ditar; resuma."
+    return telefone, nome, texto, ""
+
+
 def prechecar(n: Nucleo) -> Any:
     """Para o ClaudeBrain: recusa sem perguntar ao usuário a resposta que não teria destino."""
 
     def prechecar_resposta(nome: str, entrada: dict[str, Any]) -> str | None:
         if nome == ESQUECER and n.caixa.achar(_contato(entrada)) is None:
             return "Nenhuma conversa com esse nome no arquivo (ou mais de uma). Passe o id."
+        if nome == ENVIAR:
+            return _novo(entrada)[3] or None
         if nome != RESPONDER:
             return None
         return _alvo(n, entrada)[2] or None
@@ -256,6 +297,15 @@ def descritor(n: Nucleo) -> Any:
     def descrever_resposta(nome: str, entrada: dict[str, Any]) -> str | None:
         if nome == ESQUECER and (c := n.caixa.achar(_contato(entrada))) is not None:
             return f"Vou apagar do meu arquivo a conversa com {c.nome}, inteira. Confirma?"
+        if nome == ENVIAR:
+            telefone, quem, texto, problema = _novo(entrada)
+            if problema:
+                return None
+            fim = texto if texto.endswith((".", "!", "?")) else f"{texto}."
+            return (
+                f"Vou começar uma conversa no WhatsApp com {quem}, no número "
+                f"{numero_falado(telefone)}, e mandar: {fim} É para {quem} mesmo? Envio?"
+            )
         if nome != RESPONDER:
             return None
         destino, texto, _ = _alvo(n, entrada)
@@ -394,7 +444,7 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         "que o usuário ditou. O texto vai como o usuário quer que chegue, na voz dele (primeira "
         "pessoa), sem inventar nem acrescentar nada; se ele pedir para você redigir, diga a "
         "sugestão e espere o ok antes. O usuário confirma por voz, ouvindo o destinatário e o "
-        "texto. Nunca a grupo nem a quem não escreveu.",
+        "texto. Nunca a grupo. A quem não escreveu (não está na caixa), use whatsapp_enviar.",
         {
             "type": "object",
             "properties": {
@@ -410,6 +460,34 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
             return _texto(problema or "Conversa não encontrada.", erro=True)
         try:
             return _texto(await asyncio.to_thread(n.responder_whatsapp, *destino, texto))
+        except RuntimeError as erro:
+            return _texto(str(erro), erro=True)
+
+    @tool(
+        "whatsapp_enviar",
+        "Começa uma conversa nova no WhatsApp, pelo número: alguém que ainda não escreveu, como "
+        "a empresa que a pesquisa achou, um fornecedor, um contato que o usuário ditou. Passe o "
+        "número (com o DDD; com + e o código do país, se for de fora), o nome de quem é, e o "
+        "texto como o usuário quer que chegue, na voz dele, sem inventar nada (se ele pedir para "
+        "você redigir, diga a sugestão e espere o ok). O usuário confirma por voz ouvindo o nome, "
+        "o número e o texto. O WhatsApp confere se o número existe antes de enviar. Quem já está "
+        "na caixa: whatsapp_responder. Nunca a grupo.",
+        {
+            "type": "object",
+            "properties": {
+                "numero": {"type": "string", "description": "11 98765-4321, +1 415 555 1234"},
+                "nome": {"type": "string", "description": "De quem é: Embalagens G6, a Ana"},
+                "texto": {"type": "string", "description": "A mensagem exata a enviar"},
+            },
+            "required": ["numero", "nome", "texto"],
+        },
+    )
+    async def whatsapp_enviar(args: dict[str, Any]) -> dict[str, Any]:
+        telefone, nome, texto, problema = _novo(args)
+        if problema:
+            return _texto(problema, erro=True)
+        try:
+            return _texto(await asyncio.to_thread(n.iniciar_whatsapp, telefone, nome, texto))
         except RuntimeError as erro:
             return _texto(str(erro), erro=True)
 
@@ -461,6 +539,7 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         whatsapp_esquecer,
         whatsapp_leads,
         whatsapp_responder,
+        whatsapp_enviar,
         whatsapp_ja_vi,
         whatsapp_prioridade,
     ]

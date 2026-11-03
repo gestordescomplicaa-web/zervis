@@ -33,11 +33,13 @@ class CentralFalsa:
     def __init__(self, erro: str = "") -> None:
         self.erro = erro
         self.enviados: list[tuple[str, str, str]] = []
+        self.telefones: list[str] = []
 
     def enviar(self, texto: str, chave: str, chat: str = "", telefone: str = "") -> None:
         if self.erro:
             raise CentralErro(self.erro)
         self.enviados.append((chat, texto, chave))
+        self.telefones.append(telefone)
 
     def para_tela(self) -> dict[str, Any]:
         return {"estado": "conectado", "numero": "5581900000000"}
@@ -55,6 +57,7 @@ def _nucleo(tmp_path: Path, central: CentralFalsa | None = None) -> Any:
     )
     servico = ServicoAtendimento(n)
     n.responder_whatsapp = servico.responder_whatsapp
+    n.iniciar_whatsapp = servico.iniciar_whatsapp
     n.dispensar_lead = servico.dispensar_lead
     n.estado_whatsapp = servico.estado_whatsapp
     return n
@@ -226,3 +229,54 @@ def test_esquecer_pede_o_sim_e_apaga(tmp_path: Path) -> None:
         "Esqueci a conversa com Ana (1 mensagens)."
     )
     assert n.caixa.conversas() == []
+
+
+def test_numero_dito_vira_o_numero_com_o_pais() -> None:
+    assert w.numero("(11) 98765-4321") == "5511987654321"
+    assert w.numero("11 3265-4321") == "551132654321"
+    assert w.numero("+55 81 99999-0000") == "5581999990000"
+    assert w.numero("0055 81 99999-0000") == "5581999990000"
+    assert w.numero("+1 415 555 1234") == "14155551234"  # com o +, o país vem dito
+    for errado in ("", "1234", "98765-4321", "abc", "+0 11"):
+        assert w.numero(errado) == "", errado
+    assert w.numero_falado("5511987654321") == "11 98765-4321"
+    assert w.numero_falado("551132654321") == "11 3265-4321"
+    assert w.numero_falado("14155551234") == "+14155551234"
+
+
+def test_conversa_nova_pede_o_sim_com_o_nome_e_o_numero(tmp_path: Path) -> None:
+    """Caso de 03/11/2026: a pesquisa achou o número de uma empresa e o Zé disse que só o
+    usuário podia começar a conversa. Agora começa, depois do sim que confere nome e número."""
+    n = _nucleo(tmp_path)
+    assert w.ENVIAR not in LIVRES
+    args = {"numero": "11 98765-4321", "nome": "Embalagens G6", "texto": "Oi, tudo bem"}
+    assert w.prechecar(n)(w.ENVIAR, args) is None
+    assert w.descritor(n)(w.ENVIAR, args) == (
+        "Vou começar uma conversa no WhatsApp com Embalagens G6, no número 11 98765-4321, e "
+        "mandar: Oi, tudo bem. É para Embalagens G6 mesmo? Envio?"
+    )
+    recusas = {
+        "Número inválido": {**args, "numero": "4321"},
+        "para quem é": {**args, "nome": " "},
+        "Falta o texto": {**args, "texto": ""},
+    }
+    for motivo, errado in recusas.items():
+        assert motivo in (w.prechecar(n)(w.ENVIAR, errado) or ""), motivo
+        assert w.descritor(n)(w.ENVIAR, errado) is None
+    resposta = _texto(_chamar(n, "whatsapp_enviar", args))
+    assert resposta == "Enviado para Embalagens G6. Aviso quando responder."
+    [(chat, texto, chave)] = n.central.enviados
+    assert (chat, texto, n.central.telefones) == ("", "Oi, tudo bem", ["5511987654321"])
+    _chamar(n, "whatsapp_enviar", args)
+    assert n.central.enviados[1][2] != chave  # um segundo "sim" é um segundo envio
+    [vigiado] = n.prioridade.todos()
+    assert vigiado.telefone == "5511987654321" and vigiado.motivo == "resposta"
+    assert n.prioridade.chegou("", "551187654321") is not None  # sem o nono dígito também
+
+
+def test_conversa_nova_que_falha_diz_o_motivo(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path, CentralFalsa("Esse número não está no WhatsApp."))
+    args = {"numero": "11 98765-4321", "nome": "Loja X", "texto": "oi"}
+    resposta = _chamar(n, "whatsapp_enviar", args)
+    assert resposta["is_error"] and "não está no WhatsApp" in _texto(resposta)
+    assert n.prioridade.todos() == []

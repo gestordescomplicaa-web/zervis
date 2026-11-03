@@ -68,3 +68,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0058](0058-imagens-reais-na-imersao.md) | Imagens e vídeos reais na Imersão: Wikipédia e Wikimedia Commons com crédito, o print de página atrás de uma trava de rede, e os blocos foto e video nas cenas | Em validação |
 | [0059](0059-pesquisa-profunda.md) | Pesquisa profunda: o SearXNG próprio, o leitor de páginas (Trafilatura) atrás da trava de rede, o CNPJ com reserva, o plano B pela pesquisa do Codex e o vigia semanal das fontes de fora | Em validação |
 | [0060](0060-pesquisas-guardadas.md) | Pesquisas guardadas: cada pesquisa (a profunda e a resumida) com as fontes, a página Pesquisas do painel e reabrir pela voz sem pesquisar de novo | Em validação |
+| [0061](0061-whatsapp-conversa-nova.md) | WhatsApp: começar uma conversa nova pelo número (a empresa que a pesquisa achou), com o sim que confere o nome e o número | Em validação |
