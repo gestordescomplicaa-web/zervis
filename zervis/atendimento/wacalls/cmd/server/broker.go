@@ -33,6 +33,7 @@ type AuthSnapshot struct {
 	State  string `json:"state"`
 	Paired bool   `json:"paired"`
 	QR     string `json:"qr,omitempty"`
+	Error  string `json:"error,omitempty"` // Zérvis: por que o pareamento parou ("err-client-outdated")
 }
 
 type SessionInfo struct {
@@ -42,6 +43,7 @@ type SessionInfo struct {
 	State  string `json:"state"`
 	Paired bool   `json:"paired"`
 	QR     string `json:"qr,omitempty"` // o código atual do pareamento (Zérvis: lido por consulta)
+	Error  string `json:"error,omitempty"`
 }
 
 type subscriber struct {

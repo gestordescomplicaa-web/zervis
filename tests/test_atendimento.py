@@ -244,6 +244,22 @@ def test_conectar_sobe_so_no_endereco_local_e_pede_o_qr(
     wa.parar()
 
 
+def test_pareamento_recusado_aparece_na_tela(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caso de 03/11/2026: o WhatsApp recusava a whatsmeow velha ("Client outdated (405)"), o QR
+    nunca vinha e o painel só dizia "Não conectado"."""
+    wa, falso = _pronto(tmp_path, monkeypatch)
+    wa.iniciar()
+    falso.token = wa.token
+    sessao = {"id": "cd34", "state": "logged_out", "paired": False, "error": "err-client-outdated"}
+    falso.sessoes = [sessao]
+    assert wa.para_tela() == {"estado": "desconectado", "falha": w.FALHAS["err-client-outdated"]}
+    falso.sessoes = [{**sessao, "error": "err-unexpected-state"}]
+    assert wa.para_tela()["falha"] == w.FALHA_PAREAMENTO
+    wa.parar()
+
+
 def test_desconectado_pede_novo_qr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     wa, falso = _pronto(tmp_path, monkeypatch)
     wa.iniciar()

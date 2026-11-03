@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- O "Conectar" do WhatsApp voltou a mostrar o QR: o WhatsApp passou a recusar a versão da
+  biblioteca que o Zé usava. Quando o WhatsApp recusar o pareamento, o motivo aparece na tela.
 - Leads do WhatsApp pela voz: quando um lead qualificado escreve no privado, o Zé diz quem é e lê
   a mensagem ("Marta, Ana é um lead qualificado e lhe mandou esta mensagem: …"), e lembra de 10
   em 10 minutos, por até 1 hora, enquanto você não responder. Responder pelo celular encerra.
