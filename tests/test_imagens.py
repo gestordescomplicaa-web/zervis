@@ -253,3 +253,40 @@ def test_habilidade_nativa_e_livre() -> None:
     for nome in ("imagem_buscar", "imagem_baixar", "pagina_capturar"):
         assert f"mcp__jarvis__{nome}" in LIVRES
     assert {"foto", "video"} <= set(TIPOS)
+
+
+def test_a_pagina_que_e_o_pedido_vem_pronta_sem_previas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caso de 03/11/2026: o cérebro olhava as prévias e escolheu, para "Flávio Bolsonaro", uma foto
+    de entrevista com outra pessoa; e a volta a mais custava segundos."""
+    import asyncio
+
+    from zervis.cerebro.ferramentas import imagens as ferramentas_imagens
+
+    wm = Wikimedia()
+    buscar, baixar = im.buscar, im.baixar
+    monkeypatch.setattr(im, "buscar", lambda b, t="foto": buscar(b, t, wm))
+    monkeypatch.setattr(im, "baixar", lambda i, a: baixar(i, a, wm))
+    f: dict[str, Any] = {t.name: t.handler for t in ferramentas_imagens.ferramentas(tmp_path)}
+    r = asyncio.run(f["imagem_buscar"]({"busca": "marina  SILVA"}))  # o nome como foi falado
+    dados = json.loads(r["content"][0]["text"])
+    assert dados["pronta"]["arquivo"] == "imagens/web/marina-silva.jpg"
+    assert dados["pronta"]["credito"] == "Foto: Sir.Leo Cabral · CC BY 2.0 · Wikipédia"
+    assert len(r["content"]) == 1  # nenhuma prévia: nada para o cérebro olhar
+    assert not any("240px" in u for u in wm.pedidos)
+    outro = asyncio.run(f["imagem_buscar"]({"busca": "senadora do Acre"}))
+    assert "achados" in json.loads(outro["content"][0]["text"])  # não é o nome da página: prévias
+
+
+def test_a_pagina_e_o_pedido_compara_sem_acento_nem_caixa() -> None:
+    def achado(i: str, titulo: str) -> im.Achado:
+        return im.Achado(i, titulo, "", "foto", "", "", "", "")
+
+    assert im.a_pagina_e_o_pedido(
+        achado("wiki:pt:Flávio Bolsonaro", "Flávio Bolsonaro"), "flavio bolsonaro"
+    )
+    assert not im.a_pagina_e_o_pedido(
+        achado("wiki:pt:Bolsonaro", "Jair Bolsonaro"), "Flávio Bolsonaro"
+    )
+    assert not im.a_pagina_e_o_pedido(achado("commons:File:X.jpg", "Marina Silva"), "Marina Silva")

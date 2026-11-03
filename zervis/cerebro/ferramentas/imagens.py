@@ -36,8 +36,10 @@ def ferramentas(acervo: Path | None) -> list[SdkMcpTool[Any]]:
         'uma pessoa pública ("quem é fulano"), um lugar, uma obra, um animal, um acontecimento; '
         "vídeo para o que se move (erupção, lançamento, onda). Foto vem da Wikipédia (a foto "
         "principal da página: a melhor para pessoas e lugares) e do Wikimedia Commons; vídeo, do "
-        "Commons. Busque pelo nome próprio, em português (ou em inglês, se não achar). Devolve "
-        "cada achado com a prévia logo depois: olhe e escolha o que é mesmo o pedido, em silêncio "
+        "Commons. Busque pelo nome próprio, em português (ou em inglês, se não achar). Quando a "
+        "página da Wikipédia é exatamente o pedido, a foto já volta baixada em pronta: use direto "
+        "no bloco foto. Senão, devolve cada achado com a prévia logo depois: olhe e escolha o que "
+        "é mesmo o pedido, em silêncio "
         "(o que você escreve entre as ferramentas é falado). Pessoa comum, sem página na "
         "Wikipédia, não: só figura pública. Baixe com imagem_baixar.",
         {
@@ -57,6 +59,15 @@ def ferramentas(acervo: Path | None) -> list[SdkMcpTool[Any]]:
             return _erro(erro)
         if not achados:
             return _texto({"achados": [], "dica": "nada livre com isso; tente o nome em inglês"})
+        busca = str(args.get("busca", ""))
+        if tipo == "foto" and imagens.a_pagina_e_o_pedido(achados[0], busca):
+            # A página é exatamente o pedido: a foto principal dela já vem baixada, sem prévias
+            # (uma volta a menos do cérebro, e nada de escolher uma foto de outra pessoa).
+            try:
+                r = await asyncio.to_thread(imagens.baixar, achados[0].id, acervo)
+                return _texto({"pronta": _pronto(r), "outros": imagens.para_resposta(achados[1:])})
+            except imagens.ImagemErro:
+                pass  # sem foto livre na página: segue com as prévias
         vistas = await asyncio.to_thread(imagens.previas, achados)
         return _com_previas({"achados": imagens.para_resposta(achados)}, vistas)
 
