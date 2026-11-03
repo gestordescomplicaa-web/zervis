@@ -26,8 +26,11 @@ class InterfaceAtendimento(InterfaceServico):
     def ouvir_lead(self, ident: str) -> None:
         servico(self, ServicoAtendimento).ouvir_lead(ident)
 
-    def responder_lead(self, ident: str, texto: str) -> str:
-        return servico(self, ServicoAtendimento).responder_lead(ident, texto)
+    def responder_whatsapp(self, chat: str, nome: str, texto: str) -> str:
+        return servico(self, ServicoAtendimento).responder_whatsapp(chat, nome, texto)
+
+    def estado_whatsapp(self) -> dict[str, Any]:
+        return servico(self, ServicoAtendimento).estado_whatsapp()
 
     def dispensar_lead(self, ident: str) -> str:
         return servico(self, ServicoAtendimento).dispensar_lead(ident)

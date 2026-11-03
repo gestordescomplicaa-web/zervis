@@ -16,7 +16,7 @@ import threading
 import time
 import unicodedata
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -222,18 +222,26 @@ class Pendentes:
         lista = self.todas()
         if p := next((x for x in lista if x.id == quem), None):
             return p
-        procurado = _chave(quem)
-        if not procurado:
-            return None
-        for grupo in ([x for x in lista if x.aberta], lista):
-            for confere in (
-                lambda nome: nome == procurado,
-                lambda nome: procurado in nome.split(),  # só o primeiro nome
-            ):
-                achados = {x.chat: x for x in grupo if confere(_chave(x.nome))}
-                if achados:
-                    return next(iter(achados.values())) if len(achados) == 1 else None
+        return pelo_nome([[x for x in lista if x.aberta], lista], quem, lambda x: (x.nome, x.chat))
+
+
+def pelo_nome[T](
+    grupos: Sequence[Sequence[T]], quem: str, de: Callable[[T], tuple[str, str]]
+) -> T | None:
+    """O contato pelo nome falado ("a Ana", "o João Silva", só "João"), no primeiro grupo que
+    tiver; `de` dá (nome, chat). Nome que serve a mais de uma conversa não escolhe sozinho."""
+    procurado = _chave(quem)
+    if not procurado:
         return None
+    for grupo in grupos:
+        for confere in (
+            lambda nome: nome == procurado,
+            lambda nome: procurado in nome.split(),  # só o primeiro nome
+        ):
+            achados = {de(x)[1]: x for x in grupo if confere(_chave(de(x)[0]))}
+            if achados:
+                return next(iter(achados.values())) if len(achados) == 1 else None
+    return None
 
 
 def _chave(nome: str) -> str:

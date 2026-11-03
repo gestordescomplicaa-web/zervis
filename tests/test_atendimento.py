@@ -35,19 +35,23 @@ def _msg(**campos: Any) -> dict[str, Any]:
     return {**base, **campos}
 
 
-def test_so_texto_vira_mensagem_recebida_ou_enviada() -> None:
+def test_texto_e_o_tipo_da_midia_viram_mensagem_recebida_ou_enviada() -> None:
     lote = _lote(
         _msg(),
         _msg(event_id="s:2", direction="outbound"),
-        _msg(event_id="s:3", type="media", content=""),
+        _msg(event_id="s:3", type="media", content="", media="audio"),
         _msg(event_id="s:4", content="   "),
         _msg(event_id="s:5", push_name="", content="oi"),
+        _msg(event_id="s:6", type="media", content="o orçamento", media="image"),
+        _msg(event_id="s:7", type="poll"),
         "lixo",
     )
     assert w.recebidas(lote) == [
         w.Recebida("s:1", "Ana Souza", "5511999990000", "quanto custa?", chat=CHAT),
         w.Recebida("s:2", "Ana Souza", "5511999990000", "quanto custa?", True, CHAT),
+        w.Recebida("s:3", "Ana Souza", "5511999990000", "", chat=CHAT, midia="audio"),
         w.Recebida("s:5", "5511999990000", "5511999990000", "oi", chat=CHAT),
+        w.Recebida("s:6", "Ana Souza", "5511999990000", "o orçamento", chat=CHAT, midia="image"),
     ]
     assert w.recebidas({"mensagens": "x"}) == [] and w.recebidas(None) == []
 

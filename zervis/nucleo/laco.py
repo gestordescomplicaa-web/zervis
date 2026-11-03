@@ -28,7 +28,7 @@ from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.calendario import Calendario
 from zervis.automacoes.jobs import Jobs
-from zervis.avisos import mensagens, pendentes
+from zervis.avisos import caixa, mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.avisos.fila import Fila
 from zervis.cerebro import (
@@ -330,6 +330,7 @@ class Nucleo(
         # inteiros, sem virar manchete, e o cérebro recebe só o resumo, nunca o texto.
         self.avisos_lidos: dict[str, str] = {}
         self.leads = pendentes.Pendentes()  # os leads do WhatsApp esperando a sua resposta
+        self.caixa = caixa.Caixa()  # as conversas privadas recentes do WhatsApp (ADR 0054)
         # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
         # que podem voltar uma vez e quando cada aviso foi dado.
         self._comecados: dict[str, int] = {}
@@ -498,7 +499,7 @@ class Nucleo(
             prechecar=primeiro_de(
                 ferramentas_sessoes.preparador(self.sessoes),
                 ferramentas.prechecagem(self.memoria, self.skills),
-                ferramentas_whatsapp.prechecar(self.leads),
+                ferramentas_whatsapp.prechecar(self),
                 self.sistema.prechecar,
                 navegador.prechecar,
             ),
@@ -508,7 +509,7 @@ class Nucleo(
                 self._descrever_manutencao,
                 navegador.descrever,
                 ferramentas.descritor(self.pendencias),
-                ferramentas_whatsapp.descritor(self.leads),
+                ferramentas_whatsapp.descritor(self),
                 self.sistema.descrever,
             ),
             autoaprovar=lambda nome, entrada: (

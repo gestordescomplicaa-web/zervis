@@ -42,10 +42,13 @@ const (
 var agendaIdempotencyPattern = regexp.MustCompile(`^[A-Za-z0-9:_-]{8,180}$`)
 
 type agendaMessageRequest struct {
-	Kind           string   `json:"kind"`
-	Phones         []string `json:"phones"`
-	Text           string   `json:"text"`
-	IdempotencyKey string   `json:"idempotency_key"`
+	Kind   string   `json:"kind"`
+	Phones []string `json:"phones"`
+	// Zérvis: a conversa exata (o JID privado, de telefone ou LID) a que se responde. Com ela,
+	// sem consulta de número: a resposta vai para onde a mensagem veio, mesmo sem o telefone.
+	ChatJID        string `json:"chat_jid,omitempty"`
+	Text           string `json:"text"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 type agendaMessageReceipt struct {
@@ -81,6 +84,16 @@ func validarAgendaMessageRequest(body agendaMessageRequest) (agendaMessageReques
 	if !agendaIdempotencyPattern.MatchString(body.IdempotencyKey) {
 		return body, errors.New("invalid idempotency_key")
 	}
+	body.ChatJID = strings.TrimSpace(body.ChatJID)
+	if body.ChatJID != "" {
+		if len(body.Phones) > 0 {
+			return body, errors.New("chat_jid or phones, not both")
+		}
+		if _, err := conversaPrivada(body.ChatJID); err != nil {
+			return body, err
+		}
+		return body, nil
+	}
 	if len(body.Phones) == 0 || len(body.Phones) > agendaMessageMaxPhones {
 		return body, fmt.Errorf("phones must contain 1 to %d candidates", agendaMessageMaxPhones)
 	}
@@ -109,8 +122,23 @@ func agendaPayloadHash(body agendaMessageRequest) string {
 	// retry equivalente seja recusado apenas porque o chamador reordenou a lista.
 	phones := append([]string(nil), body.Phones...)
 	sort.Strings(phones)
-	sum := sha256.Sum256([]byte(strings.Join(phones, ",") + "\x00" + body.Text))
+	alvo := strings.Join(phones, ",")
+	if body.ChatJID != "" {
+		alvo = "chat:" + body.ChatJID
+	}
+	sum := sha256.Sum256([]byte(alvo + "\x00" + body.Text))
 	return hex.EncodeToString(sum[:])
+}
+
+// conversaPrivada aceita só uma conversa com uma pessoa (telefone ou LID), sem aparelho:
+// grupo, status, canal e qualquer outro tipo ficam de fora, como na captura.
+func conversaPrivada(bruto string) (types.JID, error) {
+	jid, err := types.ParseJID(bruto)
+	if err != nil || jid.User == "" || jid.Device != 0 ||
+		(jid.Server != types.DefaultUserServer && jid.Server != types.HiddenUserServer) {
+		return types.EmptyJID, errors.New("invalid chat_jid")
+	}
+	return jid.ToNonAD(), nil
 }
 
 func agendaDeterministicMessageID(sessionID, key string) types.MessageID {
@@ -202,25 +230,31 @@ func (s *server) handleAgendaMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lookupCtx, lookupCancel := context.WithTimeout(r.Context(), 10*time.Second)
-	registered, err := sess.resolvePhoneCandidates(lookupCtx, body.Phones)
-	lookupCancel()
-	if err != nil {
-		s.log.Warn("agenda recipient lookup failed", "session", sess.id, "error", err)
-		writeJSON(w, http.StatusBadGateway, map[string]string{"error": "recipient lookup failed"})
-		return
+	var target types.JID
+	phone := ""
+	if body.ChatJID != "" {
+		target, _ = conversaPrivada(body.ChatJID) // já validado
+		phone = target.String()
+	} else {
+		lookupCtx, lookupCancel := context.WithTimeout(r.Context(), 10*time.Second)
+		registered, err := sess.resolvePhoneCandidates(lookupCtx, body.Phones)
+		lookupCancel()
+		if err != nil {
+			s.log.Warn("agenda recipient lookup failed", "session", sess.id, "error", err)
+			writeJSON(w, http.StatusBadGateway, map[string]string{"error": "recipient lookup failed"})
+			return
+		}
+		if len(registered) == 0 {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "recipient is not registered on WhatsApp"})
+			return
+		}
+		if len(registered) > 1 {
+			writeJSON(w, http.StatusConflict, map[string]string{"error": "ambiguous WhatsApp recipient"})
+			return
+		}
+		phone = registered[0]
+		target = types.NewJID(phone, types.DefaultUserServer)
 	}
-	if len(registered) == 0 {
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "recipient is not registered on WhatsApp"})
-		return
-	}
-	if len(registered) > 1 {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "ambiguous WhatsApp recipient"})
-		return
-	}
-
-	phone := registered[0]
-	target := types.NewJID(phone, types.DefaultUserServer)
 	messageID := agendaDeterministicMessageID(sess.id, body.IdempotencyKey)
 	sendCtx, sendCancel := context.WithTimeout(r.Context(), agendaMessageSendTimeout)
 	response, err := sess.client.SendMessage(

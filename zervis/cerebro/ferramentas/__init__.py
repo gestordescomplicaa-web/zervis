@@ -67,7 +67,9 @@ LEITURA = [
     "internet_pesquisar",  # só lê a internet, numa consulta à parte (ADR 0044)
     "modelo3d_buscar",  # só lê um acervo livre de modelos (ADR 0049)
     "modelo3d_baixar",  # só grava no próprio Acervo, de uma fonte permitida, e mostra na tela
-    "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053); responder pede o sim
+    "whatsapp_conversas",  # só lê a caixa de entrada (ADR 0054); responder pede o sim
+    "whatsapp_ler",
+    "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053)
     "whatsapp_ja_vi",  # só para um lembrete
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]

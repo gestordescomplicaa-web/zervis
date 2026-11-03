@@ -216,7 +216,6 @@ def test_quando_a_central_atende_a_ligacao(tmp_path: Path, monkeypatch: pytest.M
         lambda: None,  # type: ignore[arg-type, return-value]
         wa=object(),  # type: ignore[arg-type]
         atendente=atendente,
-        avisos_ligados=lambda: False,
         chave_deepgram=lambda: "chave",
     )
     monkeypatch.setattr(lg, "voz_pronta", lambda: True)

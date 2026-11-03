@@ -61,7 +61,10 @@ GRUPOS = {
     "sobre": ("Autoconhecimento", "descreve a própria configuração, capacidades e atividade"),
     "pesquisa": ("Pesquisa na internet", "pesquisa notícias e assuntos, com as fontes"),
     "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
-    "whatsapp": ("Leads do WhatsApp", "lê os leads esperando resposta e responde o que você dita"),
+    "whatsapp": (
+        "WhatsApp",
+        "lê as conversas e os leads e responde o que você dita, com o seu sim",
+    ),
 }
 
 

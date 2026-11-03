@@ -86,7 +86,7 @@ def test_central_pre_aquece_e_troca_a_reserva_quando_a_persona_muda(
     atendente = ag.Atendente(lambda: None, lambda *_: "", lambda *_: None, tmp_path,  # type: ignore[arg-type, return-value]
                              perfil=lambda: perfil)  # fmt: skip
     central = ce.Central(lambda: None, wa=object(), atendente=atendente,  # type: ignore[arg-type, return-value]
-                         avisos_ligados=lambda: False, motor_de_voz=novo)  # fmt: skip
+                         motor_de_voz=novo)  # fmt: skip
     try:
         atendente.executar(central.aquecer())
         texto = "Olá! Aqui é Bia. Como posso ajudar?"

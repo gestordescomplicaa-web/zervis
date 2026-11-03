@@ -70,27 +70,27 @@ class AtendenteFalso:
         pass
 
 
-def _central(tmp_path: Path, avisos: bool = True) -> tuple[c.Central, Any, Any]:
+def _central(tmp_path: Path) -> tuple[c.Central, Any, Any]:
     wa, at = WhatsAppFalso(), AtendenteFalso(tmp_path)
-    central = c.Central(lambda: None, wa, at, avisos_ligados=lambda: avisos)  # type: ignore[arg-type, return-value]
+    central = c.Central(lambda: None, wa, at)  # type: ignore[arg-type, return-value]
     return central, wa, at
 
 
-def test_mensagem_recebida_vai_ao_agente_e_aos_avisos(tmp_path: Path) -> None:
+def test_mensagem_vai_a_caixa_do_ze_e_so_o_texto_ao_agente(tmp_path: Path) -> None:
     central, _, at = _central(tmp_path)
     chat = "5511@s.whatsapp.net"
     central._recebida(Recebida("s:1", "Ana", "5511", "quanto custa?", chat=chat))
     central._recebida(Recebida("s:2", "Eu", "5511", "oi", de_mim=True, chat=chat))
-    assert [r.id for r in at.recebidas] == ["s:1", "s:2"]
+    central._recebida(Recebida("s:3", "Ana", "5511", "", chat=chat, midia="audio"))
+    assert [r.id for r in at.recebidas] == ["s:1", "s:2"]  # o agente não recebe mídia
     eventos, _ = central.eventos.depois(0)
     assert [{k: v for k, v in e.items() if k not in ("id", "quando")} for e in eventos] == [
         {"tipo": "mensagem", "nome": "Ana", "texto": "quanto custa?", "telefone": "5511",
-         "chat": chat},
-        {"tipo": "respondida", "chat": chat},  # a sua resposta encerra a pendência (ADR 0053)
+         "chat": chat, "midia": ""},
+        {"tipo": "respondida", "chat": chat, "texto": "oi", "midia": ""},
+        {"tipo": "mensagem", "nome": "Ana", "texto": "", "telefone": "5511", "chat": chat,
+         "midia": "audio"},
     ]  # fmt: skip
-    sem_avisos, _, _ = _central(tmp_path / "outra-instalacao", avisos=False)
-    sem_avisos._recebida(Recebida("s:3", "Ana", "5511", "oi"))
-    assert sem_avisos.eventos.depois(0) == ([], 0)
 
 
 def _pedir(porta: int, metodo: str, caminho: str, token: str, corpo: Any = None) -> tuple[int, Any]:

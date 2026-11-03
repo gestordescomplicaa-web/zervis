@@ -215,3 +215,27 @@ func TestSoConversaPrivadaPassa(t *testing.T) {
 		t.Fatal("conversa privada por LID precisa passar")
 	}
 }
+
+// Zérvis: o tipo da mídia e a legenda, sem baixar nada.
+func TestTipoDaMidiaELegenda(t *testing.T) {
+	casos := []struct {
+		msg     *waE2E.Message
+		tipo    string
+		legenda string
+	}{
+		{&waE2E.Message{AudioMessage: &waE2E.AudioMessage{}}, "audio", ""},
+		{&waE2E.Message{ImageMessage: &waE2E.ImageMessage{Caption: proto.String(" o orçamento ")}}, "image", "o orçamento"},
+		{&waE2E.Message{DocumentMessage: &waE2E.DocumentMessage{}}, "document", ""},
+		{&waE2E.Message{StickerMessage: &waE2E.StickerMessage{}}, "sticker", ""},
+		{&waE2E.Message{}, "other", ""},
+	}
+	for _, c := range casos {
+		evt := &events.Message{Message: c.msg}
+		if got := tipoDaMidia(evt); got != c.tipo {
+			t.Fatalf("tipo %q, esperado %q", got, c.tipo)
+		}
+		if got := legendaDaMidia(evt); got != c.legenda {
+			t.Fatalf("legenda %q, esperada %q", got, c.legenda)
+		}
+	}
+}
