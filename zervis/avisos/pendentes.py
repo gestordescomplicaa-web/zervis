@@ -178,12 +178,14 @@ class Pendentes:
             self._gravar(lista)
             return p
 
-    def responder(self, chat: str) -> Pendente | None:
-        """Você respondeu na conversa (pelo celular ou pelo Zé): a pendência encerra."""
+    def responder(self, chat: str, quando: float = 0.0) -> Pendente | None:
+        """Você respondeu na conversa (pelo celular ou pelo Zé): a pendência encerra. `quando`, a
+        hora da resposta: a que veio antes da última mensagem dele não responde a ela (o Zé, ao
+        reiniciar, repassa as respostas da última hora)."""
         with self._trava:
             lista = self._ler()
             p = next((x for x in lista if x.chat == chat and x.aberta), None)
-            if p is None:
+            if p is None or (quando and quando < p.ultima):
                 return None
             p.respondida, p.proximo = self.agora(), 0.0
             self._gravar(lista)

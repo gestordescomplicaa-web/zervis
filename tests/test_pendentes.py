@@ -165,8 +165,17 @@ def test_silencioso_so_na_tela_e_lembrete_so_com_os_avisos_ligados(tmp_path: Pat
 def test_resposta_vinda_da_central_encerra(tmp_path: Path) -> None:
     servico, n = _servico(tmp_path)
     servico._lead_qualificado("Ana", "quanto custa?", "", "1@x")
-    servico._evento_da_central({"tipo": "respondida", "chat": "1@x"})
+    servico._evento_da_central({"tipo": "respondida", "chat": "1@x", "quando": n.relogio.t})
     assert n.leads.abertas() == []
+
+
+def test_resposta_antiga_repassada_ao_reiniciar_nao_encerra_o_lead_novo(tmp_path: Path) -> None:
+    servico, n = _servico(tmp_path)
+    respondeu = n.relogio.t  # você respondeu à Ana às 10h00
+    n.relogio.t += 20 * 60
+    servico._lead_qualificado("Ana", "e o prazo?", "", "1@x")  # ela escreveu de novo às 10h20
+    servico._evento_da_central({"tipo": "respondida", "chat": "1@x", "quando": respondeu})
+    assert [p.nome for p in n.leads.abertas()] == ["Ana"]
 
 
 class AppFalso:

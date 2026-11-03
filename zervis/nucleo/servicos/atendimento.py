@@ -113,8 +113,8 @@ class ServicoAtendimento:
         self._leads_ao_celular()  # o texto novo aparece na notificação, sem tocar de novo
         return True
 
-    def _lead_respondido(self, chat: str) -> None:
-        if (p := self.n.leads.responder(chat)) is not None:
+    def _lead_respondido(self, chat: str, quando: float = 0.0) -> None:
+        if (p := self.n.leads.responder(chat, quando)) is not None:
             log.info("whatsapp: lead respondido")
             atividade.PADRAO.registrar("execucao", f"WhatsApp: {p.nome} respondido")
             self._leads_ao_celular()
@@ -151,7 +151,11 @@ class ServicoAtendimento:
                 str(evento.get("chat", "")),
             )
         elif evento.get("tipo") == "respondida":
-            self._lead_respondido(str(evento.get("chat", "")))
+            quando = evento.get("quando")
+            self._lead_respondido(
+                str(evento.get("chat", "")),
+                float(quando) if isinstance(quando, int | float) else 0.0,
+            )
         elif evento.get("tipo") == "ligacao":
             telefone = str(evento.get("telefone", "")) or "número oculto"
             atividade.PADRAO.registrar(
