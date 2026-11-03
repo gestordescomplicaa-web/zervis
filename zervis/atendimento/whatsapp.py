@@ -53,6 +53,11 @@ CLIENTE = "zervis-atendente"  # quem atende as chamadas no WaCalls
 _CAPTURA = re.compile(r"/api/interno/whatsapp/captura/[0-9a-f]{1,64}")
 
 
+# Por que o WhatsApp recusou o pareamento (o evento do canal do QR da whatsmeow).
+FALHAS = {"err-client-outdated": "Versão do WhatsApp desatualizada no Zé. Atualize o Zé."}
+FALHA_PAREAMENTO = "O WhatsApp recusou o pareamento. Tente de novo."
+
+
 class WhatsAppErro(RuntimeError):
     """Mensagem curta, pronta para a tela."""
 
@@ -465,7 +470,11 @@ class WhatsApp:
             return {"estado": "conectado", "numero": numero(str(s.get("jid", "")))}
         if s.get("state") == "qr" and s.get("qr"):
             return {"estado": "aguardando", "qr": str(s["qr"])}
-        return {"estado": "conectando" if s.get("paired") else "desconectado"}
+        if s.get("paired"):
+            return {"estado": "conectando"}
+        if erro := str(s.get("error") or ""):
+            return {"estado": "desconectado", "falha": FALHAS.get(erro, FALHA_PAREAMENTO)}
+        return {"estado": "desconectado"}
 
     def conectar(self) -> None:
         """Sobe o WaCalls (se preciso) e pede um QR para parear o número."""

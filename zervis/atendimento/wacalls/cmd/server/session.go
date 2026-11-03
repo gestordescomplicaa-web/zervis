@@ -378,6 +378,11 @@ func (s *Session) startPairing(ctx context.Context) error {
 				s.setAuth(AuthSnapshot{State: "open", Paired: true})
 			case "timeout":
 				s.setAuth(AuthSnapshot{State: "logged_out", Paired: false})
+			default:
+				// Zérvis: o WhatsApp recusou o pareamento (em 03/11/2026, "err-client-outdated":
+				// a whatsmeow velha demais). Sem isto, o QR nunca vinha e nada dizia por quê.
+				s.log.Warn("pairing failed", "event", evt.Event, "err", evt.Error)
+				s.setAuth(AuthSnapshot{State: "logged_out", Paired: false, Error: evt.Event})
 			}
 		}
 	}()
@@ -404,7 +409,7 @@ func (s *Session) info() SessionInfo {
 	if a.State == "qr" {
 		qr = a.QR
 	}
-	return SessionInfo{ID: s.id, Name: s.name, JID: jid, State: a.State, Paired: a.Paired || jid != "", QR: qr}
+	return SessionInfo{ID: s.id, Name: s.name, JID: jid, State: a.State, Paired: a.Paired || jid != "", QR: qr, Error: a.Error}
 }
 
 func (s *Session) setBridge(callID string, b PCMBridge) {

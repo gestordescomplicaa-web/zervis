@@ -197,6 +197,7 @@ func (m *SessionManager) Pair(id string) error {
 		return fmt.Errorf("session already paired")
 	}
 	s.replaceClient(whatsmeow.NewClient(m.container.NewDevice(), m.waLogger))
+	s.setAuth(AuthSnapshot{State: "connecting"}) // Zérvis: a falha da tentativa anterior sai da tela
 	if err := s.startPairing(m.appCtx); err != nil {
 		return fmt.Errorf("start pairing: %w", err)
 	}
