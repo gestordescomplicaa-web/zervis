@@ -78,11 +78,16 @@ def _central(tmp_path: Path, avisos: bool = True) -> tuple[c.Central, Any, Any]:
 
 def test_mensagem_recebida_vai_ao_agente_e_aos_avisos(tmp_path: Path) -> None:
     central, _, at = _central(tmp_path)
-    central._recebida(Recebida("s:1", "Ana", "5511", "quanto custa?"))
-    central._recebida(Recebida("s:2", "Eu", "5511", "oi", de_mim=True))
+    chat = "5511@s.whatsapp.net"
+    central._recebida(Recebida("s:1", "Ana", "5511", "quanto custa?", chat=chat))
+    central._recebida(Recebida("s:2", "Eu", "5511", "oi", de_mim=True, chat=chat))
     assert [r.id for r in at.recebidas] == ["s:1", "s:2"]
     eventos, _ = central.eventos.depois(0)
-    assert [(e["tipo"], e["nome"]) for e in eventos] == [("mensagem", "Ana")]
+    assert [{k: v for k, v in e.items() if k not in ("id", "quando")} for e in eventos] == [
+        {"tipo": "mensagem", "nome": "Ana", "texto": "quanto custa?", "telefone": "5511",
+         "chat": chat},
+        {"tipo": "respondida", "chat": chat},  # a sua resposta encerra a pendência (ADR 0053)
+    ]  # fmt: skip
     sem_avisos, _, _ = _central(tmp_path / "outra-instalacao", avisos=False)
     sem_avisos._recebida(Recebida("s:3", "Ana", "5511", "oi"))
     assert sem_avisos.eventos.depois(0) == ([], 0)

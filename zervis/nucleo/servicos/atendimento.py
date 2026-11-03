@@ -1,12 +1,13 @@
 """Serviço de atendimento; pode ser exercitado com dependências próprias, sem subir o núcleo."""
 
 import contextlib
+import hashlib
 import logging
 from typing import Any, Protocol
 
-from zervis import atividade
+from zervis import atividade, usuario
 from zervis.atendimento import agente, cliente, whatsapp
-from zervis.avisos import mensagens
+from zervis.avisos import mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.cerebro import rapido
 from zervis.nucleo import estados as e
@@ -16,9 +17,11 @@ log = logging.getLogger(__name__)
 
 
 class ContextoAtendimento(Protocol):
+    avisos_lidos: Any
     central: Any
     cfg: Any
     eventos: Any
+    leads: Any
     mensagens: Any
     modo_fala: Any
 
@@ -35,6 +38,99 @@ class ServicoAtendimento:
         if modo_fala.falar(self.n.modo_fala, "urgente"):
             self.n.eventos.put(e.Aviso(texto))
 
+    # --- leads esperando resposta (ADR 0053) ---------------------------------------------------
+
+    def _falar_lead(self, fala: str, contexto: str, pedido: bool = False) -> None:
+        """A fala leva o texto do lead, inteira; o contexto do cérebro, só o nome: o texto é de
+        terceiros e não entra na conversa como se fosse do Zé."""
+        lidos = self.n.avisos_lidos
+        lidos[fala] = contexto
+        while len(lidos) > 20:
+            del lidos[next(iter(lidos))]
+        self.n.eventos.put(e.Aviso(fala, pedido=pedido))
+
+    def _avisar_lead(self, fala: str, tela: str, contexto: str) -> None:
+        if tela:
+            self.n._na_linha("aviso", tela)  # a tela e a linha do tempo, só com o nome
+        if modo_fala.falar(self.n.modo_fala, "urgente"):
+            self._falar_lead(fala, contexto)
+        self._leads_ao_celular()
+
+    def _leads_ao_celular(self) -> None:
+        """Os leads esperando resposta, inteiros, para o app de voz conectado: ele mostra uma
+        notificação por lead, toca de novo no lembrete e apaga a que foi respondida."""
+        fonte = getattr(self.n, "_fonte", None)
+        if fonte is None or not getattr(fonte, "do_app", False):
+            return
+        leads = [pendentes.para_o_celular(p) for p in self.n.leads.abertas()]
+        fonte.controle(tipo="whatsapp", leads=leads)
+
+    def ouvir_lead(self, ident: str) -> None:
+        """O "Ouvir" do celular: a mensagem inteira, falada mesmo no Silencioso (você pediu)."""
+        p = self.n.leads.achar(ident)
+        if p is not None:
+            fala = pendentes.anuncio(p, usuario.PERFIL.nome)
+            self._falar_lead(fala, f"Você pediu para ouvir a mensagem de {p.nome}.", pedido=True)
+
+    def responder_lead(self, ident: str, texto: str) -> str:
+        """A resposta ditada e já aprovada pela voz, pelo WhatsApp da Central. Bloqueia (rede):
+        a ferramenta chama numa thread. A falha sobe como RuntimeError, com a frase da tela."""
+        p = self.n.leads.achar(ident)
+        if p is None or not p.telefone:
+            raise RuntimeError("Esse lead não está mais na lista.")
+        chave = hashlib.sha256(f"{p.id}:{texto}".encode()).hexdigest()[:32]  # sem envio em dobro
+        try:
+            self.n.central.enviar(p.telefone, texto, chave)
+        except cliente.CentralErro as erro:
+            raise RuntimeError(f"Não enviei: {erro}") from erro
+        self.n.leads.responder(p.chat)  # a volta da mensagem pela Central também encerraria
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: resposta a {p.nome}", texto=texto)
+        self._leads_ao_celular()
+        return f"Enviado para {p.nome}."
+
+    def dispensar_lead(self, ident: str) -> str:
+        """O "Já vi" (do celular ou pela voz): para de lembrar sem responder."""
+        p = self.n.leads.dispensar(ident)
+        if p is None:
+            return "Nada esperando resposta com esse nome."
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: {p.nome} dispensado")
+        self._leads_ao_celular()
+        return f"Certo, não lembro mais de {p.nome}."
+
+    def _lead_qualificado(self, nome: str, texto: str, telefone: str, chat: str) -> None:
+        p = self.n.leads.novo(nome, texto, chat, telefone)
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: lead qualificado ({p.nome})")
+        self._avisar_lead(
+            pendentes.anuncio(p, usuario.PERFIL.nome),
+            f"Lead qualificado no WhatsApp: {p.nome}.",
+            f"{p.nome}, um lead qualificado, mandou mensagem no WhatsApp.",
+        )
+
+    def _continuar_lead(self, chat: str, texto: str) -> bool:
+        """O contato já espera resposta: a mensagem nova junta-se à pendência, sem julgar."""
+        if self.n.leads.continuar(chat, texto) is None:
+            return False
+        self._leads_ao_celular()  # o texto novo aparece na notificação, sem tocar de novo
+        return True
+
+    def _lead_respondido(self, chat: str, quando: float = 0.0) -> None:
+        if (p := self.n.leads.responder(chat, quando)) is not None:
+            log.info("whatsapp: lead respondido")
+            atividade.PADRAO.registrar("execucao", f"WhatsApp: {p.nome} respondido")
+            self._leads_ao_celular()
+
+    def _lembrar_leads(self) -> None:
+        """A cada segundo, do laço: quem ainda espera resposta e já passou da hora de lembrar."""
+        if not self.n.mensagens.ativo:
+            return
+        if vencidas := self.n.leads.vencidas():
+            nomes = pendentes.lista_falada([p.nome for p in vencidas])
+            self._avisar_lead(
+                pendentes.lembrete(vencidas, usuario.PERFIL.nome),
+                "",
+                f"Lembrete: {nomes} espera resposta no WhatsApp.",
+            )
+
     def _motor_das_mensagens(self) -> rapido.Motor:
         """O motor da via rápida, se ligado; senão o Claude da assinatura, sem ferramentas."""
         via = rapido.efetiva(self.n.cfg["via_rapida"])
@@ -48,7 +144,18 @@ class ServicoAtendimento:
         if evento.get("tipo") == "passou":
             self.n._atendente_passou(str(evento.get("nome", "")), str(evento.get("motivo", "")))
         elif evento.get("tipo") == "mensagem":
-            self.n.mensagens.receber(str(evento.get("nome", "")), str(evento.get("texto", "")))
+            self.n.mensagens.receber(
+                str(evento.get("nome", "")),
+                str(evento.get("texto", "")),
+                str(evento.get("telefone", "")),
+                str(evento.get("chat", "")),
+            )
+        elif evento.get("tipo") == "respondida":
+            quando = evento.get("quando")
+            self._lead_respondido(
+                str(evento.get("chat", "")),
+                float(quando) if isinstance(quando, int | float) else 0.0,
+            )
         elif evento.get("tipo") == "ligacao":
             telefone = str(evento.get("telefone", "")) or "número oculto"
             atividade.PADRAO.registrar(

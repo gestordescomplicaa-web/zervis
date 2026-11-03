@@ -28,7 +28,7 @@ from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.calendario import Calendario
 from zervis.automacoes.jobs import Jobs
-from zervis.avisos import mensagens
+from zervis.avisos import mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.avisos.fila import Fila
 from zervis.cerebro import (
@@ -49,6 +49,7 @@ from zervis.cerebro.baterias import Bateria, do_omniroute
 from zervis.cerebro.claude import ClaudeBrain, carimbo
 from zervis.cerebro.consumo import Consumo, UsoDeFerramentas, gasto
 from zervis.cerebro.ferramentas import sessoes as ferramentas_sessoes
+from zervis.cerebro.ferramentas import whatsapp as ferramentas_whatsapp
 from zervis.config import Config
 from zervis.foco import ferramentas as foco_ferramentas
 from zervis.foco.frentes import Foco
@@ -325,6 +326,10 @@ class Nucleo(
         self._rodando: set[str] = set()  # automações do tipo pergunta em execução
         self._agenda_em = 0.0
         self.avisos_falados: list[tuple[float, str]] = []
+        # Avisos que leem um texto de terceiros (a mensagem de um lead, ADR 0053): falados
+        # inteiros, sem virar manchete, e o cérebro recebe só o resumo, nunca o texto.
+        self.avisos_lidos: dict[str, str] = {}
+        self.leads = pendentes.Pendentes()  # os leads do WhatsApp esperando a sua resposta
         # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
         # que podem voltar uma vez e quando cada aviso foi dado.
         self._comecados: dict[str, int] = {}
@@ -462,6 +467,7 @@ class Nucleo(
                 pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
             ),
             acervo=self.imersivo.acervo,
+            leads=self,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
@@ -492,6 +498,7 @@ class Nucleo(
             prechecar=primeiro_de(
                 ferramentas_sessoes.preparador(self.sessoes),
                 ferramentas.prechecagem(self.memoria, self.skills),
+                ferramentas_whatsapp.prechecar(self.leads),
                 self.sistema.prechecar,
                 navegador.prechecar,
             ),
@@ -501,6 +508,7 @@ class Nucleo(
                 self._descrever_manutencao,
                 navegador.descrever,
                 ferramentas.descritor(self.pendencias),
+                ferramentas_whatsapp.descritor(self.leads),
                 self.sistema.descrever,
             ),
             autoaprovar=lambda nome, entrada: (
@@ -543,6 +551,8 @@ class Nucleo(
             self._mensagem_importante,
             self._motor_das_mensagens,
             usar_notificacoes=lambda: not self.central.whatsapp_ativo,
+            ao_lead=self._lead_qualificado,
+            continuar=self._continuar_lead,
         )
         # O atendimento (ADR 0031) roda na Central, um serviço próprio: o WhatsApp e o agente
         # seguem de pé quando o Zé reinicia. Aqui ficam só a tela, o Testar e o Publicar.
@@ -657,7 +667,8 @@ class Nucleo(
                 if texto == self.maquina.aviso_falando:
                     # O cérebro não ouve a própria voz: sem isto, "pode aprovar" depois de um
                     # aviso chegava sem contexto (teste de 06/10/2026).
-                    self.avisos_falados.append((time.monotonic(), texto))
+                    contexto = self.avisos_lidos.get(texto, texto)
+                    self.avisos_falados.append((time.monotonic(), contexto))
                     self._comecados[texto] = self._comecados.get(texto, 0) + 1
                     self._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
                     self._antes_de_avisar(texto)
@@ -794,7 +805,7 @@ class Nucleo(
     # --- laço ---------------------------------------------------------------------------
 
     def tratar(self, evento: e.Evento) -> None:
-        if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso":
+        if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso" and not evento.pedido:
             log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
             self._mostrar(evento.texto)
             return
@@ -1277,6 +1288,7 @@ class Nucleo(
                     self._conversa_parada()
                     self._aviso_ao_vivo()
                     self._agendador(agora)
+                    self._lembrar_leads()
                     self._atualizar_pasta(agora)
                     self._manutencao_chegou(agora)
                     self._aplicar_quando_livre()

@@ -1,7 +1,7 @@
 """Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
-manutencao, navegador, conectores, atualizacoes, pesquisa);
+manutencao, navegador, conectores, atualizacoes, pesquisa, modelos, whatsapp);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
@@ -31,6 +31,7 @@ from zervis.cerebro.ferramentas import sessoes as g_sessoes
 from zervis.cerebro.ferramentas import sistema as g_sistema
 from zervis.cerebro.ferramentas import sobre as g_sobre
 from zervis.cerebro.ferramentas import tela as g_tela
+from zervis.cerebro.ferramentas import whatsapp as g_whatsapp
 from zervis.cerebro.ferramentas.comum import _mudanca, _skill_nova
 from zervis.habilidades import revisao
 from zervis.habilidades.diario import Diario
@@ -66,6 +67,8 @@ LEITURA = [
     "internet_pesquisar",  # só lê a internet, numa consulta à parte (ADR 0044)
     "modelo3d_buscar",  # só lê um acervo livre de modelos (ADR 0049)
     "modelo3d_baixar",  # só grava no próprio Acervo, de uma fonte permitida, e mostra na tela
+    "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053); responder pede o sim
+    "whatsapp_ja_vi",  # só para um lembrete
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -142,12 +145,13 @@ def montar(
     sobre: Callable[[], str] | None = None,
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
     acervo: Path | None = None,
+    leads: g_whatsapp.Nucleo | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
-        pesquisar, acervo,
+        pesquisar, acervo, leads,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -165,6 +169,7 @@ def por_grupo(
     sobre: Callable[[], str] | None = None,
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
     acervo: Path | None = None,
+    leads: g_whatsapp.Nucleo | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -181,6 +186,7 @@ def por_grupo(
         "sobre": g_sobre.ferramentas(sobre),
         "pesquisa": g_pesquisa.ferramentas(pesquisar),
         "modelos": g_modelos.ferramentas(acervo, tela),
+        "whatsapp": g_whatsapp.ferramentas(leads),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

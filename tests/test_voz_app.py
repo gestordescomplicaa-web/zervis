@@ -163,6 +163,10 @@ def _remoto(ao_vivo_agora: bool = False, modo_fala: str = "avisos") -> tuple[Ser
     servico = ServicoRemoto(n)
     n._fonte_remota = servico._fonte_remota
     n._quadro_remoto = lambda _f, _q: None
+    n.leads_pedidos = []
+    n._leads_ao_celular = lambda: n.leads_pedidos.append("estado")
+    n.ouvir_lead = lambda ident: n.leads_pedidos.append(f"ouvir {ident}")
+    n.dispensar_lead = lambda ident: n.leads_pedidos.append(f"visto {ident}")
     return servico, n
 
 
@@ -199,6 +203,18 @@ def test_app_no_modo_chamado_nao_e_ao_vivo_e_o_botao_do_fone_vira_apertar() -> N
     conexao = ConexaoQueFecha([json.dumps({"tipo": "apertar"}), json.dumps({"tipo": "soltar"})])
     servico.voz_pelo_app(conexao, 16000, "chamado", {"nome": "Pixel"})  # type: ignore[arg-type]
     assert _eventos(n) == [e.AoVivo(False), e.Apertou(), e.Soltou(), e.AoVivo(False)]
+
+
+def test_app_recebe_os_leads_ao_conectar_e_os_botoes_da_notificacao_valem() -> None:
+    servico, n = _remoto()
+    conexao = ConexaoQueFecha(
+        [
+            json.dumps({"tipo": "whatsapp_ouvir", "id": "ab12cd34"}),
+            json.dumps({"tipo": "whatsapp_visto", "id": "ab12cd34"}),
+        ]
+    )
+    servico.voz_pelo_app(conexao, 16000, "chamado", {"nome": "Pixel"})  # type: ignore[arg-type]
+    assert n.leads_pedidos == ["estado", "ouvir ab12cd34", "visto ab12cd34"]
 
 
 def test_app_ao_vivo_liga_e_desliga_o_ao_vivo() -> None:

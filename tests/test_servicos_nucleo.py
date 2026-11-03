@@ -18,14 +18,14 @@ from zervis.nucleo.servicos.voz import ServicoVoz
 
 
 def test_atendimento_entrega_evento_sem_acesso_ao_nucleo() -> None:
-    recebidas: list[tuple[str, str]] = []
+    recebidas: list[tuple[str, ...]] = []
     contexto: Any = SimpleNamespace(
-        mensagens=SimpleNamespace(receber=lambda n, t: recebidas.append((n, t)))
+        mensagens=SimpleNamespace(receber=lambda *dados: recebidas.append(dados))
     )
     ServicoAtendimento(contexto)._evento_da_central(
-        {"tipo": "mensagem", "nome": "Ana", "texto": "oi"}
+        {"tipo": "mensagem", "nome": "Ana", "texto": "oi", "telefone": "5511", "chat": "5511@x"}
     )
-    assert recebidas == [("Ana", "oi")]
+    assert recebidas == [("Ana", "oi", "5511", "5511@x")]
 
 
 @pytest.mark.parametrize(

@@ -262,9 +262,12 @@ class ServicoAvisos:
         curto = modo_fala.manchete(texto)
         # Repetido é o que já foi falado há pouco (marcado quando a fala começa): um aviso que
         # esperou o Zé ficar livre não conta como dado.
-        if not cortado and agora - self.n._avisos_dados.get(curto, -1e9) < modo_fala.REPETIR_S:
+        repetido = agora - self.n._avisos_dados.get(curto, -1e9) < modo_fala.REPETIR_S
+        if not cortado and not aviso.pedido and repetido:
             log.info("aviso repetido em menos de 2 minutos: só na tela")
             return None
+        if texto in getattr(self.n, "avisos_lidos", {}):
+            return aviso  # a mensagem de um lead: inteira, e o texto não vai para a tela
         if curto != texto:
             if texto not in self.n._na_tela:
                 self.n._na_linha("aviso", texto)  # o texto inteiro fica na tela

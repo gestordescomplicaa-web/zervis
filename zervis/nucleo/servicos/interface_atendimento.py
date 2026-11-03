@@ -11,6 +11,27 @@ class InterfaceAtendimento(InterfaceServico):
     def _mensagem_importante(self, texto: str) -> None:
         servico(self, ServicoAtendimento)._mensagem_importante(texto)
 
+    def _lead_qualificado(self, nome: str, texto: str, telefone: str, chat: str) -> None:
+        servico(self, ServicoAtendimento)._lead_qualificado(nome, texto, telefone, chat)
+
+    def _continuar_lead(self, chat: str, texto: str) -> bool:
+        return servico(self, ServicoAtendimento)._continuar_lead(chat, texto)
+
+    def _lembrar_leads(self) -> None:
+        servico(self, ServicoAtendimento)._lembrar_leads()
+
+    def _leads_ao_celular(self) -> None:
+        servico(self, ServicoAtendimento)._leads_ao_celular()
+
+    def ouvir_lead(self, ident: str) -> None:
+        servico(self, ServicoAtendimento).ouvir_lead(ident)
+
+    def responder_lead(self, ident: str, texto: str) -> str:
+        return servico(self, ServicoAtendimento).responder_lead(ident, texto)
+
+    def dispensar_lead(self, ident: str) -> str:
+        return servico(self, ServicoAtendimento).dispensar_lead(ident)
+
     def _motor_das_mensagens(self) -> rapido.Motor:
         return servico(self, ServicoAtendimento)._motor_das_mensagens()
 

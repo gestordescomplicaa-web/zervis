@@ -26,6 +26,7 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -52,7 +53,8 @@ import okio.ByteString;
  * toca música, e o microfone é o do celular, com o cancelamento de eco quando o Android tem.
  * Uma vez por dia, ao conectar, procura versão nova do app e avisa numa notificação. No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
  * "Falar" na notificação) abre o pedido e, de novo, envia. Cai a rede: tenta de novo, com espera
- * crescente, até a pessoa desconectar.
+ * crescente, até a pessoa desconectar. Os leads do WhatsApp esperando resposta chegam pelo mesmo
+ * canal ({"tipo":"whatsapp"}) e viram notificações próprias ({@link Leads}).
  */
 public final class VozService extends Service {
     static final String LIGAR = "ligar";
@@ -123,6 +125,7 @@ public final class VozService extends Service {
         NotificationChannel canal = new NotificationChannel(CANAL, "Voz com o Zé", NotificationManager.IMPORTANCE_LOW);
         canal.setShowBadge(false);
         avisos.createNotificationChannel(canal);
+        Leads.criarCanal(this);
     }
 
     @Override
@@ -141,6 +144,18 @@ public final class VozService extends Service {
                 return START_STICKY;
             case AJUSTAR:
                 if (ligado) ajustar();
+                return START_STICKY;
+            case Leads.OUVIR:
+            case Leads.VISTO:
+                String lead = intent.getStringExtra(Leads.ID_DO_LEAD);
+                if (lead == null) lead = "";
+                if (Leads.VISTO.equals(acao)) Leads.apagar(this, lead);
+                // Desconectado, o "Já vi" só apaga aqui: o Zé manda a lista de novo ao conectar.
+                enviarLead(Leads.OUVIR.equals(acao) ? "whatsapp_ouvir" : "whatsapp_visto", lead);
+                if (!ligado) {
+                    stopSelf(id);
+                    return START_NOT_STICKY;
+                }
                 return START_STICKY;
             default:
                 if (!ligado) ligar();
@@ -277,6 +292,9 @@ public final class VozService extends Service {
                         tocar.execute(() -> prepararFala(taxa));
                     } else if ("fim".equals(tipo)) {
                         tocar.execute(VozService.this::esperarACauda);
+                    } else if ("whatsapp".equals(tipo)) {
+                        JSONArray leads = m.optJSONArray("leads");
+                        if (leads != null) principal.post(() -> Leads.mostrar(VozService.this, leads));
                     } else if ("parar".equals(tipo)) {
                         tocar.execute(() -> {
                             if (falante != null) { falante.pause(); falante.flush(); falante.play(); }
@@ -428,6 +446,16 @@ public final class VozService extends Service {
                 // tenta de novo amanhã
             }
         }, "ze-voz-versao").start();
+    }
+
+    private void enviarLead(String tipo, String lead) {
+        WebSocket s = ws;
+        if (s == null || lead.isEmpty()) return;
+        try {
+            s.send(new JSONObject().put("tipo", tipo).put("id", lead).toString());
+        } catch (JSONException ignorado) {
+            // um id que não vira JSON não é de um lead
+        }
     }
 
     /** O botão: a primeira vez abre o pedido (como apertar o botão do painel); a segunda envia. */
