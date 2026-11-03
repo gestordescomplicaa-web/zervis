@@ -34,6 +34,7 @@ UNIDADE = "zervis-atendimento"
 REGISTRO = lugares.ESTADO / "atendimento.log"
 REPASSAR_S = 3600  # ao subir, o que passou para você há menos que isto ainda vira aviso
 SUBIDA_S = 20.0
+RELIGAR_S = 30.0  # a Central caída com o WhatsApp escolhido: tenta subir de novo neste ritmo
 _AMBIENTE = ("PATH", *variaveis.nomes("PERFIL", "RAIZ"), "XDG_CONFIG_HOME", "XDG_DATA_HOME",
              "XDG_STATE_HOME", "XDG_RUNTIME_DIR")  # fmt: skip
 
@@ -71,6 +72,7 @@ class Cliente:
         self._parar = threading.Event()
         self._fio: threading.Thread | None = None
         self._trava = threading.Lock()
+        self._religou_em = -RELIGAR_S
 
     # --- a API ----------------------------------------------------------------------------
 
@@ -147,11 +149,30 @@ class Cliente:
         except CentralErro:
             if whatsapp.escolhido():
                 tela = {"estado": "iniciando"}
+                self._religar()
             else:
                 pronto = whatsapp.go() is not None or whatsapp.binario() is not None
                 tela = {"estado": "desligado" if pronto else "indisponivel", "falha": ""}
         self.whatsapp_ativo = tela.get("estado") not in ("desligado", "indisponivel", "iniciando")
         return tela
+
+    def _religar(self) -> None:
+        """A Central caiu (ou foi parada) com o WhatsApp ainda escolhido: sem isto, o painel
+        ficava em "Iniciando" até o Zé reiniciar (caso de 03/11/2026)."""
+        agora = time.monotonic()
+        if agora - self._religou_em < RELIGAR_S:
+            return
+        self._religou_em = agora
+
+        def religar() -> None:
+            try:
+                self.garantir()
+            except CentralErro as erro:
+                log.warning("atendimento: a Central não voltou: %s", erro)
+                return
+            self.iniciar_eventos()
+
+        threading.Thread(target=religar, name="atendimento-religar", daemon=True).start()
 
     def conectar(self) -> None:
         self.garantir()

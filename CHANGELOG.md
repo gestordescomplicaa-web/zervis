@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Conectar o WhatsApp sem tropeços: o "Conectar" clicado enquanto o Zé prepara a conexão espera
+  por ela em vez de desistir, o botão não volta mais antes de o QR aparecer, o "Cancelar" do QR
+  fica longe de onde estava o "Conectar", e a conexão que caiu volta sozinha em vez de deixar a
+  tela em "Iniciando".
 - O "Conectar" do WhatsApp voltou a mostrar o QR: o WhatsApp passou a recusar a versão da
   biblioteca que o Zé usava. Quando o WhatsApp recusar o pareamento, o motivo aparece na tela.
 - Leads do WhatsApp pela voz: quando um lead qualificado escreve no privado, o Zé diz quem é e lê

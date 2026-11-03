@@ -316,11 +316,19 @@ class WhatsApp:
         return go() is not None or binario(self.pasta, self.fonte) is not None
 
     def iniciar(self) -> None:
-        """Compila se preciso (pode levar minutos na primeira vez) e sobe o WaCalls."""
+        """Compila se preciso (pode levar minutos na primeira vez) e sobe o WaCalls. Com outra
+        compilação em curso (a da subida da Central), espera por ela: antes, o "Conectar" desistia
+        em 15 s com "WhatsApp desligado" e o botão voltava (caso de 03/11/2026)."""
         with self._trava:
-            if self.filho is not None or self.preparando:
+            if self.filho is not None:
                 return
+            outra = self.preparando
             self.preparando = True
+        if outra:
+            fim = time.monotonic() + TEMPO_COMPILAR_S
+            while self.preparando and time.monotonic() < fim:
+                time.sleep(0.2)
+            return  # quem compilava sobe o WaCalls
         try:
             programa = compilar(self.pasta, self.fonte)
         except WhatsAppErro as erro:
@@ -470,8 +478,8 @@ class WhatsApp:
             return {"estado": "conectado", "numero": numero(str(s.get("jid", "")))}
         if s.get("state") == "qr" and s.get("qr"):
             return {"estado": "aguardando", "qr": str(s["qr"])}
-        if s.get("paired"):
-            return {"estado": "conectando"}
+        if s.get("paired") or (s.get("state") == "connecting" and not s.get("error")):
+            return {"estado": "conectando"}  # sem o botão: a sessão nova ainda pede o QR
         if erro := str(s.get("error") or ""):
             return {"estado": "desconectado", "falha": FALHAS.get(erro, FALHA_PAREAMENTO)}
         return {"estado": "desconectado"}

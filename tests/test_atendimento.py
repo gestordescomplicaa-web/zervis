@@ -260,6 +260,38 @@ def test_pareamento_recusado_aparece_na_tela(
     wa.parar()
 
 
+def test_sessao_nova_esperando_o_qr_nao_mostra_o_botao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Entre criar a sessão e o QR chegar, o painel mostrava "Não conectado" com o Conectar, e
+    os cliques repetidos caíam no Cancelar do QR que aparecia no lugar (03/11/2026)."""
+    wa, falso = _pronto(tmp_path, monkeypatch)
+    wa.iniciar()
+    falso.token = wa.token
+    falso.sessoes = [{"id": "cd34", "state": "connecting", "paired": False}]
+    assert wa.para_tela() == {"estado": "conectando"}
+    wa.parar()
+
+
+def test_conectar_durante_a_compilacao_espera_por_ela(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import threading
+
+    wa, _ = _pronto(tmp_path, monkeypatch)
+    wa.preparando = True  # a Central compilando ao subir
+
+    def termina() -> None:
+        time.sleep(0.3)
+        wa.preparando = False
+
+    threading.Thread(target=termina, daemon=True).start()
+    inicio = time.monotonic()
+    wa.iniciar()
+    assert time.monotonic() - inicio >= 0.25  # antes, voltava na hora e o conectar desistia
+    assert wa.filho is None  # quem compilava é quem sobe o WaCalls
+
+
 def test_desconectado_pede_novo_qr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     wa, falso = _pronto(tmp_path, monkeypatch)
     wa.iniciar()
