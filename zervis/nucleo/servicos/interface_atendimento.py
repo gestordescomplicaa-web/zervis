@@ -29,6 +29,9 @@ class InterfaceAtendimento(InterfaceServico):
     def responder_whatsapp(self, chat: str, nome: str, texto: str) -> str:
         return servico(self, ServicoAtendimento).responder_whatsapp(chat, nome, texto)
 
+    def iniciar_whatsapp(self, telefone: str, nome: str, texto: str) -> str:
+        return servico(self, ServicoAtendimento).iniciar_whatsapp(telefone, nome, texto)
+
     def falar_whatsapp(self, nome: str, argumento: str) -> str:
         return servico(self, ServicoAtendimento).falar_whatsapp(nome, argumento)
 

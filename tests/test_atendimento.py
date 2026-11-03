@@ -446,3 +446,25 @@ def test_recusa_do_whatsapp_diz_o_motivo(tmp_path: Path, monkeypatch: pytest.Mon
     with pytest.raises(w.WhatsAppErro, match="não confirmou o envio"):
         wa._api("POST", "/api/sessions/s/messages", {})
     wa.parar()
+
+
+def test_envio_a_numero_tenta_com_e_sem_o_nono_digito(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR 0061: muitos celulares estão no WhatsApp sem o nono dígito; o WaCalls confere quais
+    existem e envia ao único que existir."""
+    assert w.variantes("5511987654321") == ["5511987654321", "551187654321"]
+    assert w.variantes("551187654321") == ["551187654321", "5511987654321"]
+    assert w.variantes("551132654321") == ["551132654321"]  # fixo: sem nono dígito
+    assert w.variantes("14155551234") == ["14155551234"]  # de fora do Brasil
+    wa, _ = _pronto(tmp_path, monkeypatch)
+    pedidos: list[Any] = []
+    monkeypatch.setattr(wa, "sessoes", lambda: [{"id": "s1", "paired": True, "state": "open"}])
+
+    def api(metodo: str, caminho: str, corpo: Any = None, espera: float = 5.0) -> Any:
+        pedidos.append(corpo)
+        return {"acknowledged": True, "message_id": "m1"}
+
+    monkeypatch.setattr(wa, "_api", api)
+    assert wa.enviar("5511987654321", "oi", "chave") == "s1:m1"
+    assert pedidos[0]["phones"] == ["5511987654321", "551187654321"]

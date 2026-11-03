@@ -70,6 +70,18 @@ class WhatsAppErro(RuntimeError):
     """Mensagem curta, pronta para a tela."""
 
 
+def variantes(telefone: str) -> list[str]:
+    """O número como foi dado e, num celular do Brasil, com e sem o nono dígito: muitos estão no
+    WhatsApp sem ele. O WaCalls confere quais existem (IsOnWhatsApp) e envia ao único que
+    existir."""
+    saida = [telefone]
+    if telefone.startswith("55") and len(telefone) == 13 and telefone[4] == "9":
+        saida.append(telefone[:4] + telefone[5:])
+    elif telefone.startswith("55") and len(telefone) == 12 and telefone[4] in "6789":
+        saida.append(telefone[:4] + "9" + telefone[4:])
+    return saida
+
+
 @dataclass(frozen=True)
 class Recebida:
     id: str
@@ -554,7 +566,7 @@ class WhatsApp:
             raise WhatsAppErro("Destino inválido.")  # nunca um grupo
         if not chat and not re.fullmatch(r"\d{8,15}", telefone):
             raise WhatsAppErro("Destino inválido.")  # só um número: nunca um grupo
-        destino: dict[str, Any] = {"chat_jid": chat} if chat else {"phones": [telefone]}
+        destino: dict[str, Any] = {"chat_jid": chat} if chat else {"phones": variantes(telefone)}
         sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
         if not sessoes:
             raise WhatsAppErro("WhatsApp não conectado.")

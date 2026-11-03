@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- WhatsApp: o Zé começa conversas novas. "Manda um oi para essa empresa no WhatsApp" (o número
+  que a pesquisa achou) ou "manda para o 11 98765-4321: ..." pergunta antes "é para a Empresa X
+  mesmo, no número tal?" e, com o seu sim, envia. Celular com ou sem o nono dígito, conferido no
+  WhatsApp antes de enviar; quando a pessoa responder, ele avisa.
+
 - Pesquisas guardadas: toda pesquisa do Zé (a profunda e a resumida) fica guardada no seu
   computador com as fontes. A página Pesquisas do painel lista todas, busca ("embalagens") e abre
   cada uma com os links e os trechos lidos, também no celular. Pela voz: "o que achamos sobre

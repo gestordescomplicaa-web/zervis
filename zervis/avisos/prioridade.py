@@ -138,19 +138,24 @@ class Prioridade:
             self._gravar(lista)
             return v
 
-    def esperar_resposta(self, nome: str, chat: str) -> None:
+    def esperar_resposta(self, nome: str, chat: str, telefone: str = "") -> None:
         """O Zé mandou algo por você: espera a resposta por 24 horas (sem tirar quem já está na
-        lista de vez)."""
+        lista de vez). Numa conversa nova ainda não há `chat`: vale o número."""
         with self._trava:
             lista = self._ler()
-            atual = next((v for v in lista if v.confere(chat, "")), None)
+            atual = next((v for v in lista if v.confere(chat, digitos(telefone))), None)
             if atual is not None and atual.motivo in ("pedido", "silencio"):
                 return  # o de vez continua de vez; o silenciado continua calado
             lista = [v for v in lista if v is not atual]
             agora = self.agora()
             lista.append(
                 Vigiado(
-                    nome_falado(nome), chat, motivo="resposta", desde=agora, ate=agora + ESPERA_S
+                    nome_falado(nome),
+                    chat,
+                    telefone=digitos(telefone),
+                    motivo="resposta",
+                    desde=agora,
+                    ate=agora + ESPERA_S,
                 )
             )
             self._gravar(lista)

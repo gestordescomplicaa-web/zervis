@@ -3,6 +3,7 @@
 import contextlib
 import hashlib
 import logging
+import secrets
 from typing import Any, Protocol
 
 from zervis import atividade, fuso, usuario
@@ -91,6 +92,22 @@ class ServicoAtendimento:
         if (lista := getattr(self.n, "prioridade", None)) is None:
             return f"Enviado para {nome}."
         lista.esperar_resposta(nome, chat)  # o Zé escuta a resposta dela (ADR 0055)
+        return f"Enviado para {nome}. Aviso quando responder."
+
+    def iniciar_whatsapp(self, telefone: str, nome: str, texto: str) -> str:
+        """Uma conversa nova, com quem nunca escreveu (o número de uma empresa que a pesquisa
+        achou, por exemplo), já aprovada pela voz com o nome e o número (ADR 0061). O WaCalls
+        confere se o número está no WhatsApp antes de enviar. Bloqueia; a falha sobe como
+        RuntimeError, com a frase da tela."""
+        chave = secrets.token_hex(16)  # cada "sim" é um envio; a chave só evita o envio em dobro
+        try:
+            self.n.central.enviar(texto, chave, telefone=telefone)
+        except cliente.CentralErro as erro:
+            raise RuntimeError(f"Não enviei: {erro}") from erro
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: conversa nova com {nome}", texto=texto)
+        if (lista := getattr(self.n, "prioridade", None)) is None:
+            return f"Enviado para {nome}."
+        lista.esperar_resposta(nome, "", telefone)  # o Zé escuta a resposta (ADR 0055)
         return f"Enviado para {nome}. Aviso quando responder."
 
     def falar_whatsapp(self, nome: str, argumento: str) -> str:
