@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Responder pelo WhatsApp voltou a funcionar (pela voz e no agente de atendimento): com a versão
+  nova do WhatsApp, o Zé mandava a resposta para um identificador errado. Quando o WhatsApp
+  recusa um envio, o Zé diz o motivo em vez de "sem conexão".
 - Conectar o WhatsApp sem tropeços: o "Conectar" clicado enquanto o Zé prepara a conexão espera
   por ela em vez de desistir, o botão não volta mais antes de o QR aparecer, o "Cancelar" do QR
   fica longe de onde estava o "Conectar", e a conexão que caiu volta sozinha em vez de deixar a
