@@ -94,7 +94,8 @@
   }
 
   // ---- layout: a page holds a title and up to four blocks, to the right of the Zé ----
-  const AREA = { x0: .30, x1: .975, y0: .07, y1: .79 }, VAO = .014;
+  // the Zé shrinks into the corner (jarvis-apresentacao.js), so the scene starts at 20% (it was 30%)
+  const AREA = { x0: .20, x1: .975, y0: .07, y1: .79 }, VAO = .014;
   function paginar(passos) {
     let n = 0, titulo = false;
     for (const p of passos) {
@@ -419,11 +420,12 @@
     },
     // the real thing, not a hologram: the picture sharp, a slow push-in, the caption over it
     foto(reg, caixa, b) {
-      caixa.innerHTML = `<figure class="jv-c-foto"><img alt="${esc(b.legenda || b.titulo)}" decoding="async"></figure>`;
-      const fig = caixa.firstElementChild, img = fig.querySelector("img");
+      caixa.innerHTML = `<figure class="jv-c-foto"><i class="fundo"></i><img alt="${esc(b.legenda || b.titulo)}" decoding="async"></figure>`;
+      const fig = caixa.firstElementChild, img = fig.querySelector("img"), src = "/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/");
       img.addEventListener("error", () => { fig.classList.add("falhou"); fig.textContent = "Foto indisponível"; }, { once: true });
       img.addEventListener("load", () => fig.classList.add("pronta"), { once: true });
-      img.src = "/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/");
+      fig.querySelector(".fundo").style.backgroundImage = `url("${src}")`;
+      img.src = src;
       if (b.legenda) fig.insertAdjacentHTML("beforeend", `<figcaption>${esc(b.legenda)}</figcaption>`);
     },
     video(reg, caixa, b) {

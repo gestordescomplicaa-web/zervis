@@ -88,7 +88,8 @@
   function paraOCanto() {
     const anel = window.jarvisStage?.anel(); if (!anel) return;
     pose ||= { x: anel.x, y: anel.y, scale: anel.scale };
-    alvo = { x: vw() * .16, y: vh() * .48, scale: Math.min(.85, vh() / 1000), ry: .38 };
+    // smaller and further left than before (03/11/2026): the room is for the scene, not for him
+    alvo = { x: vw() * .095, y: vh() * .46, scale: Math.min(.52, vh() / 1700), ry: .38 };
   }
   function paraOLugar() {
     if (!pose) { alvo = null; return; }

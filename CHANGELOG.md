@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Imersão: a foto aparece sempre inteira (antes, uma foto em retrato num painel largo perdia o
+  rosto), com a sobra preenchida pela própria foto desfocada; e o Zé fica menor no canto durante a
+  apresentação, deixando mais espaço para a cena.
 - Fotos e vídeos de verdade na Imersão: "quem é fulano e o que ele faz na política?" mostra a foto
   real dele (da Wikipédia), com o crédito, ao lado da linha do tempo e dos fatos; um fenômeno vem
   em vídeo livre do Wikimedia Commons; "mostra o site da loja" tira o print da página. Tudo
