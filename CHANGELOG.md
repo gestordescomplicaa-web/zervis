@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- O Zé guarda tudo o que passa pelo seu WhatsApp desde que foi conectado, conversas e grupos, no
+  seu computador e para sempre, e lembra quando você pergunta: "o que a Ana falou do orçamento?",
+  "o que falaram no grupo da equipe hoje?". Em grupo ele só lê; responder é só no privado.
+  "Esquece a conversa com a Ana" apaga do arquivo.
+- "Quem me mandou mensagem?", "tem alguém esperando?", "quem está na lista?" e "lê a mensagem da
+  Ana" agora são respondidas na hora, sem gastar token. "Zérvis, ..." também vale como chamado.
+- Na Conversa, o gasto de cada resposta mostra os tokens novos separados dos do cache.
 - Lista de prioridade no WhatsApp: "Zé, monitora a Ana" (ou um número) e ele avisa na hora, lendo,
   qualquer mensagem dela, com lembrete até você responder, até você dizer "não monitora mais a
   Ana". E quando o Zé responde alguém por você, ele escuta a resposta: "a Ana respondeu: ...".

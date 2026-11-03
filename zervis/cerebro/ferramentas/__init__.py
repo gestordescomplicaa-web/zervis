@@ -69,6 +69,7 @@ LEITURA = [
     "modelo3d_baixar",  # só grava no próprio Acervo, de uma fonte permitida, e mostra na tela
     "whatsapp_conversas",  # só lê a caixa de entrada (ADR 0054); responder pede o sim
     "whatsapp_ler",
+    "whatsapp_buscar",  # só lê o arquivo do WhatsApp (ADR 0056); esquecer pede o sim
     "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053)
     "whatsapp_ja_vi",  # só para um lembrete
     "whatsapp_prioridade",  # só muda quem o Zé vigia (ADR 0055); nada sai para ninguém

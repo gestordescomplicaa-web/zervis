@@ -76,20 +76,27 @@ def _central(tmp_path: Path) -> tuple[c.Central, Any, Any]:
     return central, wa, at
 
 
-def test_mensagem_vai_a_caixa_do_ze_e_so_o_texto_ao_agente(tmp_path: Path) -> None:
+def test_mensagem_vai_ao_arquivo_do_ze_e_so_o_texto_privado_ao_agente(tmp_path: Path) -> None:
     central, _, at = _central(tmp_path)
-    chat = "5511@s.whatsapp.net"
-    central._recebida(Recebida("s:1", "Ana", "5511", "quanto custa?", chat=chat))
+    chat, grupo = "5511@s.whatsapp.net", "120363000000000000@g.us"
+    central._recebida(Recebida("s:1", "Ana", "5511", "quanto custa?", chat=chat, quando=10.0))
     central._recebida(Recebida("s:2", "Eu", "5511", "oi", de_mim=True, chat=chat))
     central._recebida(Recebida("s:3", "Ana", "5511", "", chat=chat, midia="audio"))
-    assert [r.id for r in at.recebidas] == ["s:1", "s:2"]  # o agente não recebe mídia
+    central._recebida(Recebida("s:4", "Bia", "5522", "bom dia", chat=grupo, grupo=True,
+                               grupo_nome="Equipe"))  # fmt: skip
+    assert [r.id for r in at.recebidas] == ["s:1", "s:2"]  # nem mídia nem grupo ao agente
     eventos, _ = central.eventos.depois(0)
-    assert [{k: v for k, v in e.items() if k not in ("id", "quando")} for e in eventos] == [
-        {"tipo": "mensagem", "nome": "Ana", "texto": "quanto custa?", "telefone": "5511",
-         "chat": chat, "midia": ""},
-        {"tipo": "respondida", "chat": chat, "texto": "oi", "midia": ""},
-        {"tipo": "mensagem", "nome": "Ana", "texto": "", "telefone": "5511", "chat": chat,
-         "midia": "audio"},
+    sem = [{k: v for k, v in e.items() if k not in ("id", "quando")} for e in eventos]
+    assert sem == [
+        {"tipo": "mensagem", "nome": "Ana", "telefone": "5511", "chat": chat,
+         "texto": "quanto custa?", "midia": "", "evento": "s:1", "hora": 10.0},
+        {"tipo": "respondida", "chat": chat, "texto": "oi", "midia": "", "evento": "s:2",
+         "hora": 0.0},
+        {"tipo": "mensagem", "nome": "Ana", "telefone": "5511", "chat": chat, "texto": "",
+         "midia": "audio", "evento": "s:3", "hora": 0.0},
+        {"tipo": "mensagem", "nome": "Bia", "telefone": "5522", "chat": grupo,
+         "texto": "bom dia", "midia": "", "evento": "s:4", "hora": 0.0, "grupo": True,
+         "grupo_nome": "Equipe"},
     ]  # fmt: skip
 
 

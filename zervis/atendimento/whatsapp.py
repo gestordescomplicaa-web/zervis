@@ -79,15 +79,35 @@ class Recebida:
     de_mim: bool = False  # enviada por este número (pelo celular ou pelo próprio agente)
     chat: str = ""  # o JID da conversa (só conversa privada chega até aqui)
     midia: str = ""  # áudio, foto...: só o tipo, nunca o arquivo (o texto é a legenda)
+    # Grupo (ADR 0056): só para o arquivo do Zé. `chat` é o grupo; nome e telefone, de quem falou.
+    grupo: bool = False
+    grupo_nome: str = ""
+    quando: float = 0.0  # a hora da mensagem no WhatsApp (epoch); 0 = desconhecida
 
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
+_GRUPO = re.compile(r"\d{5,30}(?:-\d{5,20})?@g\.us")
 
 
 def privado(chat: str) -> bool:
     """Só conversa com uma pessoa. Grupo, status, canal e qualquer tipo novo ficam de fora
     (pedido de 14/10/2026: o atendimento nunca responde em grupo)."""
     return _PRIVADO.fullmatch(chat or "") is not None
+
+
+def grupo(chat: str) -> bool:
+    """Um grupo: entra no arquivo do Zé (ADR 0056), nunca na resposta nem no agente."""
+    return _GRUPO.fullmatch(chat or "") is not None
+
+
+def _hora(bruta: Any) -> float:
+    """O `occurred_at` do WaCalls (RFC 3339, UTC) em epoch; 0 se não vier."""
+    from datetime import datetime
+
+    try:
+        return datetime.fromisoformat(str(bruta).replace("Z", "+00:00")).timestamp()
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def escolhido(arquivo: Path = ESCOLHA) -> bool:
@@ -177,7 +197,8 @@ def recebidas(corpo: Any) -> list[Recebida]:
         if m.get("direction") not in ("inbound", "outbound"):
             continue
         chat = str(m.get("chat_jid") or "")
-        if not privado(chat):
+        em_grupo = grupo(chat)
+        if not (privado(chat) or em_grupo):
             continue
         texto = str(m.get("content") or "").strip()
         midia = ""
@@ -189,7 +210,13 @@ def recebidas(corpo: Any) -> list[Recebida]:
         nome = " ".join(str(m.get("push_name") or "").split()) or telefone or "um contato"
         de_mim = m.get("direction") == "outbound"
         ident = str(m.get("event_id") or "")
-        saida.append(Recebida(ident, nome, telefone, texto, de_mim, chat, midia))
+        nome_grupo = " ".join(str(m.get("group_name") or "").split())[:80] if em_grupo else ""
+        saida.append(
+            Recebida(
+                ident, nome, telefone, texto, de_mim, chat, midia, em_grupo, nome_grupo,
+                _hora(m.get("occurred_at")),
+            )
+        )  # fmt: skip
     return saida
 
 

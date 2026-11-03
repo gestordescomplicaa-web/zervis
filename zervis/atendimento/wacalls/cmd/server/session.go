@@ -34,6 +34,7 @@ type Session struct {
 	// Estrangulamento do aviso "captura desligada" (ver msgcapture.go).
 	msgMu      sync.Mutex
 	msgAvisoEm time.Time
+	grupos     map[string]nomeGuardado // Zérvis: o nome de cada grupo, já consultado
 
 	// Mensagens transacionais da Agenda saem em série por sessão. Isto fecha a
 	// corrida entre duas réplicas do painel usando a mesma chave idempotente sem

@@ -5,10 +5,10 @@ import hashlib
 import logging
 from typing import Any, Protocol
 
-from zervis import atividade, usuario
+from zervis import atividade, fuso, usuario
 from zervis.atendimento import agente, cliente, whatsapp
 from zervis.avisos import caixa as caixa_mod
-from zervis.avisos import mensagens, pendentes
+from zervis.avisos import falas_whatsapp, mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.cerebro import rapido
 from zervis.nucleo import estados as e
@@ -26,6 +26,7 @@ class ContextoAtendimento(Protocol):
     leads: Any
     mensagens: Any
     modo_fala: Any
+    prioridade: Any
 
     def _atendente_passou(self, nome: str, motivo: str) -> None: ...
     def _na_linha(self, tipo: str, texto: str) -> None: ...
@@ -79,9 +80,7 @@ class ServicoAtendimento:
         WhatsApp da Central. Bloqueia (rede): a ferramenta chama numa thread. A falha sobe como
         RuntimeError, com a frase da tela."""
         # Sem envio em dobro na mesma vez de responder: a chave muda quando ele escreve de novo.
-        conversa = self.n.caixa.achar(chat)
-        dele = [m for m in conversa.mensagens if not m.get("de_mim")] if conversa else []
-        vez = max((m.get("quando", 0) for m in dele), default=0)
+        vez = self.n.caixa.ultima_dele(chat)
         chave = hashlib.sha256(f"{chat}:{vez}:{texto}".encode()).hexdigest()[:32]
         try:
             self.n.central.enviar(texto, chave, chat=chat)
@@ -93,6 +92,17 @@ class ServicoAtendimento:
             return f"Enviado para {nome}."
         lista.esperar_resposta(nome, chat)  # o Zé escuta a resposta dela (ADR 0055)
         return f"Enviado para {nome}. Aviso quando responder."
+
+    def falar_whatsapp(self, nome: str, argumento: str) -> str:
+        """As leituras do WhatsApp que o Zé responde sozinho, sem o cérebro (ADR 0056)."""
+        local = fuso.local()
+        if nome == "whatsapp_quem":
+            return falas_whatsapp.quem(self.n.caixa, local)
+        if nome == "whatsapp_esperando":
+            return falas_whatsapp.esperando(self.n.caixa, local)
+        if nome == "whatsapp_lista":
+            return falas_whatsapp.lista(self.n.prioridade)
+        return falas_whatsapp.ler(self.n.caixa, argumento, local)
 
     def estado_whatsapp(self) -> dict[str, Any]:
         """Conectado ou não, e o número (bloqueia: pergunta à Central)."""
@@ -175,11 +185,14 @@ class ServicoAtendimento:
         elif evento.get("tipo") == "mensagem":
             nome, texto = str(evento.get("nome", "")), str(evento.get("texto", ""))
             telefone, chat = str(evento.get("telefone", "")), str(evento.get("chat", ""))
-            midia = str(evento.get("midia", ""))
+            midia, grupo = str(evento.get("midia", "")), bool(evento.get("grupo"))
             if (caixa := getattr(self.n, "caixa", None)) is not None:
-                caixa.receber(nome, texto, telefone, chat, midia, _quando(evento))
-            if evento.get("repassado"):
-                return  # o antigo vai só para a caixa: nada de aviso atrasado
+                caixa.receber(
+                    nome, texto, telefone, chat, midia, _hora(evento),
+                    str(evento.get("evento", "")), grupo, str(evento.get("grupo_nome", "")),
+                )  # fmt: skip
+            if evento.get("repassado") or grupo:
+                return  # o antigo e o grupo vão só para o arquivo: nada de aviso
             if self._de_quem_vigio(nome, texto, telefone, chat, midia):
                 return
             if texto:  # só o texto é julgado
@@ -187,8 +200,11 @@ class ServicoAtendimento:
         elif evento.get("tipo") == "respondida":
             chat = str(evento.get("chat", ""))
             if (caixa := getattr(self.n, "caixa", None)) is not None:
-                texto, midia = str(evento.get("texto", "")), str(evento.get("midia", ""))
-                caixa.enviada(chat, texto, midia, _quando(evento))
+                caixa.enviada(
+                    chat, str(evento.get("texto", "")), str(evento.get("midia", "")),
+                    _hora(evento), str(evento.get("evento", "")), bool(evento.get("grupo")),
+                    str(evento.get("grupo_nome", "")),
+                )  # fmt: skip
             self._lead_respondido(chat, _quando(evento))
         elif evento.get("tipo") == "ligacao":
             telefone = str(evento.get("telefone", "")) or "número oculto"
@@ -258,3 +274,9 @@ class ServicoAtendimento:
 def _quando(evento: dict[str, Any]) -> float:
     quando = evento.get("quando")
     return float(quando) if isinstance(quando, int | float) else 0.0
+
+
+def _hora(evento: dict[str, Any]) -> float:
+    """A hora da mensagem no WhatsApp; sem ela, a da chegada à Central."""
+    hora = evento.get("hora")
+    return float(hora) if isinstance(hora, int | float) and hora > 0 else _quando(evento)

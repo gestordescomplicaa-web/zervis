@@ -72,16 +72,19 @@ func idEventoEscopado(sessionID, eventID string) string {
 // mensagemNormalizada é o contrato com o painel. Nomes em inglês por serem
 // chave de JSON entre serviços; o resto do código segue em português.
 type mensagemNormalizada struct {
-	EventID    string `json:"event_id"`
-	SessionID  string `json:"session_id"`
-	Direction  string `json:"direction"` // inbound | outbound
-	ChatJID    string `json:"chat_jid"`
-	SenderJID  string `json:"sender_jid"`
-	Phone      string `json:"phone"`           // forma discável, quando dá pra resolver
-	LID        string `json:"lid"`             // forma oculta, quando existe
-	PushName   string `json:"push_name"`       // como a pessoa se identifica no WhatsApp
-	Type       string `json:"type"`            // text | media
-	Media      string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
+	EventID   string `json:"event_id"`
+	SessionID string `json:"session_id"`
+	Direction string `json:"direction"` // inbound | outbound
+	ChatJID   string `json:"chat_jid"`
+	SenderJID string `json:"sender_jid"`
+	Phone     string `json:"phone"`           // forma discável, quando dá pra resolver
+	LID       string `json:"lid"`             // forma oculta, quando existe
+	PushName  string `json:"push_name"`       // como a pessoa se identifica no WhatsApp
+	Type      string `json:"type"`            // text | media
+	Media     string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
+	// Zérvis (ADR 0056): no grupo, ChatJID é o grupo, e Phone/LID/PushName são de quem falou.
+	IsGroup    bool   `json:"is_group,omitempty"`
+	GroupName  string `json:"group_name,omitempty"`
 	Content    string `json:"content"`
 	OccurredAt string `json:"occurred_at"`
 }
@@ -182,9 +185,6 @@ func identidades(evt *events.Message) (telefone string, lid string) {
 // duas faria o agente atribuir a uma pessoa o que outra escreveu — pior do que
 // não ter o histórico.
 func deveCapturar(evt *events.Message) (string, bool) {
-	if evt.Info.IsGroup {
-		return "", false
-	}
 	// Newsletter/canal é difusão, não conversa.
 	if evt.Info.Chat.Server == types.NewsletterServer {
 		return "", false
@@ -193,9 +193,12 @@ func deveCapturar(evt *events.Message) (string, bool) {
 	if evt.Info.Chat.Server == types.BroadcastServer {
 		return "", false
 	}
-	// Zérvis: só conversa privada passa (lista do que é permitido, não do que é proibido):
-	// um tipo novo de conversa do WhatsApp fica de fora até alguém decidir o contrário.
-	if evt.Info.Chat.Server != types.DefaultUserServer && evt.Info.Chat.Server != types.HiddenUserServer {
+	// Zérvis: passa conversa privada e, para o arquivo do Zé (ADR 0056), grupo (lista do que é
+	// permitido, não do que é proibido): um tipo novo de conversa fica de fora até alguém decidir.
+	// O grupo só é guardado e lido; responder em grupo continua recusado (conversaPrivada).
+	switch evt.Info.Chat.Server {
+	case types.DefaultUserServer, types.HiddenUserServer, types.GroupServer:
+	default:
 		return "", false
 	}
 	if evt.Info.ID == "" {
@@ -261,8 +264,12 @@ func (s *Session) handleMessage(evt *events.Message) {
 		PushName:   evt.Info.PushName,
 		Type:       tipo,
 		Media:      midia,
+		IsGroup:    evt.Info.Chat.Server == types.GroupServer,
 		Content:    texto,
 		OccurredAt: evt.Info.Timestamp.UTC().Format(time.RFC3339),
+	}
+	if m.IsGroup {
+		m.GroupName = s.nomeDoGrupo(evt.Info.Chat)
 	}
 	payload, err := json.Marshal(m)
 	if err != nil {
@@ -294,4 +301,36 @@ func (s *Session) avisarCapturaDesligada() {
 	}
 	s.msgAvisoEm = time.Now()
 	s.log.Info("mensagem recebida, mas o compartilhamento com o agente esta desligado")
+}
+
+// nomeDoGrupo é o assunto do grupo, consultado uma vez por grupo enquanto a sessão durar (a mesma
+// consulta que o WhatsApp Web faz ao abrir um grupo). Falhou: fica sem nome, e tenta de novo
+// depois de 10 minutos.
+func (s *Session) nomeDoGrupo(grupo types.JID) string {
+	s.msgMu.Lock()
+	if s.grupos == nil {
+		s.grupos = map[string]nomeGuardado{}
+	}
+	guardado, ok := s.grupos[grupo.String()]
+	s.msgMu.Unlock()
+	if ok && (guardado.nome != "" || time.Since(guardado.em) < 10*time.Minute) {
+		return guardado.nome
+	}
+	nome := ""
+	ctx, cancel := context.WithTimeout(s.mgr.appCtx, 5*time.Second)
+	defer cancel()
+	if info, err := s.client.GetGroupInfo(ctx, grupo); err == nil && info != nil {
+		nome = strings.TrimSpace(info.Name)
+	} else {
+		s.log.Debug("nome do grupo indisponível", "erro", err)
+	}
+	s.msgMu.Lock()
+	s.grupos[grupo.String()] = nomeGuardado{nome: nome, em: time.Now()}
+	s.msgMu.Unlock()
+	return nome
+}
+
+type nomeGuardado struct {
+	nome string
+	em   time.Time
 }

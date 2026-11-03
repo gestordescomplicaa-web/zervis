@@ -950,7 +950,7 @@ def orbe(texto: str, orbes: dict[str, str] | None = None) -> str | None:
 
 # O nome falado (08/10/2026: o Zé passou a se chamar Zé; "Jarvis" ainda vale). Os comandos
 # escritos com "o jarvis" ("reinicia o jarvis") valem com qualquer um dos nomes.
-NOMES = {"jarvis", "ze"}
+NOMES = {"jarvis", "ze", "zervis"}  # "Zérvis, ..." também chama (03/11/2026)
 CHAMADOS = {
     ("ei", "ze"),
     ("hey", "ze"),
@@ -1001,12 +1001,54 @@ def sem_nome(p: tuple[str, ...]) -> tuple[str, ...]:
     return tuple("jarvis" if w == "ze" else w for w in p)
 
 
+# As leituras do WhatsApp que o Zé responde sozinho, sem o cérebro e sem gastar token (ADR 0056):
+# frases fechadas, inteiras; o resto ("o que a Ana disse do orçamento?") vai ao cérebro.
+_WA = r"(?: (?:no|do|pelo) (?:whatsapp|whats app|zap))?"
+_DE = r"(?:da|do|de|com a|com o|com)"
+_NAO_E_NOME = {"e", "responde", "responder", "manda", "mandar", "diz", "fala", "resume", "depois"}
+WHATSAPP_LOCAL = {
+    "whatsapp_quem": (
+        rf"quem (?:foi (?:a|o) ultim[ao](?: pessoa| contato)? (?:que|a) )?(?:me )?"
+        rf"(?:mandou|enviou|escreveu)(?: (?:uma )?mensagem)?(?: (?:pra|para) mim)?{_WA}",
+        rf"(?:de quem foi|qual foi|quem mandou) a ultima mensagem(?: que (?:eu )?recebi)?{_WA}",
+        rf"(?:tem|chegou) (?:alguma )?mensagem(?: nova)?(?: (?:pra|para) mim)?{_WA}",
+    ),
+    "whatsapp_esperando": (
+        rf"(?:tem )?(?:alguem|quem) (?:esta |ta )?esperando(?: (?:a )?(?:minha )?resposta)?{_WA}",
+        rf"quem (?:eu )?(?:preciso|tenho que) responder{_WA}",
+    ),
+    "whatsapp_lista": (
+        rf"quem (?:esta|ta) na (?:minha )?lista(?: de prioridade)?{_WA}",
+        rf"quem (?:voce|vc) (?:esta|ta) monitorando{_WA}",
+    ),
+    "whatsapp_ler": (
+        rf"(?:me )?(?:le|leia|ler)(?: (?:pra|para) mim)? (?:a |as )?(?:ultimas? )?"
+        rf"(?:mensage(?:m|ns)|conversa) {_DE} (?P<nome>[a-z0-9]+(?: [a-z0-9]+){{0,2}}?){_WA}",
+    ),
+}
+
+
+def whatsapp_local(texto: str) -> str | None:
+    """`whatsapp_quem`, `whatsapp_esperando`, `whatsapp_lista` ou `whatsapp_ler:<nome>`."""
+    frase = " ".join(texto) if isinstance(texto, tuple) else " ".join(palavras(texto))
+    for nome, modelos in WHATSAPP_LOCAL.items():
+        for modelo in modelos:
+            if achado := re.fullmatch(modelo, frase):
+                quem = achado.groupdict().get("nome")
+                if quem and set(quem.split()) & _NAO_E_NOME:
+                    return None  # "lê a da Ana e responde": pede mais que ler, vai ao cérebro
+                return f"{nome}:{quem}" if quem else nome
+    return None
+
+
 def comando(
     texto: str, nucleo_em_foco: bool = False, orbes: dict[str, str] | None = None
 ) -> str | None:
     p = palavras(texto)
     if (limpo := sem_nome(p)) != p:
         p, texto = limpo, " ".join(limpo)
+    if (nome := whatsapp_local(" ".join(p))) is not None:
+        return nome
     if nucleo_em_foco and (nome := next((n for n, f in BRILHO_SEM_ALVO.items() if p in f), None)):
         return nome
     if (destino := troca(texto)) is not None:

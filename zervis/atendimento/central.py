@@ -140,15 +140,22 @@ class Central:
     # --- o que chega do WhatsApp e do agente -------------------------------------------------
 
     def _recebida(self, r: whatsapp.Recebida) -> None:
-        """Para a caixa de entrada do Zé (ADR 0054), tudo; para o agente, só o texto."""
-        if r.de_mim:  # a sua resposta: na caixa, e encerra a pendência do lead (ADR 0053)
-            self.eventos.publicar("respondida", chat=r.chat, texto=r.texto, midia=r.midia)
+        """Para o arquivo do Zé (ADR 0054 e 0056), tudo, inclusive grupo; para o agente, só o
+        texto da conversa privada."""
+        comum = {
+            "chat": r.chat,
+            "texto": r.texto,
+            "midia": r.midia,
+            "evento": r.id,
+            "hora": r.quando,
+        }
+        if r.grupo:
+            comum |= {"grupo": True, "grupo_nome": r.grupo_nome}
+        if r.de_mim:  # a sua resposta: no arquivo, e encerra a pendência do lead (ADR 0053)
+            self.eventos.publicar("respondida", **comum)
         else:
-            self.eventos.publicar(
-                "mensagem", nome=r.nome, texto=r.texto, telefone=r.telefone, chat=r.chat,
-                midia=r.midia,
-            )  # fmt: skip
-        if not r.midia:
+            self.eventos.publicar("mensagem", nome=r.nome, telefone=r.telefone, **comum)
+        if not r.midia and not r.grupo:
             self.atendente.receber(r)
 
     def _passou(self, nome: str, motivo: str) -> None:
