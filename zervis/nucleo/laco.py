@@ -116,6 +116,8 @@ from zervis.nucleo.servicos.voz import ServicoVoz
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import SessaoErro, Sessoes
+from zervis.pesquisa import saude
+from zervis.pesquisa.buscador import Buscador
 from zervis.portal import senha, tunel
 from zervis.portal.acoes import Acoes
 from zervis.portal.senha import Acesso
@@ -168,6 +170,7 @@ JANELA_PERMISSAO_S = 45.0
 # quando passa de meio segundo, para um estalo ou uma tosse não virar aviso.
 FALA_PERDIDA_DBFS = -35.0
 FALA_PERDIDA_MIN_S = 0.5
+VIGIA_ESPERA_S = 600.0  # a primeira checagem das fontes, depois de o Zé assentar
 # Comandos locais de voz (sem o cérebro), por tipo. "{}" é o argumento do comando
 # ("abrir_orbe:Guia" -> Guia). Os que pedem algo à página pelo maos-pedido: nome -> (pedido, fala).
 # O jeito do Zé (08/10/2026): o que ele diz quando dá uma voltinha e quando o usuário o roda
@@ -334,6 +337,14 @@ class Nucleo(
         self.caixa = caixa.Caixa()  # as conversas privadas recentes do WhatsApp (ADR 0054)
         self.prioridade = prioridade.Prioridade()  # quem o Zé vigia em tempo real (ADR 0055)
         self.instagram = instagram.Instagram()  # métricas do Instagram, só leitura (ADR 0057)
+        # A pesquisa profunda (ADR 0059): o SearXNG próprio e o vigia semanal das fontes de fora.
+        self.buscador = Buscador()
+        self.fontes_de_fora = saude.Vigia(
+            lambda: saude.verificacoes(
+                self.buscador, lambda: getattr(self, "central", None), lambda: self.instagram
+            )
+        )
+        self._vigia_desde = time.monotonic()
         # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
         # que podem voltar uma vez e quando cada aviso foi dado.
         self._comecados: dict[str, int] = {}
@@ -473,6 +484,8 @@ class Nucleo(
             acervo=self.imersivo.acervo,
             leads=self,
             instagram=self.instagram,
+            buscador=self.buscador,
+            vigia=self.fontes_de_fora,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
@@ -1266,6 +1279,7 @@ class Nucleo(
         if mensagens.escolhido() and (mensagens.disponivel() or whatsapp.escolhido()):
             self.mensagens.iniciar()
         self.imersivo.iniciar()
+        self.buscador.preparar_em_segundo_plano()  # só baixa na primeira vez (ou numa versão nova)
         if self.presenca is not None:
             self.presenca.start()
         self.rostos.marcar("sempre", self.modo_escuta == "sempre")
@@ -1294,6 +1308,7 @@ class Nucleo(
                     self._aviso_ao_vivo()
                     self._agendador(agora)
                     self._lembrar_leads()
+                    self._vigiar_fontes()
                     self._atualizar_pasta(agora)
                     self._manutencao_chegou(agora)
                     self._aplicar_quando_livre()
@@ -1312,6 +1327,31 @@ class Nucleo(
                     continue
         finally:
             self.desligar()
+
+    def _vigiar_fontes(self) -> None:
+        """Uma vez por semana, as fontes de fora testadas de verdade; o Zé fala só o que mudou
+        (ADR 0059). Espera o Zé assentar (e o buscador se preparar) antes da primeira rodada."""
+        if (
+            self.fontes_de_fora.rodando
+            or self.buscador.preparando
+            or time.monotonic() - self._vigia_desde < VIGIA_ESPERA_S
+            or not self.fontes_de_fora.vencido()
+        ):
+            return
+        self.fontes_de_fora.rodando = True
+
+        def vigiar() -> None:
+            try:
+                fala = self.fontes_de_fora.checar_e_contar()
+            except Exception:
+                log.exception("vigia das fontes falhou")
+                self.fontes_de_fora.rodando = False
+                return
+            if fala:
+                log.warning("fontes: %s", fala)
+                self.eventos.put(e.Aviso(f"Sobre as fontes de fora que eu uso: {fala}"))
+
+        threading.Thread(target=vigiar, name="vigia-fontes", daemon=True).start()
 
     def conversa_em_andamento(self) -> dict[str, str] | None:
         """O pedido em curso e o que o Zé já respondeu dele, antes de a troca ir para o histórico
@@ -1374,6 +1414,7 @@ class Nucleo(
         self.livekit.parar()
         self.tunel.soltar()  # o túnel continua de pé: o endereço não muda
         self.mensagens.parar()
+        self.buscador.parar()
         self.central.parar()  # só para de ouvir: a Central continua atendendo
         self.testes_do_atendente.parar()
         self.memoria_longa.parar()

@@ -163,8 +163,40 @@ def conferir_url(url: str, resolve: Resolver = resolver) -> str:
     if not ips:
         raise CapturaErro(f"{host} não foi encontrado")
     if not all(publico(ip) for ip in ips):
-        raise CapturaErro("endereço da rede local: não fotografo")
+        raise CapturaErro("endereço da rede local: fica de fora")
     return host
+
+
+def _chromium(binario: str, perfil: str, porta: int, saida: str, url: str) -> list[str]:
+    """O Chromium sem tela, com perfil descartável e todo o tráfego atrás da trava."""
+    return [
+        binario, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio",
+        "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+        "--disable-quic", "--disable-background-networking",
+        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+        f"--user-data-dir={perfil}", f"--proxy-server=http://127.0.0.1:{porta}",
+        "--proxy-bypass-list=<-loopback>", f"--window-size={LARGURA},{ALTURA}",
+        "--virtual-time-budget=6000", saida, url,
+    ]  # fmt: skip
+
+
+def renderizar(url: str, executar: Any = subprocess.run, limite: int = 6 * 1024 * 1024) -> str:
+    """O HTML da página depois do JavaScript (para o leitor da pesquisa, ADR 0059), pelo mesmo
+    Chromium e a mesma trava do print."""
+    conferir_url(url)
+    binario = navegador()
+    if binario is None:
+        raise CapturaErro("Chromium não encontrado nesta máquina")
+    with tempfile.TemporaryDirectory(prefix="ze-leitura-") as perfil, trava() as t:
+        try:
+            r = executar(
+                _chromium(binario, perfil, t.porta, "--dump-dom", url),
+                capture_output=True, timeout=TEMPO_S, check=False,
+            )  # fmt: skip
+        except subprocess.TimeoutExpired:
+            raise CapturaErro("a página demorou demais para abrir") from None
+    html = (r.stdout or b"")[:limite]
+    return html.decode("utf-8", "replace") if isinstance(html, bytes) else str(html)
 
 
 def capturar(url: str, acervo: Path, executar: Any = subprocess.run) -> dict[str, Any]:
@@ -180,15 +212,7 @@ def capturar(url: str, acervo: Path, executar: Any = subprocess.run) -> dict[str
     destino.mkdir(parents=True, exist_ok=True, mode=0o700)
     with tempfile.TemporaryDirectory(prefix="ze-captura-") as perfil, trava() as t:
         saida = Path(perfil) / "print.png"
-        comando = [
-            binario, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--mute-audio",
-            "--no-first-run", "--no-default-browser-check", "--disable-extensions",
-            "--disable-quic", "--disable-background-networking",
-            "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
-            f"--user-data-dir={perfil}", f"--proxy-server=http://127.0.0.1:{t.porta}",
-            "--proxy-bypass-list=<-loopback>", f"--window-size={LARGURA},{ALTURA}",
-            "--virtual-time-budget=6000", f"--screenshot={saida}", url,
-        ]  # fmt: skip
+        comando = _chromium(binario, perfil, t.porta, f"--screenshot={saida}", url)
         try:
             executar(comando, capture_output=True, timeout=TEMPO_S, check=False)
         except subprocess.TimeoutExpired:

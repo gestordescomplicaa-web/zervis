@@ -201,7 +201,9 @@ def _titulos(linhas: list[str], inicio: int) -> list[str]:
     return achados
 
 
-def cortar(texto: str, pasta: Path = LEITURAS) -> str:
+def cortar(
+    texto: str, pasta: Path = LEITURAS, dica: str = ". Ou use browser_find para um trecho"
+) -> str:
     """Até LIMITE caracteres, numa quebra de linha; o resto fica gravado para continuar."""
     if len(texto) <= LIMITE:
         return texto
@@ -222,7 +224,7 @@ def cortar(texto: str, pasta: Path = LEITURAS) -> str:
     if indice:
         mostrar = indice[:15] + ([f"e mais {len(indice) - 15}"] if len(indice) > 15 else [])
         aviso += ". Seções que ficaram de fora: " + "; ".join(mostrar)
-    return "\n".join(mantidas) + aviso + ". Ou use browser_find para um trecho.]"
+    return "\n".join(mantidas) + aviso + dica + ".]"
 
 
 def guardar(texto: str, pasta: Path = LEITURAS) -> str:

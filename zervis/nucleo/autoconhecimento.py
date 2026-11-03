@@ -60,6 +60,10 @@ GRUPOS = {
     "atualizacoes": ("Atualizações", "verifica se há versão nova do Zé"),
     "sobre": ("Autoconhecimento", "descreve a própria configuração, capacidades e atividade"),
     "pesquisa": ("Pesquisa na internet", "pesquisa notícias e assuntos, com as fontes"),
+    "profunda": (
+        "Pesquisa profunda",
+        "levanta empresas, mercado e concorrentes lendo as páginas, consulta CNPJ, vigia as fontes",
+    ),
     "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
     "imagens": ("Imagens reais", "mostra fotos e vídeos de verdade e prints de páginas na tela"),
     "instagram": ("Instagram", "lê o perfil e as métricas das publicações, sem publicar nada"),
