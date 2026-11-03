@@ -57,6 +57,7 @@ function cartaoInstagram(ig) {
   return cartao("", `${topo}${sub("Métricas do perfil e das publicações, só leitura.")}
     <div class="linha"><label>Token de acesso<input type="password" id="ig-token" class="mono" placeholder="Cole o token" autocomplete="off"></label>
       <div class="botoes">${botao("Conectar", "instagram-conectar", "", "principal")}</div></div>
+    <p class="resultado" id="ig-resultado" role="status"></p>
     <details class="detalhes"><summary>Como obter o token</summary><p>Conta Profissional do Instagram. No app da Meta (developers.facebook.com), adicione o produto Instagram, gere o token da conta com as permissões de leitura e de métricas e cole aqui.</p></details>`);
 }
 
@@ -292,10 +293,14 @@ Object.assign(ACOES, {
   },
   "instagram-conectar": async (b) => {
     const campo = /** @type {HTMLInputElement | null} */ ($("ig-token"));
-    if (!campo?.value.trim()) { toast("Cole o token."); return; }
-    const r = await ocupado(b, () => api("instagram/conectar", { token: campo.value.trim() }));
-    toast(r.aviso);
-    await recarregar();
+    if (!campo?.value.trim()) { mostrar("ig-resultado", false, "Cole o token."); return; }
+    // O resultado fica embaixo do campo: o aviso que some em 2 s passava despercebido (03/11/2026).
+    mostrar("ig-resultado", null, "Conferindo o token…");
+    try {
+      const r = await ocupado(b, () => api("instagram/conectar", { token: campo.value.trim() }));
+      toast(r.aviso);
+      await recarregar();
+    } catch (erro) { mostrar("ig-resultado", false, erro.message); }
   },
   "instagram-desconectar": (b) => confirmar(b, "Desconectar o Instagram?", async () => {
     const r = await api("instagram/desconectar", { confirmado: true });

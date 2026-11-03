@@ -1606,3 +1606,46 @@ def test_sempre_nas_respostas_rapidas_vale_no_clique(tmp_path: Path) -> None:
 
     with _painel(tmp_path, extras={"cerebro": gravar}) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_conectar_o_instagram_mostra_o_erro_embaixo_do_campo(tmp_path: Path) -> None:
+    """Caso de 03/11/2026: dois tokens colados e "nada": o erro saía num aviso de 2 s. Agora fica
+    embaixo do campo, e o token vai inteiro ao Zé."""
+    base = json.loads(RESPOSTAS.read_text())["leituras"]["atendimento"]
+    recebidos: list[str] = []
+
+    def atendimento() -> dict[str, Any]:
+        return {**copy.deepcopy(base), "instagram": {"conectado": False, "usuario": ""}}
+
+    def conectar(dados: dict[str, Any]) -> dict[str, Any]:
+        recebidos.append(str(dados.get("token", "")))
+        raise PedidoInvalido("Token inválido ou vencido. Cole um novo.")
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#atendimento")
+            await _esperar(nav, "!!document.getElementById('ig-token')")
+            clicar = "document.querySelector('[data-acao=\"instagram-conectar\"]').click()"
+            await nav.avaliar(clicar)
+            await _esperar(
+                nav, "document.getElementById('ig-resultado').textContent === 'Cole o token.'"
+            )
+            token = "IGAA" + "x" * 150
+            await nav.avaliar(f"document.getElementById('ig-token').value = '  {token}  '")
+            await nav.avaliar(clicar)
+            await _esperar(
+                nav,
+                "document.getElementById('ig-resultado').textContent === "
+                "'Token inválido ou vencido. Cole um novo.'",
+            )
+            assert recebidos == [token]
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path,
+        extras={"instagram/conectar": conectar},
+        leituras_vivas={"atendimento": atendimento},
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
