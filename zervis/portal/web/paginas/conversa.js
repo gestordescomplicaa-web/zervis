@@ -34,7 +34,8 @@ const ROTULOS_DO_GASTO = { rapida: "Respostas rápidas", completo: "Cérebro", p
 const tokens = (n) => n < 1000 ? String(n) : n < 1e6 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: n < 1e4 ? 1 : 0 })} mil` : `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
 const lidos = (p) => (p.entrada || 0) + (p.cache_lido || 0) + (p.cache_criado || 0);
 const somaPartes = (partes) => partes.reduce((t, p) => ({ lidos: t.lidos + lidos(p), cache: t.cache + (p.cache_lido || 0), saida: t.saida + (p.saida || 0) }), { lidos: 0, cache: 0, saida: 0 });
-const emCache = (t) => t.lidos ? Math.round(100 * t.cache / t.lidos) : 0;
+// O que pesa de verdade é o novo: o lido do cache custa uma fração e não esgota a conta igual.
+const resumo = (t) => `${tokens(t.lidos - t.cache)} novos + ${tokens(t.cache)} do cache · ${tokens(t.saida)} gerados`;
 
 /** A linha do gasto de uma resposta e, ao abrir, cada parte. */
 function gastoDaResposta(g) {
@@ -42,7 +43,7 @@ function gastoDaResposta(g) {
   const t = somaPartes(g.partes);
   const partes = g.partes.map((p) => `<li><b>${esc(ROTULOS_DO_GASTO[p.rotulo] || p.rotulo)}</b>${p.modelo ? ` · ${esc(p.modelo)}` : ""}<br>${tokens(lidos(p))} lidos (${tokens(p.cache_lido || 0)} em cache${p.cache_criado ? `, ${tokens(p.cache_criado)} gravados no cache` : ""}) · ${tokens(p.saida || 0)} gerados</li>`).join("");
   const ferramentas = g.ferramentas?.length ? `<li><b>Ferramentas</b><br>${esc(g.ferramentas.join(", "))}</li>` : "";
-  return `<details class="gasto"><summary>${tokens(t.lidos + t.saida)} tokens · ${emCache(t)}% em cache</summary><ul>${partes}${ferramentas}</ul></details>`;
+  return `<details class="gasto"><summary>${resumo(t)}</summary><ul>${partes}${ferramentas}</ul></details>`;
 }
 
 /** O dia: as respostas com gasto, as resolvidas sem modelo e o segundo plano. */
@@ -51,8 +52,8 @@ function consumoDoDia(itens, consumo) {
   const t = gastos.reduce((a, g) => ({ lidos: a.lidos + g.lidos, cache: a.cache + g.cache, saida: a.saida + g.saida }), { lidos: 0, cache: 0, saida: 0 });
   const partes = [];
   if (gastos.length) {
-    const total = t.lidos + t.saida;
-    partes.push(`Hoje: ${gastos.length} ${gastos.length === 1 ? "resposta" : "respostas"} · ${tokens(total)} tokens · ${emCache(t)}% em cache · média de ${tokens(Math.round(total / gastos.length))} por resposta`);
+    const novos = t.lidos - t.cache + t.saida;
+    partes.push(`Hoje: ${gastos.length} ${gastos.length === 1 ? "resposta" : "respostas"} · ${resumo(t)} · média de ${tokens(Math.round(novos / gastos.length))} novos por resposta`);
   }
   if (consumo?.locais) partes.push(`${consumo.locais} sem modelo`);
   const f = consumo?.fundo;

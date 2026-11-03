@@ -393,7 +393,7 @@ def test_painel_mostra_o_qr_como_imagem_e_exige_confirmacao_para_desconectar(
     assert acoes.desconectar_whatsapp({"confirmado": True})["aviso"] == "WhatsApp desconectado."
 
 
-def test_so_conversa_privada_entra_nunca_grupo_status_ou_canal() -> None:
+def test_privada_e_grupo_entram_status_e_canal_nunca() -> None:
     assert w.privado("5511999990000@s.whatsapp.net") and w.privado("123456789012@lid")
     for chat in (
         "120363000000000000@g.us",  # grupo
@@ -404,12 +404,19 @@ def test_so_conversa_privada_entra_nunca_grupo_status_ou_canal() -> None:
         "5511@s.whatsapp.net.evil",
     ):
         assert not w.privado(chat), chat
+    assert w.grupo("120363000000000000@g.us") and w.grupo("5511999990000-1500000000@g.us")
+    assert not w.grupo("5511999990000@s.whatsapp.net") and not w.grupo("x@g.us.evil")
     lote = _lote(
-        _msg(event_id="g:1", chat_jid="120363000000000000@g.us"),
+        _msg(event_id="g:1", chat_jid="120363000000000000@g.us", group_name=" Equipe  Vendas ",
+             occurred_at="2026-11-03T13:42:00Z"),
         _msg(event_id="b:1", chat_jid="status@broadcast"),
+        _msg(event_id="n:1", chat_jid="120363000000000000@newsletter"),
         _msg(event_id="p:1"),
-    )
-    assert [r.id for r in w.recebidas(lote)] == ["p:1"]
+    )  # fmt: skip
+    g, p = w.recebidas(lote)
+    assert (g.id, g.grupo, g.grupo_nome, g.nome) == ("g:1", True, "Equipe Vendas", "Ana Souza")
+    assert g.quando == 1793713320.0  # a hora da mensagem, não a da chegada
+    assert (p.id, p.grupo, p.quando) == ("p:1", False, 0.0)
 
 
 def test_envio_so_para_um_numero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

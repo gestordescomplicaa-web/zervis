@@ -1541,11 +1541,13 @@ def test_conversa_mostra_o_gasto_de_cada_resposta_e_do_dia(tmp_path: Path) -> No
             await _carregar(nav, endereco + "#conversa")
             await _esperar(nav, "!!document.querySelector('.fala.ze .gasto')")
             linha = await nav.avaliar("document.querySelector('.gasto summary').textContent")
-            assert linha == "19 mil tokens · 66% em cache", linha
+            # O novo separado do cache (03/11/2026): o total somado parecia 50 vezes o gasto real.
+            assert linha == "6,1 mil novos + 12 mil do cache · 485 gerados", linha
             dia = await nav.avaliar("document.getElementById('consumo-dia').textContent")
             assert dia == (
-                "Hoje: 1 resposta · 19 mil tokens · 66% em cache · média de 19 mil por "
-                "resposta · 3 sem modelo · segundo plano: 2,1 mil tokens em 2 tarefas"
+                "Hoje: 1 resposta · 6,1 mil novos + 12 mil do cache · 485 gerados · média de "
+                "6,6 mil novos por resposta · 3 sem modelo · segundo plano: 2,1 mil tokens em 2 "
+                "tarefas"
             ), dia
             await nav.avaliar("document.querySelector('.gasto summary').click()")
             detalhe = await nav.avaliar("document.querySelector('.gasto ul').innerText")

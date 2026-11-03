@@ -33,13 +33,16 @@ func jidLID(u string) types.JID { return types.JID{User: u, Server: types.Hidden
 
 // ---------- o que NÃO entra ----------
 
-func TestGrupoNaoEhCapturado(t *testing.T) {
-	// A memória do agente é por CONTATO. Mensagem de grupo é de muita gente ao
-	// mesmo tempo: misturar faria o agente atribuir a uma pessoa o que outra
-	// escreveu — pior do que não ter histórico nenhum.
-	evt := msgDe(jidPN("5581999@g.us"), jidPN("558199"), "A1", false, true)
-	if _, ok := deveCapturar(evt); ok {
-		t.Fatal("grupo não pode ser capturado")
+func TestGrupoEntraNoArquivoDoZe(t *testing.T) {
+	// Zérvis (ADR 0056): o grupo é guardado para o Zé lembrar e buscar. O agente
+	// continua só no privado (o lado Python separa), e responder em grupo é
+	// recusado no envio (conversaPrivada).
+	grupo := types.NewJID("120363000000000000", types.GroupServer)
+	if _, ok := deveCapturar(msgDe(grupo, jidPN("558199"), "A1", false, true)); !ok {
+		t.Fatal("o grupo entra no arquivo")
+	}
+	if _, err := conversaPrivada(grupo.String()); err == nil {
+		t.Fatal("responder em grupo continua proibido")
 	}
 }
 
@@ -200,12 +203,10 @@ func TestFilaSaiNaOrdemDeChegada(t *testing.T) {
 	}
 }
 
-func TestSoConversaPrivadaPassa(t *testing.T) {
+func TestSoPrivadaEGrupoPassam(t *testing.T) {
 	contato := types.NewJID("5581999990000", types.DefaultUserServer)
-	// Um grupo que não veio marcado como grupo continua de fora pelo servidor do chat.
-	grupo := types.NewJID("120363000000000000", types.GroupServer)
-	if _, ok := deveCapturar(msgDe(grupo, contato, "G1", false, false)); ok {
-		t.Fatal("chat de grupo não pode passar mesmo sem IsGroup")
+	if _, ok := deveCapturar(msgDe(types.JID{User: "x", Server: "call"}, contato, "G1", false, false)); ok {
+		t.Fatal("um tipo de conversa desconhecido fica de fora")
 	}
 	if _, ok := deveCapturar(msgDe(contato, contato, "P1", false, false)); !ok {
 		t.Fatal("conversa privada precisa passar")
