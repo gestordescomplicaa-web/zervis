@@ -5,7 +5,9 @@ import stat
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from zervis.avisos import falas_whatsapp as f
 from zervis.avisos import pendentes as pd
 from zervis.avisos import prioridade as pr
 from zervis.avisos.caixa import Caixa
@@ -14,6 +16,7 @@ from zervis.nucleo import estados as e
 from zervis.nucleo.servicos.atendimento import ServicoAtendimento
 
 T = 1_000_000.0
+FUSO = ZoneInfo("America/Sao_Paulo")
 ANA = "134230663237656@lid"
 
 
@@ -169,3 +172,54 @@ def test_ver_e_tirar_da_lista_pela_voz(tmp_path: Path) -> None:
     assert r["content"][0]["text"] == "João Silva saiu da lista de prioridade."
     assert _ferramenta(n, {"acao": "adicionar", "contato": "Carla"})["is_error"]
     assert _ferramenta(n, {"acao": "remover", "contato": "Carla"})["is_error"]
+
+
+ACOUGUE = "558133334444@s.whatsapp.net"
+PEDIDO = "PRODUTO(S): Acém sem osso, 6 kg x R$ 30,49 = R$ 182,94. Valor após a pesagem."
+
+
+def test_ja_vi_segura_o_contato_por_6_horas_sem_julgar_de_novo(tmp_path: Path) -> None:
+    """Caso de 03/11/2026: a loja que mandava o resumo do pedido virou lead três vezes, e o "já
+    vi" só calava a mensagem daquele momento."""
+    n = _nucleo(tmp_path)
+    _chega(n, "Oi", PEDIDO, ACOUGUE)
+    assert len(n.julgadas) == 1
+    n.servico._lead_qualificado("Oi", PEDIDO, "", ACOUGUE)  # o filtro tinha dito que era lead
+    assert n.servico.dispensar_lead(ACOUGUE) == "Certo, não lembro mais de Oi."
+    _chega(n, "Oi", "Chã de dentro: 2 peças, R$ 160", ACOUGUE)
+    assert len(n.julgadas) == 1  # nem julgou: "já vi" há pouco
+    assert n.leads.abertas() == []
+    n.relogio.t += pd.SEGURAR_S + 60
+    _chega(n, "Oi", "Seu pedido saiu para entrega", ACOUGUE)
+    assert len(n.julgadas) == 2  # passou o tempo: volta ao normal
+    assert [m["texto"] for m in n.caixa.mensagens(ACOUGUE)][-1] == "Seu pedido saiu para entrega"
+
+
+def test_silenciar_cala_de_vez_ate_voltar_a_avisar(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path)
+    _chega(n, "Oi", PEDIDO, ACOUGUE)
+    n.servico._lead_qualificado("Oi", PEDIDO, "", ACOUGUE)
+    falados = len(n.falados)
+    r = _ferramenta(n, {"acao": "silenciar", "contato": "Oi"})
+    assert r["content"][0]["text"] == (
+        "Certo, não aviso mais de Oi. As mensagens continuam no arquivo."
+    )
+    assert n.leads.abertas() == []  # o aviso aberto também parou
+    n.relogio.t += pd.SEGURAR_S + 60
+    _chega(n, "Oi", "Seu pedido saiu para entrega", ACOUGUE)
+    assert len(n.julgadas) == 1 and len(n.falados) == falados  # nada: nem julga, nem fala
+    assert len(n.caixa.mensagens(ACOUGUE)) == 2  # mas guarda
+    assert "Ninguém esperando" in f.esperando(n.caixa, FUSO, n.prioridade.calado)
+    assert "silenciado" in _ferramenta(n, {"acao": "ver"})["content"][0]["text"]
+    n.servico.responder_whatsapp(ACOUGUE, "Oi", "Obrigado!")
+    assert [v.motivo for v in n.prioridade.todos()] == ["silencio"]  # responder não descala
+    r = _ferramenta(n, {"acao": "remover", "contato": "Oi"})
+    assert r["content"][0]["text"] == "Voltei a avisar de Oi."
+    _chega(n, "Oi", "Chegou?", ACOUGUE)
+    assert len(n.julgadas) == 2
+
+
+def test_o_filtro_sabe_que_a_loja_do_seu_pedido_nao_e_lead() -> None:
+    from zervis.avisos.mensagens import SISTEMA
+
+    assert "pedido, uma compra ou um serviço que o próprio usuário contratou" in SISTEMA

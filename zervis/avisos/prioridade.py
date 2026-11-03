@@ -1,10 +1,12 @@
 """A lista de prioridade do WhatsApp (ADR 0055): os contatos que o Zé vigia em tempo real.
 
-Dois jeitos de entrar:
+Três jeitos de entrar:
 - **pedido**: "Zé, monitora a Ana" (ou um número). Fica até você dizer "não monitora mais a Ana";
   qualquer mensagem dela vira aviso, lida, com lembrete até você responder.
 - **resposta**: quando o Zé responde alguém por você, ele espera a resposta dessa pessoa por 24
   horas. A primeira mensagem dela vira aviso ("a Ana respondeu: ...") e a espera acaba.
+- **silêncio**: "não me avisa mais do açougue". Nada dele vira aviso, lembrete ou lead, até você
+  dizer "pode voltar a avisar"; as mensagens continuam no arquivo.
 
 Fica em `<estado>/whatsapp-prioridade.json` (0600). Só conversa privada chega até aqui.
 """
@@ -57,7 +59,7 @@ class Vigiado:
     nome: str
     chat: str = ""  # a conversa, quando já existe na caixa
     telefone: str = ""  # o número dito por voz, para quem ainda não escreveu
-    motivo: str = "pedido"  # pedido | resposta
+    motivo: str = "pedido"  # pedido | resposta | silencio (nunca avisar dele)
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
     desde: float = field(default_factory=time.time)
     ate: float = 0.0  # 0 = até você tirar
@@ -122,14 +124,28 @@ class Prioridade:
             self._gravar(lista)
             return v
 
+    def calado(self, chat: str, telefone: str = "") -> bool:
+        """Silenciado: não conta como "esperando resposta" nem vira aviso."""
+        return any(v.motivo == "silencio" and v.confere(chat, telefone) for v in self.todos())
+
+    def silenciar(self, nome: str, chat: str = "", telefone: str = "") -> Vigiado:
+        """ "Não me avisa mais dele": nenhum aviso, lembrete ou julgamento de lead, até você tirar.
+        As mensagens continuam no arquivo."""
+        with self._trava:
+            lista = [v for v in self._ler() if not v.confere(chat, digitos(telefone))]
+            v = Vigiado(nome_falado(nome), chat, digitos(telefone), "silencio", desde=self.agora())
+            lista.append(v)
+            self._gravar(lista)
+            return v
+
     def esperar_resposta(self, nome: str, chat: str) -> None:
         """O Zé mandou algo por você: espera a resposta por 24 horas (sem tirar quem já está na
         lista de vez)."""
         with self._trava:
             lista = self._ler()
             atual = next((v for v in lista if v.confere(chat, "")), None)
-            if atual is not None and atual.motivo == "pedido":
-                return
+            if atual is not None and atual.motivo in ("pedido", "silencio"):
+                return  # o de vez continua de vez; o silenciado continua calado
             lista = [v for v in lista if v is not atual]
             agora = self.agora()
             lista.append(

@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- WhatsApp: "não me avisa mais desse contato" silencia de vez (ele continua no arquivo, até "pode
+  voltar a avisar"); "já vi" segura o contato por 6 horas; e a loja mandando o resumo de um pedido
+  seu deixa de ser tratada como lead.
 - Conectar o Instagram: o resultado aparece embaixo do campo (antes, num aviso que sumia em 2 s), e
   colar o ID ou a chave secreta do app no lugar do token diz isso.
 - Instagram no Zé, só para análise: cole o token na página Redes sociais (antes Atendimento) e
