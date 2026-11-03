@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- O Zé como recepcionista do seu WhatsApp, pela voz: "quem me mandou mensagem?", "tem alguém
+  esperando resposta?", "o que a Ana disse?" e "responde para ela: ...", com o seu sim. Ele vê as
+  conversas privadas dos últimos 7 dias (grupo nunca), inclusive que chegou um áudio ou uma foto,
+  e responde na própria conversa, também a quem não mostra o número. Os dados ficam no
+  computador e somem sozinhos em 7 dias.
 - Responder pelo WhatsApp voltou a funcionar (pela voz e no agente de atendimento): com a versão
   nova do WhatsApp, o Zé mandava a resposta para um identificador errado. Quando o WhatsApp
   recusa um envio, o Zé diz o motivo em vez de "sem conexão".

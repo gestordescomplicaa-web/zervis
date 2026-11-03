@@ -78,6 +78,7 @@ class Recebida:
     texto: str
     de_mim: bool = False  # enviada por este número (pelo celular ou pelo próprio agente)
     chat: str = ""  # o JID da conversa (só conversa privada chega até aqui)
+    midia: str = ""  # áudio, foto...: só o tipo, nunca o arquivo (o texto é a legenda)
 
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
@@ -166,11 +167,12 @@ def numero(jid: str) -> str:
 
 
 def recebidas(corpo: Any) -> list[Recebida]:
-    """As mensagens de texto de um lote do WaCalls, recebidas e enviadas; mídia fica de fora."""
+    """As mensagens de um lote do WaCalls, recebidas e enviadas; da mídia, só o tipo e a
+    legenda (a caixa de entrada do Zé diz "ela mandou um áudio", ADR 0054)."""
     itens = corpo.get("mensagens") if isinstance(corpo, dict) else None
     saida = []
     for m in itens if isinstance(itens, list) else []:
-        if not isinstance(m, dict) or m.get("type") != "text":
+        if not isinstance(m, dict) or m.get("type") not in ("text", "media"):
             continue
         if m.get("direction") not in ("inbound", "outbound"):
             continue
@@ -178,12 +180,16 @@ def recebidas(corpo: Any) -> list[Recebida]:
         if not privado(chat):
             continue
         texto = str(m.get("content") or "").strip()
-        if not texto:
+        midia = ""
+        if m.get("type") == "media":
+            midia = re.sub(r"[^a-z]", "", str(m.get("media") or "other"))[:16] or "other"
+        elif not texto:
             continue
         telefone = str(m.get("phone") or "")
         nome = " ".join(str(m.get("push_name") or "").split()) or telefone or "um contato"
         de_mim = m.get("direction") == "outbound"
-        saida.append(Recebida(str(m.get("event_id") or ""), nome, telefone, texto, de_mim, chat))
+        ident = str(m.get("event_id") or "")
+        saida.append(Recebida(ident, nome, telefone, texto, de_mim, chat, midia))
     return saida
 
 
@@ -512,11 +518,16 @@ class WhatsApp:
         if not s.get("paired") and s.get("state") != "qr":
             self._api("POST", f"/api/sessions/{s['id']}/pair", {}, espera=15.0)
 
-    def enviar(self, telefone: str, texto: str, chave: str) -> str:
-        """Envia um texto ao número; devolve o id do evento (`<sessão>:<mensagem>`), o mesmo que
-        volta pelo receptor como mensagem enviada. A `chave` evita o envio em dobro."""
-        if not re.fullmatch(r"\d{8,15}", telefone):
+    def enviar(self, telefone: str, texto: str, chave: str, chat: str = "") -> str:
+        """Envia um texto ao número, ou direto à conversa privada (`chat`, o JID de onde a
+        mensagem veio, mesmo sem o telefone); devolve o id do evento (`<sessão>:<mensagem>`), o
+        mesmo que volta pelo receptor como mensagem enviada. A `chave` evita o envio em dobro."""
+        chat = re.sub(r":\d+@", "@", chat)  # a conversa, sem o aparelho
+        if chat and not privado(chat):
+            raise WhatsAppErro("Destino inválido.")  # nunca um grupo
+        if not chat and not re.fullmatch(r"\d{8,15}", telefone):
             raise WhatsAppErro("Destino inválido.")  # só um número: nunca um grupo
+        destino: dict[str, Any] = {"chat_jid": chat} if chat else {"phones": [telefone]}
         sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
         if not sessoes:
             raise WhatsAppErro("WhatsApp não conectado.")
@@ -526,7 +537,7 @@ class WhatsApp:
             f"/api/sessions/{sid}/messages",
             {
                 "kind": "atendimento_reply",
-                "phones": [telefone],
+                **destino,
                 "text": texto,
                 "idempotency_key": chave,
             },

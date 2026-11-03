@@ -61,3 +61,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0051](0051-eco-da-voz-remota.md) | O eco da voz remota sai no servidor: o cancelador do WebRTC tira do microfone do celular a fala do Zé na caixa de som | Em validação |
 | [0052](0052-objetos-3d-escolhidos-de-olho.md) | Objetos 3D: modelos oficiais da NASA, qualidade em cada achado e o Zé escolhendo pela prévia; a Imersão abre Draco | Em validação |
 | [0053](0053-leads-do-whatsapp-pela-voz.md) | Leads do WhatsApp pela voz: o Zé lê a mensagem, lembra até você responder, avisa no celular e responde ditado, com o seu sim | Em validação |
+| [0054](0054-whatsapp-do-ze-recepcionista.md) | O WhatsApp do Zé como recepcionista pela voz: a caixa de entrada das conversas privadas, ler, saber quem espera e responder ditado na conversa, com o seu sim | Em validação |

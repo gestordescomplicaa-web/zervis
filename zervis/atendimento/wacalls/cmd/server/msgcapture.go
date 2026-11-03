@@ -77,10 +77,11 @@ type mensagemNormalizada struct {
 	Direction  string `json:"direction"` // inbound | outbound
 	ChatJID    string `json:"chat_jid"`
 	SenderJID  string `json:"sender_jid"`
-	Phone      string `json:"phone"`     // forma discável, quando dá pra resolver
-	LID        string `json:"lid"`       // forma oculta, quando existe
-	PushName   string `json:"push_name"` // como a pessoa se identifica no WhatsApp
-	Type       string `json:"type"`      // text | media
+	Phone      string `json:"phone"`           // forma discável, quando dá pra resolver
+	LID        string `json:"lid"`             // forma oculta, quando existe
+	PushName   string `json:"push_name"`       // como a pessoa se identifica no WhatsApp
+	Type       string `json:"type"`            // text | media
+	Media      string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
 	Content    string `json:"content"`
 	OccurredAt string `json:"occurred_at"`
 }
@@ -104,6 +105,44 @@ func textoDaMensagem(evt *events.Message) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// tipoDaMidia diz o que veio, sem baixar nada: o Zé fala "ela mandou um áudio".
+func tipoDaMidia(evt *events.Message) string {
+	m := evt.Message
+	switch {
+	case m == nil:
+		return "other"
+	case m.GetAudioMessage() != nil:
+		return "audio"
+	case m.GetImageMessage() != nil:
+		return "image"
+	case m.GetVideoMessage() != nil:
+		return "video"
+	case m.GetDocumentMessage() != nil:
+		return "document"
+	case m.GetStickerMessage() != nil:
+		return "sticker"
+	}
+	return "other"
+}
+
+// legendaDaMidia é o texto que a pessoa escreveu junto da foto, do vídeo ou do documento.
+func legendaDaMidia(evt *events.Message) string {
+	m := evt.Message
+	if m == nil {
+		return ""
+	}
+	for _, legenda := range []string{
+		m.GetImageMessage().GetCaption(),
+		m.GetVideoMessage().GetCaption(),
+		m.GetDocumentMessage().GetCaption(),
+	} {
+		if t := strings.TrimSpace(legenda); t != "" {
+			return t
+		}
+	}
+	return ""
 }
 
 // identidades separa as duas formas do MESMO contato. O evento já traz o par:
@@ -194,12 +233,12 @@ func (s *Session) handleMessage(evt *events.Message) {
 	eventID = idEventoEscopado(s.id, eventID)
 
 	texto, ehTexto := textoDaMensagem(evt)
-	tipo := "text"
+	tipo, midia := "text", ""
 	if !ehTexto {
 		// Registra que houve algo, sem o conteúdo. Serve para a conversa não
 		// aparecer com buracos inexplicáveis ("ela mandou um áudio aqui").
-		tipo = "media"
-		texto = ""
+		tipo, midia = "media", tipoDaMidia(evt)
+		texto = legendaDaMidia(evt)
 	}
 	if len(texto) > textoMaxChars {
 		texto = texto[:textoMaxChars]
@@ -221,6 +260,7 @@ func (s *Session) handleMessage(evt *events.Message) {
 		LID:        lid,
 		PushName:   evt.Info.PushName,
 		Type:       tipo,
+		Media:      midia,
 		Content:    texto,
 		OccurredAt: evt.Info.Timestamp.UTC().Format(time.RFC3339),
 	}

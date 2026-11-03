@@ -2,6 +2,8 @@
 
 - Data: 03/11/2026
 - Status: **Em validação** (testado com o WhatsApp simulado; falta o número de verdade).
+- Ampliado pelo [ADR 0054](0054-whatsapp-do-ze-recepcionista.md): as conversas todas, e a
+  resposta vai para a conversa (sem precisar do número).
 - Continua o [ADR 0030](0030-assistente-de-mensagens-whatsapp.md), com o WhatsApp do Zé
   ([ADR 0031](0031-atendimento-whatsapp-e-telefonia.md)) como fonte.
 

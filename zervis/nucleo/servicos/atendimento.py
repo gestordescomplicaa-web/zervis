@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 
 class ContextoAtendimento(Protocol):
     avisos_lidos: Any
+    caixa: Any
     central: Any
     cfg: Any
     eventos: Any
@@ -72,21 +73,27 @@ class ServicoAtendimento:
             fala = pendentes.anuncio(p, usuario.PERFIL.nome)
             self._falar_lead(fala, f"Você pediu para ouvir a mensagem de {p.nome}.", pedido=True)
 
-    def responder_lead(self, ident: str, texto: str) -> str:
-        """A resposta ditada e já aprovada pela voz, pelo WhatsApp da Central. Bloqueia (rede):
-        a ferramenta chama numa thread. A falha sobe como RuntimeError, com a frase da tela."""
-        p = self.n.leads.achar(ident)
-        if p is None or not p.telefone:
-            raise RuntimeError("Esse lead não está mais na lista.")
-        chave = hashlib.sha256(f"{p.id}:{texto}".encode()).hexdigest()[:32]  # sem envio em dobro
+    def responder_whatsapp(self, chat: str, nome: str, texto: str) -> str:
+        """A resposta ditada e já aprovada pela voz, direto na conversa (ADR 0054), pelo
+        WhatsApp da Central. Bloqueia (rede): a ferramenta chama numa thread. A falha sobe como
+        RuntimeError, com a frase da tela."""
+        # Sem envio em dobro na mesma vez de responder: a chave muda quando ele escreve de novo.
+        conversa = self.n.caixa.achar(chat)
+        dele = [m for m in conversa.mensagens if not m.get("de_mim")] if conversa else []
+        vez = max((m.get("quando", 0) for m in dele), default=0)
+        chave = hashlib.sha256(f"{chat}:{vez}:{texto}".encode()).hexdigest()[:32]
         try:
-            self.n.central.enviar(p.telefone, texto, chave)
+            self.n.central.enviar(texto, chave, chat=chat)
         except cliente.CentralErro as erro:
             raise RuntimeError(f"Não enviei: {erro}") from erro
-        self.n.leads.responder(p.chat)  # a volta da mensagem pela Central também encerraria
-        atividade.PADRAO.registrar("execucao", f"WhatsApp: resposta a {p.nome}", texto=texto)
-        self._leads_ao_celular()
-        return f"Enviado para {p.nome}."
+        self._lead_respondido(chat)  # a volta da mensagem pela Central também encerraria
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: resposta a {nome}", texto=texto)
+        return f"Enviado para {nome}."
+
+    def estado_whatsapp(self) -> dict[str, Any]:
+        """Conectado ou não, e o número (bloqueia: pergunta à Central)."""
+        tela: dict[str, Any] = self.n.central.para_tela()
+        return tela
 
     def dispensar_lead(self, ident: str) -> str:
         """O "Já vi" (do celular ou pela voz): para de lembrar sem responder."""
@@ -144,18 +151,19 @@ class ServicoAtendimento:
         if evento.get("tipo") == "passou":
             self.n._atendente_passou(str(evento.get("nome", "")), str(evento.get("motivo", "")))
         elif evento.get("tipo") == "mensagem":
-            self.n.mensagens.receber(
-                str(evento.get("nome", "")),
-                str(evento.get("texto", "")),
-                str(evento.get("telefone", "")),
-                str(evento.get("chat", "")),
-            )
+            nome, texto = str(evento.get("nome", "")), str(evento.get("texto", ""))
+            telefone, chat = str(evento.get("telefone", "")), str(evento.get("chat", ""))
+            midia = str(evento.get("midia", ""))
+            if (caixa := getattr(self.n, "caixa", None)) is not None:
+                caixa.receber(nome, texto, telefone, chat, midia, _quando(evento))
+            if texto and not evento.get("repassado"):  # só o texto é julgado; o antigo, não
+                self.n.mensagens.receber(nome, texto, telefone, chat)
         elif evento.get("tipo") == "respondida":
-            quando = evento.get("quando")
-            self._lead_respondido(
-                str(evento.get("chat", "")),
-                float(quando) if isinstance(quando, int | float) else 0.0,
-            )
+            chat = str(evento.get("chat", ""))
+            if (caixa := getattr(self.n, "caixa", None)) is not None:
+                texto, midia = str(evento.get("texto", "")), str(evento.get("midia", ""))
+                caixa.enviada(chat, texto, midia, _quando(evento))
+            self._lead_respondido(chat, _quando(evento))
         elif evento.get("tipo") == "ligacao":
             telefone = str(evento.get("telefone", "")) or "número oculto"
             atividade.PADRAO.registrar(
@@ -219,3 +227,8 @@ class ServicoAtendimento:
             return "Avisos do WhatsApp ligados."
         self.n.mensagens.parar()
         return "Avisos do WhatsApp desligados."
+
+
+def _quando(evento: dict[str, Any]) -> float:
+    quando = evento.get("quando")
+    return float(quando) if isinstance(quando, int | float) else 0.0

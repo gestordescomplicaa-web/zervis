@@ -115,16 +115,10 @@ class Central:
         criar_motor: Callable[[], agente.Motor],
         wa: whatsapp.WhatsApp | None = None,
         atendente: agente.Atendente | None = None,
-        avisos_ligados: Callable[[], bool] | None = None,
         motor_de_voz: Callable[[], Any] | None = None,
         chave_deepgram: Callable[[], str | None] | None = None,
     ) -> None:
         self.versao = versao()  # a do código com que esta Central subiu
-        if avisos_ligados is None:
-            from zervis.avisos import mensagens  # só o arquivo da escolha; nada do núcleo
-
-            avisos_ligados = mensagens.escolhido
-        self.avisos_ligados = avisos_ligados
         self.motor_de_voz = motor_de_voz or _motor_de_voz
         self.chave_deepgram = chave_deepgram or _chave_deepgram
         self.ligacoes: set[str] = set()  # as chamadas em andamento
@@ -132,10 +126,10 @@ class Central:
         # iniciado esperando a próxima ligação; a ligação começa sem esperar nenhum dos dois.
         self.saudacao: tuple[str, bytes] | None = None
         self.reserva: tuple[Any, str] | None = None  # (motor aquecido, o que ele recebeu)
+        # Conectar o WhatsApp ao Zé é a escolha de deixá-lo ler as conversas privadas (a caixa de
+        # entrada, ADR 0054): a captura vale enquanto ele está conectado, com ou sem o agente.
         self.whatsapp = wa or whatsapp.WhatsApp(
-            self._recebida,
-            lambda: self.avisos_ligados() or agente.ler().ligado,
-            ao_chamar=self._chamada_chegou,
+            self._recebida, lambda: True, ao_chamar=self._chamada_chegou
         )
         self.atendente = atendente or agente.Atendente(
             criar_motor, self.whatsapp.enviar, self._passou, perfil=projeto.perfil
@@ -146,14 +140,16 @@ class Central:
     # --- o que chega do WhatsApp e do agente -------------------------------------------------
 
     def _recebida(self, r: whatsapp.Recebida) -> None:
-        if self.avisos_ligados():
-            if r.de_mim:  # a sua resposta encerra a pendência do lead (ADR 0053)
-                self.eventos.publicar("respondida", chat=r.chat)
-            else:
-                self.eventos.publicar(
-                    "mensagem", nome=r.nome, texto=r.texto, telefone=r.telefone, chat=r.chat
-                )
-        self.atendente.receber(r)
+        """Para a caixa de entrada do Zé (ADR 0054), tudo; para o agente, só o texto."""
+        if r.de_mim:  # a sua resposta: na caixa, e encerra a pendência do lead (ADR 0053)
+            self.eventos.publicar("respondida", chat=r.chat, texto=r.texto, midia=r.midia)
+        else:
+            self.eventos.publicar(
+                "mensagem", nome=r.nome, texto=r.texto, telefone=r.telefone, chat=r.chat,
+                midia=r.midia,
+            )  # fmt: skip
+        if not r.midia:
+            self.atendente.receber(r)
 
     def _passou(self, nome: str, motivo: str) -> None:
         self.eventos.publicar("passou", nome=nome, motivo=motivo)
@@ -286,7 +282,10 @@ class Central:
             if not 0 < len(texto) <= TEXTO_ENVIADO_MAXIMO:
                 return 400, {"erro": "Texto vazio ou longo demais."}
             ident = self.whatsapp.enviar(
-                str(corpo.get("telefone", "")), texto, str(corpo.get("chave", ""))[:80]
+                str(corpo.get("telefone", "")),
+                texto,
+                str(corpo.get("chave", ""))[:80],
+                chat=str(corpo.get("chat", "")),
             )
             return 200, {"id": ident}
         if rota == ("GET", "/pausados"):
