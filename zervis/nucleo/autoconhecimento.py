@@ -62,7 +62,7 @@ GRUPOS = {
     "pesquisa": ("Pesquisa na internet", "pesquisa notícias e assuntos, com as fontes"),
     "profunda": (
         "Pesquisa profunda",
-        "levanta empresas, mercado e concorrentes lendo as páginas, consulta CNPJ, vigia as fontes",
+        "levanta empresas e mercado lendo as páginas, guarda e reabre pesquisas, consulta CNPJ",
     ),
     "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
     "imagens": ("Imagens reais", "mostra fotos e vídeos de verdade e prints de páginas na tela"),

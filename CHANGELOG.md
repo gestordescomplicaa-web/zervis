@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Pesquisas guardadas: toda pesquisa do Zé (a profunda e a resumida) fica guardada no seu
+  computador com as fontes. A página Pesquisas do painel lista todas, busca ("embalagens") e abre
+  cada uma com os links e os trechos lidos, também no celular. Pela voz: "o que achamos sobre
+  embalagens?" ou "me mostra a pesquisa dos concorrentes" responde da pesquisa guardada, sem
+  pesquisar de novo.
+
 - Pesquisa profunda: "pesquisa a fundo os concorrentes da loja X", "levanta tudo sobre esse
   fornecedor", "qual o CNPJ e quem são os sócios?". O Zé busca de vários jeitos no buscador próprio
   dele (o SearXNG, gratuito, rodando no seu computador), lê as melhores páginas e responde com as

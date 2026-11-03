@@ -1,7 +1,8 @@
 """A pesquisa profunda (ADR 0059): buscar de vários jeitos, ler as páginas e o cadastro de uma
 empresa, e o vigia das fontes de fora. Só lê a internet (pelo buscador próprio, pela trava de
-rede, pelas APIs públicas do CNPJ) e só grava o relatório na pasta do Zé, então passa sem
-perguntar; as travas estão em `zervis/pesquisa/`."""
+rede, pelas APIs públicas do CNPJ) e só grava a pesquisa na pasta do Zé, então passa sem
+perguntar; as travas estão em `zervis/pesquisa/`. As pesquisas guardadas (ADR 0060) se reabrem
+pela voz, sem pesquisar de novo."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -12,7 +13,7 @@ from claude_agent_sdk import SdkMcpTool, tool
 from zervis.cerebro import navegador
 from zervis.cerebro.ferramentas.comum import _erro, _texto
 from zervis.cerebro.pesquisa import PesquisaErro
-from zervis.pesquisa import cnpj, leitor, profunda, saude
+from zervis.pesquisa import cnpj, guardadas, leitor, profunda, saude
 
 FECHO = (
     'Fale a resposta e o porquê; feche com "Fontes:" e até três links (vão para a tela, não são '
@@ -24,9 +25,11 @@ def ferramentas(
     buscador: profunda.Busca | None,
     vigia: saude.Vigia | None = None,
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
+    pesquisas: guardadas.Guardadas | None = None,
 ) -> list[SdkMcpTool[Any]]:
     if buscador is None:
         return []
+    pesquisas = pesquisas or guardadas.Guardadas()
 
     @tool(
         "pesquisa_profunda",
@@ -66,7 +69,7 @@ def ferramentas(
             paginas = profunda.PAGINAS
         try:
             achado = await asyncio.to_thread(
-                profunda.pesquisar, pergunta, consultas, buscador, paginas
+                profunda.pesquisar, pergunta, consultas, buscador, paginas, guardadas=pesquisas
             )
             return _texto({**achado, "dica": FECHO})
         except profunda.ProfundaErro as erro:
@@ -123,7 +126,47 @@ def ferramentas(
         except cnpj.CnpjErro as erro:
             return _erro(erro)
 
-    lista = [pesquisa_profunda, pagina_ler, empresa_cnpj]
+    @tool(
+        "pesquisas_guardadas",
+        "As pesquisas que você já fez (a profunda e a resumida), guardadas com as fontes: "
+        '"o que achamos sobre embalagens?", "me mostra a pesquisa dos concorrentes", "quais '
+        'pesquisas eu fiz essa semana?". Com busca, as que falam disso; sem, as mais novas. '
+        "Antes de pesquisar de novo algo que o usuário diz que já pesquisou, olhe aqui. Abra uma "
+        "com pesquisa_guardada.",
+        {
+            "type": "object",
+            "properties": {"busca": {"type": "string", "description": "embalagens, concorrentes"}},
+        },
+    )
+    async def pesquisas_guardadas(args: dict[str, Any]) -> dict[str, Any]:
+        achadas = await asyncio.to_thread(pesquisas.listar, str(args.get("busca", "")), 10)
+        if not achadas:
+            return _texto({"pesquisas": [], "dica": "nenhuma guardada com isso"})
+        return _texto({"pesquisas": [{**p, "em": guardadas.quando(p["em"])} for p in achadas]})
+
+    @tool(
+        "pesquisa_guardada",
+        "Abre uma pesquisa guardada (pelo id de pesquisas_guardadas): a pergunta, a data, as "
+        "fontes com os trechos lidos, ou o resumo. Responda dela, dizendo de quando é; se for "
+        "antiga para o assunto (preço, notícia), ofereça pesquisar de novo. A página Pesquisas do "
+        "painel mostra a mesma, com os links.",
+        {
+            "type": "object",
+            "properties": {"id": {"type": "string", "description": "20261103-191500-a1b2c3"}},
+            "required": ["id"],
+        },
+    )
+    async def pesquisa_guardada(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            p = await asyncio.to_thread(pesquisas.ler, str(args.get("id", "")))
+        except ValueError as erro:
+            return _erro(erro)
+        aberta = {k: v for k, v in p.items() if k not in ("outros_resultados", "em")}
+        return _texto({**aberta, "em": guardadas.quando(p.get("em", 0)), "dica": FECHO})
+
+    lista = [
+        pesquisa_profunda, pagina_ler, empresa_cnpj, pesquisas_guardadas, pesquisa_guardada,
+    ]  # fmt: skip
     if vigia is None:
         return lista
 

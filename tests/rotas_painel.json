@@ -21,7 +21,8 @@
     "pastas",
     "conectores",
     "atendimento",
-    "atualizacoes"
+    "atualizacoes",
+    "pesquisas"
   ],
   "escritas": [
     "cerebro",
@@ -63,6 +64,9 @@
     "whatsapp/conectar",
     "instagram/conectar",
     "instagram/desconectar",
+    "pesquisas/buscar",
+    "pesquisas/ler",
+    "pesquisas/apagar",
     "whatsapp/desconectar",
     "atendente/salvar",
     "atendente/testar",

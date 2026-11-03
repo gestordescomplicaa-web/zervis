@@ -21,6 +21,7 @@ from zervis.portal.acoes.inicio import AcoesInicio
 from zervis.portal.acoes.melhorias import AcoesMelhorias
 from zervis.portal.acoes.memoria import AcoesMemoria
 from zervis.portal.acoes.pagina import Servicos
+from zervis.portal.acoes.pesquisas import AcoesPesquisas
 from zervis.portal.acoes.sessoes import AcoesSessoes
 from zervis.portal.acoes.voz import AcoesVoz
 from zervis.portal.servidor import Escrita, Leitura, PedidoInvalido
@@ -48,6 +49,7 @@ class Acoes:
             AcoesConectores,
             AcoesInicio,
             AcoesAtualizacoes,
+            AcoesPesquisas,
         ):
             pagina = tipo(
                 self, Servicos({nome: partial(getattr, nucleo, nome) for nome in tipo.dependencias})
@@ -90,6 +92,7 @@ class Acoes:
             "conectores": self.conectores,
             "atendimento": self.atendimento,
             "atualizacoes": self.atualizacoes,
+            "pesquisas": self.lista_de_pesquisas,
         }
 
     def escritas(self) -> dict[str, Escrita]:
@@ -133,6 +136,9 @@ class Acoes:
             "whatsapp/conectar": self.conectar_whatsapp,
             "instagram/conectar": self.conectar_instagram,
             "instagram/desconectar": self.desconectar_instagram,
+            "pesquisas/buscar": self.buscar_pesquisas,
+            "pesquisas/ler": self.ler_pesquisa,
+            "pesquisas/apagar": self.apagar_pesquisa,
             "whatsapp/desconectar": self.desconectar_whatsapp,
             "atendente/salvar": self.salvar_atendente,
             "atendente/testar": self.testar_atendente,

@@ -24,6 +24,7 @@ from zervis.imersivo import capturas
 from zervis.pesquisa import buscador as bu
 from zervis.pesquisa import cnpj, leitor, profunda, saude
 from zervis.pesquisa.buscador import Resultado
+from zervis.pesquisa.guardadas import Guardadas
 
 ARTIGO = (
     "<html><head><title>Loja X abre filial</title></head><body><nav>Menu Entrar Carrinho</nav>"
@@ -354,7 +355,7 @@ def test_pesquisa_le_as_melhores_no_maximo_duas_por_site_e_grava_o_relatorio(
         buscador,
         paginas=3,
         ler=ler,
-        pasta=tmp_path,
+        guardadas=Guardadas(tmp_path),
         guardar=guardar,
     )
     assert buscador.consultas.count("loja x vagas") == 1  # a repetida não roda de novo
@@ -372,11 +373,11 @@ def test_pesquisa_le_as_melhores_no_maximo_duas_por_site_e_grava_o_relatorio(
         "https://g1.com/3",
         "https://quebrado.com/x",
     }
-    relatorio = (tmp_path / r["relatorio"]).read_text()
+    guardada = Guardadas(tmp_path).ler(r["guardada"])
     assert (
-        relatorio.startswith("# Quantas vagas a Loja X abriu?")
-        and "https://jornal.com/a" in relatorio
+        guardada["pergunta"] == "Quantas vagas a Loja X abriu?" and guardada["tipo"] == "profunda"
     )
+    assert guardada["fontes"][1]["url"] == "https://jornal.com/a"
 
 
 def test_sem_buscador_a_pesquisa_falha_e_a_ferramenta_usa_a_reserva(tmp_path: Path) -> None:
@@ -384,7 +385,7 @@ def test_sem_buscador_a_pesquisa_falha_e_a_ferramenta_usa_a_reserva(tmp_path: Pa
         {"x": bu.BuscadorErro("o SearXNG não respondeu"), "pergunta x": bu.BuscadorErro("idem")}
     )
     with pytest.raises(profunda.ProfundaErro, match="não respondeu"):
-        profunda.pesquisar("pergunta x", ["x"], caido, pasta=tmp_path)
+        profunda.pesquisar("pergunta x", ["x"], caido, guardadas=Guardadas(tmp_path))
     pedidos: list[str] = []
 
     async def pesquisar(pedido: str) -> str:
@@ -418,7 +419,10 @@ def test_habilidade_nativa_e_livre() -> None:
         assert f"mcp__jarvis__{nome}" in LIVRES
     vigia = saude.Vigia(dict)
     nomes = [t.name for t in ferramentas_profunda.ferramentas(BuscadorFalso({}), vigia)]
-    assert nomes == ["pesquisa_profunda", "pagina_ler", "empresa_cnpj", "fontes_saude"]
+    assert nomes == [
+        "pesquisa_profunda", "pagina_ler", "empresa_cnpj", "pesquisas_guardadas",
+        "pesquisa_guardada", "fontes_saude",
+    ]  # fmt: skip
     assert ferramentas_profunda.ferramentas(None) == []
 
 

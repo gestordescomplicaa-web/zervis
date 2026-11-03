@@ -6,7 +6,7 @@ o material: as consultas rodam juntas no SearXNG do Zé, os resultados se juntam
 achado por mais de uma consulta ou buscador sobe), no máximo duas páginas por site, e as primeiras
 são lidas ao mesmo tempo pelo leitor. De cada página vão os trechos com mais palavras da pergunta,
 escolhidos aqui, sem gastar token; a leitura inteira fica guardada para continuar com
-`navegador_continuar`. O relatório vai para `DADOS/pesquisas/`.
+`navegador_continuar`. A pesquisa fica guardada (`guardadas.py`, ADR 0060).
 
 Para empresas, mercado, concorrentes, fornecedores e figuras públicas. Dossiê de pessoa comum,
 não (regra da persona).
@@ -15,22 +15,19 @@ não (regra da persona).
 import concurrent.futures
 import logging
 import re
-import time
 import unicodedata
 import urllib.parse
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Protocol
 
-from zervis import lugares
 from zervis.cerebro import navegador
 from zervis.pesquisa import leitor
 from zervis.pesquisa.buscador import BuscadorErro, Resultado
+from zervis.pesquisa.guardadas import Guardadas
 
 log = logging.getLogger(__name__)
 
-PASTA = lugares.DADOS / "pesquisas"
 CONSULTAS_MAX = 4
 PAGINAS = 5
 POR_SITE = 2
@@ -167,28 +164,13 @@ def _ler_varias(
     return lidas[:quantas]
 
 
-def _relatorio(pergunta: str, fontes: list[Fonte], pasta: Path) -> str:
-    nome = time.strftime("%Y-%m-%d-%H%M%S-") + re.sub(r"\W+", "-", _sem_acento(pergunta))[:50]
-    linhas = [f"# {pergunta}", "", time.strftime("Pesquisado em %d/%m/%Y %H:%M."), ""]
-    for f in fontes:
-        linhas += [f"## [{f.n}] {f.titulo or f.site}", f.url, ""]
-        linhas += [f"> {t}\n" for t in f.trechos]
-    try:
-        pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
-        (pasta / f"{nome.strip('-')}.md").write_text("\n".join(linhas))
-    except OSError as erro:
-        log.warning("profunda: relatório não gravado (%s)", erro)
-        return ""
-    return f"{nome.strip('-')}.md"
-
-
 def pesquisar(
     pergunta: str,
     consultas: list[str],
     buscador: Busca,
     paginas: int = PAGINAS,
     ler: Callable[[str], leitor.Pagina] = leitor.ler,
-    pasta: Path = PASTA,
+    guardadas: Guardadas | None = None,
     guardar: Callable[[str], str] = navegador.guardar,
 ) -> dict[str, Any]:
     """As fontes lidas, cada uma com os trechos que respondem, e o resto do que a busca achou."""
@@ -230,10 +212,11 @@ def pesquisar(
         for r in achados
         if chave(r.url) not in usados
     ][:8]
-    return {
+    achado = {
         "pergunta": pergunta,
         "consultas": lista[:CONSULTAS_MAX],
         "fontes": [{k: v for k, v in f.__dict__.items() if v} for f in fontes],
         "outros_resultados": outros,
-        "relatorio": _relatorio(pergunta, fontes, pasta),
     }
+    guardada = (guardadas or Guardadas()).gravar(achado)
+    return {**achado, "guardada": guardada}

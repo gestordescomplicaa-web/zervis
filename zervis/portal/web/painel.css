@@ -568,3 +568,9 @@ body.manutencao .marca strong::after { content: "Manutenção"; display: block; 
 .novidades li { line-height: 1.45; }
 .passos-fixo { margin: 10px 0 12px; padding-left: 20px; display: grid; gap: 6px; line-height: 1.45; }
 #fixo-detalhes textarea { width: 100%; font-family: var(--mono, monospace); }
+/* Pesquisas (ADR 0060): as fontes de uma pesquisa guardada e os trechos lidos */
+.fonte-pesquisa { padding: 12px 0; border-top: 1px solid var(--borda); }
+.fonte-pesquisa:first-of-type { border-top: 0; padding-top: 0; }
+.fonte-pesquisa .titulo-fonte { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+blockquote.trecho { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid var(--borda-forte);
+  background: rgb(70 217 222 / .05); border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }

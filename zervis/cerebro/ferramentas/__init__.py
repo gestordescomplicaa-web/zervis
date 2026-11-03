@@ -43,6 +43,7 @@ from zervis.memoria.curta import Memoria, MemoriaErro
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.sessoes import Sessoes
 from zervis.pesquisa.buscador import Buscador
+from zervis.pesquisa.guardadas import Guardadas
 from zervis.pesquisa.saude import Vigia
 from zervis.redes.instagram import Instagram
 from zervis.rosto.tela import Tela
@@ -87,6 +88,8 @@ LEITURA = [
     "pesquisa_profunda",  # só lê a internet pelo buscador próprio e a trava (ADR 0059)
     "pagina_ler",
     "empresa_cnpj",  # só lê o cadastro público da Receita
+    "pesquisas_guardadas",  # só lê as pesquisas já feitas (ADR 0060)
+    "pesquisa_guardada",
     "fontes_saude",  # só testa as fontes com pedidos pequenos
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
@@ -168,12 +171,13 @@ def montar(
     instagram: Instagram | None = None,
     buscador: Buscador | None = None,
     vigia: Vigia | None = None,
+    pesquisas: Guardadas | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
-        pesquisar, acervo, leads, instagram, buscador, vigia,
+        pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -195,6 +199,7 @@ def por_grupo(
     instagram: Instagram | None = None,
     buscador: Buscador | None = None,
     vigia: Vigia | None = None,
+    pesquisas: Guardadas | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -210,7 +215,7 @@ def por_grupo(
         "atualizacoes": g_atualizacoes.ferramentas(),
         "sobre": g_sobre.ferramentas(sobre),
         "pesquisa": g_pesquisa.ferramentas(pesquisar),
-        "profunda": g_profunda.ferramentas(buscador, vigia, pesquisar),
+        "profunda": g_profunda.ferramentas(buscador, vigia, pesquisar, pesquisas),
         "modelos": g_modelos.ferramentas(acervo, tela),
         "imagens": g_imagens.ferramentas(acervo),
         "whatsapp": g_whatsapp.ferramentas(leads),
