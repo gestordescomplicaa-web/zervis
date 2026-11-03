@@ -187,9 +187,25 @@ def test_central_desligada_mostra_o_estado_local(
 ) -> None:
     monkeypatch.setattr(wa_mod, "escolhido", lambda: False)
     monkeypatch.setattr(wa_mod, "go", lambda: "/usr/bin/go")
-    ze = cl.Cliente(lambda e: None, LancadorFalso(tmp_path, tmp_path / "e", tmp_path / "t"),  # type: ignore[arg-type]
-                    tmp_path / "e", tmp_path / "t")  # fmt: skip
+    lancador = LancadorFalso(tmp_path, tmp_path / "e", tmp_path / "t")
+    ze = cl.Cliente(lambda e: None, lancador, tmp_path / "e", tmp_path / "t")  # type: ignore[arg-type]
     assert ze.para_tela() == {"estado": "desligado", "falha": ""} and not ze.whatsapp_ativo
     assert ze.pausados() == []
-    monkeypatch.setattr(wa_mod, "escolhido", lambda: True)
-    assert ze.para_tela() == {"estado": "iniciando"}
+    assert lancador.subidas == 0  # desligado por escolha: a Central fica parada
+    try:
+        # Caso de 03/11/2026: a Central parou com o WhatsApp escolhido, e o painel ficava em
+        # "Iniciando" até o Zé reiniciar. Agora ela volta sozinha, uma vez a cada 30 s.
+        monkeypatch.setattr(wa_mod, "escolhido", lambda: True)
+        assert ze.para_tela() == {"estado": "iniciando"}
+        fim = time.monotonic() + 5
+        while lancador.subidas == 0 or ze.para_tela()["estado"] == "iniciando":
+            assert time.monotonic() < fim
+            time.sleep(0.02)
+        assert lancador.subidas == 1
+        lancador.parar()
+        assert ze.para_tela() == {"estado": "iniciando"}
+        time.sleep(0.2)
+        assert lancador.subidas == 1  # dentro dos 30 s: não insiste
+    finally:
+        ze.parar()
+        lancador.parar()

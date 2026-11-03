@@ -55,8 +55,8 @@ function cartaoWhatsapp(w) {
     corpo = item("", `Número conectado: <span class="mono">+${esc(w.numero)}</span>`, botao("Desconectar", "whatsapp-desconectar", "", "perigo"));
   } else if (w.estado === "aguardando") {
     corpo = `<div class="acesso-qr">${w.qr}<div class="campos"><p>No celular, abra o WhatsApp › Aparelhos conectados › Conectar aparelho e leia o código.</p>
-      <p class="nota">O código se renova sozinho.</p></div></div>
-      <div class="botoes">${botao("Cancelar", "whatsapp-desconectar", "", "discreta")}</div>`;
+      <p class="nota">O código se renova sozinho.</p>
+      <div class="botoes">${botao("Cancelar", "whatsapp-desconectar", "", "discreta")}</div></div></div>`;
   } else if (MUDANDO.includes(w.estado)) {
     corpo = sub(w.estado === "preparando" ? "Preparando a conexão. Na primeira vez leva alguns minutos." : "Um momento.");
   } else if (w.estado === "indisponivel") {
