@@ -91,6 +91,18 @@ def lembrete(abertas: list[Pendente], quem_usa: str) -> str:
     )
 
 
+def para_o_celular(p: Pendente) -> dict[str, Any]:
+    """O que o app de voz mostra na notificação (e o número, para abrir a conversa)."""
+    return {
+        "id": p.id,
+        "nome": p.nome,
+        "texto": p.texto,
+        "telefone": p.telefone,
+        "lembretes": p.lembretes,
+        "chegou": round(p.chegou * 1000),
+    }
+
+
 class Pendentes:
     def __init__(self, arquivo: Path = ARQUIVO, agora: Callable[[], float] = time.time) -> None:
         self.arquivo = arquivo

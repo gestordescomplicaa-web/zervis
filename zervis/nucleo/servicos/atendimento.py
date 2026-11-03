@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 class ContextoAtendimento(Protocol):
-    avisos_resumidos: Any
+    avisos_lidos: Any
     central: Any
     cfg: Any
     eventos: Any
@@ -39,17 +39,46 @@ class ServicoAtendimento:
 
     # --- leads esperando resposta (ADR 0053) ---------------------------------------------------
 
+    def _falar_lead(self, fala: str, contexto: str, pedido: bool = False) -> None:
+        """A fala leva o texto do lead, inteira; o contexto do cérebro, só o nome: o texto é de
+        terceiros e não entra na conversa como se fosse do Zé."""
+        lidos = self.n.avisos_lidos
+        lidos[fala] = contexto
+        while len(lidos) > 20:
+            del lidos[next(iter(lidos))]
+        self.n.eventos.put(e.Aviso(fala, pedido=pedido))
+
     def _avisar_lead(self, fala: str, tela: str, contexto: str) -> None:
-        """A fala leva o texto do lead; a tela (e a linha do tempo) e o contexto do cérebro, só
-        o nome: o texto é de terceiros e não entra na conversa como se fosse do Zé."""
         if tela:
-            self.n._na_linha("aviso", tela)
+            self.n._na_linha("aviso", tela)  # a tela e a linha do tempo, só com o nome
         if modo_fala.falar(self.n.modo_fala, "urgente"):
-            resumidos = self.n.avisos_resumidos
-            resumidos[fala] = contexto
-            while len(resumidos) > 20:
-                del resumidos[next(iter(resumidos))]
-            self.n.eventos.put(e.Aviso(fala))
+            self._falar_lead(fala, contexto)
+        self._leads_ao_celular()
+
+    def _leads_ao_celular(self) -> None:
+        """Os leads esperando resposta, inteiros, para o app de voz conectado: ele mostra uma
+        notificação por lead, toca de novo no lembrete e apaga a que foi respondida."""
+        fonte = getattr(self.n, "_fonte", None)
+        if fonte is None or not getattr(fonte, "do_app", False):
+            return
+        leads = [pendentes.para_o_celular(p) for p in self.n.leads.abertas()]
+        fonte.controle(tipo="whatsapp", leads=leads)
+
+    def ouvir_lead(self, ident: str) -> None:
+        """O "Ouvir" do celular: a mensagem inteira, falada mesmo no Silencioso (você pediu)."""
+        p = self.n.leads.achar(ident)
+        if p is not None:
+            fala = pendentes.anuncio(p, usuario.PERFIL.nome)
+            self._falar_lead(fala, f"Você pediu para ouvir a mensagem de {p.nome}.", pedido=True)
+
+    def dispensar_lead(self, ident: str) -> str:
+        """O "Já vi" (do celular ou pela voz): para de lembrar sem responder."""
+        p = self.n.leads.dispensar(ident)
+        if p is None:
+            return "Nada esperando resposta com esse nome."
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: {p.nome} dispensado")
+        self._leads_ao_celular()
+        return f"Certo, não lembro mais de {p.nome}."
 
     def _lead_qualificado(self, nome: str, texto: str, telefone: str, chat: str) -> None:
         p = self.n.leads.novo(nome, texto, chat, telefone)
@@ -62,12 +91,16 @@ class ServicoAtendimento:
 
     def _continuar_lead(self, chat: str, texto: str) -> bool:
         """O contato já espera resposta: a mensagem nova junta-se à pendência, sem julgar."""
-        return self.n.leads.continuar(chat, texto) is not None
+        if self.n.leads.continuar(chat, texto) is None:
+            return False
+        self._leads_ao_celular()  # o texto novo aparece na notificação, sem tocar de novo
+        return True
 
     def _lead_respondido(self, chat: str) -> None:
         if (p := self.n.leads.responder(chat)) is not None:
             log.info("whatsapp: lead respondido")
             atividade.PADRAO.registrar("execucao", f"WhatsApp: {p.nome} respondido")
+            self._leads_ao_celular()
 
     def _lembrar_leads(self) -> None:
         """A cada segundo, do laço: quem ainda espera resposta e já passou da hora de lembrar."""

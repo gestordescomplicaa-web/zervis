@@ -92,6 +92,7 @@ class Aviso:
     texto: str
     escutar: bool = False  # mãos livres: depois do aviso, ouve a resposta sem o chamado
     sequencial: bool = False  # resultados de sessões saem também nas pausas da conversa
+    pedido: bool = False  # a pessoa pediu para ouvir (o "Ouvir" do celular): vale no Silencioso
 
 
 @dataclass(frozen=True)

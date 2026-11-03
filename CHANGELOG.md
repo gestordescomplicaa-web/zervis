@@ -6,6 +6,9 @@
   a mensagem ("Marta, Ana é um lead qualificado e lhe mandou esta mensagem: …"), e lembra de 10
   em 10 minutos, por até 1 hora, enquanto você não responder. Responder pelo celular encerra.
   Grupo nunca entra. Precisa do WhatsApp conectado ao Zé (página Atendimento).
+- No celular (Zé Voz), cada lead esperando resposta vira uma notificação com o nome e a mensagem,
+  que toca de novo a cada lembrete e some quando você responde. Botões: Ouvir (o Zé lê a
+  mensagem, mesmo no Silencioso), Abrir no WhatsApp e Já vi.
 - "Zé, mostra o Hubble em 3D": naves, sondas, foguetes e astronautas agora vêm dos modelos oficiais
   da NASA (domínio público), e a Imersão abre os modelos comprimidos. Para os outros objetos, o Zé
   olha a prévia de cada modelo antes de escolher e diz quando não achou um bom, em vez de mostrar

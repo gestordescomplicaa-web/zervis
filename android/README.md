@@ -50,6 +50,12 @@ apps; depois, só a confirmação. Para isso, as versões precisam da mesma assi
   passa de meio segundo) antes de voltar a valer: sem isso, na conversa contínua, o Zé ouvia o
   final da própria fala como um pedido. Durante a fala, o "Ei Zé" continua interrompendo.
 - Caiu a rede: o app tenta de novo sozinho (2 s, 5 s, 15 s, 30 s, 60 s).
+- **Leads do WhatsApp** (ADR 0053): com o WhatsApp conectado ao Zé, cada lead qualificado que
+  espera resposta vira uma notificação, com o nome e a mensagem. Ela toca de novo a cada lembrete
+  (10 em 10 minutos, até 1 hora) e some quando você responde. **Ouvir** pede ao Zé a mensagem
+  falada (vale no Silencioso), **Abrir no WhatsApp** abre a conversa e **Já vi** para os
+  lembretes; arrastar para o lado também. Na tela bloqueada aparece só "Lead qualificado no
+  WhatsApp". O celular recebe enquanto o app está conectado.
 - Segurança: o app não entra no painel. O pareamento dá uma chave só de voz (o Zé guarda apenas
   o resumo dela); remover o celular no painel corta a chave na hora.
 

@@ -325,9 +325,9 @@ class Nucleo(
         self._rodando: set[str] = set()  # automações do tipo pergunta em execução
         self._agenda_em = 0.0
         self.avisos_falados: list[tuple[float, str]] = []
-        # O que o cérebro recebe de um aviso falado, quando não deve ser a fala inteira: a de um
-        # lead do WhatsApp lê o texto de terceiros, que não entra na conversa (ADR 0053).
-        self.avisos_resumidos: dict[str, str] = {}
+        # Avisos que leem um texto de terceiros (a mensagem de um lead, ADR 0053): falados
+        # inteiros, sem virar manchete, e o cérebro recebe só o resumo, nunca o texto.
+        self.avisos_lidos: dict[str, str] = {}
         self.leads = pendentes.Pendentes()  # os leads do WhatsApp esperando a sua resposta
         # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
         # que podem voltar uma vez e quando cada aviso foi dado.
@@ -663,7 +663,7 @@ class Nucleo(
                 if texto == self.maquina.aviso_falando:
                     # O cérebro não ouve a própria voz: sem isto, "pode aprovar" depois de um
                     # aviso chegava sem contexto (teste de 06/10/2026).
-                    contexto = self.avisos_resumidos.get(texto, texto)
+                    contexto = self.avisos_lidos.get(texto, texto)
                     self.avisos_falados.append((time.monotonic(), contexto))
                     self._comecados[texto] = self._comecados.get(texto, 0) + 1
                     self._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
@@ -801,7 +801,7 @@ class Nucleo(
     # --- laço ---------------------------------------------------------------------------
 
     def tratar(self, evento: e.Evento) -> None:
-        if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso":
+        if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso" and not evento.pedido:
             log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
             self._mostrar(evento.texto)
             return

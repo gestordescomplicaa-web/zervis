@@ -20,6 +20,15 @@ class InterfaceAtendimento(InterfaceServico):
     def _lembrar_leads(self) -> None:
         servico(self, ServicoAtendimento)._lembrar_leads()
 
+    def _leads_ao_celular(self) -> None:
+        servico(self, ServicoAtendimento)._leads_ao_celular()
+
+    def ouvir_lead(self, ident: str) -> None:
+        servico(self, ServicoAtendimento).ouvir_lead(ident)
+
+    def dispensar_lead(self, ident: str) -> str:
+        return servico(self, ServicoAtendimento).dispensar_lead(ident)
+
     def _motor_das_mensagens(self) -> rapido.Motor:
         return servico(self, ServicoAtendimento)._motor_das_mensagens()
 

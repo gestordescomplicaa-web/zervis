@@ -41,8 +41,11 @@ class ContextoRemoto(Protocol):
     voz: Any
 
     def _fonte_remota(self, fonte: Any, conectada: bool) -> None: ...
+    def _leads_ao_celular(self) -> None: ...
     def _na_linha(self, tipo: str, texto: str) -> None: ...
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None: ...
+    def dispensar_lead(self, ident: str) -> str: ...
+    def ouvir_lead(self, ident: str) -> None: ...
     @property
     def microfone_travado(self) -> bool: ...
 
@@ -176,14 +179,20 @@ class ServicoRemoto:
         voz = VozNavegador(conexao, taxa, ao_vivo=modo == "ao_vivo", do_app=True)
         log.info("app de voz: %s conectado (%s, %d Hz)", aparelho.get("nome"), modo, voz.taxa)
         self.n._fonte_remota(voz, True)
+        self.n._leads_ao_celular()  # os leads que já esperam resposta (ADR 0053)
 
         def controle(mensagem: dict[str, object]) -> None:
             if voz is not self.n._fonte:
                 return
-            if mensagem.get("tipo") == "apertar" and not self.n.microfone_travado:
+            tipo, lead = mensagem.get("tipo"), str(mensagem.get("id", ""))[:16]
+            if tipo == "apertar" and not self.n.microfone_travado:
                 self.n.eventos.put(e.Apertou())
-            elif mensagem.get("tipo") == "soltar":
+            elif tipo == "soltar":
                 self.n.eventos.put(e.Soltou())
+            elif tipo == "whatsapp_ouvir":  # os botões da notificação do lead
+                self.n.ouvir_lead(lead)
+            elif tipo == "whatsapp_visto":
+                self.n.dispensar_lead(lead)
 
         try:
             voz.ouvir(lambda quadro: self.n._quadro_remoto(voz, quadro), controle)
