@@ -71,6 +71,7 @@ LEITURA = [
     "whatsapp_ler",
     "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053)
     "whatsapp_ja_vi",  # só para um lembrete
+    "whatsapp_prioridade",  # só muda quem o Zé vigia (ADR 0055); nada sai para ninguém
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 

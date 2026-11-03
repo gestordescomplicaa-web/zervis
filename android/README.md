@@ -54,8 +54,9 @@ apps; depois, só a confirmação. Para isso, as versões precisam da mesma assi
   espera resposta vira uma notificação, com o nome e a mensagem. Ela toca de novo a cada lembrete
   (10 em 10 minutos, até 1 hora) e some quando você responde. **Ouvir** pede ao Zé a mensagem
   falada (vale no Silencioso), **Abrir no WhatsApp** abre a conversa e **Já vi** para os
-  lembretes; arrastar para o lado também. Na tela bloqueada aparece só "Lead qualificado no
-  WhatsApp". O celular recebe enquanto o app está conectado.
+  lembretes; arrastar para o lado também. Na tela bloqueada aparece só "Mensagem importante no
+  WhatsApp". Quem está na lista de prioridade do Zé, e quem respondeu ao que ele mandou por
+  você, também aparece aqui (ADR 0055). O celular recebe enquanto o app está conectado.
 - Segurança: o app não entra no painel. O pareamento dá uma chave só de voz (o Zé guarda apenas
   o resumo dela); remover o celular no painel corta a chave na hora.
 

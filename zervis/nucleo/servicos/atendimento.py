@@ -7,6 +7,7 @@ from typing import Any, Protocol
 
 from zervis import atividade, usuario
 from zervis.atendimento import agente, cliente, whatsapp
+from zervis.avisos import caixa as caixa_mod
 from zervis.avisos import mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.cerebro import rapido
@@ -88,7 +89,10 @@ class ServicoAtendimento:
             raise RuntimeError(f"Não enviei: {erro}") from erro
         self._lead_respondido(chat)  # a volta da mensagem pela Central também encerraria
         atividade.PADRAO.registrar("execucao", f"WhatsApp: resposta a {nome}", texto=texto)
-        return f"Enviado para {nome}."
+        if (lista := getattr(self.n, "prioridade", None)) is None:
+            return f"Enviado para {nome}."
+        lista.esperar_resposta(nome, chat)  # o Zé escuta a resposta dela (ADR 0055)
+        return f"Enviado para {nome}. Aviso quando responder."
 
     def estado_whatsapp(self) -> dict[str, Any]:
         """Conectado ou não, e o número (bloqueia: pergunta à Central)."""
@@ -104,14 +108,30 @@ class ServicoAtendimento:
         self._leads_ao_celular()
         return f"Certo, não lembro mais de {p.nome}."
 
-    def _lead_qualificado(self, nome: str, texto: str, telefone: str, chat: str) -> None:
-        p = self.n.leads.novo(nome, texto, chat, telefone)
-        atividade.PADRAO.registrar("execucao", f"WhatsApp: lead qualificado ({p.nome})")
+    def _lead_qualificado(
+        self, nome: str, texto: str, telefone: str, chat: str, motivo: str = "lead"
+    ) -> None:
+        p = self.n.leads.novo(nome, texto, chat, telefone, motivo)
+        titulo = pendentes.TITULOS.get(p.motivo, "Lead qualificado")
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: {titulo.lower()} ({p.nome})")
         self._avisar_lead(
             pendentes.anuncio(p, usuario.PERFIL.nome),
-            f"Lead qualificado no WhatsApp: {p.nome}.",
-            f"{p.nome}, um lead qualificado, mandou mensagem no WhatsApp.",
+            pendentes.TELAS.get(p.motivo, pendentes.TELAS["lead"]).format(nome=p.nome),
+            pendentes.CONTEXTOS.get(p.motivo, pendentes.CONTEXTOS["lead"]).format(nome=p.nome),
         )
+
+    def _de_quem_vigio(self, nome: str, texto: str, telefone: str, chat: str, midia: str) -> bool:
+        """Uma mensagem de quem está na lista de prioridade (ADR 0055): aviso na hora, lida, sem
+        passar pelo julgamento de lead. Verdadeiro se era de alguém da lista."""
+        lista = getattr(self.n, "prioridade", None)
+        v = lista.chegou(chat, telefone) if lista is not None and chat else None
+        if v is None:
+            return False
+        lido = caixa_mod.descrever({"texto": texto, "midia": midia})
+        if not self._continuar_lead(chat, lido):
+            motivo = "resposta" if v.motivo == "resposta" else "prioridade"
+            self._lead_qualificado(nome or v.nome, lido, telefone, chat, motivo)
+        return True
 
     def _continuar_lead(self, chat: str, texto: str) -> bool:
         """O contato já espera resposta: a mensagem nova junta-se à pendência, sem julgar."""
@@ -127,10 +147,12 @@ class ServicoAtendimento:
             self._leads_ao_celular()
 
     def _lembrar_leads(self) -> None:
-        """A cada segundo, do laço: quem ainda espera resposta e já passou da hora de lembrar."""
-        if not self.n.mensagens.ativo:
-            return
-        if vencidas := self.n.leads.vencidas():
+        """A cada segundo, do laço: quem ainda espera resposta e já passou da hora de lembrar (o
+        lead, quem está na lista de prioridade e quem respondeu ao que o Zé mandou). Com os avisos
+        de lead desligados, o lead não é lembrado; os outros, sim."""
+        ligados = self.n.mensagens.ativo
+        vencidas = self.n.leads.vencidas(lambda p: ligados or p.motivo != "lead")
+        if vencidas:
             nomes = pendentes.lista_falada([p.nome for p in vencidas])
             self._avisar_lead(
                 pendentes.lembrete(vencidas, usuario.PERFIL.nome),
@@ -156,7 +178,11 @@ class ServicoAtendimento:
             midia = str(evento.get("midia", ""))
             if (caixa := getattr(self.n, "caixa", None)) is not None:
                 caixa.receber(nome, texto, telefone, chat, midia, _quando(evento))
-            if texto and not evento.get("repassado"):  # só o texto é julgado; o antigo, não
+            if evento.get("repassado"):
+                return  # o antigo vai só para a caixa: nada de aviso atrasado
+            if self._de_quem_vigio(nome, texto, telefone, chat, midia):
+                return
+            if texto:  # só o texto é julgado
                 self.n.mensagens.receber(nome, texto, telefone, chat)
         elif evento.get("tipo") == "respondida":
             chat = str(evento.get("chat", ""))

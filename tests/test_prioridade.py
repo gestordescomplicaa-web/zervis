@@ -1,0 +1,171 @@
+"""A lista de prioridade do WhatsApp (ADR 0055): quem o Zé vigia em tempo real."""
+
+import asyncio
+import stat
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
+
+from zervis.avisos import pendentes as pd
+from zervis.avisos import prioridade as pr
+from zervis.avisos.caixa import Caixa
+from zervis.cerebro.ferramentas import whatsapp as w
+from zervis.nucleo import estados as e
+from zervis.nucleo.servicos.atendimento import ServicoAtendimento
+
+T = 1_000_000.0
+ANA = "134230663237656@lid"
+
+
+class Relogio:
+    t = T
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def test_o_mesmo_numero_escrito_de_jeitos_diferentes() -> None:
+    assert pr.mesmo_numero("5581993563525", "558193563525")  # o nono dígito
+    assert pr.mesmo_numero("81 99356-3525", "5581993563525")  # sem o código do país
+    assert pr.mesmo_numero("+1 (415) 555-0100", "14155550100")
+    assert not pr.mesmo_numero("5581993563525", "5511993563525")  # outro DDD
+    assert not pr.mesmo_numero("5581993563525", "5581993563526")
+    assert not pr.mesmo_numero("3525", "5581993563525")
+
+
+def _lista(tmp_path: Path) -> tuple[pr.Prioridade, Relogio]:
+    relogio = Relogio()
+    return pr.Prioridade(tmp_path / "prioridade.json", relogio), relogio
+
+
+def test_monitorar_fica_ate_tirar_e_aprende_a_conversa(tmp_path: Path) -> None:
+    lista, relogio = _lista(tmp_path)
+    lista.monitorar("Ana", telefone="81 99356-3525")
+    assert stat.S_IMODE((tmp_path / "prioridade.json").stat().st_mode) == 0o600
+    v = lista.chegou("558193563525@s.whatsapp.net", "558193563525")  # o WhatsApp sem o nono
+    assert v is not None and v.motivo == "pedido"
+    relogio.t += 30 * 24 * 3600
+    depois = pr.Prioridade(tmp_path / "prioridade.json", relogio)  # reiniciou, um mês depois
+    assert depois.chegou("558193563525@s.whatsapp.net", "") is not None  # pela conversa aprendida
+    assert depois.remover("a Ana") is not None
+    assert depois.todos() == []
+
+
+def test_esperar_resposta_vale_uma_vez_e_por_24_horas(tmp_path: Path) -> None:
+    lista, relogio = _lista(tmp_path)
+    lista.esperar_resposta("Ana", ANA)
+    assert lista.chegou(ANA, "") is not None
+    assert lista.chegou(ANA, "") is None  # respondeu: a espera acabou
+    lista.esperar_resposta("Ana", ANA)
+    relogio.t += pr.ESPERA_S + 1
+    assert lista.chegou(ANA, "") is None  # passou um dia sem resposta
+
+
+def test_esperar_resposta_nao_tira_quem_esta_de_vez(tmp_path: Path) -> None:
+    lista, _ = _lista(tmp_path)
+    lista.monitorar("Ana", chat=ANA)
+    lista.esperar_resposta("Ana", ANA)
+    assert [v.motivo for v in lista.todos()] == ["pedido"]
+    lista.chegou(ANA, "")
+    assert len(lista.todos()) == 1
+
+
+def test_tirar_pelo_numero_e_pelo_id(tmp_path: Path) -> None:
+    lista, _ = _lista(tmp_path)
+    v = lista.monitorar("Bia", telefone="5581999990000")
+    lista.monitorar("Caio", chat="2@lid")
+    assert lista.remover("81 99999-0000") is not None
+    assert lista.remover("ninguém") is None
+    assert [x.nome for x in lista.todos()] == ["Caio"]
+    assert lista.remover(lista.todos()[0].id) is not None
+    assert v.nome == "Bia"
+
+
+def _nucleo(tmp_path: Path, mensagens_ativo: bool = True) -> Any:
+    relogio = Relogio()
+    falados: list[e.Aviso] = []
+    julgadas: list[tuple[str, ...]] = []
+    n: Any = SimpleNamespace(
+        leads=pd.Pendentes(tmp_path / "pendentes.json", relogio),
+        caixa=Caixa(tmp_path / "caixa.json", relogio),
+        prioridade=pr.Prioridade(tmp_path / "prioridade.json", relogio),
+        relogio=relogio,
+        modo_fala="avisos",
+        avisos_lidos={},
+        mensagens=SimpleNamespace(
+            ativo=mensagens_ativo, receber=lambda *dados: julgadas.append(dados)
+        ),
+        eventos=SimpleNamespace(put=falados.append),
+        _na_linha=lambda tipo, texto: None,
+        _fonte=None,
+        falados=falados,
+        julgadas=julgadas,
+        central=SimpleNamespace(
+            enviar=lambda *a, **k: None, para_tela=lambda: {"estado": "conectado"}
+        ),
+    )
+    servico = ServicoAtendimento(n)
+    n.servico = servico
+    n.responder_whatsapp = servico.responder_whatsapp
+    n.dispensar_lead = servico.dispensar_lead
+    n.estado_whatsapp = servico.estado_whatsapp
+    return n
+
+
+def _chega(n: Any, nome: str, texto: str, chat: str, telefone: str = "", midia: str = "") -> None:
+    n.relogio.t += 1
+    n.servico._evento_da_central(
+        {"tipo": "mensagem", "nome": nome, "texto": texto, "telefone": telefone, "chat": chat,
+         "midia": midia, "quando": n.relogio.t}
+    )  # fmt: skip
+
+
+def _ferramenta(n: Any, args: dict[str, Any]) -> dict[str, Any]:
+    f: dict[str, Any] = {t.name: t.handler for t in w.ferramentas(n)}
+    resposta: dict[str, Any] = asyncio.run(f["whatsapp_prioridade"](args))
+    return resposta
+
+
+def test_quem_esta_na_lista_avisa_na_hora_sem_julgar_e_lembra(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path, mensagens_ativo=False)  # sem os avisos de lead: a lista vale igual
+    r = _ferramenta(n, {"acao": "adicionar", "contato": "Ana", "numero": "81 99356-3525"})
+    assert r["content"][0]["text"] == "Monitorando Ana: aviso qualquer mensagem, na hora."
+    _chega(n, "Ana Souza", "", "558193563525@s.whatsapp.net", "558193563525", midia="audio")
+    [aviso] = n.falados
+    assert "Ana Souza, da sua lista de prioridade, mandou: [um áudio]" in aviso.texto
+    assert n.julgadas == []  # não passa pelo julgamento de lead
+    _chega(n, "Ana Souza", "me liga", "558193563525@s.whatsapp.net", "558193563525")
+    assert len(n.falados) == 1  # junta na mesma pendência
+    n.relogio.t += pd.INTERVALO_S
+    n.servico._lembrar_leads()
+    assert n.falados[-1].texto.endswith("Ana Souza ainda espera sua resposta no WhatsApp.")
+    assert pd.para_o_celular(n.leads.abertas()[0])["motivo"] == "Prioridade"
+
+
+def test_depois_que_o_ze_responde_ele_escuta_a_resposta(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path)
+    _chega(n, "Ana", "quanto custa?", ANA)
+    assert n.servico.responder_whatsapp(ANA, "Ana", "Custa 200.") == (
+        "Enviado para Ana. Aviso quando responder."
+    )
+    n.servico._evento_da_central(
+        {"tipo": "respondida", "chat": ANA, "texto": "Custa 200.", "quando": n.relogio.t}
+    )
+    _chega(n, "Ana", "fechado, pode mandar o link", ANA)
+    assert n.falados[-1].texto.endswith("Ana respondeu: fechado, pode mandar o link.")
+    assert len(n.julgadas) == 1  # só a primeira mensagem dela foi julgada
+    _chega(n, "Bia", "oi", "2@lid")
+    _chega(n, "Ana", "e o prazo?", ANA)
+    assert len(n.julgadas) == 3  # a espera acabou: a próxima volta ao normal (junta na pendência)
+
+
+def test_ver_e_tirar_da_lista_pela_voz(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path)
+    _chega(n, "João Silva", "oi", "9@lid")
+    assert "vazia" in _ferramenta(n, {"acao": "ver"})["content"][0]["text"]
+    _ferramenta(n, {"acao": "adicionar", "contato": "João"})
+    assert "João Silva (id " in _ferramenta(n, {"acao": "ver"})["content"][0]["text"]
+    r = _ferramenta(n, {"acao": "remover", "contato": "o João"})
+    assert r["content"][0]["text"] == "João Silva saiu da lista de prioridade."
+    assert _ferramenta(n, {"acao": "adicionar", "contato": "Carla"})["is_error"]
+    assert _ferramenta(n, {"acao": "remover", "contato": "Carla"})["is_error"]

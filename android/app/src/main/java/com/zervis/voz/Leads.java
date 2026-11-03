@@ -26,7 +26,8 @@ import java.util.Set;
  *
  * Os botões: "Ouvir" pede ao Zé a mensagem falada, "Abrir no WhatsApp" abre a conversa (quando o
  * número é conhecido) e "Já vi" para os lembretes. Arrastar a notificação para o lado vale como
- * "Já vi". Na tela bloqueada, sem o conteúdo: só "Lead qualificado no WhatsApp".
+ * "Já vi". Na tela bloqueada, sem o conteúdo: só "Mensagem importante no WhatsApp". Também vêm aqui
+ * as mensagens de quem está na lista de prioridade e as respostas ao que o Zé mandou (ADR 0055).
  */
 final class Leads {
     static final String CANAL = "leads";
@@ -78,6 +79,8 @@ final class Leads {
         String id = lead.optString("id");
         String nome = lead.optString("nome", "Contato");
         String texto = lead.optString("texto");
+        // Lead qualificado, Prioridade (a lista do Zé) ou Respondeu (ao que o Zé mandou por você).
+        String motivo = lead.optString("motivo", "Lead qualificado");
         Bundle extras = new Bundle();
         extras.putInt(LEMBRETES, lembretes);
         Notification.Builder b = new Notification.Builder(c, CANAL)
@@ -85,7 +88,7 @@ final class Leads {
                 .setContentTitle(nome)
                 .setContentText(texto)
                 .setStyle(new Notification.BigTextStyle().bigText(texto))
-                .setSubText(lembretes > 0 ? "Lead esperando resposta" : "Lead qualificado")
+                .setSubText(lembretes > 0 ? motivo + " · esperando resposta" : motivo)
                 .setCategory(Notification.CATEGORY_MESSAGE)
                 .setWhen(lead.optLong("chegou", System.currentTimeMillis()))
                 .setShowWhen(true)
@@ -94,7 +97,7 @@ final class Leads {
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setPublicVersion(new Notification.Builder(c, CANAL)
                         .setSmallIcon(R.drawable.ic_ze)
-                        .setContentTitle("Lead qualificado no WhatsApp")
+                        .setContentTitle("Mensagem importante no WhatsApp")
                         .build())
                 .addExtras(extras)
                 .setDeleteIntent(paraOZe(c, VISTO, id))

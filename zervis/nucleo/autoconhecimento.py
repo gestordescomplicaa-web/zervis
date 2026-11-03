@@ -63,7 +63,7 @@ GRUPOS = {
     "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
     "whatsapp": (
         "WhatsApp",
-        "lê as conversas e os leads e responde o que você dita, com o seu sim",
+        "lê as conversas e os leads, vigia a lista de prioridade e responde o que você dita",
     ),
 }
 
