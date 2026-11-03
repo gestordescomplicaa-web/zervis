@@ -49,6 +49,7 @@ from zervis.cerebro.baterias import Bateria, do_omniroute
 from zervis.cerebro.claude import ClaudeBrain, carimbo
 from zervis.cerebro.consumo import Consumo, UsoDeFerramentas, gasto
 from zervis.cerebro.ferramentas import sessoes as ferramentas_sessoes
+from zervis.cerebro.ferramentas import whatsapp as ferramentas_whatsapp
 from zervis.config import Config
 from zervis.foco import ferramentas as foco_ferramentas
 from zervis.foco.frentes import Foco
@@ -466,6 +467,7 @@ class Nucleo(
                 pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
             ),
             acervo=self.imersivo.acervo,
+            leads=self,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
@@ -496,6 +498,7 @@ class Nucleo(
             prechecar=primeiro_de(
                 ferramentas_sessoes.preparador(self.sessoes),
                 ferramentas.prechecagem(self.memoria, self.skills),
+                ferramentas_whatsapp.prechecar(self.leads),
                 self.sistema.prechecar,
                 navegador.prechecar,
             ),
@@ -505,6 +508,7 @@ class Nucleo(
                 self._descrever_manutencao,
                 navegador.descrever,
                 ferramentas.descritor(self.pendencias),
+                ferramentas_whatsapp.descritor(self.leads),
                 self.sistema.descrever,
             ),
             autoaprovar=lambda nome, entrada: (

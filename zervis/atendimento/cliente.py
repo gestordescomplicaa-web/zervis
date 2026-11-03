@@ -173,6 +173,15 @@ class Cliente:
     def devolver(self, telefone: str) -> None:
         self._api("POST", "/devolver", {"telefone": telefone})
 
+    def enviar(self, telefone: str, texto: str, chave: str) -> None:
+        """Uma resposta já aprovada, pelo WhatsApp da Central; a `chave` evita o envio em dobro."""
+        self._api(
+            "POST",
+            "/whatsapp/enviar",
+            {"telefone": telefone, "texto": texto, "chave": chave},
+            espera=40.0,
+        )
+
     # --- os eventos ---------------------------------------------------------------------------
 
     def iniciar_eventos(self) -> None:

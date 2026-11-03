@@ -42,6 +42,7 @@ EVENTOS = 200
 AQUECER_S = 60.0  # confere se a persona ou o cérebro mudaram (a reserva antiga não serve)
 ESPERA_EVENTOS_S = 25.0
 CORPO_MAXIMO = 64 * 1024
+TEXTO_ENVIADO_MAXIMO = 2000  # uma resposta ditada; mais que isto não é resposta falada
 
 
 def versao(pasta: Path = Path(__file__).parent) -> str:
@@ -279,6 +280,15 @@ class Central:
         if rota == ("POST", "/whatsapp/desconectar"):
             self.whatsapp.desconectar()
             return 200, {}
+        if rota == ("POST", "/whatsapp/enviar"):
+            # A resposta que você ditou ao Zé para um lead (ADR 0053), já aprovada pela voz.
+            texto = str(corpo.get("texto", "")).strip()
+            if not 0 < len(texto) <= TEXTO_ENVIADO_MAXIMO:
+                return 400, {"erro": "Texto vazio ou longo demais."}
+            ident = self.whatsapp.enviar(
+                str(corpo.get("telefone", "")), texto, str(corpo.get("chave", ""))[:80]
+            )
+            return 200, {"id": ident}
         if rota == ("GET", "/pausados"):
             return 200, {"pausados": self.atendente.registros.pausados()}
         if rota == ("POST", "/devolver"):

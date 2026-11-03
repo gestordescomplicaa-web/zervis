@@ -26,6 +26,9 @@ class InterfaceAtendimento(InterfaceServico):
     def ouvir_lead(self, ident: str) -> None:
         servico(self, ServicoAtendimento).ouvir_lead(ident)
 
+    def responder_lead(self, ident: str, texto: str) -> str:
+        return servico(self, ServicoAtendimento).responder_lead(ident, texto)
+
     def dispensar_lead(self, ident: str) -> str:
         return servico(self, ServicoAtendimento).dispensar_lead(ident)
 

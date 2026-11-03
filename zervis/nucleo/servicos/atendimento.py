@@ -1,6 +1,7 @@
 """Serviço de atendimento; pode ser exercitado com dependências próprias, sem subir o núcleo."""
 
 import contextlib
+import hashlib
 import logging
 from typing import Any, Protocol
 
@@ -70,6 +71,22 @@ class ServicoAtendimento:
         if p is not None:
             fala = pendentes.anuncio(p, usuario.PERFIL.nome)
             self._falar_lead(fala, f"Você pediu para ouvir a mensagem de {p.nome}.", pedido=True)
+
+    def responder_lead(self, ident: str, texto: str) -> str:
+        """A resposta ditada e já aprovada pela voz, pelo WhatsApp da Central. Bloqueia (rede):
+        a ferramenta chama numa thread. A falha sobe como RuntimeError, com a frase da tela."""
+        p = self.n.leads.achar(ident)
+        if p is None or not p.telefone:
+            raise RuntimeError("Esse lead não está mais na lista.")
+        chave = hashlib.sha256(f"{p.id}:{texto}".encode()).hexdigest()[:32]  # sem envio em dobro
+        try:
+            self.n.central.enviar(p.telefone, texto, chave)
+        except cliente.CentralErro as erro:
+            raise RuntimeError(f"Não enviei: {erro}") from erro
+        self.n.leads.responder(p.chat)  # a volta da mensagem pela Central também encerraria
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: resposta a {p.nome}", texto=texto)
+        self._leads_ao_celular()
+        return f"Enviado para {p.nome}."
 
     def dispensar_lead(self, ident: str) -> str:
         """O "Já vi" (do celular ou pela voz): para de lembrar sem responder."""
