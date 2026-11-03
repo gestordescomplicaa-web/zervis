@@ -59,9 +59,14 @@
         .filter(i => i.lat != null && i.lon != null && Math.abs(i.lat) <= 90 && Math.abs(i.lon) <= 180) }),
     linha_tempo: b => { const marcos = lista(b.marcos, 8).map(i => ({ quando: texto(i?.quando, 14), nome: texto(i?.nome, 40) })).filter(i => i.nome);
       return marcos.length > 1 && { marcos }; },
+    // a real photo or video (ADR 0058) from the Acervo: imagem_baixar or pagina_capturar put it there
+    foto: b => { const f = String(b.arquivo || ""); return /^imagens\/[\w\-./ ]+\.(jpe?g|png|webp|gif)$/i.test(f) && !f.split("/").includes("..") && { arquivo: f, legenda: texto(b.legenda, 120), credito: texto(b.credito, 120) }; },
+    video: b => { const f = String(b.arquivo || ""); return /^videos\/[\w\-./ ]+\.webm$/i.test(f) && !f.split("/").includes("..") && { arquivo: f, legenda: texto(b.legenda, 120), credito: texto(b.credito, 120) }; },
   };
+  const REAIS = new Set(["foto", "video"]);   // a photo is not a scheme nor an illustration: it carries its credit
   const NOME = { titulo: "TÍTULO", numero: "NÚMERO", barras: "COMPARAÇÃO", linha: "EVOLUÇÃO", rosca: "DIVISÃO", etapas: "ETAPAS", rede: "CONEXÕES",
-    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", modelo: "MODELO 3D", globo: "GLOBO", mapa: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO" };
+    onda: "ONDAS", forma3d: "FORMA", holograma: "HOLOGRAMA 3D", modelo: "MODELO 3D", globo: "GLOBO", mapa: "MAPA", comparar: "LADO A LADO", lista: "PONTOS", linha_tempo: "LINHA DO TEMPO",
+    foto: "FOTO", video: "VÍDEO" };
   function limpar(cena) {
     if (typeof cena === "string") { try { cena = JSON.parse(cena); } catch (_) { cena = null; } }
     if (!cena || typeof cena !== "object") throw new Error("cena: um objeto com titulo e passos");
@@ -412,6 +417,23 @@
       caixa.innerHTML = `<div class="jv-c-comparar">${b.lados.map((l, j) => `<div class="lado"><h3>${esc(l.nome)}</h3><ul>${l.itens.map((i, n) =>
         `<li style="animation-delay:${.4 + j * .25 + n * .14}s">${esc(i)}</li>`).join("")}</ul></div>`).join('<div class="vs"><i></i><b>VS</b><i></i></div>')}</div>`;
     },
+    // the real thing, not a hologram: the picture sharp, a slow push-in, the caption over it
+    foto(reg, caixa, b) {
+      caixa.innerHTML = `<figure class="jv-c-foto"><img alt="${esc(b.legenda || b.titulo)}" decoding="async"></figure>`;
+      const fig = caixa.firstElementChild, img = fig.querySelector("img");
+      img.addEventListener("error", () => { fig.classList.add("falhou"); fig.textContent = "Foto indisponível"; }, { once: true });
+      img.addEventListener("load", () => fig.classList.add("pronta"), { once: true });
+      img.src = "/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/");
+      if (b.legenda) fig.insertAdjacentHTML("beforeend", `<figcaption>${esc(b.legenda)}</figcaption>`);
+    },
+    video(reg, caixa, b) {
+      caixa.innerHTML = `<figure class="jv-c-foto"><video muted autoplay loop playsinline preload="auto"></video></figure>`;
+      const fig = caixa.firstElementChild, v = fig.querySelector("video");
+      v.addEventListener("error", () => { fig.classList.add("falhou"); fig.textContent = "Vídeo indisponível"; }, { once: true });
+      v.addEventListener("loadeddata", () => fig.classList.add("pronta"), { once: true });
+      v.src = "/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/");
+      if (b.legenda) fig.insertAdjacentHTML("beforeend", `<figcaption>${esc(b.legenda)}</figcaption>`);
+    },
     lista(reg, caixa, b) {
       caixa.innerHTML = `<ol class="jv-c-lista">${b.itens.map((i, n) => `<li style="animation-delay:${.35 + n * .2}s"><span>${String(n + 1).padStart(2, "0")}</span><p>${esc(i)}</p></li>`).join("")}</ol>`;
     },
@@ -496,10 +518,11 @@
           // a map with values is a chart (source or ILUSTRATIVO); without, its source is the contours
           const comValores = b.tipo === "mapa" && b.destaques.some(d => d.valor != null), contornos = b.tipo === "mapa" && !comValores;
           if (contornos) b.fonte ||= window.jarvisMapas?.fonteDe(b) || "";
-          const { x, y, w, h } = b.caixa, esquema = !COM_NUMEROS.has(b.tipo) && !comValores && !contornos;
+          const real = REAIS.has(b.tipo), { x, y, w, h } = b.caixa, esquema = !real && !COM_NUMEROS.has(b.tipo) && !comValores && !contornos;
+          const credito = real ? (b.credito || b.fonte || "Wikimedia").toUpperCase() : "";
           const reg = palco.painel(nome, { cod: `${ordem} · ${NOME[b.tipo]}`, titulo: b.titulo || (b.tipo === "titulo" ? b.texto : NOME[b.tipo][0] + NOME[b.tipo].slice(1).toLowerCase()),
-            x, y, w, h, classe: `jv-cena jv-cena-${b.tipo}`, fonte: esquema ? "ESQUEMA" : b.fonte ? "FONTE · " + b.fonte.toUpperCase() : "",
-            ilustrativo: !esquema && !contornos && (b.ilustrativo || !b.fonte) });
+            x, y, w, h, classe: `jv-cena jv-cena-${b.tipo}`, fonte: real ? credito : esquema ? "ESQUEMA" : b.fonte ? "FONTE · " + b.fonte.toUpperCase() : "",
+            ilustrativo: !real && !esquema && !contornos && (b.ilustrativo || !b.fonte) });
           const caixa = reg.el.querySelector(".jv-h-corpo");
           setTimeout(() => { if (reg.el.isConnected && !caixa.childElementCount) try { BLOCOS[b.tipo](reg, caixa, b); } catch (e) { caixa.textContent = "—"; console.error(e); } }, 320);
           return reg;

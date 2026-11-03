@@ -7,6 +7,7 @@ Uses installed Chromium and an isolated HTTP server/browser profile.
 import asyncio
 import base64
 import json
+import urllib.parse
 import subprocess
 import tempfile
 import threading
@@ -103,12 +104,22 @@ FOCO = {
 }
 
 
+MEDIA: dict[str, str] = {}  # a test sets MEDIA["pasta"] to serve /media/ from it
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/stage.html'):
             body, kind = HARNESS.encode(), 'text/html'
         elif self.path in ['/jarvis-paineis.js', '/jarvis-cerebro.js', '/jarvis-grafo.js', '/jarvis-workspace.css', '/jarvis-maos.js', '/jarvis-tema.js', '/jarvis-fundo.js', '/jarvis-tema.css', '/jarvis-config.js', '/jarvis-controle.js', '/jarvis-teclado.js', '/jarvis-avatar.js', '/jarvis-apresentacao.js', '/jarvis-apresentacao.css', '/jarvis-cenas.js', '/jarvis-cenas.css', '/jarvis-holograma.js', '/jarvis-mapas.js', '/jarvis-mapas.json', '/avatar/jarvis-chimpanze.js', '/avatar/jarvis-constelacao.js', '/avatar/jarvis-chimpanze.glb', '/avatar/jarvis-chimpanze-frente.png', '/avatar/jarvis-chimpanze-perfil.png', '/avatar/jarvis-chimpanze-costas.png']:
             body, kind = (ROOT / self.path.removeprefix('/')).read_bytes(), 'text/css' if self.path.endswith('.css') else 'model/gltf-binary' if self.path.endswith('.glb') else 'image/png' if self.path.endswith('.png') else 'application/json' if self.path.endswith('.json') else 'text/javascript'
+        elif self.path.startswith('/media/') and MEDIA.get('pasta'):  # the Acervo of a test (ADR 0058)
+            alvo = (Path(MEDIA['pasta']) / urllib.parse.unquote(self.path.removeprefix('/media/'))).resolve()
+            if Path(MEDIA['pasta']).resolve() not in alvo.parents or not alvo.is_file():
+                self.send_error(404)
+                return
+            tipos = {'.jpg': 'image/jpeg', '.png': 'image/png', '.webm': 'video/webm'}
+            body, kind = alvo.read_bytes(), tipos.get(alvo.suffix, 'application/octet-stream')
         elif self.path == '/autoconhecimento':  # the sample the panel test also uses, no one's data
             body = json.dumps(json.loads((Path(__file__).parents[1] / 'painel_respostas.json').read_text())['leituras']['autoconhecimento']).encode()
             kind = 'application/json'

@@ -13,7 +13,17 @@ from zervis.rosto.tela import CENA, Tela, TelaErro
 TAMANHO_DA_CENA = 16_000  # caracteres do JSON; a página ainda limita passos e blocos
 FORMAS = ["esfera", "toro", "helice", "cubo", "atomo", "galaxia", "terreno", "neural", "plexo"]
 TIPOS = ["titulo", "numero", "barras", "linha", "rosca", "etapas", "rede", "onda", "forma3d"]
-TIPOS += ["globo", "mapa", "comparar", "lista", "linha_tempo", "holograma", "modelo"]
+TIPOS += [
+    "globo",
+    "mapa",
+    "comparar",
+    "lista",
+    "linha_tempo",
+    "holograma",
+    "modelo",
+    "foto",
+    "video",
+]
 PECAS = ["esfera", "cubo", "caixa", "cilindro", "cone", "piramide", "toro", "anel", "capsula"]
 PECAS += ["helice", "tubo", "linha", "ligacao", "particulas"]
 
@@ -125,7 +135,8 @@ BLOCO: dict[str, Any] = {
             "description": "forma3d: helice é o DNA; terreno, uma superfície ondulando; neural, "
             "camadas ligadas; plexo, uma rede de pontos",
         },
-        "legenda": _texto_("forma3d: uma frase embaixo"),
+        "legenda": _texto_("forma3d: uma frase embaixo; foto e video: a legenda sobre a imagem"),
+        "credito": _texto_("foto e video: o credito que imagem_baixar ou pagina_capturar devolveu"),
         "ligar": {
             "type": "boolean",
             "description": "globo e mapa: arcos do primeiro ponto aos outros",
@@ -162,7 +173,10 @@ BLOCO: dict[str, Any] = {
             },
         },
         "marcos": _lista_de("linha_tempo: em ordem", quando=TEXTO, nome=NOME),
-        "arquivo": _texto_("modelo: o arquivo no Acervo que modelo3d_baixar devolveu"),
+        "arquivo": _texto_(
+            "modelo: o arquivo no Acervo que modelo3d_baixar devolveu; foto e video: o que "
+            "imagem_baixar ou pagina_capturar devolveu"
+        ),
         "estilo": {
             "type": "string",
             "enum": ["holograma", "solido"],
@@ -259,7 +273,11 @@ def ferramentas(tela: Tela | None) -> list[SdkMcpTool[Any]]:
         "solar, átomo): bloco holograma, montado com peças (forma3d é só um desenho). Mapa "
         "(do Brasil, de estados, países, continentes, onde fica algo): bloco mapa, com regiao, "
         "destaques pelo nome e cidades com lat/lon; os contornos são reais, então nunca desenhe "
-        "mapa com peças, forma3d ou globo (relevo=true para o mapa em 3D). Para "
+        "mapa com peças, forma3d ou globo (relevo=true para o mapa em 3D). Pessoa, lugar, "
+        'obra ou acontecimento de verdade ("quem é fulano", "como é Machu Picchu"): mostre a '
+        "foto real com o bloco foto (imagem_buscar, imagem_baixar), com legenda e credito, ao "
+        "lado dos fatos; um fenômeno em movimento (erupção, lançamento): bloco video; uma página "
+        '("mostra o site"): pagina_capturar e o bloco foto. Para '
         "conceito, prefira etapas, rede, onda, comparar e "
         'lista. Para tirar a cena ("tira isso", "limpa a tela"): tela_agir fechar com alvo cena.',
         {

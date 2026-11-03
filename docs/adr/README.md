@@ -65,3 +65,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0055](0055-lista-de-prioridade-do-whatsapp.md) | A lista de prioridade do WhatsApp: o Zé vigia em tempo real quem você pedir, até você tirar, e escuta a resposta de quem ele respondeu por você | Em validação |
 | [0056](0056-arquivo-do-whatsapp.md) | O arquivo do WhatsApp: tudo o que passa pelo WhatsApp (privadas e grupos), para sempre, com busca; leituras sem token e o gasto real na Conversa | Em validação |
 | [0057](0057-instagram-so-leitura.md) | O Instagram do Zé, só leitura: perfil e métricas das publicações pela API oficial, analisados pela voz; a página Atendimento vira Redes sociais | Em validação |
+| [0058](0058-imagens-reais-na-imersao.md) | Imagens e vídeos reais na Imersão: Wikipédia e Wikimedia Commons com crédito, o print de página atrás de uma trava de rede, e os blocos foto e video nas cenas | Em validação |
