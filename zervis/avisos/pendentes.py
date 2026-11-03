@@ -46,6 +46,7 @@ class Pendente:
     lembretes: int = 0
     proximo: float = 0.0  # quando lembrar de novo; 0 = não lembra mais
     respondida: float = 0.0  # quando você respondeu ou dispensou; 0 = esperando
+    motivo: str = "lead"  # lead | prioridade (na lista, ADR 0055) | resposta (ao que o Zé mandou)
 
     @property
     def aberta(self) -> bool:
@@ -74,10 +75,30 @@ def chamando(quem_usa: str, frase: str) -> str:
     return f"{quem_usa}, {frase}" if quem_usa else frase[:1].upper() + frase[1:]
 
 
+ANUNCIOS = {
+    "lead": "{nome} é um lead qualificado e lhe mandou esta mensagem: {texto}",
+    "prioridade": "{nome}, da sua lista de prioridade, mandou: {texto}",
+    "resposta": "{nome} respondeu: {texto}",
+}
+TITULOS = {"lead": "Lead qualificado", "prioridade": "Prioridade", "resposta": "Respondeu"}
+# A tela e a linha do tempo (só o nome) e o contexto do cérebro (nunca o texto de terceiros).
+TELAS = {
+    "lead": "Lead qualificado no WhatsApp: {nome}.",
+    "prioridade": "Mensagem de {nome} no WhatsApp (prioridade).",
+    "resposta": "{nome} respondeu no WhatsApp.",
+}
+CONTEXTOS = {
+    "lead": "{nome}, um lead qualificado, mandou mensagem no WhatsApp.",
+    "prioridade": "{nome}, da lista de prioridade, mandou mensagem no WhatsApp.",
+    "resposta": "{nome} respondeu no WhatsApp ao que você mandou.",
+}
+
+
 def anuncio(p: Pendente, quem_usa: str) -> str:
     """A fala da chegada: quem é e o que mandou, lido como dado."""
     texto = para_ouvir(p.texto, limite=FALA_MAXIMA) or "uma mensagem sem texto"
-    return chamando(quem_usa, f"{p.nome} é um lead qualificado e lhe mandou esta mensagem: {texto}")
+    modelo = ANUNCIOS.get(p.motivo, ANUNCIOS["lead"])
+    return chamando(quem_usa, modelo.format(nome=p.nome, texto=texto))
 
 
 def lembrete(abertas: list[Pendente], quem_usa: str) -> str:
@@ -100,6 +121,7 @@ def para_o_celular(p: Pendente) -> dict[str, Any]:
         "telefone": p.telefone,
         "lembretes": p.lembretes,
         "chegou": round(p.chegou * 1000),
+        "motivo": TITULOS.get(p.motivo, TITULOS["lead"]),
     }
 
 
@@ -147,8 +169,11 @@ class Pendentes:
     def aberta_de(self, chat: str) -> Pendente | None:
         return next((p for p in self.abertas() if p.chat == chat), None)
 
-    def novo(self, nome: str, texto: str, chat: str, telefone: str = "") -> Pendente:
-        """Um lead qualificado; a primeira lembrança vem em 10 minutos."""
+    def novo(
+        self, nome: str, texto: str, chat: str, telefone: str = "", motivo: str = "lead"
+    ) -> Pendente:
+        """Um lead qualificado (ou alguém da lista de prioridade); a primeira lembrança vem em 10
+        minutos."""
         agora = self.agora()
         p = Pendente(
             nome_falado(nome),
@@ -158,6 +183,7 @@ class Pendentes:
             chegou=agora,
             ultima=agora,
             proximo=agora + INTERVALO_S,
+            motivo=motivo if motivo in ANUNCIOS else "lead",
         )
         with self._trava:
             lista = [x for x in self._ler() if x.chat != chat]  # a anterior dele já foi resolvida
@@ -202,12 +228,13 @@ class Pendentes:
             self._gravar(lista)
             return p
 
-    def vencidas(self) -> list[Pendente]:
-        """As que pedem lembrete agora; cada uma passa ao próximo (ou para de lembrar)."""
+    def vencidas(self, incluir: Callable[[Pendente], bool] = lambda p: True) -> list[Pendente]:
+        """As que pedem lembrete agora (entre as de `incluir`); cada uma passa ao próximo (ou
+        para de lembrar). A que fica de fora não gasta o lembrete."""
         agora = self.agora()
         with self._trava:
             lista = self._ler()  # a cada segundo: da memória, sem disco
-            vencidas = [p for p in lista if p.aberta and 0 < p.proximo <= agora]
+            vencidas = [p for p in lista if p.aberta and 0 < p.proximo <= agora and incluir(p)]
             if not vencidas:
                 return []
             for p in vencidas:

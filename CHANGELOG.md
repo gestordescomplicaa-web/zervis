@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Lista de prioridade no WhatsApp: "Zé, monitora a Ana" (ou um número) e ele avisa na hora, lendo,
+  qualquer mensagem dela, com lembrete até você responder, até você dizer "não monitora mais a
+  Ana". E quando o Zé responde alguém por você, ele escuta a resposta: "a Ana respondeu: ...".
 - O Zé como recepcionista do seu WhatsApp, pela voz: "quem me mandou mensagem?", "tem alguém
   esperando resposta?", "o que a Ana disse?" e "responde para ela: ...", com o seu sim. Ele vê as
   conversas privadas dos últimos 7 dias (grupo nunca), inclusive que chegou um áudio ou uma foto,
