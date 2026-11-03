@@ -53,12 +53,14 @@ class CompletoFalso:
         self.pedidos: list[str] = []
         self.uso = {"input_tokens": 10}
         self.ferramentas_usadas = ["mcp__jarvis__tela_agir"]
+        self.atraso_s = 0.0  # quanto ele demora para a primeira palavra
 
     async def start(self, persona: str, aprovar: Aprovar | None = None) -> None:
         return None
 
     async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
         self.pedidos.append(texto)
+        await asyncio.sleep(self.atraso_s)
         yield Texto("Abri o Mapa.")
         yield Fim()
 
@@ -108,13 +110,13 @@ def test_pedido_de_acao_passa_ao_completo_com_aviso_e_a_conversa_anterior() -> N
     motor = MotorFalso([["Oi!"], ["[comp", "leto]"], ["Beleza."]])
     r, completo = roteado(motor)
     falar(r, "Oi Zé")
-    assert falar(r, "Me ajuda numa coisa") == "Deixa eu ver. Abri o Mapa."  # o motor passou
+    assert falar(r, "Me ajuda numa coisa") == "Abri o Mapa."  # o motor passou; veio rápido
     assert r.via == "completo" and r.ferramentas_usadas == ["mcp__jarvis__tela_agir"]
     assert completo.pedidos == [
         "(Antes disto, na mesma conversa: Usuário: «Oi Zé» Zé: «Oi!»)\nMe ajuda numa coisa"
     ]
-    # Ação clara vai direto, sem perguntar ao motor; o aviso varia.
-    assert falar(r, "[09/10, 11:30] (Janela: aberta) Abre o mapa") == "Um instante. Abri o Mapa."
+    # Ação clara vai direto, sem perguntar ao motor.
+    assert falar(r, "[09/10, 11:30] (Janela: aberta) Abre o mapa") == "Abri o Mapa."
     assert len(motor.pedidos) == 2 and len(completo.pedidos) == 2
     assert falar(r, "Valeu") == "Beleza."  # a via rápida vê o que o completo respondeu
     assert {"role": "assistant", "content": "Abri o Mapa."} in motor.pedidos[-1]
@@ -156,7 +158,7 @@ def test_marca_de_emocao_antes_nao_esconde_o_passar_nem_a_resposta() -> None:
 def test_motor_lento_ou_quebrado_vai_ao_completo() -> None:
     lento = MotorFalso([["Oi"]], atraso_s=0.5)
     r, completo = roteado(lento, espera_s=0.1)
-    assert falar(r, "Oi") == "Deixa eu ver. Abri o Mapa."
+    assert falar(r, "Oi") == "Abri o Mapa."
     assert lento.interrompido == 1 and len(completo.pedidos) == 1
 
     class Quebrado(MotorFalso):
@@ -165,7 +167,7 @@ def test_motor_lento_ou_quebrado_vai_ao_completo() -> None:
             yield ""  # pragma: no cover
 
     r, completo = roteado(Quebrado([]))
-    assert falar(r, "Oi") == "Deixa eu ver. Abri o Mapa."
+    assert falar(r, "Oi") == "Abri o Mapa."
 
 
 # --- HTTP de verdade, num servidor local --------------------------------------------------
@@ -393,3 +395,16 @@ def test_o_motor_da_assinatura_nao_usa_a_chave_do_painel(tmp_path: Path) -> None
     conta.login.parent.mkdir(parents=True, exist_ok=True)
     conta.login.write_text("{}")
     assert rapido.pela_assinatura(conta) == {"ANTHROPIC_API_KEY": ""}
+
+
+def test_frase_de_espera_so_quando_a_resposta_demora(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Caso de 03/11/2026: "vou ver aqui" a cada pedido, até nos que saíam na hora, cansava."""
+    monkeypatch.setattr(rapido, "AVISO_APOS_S", 0.2)
+    motor = MotorFalso([["[completo]"], ["[completo]"], ["[completo]"]])
+    r, completo = roteado(motor)
+    assert falar(r, "Me ajuda numa coisa") == "Abri o Mapa."  # rápido: sem frase
+    completo.atraso_s = 0.5
+    primeira = falar(r, "Me ajuda em outra")
+    segunda = falar(r, "E mais uma")
+    assert primeira in ("Só um momento. Abri o Mapa.", "Um instante. Abri o Mapa.")
+    assert {primeira, segunda} == {"Só um momento. Abri o Mapa.", "Um instante. Abri o Mapa."}

@@ -29,6 +29,7 @@ import os
 import re
 import shutil
 import threading
+import time
 import unicodedata
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
@@ -44,7 +45,10 @@ from zervis.cerebro.consumo import gasto, somar_usos
 
 log = logging.getLogger(__name__)
 PASSAR = "[completo]"
-AVISOS = ("Deixa eu ver.", "Um instante.", "Só um momento.", "Vou ver aqui.")
+# A frase de espera, só quando a resposta demora (03/11/2026: "vou ver aqui" a cada pedido, até
+# nos que saíam na hora, cansava). Duas, alternadas.
+AVISOS = ("Só um momento.", "Um instante.")
+AVISO_APOS_S = 3.0  # sem nenhuma palavra da resposta até aqui (desde o pedido), o Zé avisa
 # O que claramente pede ferramenta vai direto ao completo, sem esperar a via rápida decidir:
 # o aviso sai na hora. Na dúvida fica na via rápida, que ainda pode passar a vez.
 VERBOS_DE_ACAO = {
@@ -833,6 +837,7 @@ class Roteado:
 
     async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
         self.uso, self.ferramentas_usadas, self.via = None, [], ""
+        inicio = time.monotonic()
         # Cada chamada desta mensagem, para a Conversa mostrar como o Zé gastou os tokens.
         self.gastos, self._uso_rapida = [], None
         falou = False
@@ -874,7 +879,7 @@ class Roteado:
                 self.visto_motor = len(self.turnos)  # ele viu o pedido, não a resposta
             # A via rápida leu o pedido para decidir passar a vez: isso também gastou.
             self.gastos, self._uso_rapida = self._gasto_rapida(), self.motor.uso
-        async for evento in self._completo(texto, aviso=not falou):
+        async for evento in self._completo(texto, aviso=not falou, inicio=inicio):
             yield evento
 
     async def _parar_motor(self) -> None:
@@ -940,19 +945,40 @@ class Roteado:
             return "esperar"  # uma marca chegando pela metade
         return "falar"
 
-    async def _completo(self, texto: str, aviso: bool) -> AsyncIterator[EventoCerebro]:
-        if aviso:
-            self._avisos += 1
-            yield Texto(AVISOS[self._avisos % len(AVISOS)] + " ")
+    async def _completo(
+        self, texto: str, aviso: bool, inicio: float | None = None
+    ) -> AsyncIterator[EventoCerebro]:
         pedido = self._perdidos(self.visto_completo) + texto
         resposta = ""
         erro: str | None = None
-        async for evento in self.completo.ask(pedido):
-            if isinstance(evento, Texto):
-                resposta += evento.texto
-            elif isinstance(evento, Fim):
-                erro = evento.erro
-            yield evento
+        prazo = (inicio if inicio is not None else time.monotonic()) + AVISO_APOS_S
+        # Sem aviso de espera se a resposta começar antes do prazo: o primeiro evento é esperado
+        # sem cancelar (asyncio.wait), para o aviso entrar no meio quando o prazo vence.
+        eventos = self.completo.ask(pedido).__aiter__()
+        proximo: asyncio.Future[EventoCerebro] = asyncio.ensure_future(eventos.__anext__())
+        try:
+            while True:
+                if aviso and not resposta.strip():
+                    pronto, _ = await asyncio.wait({proximo}, timeout=prazo - time.monotonic())
+                    if not pronto:
+                        aviso = False
+                        self._avisos += 1
+                        yield Texto(AVISOS[self._avisos % len(AVISOS)] + " ")
+                try:
+                    evento = await proximo
+                except StopAsyncIteration:
+                    break
+                if isinstance(evento, Texto):
+                    resposta += evento.texto
+                    if evento.texto.strip():
+                        aviso = False
+                elif isinstance(evento, Fim):
+                    erro = evento.erro
+                yield evento
+                proximo = asyncio.ensure_future(eventos.__anext__())
+        finally:
+            if not proximo.done():
+                proximo.cancel()
         uso_completo = getattr(self.completo, "uso", None)
         self.ferramentas_usadas = list(getattr(self.completo, "ferramentas_usadas", []))
         self.modelo_usado = getattr(self.completo, "modelo_usado", None)

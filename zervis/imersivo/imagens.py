@@ -13,9 +13,11 @@ WebP, GIF ou WebM de verdade). Imagem marcada como não livre (uso justo) é rec
 cada arquivo fica um `.json` com a fonte, a licença e o autor: o crédito vai para a tela.
 """
 
+import concurrent.futures
 import json
 import re
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -255,22 +257,37 @@ def buscar(busca: str, tipo: str = "foto", ler: Any = _ler) -> list[Achado]:
         raise ImagemErro("diga o que buscar")
     if tipo == "video":
         return buscar_commons(busca, True, ler)
-    return [*buscar_wikipedia(busca, ler), *buscar_commons(busca, False, ler, 3)][:6]
+    # As duas ao mesmo tempo (03/11/2026: uma depois da outra, a busca levava 2 a 3 s).
+    with concurrent.futures.ThreadPoolExecutor(2) as grupo:
+        wiki = grupo.submit(buscar_wikipedia, busca, ler)
+        commons = grupo.submit(buscar_commons, busca, False, ler, 3)
+        return [*wiki.result(), *commons.result()][:6]
+
+
+def a_pagina_e_o_pedido(achado: Achado, busca: str) -> bool:
+    """A página da Wikipédia é exatamente quem (ou o que) foi pedido: "Marina Silva" acha a página
+    "Marina Silva". Aí a foto principal dela serve sem o Zé olhar as prévias."""
+
+    def chave(texto: str) -> str:
+        sem = unicodedata.normalize("NFKD", texto.casefold())
+        return " ".join(re.findall(r"[a-z0-9]+", "".join(c for c in sem if c.isascii())))
+
+    return achado.id.startswith("wiki:") and chave(achado.titulo) == chave(busca)
 
 
 def previas(achados: list[Achado], ler: Any = _ler) -> list[tuple[str, bytes]]:
-    """A miniatura de cada achado (pequena), para o Zé olhar antes de escolher."""
-    vistas = []
-    for a in achados[:6]:
-        if not a.previa:
-            continue
+    """A miniatura de cada achado (pequena), para o Zé olhar antes de escolher; em paralelo."""
+
+    def uma(a: Achado) -> tuple[str, bytes] | None:
         try:
             imagem = ler(a.previa, PREVIA_MAX)
         except ImagemErro:
-            continue
-        if tipo_do_arquivo(imagem) in ("jpg", "png", "webp", "gif"):
-            vistas.append((a.id, imagem))
-    return vistas
+            return None
+        return (a.id, imagem) if tipo_do_arquivo(imagem) in ("jpg", "png", "webp", "gif") else None
+
+    com_previa = [a for a in achados[:6] if a.previa]
+    with concurrent.futures.ThreadPoolExecutor(6) as grupo:
+        return [v for v in grupo.map(uma, com_previa) if v is not None]
 
 
 # --- baixar -------------------------------------------------------------------------------------

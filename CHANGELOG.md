@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- O Zé não diz mais "vou ver aqui" a cada pedido: a frase de espera ("Só um momento", "Um
+  instante") só sai quando a resposta demora mais de 3 segundos.
+- Foto de pessoa na Imersão mais rápida e certeira: quando a página da Wikipédia é exatamente quem
+  foi pedido, a foto principal dela já vem pronta (busca e download em cerca de 1,5 s), sem o Zé
+  precisar olhar as prévias, e ele pesquisa os fatos e a foto ao mesmo tempo.
 - Imersão: a foto aparece sempre inteira (antes, uma foto em retrato num painel largo perdia o
   rosto), com a sobra preenchida pela própria foto desfocada; e o Zé fica menor no canto durante a
   apresentação, deixando mais espaço para a cena.
