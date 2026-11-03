@@ -417,3 +417,21 @@ def test_envio_so_para_um_numero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
             wa.enviar(destino, "oi", "atendimento:12345678")
     assert not any("/messages" in caminho for _, caminho in falso.pedidos)
     wa.parar()
+
+
+def test_recusa_do_whatsapp_diz_o_motivo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Caso de 03/11/2026: o envio falhava no WhatsApp e o Zé dizia "Sem conexão"."""
+    import io
+    import urllib.error
+
+    wa, _ = _pronto(tmp_path, monkeypatch)
+    wa.iniciar()
+
+    def recusa(pedido: Any, timeout: float = 0) -> Any:
+        corpo = io.BytesIO(json.dumps({"error": "message was not acknowledged"}).encode())
+        raise urllib.error.HTTPError(pedido.full_url, 502, "Bad Gateway", {}, corpo)  # type: ignore[arg-type]
+
+    wa.abrir = recusa
+    with pytest.raises(w.WhatsAppErro, match="não confirmou o envio"):
+        wa._api("POST", "/api/sessions/s/messages", {})
+    wa.parar()

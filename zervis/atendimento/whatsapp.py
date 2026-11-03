@@ -56,6 +56,14 @@ _CAPTURA = re.compile(r"/api/interno/whatsapp/captura/[0-9a-f]{1,64}")
 # Por que o WhatsApp recusou o pareamento (o evento do canal do QR da whatsmeow).
 FALHAS = {"err-client-outdated": "Versão do WhatsApp desatualizada no Zé. Atualize o Zé."}
 FALHA_PAREAMENTO = "O WhatsApp recusou o pareamento. Tente de novo."
+# O motivo que o WaCalls devolve, na frase da tela (e da voz).
+RECUSAS = {
+    "session not connected": "WhatsApp não conectado.",
+    "recipient is not registered on WhatsApp": "Esse número não está no WhatsApp.",
+    "ambiguous WhatsApp recipient": "Mais de uma conta para esse número.",
+    "recipient lookup failed": "O WhatsApp não confirmou o número. Tente de novo.",
+    "message was not acknowledged": "O WhatsApp não confirmou o envio.",
+}
 
 
 class WhatsAppErro(RuntimeError):
@@ -438,6 +446,14 @@ class WhatsApp:
         try:
             with self.abrir(pedido, timeout=espera) as resposta:
                 bruto = resposta.read()
+        except urllib.error.HTTPError as erro:
+            # O WaCalls respondeu, com um motivo: "Sem conexão" escondia a recusa do WhatsApp
+            # (caso de 03/11/2026, um envio para o identificador errado).
+            motivo = ""
+            with contextlib.suppress(ValueError, OSError, AttributeError):
+                motivo = str(json.loads(erro.read() or b"{}").get("error", ""))
+            log.warning("whatsapp: %s %s recusado (%s): %s", metodo, caminho, erro.code, motivo)
+            raise WhatsAppErro(RECUSAS.get(motivo, "O WhatsApp recusou o pedido.")) from erro
         except (urllib.error.URLError, OSError) as erro:
             raise WhatsAppErro("Sem conexão com o WhatsApp.") from erro
         try:

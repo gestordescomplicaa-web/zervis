@@ -204,14 +204,11 @@ func (s *Session) resolvePhoneCandidates(ctx context.Context, phones []string) (
 		// perdê-lo fez a oferta sair para o PN e ficar sem ACK em alguns celulares.
 		// Consulte a identidade canônica agora para que o WaCalls tenha o LID antes
 		// de criar a oferta.
-		canonical := response.JID
-		if canonical.IsEmpty() {
-			canonical = jid
-		}
-		canonicalPN := types.NewJID(canonical.User, types.DefaultUserServer)
+		canonicalPN, lid := identidadeCanonica(jid, response)
 		identity := canonicalPN.ToNonAD().String()
-		lid := types.EmptyJID
-		if info, infoErr := s.client.GetUserInfo(ctx, []types.JID{canonicalPN}); infoErr != nil {
+		if !lid.IsEmpty() {
+			identity = lid.ToNonAD().String()
+		} else if info, infoErr := s.client.GetUserInfo(ctx, []types.JID{canonicalPN}); infoErr != nil {
 			s.log.Warn("whatsapp canonical identity lookup failed",
 				"phone", jid.User, "canonical", canonicalPN.String(), "error", infoErr)
 		} else {
@@ -238,6 +235,24 @@ func (s *Session) resolvePhoneCandidates(ctx context.Context, phones []string) (
 		})
 	}
 	return distinctRegisteredPhones(resolved), nil
+}
+
+// identidadeCanonica separa o telefone (PN) e o LID da resposta do IsOnWhatsApp. Desde a
+// whatsmeow de 11/2026 a consulta vai em "addressing_mode: lid": JID traz o LID e PhoneNumber o
+// telefone. Tratar o JID como telefone (como antes) punha o LID no servidor de telefone, e o
+// envio falhava com "no LID found" (Zérvis, 03/11/2026).
+func identidadeCanonica(pedido types.JID, r types.IsOnWhatsAppResponse) (types.JID, types.JID) {
+	pn, lid := pedido, types.EmptyJID
+	switch {
+	case r.PhoneNumber.Server == types.DefaultUserServer && r.PhoneNumber.User != "":
+		pn = r.PhoneNumber
+	case r.JID.Server == types.DefaultUserServer && r.JID.User != "":
+		pn = r.JID
+	}
+	if r.JID.Server == types.HiddenUserServer {
+		lid = r.JID
+	}
+	return types.NewJID(pn.User, types.DefaultUserServer), lid
 }
 
 type resolvedPhoneCandidate struct {
