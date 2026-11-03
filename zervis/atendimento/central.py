@@ -145,8 +145,13 @@ class Central:
     # --- o que chega do WhatsApp e do agente -------------------------------------------------
 
     def _recebida(self, r: whatsapp.Recebida) -> None:
-        if not r.de_mim and self.avisos_ligados():
-            self.eventos.publicar("mensagem", nome=r.nome, texto=r.texto)
+        if self.avisos_ligados():
+            if r.de_mim:  # a sua resposta encerra a pendência do lead (ADR 0053)
+                self.eventos.publicar("respondida", chat=r.chat)
+            else:
+                self.eventos.publicar(
+                    "mensagem", nome=r.nome, texto=r.texto, telefone=r.telefone, chat=r.chat
+                )
         self.atendente.receber(r)
 
     def _passou(self, nome: str, motivo: str) -> None:

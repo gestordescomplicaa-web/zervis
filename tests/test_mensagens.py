@@ -134,3 +134,44 @@ def test_avisa_so_o_importante_uma_vez_por_contato(tmp_path: Path) -> None:
     while vigia.ativo:
         assert time.monotonic() < fim
         time.sleep(0.02)
+
+
+def test_conversa_privada_vira_pendencia_e_o_resto_nao_e_julgado_de_novo() -> None:
+    avisos: list[str] = []
+    leads: list[tuple[str, str, str, str]] = []
+    esperando: set[str] = set()
+
+    def ao_lead(nome: str, texto: str, telefone: str, chat: str) -> None:
+        leads.append((nome, texto, telefone, chat))
+        esperando.add(chat)
+
+    def continuar(chat: str, texto: str) -> bool:
+        return chat in esperando
+
+    motor = MotorFalso()
+    vigia = m.Mensagens(
+        avisos.append,
+        lambda: motor,
+        comando=[sys.executable, "-c", "import time; time.sleep(30)"],
+        ao_lead=ao_lead,
+        continuar=continuar,
+    )
+    vigia.iniciar()
+    try:
+        fim = time.monotonic() + 5
+        while vigia._fila is None:
+            assert time.monotonic() < fim
+            time.sleep(0.02)
+        vigia.receber("Ana", "bom dia", "5581", "1@s.whatsapp.net")
+        vigia.receber("Ana", "urgente: quero o orçamento", "5581", "1@s.whatsapp.net")
+        vigia.receber("Ana", "urgente: e o prazo?", "5581", "1@s.whatsapp.net")
+        vigia.receber("Bruno", "urgente: pela notificação", "", "")
+        while len(avisos) + len(leads) < 2:
+            assert time.monotonic() < fim
+            time.sleep(0.02)
+        time.sleep(0.2)
+    finally:
+        vigia.parar()
+    assert leads == [("Ana", "urgente: quero o orçamento", "5581", "1@s.whatsapp.net")]
+    assert avisos == ["Lead quente no WhatsApp: Bruno."]
+    assert len(motor.pedidos) == 3  # o "e o prazo?" juntou-se à pendência, sem modelo

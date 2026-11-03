@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Leads do WhatsApp pela voz: quando um lead qualificado escreve no privado, o Zé diz quem é e lê
+  a mensagem ("Marta, Ana é um lead qualificado e lhe mandou esta mensagem: …"), e lembra de 10
+  em 10 minutos, por até 1 hora, enquanto você não responder. Responder pelo celular encerra.
+  Grupo nunca entra. Precisa do WhatsApp conectado ao Zé (página Atendimento).
 - "Zé, mostra o Hubble em 3D": naves, sondas, foguetes e astronautas agora vêm dos modelos oficiais
   da NASA (domínio público), e a Imersão abre os modelos comprimidos. Para os outros objetos, o Zé
   olha a prévia de cada modelo antes de escolher e diz quando não achou um bom, em vez de mostrar

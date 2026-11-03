@@ -190,7 +190,9 @@ class Cliente:
                     r = self._api("GET", "/eventos?depois=0")
                     agora = time.time()
                     for e in r.get("eventos", []):
-                        if e.get("tipo") == "passou" and agora - e.get("quando", 0) < REPASSAR_S:
+                        recente = agora - e.get("quando", 0) < REPASSAR_S
+                        # "respondida": a resposta dada com o Zé fora encerra a pendência.
+                        if e.get("tipo") in ("passou", "respondida") and recente:
                             self._entregar(e)
                     visto = int(r.get("ultimo", 0))
                     self.para_tela()

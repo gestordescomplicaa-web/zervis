@@ -4,6 +4,8 @@
 - Status: **Proposta**, para depois da auditoria (depende das áreas de Conectores e Sessões). A
   fonte das mensagens passou a ser o WaCalls, no lugar do WuzAPI
   ([ADR 0031](0031-atendimento-whatsapp-e-telefonia.md)).
+  O aviso que lê a mensagem, os lembretes e a resposta ditada estão no
+  [ADR 0053](0053-leads-do-whatsapp-pela-voz.md).
 
 ## Contexto
 Operando o Zé por voz (Mãos livres, fone), a pessoa não quer olhar o WhatsApp a toda hora, mas

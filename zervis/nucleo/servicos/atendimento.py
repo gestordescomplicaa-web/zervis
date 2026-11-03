@@ -4,9 +4,9 @@ import contextlib
 import logging
 from typing import Any, Protocol
 
-from zervis import atividade
+from zervis import atividade, usuario
 from zervis.atendimento import agente, cliente, whatsapp
-from zervis.avisos import mensagens
+from zervis.avisos import mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.cerebro import rapido
 from zervis.nucleo import estados as e
@@ -16,9 +16,11 @@ log = logging.getLogger(__name__)
 
 
 class ContextoAtendimento(Protocol):
+    avisos_resumidos: Any
     central: Any
     cfg: Any
     eventos: Any
+    leads: Any
     mensagens: Any
     modo_fala: Any
 
@@ -35,6 +37,50 @@ class ServicoAtendimento:
         if modo_fala.falar(self.n.modo_fala, "urgente"):
             self.n.eventos.put(e.Aviso(texto))
 
+    # --- leads esperando resposta (ADR 0053) ---------------------------------------------------
+
+    def _avisar_lead(self, fala: str, tela: str, contexto: str) -> None:
+        """A fala leva o texto do lead; a tela (e a linha do tempo) e o contexto do cérebro, só
+        o nome: o texto é de terceiros e não entra na conversa como se fosse do Zé."""
+        if tela:
+            self.n._na_linha("aviso", tela)
+        if modo_fala.falar(self.n.modo_fala, "urgente"):
+            resumidos = self.n.avisos_resumidos
+            resumidos[fala] = contexto
+            while len(resumidos) > 20:
+                del resumidos[next(iter(resumidos))]
+            self.n.eventos.put(e.Aviso(fala))
+
+    def _lead_qualificado(self, nome: str, texto: str, telefone: str, chat: str) -> None:
+        p = self.n.leads.novo(nome, texto, chat, telefone)
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: lead qualificado ({p.nome})")
+        self._avisar_lead(
+            pendentes.anuncio(p, usuario.PERFIL.nome),
+            f"Lead qualificado no WhatsApp: {p.nome}.",
+            f"{p.nome}, um lead qualificado, mandou mensagem no WhatsApp.",
+        )
+
+    def _continuar_lead(self, chat: str, texto: str) -> bool:
+        """O contato já espera resposta: a mensagem nova junta-se à pendência, sem julgar."""
+        return self.n.leads.continuar(chat, texto) is not None
+
+    def _lead_respondido(self, chat: str) -> None:
+        if (p := self.n.leads.responder(chat)) is not None:
+            log.info("whatsapp: lead respondido")
+            atividade.PADRAO.registrar("execucao", f"WhatsApp: {p.nome} respondido")
+
+    def _lembrar_leads(self) -> None:
+        """A cada segundo, do laço: quem ainda espera resposta e já passou da hora de lembrar."""
+        if not self.n.mensagens.ativo:
+            return
+        if vencidas := self.n.leads.vencidas():
+            nomes = pendentes.lista_falada([p.nome for p in vencidas])
+            self._avisar_lead(
+                pendentes.lembrete(vencidas, usuario.PERFIL.nome),
+                "",
+                f"Lembrete: {nomes} espera resposta no WhatsApp.",
+            )
+
     def _motor_das_mensagens(self) -> rapido.Motor:
         """O motor da via rápida, se ligado; senão o Claude da assinatura, sem ferramentas."""
         via = rapido.efetiva(self.n.cfg["via_rapida"])
@@ -48,7 +94,14 @@ class ServicoAtendimento:
         if evento.get("tipo") == "passou":
             self.n._atendente_passou(str(evento.get("nome", "")), str(evento.get("motivo", "")))
         elif evento.get("tipo") == "mensagem":
-            self.n.mensagens.receber(str(evento.get("nome", "")), str(evento.get("texto", "")))
+            self.n.mensagens.receber(
+                str(evento.get("nome", "")),
+                str(evento.get("texto", "")),
+                str(evento.get("telefone", "")),
+                str(evento.get("chat", "")),
+            )
+        elif evento.get("tipo") == "respondida":
+            self._lead_respondido(str(evento.get("chat", "")))
         elif evento.get("tipo") == "ligacao":
             telefone = str(evento.get("telefone", "")) or "número oculto"
             atividade.PADRAO.registrar(

@@ -28,7 +28,7 @@ from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.calendario import Calendario
 from zervis.automacoes.jobs import Jobs
-from zervis.avisos import mensagens
+from zervis.avisos import mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.avisos.fila import Fila
 from zervis.cerebro import (
@@ -325,6 +325,10 @@ class Nucleo(
         self._rodando: set[str] = set()  # automações do tipo pergunta em execução
         self._agenda_em = 0.0
         self.avisos_falados: list[tuple[float, str]] = []
+        # O que o cérebro recebe de um aviso falado, quando não deve ser a fala inteira: a de um
+        # lead do WhatsApp lê o texto de terceiros, que não entra na conversa (ADR 0053).
+        self.avisos_resumidos: dict[str, str] = {}
+        self.leads = pendentes.Pendentes()  # os leads do WhatsApp esperando a sua resposta
         # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
         # que podem voltar uma vez e quando cada aviso foi dado.
         self._comecados: dict[str, int] = {}
@@ -543,6 +547,8 @@ class Nucleo(
             self._mensagem_importante,
             self._motor_das_mensagens,
             usar_notificacoes=lambda: not self.central.whatsapp_ativo,
+            ao_lead=self._lead_qualificado,
+            continuar=self._continuar_lead,
         )
         # O atendimento (ADR 0031) roda na Central, um serviço próprio: o WhatsApp e o agente
         # seguem de pé quando o Zé reinicia. Aqui ficam só a tela, o Testar e o Publicar.
@@ -657,7 +663,8 @@ class Nucleo(
                 if texto == self.maquina.aviso_falando:
                     # O cérebro não ouve a própria voz: sem isto, "pode aprovar" depois de um
                     # aviso chegava sem contexto (teste de 06/10/2026).
-                    self.avisos_falados.append((time.monotonic(), texto))
+                    contexto = self.avisos_resumidos.get(texto, texto)
+                    self.avisos_falados.append((time.monotonic(), contexto))
                     self._comecados[texto] = self._comecados.get(texto, 0) + 1
                     self._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
                     self._antes_de_avisar(texto)
@@ -1277,6 +1284,7 @@ class Nucleo(
                     self._conversa_parada()
                     self._aviso_ao_vivo()
                     self._agendador(agora)
+                    self._lembrar_leads()
                     self._atualizar_pasta(agora)
                     self._manutencao_chegou(agora)
                     self._aplicar_quando_livre()
