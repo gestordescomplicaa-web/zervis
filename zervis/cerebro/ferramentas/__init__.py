@@ -1,7 +1,7 @@
 """Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
-manutencao, navegador, conectores, atualizacoes, pesquisa, modelos, whatsapp, instagram);
+manutencao, navegador, conectores, atualizacoes, pesquisa, modelos, imagens, whatsapp, instagram);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
@@ -23,6 +23,7 @@ from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
 from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
 from zervis.cerebro.ferramentas import automacoes as g_automacoes
 from zervis.cerebro.ferramentas import conectores as g_conectores
+from zervis.cerebro.ferramentas import imagens as g_imagens
 from zervis.cerebro.ferramentas import instagram as g_instagram
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
 from zervis.cerebro.ferramentas import modelos as g_modelos
@@ -69,6 +70,9 @@ LEITURA = [
     "internet_pesquisar",  # só lê a internet, numa consulta à parte (ADR 0044)
     "modelo3d_buscar",  # só lê um acervo livre de modelos (ADR 0049)
     "modelo3d_baixar",  # só grava no próprio Acervo, de uma fonte permitida, e mostra na tela
+    "imagem_buscar",  # só lê a Wikimedia (ADR 0058)
+    "imagem_baixar",  # só grava no próprio Acervo, da Wikimedia, com o crédito
+    "pagina_capturar",  # o print de uma página pública, atrás da trava de rede
     "whatsapp_conversas",  # só lê a caixa de entrada (ADR 0054); responder pede o sim
     "whatsapp_ler",
     "whatsapp_buscar",  # só lê o arquivo do WhatsApp (ADR 0056); esquecer pede o sim
@@ -196,6 +200,7 @@ def por_grupo(
         "sobre": g_sobre.ferramentas(sobre),
         "pesquisa": g_pesquisa.ferramentas(pesquisar),
         "modelos": g_modelos.ferramentas(acervo, tela),
+        "imagens": g_imagens.ferramentas(acervo),
         "whatsapp": g_whatsapp.ferramentas(leads),
         "instagram": g_instagram.ferramentas(instagram),
     }

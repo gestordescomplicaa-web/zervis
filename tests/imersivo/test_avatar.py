@@ -25,7 +25,24 @@ import test_brain_navigation as tb  # noqa: E402
 
 
 
+def _png(largura, altura):
+    """A tiny real PNG (grey), for the photo block."""
+    import struct
+    import zlib
+    linha = b"\x00" + b"\x80\x80\x80" * largura
+
+    def pedaco(tipo, dados):
+        return struct.pack(">I", len(dados)) + tipo + dados + struct.pack(">I", zlib.crc32(tipo + dados))
+
+    cabeca = struct.pack(">IIBBBBB", largura, altura, 8, 2, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + pedaco(b"IHDR", cabeca) + pedaco(b"IDAT", zlib.compress(linha * altura)) + pedaco(b"IEND", b"")
+
+
 async def main():
+    acervo = Path(tempfile.mkdtemp(prefix='jarvis-acervo-'))
+    (acervo / 'imagens' / 'web').mkdir(parents=True)
+    (acervo / 'imagens' / 'web' / 'pessoa.png').write_bytes(_png(4, 3))
+    tb.MEDIA['pasta'] = str(acervo)
     server = ThreadingHTTPServer(('127.0.0.1', 0), tb.Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     errors, passed = [], []
@@ -296,6 +313,29 @@ async def main():
                         break
                     await asyncio.sleep(.1)
                 await check('and "fecha tudo" clears it too', limpo)
+                # A real photo (ADR 0058): no hologram over it, the credit in the footer, and a path
+                # outside the Acervo's photo folder is dropped.
+                cena_foto = {'titulo': 'Foto', 'passos': [{'fala': 'Esta é ela.', 'blocos': [
+                    {'tipo': 'foto', 'titulo': 'Ela', 'arquivo': 'imagens/web/pessoa.png', 'legenda': 'Em 2018',
+                     'credito': 'Foto: Fulano · CC BY 2.0 · Wikipédia'},
+                    {'tipo': 'foto', 'arquivo': '../segredo.png'}, {'tipo': 'video', 'arquivo': 'imagens/web/pessoa.png'}]}]}
+                r = await ev(f'jarvisApresentacao.ritmo=.03; JSON.stringify(jarvisCenas.explicar({json.dumps(cena_foto)}))')
+                foto = '(() => { const f = document.querySelector(".jv-cena-foto .jv-c-foto"); return !!f && f.classList.contains("pronta") && f.querySelector("img").naturalWidth === 4; })()'
+                for _ in range(150):
+                    if await ev(foto):
+                        break
+                    await asyncio.sleep(.1)
+                await check('a photo block shows the real picture from the Acervo', foto)
+                await check('its footer is the credit, not ESQUEMA or ILUSTRATIVO; bad paths are dropped',
+                            '(() => { const f = document.querySelector(".jv-cena-foto .jv-h-fonte"), r = ' + r + ';'
+                            ' return f.textContent === "FOTO: FULANO · CC BY 2.0 · WIKIPÉDIA" && !f.classList.contains("ilustrativo")'
+                            ' && document.querySelector(".jv-cena-foto figcaption").textContent === "Em 2018"'
+                            ' && r.ignorados.join() === "foto,video"; })()')
+                await ev('jarvisControle.executar({id:"f1",acoes:[{acao:"fechar",alvo:"tudo"}]})')
+                for _ in range(150):
+                    if await ev(limpo):
+                        break
+                    await asyncio.sleep(.1)
                 # A real 3D hologram (ADR 0048): built from pieces into a model card the pinch lock
                 # turns on every axis; it hangs on the Zé's beam and leaves with the scene.
                 cena3d = {'titulo': 'Teste 3D', 'passos': [{'fala': 'Um.', 'blocos': [{'tipo': 'holograma', 'pecas': [

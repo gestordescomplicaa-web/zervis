@@ -78,6 +78,8 @@ ASSUNTOS_DE_FERRAMENTA = {
 # Com a janela do Zé aberta, explicar vira uma cena na tela (tela_explicar, ADR 0047): só o
 # completo tem a ferramenta. Fechada, a explicação fica na via rápida, falada.
 EXPLICAR = {"explica", "explique", "explicar", "ensina", "ensine", "apresenta", "apresente"}
+# "Quem é fulano?" com a janela aberta pede a foto dele na tela (ADR 0058): vai ao cérebro completo.
+QUEM_E = {("quem", "e"), ("quem", "foi"), ("quem", "era")}
 JANELA_ABERTA = "janela do ze aberta"
 FALADO = re.compile(r"^\s*(?:\[[^\]]*\]\s*|\([^)]*\)\s*)*")
 MARCA = re.compile(r"\s*\[[a-zà-ú_]{2,12}\]\s*", re.IGNORECASE)
@@ -119,7 +121,9 @@ def precisa_do_completo(pedido: str) -> bool:
         p = p[1:]
     if not p:
         return False
-    if any(w in EXPLICAR for w in p[:3]) and JANELA_ABERTA in " ".join(palavras(pedido)):
+    explica = any(w in EXPLICAR for w in p[:3])
+    quem = tuple(p[:2]) in QUEM_E and (p[2:3] or [""])[0] not in ("voce", "vc", "tu")
+    if (explica or quem) and JANELA_ABERTA in " ".join(palavras(pedido)):
         return True
     return p[0] in VERBOS_DE_ACAO or any(w in ASSUNTOS_DE_FERRAMENTA for w in p)
 

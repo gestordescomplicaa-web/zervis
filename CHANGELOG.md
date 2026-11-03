@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Fotos e vídeos de verdade na Imersão: "quem é fulano e o que ele faz na política?" mostra a foto
+  real dele (da Wikipédia), com o crédito, ao lado da linha do tempo e dos fatos; um fenômeno vem
+  em vídeo livre do Wikimedia Commons; "mostra o site da loja" tira o print da página. Tudo
+  gratuito, e o print nunca alcança a rede de casa.
 - WhatsApp: "não me avisa mais desse contato" silencia de vez (ele continua no arquivo, até "pode
   voltar a avisar"); "já vi" segura o contato por 6 horas; e a loja mandando o resumo de um pedido
   seu deixa de ser tratada como lead.
