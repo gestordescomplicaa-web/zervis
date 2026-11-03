@@ -1,6 +1,7 @@
-// A página Atendimento (ADR 0031), carregada sob demanda pelo painel: usa as funções dele.
-// Um cartão por função: WhatsApp (conexão), Atendimento (o que fica ligado), Cérebro (modelo e
-// chaves de API), Agente (persona, Publicar), Testar, Com você, Memória e Avisos.
+// A página Redes sociais (antes Atendimento; ADR 0031 e 0057), carregada sob demanda pelo painel:
+// usa as funções dele. Primeiro as redes ligadas ao Zé: WhatsApp (conexão), Instagram (métricas,
+// só leitura) e Avisos. Depois, à parte, o agente de atendimento: Atendimento (o que fica ligado),
+// Cérebro (modelo e chaves de API), Agente (persona, Publicar), Testar, Com você e Memória.
 
 const ESTADO_WHATSAPP = {
   conectado: ["Conectado", "bom"],
@@ -31,17 +32,33 @@ PAGINAS.atendimento = async () => {
   const a = await api("atendimento");
   vigiarAtendimento(a.whatsapp.estado);
   agenteVisto = a.agente;
-  return `${cabeca("Atendimento")}${sub("O agente que atende seus clientes no WhatsApp, separado do Zé.")}
+  return `${cabeca("Redes sociais")}${sub("O WhatsApp e o Instagram ligados ao Zé.")}
     <div id="cartao-whatsapp">${cartaoWhatsapp(a.whatsapp)}</div>
+    ${cartaoInstagram(a.instagram)}
+    ${cartao("", `<div class="cabeca"><h2>Avisos</h2></div>
+      ${item("Lead quente", "O Zé avisa quando alguém quer comprar.", liga(a.avisos.ligado, "atendimento-avisos", "", "Avisos de lead quente"))}`)}
+    <h3 class="sub-titulo">Agente de atendimento</h3>
+    ${sub("O agente que atende seus clientes no WhatsApp, separado do Zé.")}
     ${cartaoFuncionamento(a.agente)}
     ${cartaoCerebro(a.agente.cerebro, a.chaves)}
     ${cartaoAgente(a.agente)}
     ${cartaoTeste()}
     ${cartaoComVoce(a.pausados)}
-    ${cartaoMemoria(a.memoria)}
-    ${cartao("", `<div class="cabeca"><h2>Avisos</h2></div>
-      ${item("Lead quente", "O Zé avisa quando alguém quer comprar.", liga(a.avisos.ligado, "atendimento-avisos", "", "Avisos de lead quente"))}`)}`;
+    ${cartaoMemoria(a.memoria)}`;
 };
+
+// --- Instagram (ADR 0057): só leitura -------------------------------------------------------------
+
+function cartaoInstagram(ig) {
+  const topo = `<div class="cabeca"><h2>Instagram</h2>${etiquetaDe(ig.conectado, ig.conectado ? "Conectado" : "Não conectado")}</div>`;
+  if (ig.conectado) {
+    return cartao("", topo + item("", `Conta: <span class="mono">@${esc(ig.usuario)}</span> · métricas do perfil e das publicações`, botao("Desconectar", "instagram-desconectar", "", "perigo")));
+  }
+  return cartao("", `${topo}${sub("Métricas do perfil e das publicações, só leitura.")}
+    <div class="linha"><label>Token de acesso<input type="password" id="ig-token" class="mono" placeholder="Cole o token" autocomplete="off"></label>
+      <div class="botoes">${botao("Conectar", "instagram-conectar", "", "principal")}</div></div>
+    <details class="detalhes"><summary>Como obter o token</summary><p>Conta Profissional do Instagram. No app da Meta (developers.facebook.com), adicione o produto Instagram, gere o token da conta com as permissões de leitura e de métricas e cole aqui.</p></details>`);
+}
 
 const etiquetaDe = (bom, texto) => `<span class="etiqueta ${bom ? "bom" : "alerta"}">${texto}</span>`;
 
@@ -273,6 +290,18 @@ Object.assign(ACOES, {
     toast(r.aviso);
     await recarregar();
   },
+  "instagram-conectar": async (b) => {
+    const campo = /** @type {HTMLInputElement | null} */ ($("ig-token"));
+    if (!campo?.value.trim()) { toast("Cole o token."); return; }
+    const r = await ocupado(b, () => api("instagram/conectar", { token: campo.value.trim() }));
+    toast(r.aviso);
+    await recarregar();
+  },
+  "instagram-desconectar": (b) => confirmar(b, "Desconectar o Instagram?", async () => {
+    const r = await api("instagram/desconectar", { confirmado: true });
+    toast(r.aviso);
+    await recarregar();
+  }),
   "whatsapp-conectar": async (b) => {
     const r = await ocupado(b, () => api("whatsapp/conectar", {}));
     toast(r.aviso);

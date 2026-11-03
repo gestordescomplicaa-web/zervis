@@ -64,3 +64,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0054](0054-whatsapp-do-ze-recepcionista.md) | O WhatsApp do Zé como recepcionista pela voz: a caixa de entrada das conversas privadas, ler, saber quem espera e responder ditado na conversa, com o seu sim | Em validação |
 | [0055](0055-lista-de-prioridade-do-whatsapp.md) | A lista de prioridade do WhatsApp: o Zé vigia em tempo real quem você pedir, até você tirar, e escuta a resposta de quem ele respondeu por você | Em validação |
 | [0056](0056-arquivo-do-whatsapp.md) | O arquivo do WhatsApp: tudo o que passa pelo WhatsApp (privadas e grupos), para sempre, com busca; leituras sem token e o gasto real na Conversa | Em validação |
+| [0057](0057-instagram-so-leitura.md) | O Instagram do Zé, só leitura: perfil e métricas das publicações pela API oficial, analisados pela voz; a página Atendimento vira Redes sociais | Em validação |

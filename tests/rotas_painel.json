@@ -61,6 +61,8 @@
     "voz-app/remover",
     "mensagens/whatsapp",
     "whatsapp/conectar",
+    "instagram/conectar",
+    "instagram/desconectar",
     "whatsapp/desconectar",
     "atendente/salvar",
     "atendente/testar",

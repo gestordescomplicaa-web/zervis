@@ -1,7 +1,7 @@
 """Servidor MCP `jarvis` dentro do processo (docs/04-arquitetura.md): sessões, memória e histórico.
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
-manutencao, navegador, conectores, atualizacoes, pesquisa, modelos, whatsapp);
+manutencao, navegador, conectores, atualizacoes, pesquisa, modelos, whatsapp, instagram);
 aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
@@ -23,6 +23,7 @@ from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
 from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
 from zervis.cerebro.ferramentas import automacoes as g_automacoes
 from zervis.cerebro.ferramentas import conectores as g_conectores
+from zervis.cerebro.ferramentas import instagram as g_instagram
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
 from zervis.cerebro.ferramentas import modelos as g_modelos
 from zervis.cerebro.ferramentas import navegador as g_navegador
@@ -39,6 +40,7 @@ from zervis.habilidades.skills import SkillErro, Skills
 from zervis.memoria.curta import Memoria, MemoriaErro
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.sessoes import Sessoes
+from zervis.redes.instagram import Instagram
 from zervis.rosto.tela import Tela
 from zervis.sistema.politica import Sistema
 
@@ -73,6 +75,8 @@ LEITURA = [
     "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053)
     "whatsapp_ja_vi",  # só para um lembrete
     "whatsapp_prioridade",  # só muda quem o Zé vigia (ADR 0055); nada sai para ninguém
+    "instagram_perfil",  # o Instagram é só leitura (ADR 0057)
+    "instagram_posts",
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -150,12 +154,13 @@ def montar(
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
     acervo: Path | None = None,
     leads: g_whatsapp.Nucleo | None = None,
+    instagram: Instagram | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
-        pesquisar, acervo, leads,
+        pesquisar, acervo, leads, instagram,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -174,6 +179,7 @@ def por_grupo(
     pesquisar: Callable[[str], Awaitable[str]] | None = None,
     acervo: Path | None = None,
     leads: g_whatsapp.Nucleo | None = None,
+    instagram: Instagram | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -191,6 +197,7 @@ def por_grupo(
         "pesquisa": g_pesquisa.ferramentas(pesquisar),
         "modelos": g_modelos.ferramentas(acervo, tela),
         "whatsapp": g_whatsapp.ferramentas(leads),
+        "instagram": g_instagram.ferramentas(instagram),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

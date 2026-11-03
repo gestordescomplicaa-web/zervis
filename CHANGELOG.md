@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Instagram no Zé, só para análise: cole o token na página Redes sociais (antes Atendimento) e
+  pergunte "qual post me rendeu mais visualizações?", "meus reels com mais alcance no mês" ou "como
+  está meu Instagram?". Ele lê o perfil e as métricas de cada publicação pela API oficial da Meta e
+  nunca publica, comenta ou responde.
 - O Zé guarda tudo o que passa pelo seu WhatsApp desde que foi conectado, conversas e grupos, no
   seu computador e para sempre, e lembra quando você pergunta: "o que a Ana falou do orçamento?",
   "o que falaram no grupo da equipe hoje?". Em grupo ele só lê; responder é só no privado.

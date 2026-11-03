@@ -5,6 +5,10 @@
     "estado": "conectado",
     "numero": "Exemplo"
    },
+   "instagram": {
+    "conectado": true,
+    "usuario": "exemplo"
+   },
    "avisos": {
     "ligado": true
    },

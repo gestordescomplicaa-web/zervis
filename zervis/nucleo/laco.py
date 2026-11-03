@@ -125,6 +125,7 @@ from zervis.presenca import hyprland
 from zervis.presenca import modo as modo_escuta
 from zervis.presenca.hyprland import MonitorPresenca
 from zervis.presenca.rostos import Rostos
+from zervis.redes import instagram
 from zervis.rosto import hud, manifesto, pasta, tela
 from zervis.rosto.anel import Anel
 from zervis.rosto.painel import Painel
@@ -332,6 +333,7 @@ class Nucleo(
         self.leads = pendentes.Pendentes()  # os leads do WhatsApp esperando a sua resposta
         self.caixa = caixa.Caixa()  # as conversas privadas recentes do WhatsApp (ADR 0054)
         self.prioridade = prioridade.Prioridade()  # quem o Zé vigia em tempo real (ADR 0055)
+        self.instagram = instagram.Instagram()  # métricas do Instagram, só leitura (ADR 0057)
         # Regras de fala (ADR 0027): quantas vezes cada aviso começou a ser falado, os cortados
         # que podem voltar uma vez e quando cada aviso foi dado.
         self._comecados: dict[str, int] = {}
@@ -470,6 +472,7 @@ class Nucleo(
             ),
             acervo=self.imersivo.acervo,
             leads=self,
+            instagram=self.instagram,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
