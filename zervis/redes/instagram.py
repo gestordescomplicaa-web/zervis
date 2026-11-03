@@ -164,8 +164,13 @@ class Instagram:
     def conectar(self, colado: str) -> str:
         """Confere o token colado, descobre a conta e guarda. Devolve "@usuario"."""
         token = extrair_token(colado)
-        if len(token) < 40:
-            raise InstagramErro("Cole o token de acesso do Instagram.")
+        # O formato do que chegou (nunca o token): diz se colaram o ID ou a chave do app.
+        log.info("instagram: conectando (%s…, %d caracteres)", token[:4], len(token))
+        if len(token) < 40 or not token.startswith(("IG", "EAA")):
+            raise InstagramErro(
+                "Token de acesso não reconhecido: ele começa com IG ou EAA e é longo. "
+                "O ID e a chave secreta do app não servem."
+            )
         base, conta, usuario = "", "", ""
         if token.startswith("IG"):
             eu = self._pedir("ig", "me", {"fields": "user_id,username"}, token)
@@ -189,6 +194,7 @@ class Instagram:
              "guardado": agora, "renovado": agora},
         )  # fmt: skip
         self.cache.unlink(missing_ok=True)  # métricas de outra conta não servem
+        log.info("instagram: conectado (login %s)", "Instagram" if base == "ig" else "Facebook")
         return f"@{usuario}" if usuario else "a conta"
 
     def desconectar(self) -> None:

@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- Conectar o Instagram: o resultado aparece embaixo do campo (antes, num aviso que sumia em 2 s), e
+  colar o ID ou a chave secreta do app no lugar do token diz isso.
 - Instagram no Zé, só para análise: cole o token na página Redes sociais (antes Atendimento) e
   pergunte "qual post me rendeu mais visualizações?", "meus reels com mais alcance no mês" ou "como
   está meu Instagram?". Ele lê o perfil e as métricas de cada publicação pela API oficial da Meta e

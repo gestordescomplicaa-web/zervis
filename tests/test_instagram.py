@@ -117,8 +117,10 @@ def test_conecta_pelos_dois_logins_e_guarda_privado(tmp_path: Path) -> None:
     assert stat.S_IMODE((tmp_path / "instagram.key").stat().st_mode) == 0o600
     assert conta.conectar(TOKEN_FB) == "@loja.oficial"  # a Página que tem o Instagram
     assert conta.conta["base"] == "fb" and conta.conta["conta"] == "1784"
-    with pytest.raises(ig.InstagramErro, match="Cole o token"):
+    with pytest.raises(ig.InstagramErro, match="não reconhecido"):
         conta.conectar("abc")
+    with pytest.raises(ig.InstagramErro, match="chave secreta"):
+        conta.conectar("a1b2c3d4" * 6)  # a chave secreta do app (48 caracteres), não o token
     conta.desconectar()
     assert not conta.conectado
     with pytest.raises(ig.InstagramErro, match="não conectado"):
