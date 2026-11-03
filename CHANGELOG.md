@@ -2,6 +2,15 @@
 
 ## Não lançado
 
+- Pesquisa profunda: "pesquisa a fundo os concorrentes da loja X", "levanta tudo sobre esse
+  fornecedor", "qual o CNPJ e quem são os sócios?". O Zé busca de vários jeitos no buscador próprio
+  dele (o SearXNG, gratuito, rodando no seu computador), lê as melhores páginas e responde com as
+  fontes e as datas; o cadastro da empresa vem da Receita, pela BrasilAPI. "Lê esse link" traz o
+  texto limpo da página. Pessoa comum não se pesquisa: só empresas e figuras públicas.
+- O Zé vigia as fontes de fora que ele usa (o buscador, o leitor de páginas, o CNPJ, a Wikimedia,
+  o WhatsApp e o Instagram): uma vez por semana ele testa todas e avisa quando alguma quebra ou
+  volta. "Está tudo funcionando?" testa na hora.
+
 - O Zé não diz mais "vou ver aqui" a cada pedido: a frase de espera ("Só um momento", "Um
   instante") só sai quando a resposta demora mais de 3 segundos.
 - Foto de pessoa na Imersão mais rápida e certeira: quando a página da Wikipédia é exatamente quem
