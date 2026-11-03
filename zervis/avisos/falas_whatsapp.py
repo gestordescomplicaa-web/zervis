@@ -3,6 +3,7 @@
 Ana". Saem do arquivo do WhatsApp, em frases curtas para ouvir.
 """
 
+from collections.abc import Callable
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -10,6 +11,11 @@ from zervis.avisos.caixa import Caixa, Conversa, descrever
 from zervis.avisos.modo import para_ouvir
 from zervis.avisos.pendentes import lista_falada
 from zervis.avisos.prioridade import Prioridade
+
+
+def _nunca(chat: str, telefone: str) -> bool:
+    return False
+
 
 LIDAS = 3  # mensagens lidas de uma conversa; mais que isso, o cérebro (whatsapp_ler)
 TRECHO = 160  # caracteres de cada mensagem lida
@@ -30,7 +36,11 @@ def _trecho(m: dict[str, object]) -> str:
     return para_ouvir(descrever(m), limite=TRECHO) or "uma mensagem sem texto"
 
 
-def quem(caixa: Caixa, fuso: ZoneInfo) -> str:
+def _esperando(c: Conversa, calado: Callable[[str, str], bool]) -> bool:
+    return c.sem_resposta and not calado(c.chat, c.telefone)
+
+
+def quem(caixa: Caixa, fuso: ZoneInfo, calado: Callable[[str, str], bool] = _nunca) -> str:
     recebidas = caixa.recebidas(5)
     if not recebidas:
         return "Nenhuma mensagem no WhatsApp ainda."
@@ -40,14 +50,14 @@ def quem(caixa: Caixa, fuso: ZoneInfo) -> str:
     frase += _trecho(m)
     if not c.sem_resposta:
         frase += " Você já respondeu."
-    outros = [x.nome for x in recebidas[1:] if x.sem_resposta]
+    outros = [x.nome for x in recebidas[1:] if _esperando(x, calado)]
     if outros:
         frase += f" Também esperam resposta: {lista_falada(outros)}."
     return frase
 
 
-def esperando(caixa: Caixa, fuso: ZoneInfo) -> str:
-    aguardam = [c for c in caixa.recebidas(20) if c.sem_resposta]
+def esperando(caixa: Caixa, fuso: ZoneInfo, calado: Callable[[str, str], bool] = _nunca) -> str:
+    aguardam = [c for c in caixa.recebidas(20) if _esperando(c, calado)]
     if not aguardam:
         return "Ninguém esperando a sua resposta no WhatsApp."
     agora = caixa.agora()
@@ -63,11 +73,14 @@ def lista(prioridade: Prioridade) -> str:
         return "A lista de prioridade está vazia."
     de_vez = [v.nome for v in todos if v.motivo == "pedido"]
     resposta = [v.nome for v in todos if v.motivo == "resposta"]
+    calados = [v.nome for v in todos if v.motivo == "silencio"]
     partes = []
     if de_vez:
         partes.append(f"Na lista de prioridade: {lista_falada(de_vez)}.")
     if resposta:
         partes.append(f"Esperando a resposta ao que mandei por você: {lista_falada(resposta)}.")
+    if calados:
+        partes.append(f"Silenciados: {lista_falada(calados)}.")
     return " ".join(partes)
 
 

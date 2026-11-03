@@ -136,7 +136,9 @@ def _servico(tmp_path: Path) -> tuple[ServicoAtendimento, Any, list[tuple[str, .
     n: Any = SimpleNamespace(
         caixa=caixa,
         mensagens=SimpleNamespace(receber=lambda *dados: julgadas.append(dados)),
-        leads=SimpleNamespace(responder=lambda chat, quando=0.0: None),
+        leads=SimpleNamespace(
+            responder=lambda chat, quando=0.0: None, dispensada_ha_pouco=lambda chat: False
+        ),
     )
     return ServicoAtendimento(n), n, julgadas
 

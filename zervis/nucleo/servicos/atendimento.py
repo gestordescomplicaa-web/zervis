@@ -96,10 +96,11 @@ class ServicoAtendimento:
     def falar_whatsapp(self, nome: str, argumento: str) -> str:
         """As leituras do WhatsApp que o Zé responde sozinho, sem o cérebro (ADR 0056)."""
         local = fuso.local()
+        calado = self.n.prioridade.calado
         if nome == "whatsapp_quem":
-            return falas_whatsapp.quem(self.n.caixa, local)
+            return falas_whatsapp.quem(self.n.caixa, local, calado)
         if nome == "whatsapp_esperando":
-            return falas_whatsapp.esperando(self.n.caixa, local)
+            return falas_whatsapp.esperando(self.n.caixa, local, calado)
         if nome == "whatsapp_lista":
             return falas_whatsapp.lista(self.n.prioridade)
         return falas_whatsapp.ler(self.n.caixa, argumento, local)
@@ -137,6 +138,8 @@ class ServicoAtendimento:
         v = lista.chegou(chat, telefone) if lista is not None and chat else None
         if v is None:
             return False
+        if v.motivo == "silencio":
+            return True  # silenciado: só o arquivo
         lido = caixa_mod.descrever({"texto": texto, "midia": midia})
         if not self._continuar_lead(chat, lido):
             motivo = "resposta" if v.motivo == "resposta" else "prioridade"
@@ -195,6 +198,9 @@ class ServicoAtendimento:
                 return  # o antigo e o grupo vão só para o arquivo: nada de aviso
             if self._de_quem_vigio(nome, texto, telefone, chat, midia):
                 return
+            leads = getattr(self.n, "leads", None)
+            if leads is not None and leads.dispensada_ha_pouco(chat):
+                return  # "já vi" há pouco: não vira lead de novo (nem gasta o julgamento)
             if texto:  # só o texto é julgado
                 self.n.mensagens.receber(nome, texto, telefone, chat)
         elif evento.get("tipo") == "respondida":

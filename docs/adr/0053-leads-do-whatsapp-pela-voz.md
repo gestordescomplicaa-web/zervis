@@ -50,3 +50,10 @@ privada; grupo nunca.
 - Abrir a conversa sem responder não encerra: o WaCalls não repassa a confirmação de leitura.
   "Já vi" encerra.
 - O celular recebe enquanto o Zé Voz está conectado.
+
+## Ajustes de 03/11/2026
+
+- **"Já vi" segura o contato por 6 horas**: o que ele mandar nesse tempo vai só para o arquivo, sem
+  novo julgamento nem aviso de lead. Para calar de vez, o silêncio do ADR 0055.
+- **O filtro de lead** sabe que loja, fornecedor ou prestador falando de um pedido que o próprio
+  usuário fez (resumo, valores, pesagem, entrega, nota, boleto) não é lead: quem vende é o outro.

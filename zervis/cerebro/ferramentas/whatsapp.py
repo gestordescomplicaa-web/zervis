@@ -90,11 +90,12 @@ def conversas(
     estado: dict[str, Any],
     so_sem_resposta: bool,
     grupos: bool = False,
+    calado: Any = lambda chat, telefone: False,
 ) -> str:
     """As conversas recentes, a mais nova primeiro: quem, a última mensagem e se espera você."""
     lista = caixa.conversas(grupos=grupos and not so_sem_resposta, limite=200)
     if so_sem_resposta:
-        lista = [c for c in lista if c.sem_resposta]
+        lista = [c for c in lista if c.sem_resposta and not calado(c.chat, c.telefone)]
     topo = _conectado(estado)
     if not lista:
         nada = "Ninguém esperando resposta" if so_sem_resposta else "Nenhuma conversa"
@@ -159,7 +160,7 @@ def buscar(caixa: Caixa, consulta: str, contato: str, dias: int) -> tuple[str, b
 
 
 def prioridade(n: Nucleo, acao: str, contato: str, numero: str) -> tuple[str, bool]:
-    """(a resposta, se é erro) da lista de prioridade: ver, adicionar ou remover."""
+    """(a resposta, se é erro) da lista de prioridade: ver, adicionar, silenciar ou remover."""
     lista = n.prioridade
     numero = digitos(numero)
     if acao == "ver":
@@ -167,37 +168,43 @@ def prioridade(n: Nucleo, acao: str, contato: str, numero: str) -> tuple[str, bo
         if not todos:
             return "A lista de prioridade está vazia.", False
         linhas = ["Na lista de prioridade:"]
+        comos = {
+            "resposta": "esperando a resposta ao que você mandou",
+            "silencio": "silenciado: nenhum aviso dele",
+        }
         for v in todos:
-            como = (
-                "esperando a resposta ao que você mandou"
-                if v.motivo == "resposta"
-                else "até você tirar"
-            )
-            linhas.append(f"- {v.nome} (id {v.id}), {como}")
+            linhas.append(f"- {v.nome} (id {v.id}), {comos.get(v.motivo, 'até você tirar')}")
         return "\n".join(linhas), False
     if acao == "remover":
         saiu = lista.remover(contato or numero)
         if saiu is None:
             return "Ninguém com esse nome ou número na lista de prioridade.", True
+        if saiu.motivo == "silencio":
+            return f"Voltei a avisar de {saiu.nome}.", False
         return f"{saiu.nome} saiu da lista de prioridade.", False
-    if acao != "adicionar":
-        return "Ação desconhecida: use ver, adicionar ou remover.", True
+    if acao not in ("adicionar", "silenciar"):
+        return "Ação desconhecida: use ver, adicionar, silenciar ou remover.", True
     c = n.caixa.achar(contato) if contato else None
     if c is None and len(numero) >= 10:
         privadas = n.caixa.conversas(grupos=False)
         c = next((x for x in privadas if mesmo_numero(x.telefone, numero)), None)
     if c is not None and c.grupo:
         return "Grupo não entra na lista de prioridade: ela é de pessoas.", True
+    regra = lista.silenciar if acao == "silenciar" else lista.monitorar
     if c is not None:
-        v = lista.monitorar(c.nome, c.chat, c.telefone)
+        v = regra(c.nome, c.chat, c.telefone)
     elif len(numero) >= 10:
-        v = lista.monitorar(contato or f"o número {numero}", "", numero)
+        v = regra(contato or f"o número {numero}", "", numero)
     else:
         return (
             "Não achei essa conversa no arquivo. Diga o número com o DDD (e o código do "
             "país, se não for daqui) ou use whatsapp_conversas e passe o id.",
             True,
         )
+    if acao == "silenciar":
+        if v.chat:
+            n.dispensar_lead(v.chat)  # o aviso que estava aberto também para
+        return f"Certo, não aviso mais de {v.nome}. As mensagens continuam no arquivo.", False
     return f"Monitorando {v.nome}: aviso qualquer mensagem, na hora.", False
 
 
@@ -303,7 +310,8 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
     async def whatsapp_conversas(args: dict[str, Any]) -> dict[str, Any]:
         estado = await asyncio.to_thread(_estado, n)
         sem_resposta, grupos = bool(args.get("sem_resposta")), bool(args.get("grupos"))
-        return _texto(conversas(n.caixa, n.leads, estado, sem_resposta, grupos))
+        calado = n.prioridade.calado
+        return _texto(conversas(n.caixa, n.leads, estado, sem_resposta, grupos, calado))
 
     @tool(
         "whatsapp_ler",
@@ -426,12 +434,14 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         "A lista de prioridade do WhatsApp: os contatos que você vigia em tempo real e avisa de "
         'qualquer mensagem, na hora, lendo para o usuário. "Monitora a Ana", "fica de olho nesse '
         'número" (adicionar); "não monitora mais a Ana" (remover); "quem está na lista?" (ver). '
+        '"Não me avisa mais desse contato", "para de falar do açougue" (silenciar: nenhum aviso, '
+        'lembrete ou lead dele; continua no arquivo); "pode voltar a avisar da Ana" (remover). '
         "Quem você responde pelo usuário entra sozinho, esperando a resposta por 24 horas. Para "
         "um número, passe os dígitos com o DDD.",
         {
             "type": "object",
             "properties": {
-                "acao": {"type": "string", "enum": ["ver", "adicionar", "remover"]},
+                "acao": {"type": "string", "enum": ["ver", "adicionar", "silenciar", "remover"]},
                 "contato": {"type": "string", "description": "O nome, ou o id da conversa"},
                 "numero": {"type": "string", "description": "O telefone, com o DDD"},
             },

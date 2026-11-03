@@ -28,6 +28,7 @@ from zervis.avisos.modo import para_ouvir
 ARQUIVO = lugares.ESTADO / "whatsapp-pendentes.json"
 INTERVALO_S = 10 * 60
 LEMBRETES = 6  # 10 min até 1 h; depois só na lista
+SEGURAR_S = 6 * 3600  # depois do "já vi", o mesmo contato não vira lead de novo por 6 horas
 VALIDADE_S = 24 * 3600  # aberta ou respondida, some depois disto
 TEXTO_MAXIMO = 1200  # o que se guarda de um lead (as últimas mensagens dele, juntas)
 FALA_MAXIMA = 300  # o que o Zé lê no aviso; o resto, quando você pede
@@ -47,6 +48,7 @@ class Pendente:
     proximo: float = 0.0  # quando lembrar de novo; 0 = não lembra mais
     respondida: float = 0.0  # quando você respondeu ou dispensou; 0 = esperando
     motivo: str = "lead"  # lead | prioridade (na lista, ADR 0055) | resposta (ao que o Zé mandou)
+    dispensada: bool = False  # encerrada pelo "já vi", não por uma resposta
 
     @property
     def aberta(self) -> bool:
@@ -224,9 +226,15 @@ class Pendentes:
             p = next((x for x in lista if ident in (x.id, x.chat) and x.aberta), None)
             if p is None:
                 return None
-            p.respondida, p.proximo = self.agora(), 0.0
+            p.respondida, p.proximo, p.dispensada = self.agora(), 0.0, True
             self._gravar(lista)
             return p
+
+    def dispensada_ha_pouco(self, chat: str, janela_s: float = SEGURAR_S) -> bool:
+        """Você disse "já vi" a este contato há menos de `janela_s`: o que ele mandar depois não
+        vira aviso de lead (03/11/2026: a loja que mandava o pedido virava lead três vezes)."""
+        limite = self.agora() - janela_s
+        return any(p.chat == chat and p.dispensada and p.respondida > limite for p in self.todas())
 
     def vencidas(self, incluir: Callable[[Pendente], bool] = lambda p: True) -> list[Pendente]:
         """As que pedem lembrete agora (entre as de `incluir`); cada uma passa ao próximo (ou
