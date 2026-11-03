@@ -1649,3 +1649,67 @@ def test_conectar_o_instagram_mostra_o_erro_embaixo_do_campo(tmp_path: Path) -> 
         leituras_vivas={"atendimento": atendimento},
     ) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+def test_pesquisas_abrem_com_as_fontes_e_o_texto_das_paginas_nao_vira_html(
+    tmp_path: Path,
+) -> None:
+    """ADR 0060: a lista, a busca e uma pesquisa aberta. Trecho e link vêm de páginas de
+    terceiros: nada disso pode virar HTML nem link fora de http(s)."""
+    buscas: list[str] = []
+    aberta = {
+        "id": "20261103-191500-a1b2c3",
+        "pergunta": "Quem são os concorrentes da Loja Exemplo?",
+        "em": 1793740500,
+        "tipo": "profunda",
+        "consultas": ["concorrentes loja exemplo"],
+        "fontes": [
+            {
+                "n": 1,
+                "titulo": "Mercado de móveis",
+                "url": "https://noticias.exemplo/moveis",
+                "site": "noticias.exemplo",
+                "data": "2026-10-01",
+                "trechos": [
+                    'A Loja Exemplo disputa com a Rede Y. <img src=x onerror="window.invadiu=1">'
+                ],
+            },
+            {"n": 2, "titulo": "Truque", "url": "javascript:window.invadiu=2", "trechos": ["ok"]},
+        ],
+        "outros_resultados": [{"titulo": "Outro", "url": "https://outro.exemplo/", "trecho": "x"}],
+    }
+
+    def buscar(dados: dict[str, Any]) -> dict[str, Any]:
+        buscas.append(str(dados.get("busca", "")))
+        return {"pesquisas": []}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#pesquisas")
+            await _esperar(
+                nav, "document.querySelectorAll('[data-acao=\"pesquisas-abrir\"]').length === 2"
+            )
+            await nav.avaliar("document.querySelector('[data-acao=\"pesquisas-abrir\"]').click()")
+            await _esperar(nav, "!!document.querySelector('blockquote.trecho')")
+            links = await nav.avaliar(
+                "[...document.querySelectorAll('#conteudo a.externo')].map(a => a.href).join(' ')"
+            )
+            assert "https://noticias.exemplo/moveis" in links and "javascript" not in links
+            assert "https://outro.exemplo/" in links
+            assert await nav.avaliar("document.querySelector('blockquote.trecho img') === null")
+            assert await nav.avaliar("window.invadiu === undefined")
+            await nav.avaliar("document.querySelector('[data-acao=\"pesquisas-voltar\"]').click()")
+            await _esperar(nav, "!!document.getElementById('busca-pesquisas')")
+            await nav.avaliar("document.getElementById('busca-pesquisas').value = 'embalagens'")
+            await nav.avaliar("document.querySelector('[data-acao=\"pesquisas-buscar\"]').click()")
+            await _esperar(
+                nav, "document.body.textContent.includes('Nenhuma pesquisa fala disso.')"
+            )
+            assert buscas == ["embalagens"]
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path, extras={"pesquisas/ler": lambda dados: aberta, "pesquisas/buscar": buscar}
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))

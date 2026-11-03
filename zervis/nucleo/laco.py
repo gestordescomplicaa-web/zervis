@@ -118,6 +118,7 @@ from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import SessaoErro, Sessoes
 from zervis.pesquisa import saude
 from zervis.pesquisa.buscador import Buscador
+from zervis.pesquisa.guardadas import Guardadas, guardando
 from zervis.portal import senha, tunel
 from zervis.portal.acoes import Acoes
 from zervis.portal.senha import Acesso
@@ -339,6 +340,7 @@ class Nucleo(
         self.instagram = instagram.Instagram()  # métricas do Instagram, só leitura (ADR 0057)
         # A pesquisa profunda (ADR 0059): o SearXNG próprio e o vigia semanal das fontes de fora.
         self.buscador = Buscador()
+        self.pesquisas = Guardadas()  # cada pesquisa feita, para o painel e a voz (ADR 0060)
         self.fontes_de_fora = saude.Vigia(
             lambda: saude.verificacoes(
                 self.buscador, lambda: getattr(self, "central", None), lambda: self.instagram
@@ -478,14 +480,18 @@ class Nucleo(
             sobre=lambda: autoconhecimento.texto(
                 self.retrato(), self.capacidades(), self.historico()
             ),
-            pesquisar=lambda pedido: pesquisa.pesquisar(
-                pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
+            pesquisar=guardando(
+                lambda pedido: pesquisa.pesquisar(
+                    pedido, carimbo(), DADOS / "cerebro", cfg["cerebro"]["modelo"], self._gastou
+                ),
+                self.pesquisas,
             ),
             acervo=self.imersivo.acervo,
             leads=self,
             instagram=self.instagram,
             buscador=self.buscador,
             vigia=self.fontes_de_fora,
+            pesquisas=self.pesquisas,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)

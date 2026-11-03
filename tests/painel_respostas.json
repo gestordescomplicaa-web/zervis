@@ -1,5 +1,28 @@
 {
  "leituras": {
+  "pesquisas": {
+   "pesquisas": [
+    {
+     "id": "20261103-191500-a1b2c3",
+     "pergunta": "Quem são os concorrentes da Loja Exemplo?",
+     "em": 1793740500,
+     "tipo": "profunda",
+     "fontes": 5,
+     "sites": [
+      "exemplo.com.br",
+      "noticias.exemplo"
+     ]
+    },
+    {
+     "id": "20261102-101000-d4e5f6",
+     "pergunta": "Notícias do varejo hoje",
+     "em": 1793625000,
+     "tipo": "resumida",
+     "fontes": 2,
+     "sites": []
+    }
+   ]
+  },
   "atendimento": {
    "whatsapp": {
     "estado": "conectado",
