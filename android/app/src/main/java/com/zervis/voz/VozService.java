@@ -16,6 +16,7 @@ import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.media.audiofx.AcousticEchoCanceler;
+import android.media.audiofx.NoiseSuppressor;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
@@ -47,10 +48,12 @@ import okio.ByteString;
  * 80 ms, pelo WebSocket do painel (/voz-app/ws, o mesmo protocolo da voz do navegador, ADR 0024);
  * a fala do Zé volta pelo mesmo canal ({"tipo":"voz","taxa":N}, os pedaços, "fim" ou "parar").
  *
- * Com um fone Bluetooth com microfone, o microfone e a fala vão por ele (o modo de comunicação,
- * como numa ligação). Sem ele (uma caixa de som Bluetooth, o fone com fio, o alto-falante), ou
- * com o aparelho marcado "microfone do celular" na tela, a fala sai como mídia, por onde o celular
- * toca música, e o microfone é o do celular, com o cancelamento de eco quando o Android tem.
+ * Como numa ligação (o modo de comunicação), sempre que dá: com um fone Bluetooth com microfone,
+ * por ele; sem Bluetooth, no viva-voz do celular (ou no fone com fio), como uma ligação do
+ * WhatsApp no viva-voz: o próprio Android tira o eco da fala do alto-falante dele, em qualquer
+ * volume (ADR 0062). Só a caixa de som Bluetooth sem microfone (ou o aparelho marcado "microfone
+ * do celular" na tela) não entra em ligação: a fala sai como mídia e o eco sai no servidor
+ * (ADR 0051).
  * Uma vez por dia, ao conectar, procura versão nova do app e avisa numa notificação. No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
  * "Falar" na notificação) abre o pedido e, de novo, envia. Cai a rede: tenta de novo, com espera
  * crescente, até a pessoa desconectar. Os leads do WhatsApp esperando resposta chegam pelo mesmo
@@ -84,6 +87,7 @@ public final class VozService extends Service {
     private AudioManager audio;
     private AudioRecord gravador;
     private AcousticEchoCanceler semEco;
+    private NoiseSuppressor semRuido;
     private String modoDaConexao = "";
     private Thread captura;
     private AudioTrack falante;
@@ -95,7 +99,7 @@ public final class VozService extends Service {
     private volatile boolean ligado;
     private volatile boolean falando; // o pedido aberto pelo botão (apertar) ainda não foi enviado
     private int quedas;
-    private volatile boolean chamada; // a fala vai como numa ligação (fone Bluetooth com microfone)
+    private volatile boolean chamada; // a fala vai como numa ligação (tudo menos a caixa Bluetooth)
     private final AudioDeviceCallback aparelhos = new AudioDeviceCallback() {
         @Override
         public void onAudioDevicesAdded(AudioDeviceInfo[] novos) { escolherSaida(); }
@@ -203,23 +207,25 @@ public final class VozService extends Service {
         if (ws != null && !ajustes.modo().equals(modoDaConexao)) ws.close(1000, "modo");
     }
 
-    /** Fone Bluetooth com microfone: como numa ligação. Senão, ou com o aparelho marcado
-     * "microfone do celular": a fala como mídia, que vai ao aparelho Bluetooth, ao fone com fio ou
-     * ao alto-falante (no modo de ligação, iria ao fone da orelha do celular). Chamado ao ligar, a
+    /** Como numa ligação: no fone Bluetooth com microfone, ou, sem Bluetooth, no viva-voz do
+     * celular (ou no fone com fio). A caixa de som Bluetooth sem microfone (ou com o aparelho
+     * marcado "microfone do celular") só toca mídia: a fala vai como mídia. Chamado ao ligar, a
      * cada aparelho que entra ou sai e quando a tela muda o microfone. */
     private void escolherSaida() {
         if (!ligado) return;
         String aparelho = Rota.aparelho(audio);
         boolean fone = aparelho != null && Rota.temMicrofone(audio) && !ajustes.microfoneDoCelular(aparelho);
-        if (fone) {
-            audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
-            usarFoneBluetooth(true);
-        } else {
+        boolean caixa = aparelho != null && !fone;
+        if (caixa) {
             usarFoneBluetooth(false);
             audio.setMode(AudioManager.MODE_NORMAL);
+        } else {
+            audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
+            if (fone) usarFoneBluetooth(true); else usarOProprioCelular();
         }
-        if (fone == chamada) return;
-        chamada = fone;
+        boolean ligacao = !caixa;
+        if (ligacao == chamada) return;
+        chamada = ligacao;
         tocar.execute(() -> {
             if (falante == null) return;
             int taxa = taxaFala;
@@ -246,8 +252,30 @@ public final class VozService extends Service {
         }
     }
 
+    /** Sem Bluetooth: a ligação no viva-voz (ou no fone com fio, se estiver plugado). No modo de
+     * ligação, sem isto, a fala iria ao fone da orelha do celular. */
+    @SuppressWarnings("deprecation")
+    private void usarOProprioCelular() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            AudioDeviceInfo altoFalante = null;
+            for (AudioDeviceInfo d : audio.getAvailableCommunicationDevices()) {
+                int tipo = d.getType();
+                if (tipo == AudioDeviceInfo.TYPE_WIRED_HEADSET || tipo == AudioDeviceInfo.TYPE_USB_HEADSET) {
+                    audio.setCommunicationDevice(d);
+                    return;
+                }
+                if (tipo == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) altoFalante = d;
+            }
+            if (altoFalante != null) audio.setCommunicationDevice(altoFalante);
+        } else {
+            legadoBluetooth(false);
+            audio.setSpeakerphoneOn(!Rota.temFio(audio));
+        }
+    }
+
     @SuppressWarnings("deprecation")
     private void legadoBluetooth(boolean usar) {
+        audio.setSpeakerphoneOn(false);
         if (usar) {
             audio.startBluetoothSco();
             audio.setBluetoothScoOn(true);
@@ -346,10 +374,15 @@ public final class VozService extends Service {
             return;
         }
         AudioRecord este = gravador;
-        // A fala do Zé na caixa de som volta pelo microfone do celular: o cancelamento de eco tira.
+        // A fala do Zé no alto-falante volta pelo microfone: no modo de ligação, o cancelamento de
+        // eco do aparelho tira (e o de ruído limpa o fundo), como numa ligação no viva-voz.
         if (AcousticEchoCanceler.isAvailable()) {
             semEco = AcousticEchoCanceler.create(este.getAudioSessionId());
             if (semEco != null) semEco.setEnabled(true);
+        }
+        if (NoiseSuppressor.isAvailable()) {
+            semRuido = NoiseSuppressor.create(este.getAudioSessionId());
+            if (semRuido != null) semRuido.setEnabled(true);
         }
         captura = new Thread(() -> {
             byte[] quadro = new byte[QUADRO];
@@ -370,6 +403,10 @@ public final class VozService extends Service {
         if (semEco != null) {
             semEco.release();
             semEco = null;
+        }
+        if (semRuido != null) {
+            semRuido.release();
+            semRuido = null;
         }
         if (gravador != null) {
             try { gravador.stop(); } catch (IllegalStateException ignorado) { /* já parado */ }

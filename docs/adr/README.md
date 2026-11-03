@@ -69,3 +69,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0059](0059-pesquisa-profunda.md) | Pesquisa profunda: o SearXNG próprio, o leitor de páginas (Trafilatura) atrás da trava de rede, o CNPJ com reserva, o plano B pela pesquisa do Codex e o vigia semanal das fontes de fora | Em validação |
 | [0060](0060-pesquisas-guardadas.md) | Pesquisas guardadas: cada pesquisa (a profunda e a resumida) com as fontes, a página Pesquisas do painel e reabrir pela voz sem pesquisar de novo | Em validação |
 | [0061](0061-whatsapp-conversa-nova.md) | WhatsApp: começar uma conversa nova pelo número (a empresa que a pesquisa achou), com o sim que confere o nome e o número | Em validação |
+| [0062](0062-app-voz-como-ligacao.md) | O app de voz como uma ligação no viva-voz (o cancelamento de eco do Android em qualquer volume) e o eco pelo texto | Em validação |

@@ -37,15 +37,20 @@ apps; depois, só a confirmação. Para isso, as versões precisam da mesma assi
 - Com um fone Bluetooth com microfone, o microfone e a fala vão por ele (o modo de comunicação,
   como numa ligação). Com alguns fones, nesse modo o botão vira "atender/desligar" e não chega ao
   app: aí use o "Ei Zé" ou o Falar da notificação.
-- Sem fone com microfone (uma caixa de som Bluetooth, o fone com fio, o alto-falante), a fala sai
-  como mídia, por onde o celular toca música, e o microfone é o do celular. A troca vale na hora,
+- Sem Bluetooth, no alto-falante do celular (ou no fone com fio), também como numa ligação, no
+  viva-voz: o próprio Android tira o eco da fala dele, em qualquer volume, como numa ligação do
+  WhatsApp no viva-voz (ADR 0062). O volume da fala é o volume de ligação (as teclas de volume,
+  com o Zé falando).
+- Numa caixa de som Bluetooth sem microfone, a fala sai como mídia, por onde o celular toca
+  música, e o microfone é o do celular; o eco sai no servidor (ADR 0051). A troca vale na hora,
   ao conectar ou desconectar um aparelho.
 - **Microfone do celular num aparelho com microfone** (a caixa de som com viva-voz, o fone): na
   tela, "Microfone: de <aparelho>" troca para "Microfone: do celular". A fala continua saindo pelo
   aparelho, como mídia, e a escolha fica guardada para ele (pelo nome); os outros seguem a sua.
   Com vários aparelhos Bluetooth conectados, vale o que o Android usa para o som naquele momento.
-- Com a fala no alto-falante ou na caixa, o app liga o cancelamento de eco do Android (quando o
-  celular tem), para o Zé não ouvir a própria voz. Ao vivo, numa caixa alta, o fone ainda é melhor.
+- O app liga o cancelamento de eco e o de ruído do Android (quando o celular tem). E o Zé descarta
+  a transcrição que for um trecho do que ele acabou de dizer (5 palavras ou mais seguidas): o eco
+  que escapar não vira pedido. Ao vivo, numa caixa Bluetooth alta, o fone ainda é melhor.
 - Ao fim de cada fala, o microfone espera a saída terminar de tocar (na caixa Bluetooth, o atraso
   passa de meio segundo) antes de voltar a valer: sem isso, na conversa contínua, o Zé ouvia o
   final da própria fala como um pedido. Durante a fala, o "Ei Zé" continua interrompendo.
