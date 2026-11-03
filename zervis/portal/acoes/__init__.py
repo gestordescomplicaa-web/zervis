@@ -131,6 +131,8 @@ class Acoes:
             "voz-app/remover": self.remover_app_voz,
             "mensagens/whatsapp": self.mudar_mensagens,
             "whatsapp/conectar": self.conectar_whatsapp,
+            "instagram/conectar": self.conectar_instagram,
+            "instagram/desconectar": self.desconectar_instagram,
             "whatsapp/desconectar": self.desconectar_whatsapp,
             "atendente/salvar": self.salvar_atendente,
             "atendente/testar": self.testar_atendente,

@@ -61,6 +61,7 @@ GRUPOS = {
     "sobre": ("Autoconhecimento", "descreve a própria configuração, capacidades e atividade"),
     "pesquisa": ("Pesquisa na internet", "pesquisa notícias e assuntos, com as fontes"),
     "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
+    "instagram": ("Instagram", "lê o perfil e as métricas das publicações, sem publicar nada"),
     "whatsapp": (
         "WhatsApp",
         "guarda e busca tudo do WhatsApp, vigia a lista de prioridade e responde o que você dita",

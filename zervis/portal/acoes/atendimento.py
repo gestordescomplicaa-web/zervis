@@ -14,6 +14,7 @@ from zervis.cerebro import rapido
 from zervis.portal.acoes.apoio import _ler
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
+from zervis.redes.instagram import InstagramErro
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class AcoesAtendimento(Pagina):
         "conectar_whatsapp",
         "deepgram",
         "desconectar_whatsapp",
+        "instagram",
         "ligar_mensagens",
         "mensagens",
         "projeto_agente",
@@ -50,6 +52,7 @@ class AcoesAtendimento(Pagina):
         publicado = agente.PASTA / "publicado"
         return {
             "whatsapp": tela,
+            "instagram": self._instagram(),
             "avisos": {"ligado": self.n.mensagens.ativo},
             "agente": {
                 "nome": p.nome,
@@ -232,6 +235,27 @@ class AcoesAtendimento(Pagina):
         except cliente.CentralErro as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {**self.painel.atendimento(), "aviso": "Conversa devolvida ao agente."}
+
+    def _instagram(self) -> dict[str, Any]:
+        """O cartão do Instagram (ADR 0057): a conta conectada, sem consultar a Meta a cada vez."""
+        instagram = getattr(self.n, "instagram", None)
+        conta = instagram.conta if instagram is not None else {}
+        return {"conectado": bool(conta.get("token")), "usuario": conta.get("usuario", "")}
+
+    def conectar_instagram(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            usuario = self.n.instagram.conectar(str(dados.get("token", ""))[:4000])
+        except InstagramErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        atividade.PADRAO.registrar("execucao", f"Instagram conectado ({usuario})", origem="painel")
+        return {**self.painel.atendimento(), "aviso": f"Instagram conectado: {usuario}."}
+
+    def desconectar_instagram(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if dados.get("confirmado") is not True:
+            raise PedidoInvalido("confirmação necessária")
+        self.n.instagram.desconectar()
+        atividade.PADRAO.registrar("execucao", "Instagram desconectado", origem="painel")
+        return {**self.painel.atendimento(), "aviso": "Instagram desconectado."}
 
     def conectar_whatsapp(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
