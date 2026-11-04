@@ -294,6 +294,7 @@ conjunto de pastas (`zervis-<nome>`); `ZERVIS_RAIZ=<pasta>` põe as três dentro
 | [android/README.md](android/README.md) | O app de voz Zé Voz: instalar, parear e como funciona |
 | [docs/avaliacao.md](docs/avaliacao.md) | A bateria que mede o julgamento do cérebro |
 | [docs/essencia.md](docs/essencia.md) | O que o Zé é e não deixa de ser |
+| [docs/imersivo/PERSONALIZAR.md](docs/imersivo/PERSONALIZAR.md) | Como a Imersão funciona e o que dá para personalizar (JSON) |
 | [docs/conceitos.md](docs/conceitos.md) | Conversa, voz, foco, sessão, automação, memória e skill |
 | [docs/04-arquitetura.md](docs/04-arquitetura.md) | Componentes, estado, fluxos e contratos |
 | [docs/matriz-comparativa.md](docs/matriz-comparativa.md) | Hermes, OpenClaw e Zérvis, função por função |
