@@ -8,6 +8,7 @@ import logging
 import secrets
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from zervis import lugares
@@ -26,6 +27,19 @@ def tem_acervo(pasta: Path) -> bool:
         return any(p.suffix.lower() in TIPOS_ACERVO for p in pasta.rglob("*") if p.is_file())
     except OSError:
         return False
+
+
+LEGADO = ("barehands-window.service", "barehands.service")
+
+
+def _systemctl(*args: str) -> subprocess.CompletedProcess[str] | None:
+    try:
+        return subprocess.run(  # noqa: S603 (binário e argumentos fixos)
+            ["/usr/bin/systemctl", "--user", *args],
+            capture_output=True, text=True, timeout=10, check=False,
+        )  # fmt: skip
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 class Imersivo:
@@ -53,11 +67,24 @@ class Imersivo:
         return self.filho.processo
 
     def iniciar(self) -> None:
+        if porta_ocupada(self.porta) and self._legado_no_ar():
+            # O Barehands do JARVIS de antes, ligado à parte: a Imersão agora é a do Zé.
+            log.warning("modo imersivo: o barehands.service antigo estava na porta; desligando")
+            _systemctl("stop", *LEGADO)
+            for _ in range(20):
+                if not porta_ocupada(self.porta):
+                    break
+                time.sleep(0.25)
         if porta_ocupada(self.porta):
             log.warning("modo imersivo: porta %d já em uso; o Zé não sobe o próprio", self.porta)
             return
         log.info("modo imersivo em http://127.0.0.1:%d/stage.html", self.porta)
         self.filho.iniciar()
+
+    @staticmethod
+    def _legado_no_ar() -> bool:
+        r = _systemctl("is-active", "barehands.service")
+        return r is not None and r.stdout.strip() in ("active", "activating")
 
     def parar(self) -> None:
         self.filho.parar()
