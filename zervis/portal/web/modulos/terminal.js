@@ -78,7 +78,7 @@ function mostrarEco() {
 
 function terminalPodeEnviar(id, ciclo) {
   return id === termId && ciclo === cicloAtualizacao && !atualizando()
-    && !(sessaoAtual?.melhorias && window.unificandoSessoes);
+    && !(sessaoDaTela()?.melhorias && window.unificandoSessoes);
 }
 
 function escreverTerminalHttp(id, dados, ciclo) {
@@ -216,7 +216,12 @@ async function lerTerminal(id, sinal) {
   }
 }
 
+// A sessão aberta na página Sessões, que carrega sob demanda: no Autodesenvolvimento ela ainda
+// não existe, e o batimento do painel quebrava aqui (ReferenceError, CI de 04/11/2026).
+const sessaoDaTela = () => (typeof sessaoAtual === "undefined" ? null : sessaoAtual);
+
 window.desenharTravaSessoes = () => {
+  const sessaoAtual = sessaoDaTela();
   const bloqueada = atualizando() || (!!sessaoAtual?.melhorias && !!window.unificandoSessoes);
   const aviso = $("reserva-sessoes");
   if (aviso) {
@@ -230,6 +235,7 @@ window.desenharTravaSessoes = () => {
 
 // Enquanto o agente trabalha, a conta fica travada (a troca reabre o terminal).
 function travarAjustes(trabalhando) {
+  const sessaoAtual = sessaoDaTela();
   const bloqueado = trabalhando || atualizando() || (!!sessaoAtual?.melhorias && !!window.unificandoSessoes);
   /** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll("#ajustes-sessao .escolha-botao")).forEach((el) => { el.disabled = bloqueado; });
   const parar = /** @type {HTMLButtonElement | null} */ ($("interromper-trabalho"));
