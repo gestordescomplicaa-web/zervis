@@ -107,14 +107,14 @@ func TestAgendaMessageAceitaRespostaDoAtendimento(t *testing.T) {
 // Zérvis: responder na conversa exata (telefone ou LID), nunca em grupo.
 func TestAgendaMessageNaConversa(t *testing.T) {
 	base := agendaMessageRequest{Kind: atendimentoMessageKind, Text: "oi", IdempotencyKey: "zervis:12345678"}
-	for _, chat := range []string{"134230663237656@lid", "558193563525@s.whatsapp.net"} {
+	for _, chat := range []string{"100000000000001@lid", "558187650000@s.whatsapp.net"} {
 		pedido := base
 		pedido.ChatJID = chat
 		if _, err := validarAgendaMessageRequest(pedido); err != nil {
 			t.Fatalf("%s: %v", chat, err)
 		}
 	}
-	for _, chat := range []string{"120363000000000000@g.us", "status@broadcast", "123@newsletter", "558193563525:3@s.whatsapp.net", "lixo"} {
+	for _, chat := range []string{"120363000000000000@g.us", "status@broadcast", "123@newsletter", "558187650000:3@s.whatsapp.net", "lixo"} {
 		pedido := base
 		pedido.ChatJID = chat
 		if _, err := validarAgendaMessageRequest(pedido); err == nil {
@@ -122,14 +122,14 @@ func TestAgendaMessageNaConversa(t *testing.T) {
 		}
 	}
 	ambos := base
-	ambos.ChatJID, ambos.Phones = "134230663237656@lid", []string{"558193563525"}
+	ambos.ChatJID, ambos.Phones = "100000000000001@lid", []string{"558187650000"}
 	if _, err := validarAgendaMessageRequest(ambos); err == nil {
 		t.Fatal("chat_jid e phones juntos deveriam ser recusados")
 	}
 	porTelefone := base
-	porTelefone.Phones = []string{"558193563525"}
+	porTelefone.Phones = []string{"558187650000"}
 	naConversa := base
-	naConversa.ChatJID = "558193563525@s.whatsapp.net"
+	naConversa.ChatJID = "558187650000@s.whatsapp.net"
 	if agendaPayloadHash(porTelefone) == agendaPayloadHash(naConversa) {
 		t.Fatal("o alvo entra no resumo do pedido")
 	}

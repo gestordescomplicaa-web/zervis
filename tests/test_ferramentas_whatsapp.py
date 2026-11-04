@@ -18,7 +18,7 @@ from zervis.cerebro.ferramentas import LIVRES
 from zervis.cerebro.ferramentas import whatsapp as w
 from zervis.nucleo.servicos.atendimento import ServicoAtendimento
 
-ANA = "134230663237656@lid"  # um contato só com LID: a resposta vai à conversa, sem o número
+ANA = "100000000000001@lid"  # um contato só com LID: a resposta vai à conversa, sem o número
 BIA = "558199990000@s.whatsapp.net"
 
 

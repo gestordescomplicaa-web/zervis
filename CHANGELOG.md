@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Cérebro local mais leve: recebe só as ferramentas do próprio Zé (o navegador completo e os
+  conectores ficam para o Claude e o Codex), então a leitura inicial é mais curta. Só o
+  gemma4:e4b aparece para escolher: o qwen3:8b não cabe na memória livre desta máquina com o
+  contexto do Zé. O painel mostra "Preparando…" enquanto ele lê, e o Zé avisa quanto tempo leva.
+
 - Imersão: a janela do Zé não liga mais o servidor antigo do JARVIS (o `barehands.service`), que
   disputava a porta com a Imersão do Zé e, num reinício, ficava com ela: a janela mostrava a
   página velha, sem o fundo escuro nem a troca entre anel e Zé. Ao subir, o Zé tira o antigo da

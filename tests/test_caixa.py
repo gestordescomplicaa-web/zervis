@@ -9,7 +9,7 @@ from typing import Any
 from zervis.avisos import caixa as cx
 from zervis.nucleo.servicos.atendimento import ServicoAtendimento
 
-ANA = "134230663237656@lid"
+ANA = "100000000000001@lid"
 GRUPO = "120363000000000000@g.us"
 T = 1_000_000.0  # o relógio dos testes
 
