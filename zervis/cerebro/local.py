@@ -311,6 +311,7 @@ class LocalBrain(ClaudeBrain):
 
     async def interrupt(self) -> None:
         self._parar = True
+        self.http.abortar()  # o Ollama para de gerar (ou de ler o prompt) na hora
 
     async def reset(self) -> None:
         self.mensagens = []
@@ -318,6 +319,7 @@ class LocalBrain(ClaudeBrain):
 
     async def close(self) -> None:
         await self.reset()
+        self.http.abortar()  # a leitura em curso não fica ocupando a GPU para um cérebro morto
         if self.aquecimento is not None:
             self.aquecimento.cancel()
         if self.ponte_mcp is not None:
@@ -327,24 +329,25 @@ class LocalBrain(ClaudeBrain):
 
 
 async def testar(endereco: str, modelo: str) -> tuple[bool, str]:
-    """Uma pergunta mínima, sem ferramentas: o Ollama no ar e o modelo respondendo."""
+    """O Ollama no ar e o modelo carregado, sem fazer pergunta: uma pergunta entraria na fila
+    atrás da leitura do prompt do cérebro (minutos) e apagaria o que ele já leu."""
     try:
         await asyncio.to_thread(conferir, endereco, modelo)
     except LocalErro as erro:
         return False, f"{str(erro)[:1].upper()}{str(erro)[1:]}."
-    http = Http(endereco, tempo_limite_s=120)
-    corpo = {
-        "model": modelo, "stream": True, "think": False, "keep_alive": MANTER,
-        "messages": [{"role": "user", "content": "Responda só: ok"}],
-        "options": {"num_predict": 4},
-    }  # fmt: skip
+
+    def carregar() -> Any:
+        corpo = json.dumps({"model": modelo, "keep_alive": MANTER}).encode()
+        pedido = urllib.request.Request(  # noqa: S310 (loopback, validado)
+            endereco.rstrip("/") + "/api/generate", corpo, {"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(pedido, timeout=120) as r:  # noqa: S310
+            return json.loads(r.read())
+
     try:
-        respondeu = False
-        async for linha in http.linhas("/api/chat", corpo, {}):
-            dados = json.loads(linha) if linha.strip() else {}
-            respondeu = respondeu or bool((dados.get("message") or {}).get("content"))
-        return (True, "Conectado.") if respondeu else (False, "O modelo não respondeu.")
-    except (MotorErro, OSError, ValueError):
-        return False, "O Ollama não respondeu."
-    finally:
-        http.fechar()
+        dados = await asyncio.to_thread(carregar)
+    except (urllib.error.URLError, OSError, ValueError):
+        return False, "O Ollama não carregou o modelo."
+    if not dados.get("done"):
+        return False, "O Ollama não carregou o modelo."
+    return True, f"Conectado: {modelo} carregado."

@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Cérebro local: trocar de modelo, desligar ou interromper corta na hora o que o Ollama estava
+  fazendo (antes, a leitura inicial antiga seguia por minutos com a GPU em 99%, e os pedidos
+  novos ficavam na fila). E o "Testar conexão" só confere que o modelo carrega, sem entrar na
+  fila atrás da leitura.
+
 - Cérebro local: o Zé pode responder por um modelo do seu computador (o Gemma 4, pelo Ollama),
   sem gastar os planos do Claude e do Codex. Ele conversa e usa as mesmas ferramentas (WhatsApp,
   pesquisa, CNPJ, lembretes...), com o mesmo "sim" falado para o que tem efeito. Escolha em

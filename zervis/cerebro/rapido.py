@@ -28,6 +28,7 @@ import logging
 import os
 import re
 import shutil
+import socket
 import threading
 import time
 import unicodedata
@@ -296,6 +297,7 @@ class Http:
         self.tempo_limite_s = tempo_limite_s
         self._conn: http.client.HTTPConnection | None = None
         self._trava = threading.Lock()
+        self._abortado = threading.Event()  # cortado de propósito: não é para tentar de novo
 
     def _conexao(self) -> http.client.HTTPConnection:
         if self._conn is None:
@@ -334,6 +336,8 @@ class Http:
         def por(item: object) -> None:
             laco.call_soon_threadsafe(fila.put_nowait, item)
 
+        self._abortado.clear()
+
         def trabalhar() -> None:
             with self._trava:
                 for tentativa in (1, 2):
@@ -358,9 +362,10 @@ class Http:
                         por(_FIM)
                         return
                     except (http.client.RemoteDisconnected, ConnectionError) as erro:
-                        # A conexão parada foi fechada do outro lado: refaz uma vez.
+                        # A conexão parada foi fechada do outro lado: refaz uma vez (nunca a
+                        # que foi cortada daqui, por `abortar`).
                         self._fechar()
-                        if recebeu or tentativa == 2:
+                        if recebeu or tentativa == 2 or self._abortado.is_set():
                             por(MotorErro(type(erro).__name__))
                             return
                     except Exception as erro:
@@ -383,6 +388,16 @@ class Http:
     def fechar(self) -> None:
         with self._trava:
             self._fechar()
+
+    def abortar(self) -> None:
+        """Corta o pedido em curso, de fora da thread que lê: o servidor vê a conexão cair e
+        para de trabalhar nele (sem isto, um modelo local seguia lendo um prompt de minutos
+        depois de o pedido ser abandonado, caso de 04/11/2026)."""
+        self._abortado.set()
+        sock = getattr(self._conn, "sock", None)
+        if sock is not None:
+            with contextlib.suppress(OSError):
+                sock.shutdown(socket.SHUT_RDWR)
 
 
 def _dados_sse(linhas: AsyncIterator[str]) -> AsyncIterator[dict[str, Any]]:
