@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- App de voz no celular: o Zé não se ouve mais no alto-falante, em qualquer volume. Sem fone
+  Bluetooth, a fala passa a sair como numa ligação no viva-voz (igual ao WhatsApp), onde o próprio
+  celular tira o eco; o volume é o de ligação. E o que ainda escapar, se for um trecho do que ele
+  acabou de dizer, é descartado antes de virar pedido. Vale para o "Ei Zé" e para o Ao vivo.
+
 - WhatsApp: o Zé começa conversas novas. "Manda um oi para essa empresa no WhatsApp" (o número
   que a pesquisa achou) ou "manda para o 11 98765-4321: ..." pergunta antes "é para a Empresa X
   mesmo, no número tal?" e, com o seu sim, envia. Celular com ou sem o nono dígito, conferido no

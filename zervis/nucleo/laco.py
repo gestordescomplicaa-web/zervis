@@ -9,6 +9,7 @@ import collections
 import concurrent.futures
 import contextlib
 import dataclasses
+import functools
 import logging
 import os
 import queue
@@ -156,6 +157,7 @@ from zervis.voz.ativacao import (
     faltando,
 )
 from zervis.voz.deepgram import Deepgram, EscutaDeepgram
+from zervis.voz.eco_texto import EcoDeTexto
 from zervis.voz.escuta import Segmentador
 from zervis.voz.fala import falavel, para_fala
 from zervis.voz.fim_de_turno import FimDeTurno
@@ -680,6 +682,8 @@ class Nucleo(
                 self.marca += 1
                 self.ponte.interromper()
             case e.Falar(texto):
+                if (eco := getattr(self, "eco_texto", None)) is not None:
+                    eco.falou(texto)
                 # O que foi dito por último, inteiro, para "repete": um aviso, ou as frases de
                 # uma mesma resposta (a marca muda a cada pedido).
                 if texto == self.maquina.aviso_falando:
@@ -840,6 +844,15 @@ class Nucleo(
             evento = permitido
         if isinstance(evento, e.Aviso) and self._pessoa_falando():
             self._guardar(evento.texto)  # ao vivo: o aviso espera a pausa, não atropela
+            return
+        eco = getattr(self, "eco_texto", None)
+        if (
+            isinstance(evento, e.FimDeFala | e.FalaAoVivo)
+            and eco is not None
+            and eco.eco(evento.texto)
+        ):
+            # A própria fala do Zé voltou pelo microfone, transcrita (ADR 0062): não é pedido.
+            log.info("eco: a própria fala voltou transcrita (%d caracteres)", len(evento.texto))
             return
         if isinstance(evento, e.FalaAoVivo):
             self._pedido_ao_vivo(evento)
@@ -1333,6 +1346,11 @@ class Nucleo(
                     continue
         finally:
             self.desligar()
+
+    @functools.cached_property
+    def eco_texto(self) -> EcoDeTexto:
+        """O que o Zé disse há pouco, se voltar pelo microfone transcrito (ADR 0062)."""
+        return EcoDeTexto()
 
     def _vigiar_fontes(self) -> None:
         """Uma vez por semana, as fontes de fora testadas de verdade; o Zé fala só o que mudou

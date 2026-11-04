@@ -3,7 +3,8 @@ package com.zervis.voz;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 
-/** Os aparelhos Bluetooth de áudio conectados: o nome (para lembrar a escolha) e se têm microfone. */
+/** Os aparelhos de áudio conectados: o Bluetooth (o nome, para lembrar a escolha, e se tem
+ * microfone) e o fone com fio. */
 final class Rota {
     private Rota() {}
 
@@ -23,6 +24,18 @@ final class Rota {
             }
         }
         return null;
+    }
+
+    /** Um fone com fio (ou USB) plugado. */
+    static boolean temFio(AudioManager audio) {
+        for (AudioDeviceInfo d : audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            int tipo = d.getType();
+            if (tipo == AudioDeviceInfo.TYPE_WIRED_HEADSET || tipo == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                    || tipo == AudioDeviceInfo.TYPE_USB_HEADSET) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** O aparelho Bluetooth tem microfone (o perfil de ligação: fone, ou caixa com viva-voz)? */
