@@ -3,8 +3,10 @@ Zé, a conversa que cabe no contexto, a data que não vira fala, e o catálogo, 
 Um Ollama falso responde roteiros prontos; nada sai da máquina."""
 
 import asyncio
+import contextlib
 import json
 import threading
+import time
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -25,6 +27,9 @@ class OllamaFalso:
     def __init__(self, roteiros: list[list[dict[str, Any]]], modelos: list[str]) -> None:
         self.roteiros, self.modelos = roteiros, modelos
         self.pedidos: list[dict[str, Any]] = []
+        self.lento = False
+        self.lendo = threading.Event()
+        self.caiu_em: float | None = None
         falso = self
 
         class Tratador(BaseHTTPRequestHandler):
@@ -41,6 +46,21 @@ class OllamaFalso:
             def do_POST(self) -> None:
                 pedido = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 falso.pedidos.append(pedido)
+                if self.path == "/api/generate":  # carregar o modelo, sem pergunta
+                    corpo = json.dumps({"done": True, "done_reason": "load"}).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Length", str(len(corpo)))
+                    self.end_headers()
+                    self.wfile.write(corpo)
+                    return
+                if falso.lento:  # lendo um prompt longo: só termina quando o cliente cai
+                    falso.lendo.set()
+                    self.connection.settimeout(10)
+                    inicio = time.monotonic()
+                    with contextlib.suppress(OSError):
+                        self.connection.recv(1)
+                    falso.caiu_em = time.monotonic() - inicio
+                    return
                 if pedido["messages"][-1].get("content") == "ok":  # o aquecimento
                     roteiro = [{"done": True, "prompt_eval_count": 1, "eval_count": 1}]
                 else:
@@ -244,3 +264,29 @@ def test_catalogo_config_e_voz(tmp_path: Path, ollama: OllamaFalso) -> None:
         False,
         "O Ollama está fora do ar.",
     )
+
+
+def test_fechar_corta_a_leitura_em_curso(tmp_path: Path, ollama: OllamaFalso) -> None:
+    """Caso de 04/11/2026: trocar de modelo no meio da leitura inicial deixava o Ollama lendo o
+    prompt antigo por minutos, com a GPU em 99%, e os pedidos novos na fila."""
+    ollama.lento = True
+    b = _cerebro(tmp_path, ollama, [])
+
+    async def rodar() -> None:
+        await b.start("Zé", None)  # o aquecimento começa a ler
+        await asyncio.to_thread(ollama.lendo.wait, 5)
+        await b.close()
+
+    asyncio.run(rodar())
+    deadline = time.monotonic() + 3
+    while ollama.caiu_em is None and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert ollama.caiu_em is not None and ollama.caiu_em < 2  # a conexão caiu na hora
+
+
+def test_testar_carrega_o_modelo_sem_perguntar(ollama: OllamaFalso) -> None:
+    ok, mensagem = asyncio.run(local.testar(ollama.endereco, "gemma4:e4b"))
+    assert (ok, mensagem) == (True, "Conectado: gemma4:e4b carregado.")
+    assert ollama.pedidos == [{"model": "gemma4:e4b", "keep_alive": local.MANTER}]
+    ok, mensagem = asyncio.run(local.testar(ollama.endereco, "llama9:70b"))
+    assert not ok and "não está instalado" in mensagem
