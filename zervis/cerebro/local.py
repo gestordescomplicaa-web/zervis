@@ -355,6 +355,22 @@ class LocalBrain(ClaudeBrain):
             await self.ponte_mcp.fechar()
             self.ponte_mcp = None
         self.http.fechar()
+        # Saiu do local (ou trocou de modelo): a memória do modelo volta para a máquina na hora,
+        # em vez de ficar presa pelas horas do `keep_alive` (o qwen3:8b segurava 9,8 GB).
+        await asyncio.to_thread(descarregar, self.endereco, self.modelo)
+
+
+def descarregar(endereco: str, modelo: str) -> None:
+    """Tira o modelo da memória do Ollama (sem erro se ele já saiu ou o Ollama caiu)."""
+    corpo = json.dumps({"model": modelo, "keep_alive": 0}).encode()
+    pedido = urllib.request.Request(  # noqa: S310 (loopback, validado)
+        endereco.rstrip("/") + "/api/generate", corpo, {"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(pedido, timeout=10) as r:  # noqa: S310
+            r.read()
+    except (urllib.error.URLError, OSError):
+        pass
 
 
 async def testar(endereco: str, modelo: str) -> tuple[bool, str]:
