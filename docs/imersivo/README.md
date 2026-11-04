@@ -4,6 +4,9 @@ A interface do Zé na tela, movida pelas mãos: o anel do Zé, os círculos que
 nascem dele, o quadro de vidro, o cérebro navegável e os ajustes de câmera e cores.
 Roda no próprio computador; a câmera nunca sai da máquina.
 
+Para entender como a Imersão funciona por dentro e o que dá para personalizar, veja
+[PERSONALIZAR.md](PERSONALIZAR.md).
+
 ## Rodar
 
 ```bash
