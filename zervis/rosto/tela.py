@@ -23,6 +23,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from zervis import lugares
+
 ACOES = {
     "abrir": "alvo: um orbe (pelo nome ou apelido) ou qualquer item do Núcleo pelo nome falado: "
     "nota, arquivo do Acervo ou pasta; orbe (opcional) restringe a "
@@ -66,7 +68,14 @@ CENA = "explicar"  # a cena animada (tela_explicar), com a cena em JSON no lugar
 JANELA = r"class:^(chrome-127\.0\.0\.1__(stage\.html.*|-Default))$"  # o imersivo ou o painel
 CLASSE_PAINEL = "chrome-127.0.0.1__-Default"
 CLASSE = "chrome-127.0.0.1__stage.html"
-SERVICOS = ["barehands.service", "barehands-window.service"]
+# A janela é uma unidade do próprio Zé, no Chromium (caso de 04/11/2026): a antiga ligava o
+# `barehands.service` do JARVIS de antes, que brigava com a Imersão do Zé pela porta 8794 (falhava
+# a cada 5 s, para sempre, e ganhou a porta num reinício do Zé, com a página velha na janela).
+UNIDADE = "zervis-janela"
+LEGADO_JANELA = "barehands-window.service"  # a janela aberta do jeito antigo também fecha
+PERFIL_LEGADO = Path.home() / ".local/share/barehands/browser"  # a câmera e as escolhas da página
+ENDERECO = "http://127.0.0.1:8794/stage.html?res=1280x720&fps=auto"
+NAVEGADORES = ("/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome-stable")
 VIVO_S = 15.0  # a página publica o estado a cada 5 s; sem isso por 15 s, a janela está fechada
 MODOS = {"brain": "geral", "work": "trabalho", "focus": "foco"}
 
@@ -102,6 +111,13 @@ def _systemctl(*args: str) -> None:
     with contextlib.suppress(OSError, subprocess.SubprocessError):
         subprocess.run(  # noqa: S603 (binário e argumentos fixos)
             ["/usr/bin/systemctl", "--user", *args], capture_output=True, timeout=10, check=False
+        )
+
+
+def _systemd_run(*args: str) -> None:
+    with contextlib.suppress(OSError, subprocess.SubprocessError):
+        subprocess.run(  # noqa: S603 (binário fixo; argumentos do próprio Zé)
+            ["/usr/bin/systemd-run", "--user", *args], capture_output=True, timeout=10, check=False
         )
 
 
@@ -219,8 +235,18 @@ class Tela:
         _hyprctl("dispatch", "focuswindow", JANELA)
 
     def abrir(self) -> None:
-        """Liga a janela do Zé (servidor e janela; a câmera acende) e a traz para a frente."""
-        _systemctl("start", *SERVICOS)
+        """Abre a janela do Zé (a câmera acende) e a traz para a frente. O servidor é o do
+        próprio Zé (`zervis.imersivo`), que já está de pé."""
+        navegador = next((n for n in NAVEGADORES if Path(n).is_file()), None)
+        if navegador is not None and not self.aberto():
+            perfil = PERFIL_LEGADO if PERFIL_LEGADO.is_dir() else lugares.DADOS / "janela"
+            perfil.mkdir(parents=True, exist_ok=True, mode=0o700)
+            _systemctl("stop", UNIDADE)  # uma janela que fechou sozinha deixa a unidade parada
+            _systemd_run(
+                f"--unit={UNIDADE}", "--collect", "--quiet", navegador,
+                f"--user-data-dir={perfil}", "--no-first-run", "--no-default-browser-check",
+                f"--app={ENDERECO}",
+            )  # fmt: skip
         for _ in range(20):
             if self.aberto():
                 break
@@ -229,4 +255,4 @@ class Tela:
 
     def fechar(self) -> None:
         """Fecha a janela do Zé (a câmera apaga); o servidor fica para o HUD."""
-        _systemctl("stop", SERVICOS[1])
+        _systemctl("stop", UNIDADE, LEGADO_JANELA)

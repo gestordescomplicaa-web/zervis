@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Imersão: a janela do Zé não liga mais o servidor antigo do JARVIS (o `barehands.service`), que
+  disputava a porta com a Imersão do Zé e, num reinício, ficava com ela: a janela mostrava a
+  página velha, sem o fundo escuro nem a troca entre anel e Zé. Ao subir, o Zé tira o antigo da
+  porta, e a janela abre numa unidade própria (`zervis-janela`), no mesmo perfil do navegador.
+
 - Cérebro local: a lista de modelos mostra só os que funcionam como cérebro do Zé, medidos nesta
   máquina com as ferramentas dele (o gemma4:e4b primeiro, como recomendado; o qwen3:8b como mais
   lento). O functiongemma e os modelos sem ferramentas (como o gemma2) não aparecem mais.

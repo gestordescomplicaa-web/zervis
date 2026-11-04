@@ -5,6 +5,7 @@ import socket
 import time
 import urllib.request
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -95,3 +96,29 @@ def test_o_acervo_e_uma_pasta_do_ze_com_imagens_e_3d(imersivo: Imersivo) -> None
     itens = json.dumps(pegar(imersivo, "/props"))
     assert "imagens/capa.png" in itens and "3d/cabeca.glb" in itens and "roteiro" not in itens
     assert tem_acervo(acervo)
+
+
+def test_o_barehands_antigo_sai_da_porta_quando_o_ze_sobe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caso de 04/11/2026: o barehands.service do JARVIS antigo segurava a porta 8794 e o Zé não
+    subia a própria Imersão; agora ele desliga o antigo e sobe a sua."""
+    import zervis.imersivo as im
+
+    ocupada = {"sim": True}
+    comandos: list[tuple[str, ...]] = []
+
+    def systemctl(*args: str) -> Any:
+        comandos.append(args)
+        if args[0] == "stop":
+            ocupada["sim"] = False
+        return SimpleNamespace(stdout="active\n")
+
+    monkeypatch.setattr(im, "_systemctl", systemctl)
+    monkeypatch.setattr(im, "porta_ocupada", lambda porta: ocupada["sim"])
+    imersivo = im.Imersivo(tmp_path)
+    subiu: list[int] = []
+    monkeypatch.setattr(imersivo.filho, "iniciar", lambda: subiu.append(1))
+    imersivo.iniciar()
+    assert ("stop", "barehands-window.service", "barehands.service") in comandos
+    assert subiu == [1]

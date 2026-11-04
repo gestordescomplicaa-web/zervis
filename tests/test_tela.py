@@ -184,5 +184,27 @@ def test_trazer_usa_o_hyprctl_com_comando_fixo(
     tela.Tela(tmp_path).fechar()
     assert chamadas == [
         ["/usr/bin/hyprctl", "dispatch", "focuswindow", tela.JANELA],
-        ["/usr/bin/systemctl", "--user", "stop", "barehands-window.service"],
+        ["/usr/bin/systemctl", "--user", "stop", "zervis-janela", "barehands-window.service"],
     ]
+
+
+def test_abrir_a_janela_nunca_liga_o_barehands_antigo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caso de 04/11/2026: abrir a janela ligava o barehands.service do JARVIS antigo, que brigava
+    com a Imersão do Zé pela porta e ganhou num reinício (a página velha, sem fundo escuro)."""
+    chamadas: list[list[str]] = []
+
+    def rodar(args: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        chamadas.append(args)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", rodar)
+    monkeypatch.setattr(tela, "PERFIL_LEGADO", tmp_path / "perfil")
+    vezes = iter([False, True])  # fechada; aberta logo depois de lançar
+    monkeypatch.setattr(tela.Tela, "aberto", lambda self: next(vezes, True))
+    tela.Tela(tmp_path).abrir()
+    assert not any("barehands.service" in " ".join(c) for c in chamadas)
+    [abriu] = [c for c in chamadas if c[0] == "/usr/bin/systemd-run"]
+    assert "--unit=zervis-janela" in abriu and abriu[-1].startswith("--app=http://127.0.0.1:8794/")
+    assert any(a.startswith("--user-data-dir=") for a in abriu)
