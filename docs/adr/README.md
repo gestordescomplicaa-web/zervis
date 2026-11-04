@@ -71,3 +71,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0061](0061-whatsapp-conversa-nova.md) | WhatsApp: começar uma conversa nova pelo número (a empresa que a pesquisa achou), com o sim que confere o nome e o número | Em validação |
 | [0062](0062-app-voz-como-ligacao.md) | O app de voz como uma ligação no viva-voz (o cancelamento de eco do Android em qualquer volume) e o eco pelo texto | Em validação |
 | [0063](0063-cerebro-local.md) | O cérebro local: um modelo do Ollama (Gemma 4 E4B na GPU integrada) com as ferramentas e a aprovação do Zé, sem gastar os planos | Em validação |
+| [0064](0064-barra-de-andamento.md) | A barra de carregamento: o passo (rótulo de cada ferramenta) e o tempo esperado (as medianas reais), na Imersão e no painel | Em validação |

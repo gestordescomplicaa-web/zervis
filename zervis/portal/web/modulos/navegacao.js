@@ -183,6 +183,56 @@ function faixaFora(ligar) {
   if (ligar && !f) { f = document.createElement("div"); f.className = "faixa-fora"; f.role = "status"; f.textContent = "Reconectando…"; document.body.append(f); }
   if (!ligar) f?.remove();
 }
+// A barra de carregamento no topo (ADR 0064): o que o Zé está fazendo e uma barra que anda como
+// num jogo, rápida no começo e mais devagar perto do fim; só completa quando a resposta começa.
+const andamento = { ativo: false, inicio: 0, base: 0, desde: 0, tau: 3, texto: "Pensando", visto: 0, saiu: 0, fim: 0 };
+const ANDAMENTO_TETO = 0.95;
+const agoraS = () => performance.now() / 1000;
+const progressoAndamento = (t) => andamento.base + (ANDAMENTO_TETO - andamento.base) * (1 - Math.exp(-(t - andamento.desde) / andamento.tau));
+
+/** @param {string} texto @param {number} esperado */
+function etapaAndamento(texto, esperado) {
+  const t = agoraS();
+  andamento.base = Math.min(ANDAMENTO_TETO, andamento.ativo ? progressoAndamento(t) : 0);
+  andamento.desde = t; andamento.tau = Math.max(0.6, esperado); andamento.texto = texto;
+}
+
+/** @param {string} estado @param {{rotulo?: string, esperado_s?: number, ts?: number} | undefined} passo */
+function andamentoPainel(estado, passo) {
+  let barra = $("andamento");
+  if (!barra) {
+    barra = document.createElement("div");
+    barra.id = "andamento"; barra.setAttribute("role", "progressbar"); barra.setAttribute("aria-label", "O que o Zé está fazendo");
+    barra.innerHTML = '<div class="andamento-cheio"></div><span class="andamento-rotulo"></span>';
+    document.body.appendChild(barra);
+    requestAnimationFrame(desenharAndamento);
+  }
+  const t = agoraS();
+  if (estado === "pensando") {
+    andamento.saiu = 0;
+    if (!andamento.ativo) { andamento.ativo = true; andamento.inicio = t; andamento.visto = passo?.ts ?? 0; etapaAndamento("Pensando", 3); barra.classList.add("ativo"); }
+    if (passo?.ts && passo.ts !== andamento.visto) { andamento.visto = passo.ts; etapaAndamento(passo.rotulo || "Pensando", Number(passo.esperado_s) || 3); }
+  } else if (andamento.ativo) {
+    andamento.saiu = andamento.saiu || t;
+    if (t - andamento.saiu > 1.5 || estado === "ativo" || estado === "inativo") { andamento.ativo = false; andamento.fim = t; }
+  }
+}
+
+function desenharAndamento() {
+  const barra = $("andamento");
+  if (!barra) return;
+  const cheio = /** @type {HTMLElement} */ (barra.querySelector(".andamento-cheio"));
+  const t = agoraS();
+  if (andamento.ativo) {
+    cheio.style.width = (progressoAndamento(t) * 100).toFixed(1) + "%";
+    /** @type {HTMLElement} */ (barra.querySelector(".andamento-rotulo")).textContent = `${andamento.texto}… ${Math.round(t - andamento.inicio)} s`;
+  } else if (andamento.fim) {
+    cheio.style.width = "100%";
+    if (t - andamento.fim > 0.6) { barra.classList.remove("ativo"); andamento.fim = 0; }
+  }
+  requestAnimationFrame(desenharAndamento);
+}
+
 async function batimento() {
   try {
     const e = await api("estado");
@@ -199,6 +249,7 @@ async function batimento() {
     estadoZe = e.ze;
     const holo = /** @type {HTMLElement} */ (document.querySelector(".holo"));
     if (holo && holo.dataset.estado !== e.ze) { holo.dataset.estado = e.ze; $("holo-estado").textContent = ESTADO_HOLO[e.ze] || ""; }
+    andamentoPainel(e.ze, e.andamento);
     desenharModoFala(e.modo_fala);
     desenharAtualizacao(e.atualizacao ?? null);
     $("ponto-atualizacoes").hidden = !e.versao?.disponivel;

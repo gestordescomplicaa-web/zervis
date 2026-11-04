@@ -46,6 +46,7 @@ from zervis.pesquisa.buscador import Buscador
 from zervis.pesquisa.guardadas import Guardadas
 from zervis.pesquisa.saude import Vigia
 from zervis.redes.instagram import Instagram
+from zervis.rosto import andamento
 from zervis.rosto.tela import Tela
 from zervis.sistema.politica import Sistema
 
@@ -232,14 +233,17 @@ def auditada(ferramenta: SdkMcpTool[Any]) -> SdkMcpTool[Any]:
         inicio = time.monotonic()
         titulo = atividade.titulo_da_ferramenta(ferramenta.name, entrada)
         como = atividade.PADRAO.autorizacao(ferramenta.name)
+        andamento.PADRAO.ferramenta(ferramenta.name)  # a barra de carregamento (ADR 0064)
         try:
             resposta = await original(entrada)
         except Exception as erro:
+            andamento.PADRAO.pensando()
             atividade.PADRAO.registrar(
                 "falha", titulo, ferramenta=ferramenta.name, entrada=entrada, autorizacao=como,
                 erro=f"{type(erro).__name__}: {erro}",
             )  # fmt: skip
             raise
+        andamento.PADRAO.pensando()
         textos = [c.get("text", "") for c in resposta.get("content", []) if isinstance(c, dict)]
         atividade.PADRAO.registrar(
             "falha" if resposta.get("is_error") else "execucao",

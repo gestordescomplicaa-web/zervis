@@ -664,7 +664,7 @@ class Handler(SimpleHTTPRequestHandler):
             # tiny files in ./state/. Every read fails soft — no files,
             # no assistant, no problem: the ring just breathes.
             s_dir = ESTADO
-            out = {"state": "idle", "mood": "green", "wave": None}
+            out: dict[str, Any] = {"state": "idle", "mood": "green", "wave": None}
             try:
                 f = s_dir / "state"
                 s = f.read_text().strip().lower()
@@ -702,6 +702,18 @@ class Handler(SimpleHTTPRequestHandler):
                     "tristeza",
                 ):
                     out["expressao"] = x["expressao"]
+            except Exception:
+                pass
+            try:
+                # barehands-jarvis: o que o Zé está fazendo e quanto costuma levar, para a barra
+                # de carregamento (ADR 0064).
+                a = json.loads((s_dir / "andamento.json").read_text())
+                if time.time() - float(a.get("ts", 0)) < 120:
+                    out["andamento"] = {
+                        "rotulo": str(a.get("rotulo", ""))[:80],
+                        "esperado_s": float(a.get("esperado_s", 3)),
+                        "ts": float(a["ts"]),
+                    }
             except Exception:
                 pass
             if out["state"] == "speaking":

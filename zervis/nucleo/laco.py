@@ -130,7 +130,7 @@ from zervis.presenca import modo as modo_escuta
 from zervis.presenca.hyprland import MonitorPresenca
 from zervis.presenca.rostos import Rostos
 from zervis.redes import instagram
-from zervis.rosto import hud, manifesto, pasta, tela
+from zervis.rosto import andamento, hud, manifesto, pasta, tela
 from zervis.rosto.anel import Anel
 from zervis.rosto.painel import Painel
 from zervis.rosto.quadro import Quadro
@@ -429,6 +429,10 @@ class Nucleo(
         self.remota: SalaRemota | None = None
         self._fonte: Any = None  # a voz remota em uso: o navegador ou a sala LiveKit
         self._ouvido = ""  # a última transcrição
+        # A barra de carregamento (ADR 0064): o rótulo de cada ferramenta e quanto ela costuma
+        # levar, das médias reais da Atividade e das latências (lidas em segundo plano).
+        andamento.PADRAO.configurar(cfg.caminho("barehands", "pasta_estado"))
+        threading.Thread(target=self._medir_andamento, name="andamento", daemon=True).start()
         self.imersivo = Imersivo(
             cfg.caminho("barehands", "pasta_estado"),
             acervo=cfg.caminho("barehands", "pasta_acervo"),
@@ -1351,6 +1355,17 @@ class Nucleo(
     def eco_texto(self) -> EcoDeTexto:
         """O que o Zé disse há pouco, se voltar pelo microfone transcrito (ADR 0062)."""
         return EcoDeTexto()
+
+    @staticmethod
+    def _medir_andamento() -> None:
+        try:
+            esperas = andamento.esperas_da_atividade(
+                atividade.PADRAO.listar(limite=5000, tipos=("execucao",))
+            )
+            pensar = andamento.pensar_das_latencias(ESTADO / "latencias")
+            andamento.PADRAO.configurar(andamento.PADRAO.pasta or ESTADO, esperas, pensar)
+        except Exception:
+            log.exception("andamento: médias não lidas; ficam os padrões")
 
     def _vigiar_fontes(self) -> None:
         """Uma vez por semana, as fontes de fora testadas de verdade; o Zé fala só o que mudou

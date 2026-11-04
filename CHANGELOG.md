@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Barra de carregamento no topo da Imersão e do painel: enquanto o Zé pensa, ela mostra o que ele
+  está fazendo ("Pesquisando na internet… 12 s", "Lendo a página", "Montando a cena") e anda como
+  num jogo, pelo tempo que cada coisa costuma levar (as médias reais do seu Zé); completa quando a
+  resposta começa.
+
 - Cérebro local mais leve: recebe só as ferramentas do próprio Zé (o navegador completo e os
   conectores ficam para o Claude e o Codex), então a leitura inicial é mais curta. Só o
   gemma4:e4b aparece para escolher: o qwen3:8b não cabe na memória livre desta máquina com o
