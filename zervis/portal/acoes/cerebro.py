@@ -81,12 +81,17 @@ class AcoesCerebro(Pagina):
             }
         if provedor == "local":
             no_ar = bool(local.modelos(c["local_endereco"]))
+            cerebro = getattr(self.n.cerebro, "principal", self.n.cerebro)  # sob a reserva
             return {
                 "provedor": "local",
                 "modelo": c["modelo_local"],
                 "modelos": local.que_funcionam(c["local_endereco"]),
                 "omniroute": omni,
-                "local": {"endereco": c["local_endereco"], "no_ar": no_ar},
+                "local": {
+                    "endereco": c["local_endereco"],
+                    "no_ar": no_ar,
+                    "preparando": not getattr(cerebro, "pronto", True),
+                },
             }
         lista = modelos.do_cerebro(provedor) if provedor in ("claude", "codex") else []
         return {

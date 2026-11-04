@@ -348,7 +348,8 @@ class ServicoCerebro:
         if id_ == "local":
             return (
                 f"Pronto, agora respondo pelo modelo local, o {self.n.modelos()[id_]}, sem gastar "
-                "os planos. A primeira resposta demora um minuto: estou lendo minhas ferramentas."
+                "os planos. Nos próximos dois ou três minutos eu leio minhas ferramentas, com a "
+                "placa de vídeo no máximo; depois disso respondo em segundos."
             )
         return f"Pronto, agora quem responde é o {nome}, com o {self.n.modelos()[id_]}."
 
@@ -404,6 +405,11 @@ class ServicoCerebro:
             self.n.ponte.trocar(cerebro)
             self.n.cerebro = cerebro
         log.info("cérebro: modelo do %s agora é %s", agente, modelo)
+        if agente == "local" and provedor == self.n.provedor:
+            return (
+                f"Modelo do cérebro: {modelo}. Ele lê a persona e as ferramentas nos próximos "
+                "minutos (a placa de vídeo fica no máximo nesse tempo)."
+            )
         nomes = (
             {} if agente == "local"
             else {m["id"]: m["nome"] for m in modelos_dos_agentes.do_cerebro(agente)}

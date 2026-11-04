@@ -55,29 +55,29 @@ func TestDistinctRegisteredPhonesFailsSafeWithoutCanonicalIdentity(t *testing.T)
 }
 
 // Caso de 03/11/2026: a whatsmeow nova devolve o LID no JID; o envio ia para
-// 134230663237656@s.whatsapp.net e falhava com "no LID found".
+// 100000000000001@s.whatsapp.net e falhava com "no LID found".
 func TestIdentidadeCanonicaComLIDNoJID(t *testing.T) {
-	pedido := types.NewJID("5581993563525", types.DefaultUserServer)
+	pedido := types.NewJID("5581987650000", types.DefaultUserServer)
 	pn, lid := identidadeCanonica(pedido, types.IsOnWhatsAppResponse{
-		JID:         types.NewJID("134230663237656", types.HiddenUserServer),
-		PhoneNumber: types.NewJID("558193563525", types.DefaultUserServer),
+		JID:         types.NewJID("100000000000001", types.HiddenUserServer),
+		PhoneNumber: types.NewJID("558187650000", types.DefaultUserServer),
 		IsIn:        true,
 	})
-	if pn.String() != "558193563525@s.whatsapp.net" || lid.String() != "134230663237656@lid" {
+	if pn.String() != "558187650000@s.whatsapp.net" || lid.String() != "100000000000001@lid" {
 		t.Fatalf("pn=%s lid=%s", pn, lid)
 	}
 	// Resposta antiga (sem LID): o JID é o telefone canônico.
 	pn, lid = identidadeCanonica(pedido, types.IsOnWhatsAppResponse{
-		JID: types.NewJID("558193563525", types.DefaultUserServer), IsIn: true,
+		JID: types.NewJID("558187650000", types.DefaultUserServer), IsIn: true,
 	})
-	if pn.User != "558193563525" || !lid.IsEmpty() {
+	if pn.User != "558187650000" || !lid.IsEmpty() {
 		t.Fatalf("pn=%s lid=%s", pn, lid)
 	}
 	// Só o LID, sem telefone: fica o telefone pedido.
 	pn, lid = identidadeCanonica(pedido, types.IsOnWhatsAppResponse{
-		JID: types.NewJID("134230663237656", types.HiddenUserServer), IsIn: true,
+		JID: types.NewJID("100000000000001", types.HiddenUserServer), IsIn: true,
 	})
-	if pn.User != "5581993563525" || lid.User != "134230663237656" {
+	if pn.User != "5581987650000" || lid.User != "100000000000001" {
 		t.Fatalf("pn=%s lid=%s", pn, lid)
 	}
 }

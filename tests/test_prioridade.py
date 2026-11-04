@@ -17,7 +17,7 @@ from zervis.nucleo.servicos.atendimento import ServicoAtendimento
 
 T = 1_000_000.0
 FUSO = ZoneInfo("America/Sao_Paulo")
-ANA = "134230663237656@lid"
+ANA = "100000000000001@lid"
 
 
 class Relogio:
@@ -28,12 +28,12 @@ class Relogio:
 
 
 def test_o_mesmo_numero_escrito_de_jeitos_diferentes() -> None:
-    assert pr.mesmo_numero("5581993563525", "558193563525")  # o nono dígito
-    assert pr.mesmo_numero("81 99356-3525", "5581993563525")  # sem o código do país
+    assert pr.mesmo_numero("5581987650000", "558187650000")  # o nono dígito
+    assert pr.mesmo_numero("81 98765-0000", "5581987650000")  # sem o código do país
     assert pr.mesmo_numero("+1 (415) 555-0100", "14155550100")
-    assert not pr.mesmo_numero("5581993563525", "5511993563525")  # outro DDD
-    assert not pr.mesmo_numero("5581993563525", "5581993563526")
-    assert not pr.mesmo_numero("3525", "5581993563525")
+    assert not pr.mesmo_numero("5581987650000", "5511987650000")  # outro DDD
+    assert not pr.mesmo_numero("5581987650000", "5581987650001")
+    assert not pr.mesmo_numero("0000", "5581987650000")
 
 
 def _lista(tmp_path: Path) -> tuple[pr.Prioridade, Relogio]:
@@ -43,13 +43,13 @@ def _lista(tmp_path: Path) -> tuple[pr.Prioridade, Relogio]:
 
 def test_monitorar_fica_ate_tirar_e_aprende_a_conversa(tmp_path: Path) -> None:
     lista, relogio = _lista(tmp_path)
-    lista.monitorar("Ana", telefone="81 99356-3525")
+    lista.monitorar("Ana", telefone="81 98765-0000")
     assert stat.S_IMODE((tmp_path / "prioridade.json").stat().st_mode) == 0o600
-    v = lista.chegou("558193563525@s.whatsapp.net", "558193563525")  # o WhatsApp sem o nono
+    v = lista.chegou("558187650000@s.whatsapp.net", "558187650000")  # o WhatsApp sem o nono
     assert v is not None and v.motivo == "pedido"
     relogio.t += 30 * 24 * 3600
     depois = pr.Prioridade(tmp_path / "prioridade.json", relogio)  # reiniciou, um mês depois
-    assert depois.chegou("558193563525@s.whatsapp.net", "") is not None  # pela conversa aprendida
+    assert depois.chegou("558187650000@s.whatsapp.net", "") is not None  # pela conversa aprendida
     assert depois.remover("a Ana") is not None
     assert depois.todos() == []
 
@@ -131,13 +131,13 @@ def _ferramenta(n: Any, args: dict[str, Any]) -> dict[str, Any]:
 
 def test_quem_esta_na_lista_avisa_na_hora_sem_julgar_e_lembra(tmp_path: Path) -> None:
     n = _nucleo(tmp_path, mensagens_ativo=False)  # sem os avisos de lead: a lista vale igual
-    r = _ferramenta(n, {"acao": "adicionar", "contato": "Ana", "numero": "81 99356-3525"})
+    r = _ferramenta(n, {"acao": "adicionar", "contato": "Ana", "numero": "81 98765-0000"})
     assert r["content"][0]["text"] == "Monitorando Ana: aviso qualquer mensagem, na hora."
-    _chega(n, "Ana Souza", "", "558193563525@s.whatsapp.net", "558193563525", midia="audio")
+    _chega(n, "Ana Souza", "", "558187650000@s.whatsapp.net", "558187650000", midia="audio")
     [aviso] = n.falados
     assert "Ana Souza, da sua lista de prioridade, mandou: [um áudio]" in aviso.texto
     assert n.julgadas == []  # não passa pelo julgamento de lead
-    _chega(n, "Ana Souza", "me liga", "558193563525@s.whatsapp.net", "558193563525")
+    _chega(n, "Ana Souza", "me liga", "558187650000@s.whatsapp.net", "558187650000")
     assert len(n.falados) == 1  # junta na mesma pendência
     n.relogio.t += pd.INTERVALO_S
     n.servico._lembrar_leads()

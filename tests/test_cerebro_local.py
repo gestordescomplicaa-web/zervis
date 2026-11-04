@@ -246,8 +246,11 @@ def test_a_conversa_corta_sempre_num_pedido() -> None:
 
 def test_catalogo_config_e_voz(tmp_path: Path, ollama: OllamaFalso) -> None:
     cfg = validar({"cerebro": {"local_endereco": ollama.endereco}}, "teste")
-    b = catalogo.criar("local", cfg, tmp_path)
+    extras = catalogo.Extras(mcp={"jarvis": {}, "tempo": {}, "navegador": {}, "drive": {}})
+    b = catalogo.criar("local", cfg, tmp_path, extras)
     assert isinstance(b, local.LocalBrain) and b.modelo == "gemma4:e4b"
+    assert set(b.mcp) == {"jarvis", "tempo"}  # o navegador e os conectores ficam para a nuvem
+    assert not b.pronto  # ainda não leu a persona e as ferramentas
     cfg["cerebro"]["modelo_local"] = "llama9:70b"
     with pytest.raises(catalogo.Indisponivel, match="não está instalado"):
         catalogo.criar("local", cfg, tmp_path)
@@ -299,9 +302,9 @@ def test_so_aparecem_os_que_funcionam_o_recomendado_primeiro() -> None:
     try:
         assert local.que_funcionam(falso.endereco) == [
             {"id": "gemma4:e4b", "nome": "gemma4:e4b · recomendado"},
-            {"id": "qwen3:8b", "nome": "qwen3:8b · mais lento"},
-        ]
+        ]  # o qwen3:8b não cabe na RAM livre desta máquina com o contexto do Zé
     finally:
         falso.servidor.shutdown()
     assert local.que_funcionam("http://127.0.0.1:9") == []
-    assert "functiongemma:270m" not in local.FUNCIONAM and "gemma2:2b" not in local.FUNCIONAM
+    for fora in ("functiongemma:270m", "gemma2:2b", "qwen3:8b"):
+        assert fora not in local.FUNCIONAM

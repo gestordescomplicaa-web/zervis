@@ -127,7 +127,7 @@ def criar(
             pasta / "local",
             endereco=c["local_endereco"],
             contexto=int(c["local_contexto"]),
-            **comum,
+            **{**comum, "mcp": {k: v for k, v in x.mcp.items() if k in local.SERVIDORES}},
         )
     if opcao.rota is None:
         if id_ == "codex":

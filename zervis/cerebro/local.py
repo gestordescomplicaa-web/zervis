@@ -53,16 +53,20 @@ REGRAS = """
 
 # Os que funcionam como cérebro, medidos nesta máquina com as 55 ferramentas do Zé (03/11/2026,
 # docs/adr/0063): só estes aparecem para escolher. Fora da lista, por quê:
+# - qwen3:8b: acerta, mas com o contexto do Zé ocupa 9,8 GB (não cabe na RAM livre desta máquina)
+#   e leu a persona e as ferramentas a ~70 tokens/s, mais de 5 minutos de GPU em 99% (04/11/2026);
+# - qwen3.5:4b: acerta, mas relê tudo a cada pedido (~17 s por pedido);
 # - functiongemma:270m: 1 de 5 ferramentas, 0 de 16 rotas, responde em inglês (é feito para ser
 #   ajustado a um conjunto fixo de funções);
 # - gemma4:e2b e granite4: escolhem a ferramenta, mas erram argumentos (o e2b pôs "Zé" como
 #   destinatário de um WhatsApp);
 # - gemma2 e outros sem ferramentas no Ollama: conversam, mas não pesquisam nem agem.
 FUNCIONAM = {
-    "gemma4:e4b": "recomendado",  # 10/10 com as ferramentas, 2,2 s por pedido
-    "qwen3:8b": "mais lento",  # acerta, de 4 a 9 s por pedido
-    "qwen3.5:4b": "lento com as ferramentas",  # acerta 10/10, mas relê tudo: ~17 s por pedido
+    "gemma4:e4b": "recomendado",  # 10/10 com as ferramentas, 2,2 s por pedido, ~6 GB
 }
+# Só as ferramentas do próprio Zé: o navegador completo (dezenas de ferramentas) e os conectores
+# externos ficam para os cérebros da nuvem. Menos texto para ler: menos minutos de GPU ao ligar.
+SERVIDORES = ("jarvis", "tempo", "foco")
 
 
 class LocalErro(RuntimeError):
@@ -171,6 +175,11 @@ class LocalBrain(ClaudeBrain):
         self.mensagens: list[dict[str, Any]] = []
         self.aquecimento: asyncio.Task[None] | None = None
         self._parar = False
+
+    @property
+    def pronto(self) -> bool:
+        """Já leu a persona e as ferramentas (a leitura inicial, de minutos, terminou)."""
+        return self.aquecimento is not None and self.aquecimento.done()
 
     async def start(self, persona: str, aprovar: Aprovar | None = None) -> None:
         self.persona, self.aprovar = persona, aprovar

@@ -88,12 +88,13 @@ function cartaoOmni(a) {
 // O cérebro local (ADR 0063): um modelo do Ollama desta máquina, sem gastar os planos.
 function cartaoLocal(a) {
   const l = a.local || {}, pronto = l.no_ar && (a.modelos || []).some((m) => m.id === a.modelo);
-  const estado = !l.no_ar ? "Ollama fora do ar" : pronto ? "Pronto" : "Modelo não instalado";
-  return `<div class="cabeca"><h2>Cérebro</h2><span class="etiqueta ${pronto ? "bom" : "alerta"}">${estado}</span></div>
+  const estado = !l.no_ar ? "Ollama fora do ar" : !pronto ? "Modelo não instalado" : l.preparando ? "Preparando…" : "Pronto";
+  return `<div class="cabeca"><h2>Cérebro</h2><span class="etiqueta ${pronto && !l.preparando ? "bom" : "alerta"}">${estado}</span></div>
     ${sub("Um modelo deste computador, pelo Ollama: conversa e usa as ferramentas do Zé sem gastar os planos. Código e sessões continuam nos agentes.")}${seletorAgente("local")}
     ${l.no_ar && a.modelos?.length ? seletorModelo(a) : ""}
     <p class="nota">${!l.no_ar ? `Inicie o Ollama em ${esc(l.endereco || "http://127.0.0.1:11434")}.`
-      : a.modelos?.length ? "Só aparecem os modelos que passaram no teste com as ferramentas do Zé. A primeira resposta depois de ligar demora uns 3 minutos (o modelo lê a persona e as ferramentas); as seguintes saem em segundos."
+      : l.preparando ? "Lendo a persona e as ferramentas: uns 2 a 3 minutos, com a placa de vídeo no máximo. Depois, cada resposta sai em segundos. Para parar, volte para o Claude."
+      : a.modelos?.length ? "Só aparecem os modelos que passaram no teste com as ferramentas do Zé nesta máquina."
       : "Nenhum modelo instalado funciona como cérebro. Instale o recomendado: <span class=\"mono\">ollama pull gemma4:e4b</span>."}</p>
     <div class="linha">${botao("Testar conexão", "acesso-testar")}</div>
     <p class="resultado" id="resultado-acesso"></p>`;
