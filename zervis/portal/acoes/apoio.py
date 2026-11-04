@@ -81,6 +81,7 @@ AGENTES = [
     {"id": "claude", "nome": "Claude", "disponivel": True},
     {"id": "codex", "nome": "Codex", "disponivel": True},
     {"id": "omniroute", "nome": "OmniRoute", "disponivel": True},
+    {"id": "local", "nome": "Local", "disponivel": True},  # o Ollama desta máquina (ADR 0063)
 ]
 AGENTES_SESSOES = [
     {"id": "claude", "nome": "Claude", "disponivel": True},

@@ -51,7 +51,7 @@ async function modelosDaConta() {
   if ($("campo-modelo")) $("campo-modelo").innerHTML = "Modelo" + campoModelo(modelo.motor, valorCampo("modelo")?.value);
 }
 
-const completo = (c) => ({ cerebro: c.completo.provedor, modelo: c.completo.modelo, modelos: c.completo.modelos, omniroute: c.completo.omniroute });
+const completo = (c) => ({ cerebro: c.completo.provedor, modelo: c.completo.modelo, modelos: c.completo.modelos, omniroute: c.completo.omniroute, local: c.completo.local });
 
 // O modelo das Respostas rápidas: lista com a versão para Claude, Codex e Anthropic; campo livre
 // para os motores com modelos demais (OpenAI, OpenRouter, Ponte).
@@ -85,11 +85,24 @@ function cartaoOmni(a) {
     <p class="resultado" id="resultado-acesso"></p>`;
 }
 
+// O cérebro local (ADR 0063): um modelo do Ollama desta máquina, sem gastar os planos.
+function cartaoLocal(a) {
+  const l = a.local || {}, pronto = l.no_ar && (a.modelos || []).some((m) => m.id === a.modelo);
+  const estado = !l.no_ar ? "Ollama fora do ar" : pronto ? "Pronto" : "Modelo não instalado";
+  return `<div class="cabeca"><h2>Cérebro</h2><span class="etiqueta ${pronto ? "bom" : "alerta"}">${estado}</span></div>
+    ${sub("Um modelo deste computador, pelo Ollama: conversa e usa as ferramentas do Zé sem gastar os planos. Código e sessões continuam nos agentes.")}${seletorAgente("local")}
+    ${l.no_ar && a.modelos?.length ? seletorModelo(a) : ""}
+    <p class="nota">${l.no_ar ? "Recomendado: gemma4:e4b. A primeira resposta depois de ligar demora (o modelo lê a persona e as ferramentas); as seguintes saem em segundos." : `Inicie o Ollama em ${esc(l.endereco || "http://127.0.0.1:11434")}.`}</p>
+    <div class="linha">${botao("Testar conexão", "acesso-testar")}</div>
+    <p class="resultado" id="resultado-acesso"></p>`;
+}
+
 function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
   const a = acessoTela, cerebro = area.dataset.contexto === "cerebro";
   if (cerebro && a.cerebro === "omniroute") { area.innerHTML = cartaoOmni(a); return; }
+  if (cerebro && a.cerebro === "local") { area.innerHTML = cartaoLocal(a); return; }
   const agente = cerebro && a.cerebro === "codex" ? "codex" : "claude";
   const cs = contasTela.agentes.find((x) => x.id === agente);
   const pronto = agente === "codex" ? Boolean(cs?.contas.find((x) => x.id === cs.em_uso)?.logado) : Boolean(a.metodo);

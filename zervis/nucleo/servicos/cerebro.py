@@ -11,12 +11,13 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from zervis import atividade, usuario
-from zervis.cerebro import acesso, catalogo, mcp_externo, omniroute, rapido
+from zervis.cerebro import acesso, catalogo, local, mcp_externo, omniroute, rapido
 from zervis.cerebro import modelos as modelos_dos_agentes
 from zervis.cerebro.base import Brain, Ponte
 from zervis.cerebro.baterias import Bateria, da_assinatura
 from zervis.cerebro.consumo import Consumo, UsoDeFerramentas, gasto
 from zervis.cerebro.eco import Eco
+from zervis.cerebro.local import LocalBrain
 from zervis.config import Config
 from zervis.habilidades import evidencias, revisao
 from zervis.habilidades.skills import Skills
@@ -178,8 +179,10 @@ class ServicoCerebro:
 
     def _com_via_rapida(self, cerebro: Brain) -> Brain:
         """A via rápida na frente do cérebro escolhido (docs/plano-voz-rapida.md)."""
-        if isinstance(cerebro, Eco):
-            return cerebro
+        if isinstance(cerebro, Eco) or isinstance(
+            getattr(cerebro, "principal", cerebro), LocalBrain
+        ):
+            return cerebro  # o local já é o caminho sem plano: a via rápida gastaria um
         return rapido.envolver(
             cerebro,
             rapido.efetiva(self.n.cfg["via_rapida"]),
@@ -342,6 +345,11 @@ class ServicoCerebro:
         if id_ == "auto":
             return "Pronto, agora é o automático: o OmniRoute escolhe o modelo a cada pedido."
         nome = catalogo.OPCOES[id_].nome
+        if id_ == "local":
+            return (
+                f"Pronto, agora respondo pelo modelo local, o {self.n.modelos()[id_]}, sem gastar "
+                "os planos. A primeira resposta demora um minuto: estou lendo minhas ferramentas."
+            )
         return f"Pronto, agora quem responde é o {nome}, com o {self.n.modelos()[id_]}."
 
     def _testar_modelo(self, modelo: str) -> str | None:
@@ -368,7 +376,10 @@ class ServicoCerebro:
         if agente not in catalogo.CHAVE_DO_MODELO:
             raise ValueError("Agente desconhecido.")
         padrao = agente == "codex" and not modelo  # o Codex pode usar o padrão da conta
-        if agente == "omniroute":
+        if agente == "local":
+            if modelo not in local.modelos(self.n.cfg["cerebro"]["local_endereco"]):
+                raise ValueError("Modelo não instalado no Ollama.")
+        elif agente == "omniroute":
             if modelo not in {
                 *self.n.modelos_do_omniroute(),
                 self.n.cfg["cerebro"]["omniroute_rota"],
@@ -391,7 +402,10 @@ class ServicoCerebro:
             self.n.ponte.trocar(cerebro)
             self.n.cerebro = cerebro
         log.info("cérebro: modelo do %s agora é %s", agente, modelo)
-        nomes = {m["id"]: m["nome"] for m in modelos_dos_agentes.do_cerebro(agente)}
+        nomes = (
+            {} if agente == "local"
+            else {m["id"]: m["nome"] for m in modelos_dos_agentes.do_cerebro(agente)}
+        )  # fmt: skip
         return f"Modelo do cérebro: {nomes.get(modelo, modelo or 'padrão da conta')}."
 
     def _chave_do_omniroute(self) -> str | None:
@@ -445,6 +459,7 @@ class ServicoCerebro:
             modelos[self.n.provedor] = catalogo.rotulo(usado)
             if self.n.provedor == "auto":
                 self.n.modelo_auto = modelos["auto"]
+        modelos["local"] = c["modelo_local"]  # o nome do Ollama, como a pessoa instalou
         return modelos
 
     def baterias(self) -> dict[str, Bateria]:

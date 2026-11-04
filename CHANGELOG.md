@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- Cérebro local: o Zé pode responder por um modelo do seu computador (o Gemma 4, pelo Ollama),
+  sem gastar os planos do Claude e do Codex. Ele conversa e usa as mesmas ferramentas (WhatsApp,
+  pesquisa, CNPJ, lembretes...), com o mesmo "sim" falado para o que tem efeito. Escolha em
+  Modelos → Cérebro → Local, ou diga "muda para o local". A primeira resposta demora um minuto;
+  as seguintes começam a falar em menos de um segundo. Código e sessões continuam nos agentes.
+
 - App de voz no celular: o Zé não se ouve mais no alto-falante, em qualquer volume. Sem fone
   Bluetooth, a fala passa a sair como numa ligação no viva-voz (igual ao WhatsApp), onde o próprio
   celular tira o eco; o volume é o de ligação. E o que ainda escapar, se for um trecho do que ele
