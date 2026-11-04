@@ -324,3 +324,29 @@ def test_sair_do_local_tira_o_modelo_da_memoria(tmp_path: Path, ollama: OllamaFa
 
     asyncio.run(rodar())
     assert {"model": "gemma4:e4b", "keep_alive": 0} in ollama.pedidos
+
+
+def test_resultado_grande_chega_curto_ao_modelo_local() -> None:
+    """Teste real de 04/11/2026: ler a pesquisa inteira (~4 mil tokens) deixava a primeira palavra
+    em 50 a 67 s; com as fontes compactas, 20 s."""
+    pesquisa = {
+        "pergunta": "concorrentes",
+        "fontes": [
+            {
+                "titulo": f"Fonte {i}",
+                "site": f"s{i}.com",
+                "data": "2026-10-01",
+                "trechos": ["x" * 900, "y" * 900],
+            }
+            for i in range(5)
+        ],
+        "outros_resultados": [{"url": "https://a.com", "trecho": "z" * 2000}],
+        "dica": 'Feche com "Fontes:".',
+    }
+    curto = local.encurtar(json.dumps(pesquisa))
+    assert curto.startswith("Fontes lidas:\n- Fonte 0 (s0.com, 2026-10-01): x")
+    assert curto.count("\n- ") == 5 and "y" not in curto and "z" not in curto
+    assert curto.endswith('Feche com "Fontes:".')
+    longo = local.encurtar("a" * 10_000)
+    assert len(longo) < local.RESULTADO_MAX + 100 and longo.endswith("peça]")
+    assert local.encurtar("pouco") == "pouco"

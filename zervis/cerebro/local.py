@@ -39,12 +39,17 @@ MANTER = "4h"  # carregado entre pedidos: descarregar custa reler o prompt intei
 RODADAS = 8  # rodadas de ferramentas num pedido
 HISTORICO = 30  # mensagens da conversa guardadas (além da persona)
 LEITURA_S = 300.0  # a primeira leitura do prompt, a frio, leva minutos na GPU integrada
+# O que uma ferramenta devolve, no máximo, para o modelo local: ler o resultado de uma pesquisa
+# inteira (~4 mil tokens) a ~80 tokens/s deixava a primeira palavra em 50 a 67 s (04/11/2026).
+RESULTADO_MAX = 2500
 REGRAS = """
 
 ## Neste modelo (local): regras que valem acima de tudo
 - Dado que você não tem (CNPJ, mensagens, pesquisa, agenda, sessões, o que está na internet):
   chame a ferramenta certa ANTES de responder, no mesmo passo. Nunca diga "vou consultar" sem
   chamar a ferramenta, e nunca invente nomes, números, datas ou resultados.
+- Se a ferramenta falhar ou não trouxer o dado, diga isso em uma frase ("não consegui ver o
+  dólar agora") e ofereça tentar de outro jeito. Nunca responda com um valor de cabeça.
 - Use o nome exato da ferramenta e os argumentos do esquema.
 - Cada pedido começa com a data e a hora entre colchetes: é só para você saber. Nunca repita.
 - Responda curto, em português, como fala, sem Markdown.
@@ -102,6 +107,30 @@ def conferir(endereco: str, modelo: str) -> None:
         raise LocalErro("o Ollama está fora do ar") from None
     if modelo not in instalados and f"{modelo}:latest" not in instalados:
         raise LocalErro(f"o modelo {modelo} não está instalado no Ollama")
+
+
+def encurtar(texto: str, maximo: int = RESULTADO_MAX) -> str:
+    """O resultado de uma ferramenta no tamanho que o modelo local lê rápido. A pesquisa
+    (fontes com trechos) vira uma linha por fonte, com o trecho principal; o resto é cortado."""
+    if len(texto) <= maximo:
+        return texto
+    try:
+        dados = json.loads(texto)
+    except ValueError:
+        dados = None
+    if isinstance(dados, dict) and isinstance(dados.get("fontes"), list):
+        linhas = []
+        for f in dados["fontes"]:
+            if not isinstance(f, dict):
+                continue
+            trecho = " ".join(str(t) for t in (f.get("trechos") or [])[:1])[:400]
+            onde = ", ".join(x for x in (str(f.get("site") or ""), str(f.get("data") or "")) if x)
+            linhas.append(f"- {f.get('titulo') or f.get('site')} ({onde}): {trecho}")
+        compacto = "Fontes lidas:\n" + "\n".join(linhas)
+        if dados.get("dica"):
+            compacto += f"\n{dados['dica']}"
+        return compacto[: maximo * 2]
+    return texto[:maximo] + "\n[… resultado cortado: o essencial está acima; se faltar algo, peça]"
 
 
 def nome_curto(chave: str) -> str:
@@ -281,7 +310,9 @@ class LocalBrain(ClaudeBrain):
                 textos.append(str(bloco.get("text", "")))
             elif bloco.get("type") == "image" and bloco.get("data"):
                 imagens.append(str(bloco["data"]))  # o Gemma 4 vê imagens
-        conteudo = "\n".join(textos) or ("Feito." if not bruto.get("isError") else "Falhou.")
+        conteudo = encurtar("\n".join(textos)) or (
+            "Feito." if not bruto.get("isError") else "Falhou."
+        )
         if bruto.get("isError"):
             conteudo = f"[erro] {conteudo}"
         return {**resposta, "content": conteudo, **({"images": imagens} if imagens else {})}
