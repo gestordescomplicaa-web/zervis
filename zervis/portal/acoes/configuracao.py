@@ -82,6 +82,12 @@ class AcoesConfiguracao(Pagina):
         if self.n.provedor == "auto":
             ok, mensagem = self.n.testar_omniroute()
             return {"ok": ok, "mensagem": mensagem}
+        if self.n.provedor == "local":
+            from zervis.cerebro import local
+
+            c = self.n.cfg["cerebro"]
+            ok, mensagem = asyncio.run(local.testar(c["local_endereco"], c["modelo_local"]))
+            return {"ok": ok, "mensagem": mensagem}
         if self.n.provedor == "codex":
             from zervis.cerebro.codex import testar
 

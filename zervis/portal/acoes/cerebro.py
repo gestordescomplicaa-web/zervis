@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Any
 
-from zervis.cerebro import modelos, rapido
+from zervis.cerebro import local, modelos, rapido
 from zervis.portal.acoes.apoio import (
     AGENTES,
     AGENTES_SESSOES,
@@ -79,6 +79,15 @@ class AcoesCerebro(Pagina):
                 "modelos": [{"id": r, "nome": r} for r in rotas],
                 "omniroute": omni,
             }
+        if provedor == "local":
+            instalados = local.modelos(c["local_endereco"])
+            return {
+                "provedor": "local",
+                "modelo": c["modelo_local"],
+                "modelos": [{"id": m, "nome": m} for m in instalados],
+                "omniroute": omni,
+                "local": {"endereco": c["local_endereco"], "no_ar": bool(instalados)},
+            }
         lista = modelos.do_cerebro(provedor) if provedor in ("claude", "codex") else []
         return {
             "provedor": provedor,
@@ -106,7 +115,7 @@ class AcoesCerebro(Pagina):
 
     def escolher_cerebro(self, dados: dict[str, Any]) -> dict[str, Any]:
         agente = str(dados.get("agente", ""))
-        if agente not in ("claude", "codex", "omniroute"):
+        if agente not in ("claude", "codex", "omniroute", "local"):
             raise PedidoInvalido("Agente desconhecido.")
         aviso = self.n.trocar_cerebro(catalogo_provedor(agente))
         return {**self.painel.cerebro(), "aviso": aviso}

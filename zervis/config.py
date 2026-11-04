@@ -103,6 +103,11 @@ PADRAO: dict[str, dict[str, Any]] = {
         # Só leitura: as cotas que o OmniRoute guarda de cada conta (baterias, ADR 0010).
         "omniroute_banco": "~/.config/omniroute/storage.sqlite",
         "reserva": "claude",
+        # O cérebro local (ADR 0063): um modelo no Ollama desta máquina, sem gastar os planos.
+        # Só em loopback; o contexto cabe a persona e as ferramentas (mais de 19 mil tokens).
+        "modelo_local": "gemma4:e4b",
+        "local_endereco": "http://127.0.0.1:11434",
+        "local_contexto": 32768,
     },
     # Via rápida (docs/plano-voz-rapida.md, 09/10/2026): a conversa simples vai a um motor
     # rápido com a persona enxuta; o que precisa de ferramenta segue para o cérebro acima.
@@ -125,7 +130,7 @@ PADRAO: dict[str, dict[str, Any]] = {
         "historico": 12,
     },
 }
-PROVEDORES = {"eco", "claude", "codex", "omniroute"}
+PROVEDORES = {"eco", "claude", "codex", "omniroute", "local"}
 RESERVAS = {"eco", "claude", "codex"}
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 
@@ -200,6 +205,11 @@ def validar(dados: dict[str, Any], origem: str) -> Config:
         raise ConfigInvalida(f"{origem}: cerebro.reserva deve ser um de {sorted(RESERVAS)}")
     if cerebro["tempo_limite_s"] <= 0:
         raise ConfigInvalida(f"{origem}: cerebro.tempo_limite_s precisa ser positivo")
+    local_ = urlsplit(cerebro["local_endereco"])
+    if local_.scheme != "http" or local_.hostname not in LOOPBACK:
+        raise ConfigInvalida(f"{origem}: cerebro.local_endereco precisa ser http em loopback")
+    if not 4096 <= int(cerebro["local_contexto"]) <= 262144:
+        raise ConfigInvalida(f"{origem}: cerebro.local_contexto deve ficar entre 4096 e 262144")
     endereco = urlsplit(cerebro["omniroute_endereco"])
     local = endereco.scheme == "http" and endereco.hostname in LOOPBACK
     if not local and not (endereco.scheme == "https" and endereco.hostname):

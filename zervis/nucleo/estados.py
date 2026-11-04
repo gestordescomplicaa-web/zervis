@@ -748,6 +748,9 @@ TROCAR_NOMES = {
     "automatico": "auto",
     "auto": "auto",
     "omniroute": "auto",
+    "local": "local",  # o Ollama desta máquina (ADR 0063)
+    "gemma": "local",
+    "ollama": "local",
 }
 
 

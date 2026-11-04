@@ -13,7 +13,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from zervis.cerebro import contas, omniroute
+from zervis.cerebro import contas, local, omniroute
 from zervis.cerebro.base import Brain
 from zervis.cerebro.claude import ClaudeBrain
 from zervis.cerebro.codex import CodexBrain
@@ -38,6 +38,7 @@ OPCOES = {
     "gpt": Opcao("gpt", "GPT", "gpt", "cx/gpt-6-luna"),
     "gemini": Opcao("gemini", "Gemini", "gemini", "agy/gemini-3.1-pro-high"),
     "auto": Opcao("auto", "Automático", None, ""),  # rota da config (omniroute_rota)
+    "local": Opcao("local", "Local", "local", None),  # o Ollama desta máquina (ADR 0063)
 }
 
 
@@ -71,7 +72,7 @@ def rotulo(modelo: str) -> str:
 
 def inicial(cfg: Config) -> str:
     """O cérebro da config: `provedor = "omniroute"` é o automático."""
-    return {"claude": "claude", "codex": "codex", "omniroute": "auto"}.get(
+    return {"claude": "claude", "codex": "codex", "omniroute": "auto", "local": "local"}.get(
         cfg["cerebro"]["provedor"], "eco"
     )
 
@@ -98,7 +99,7 @@ def criar(
     pasta: Path,
     extras: Extras | None = None,
     conta: contas.Conta | None = None,
-) -> ClaudeBrain:
+) -> Brain:
     c = cfg["cerebro"]
     opcao = OPCOES[id_]
     ferramentas = list(c["ferramentas"])
@@ -116,6 +117,18 @@ def criar(
         "frase_exata": x.frase_exata,
         "depois": x.depois,
     }
+    if id_ == "local":
+        try:
+            local.conferir(c["local_endereco"], c["modelo_local"])
+        except local.LocalErro as erro:
+            raise Indisponivel(str(erro)) from None
+        return local.LocalBrain(
+            c["modelo_local"],
+            pasta / "local",
+            endereco=c["local_endereco"],
+            contexto=int(c["local_contexto"]),
+            **comum,
+        )
     if opcao.rota is None:
         if id_ == "codex":
             if shutil.which("codex") is None:
@@ -153,7 +166,12 @@ def ler_escolha(arquivo: Path) -> str | None:
     return escolha if escolha in OPCOES else None
 
 
-CHAVE_DO_MODELO = {"claude": "modelo", "codex": "modelo_codex", "omniroute": "omniroute_rota"}
+CHAVE_DO_MODELO = {
+    "claude": "modelo",
+    "codex": "modelo_codex",
+    "omniroute": "omniroute_rota",
+    "local": "modelo_local",
+}
 PROVEDOR_DO_AGENTE = {"omniroute": "auto"}  # o OmniRoute é a opção "auto" do catálogo
 
 
