@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Cérebro local: a lista de modelos mostra só os que funcionam como cérebro do Zé, medidos nesta
+  máquina com as ferramentas dele (o gemma4:e4b primeiro, como recomendado; o qwen3:8b como mais
+  lento). O functiongemma e os modelos sem ferramentas (como o gemma2) não aparecem mais.
+
 - Cérebro local: trocar de modelo, desligar ou interromper corta na hora o que o Ollama estava
   fazendo (antes, a leitura inicial antiga seguia por minutos com a GPU em 99%, e os pedidos
   novos ficavam na fila). E o "Testar conexão" só confere que o modelo carrega, sem entrar na

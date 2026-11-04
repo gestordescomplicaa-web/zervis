@@ -92,7 +92,9 @@ function cartaoLocal(a) {
   return `<div class="cabeca"><h2>Cérebro</h2><span class="etiqueta ${pronto ? "bom" : "alerta"}">${estado}</span></div>
     ${sub("Um modelo deste computador, pelo Ollama: conversa e usa as ferramentas do Zé sem gastar os planos. Código e sessões continuam nos agentes.")}${seletorAgente("local")}
     ${l.no_ar && a.modelos?.length ? seletorModelo(a) : ""}
-    <p class="nota">${l.no_ar ? "Recomendado: gemma4:e4b. A primeira resposta depois de ligar demora (o modelo lê a persona e as ferramentas); as seguintes saem em segundos." : `Inicie o Ollama em ${esc(l.endereco || "http://127.0.0.1:11434")}.`}</p>
+    <p class="nota">${!l.no_ar ? `Inicie o Ollama em ${esc(l.endereco || "http://127.0.0.1:11434")}.`
+      : a.modelos?.length ? "Só aparecem os modelos que passaram no teste com as ferramentas do Zé. A primeira resposta depois de ligar demora uns 3 minutos (o modelo lê a persona e as ferramentas); as seguintes saem em segundos."
+      : "Nenhum modelo instalado funciona como cérebro. Instale o recomendado: <span class=\"mono\">ollama pull gemma4:e4b</span>."}</p>
     <div class="linha">${botao("Testar conexão", "acesso-testar")}</div>
     <p class="resultado" id="resultado-acesso"></p>`;
 }

@@ -80,13 +80,13 @@ class AcoesCerebro(Pagina):
                 "omniroute": omni,
             }
         if provedor == "local":
-            instalados = local.modelos(c["local_endereco"])
+            no_ar = bool(local.modelos(c["local_endereco"]))
             return {
                 "provedor": "local",
                 "modelo": c["modelo_local"],
-                "modelos": [{"id": m, "nome": m} for m in instalados],
+                "modelos": local.que_funcionam(c["local_endereco"]),
                 "omniroute": omni,
-                "local": {"endereco": c["local_endereco"], "no_ar": bool(instalados)},
+                "local": {"endereco": c["local_endereco"], "no_ar": no_ar},
             }
         lista = modelos.do_cerebro(provedor) if provedor in ("claude", "codex") else []
         return {

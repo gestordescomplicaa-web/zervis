@@ -290,3 +290,18 @@ def test_testar_carrega_o_modelo_sem_perguntar(ollama: OllamaFalso) -> None:
     assert ollama.pedidos == [{"model": "gemma4:e4b", "keep_alive": local.MANTER}]
     ok, mensagem = asyncio.run(local.testar(ollama.endereco, "llama9:70b"))
     assert not ok and "não está instalado" in mensagem
+
+
+def test_so_aparecem_os_que_funcionam_o_recomendado_primeiro() -> None:
+    """Pedido de 04/11/2026: a lista mostrava tudo o que estava instalado no Ollama, inclusive o
+    functiongemma, que não funciona como cérebro."""
+    falso = OllamaFalso([], ["functiongemma:270m", "qwen3:8b", "gemma2:2b", "gemma4:e4b"])
+    try:
+        assert local.que_funcionam(falso.endereco) == [
+            {"id": "gemma4:e4b", "nome": "gemma4:e4b · recomendado"},
+            {"id": "qwen3:8b", "nome": "qwen3:8b · mais lento"},
+        ]
+    finally:
+        falso.servidor.shutdown()
+    assert local.que_funcionam("http://127.0.0.1:9") == []
+    assert "functiongemma:270m" not in local.FUNCIONAM and "gemma2:2b" not in local.FUNCIONAM
