@@ -377,6 +377,8 @@ class ServicoCerebro:
             raise ValueError("Agente desconhecido.")
         padrao = agente == "codex" and not modelo  # o Codex pode usar o padrão da conta
         if agente == "local":
+            if modelo not in local.FUNCIONAM:
+                raise ValueError("Esse modelo não funciona como cérebro do Zé (ADR 0063).")
             if modelo not in local.modelos(self.n.cfg["cerebro"]["local_endereco"]):
                 raise ValueError("Modelo não instalado no Ollama.")
         elif agente == "omniroute":

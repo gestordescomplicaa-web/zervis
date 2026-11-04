@@ -51,6 +51,20 @@ REGRAS = """
 - Programar ou mexer num projeto: use as ferramentas de sessão (quem programa são os agentes)."""
 
 
+# Os que funcionam como cérebro, medidos nesta máquina com as 55 ferramentas do Zé (03/11/2026,
+# docs/adr/0063): só estes aparecem para escolher. Fora da lista, por quê:
+# - functiongemma:270m: 1 de 5 ferramentas, 0 de 16 rotas, responde em inglês (é feito para ser
+#   ajustado a um conjunto fixo de funções);
+# - gemma4:e2b e granite4: escolhem a ferramenta, mas erram argumentos (o e2b pôs "Zé" como
+#   destinatário de um WhatsApp);
+# - gemma2 e outros sem ferramentas no Ollama: conversam, mas não pesquisam nem agem.
+FUNCIONAM = {
+    "gemma4:e4b": "recomendado",  # 10/10 com as ferramentas, 2,2 s por pedido
+    "qwen3:8b": "mais lento",  # acerta, de 4 a 9 s por pedido
+    "qwen3.5:4b": "lento com as ferramentas",  # acerta 10/10, mas relê tudo: ~17 s por pedido
+}
+
+
 class LocalErro(RuntimeError):
     """O Ollama não respondeu ou recusou; a mensagem é falável."""
 
@@ -68,6 +82,12 @@ def modelos(endereco: str = ENDERECO) -> list[str]:
     except (urllib.error.URLError, OSError, ValueError):
         return []
     return sorted(str(m.get("name", "")) for m in dados.get("models", []) if m.get("name"))
+
+
+def que_funcionam(endereco: str = ENDERECO) -> list[dict[str, str]]:
+    """Os modelos instalados que funcionam como cérebro, o recomendado primeiro."""
+    instalados = set(modelos(endereco))
+    return [{"id": m, "nome": f"{m} · {nota}"} for m, nota in FUNCIONAM.items() if m in instalados]
 
 
 def conferir(endereco: str, modelo: str) -> None:
