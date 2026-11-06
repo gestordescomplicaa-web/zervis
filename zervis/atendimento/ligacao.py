@@ -66,6 +66,7 @@ _CHAMAR = re.compile(r"\[\[\s*CHAMAR\s*:?\s*([^\]]*)\]\]", re.I)
 ESPERA_DONO_S = 45.0  # a pessoa em espera, enquanto o Zé pergunta se você atende
 LEMBRAR_ESPERA_S = 15.0  # "só mais um instante" de tempos em tempos, para ela não desistir
 PONTE_MAXIMA_S = 2.0  # o que a sua voz pode atrasar na ponte: além disso, descarta o mais velho
+FOLGA_PONTE_S = 0.2  # silêncio antes da sua voz: a folga contra os soluços da rede do celular
 REGRAS_DA_LIGACAO = (
     "Nesta ligação:\n"
     "- Se a pessoa pedir para falar com {dono} (ou com o responsável, com um humano): diga, numa "
@@ -715,6 +716,8 @@ class Chamada:
         await self.tocador.terminar()
         self._anotar("agente", f"[A ligação foi passada para {self.dono}.]")
         self.desfecho = "transferida"
+        for _ in range(round(FOLGA_PONTE_S / QUADRO_S)):
+            self.tocador.empurrar(b"\0" * QUADRO, int(PONTE_MAXIMA_S / QUADRO_S))
         self.em_ponte = True
         self.ponte_pronta.set()
         await self.ponte_fim.wait()

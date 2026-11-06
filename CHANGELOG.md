@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Ligação passada ao app: o áudio saía travado e com a voz alterada. O Zé respondia ao "sim"
+  pelo modo Ao vivo com a ligação já no celular, e a fala dele trocava a taxa do áudio e
+  silenciava o microfone por instantes. Agora, enquanto a ligação está no celular, só ela fala
+  com o app. A sua voz vai sem o filtro do Zé (o celular já tira o eco), e os dois sentidos têm
+  uma folga contra os soluços da rede (ADR 0066).
 - Ligações do WhatsApp: quando alguém pede para falar com você, o agente põe em espera e o Zé
   pergunta pelo app de voz ("a Ana está na linha e quer falar com você sobre o orçamento. Pode
   atender?"). Com o "sim", falado ou no botão "Atender" da notificação, a ligação passa para o

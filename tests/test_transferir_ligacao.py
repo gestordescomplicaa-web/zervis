@@ -1,6 +1,7 @@
 """Chamar você durante a ligação e passar para o app de voz, sem derrubar (ADR 0066)."""
 
 import asyncio
+import json
 import threading
 from pathlib import Path
 from queue import Queue
@@ -43,10 +44,12 @@ def test_atender_vira_ponte_e_a_ligacao_continua(tmp_path: Path) -> None:
         assert chamada.decidir("atender") and not chamada.decidir("atender")
         await _ate(lambda: chamada.em_ponte)
         assert falas[-1] == "Pronto, vou te passar para Fulano."
-        enviados = len(conexao.enviados)
-        chamada.ouvir_dono(b"\x01\x00" * 1280 * 3)  # 240 ms da sua voz: 4 quadros de 60 ms
-        await _ate(lambda: len(conexao.enviados) >= enviados + 4)
-        assert all(len(q) == lg.QUADRO for q in conexao.enviados[enviados:])
+        sua_voz = b"\x05\x00" * 960  # (a voz falsa do agente é outra)
+        chamada.ouvir_dono(b"\x05\x00" * 1280 * 3)  # 240 ms da sua voz: 4 quadros de 60 ms
+        await _ate(lambda: conexao.enviados.count(sua_voz) == 4)
+        assert all(len(q) == lg.QUADRO for q in conexao.enviados)
+        primeira = conexao.enviados.index(sua_voz)
+        assert conexao.enviados[primeira - 3 : primeira] == [b"\0" * lg.QUADRO] * 3  # a folga
         assert motor.pedidos and len(motor.pedidos) == 1  # o agente saiu da conversa
         chamada.ponte_fim.set()  # você desligou
         assert await asyncio.wait_for(tarefa, 3) == "transferida"
@@ -171,16 +174,41 @@ def test_a_ponte_da_central_leva_e_traz_o_audio(tmp_path: Path) -> None:
 # --- o lado do Zé ---------------------------------------------------------------------------
 
 
-class App:
-    do_app, conectada = True, True
+class ConexaoDoApp:
+    """O WebSocket do app: guarda o áudio e as mensagens de controle que chegam a ele."""
+
+    aberta = True
 
     def __init__(self) -> None:
-        self.controles: list[dict[str, Any]] = []
-        self.conexao = SimpleNamespace(binario=lambda pcm: self.recebidos.append(pcm))
         self.recebidos: list[bytes] = []
+        self.controles: list[dict[str, Any]] = []
+
+    def binario(self, pcm: bytes) -> None:
+        self.recebidos.append(pcm)
+
+    def texto(self, dados: str) -> None:
+        self.controles.append(json.loads(dados))
+
+
+class App:
+    """A VozNavegador do app: o controle passa pela conexão, como na de verdade."""
+
+    do_app, conectada, sem_eco = True, True, False
+
+    def __init__(self) -> None:
+        self.conexao: Any = ConexaoDoApp()
+        self.real = self.conexao
+
+    @property
+    def controles(self) -> list[dict[str, Any]]:
+        return self.real.controles
+
+    @property
+    def recebidos(self) -> list[bytes]:
+        return self.real.recebidos
 
     def controle(self, **dados: Any) -> None:
-        self.controles.append(dados)
+        self.conexao.texto(json.dumps(dados))
 
 
 class CentralFalsa:
@@ -260,19 +288,33 @@ def test_o_ze_pergunta_pelo_app_e_atender_liga_a_ponte(monkeypatch: pytest.Monke
     assert n.maquina.tratar(e.Aviso("Lembrete: beber água."), 0) == [
         e.ReterAviso("Lembrete: beber água.")
     ]
+    assert app.sem_eco  # a sua voz vai crua: o celular já tira o eco
+    folga = app.recebidos[0]
+    assert folga == b"\0\0" * 3200  # 200 ms de silêncio contra os soluços da rede
+    assert {"tipo": "voz", "taxa": 16000} in app.controles
     n.ponte_ligacao.enviar(b"mic")
     ws.entrada.put(b"pessoa")
     for _ in range(50):
-        if app.recebidos:
+        if len(app.recebidos) > 1:
             break
         threading.Event().wait(0.02)
-    assert ws.enviados == [b"mic"] and app.recebidos == [b"pessoa"]
+    assert ws.enviados == [b"mic"] and app.recebidos == [folga, b"pessoa"]
+    # O caso de 06/11/2026: o Zé respondeu ao "sim" pelo Live com a ponte aberta. A fala dele
+    # trocava a taxa do app e silenciava o microfone; agora não chega ao app.
+    controles = len(app.controles)
+    app.controle(tipo="voz", taxa=24000)
+    app.conexao.binario(b"fala do Ze")
+    app.controle(tipo="fim")
+    assert len(app.controles) == controles and app.recebidos == [folga, b"pessoa"]
+    app.controle(tipo="whatsapp", leads=[])  # o que não é áudio passa
+    assert app.controles[-1] == {"tipo": "whatsapp", "leads": []}
     assert servico.encerrar_ligacao() == "Ligação encerrada." and n.central.encerradas == ["c1"]
     for _ in range(50):
         if n.ponte_ligacao is None:
             break
         threading.Event().wait(0.02)
     assert n.ponte_ligacao is None and not n.maquina.em_ligacao
+    assert app.conexao is app.real and not app.sem_eco  # o Zé volta a falar com o app
     assert app.controles[-1]["estado"] == "fim" and {"tipo": "fim"} in app.controles
 
 

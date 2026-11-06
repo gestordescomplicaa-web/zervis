@@ -52,3 +52,23 @@ no WhatsApp, e o áudio passa da voz do agente para o celular.
 - O que você diz na ponte não é transcrito; o resumo tem só o lado da pessoa.
 - Atender pelo computador ficou de fora de propósito; dá para somar depois pelo mesmo caminho
   (a voz pelo navegador).
+
+## A primeira ligação real (06/11/2026)
+
+A ponte abriu e a ligação terminou como "transferida", mas o áudio saiu travado e com a voz
+alterada. Pelos registros, com o app no modo Ao vivo, o Zé respondeu ao "sim" ("pronto,
+transferi…") pelo Live **com a ponte já aberta**. A fala dele foi direto ao app:
+
+- anunciou outra taxa (a da voz do Zé), e o app passou a tocar a pessoa, que vem a 16 kHz, nela:
+  a voz alterada;
+- o "fim" de cada frase silencia o microfone do celular por um instante (a proteção contra o
+  eco da fala do Zé): o áudio travado para quem ligou.
+
+Além disso, o filtro de eco e ruído do Zé tratava a voz de quem usa como se fosse um pedido
+para ele.
+
+**Correção** (`transporte/ponte.py`): enquanto a ligação está no celular, só a ponte fala com o
+app. A conexão do app é trocada por uma que descarta o áudio e os sinais de taxa e de fim de frase
+que não vêm da ponte; as notificações passam. A voz de quem usa vai crua (o celular já tira o
+eco), e os dois sentidos começam com 200 ms de silêncio, uma folga contra os soluços da rede.
+No fim, a conexão volta ao normal.
