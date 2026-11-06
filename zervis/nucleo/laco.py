@@ -29,7 +29,7 @@ from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.calendario import Calendario
 from zervis.automacoes.jobs import Jobs
-from zervis.avisos import caixa, mensagens, pendentes, prioridade
+from zervis.avisos import caixa, ligacoes, mensagens, pendentes, prioridade
 from zervis.avisos import modo as modo_fala
 from zervis.avisos.fila import Fila
 from zervis.cerebro import (
@@ -339,6 +339,7 @@ class Nucleo(
         self.leads = pendentes.Pendentes()  # os leads do WhatsApp esperando a sua resposta
         self.caixa = caixa.Caixa()  # as conversas privadas recentes do WhatsApp (ADR 0054)
         self.prioridade = prioridade.Prioridade()  # quem o Zé vigia em tempo real (ADR 0055)
+        self.ligacoes = ligacoes.Ligacoes(DADOS / "ligacoes.json")  # o que foi dito nas ligações
         self.instagram = instagram.Instagram()  # métricas do Instagram, só leitura (ADR 0057)
         # A pesquisa profunda (ADR 0059): o SearXNG próprio e o vigia semanal das fontes de fora.
         self.buscador = Buscador()

@@ -9,7 +9,7 @@ from typing import Any, Protocol
 from zervis import atividade, fuso, usuario
 from zervis.atendimento import agente, cliente, whatsapp
 from zervis.avisos import caixa as caixa_mod
-from zervis.avisos import falas_whatsapp, mensagens, pendentes
+from zervis.avisos import falas_whatsapp, ligacoes, mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.cerebro import rapido
 from zervis.nucleo import estados as e
@@ -239,11 +239,34 @@ class ServicoAtendimento:
                 )  # fmt: skip
             self._lead_respondido(chat, _quando(evento))
         elif evento.get("tipo") == "ligacao":
-            telefone = str(evento.get("telefone", "")) or "número oculto"
-            atividade.PADRAO.registrar(
-                "execucao", f"Atendimento: ligação de +{telefone}", origem="atendente",
-                desfecho=str(evento.get("desfecho", "")),
-            )  # fmt: skip
+            self._ligacao_terminou(evento)
+
+    def _ligacao_terminou(self, evento: dict[str, Any]) -> None:
+        """O agente atendeu uma ligação: o Zé guarda o que foi dito e avisa quem ligou, quanto
+        durou e o resumo (antes, só que houve uma ligação: 06/11/2026)."""
+        guardadas = getattr(self.n, "ligacoes", None)
+        if guardadas is None:
+            return
+        lig = guardadas.registrar(evento)
+        atividade.PADRAO.registrar(
+            "execucao", f"Atendimento: ligação de {lig.quem}", origem="atendente",
+            desfecho=lig.desfecho, duracao=lig.duracao,
+        )  # fmt: skip
+        if lig.desfecho == "falha" and not lig.conversa:
+            return  # nem chegou a ser atendida: nada a contar
+        quem = agente.nome_falado(lig.nome) if lig.nome else lig.quem
+        partes = [f"você recebeu uma ligação de {quem}, de {ligacoes.duracao_falada(lig.duracao)}."]
+        if lig.desfecho == "passou":
+            partes.append("A pessoa pediu para falar com você.")
+        if lig.resumo:
+            partes.append(modo_fala.para_ouvir(lig.resumo, limite=320))
+        fala = pendentes.chamando(usuario.PERFIL.nome, " ".join(partes))
+        self.n._na_linha("aviso", f"Ligação de {lig.quem}: {lig.resumo or 'sem resumo'}")
+        if modo_fala.falar(
+            self.n.modo_fala, "urgente" if lig.desfecho == "passou" else "notificacao"
+        ):
+            # O contexto do cérebro leva só quem e quando: o resumo vem do que o cliente disse.
+            self._falar_lead(fala, f"Você avisou da ligação de {quem} (id {lig.id}).")
 
     def _motor_do_atendente(self) -> rapido.Motor:
         """Um modelo sem ferramentas para cada resposta do agente de atendimento."""
@@ -259,6 +282,8 @@ class ServicoAtendimento:
             "execucao", f"Atendimento: {nome} passou para você", origem="atendente", motivo=motivo
         )
         self.n._na_linha("aviso", f"{nome}, no WhatsApp, precisa de você: {motivo}")
+        if motivo.startswith("ligação"):
+            return  # o fim da ligação avisa, com o resumo (`_ligacao_terminou`)
         if modo_fala.falar(self.n.modo_fala, "urgente"):
             self.n.eventos.put(
                 e.Aviso(f"{agente.nome_falado(nome)}, no WhatsApp, precisa de você.")

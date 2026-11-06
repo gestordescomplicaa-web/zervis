@@ -398,3 +398,73 @@ def test_modelo_lento_ganha_uma_reacao_curta_sem_repetir(
         await asyncio.wait_for(tarefa, 3)
 
     asyncio.run(cena())
+
+
+def test_a_conversa_da_ligacao_e_o_resumo_vao_para_o_ze(tmp_path: Path) -> None:
+    # 06/11/2026: a ligação terminava e o Zé não sabia nada do que foi falado.
+    from types import SimpleNamespace
+
+    from zervis.atendimento import central as c
+
+    def respostas(pedido: str) -> list[str]:
+        return ["Até logo! [[DESLIGAR]]"] if "tchau" in pedido else ["Amanhã às dez, combinado."]
+
+    async def cena() -> None:
+        chamada, _, ouvido, _, _, _ = _chamada(tmp_path, respostas)
+        tarefa = asyncio.ensure_future(chamada.atender())
+        await ouvido.fila.put(("fim_da_fala", "quero marcar uma limpeza amanhã"))
+        await _ate(lambda: len(chamada.conversa) >= 3)
+        await ouvido.fila.put(("fim_da_fala", "obrigado, tchau"))
+        await asyncio.wait_for(tarefa, 3)
+        assert [f["quem"] for f in chamada.conversa] == [
+            "agente",
+            "cliente",
+            "agente",
+            "cliente",
+            "agente",
+        ]
+        assert chamada.conversa[1]["texto"] == "quero marcar uma limpeza amanhã"
+
+        resumidor = Motor(lambda pedido: ["Quer marcar uma limpeza; ", "ficou para amanhã às dez."])
+        central = c.Central.__new__(c.Central)
+        central.motor_de_voz = lambda: resumidor
+        publicados: list[tuple[str, dict[str, object]]] = []
+        central.eventos = SimpleNamespace(  # type: ignore[assignment]
+            publicar=lambda tipo, **d: publicados.append((tipo, d))
+        )
+        quem: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+        quem.set_result("Ana Lima")
+        await central._contar_ao_ze("5511999990000", "normal", 125.4, chamada.conversa, quem)
+        tipo, dados = publicados[0]
+        assert tipo == "ligacao" and dados["nome"] == "Ana Lima" and dados["duracao"] == 125
+        assert dados["resumo"] == "Quer marcar uma limpeza; ficou para amanhã às dez."
+        assert dados["conversa"] == chamada.conversa
+        assert "<<<" in resumidor.pedidos[0] and "Cliente: quero marcar" in resumidor.pedidos[0]
+        assert resumidor.sistema == lg.RESUMO and resumidor.fechado
+
+    asyncio.run(cena())
+
+
+def test_sem_fala_do_cliente_nao_ha_resumo() -> None:
+    motor = Motor(lambda _: ["não devia ser chamado"])
+    assert asyncio.run(lg.resumir(motor, [{"quem": "agente", "texto": "Olá!"}])) == ""
+    assert motor.pedidos == []
+
+
+def test_quem_ligou_pelo_nome_da_agenda() -> None:
+    from types import SimpleNamespace
+
+    from zervis.atendimento import central as c
+
+    central = c.Central.__new__(c.Central)
+    agenda = [{"nome": "Ana Lima", "telefone": "5511999990000", "lid": ""}]
+    central.whatsapp = SimpleNamespace(agenda=lambda: agenda)  # type: ignore[assignment]
+    assert central._nome_na_agenda("5511999990000") == "Ana Lima"
+    assert central._nome_na_agenda("551199990000") == "Ana Lima"  # sem o nono dígito
+    assert central._nome_na_agenda("5511888880000") == ""
+
+    def fora() -> list[dict[str, str]]:
+        raise RuntimeError("WhatsApp não conectado.")
+
+    central.whatsapp = SimpleNamespace(agenda=fora)  # type: ignore[assignment]
+    assert central._nome_na_agenda("5511999990000") == ""

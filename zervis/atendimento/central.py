@@ -40,6 +40,7 @@ TOKEN = lugares.CONFIG / "atendimento.token"
 ESTADO = lugares.ESTADO / "atendimento.json"
 EVENTOS = 200
 AQUECER_S = 60.0  # confere se a persona ou o cérebro mudaram (a reserva antiga não serve)
+RESUMIR_S = 30.0  # o resumo da ligação; sem ele, o Zé avisa mesmo assim
 ESPERA_EVENTOS_S = 25.0
 CORPO_MAXIMO = 64 * 1024
 TEXTO_ENVIADO_MAXIMO = 2000  # uma resposta ditada; mais que isto não é resposta falada
@@ -168,6 +169,45 @@ class Central:
         """Do fio do WaCalls: a decisão e a ligação rodam no laço do atendente."""
         self.atendente.agendar(self.atender_ligacao(evento))
 
+    async def _contar_ao_ze(
+        self,
+        telefone: str,
+        desfecho: str,
+        duracao: float,
+        conversa: list[dict[str, str]],
+        quem: "asyncio.Future[str]",
+    ) -> None:
+        """O Zé fica sabendo do que foi falado: quem ligou (o nome da agenda), quanto durou, o
+        resumo e a conversa (antes, só que houve a ligação: 06/11/2026)."""
+        resumo = ""
+        with contextlib.suppress(Exception):
+            resumo = await asyncio.wait_for(
+                ligacao.resumir(self.motor_de_voz(), conversa), RESUMIR_S
+            )
+        nome = ""
+        with contextlib.suppress(Exception):
+            nome = await quem
+        self.eventos.publicar(
+            "ligacao",
+            telefone=telefone,
+            nome=nome,
+            desfecho=desfecho,
+            duracao=round(duracao),
+            resumo=resumo,
+            conversa=conversa[-ligacao.CONVERSA_MAXIMA :],
+        )
+
+    def _nome_na_agenda(self, telefone: str) -> str:
+        """Como quem ligou está salvo na agenda do celular (vazio se não está)."""
+        if not telefone:
+            return ""
+        procurados = set(whatsapp.variantes(telefone))
+        try:
+            agenda = self.whatsapp.agenda()
+        except Exception:
+            return ""
+        return next((c["nome"] for c in agenda if c.get("telefone") in procurados), "")
+
     def vai_atender(self, telefone: str, chamada: str) -> str | None:
         """Por que não atender (o celular segue tocando), ou None para atender."""
         p = self.atendente.perfil
@@ -233,6 +273,8 @@ class Central:
         self.ligacoes.add(chamada)
         inicio = time.monotonic()
         desfecho = "falha"
+        atendida: ligacao.Chamada | None = None
+        quem = asyncio.ensure_future(asyncio.to_thread(self._nome_na_agenda, telefone))
         try:
             await asyncio.to_thread(self.whatsapp.atender, sessao, chamada)
             url, cabecalho = self.whatsapp.audio(sessao, chamada)
@@ -246,26 +288,30 @@ class Central:
             async with connect(url, additional_headers=cabecalho, max_size=None) as conexao:
                 ouvido = ligacao.Ouvido(str(self.chave_deepgram()))
                 await ouvido.abrir()
-                desfecho = await ligacao.Chamada(
+                nome = await quem if quem.done() else ""  # sem esperar a agenda para atender
+                atendida = ligacao.Chamada(
                     conexao,
                     ouvido,
                     motor,
                     p,
                     telefone,
-                    "",
+                    nome,
                     self.atendente.registros,
                     self._passou,
                     iniciado=iniciado,
                     saudacao_pronta=pronta,
-                ).atender()
+                )
+                desfecho = await atendida.atender()
         except Exception:
             log.exception("central: a ligação falhou")
         finally:
             self.ligacoes.discard(chamada)
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(self.whatsapp.desligar, sessao, chamada)
-            self.atendente.registros.ligacao(telefone, desfecho, time.monotonic() - inicio)
-            self.eventos.publicar("ligacao", telefone=telefone, desfecho=desfecho)
+            duracao = time.monotonic() - inicio
+            self.atendente.registros.ligacao(telefone, desfecho, duracao)
+            conversa = atendida.conversa if atendida is not None else []
+            await self._contar_ao_ze(telefone, desfecho, duracao, conversa, quem)
             log.info("central: ligação encerrada (%s)", desfecho)
             self.atendente.agendar(self.aquecer())  # a próxima ligação já começa aquecida
 

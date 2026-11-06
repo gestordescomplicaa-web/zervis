@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Ligações do WhatsApp: o Zé fica sabendo do que foi falado. Ao fim de cada ligação que o agente
+  atendeu, ele avisa quem ligou (pelo nome da agenda, ou o número), quanto durou e um resumo
+  ("você recebeu uma ligação da Ana, de 3 minutos. Quer fechar o pacote e pediu retorno hoje").
+  "Quem ligou?" e "o que a Ana falou na ligação?" respondem com a conversa guardada. Antes, ele
+  só sabia que houve uma ligação.
 - Propor como PR: as melhorias do autodesenvolvimento vão para o GitHub. "Manda essa melhoria
   como PR", pela voz, ou Melhorias → "Propor como PR", no painel. Antes de publicar, o Zé confere
   os testes e se a mudança não leva dados seus: os números e nomes da sua agenda do WhatsApp,
