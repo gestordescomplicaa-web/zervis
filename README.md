@@ -1,5 +1,5 @@
 <div align="center">
-  <img src=".github/ze-logo.png" width="180" alt="Logo do Zé, o assistente Zérvis">
+  <img src=".github/ze-logo.svg" width="168" alt="Logo do Zé, o assistente Zérvis">
   <h1>Zérvis</h1>
   <p><strong>O assistente de voz que trabalha com você: atende o seu WhatsApp, pesquisa empresas,<br>conduz agentes de código e mostra tudo em holograma, no seu Linux.</strong></p>
   <p>Você fala; o Zé faz, pergunta antes do que tem efeito e avisa quando termina.<br>Com o Claude, o Codex ou um modelo que roda no seu próprio computador.</p>
@@ -9,6 +9,7 @@
     <a href="#instalar-no-pc">Instalar no PC</a> ·
     <a href="docs/vps.md">Instalar numa VPS</a> ·
     <a href="#arquitetura">Arquitetura</a> ·
+    <a href="#o-código-pacote-por-pacote">Código</a> ·
     <a href="docs/roteiro.md">Roteiro</a> ·
     <a href="CONTRIBUTING.md">Contribuir</a>
   </p>
@@ -89,6 +90,7 @@ Tudo isto é pela voz: no microfone do PC, no navegador ou no celular bloqueado,
 | **O Zé em 3D** na tela, movido pelas suas mãos pela câmera, com o fundo da câmera ou escuro. | Pronto |
 | **Cenas que ele escreve**: "me explica X" vira gráficos, ondas, hologramas 3D montados com peças, modelos 3D livres (inclusive da NASA) e mapas de verdade (IBGE e Natural Earth). | Em validação |
 | **Fotos e vídeos reais**, da Wikipédia e do Wikimedia Commons, sempre com crédito, e o print de uma página. | Em validação |
+| **Barra de carregamento em holograma**: enquanto pensa, o que o Zé está fazendo, os passos já feitos e quanto cada um costuma levar. | Em validação |
 
 ### Cérebros: os seus modelos, inclusive locais
 | Função | Estado |
@@ -154,55 +156,264 @@ ligar sistemas de clientes, falando com ele, com cada cliente no seu lugar.
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-    voce(["Você<br>voz · painel · app Zé Voz"])
+O Zé é **um serviço do seu usuário** (`zervis.service`, systemd) com alguns processos ao lado,
+cada um com um papel só. Tudo conversa pelo endereço local (`127.0.0.1`), com token; nada fica
+aberto na rede.
 
-    subgraph ze["Zérvis (um serviço do usuário, systemd)"]
-        nucleo["Núcleo<br>estados e serviços"]
-        voz["Voz<br>ativação · escuta · Piper"]
-        cerebro["Cérebro<br>Claude · Codex · OmniRoute · local"]
-        mcpze["Ferramentas do Zé (MCP)<br>WhatsApp · pesquisa · memória ·<br>sessões · automações · sistema"]
-        pesquisa["Pesquisa<br>SearXNG · leitor · CNPJ"]
-        imersao["Imersão<br>holograma · cenas · mãos"]
-        oficina["Oficina<br>sessões de código por projeto"]
-        avisos["Central de avisos<br>e Atividade"]
-        dados[("SQLite e Markdown<br>pastas XDG")]
+### Em números (05/11/2026)
+
+| | |
+|---|---|
+| **Python** (núcleo, voz, cérebro, domínios) | 47 mil linhas em 231 módulos, 21 pacotes |
+| **Go** (WhatsApp nativo, WaCalls) | 20,7 mil linhas |
+| **JavaScript** (painel e Imersão, sem etapa de build, com checagem de tipos) | 8,6 mil linhas |
+| **Java** (app Zé Voz, Android) | 1,2 mil linhas |
+| **Ferramentas do cérebro** | 68, em três servidores MCP do próprio Zé, mais os conectores de cada projeto |
+| **Decisões registradas** | 64 ADRs em [docs/adr](docs/adr/) |
+| **Testes** | cerca de 1.180, em 149 arquivos, mais o tipo e o lint no `make check` |
+
+### Visão geral
+
+```mermaid
+flowchart TB
+    subgraph rostos["Rostos: por onde você fala com o Zé"]
+        mic["Microfone e caixa do PC<br>PipeWire"]
+        nav["Navegador<br>painel + voz por WebSocket"]
+        app["App Zé Voz<br>Android, tela bloqueada"]
+        holo["Janela da Imersão<br>Chromium + câmera + mãos"]
     end
 
-    central["Central de Atendimento<br>processo próprio · WhatsApp (Go)"]
-    ollama["Ollama<br>modelo local"]
-    agentes["Claude Code e Codex<br>com os conectores do projeto"]
-    externos["Sistemas dos clientes<br>n8n · CRM · ERP (MCP)"]
+    subgraph servico["zervis.service (systemd do usuário)"]
+        transp["Transportes<br>local · navegador · LiveKit"]
+        voz["Voz<br>Ei Zé · VAD · fim de turno · fala"]
+        nucleo["Núcleo<br>máquina de estados e laço"]
+        cerebro["Cérebro<br>via rápida · Claude · Codex ·<br>OmniRoute · local · reserva"]
+        mcp["Ferramentas MCP do Zé<br>jarvis · tempo · foco"]
+        portal["Portal :8795<br>painel · API · login"]
+        dominios["Domínios<br>oficina · pesquisa · memória · avisos ·<br>automações · foco · sistema · redes"]
+    end
 
-    voce <--> voz <--> nucleo
-    nucleo <--> cerebro <--> mcpze
+    subgraph filhos["Processos filhos (sobem e voltam sozinhos)"]
+        imersivo["Servidor da Imersão :8794"]
+        searx["SearXNG<br>buscador próprio"]
+        aimem["ai-memory<br>memória longa"]
+    end
+
+    subgraph atend["zervis-atendimento (processo próprio)"]
+        central["Central de Atendimento<br>API local com token"]
+        wa["WaCalls (Go)<br>WhatsApp nativo"]
+    end
+
+    subgraph fora["Fora do Zé"]
+        nuvem["Claude · Codex · Deepgram ·<br>ElevenLabs · Fish Audio"]
+        ollama["Ollama :11434<br>Gemma 4 E4B"]
+        agentes["Claude Code e Codex<br>sessões num terminal real"]
+        clientes["Sistemas dos clientes<br>n8n · CRM · ERP (MCP)"]
+        net["Internet pública<br>atrás da trava de rede"]
+    end
+
+    mic --> transp
+    nav --> transp
+    app --> transp
+    transp <--> voz <--> nucleo
+    nav <--> portal <--> nucleo
+    holo <--> imersivo
+    nucleo <--> cerebro <--> mcp --> dominios
+    cerebro -.-> nuvem
     cerebro -.-> ollama
-    mcpze --> pesquisa
-    mcpze --> imersao
-    mcpze --> oficina --> agentes -- conectores do projeto --> externos
-    cerebro -- conectores gerais --> externos
-    oficina --> avisos --> voce
-    nucleo <-->|eventos| central
-    nucleo --- dados
+    dominios --> imersivo
+    dominios --> searx --> net
+    dominios --> aimem
+    dominios --> agentes -- conectores do projeto --> clientes
+    nucleo <-->|eventos| central <--> wa
 ```
 
-- **Uma linguagem por papel.** Python no núcleo, no cérebro e na voz; Go no WhatsApp (WaCalls);
-  Java no app de voz; JavaScript com tipos no painel e na Imersão, sem etapa de build. Só se
-  reescreve noutra linguagem o que uma medição apontar como gargalo
-  ([ADR 0032](docs/adr/0032-arquitetura-para-crescer.md)).
+### Processos e portas
+
+| Processo | Como roda | Onde escuta | Para quê |
+|---|---|---|---|
+| **Zé** | `zervis.service`, serviço do usuário; não cai quando o Hyprland reinicia | `127.0.0.1:8795` | núcleo, voz, cérebro, ferramentas e o painel |
+| **Imersão** | filho do Zé (`zervis/filho.py`), volta sozinho se cair | `127.0.0.1:8794`, token no cabeçalho | a página do holograma, as cenas e o estado do anel |
+| **Central de Atendimento** | `zervis-atendimento`, serviço próprio (ADR 0031) | `127.0.0.1`, porta livre, token `0600` | WhatsApp, caixa, arquivo e atendente automático; reiniciar o Zé não derruba o atendimento |
+| **WaCalls** | filho da Central; o Zé compila o Go com a cadeia verificada | `127.0.0.1`, porta livre | a conexão nativa com o WhatsApp (whatsmeow) |
+| **SearXNG** | filho do Zé, sobe na primeira busca | `127.0.0.1`, porta livre, segredo novo a cada subida | o buscador da pesquisa profunda |
+| **ai-memory** | filho do Zé, binário oficial com SHA-256 conferido | local, HTTP | a memória longa comum ao Claude e ao Codex |
+| **Navegador do Zé** | Playwright MCP num Chromium próprio, sem as suas senhas | stdio | ler e usar páginas, com a mesma aprovação falada |
+| **LiveKit** | opcional, só local | `127.0.0.1:7880` | a sala de voz do celular, com cancelamento de eco (AEC3) no servidor |
+| **Ollama** | serviço da máquina, opcional | `127.0.0.1:11434` | o cérebro local |
+| **Acesso de fora** | `cloudflared`, Tailscale ou o domínio da VPS, opcional | HTTPS | painel e voz em outros aparelhos, sem abrir porta no roteador |
+
+### Um pedido por voz, do "Ei Zé" à resposta
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor V as Você
+    participant A as Ativação e VAD<br>(na máquina)
+    participant E as Escuta<br>Deepgram nova-3
+    participant N as Núcleo
+    participant R as Via rápida
+    participant C as Cérebro
+    participant F as Ferramentas MCP
+    participant S as Fala
+
+    V->>A: "Ei Zé" (o chamado nunca sai da máquina)
+    A->>N: ATIVO → OUVINDO
+    V->>E: o pedido, transcrito enquanto você fala
+    E->>N: texto final, com o fim de turno pela entonação
+    N->>R: PENSANDO
+    alt conversa curta
+        R-->>S: responde direto, com a persona enxuta
+    else precisa de ferramenta
+        R->>C: [completo]
+        C->>F: chama a ferramenta (o passo aparece na barra de carregamento)
+        opt tem efeito
+            F->>V: CONFIRMANDO: "Envio para a Ana: amanhã às 10 eu ligo?"
+            V->>F: "sim"
+        end
+        F-->>C: resultado
+        C-->>S: resposta em streaming
+    end
+    S-->>V: FALANDO, frase a frase (outro "Ei Zé" interrompe)
+```
+
+### A máquina de estados
+
+```mermaid
+stateDiagram-v2
+    [*] --> INATIVO
+    INATIVO --> ATIVO: um rosto conectou
+    ATIVO --> OUVINDO: "Ei Zé"
+    OUVINDO --> PENSANDO: fim da fala
+    PENSANDO --> CONFIRMANDO: ação com efeito
+    CONFIRMANDO --> PENSANDO: "sim" libera, "não" nega
+    PENSANDO --> FALANDO: primeira frase pronta
+    FALANDO --> OUVINDO: conversa contínua ou interrupção
+    FALANDO --> ATIVO: "ok" ou silêncio
+    ATIVO --> INATIVO: o último rosto saiu
+```
+
+Regras que viram teste: em INATIVO o microfone fica **fechado**; em FALANDO o que o microfone
+ouve não é transcrito (só o chamado, para interromper); CONFIRMANDO só aceita "sim" ou "não", e
+silêncio ou 40 s não fazem nada; uma fala por vez, e avisos só saem quando não há pedido em
+andamento ([docs/04-arquitetura.md](docs/04-arquitetura.md)).
+
+### O cérebro
+
+| Peça | O que faz |
+|---|---|
+| **Interface `Brain`** | `start`, `ask`, `interrupt`, `reset`, `close`; devolve texto parcial, chamada de ferramenta, pedido de permissão e fim (`zervis/cerebro/base.py`) |
+| **ClaudeBrain** | Claude Agent SDK, sessão contínua, persona `ZE.md`, aprovação falada pelo `can_use_tool` |
+| **CodexBrain** | `codex app-server` por JSON-RPC, com as mesmas ferramentas por MCP em stdio |
+| **OmniRoute** | o mesmo ClaudeBrain apontado para as rotas do OmniRoute: GPT, Gemini ou automático |
+| **LocalBrain** | Ollama, com as mesmas ferramentas e aprovações; só modelos que passaram nos testes do Zé (hoje, o `gemma4:e4b`) ([ADR 0063](docs/adr/0063-cerebro-local.md)) |
+| **Via rápida** | a persona enxuta (`RAPIDO.md`) responde o que é curto e devolve `[completo]` quando o pedido precisa do cérebro inteiro |
+| **Reserva** | troca de conta ou de provedor antes de qualquer resposta ou ferramenta, sem repetir ações |
+| **Baterias e consumo** | quanto resta de cada plano e quanto cada resposta gastou |
+| **Revisão** | no fim de uma conversa, um modelo menor propõe memória e skills, que viram pendência para você aprovar |
+
+### As ferramentas
+
+| Servidor MCP | Ferramentas | O que tem |
+|---|---|---|
+| `jarvis` | 58 | WhatsApp (9) · aprendizado: memória, skills e sugestões (9) · sessões de código (7) · pesquisa profunda, CNPJ e pesquisas guardadas (7) · tela e Imersão (5) · automações (4) · sistema (3) · imagens reais (3) · conectores (3) · modelos 3D (2) · Instagram (2) · navegador, atualizações, manutenção e "sobre o Zé" |
+| `tempo` | 3 | linha do tempo, conversas e nota do dia |
+| `foco` | 7 | frentes de trabalho e próximos passos |
+| `atendente` | 2 | o agente da Central de Atendimento, com persona própria |
+| conectores | por projeto | o MCP dos sistemas de cada cliente, preso à pasta do projeto |
+
+O cérebro do Claude roda o servidor dentro do próprio processo e o do Codex, por stdio: nenhuma
+das ferramentas do Zé escuta numa porta. Cada chamada cai num destes níveis:
+
+- **Leitura** passa sem perguntar: ler o WhatsApp, pesquisar, listar sessões, ver a tela.
+- **Efeito** pergunta em voz alta, com a frase exata do que vai acontecer: enviar, delegar,
+  agendar, cadastrar.
+- **Sistema** segue a política de risco de cada ação do Omarchy: livre, confirmação falada,
+  frase exata ou proibida.
+- **Apagar** não existe como ferramenta: excluir é no painel, com você.
+
+### O código, pacote por pacote
+
+| Pacote | Linhas | Responsabilidade |
+|---|---:|---|
+| `zervis/nucleo` | 7,0 mil | máquina de estados, laço principal, serviços e o autoconhecimento ("o que você sabe fazer?") |
+| `zervis/cerebro` | 9,1 mil | a interface `Brain`, Claude, Codex, OmniRoute, local, via rápida, reserva, contas, conectores MCP e OAuth, e as ferramentas (`ferramentas/`) |
+| `zervis/voz` | 4,0 mil | o "Ei Zé", a escuta, o Deepgram, o fim de turno, o Live, o filtro de eco do texto e as vozes Piper, ElevenLabs e Fish |
+| `zervis/transporte` | 1,1 mil | entrada e saída de áudio trocáveis: PipeWire, navegador (WebSocket) e LiveKit, com o cancelamento de eco |
+| `zervis/presenca` | 0,3 mil | os rostos que deixam o Zé ativo: janela no Hyprland, escuta ligada, voz remota |
+| `zervis/portal` | 4,6 mil + 4,2 mil web | o painel (17 páginas), a API, a senha com código do autenticador, o pareamento do app e o acesso de fora |
+| `zervis/imersivo` | 2,5 mil + 9,3 mil web | a Imersão: servidor, holograma 3D, mãos pela câmera, cenas com 18 tipos de bloco, mapas, fotos e a barra de carregamento |
+| `zervis/rosto` | 1,4 mil | o anel, o quadro, o HUD, a janela do Zé e o andamento de cada passo |
+| `zervis/oficina` | 4,3 mil | sessões de código (Claude Code e Codex num PTY), cópia isolada, permissões e o modo manutenção |
+| `zervis/atendimento` | 3,0 mil + 20,7 mil Go | a Central de Atendimento, o WaCalls e o atendente automático |
+| `zervis/pesquisa` | 1,1 mil | buscador (SearXNG), leitor (Trafilatura), CNPJ, pesquisa profunda, pesquisas guardadas e o vigia das fontes |
+| `zervis/memoria` | 1,2 mil | memória curta, conversas, histórico, linha do tempo, nota do dia e o ai-memory |
+| `zervis/avisos` | 1,6 mil | fila durável, caixa do WhatsApp, leads, lista de prioridade e o que falar quando |
+| `zervis/automacoes` | 0,4 mil | lembretes e consultas agendadas |
+| `zervis/foco` | 0,7 mil | as frentes de trabalho |
+| `zervis/habilidades` | 0,8 mil | skills (agentskills.io), diário de aprendizado e revisão em segundo plano |
+| `zervis/sistema` | 0,8 mil | a máquina (Omarchy, outro Linux ou servidor), o catálogo de ações, a política de risco e os vigias do sistema e do n8n |
+| `zervis/redes` | 0,5 mil | Instagram, só leitura |
+| `zervis/dados` | 0,4 mil | SQLite compartilhado entre processos, com migrações |
+| `zervis/avaliacao` | 0,6 mil | a bateria que mede o julgamento do cérebro (`zervis avaliar`) |
+| `zervis/persona` | Markdown | quem o Zé é (`ZE.md`) e a persona da via rápida (`RAPIDO.md`) |
+| `android/` | 1,2 mil Java | o app Zé Voz |
+
+### Onde mora cada dado
+
+- **SQLite, um banco por área:** atividade, consumo, conversas, sessões, atendimento, arquivo do
+  WhatsApp, linha do tempo, vigia do n8n e uso das ferramentas. Migrações automáticas e busca de
+  texto.
+- **Markdown:** memória curta, skills, persona e a pasta do Zé que a Imersão mostra.
+- **JSON com escrita atômica:** avisos, pendências, automações e os sinais da Imersão (estado,
+  humor, onda, andamento, comandos da tela).
+- **Segredos** em arquivos `0600`, fora do banco, da conversa e do repositório.
+
+### Segurança, camada por camada
+
+- **Só local por padrão.** Cada processo escuta em `127.0.0.1`, com token criado a cada subida.
+- **Painel de fora** com senha, código do autenticador (TOTP) e aparelhos lembrados. O app de
+  voz recebe só uma chave de voz no pareamento, sem acesso ao painel.
+- **Trava de rede** na pesquisa, nas imagens e nas capturas: só sai para endereços públicos da
+  internet, nunca para a sua rede local.
+- **Atividade**: tudo o que o Zé executou fica registrado, inclusive o que foi negado.
+- **O Zé melhora o próprio código** numa cópia isolada, com testes, a sua aprovação e volta
+  automática se a versão nova não subir.
+
+### Tecnologias
+
+| Camada | Usa |
+|---|---|
+| Ativação e VAD | openWakeWord adaptado, no onnxruntime, treinado com a sua voz |
+| Fim de turno | Smart Turn v3.2 (Pipecat) |
+| Transcrição | Deepgram nova-3, em streaming |
+| Voz | Piper com a voz Cadu (local); ElevenLabs e Fish Audio (nuvem) |
+| Voz remota | LiveKit (WebRTC) com AEC3; WebSocket pelo navegador |
+| Cérebro | Claude Agent SDK, Codex app-server, OmniRoute, Ollama |
+| WhatsApp | WaCalls em Go (whatsmeow e pion) |
+| Pesquisa | SearXNG, Trafilatura, BrasilAPI e minhareceita.org |
+| Imersão | Barehands (base), three.js, MediaPipe Hands, Wikimedia, IBGE e Natural Earth |
+| Painel | JavaScript sem etapa de build com tipos checados (tsc), xterm.js |
+| Memória longa | ai-memory |
+| Navegador | Playwright MCP |
+| Acesso de fora | cloudflared, Tailscale |
+
+Créditos e licenças de cada um estão em [THIRD_PARTY.md](THIRD_PARTY.md).
+
+### Princípios
+
+- **Uma linguagem por papel.** Python no núcleo, no cérebro e na voz; Go no WhatsApp; Java no
+  app de voz; JavaScript no painel e na Imersão. Só se reescreve noutra linguagem o que uma
+  medição apontar como gargalo ([ADR 0032](docs/adr/0032-arquitetura-para-crescer.md)).
 - **Fronteiras por processo.** O que precisa ficar de pé sozinho roda à parte, com API local e
-  token: a Central de Atendimento, o WaCalls, o buscador, a memória longa. Reiniciar o Zé não
-  derruba o atendimento.
-- **Cérebro trocável.** Claude, Codex, OmniRoute ou um modelo local atrás de uma interface única,
-  com as mesmas ferramentas e a mesma aprovação ([ADR 0063](docs/adr/0063-cerebro-local.md)).
+  token: a Central de Atendimento, o WaCalls, o buscador e a memória longa.
+- **Cérebro trocável.** Claude, Codex, OmniRoute ou um modelo local atrás de uma interface só,
+  com as mesmas ferramentas e a mesma aprovação.
 - **Os agentes fazem; o Zé conduz.** As sessões são o Claude Code e o Codex de verdade, com as
   skills e os conectores do projeto ([ADR 0037](docs/adr/0037-integracao-com-sistemas.md)).
 - **O n8n executa; o Zé constrói e vigia** ([ADR 0038](docs/adr/0038-fluxos-no-n8n-ze-constroi-e-vigia.md)).
-- **Cada habilidade é nativa**: um grupo de ferramentas, o autoconhecimento do Zé e uma decisão
-  registrada. O Zé sabe dizer o que sabe fazer ("o que você sabe fazer?").
-- **Dados em SQLite**, um banco por área, com migrações automáticas e busca de texto; segredos
-  fora do banco, em arquivos `0600`.
+- **Cada habilidade é nativa:** um grupo de ferramentas, o autoconhecimento do Zé e uma decisão
+  registrada.
 - **Uma essência que não muda.** O que o Zé é e não deixa de ser está em
   [docs/essencia.md](docs/essencia.md): nenhuma mudança, nem a feita por ele mesmo, pode
   contrariá-la.
