@@ -34,6 +34,7 @@ class CentralFalsa:
         self.erro = erro
         self.enviados: list[tuple[str, str, str]] = []
         self.telefones: list[str] = []
+        self.contatos: list[dict[str, str]] = []
 
     def enviar(self, texto: str, chave: str, chat: str = "", telefone: str = "") -> None:
         if self.erro:
@@ -43,6 +44,11 @@ class CentralFalsa:
 
     def para_tela(self) -> dict[str, Any]:
         return {"estado": "conectado", "numero": "5581900000000"}
+
+    def agenda(self) -> list[dict[str, str]]:
+        if self.erro:
+            raise CentralErro(self.erro)
+        return self.contatos
 
 
 def _nucleo(tmp_path: Path, central: CentralFalsa | None = None) -> Any:
@@ -60,6 +66,7 @@ def _nucleo(tmp_path: Path, central: CentralFalsa | None = None) -> Any:
     n.iniciar_whatsapp = servico.iniciar_whatsapp
     n.dispensar_lead = servico.dispensar_lead
     n.estado_whatsapp = servico.estado_whatsapp
+    n.agenda_whatsapp = servico.agenda_whatsapp
     return n
 
 
@@ -310,3 +317,54 @@ def test_contato_ambiguo_devolve_a_lista_para_escolher(tmp_path: Path) -> None:
         problema = w.prechecar(n)(ferramenta, {"contato": "souza", "texto": "oi"}) or ""
         assert "Ana Souza" in problema and "Bia Souza" in problema, ferramenta
     assert n.central.enviados == [] and len(n.caixa.conversas()) == 2
+
+
+AGENDA = [
+    {"nome": "Ana Lima", "telefone": "5581999990010", "lid": ""},
+    {"nome": "Ana Souza", "telefone": "5581999990020", "lid": ""},
+    {"nome": "Bruno Sem Número", "telefone": "", "lid": "987654321"},
+    {"nome": "Isabelle Vieira", "telefone": "5581999990001", "lid": "123456789"},
+]
+
+
+@pytest.mark.parametrize("busca", ["Isabelle Vieira", "isabelle", "Vieira", "Isab", "0001"])
+def test_acha_na_agenda_quem_nunca_escreveu(tmp_path: Path, busca: str) -> None:
+    # O caso de 06/11/2026: "responde a Isabelle Vieira" e o Zé dizia não conhecer a agenda.
+    central = CentralFalsa()
+    central.contatos = AGENDA
+    texto = _texto(_chamar(_nucleo(tmp_path, central), "whatsapp_contatos", {"busca": busca}))
+    assert "Isabelle Vieira: número 81 99999-0001" in texto and "whatsapp_enviar" in texto
+    assert "Ana" not in texto
+
+
+def test_agenda_ambigua_sem_numero_e_com_conversa(tmp_path: Path) -> None:
+    central = CentralFalsa()
+    central.contatos = AGENDA
+    n = _nucleo(tmp_path, central)
+    n.caixa.receber("Ana", "oi", "5581999990010", "5581999990010@s.whatsapp.net")
+    ambigua = _texto(_chamar(n, "whatsapp_contatos", {"busca": "Ana"}))
+    assert "Ana Lima" in ambigua and "Ana Souza" in ambigua and "pergunte qual" in ambigua
+    assert "com conversa no arquivo (id" in ambigua.split("Ana Souza")[0]
+    sem = _texto(_chamar(n, "whatsapp_contatos", {"busca": "Bruno"}))
+    assert "sem o número" in sem
+    nada = _chamar(n, "whatsapp_contatos", {"busca": "Zuleica"})
+    assert "Ninguém" in _texto(nada) and not nada.get("is_error")
+
+
+def test_agenda_fora_do_ar_e_livre_de_aprovacao(tmp_path: Path) -> None:
+    assert "mcp__jarvis__whatsapp_contatos" in LIVRES
+    fora = _nucleo(tmp_path, CentralFalsa(erro="WhatsApp não conectado."))
+    r = _chamar(fora, "whatsapp_contatos", {"busca": "Ana"})
+    assert r["is_error"] and "agenda" in _texto(r)
+
+
+def test_sem_conversa_no_arquivo_aponta_a_agenda(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path)
+    problema = w.prechecar(n)(w.RESPONDER, {"contato": "Isabelle Vieira", "texto": "oi"}) or ""
+    assert "whatsapp_contatos" in problema
+
+
+def test_a_central_devolve_a_agenda() -> None:
+    central = c.Central.__new__(c.Central)
+    central.whatsapp = SimpleNamespace(agenda=lambda: AGENDA)  # type: ignore[assignment]
+    assert central.responder("GET", "/whatsapp/agenda", {}) == (200, {"contatos": AGENDA})

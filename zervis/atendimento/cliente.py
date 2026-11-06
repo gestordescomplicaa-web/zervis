@@ -184,6 +184,11 @@ class Cliente:
         self._api("POST", "/whatsapp/desconectar", {}, espera=30.0)
         self.parar_servico()
 
+    def agenda(self) -> list[dict[str, str]]:
+        """Os contatos da agenda do celular, pelo WhatsApp da Central (bloqueia: rede)."""
+        lista = self._api("GET", "/whatsapp/agenda", espera=20.0).get("contatos", [])
+        return [c for c in lista if isinstance(c, dict)]
+
     def pausados(self) -> list[dict[str, Any]]:
         try:
             lista = self._api("GET", "/pausados").get("pausados", [])

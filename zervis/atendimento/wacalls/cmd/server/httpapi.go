@@ -31,6 +31,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("POST /api/sessions/{sid}/calls/{id}/reject", s.handleReject)
 	mux.HandleFunc("DELETE /api/sessions/{sid}/calls/{id}", s.handleEndCall)
 	mux.HandleFunc("GET /api/sessions/{sid}/history", s.handleHistory)
+	mux.HandleFunc("GET /api/sessions/{sid}/contacts", s.handleContacts) // Zérvis: a agenda
 
 	mux.HandleFunc("GET /api/events", s.handleEvents)
 

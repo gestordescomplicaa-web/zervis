@@ -122,6 +122,15 @@ class ServicoAtendimento:
             return falas_whatsapp.lista(self.n.prioridade)
         return falas_whatsapp.ler(self.n.caixa, argumento, local)
 
+    def agenda_whatsapp(self) -> list[dict[str, str]]:
+        """Os contatos da agenda do celular (bloqueia: pergunta à Central); a falha sobe como
+        RuntimeError, com a frase da tela."""
+        try:
+            lista: list[dict[str, str]] = self.n.central.agenda()
+        except cliente.CentralErro as erro:
+            raise RuntimeError(f"Não consegui ler a agenda: {erro}") from erro
+        return lista
+
     def estado_whatsapp(self) -> dict[str, Any]:
         """Conectado ou não, e o número (bloqueia: pergunta à Central)."""
         tela: dict[str, Any] = self.n.central.para_tela()

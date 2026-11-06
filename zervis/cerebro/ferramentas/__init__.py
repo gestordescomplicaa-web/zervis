@@ -81,6 +81,7 @@ LEITURA = [
     "whatsapp_conversas",  # só lê a caixa de entrada (ADR 0054); responder pede o sim
     "whatsapp_ler",
     "whatsapp_buscar",  # só lê o arquivo do WhatsApp (ADR 0056); esquecer pede o sim
+    "whatsapp_contatos",  # só lê a agenda do celular que o WhatsApp sincroniza
     "whatsapp_leads",  # só lê os leads esperando resposta (ADR 0053)
     "whatsapp_ja_vi",  # só para um lembrete
     "whatsapp_prioridade",  # só muda quem o Zé vigia (ADR 0055); nada sai para ninguém

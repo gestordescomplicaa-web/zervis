@@ -589,6 +589,21 @@ class WhatsApp:
             raise WhatsAppErro("Mensagem não enviada.")
         return f"{sid}:{r.get('message_id', '')}"
 
+    def agenda(self) -> list[dict[str, str]]:
+        """Os contatos salvos na agenda do celular (nome, número, LID), que o WhatsApp sincroniza
+        depois do pareamento: para achar quem nunca escreveu desde a conexão (06/11/2026)."""
+        sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
+        if not sessoes:
+            raise WhatsAppErro("WhatsApp não conectado.")
+        r = self._api("GET", f"/api/sessions/{sessoes[0]['id']}/contacts", espera=15.0)
+        lista = r.get("contacts") if isinstance(r, dict) else None
+        return [
+            {"nome": str(c.get("name", "")), "telefone": str(c.get("phone", "")),
+             "lid": str(c.get("lid", ""))}
+            for c in (lista if isinstance(lista, list) else [])
+            if isinstance(c, dict) and str(c.get("name", "")).strip()
+        ]  # fmt: skip
+
     def conectar_em_segundo_plano(self) -> None:
         """`conectar` sem prender quem pediu; a falha fica em `falha`, para a tela."""
         self.falha = ""
