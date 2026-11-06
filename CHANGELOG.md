@@ -2,6 +2,20 @@
 
 ## Não lançado
 
+## 0.3.0 (06/11/2026)
+
+A terceira versão publicada: o Zé que atende e faz ligações por você. Destaques:
+
+- **Ligações pelo WhatsApp:** o Zé liga para dar um recado seu, agora ou agendado, e conta como
+  foi; quando alguém pede para falar com você, a ligação passa para o celular sem cair; ao fim de
+  cada ligação, ele avisa quem ligou e o que foi falado; e a voz das ligações pode ser a do Zé.
+- **Propor como PR:** as melhorias do autodesenvolvimento vão para o GitHub, conferidas antes
+  para não levar dados seus.
+- **WhatsApp:** os contatos salvos na agenda do celular, mesmo quem nunca escreveu.
+- **Sessões:** cabeçalho organizado em duas linhas e largura ajustável da lista e dos arquivos.
+
+O detalhe de cada mudança:
+
 - Sessões: o cabeçalho fica em duas linhas (nome, estado e pasta com as ações ao lado; agente,
   conta e modelo embaixo) e não embaralha mais quando falta espaço. A lista de sessões e os
   arquivos têm uma borda para arrastar e ajustar a largura (duplo clique volta ao padrão).
