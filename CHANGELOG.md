@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- Ligações: o agente desligava na cara uns 13 s depois da saudação quando a pessoa ficava em
+  silêncio. A escuta (Deepgram) fecha sem receber áudio, e o WhatsApp quase não manda pacote no
+  silêncio; a Central tratava isso como o fim da ligação. Agora a escuta é mantida viva e, se cair,
+  reabre sem derrubar a ligação. O motivo de cada fim sem despedida fica no registro.
+- Ligações no modo teste: quem ligava de um número de teste às vezes não era atendido (o telefone
+  tocava até cair), porque o WhatsApp mandava só o identificador interno, sem o número. Agora o
+  número vem da agenda ou é conferido com os números de teste.
 - Atendimento: "Voz do Zé" em Voz nas ligações não ficava escolhida. A escolha era gravada, mas
   o perfil do agente publicado voltava com a voz local, e as ligações seguiam com o Cadu. Agora
   todos os ajustes da página valem sobre a versão publicada.

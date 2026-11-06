@@ -63,6 +63,8 @@ PARAMETROS = {
     "vad_events": "true",
 }
 _CHAMAR = re.compile(r"\[\[\s*CHAMAR\s*:?\s*([^\]]*)\]\]", re.I)
+MANTER_S = 5.0  # o KeepAlive da escuta: o Deepgram fecha em ~12 s sem receber nada
+RECONEXOES = 3  # quantas vezes a escuta reabre numa ligação antes de desistir
 ESPERA_DONO_S = 45.0  # a pessoa em espera, enquanto o Zé pergunta se você atende
 LEMBRAR_ESPERA_S = 15.0  # "só mais um instante" de tempos em tempos, para ela não desistir
 PONTE_MAXIMA_S = 2.0  # o que a sua voz pode atrasar na ponte: além disso, descarta o mais velho
@@ -365,16 +367,31 @@ class Ouvido:
     def __init__(self, chave: str) -> None:
         self.chave = chave
         self._ws: Any = None
+        self._vivo: asyncio.Task[None] | None = None
 
     async def abrir(self) -> None:
+        """Abre (ou reabre) a escuta. O Deepgram fecha em ~12 s sem áudio, e o WhatsApp quase
+        não manda pacote quando ninguém fala: o KeepAlive a cada `MANTER_S` segura a conexão
+        (06/11/2026: a ligação caía 13 s depois da saudação, com o cliente em silêncio)."""
         from websockets.asyncio.client import connect
 
+        if self._vivo is not None:
+            self._vivo.cancel()
         url = f"{deepgram.ENDERECO}?{urlencode(PARAMETROS)}"
         self._ws = await connect(url, additional_headers={"Authorization": f"Token {self.chave}"})
+        self._vivo = asyncio.ensure_future(self._manter(self._ws))
+
+    async def _manter(self, ws: Any) -> None:
+        with contextlib.suppress(Exception):
+            while True:
+                await asyncio.sleep(MANTER_S)
+                await ws.send(json.dumps({"type": "KeepAlive"}))
 
     async def enviar(self, pcm: bytes) -> None:
         if self._ws is not None:
-            await self._ws.send(pcm)
+            # A escuta caída não derruba a ligação: `Chamada._ouvir` reabre.
+            with contextlib.suppress(Exception):
+                await self._ws.send(pcm)
 
     async def eventos(self) -> AsyncIterator[tuple[str, str]]:
         """("parcial", texto), ("final", texto), ("fim_da_fala", texto) e ("pausa", "")."""
@@ -398,6 +415,8 @@ class Ouvido:
                 yield "final", texto
 
     async def fechar(self) -> None:
+        if self._vivo is not None:
+            self._vivo.cancel()
         if self._ws is not None:
             with contextlib.suppress(Exception):
                 await self._ws.send(json.dumps({"type": "CloseStream"}))
@@ -517,6 +536,7 @@ class Chamada:
                 with contextlib.suppress(TimeoutError):
                     await asyncio.wait_for(self.encerrar.wait(), 1.0)
                 if any(t.done() for t in tarefas[1:3]):
+                    self._registrar_queda(tarefas[1], tarefas[2])
                     break  # a chamada ou o Deepgram caiu
                 if time.monotonic() - inicio > DURACAO_MAXIMA_S:
                     self.desfecho = "limite"
@@ -547,6 +567,14 @@ class Chamada:
                 await self.motor.fechar()
             log.info("ligação: antecipações aproveitadas %d, descartadas %d", *self.antecipacoes)
 
+    def _registrar_queda(self, audio: "asyncio.Future[Any]", escuta: "asyncio.Future[Any]") -> None:
+        """Por que a ligação terminou sem despedida: o áudio do WhatsApp acabou (a pessoa
+        desligou) ou a escuta caiu de vez. Antes, nada ficava registrado."""
+        for nome, t in (("o áudio do WhatsApp", audio), ("a escuta", escuta)):
+            if t.done():
+                erro = None if t.cancelled() else t.exception()
+                log.info("ligação: %s terminou%s", nome, f" ({erro})" if erro else "")
+
     def _calado(self) -> float:
         if self.tocador.falando or (self.resposta is not None and not self.resposta.done()):
             self.ultima_fala = time.monotonic()
@@ -572,33 +600,54 @@ class Chamada:
         return " ".join(t for t in (*self.ouvindo, self.parcial) if t).strip()
 
     async def _ouvir(self) -> None:
-        async for tipo, texto in self.ouvido.eventos():
-            if tipo == "parcial":
-                self.ultima_fala = time.monotonic()
-                if texto != self.parcial:
-                    self.parcial, self.parcial_em = texto, time.monotonic()
-                    self._conferir_antecipada()
-                if self._interrompe(texto):
-                    self._calar()
-                continue
-            self.parcial = ""
-            if texto:
-                self.ouvindo.append(texto)
-                self.ultima_fala = time.monotonic()
-                self.parcial_em = time.monotonic()
+        """A escuta durante a ligação inteira; se ela cair (rede, o Deepgram), reabre em vez de
+        encerrar a ligação, até `RECONEXOES` vezes."""
+        quedas = 0
+        while True:
+            motivo = "fechou"
+            try:
+                async for tipo, texto in self.ouvido.eventos():
+                    self._ao_ouvir(tipo, texto)
+            except Exception as erro:
+                motivo = f"{type(erro).__name__}: {str(erro)[:120]}"
+            if self.encerrar.is_set():
+                return
+            quedas += 1
+            if quedas > RECONEXOES:
+                raise RuntimeError(f"a escuta caiu {quedas} vezes ({motivo})")
+            log.warning("ligação: a escuta caiu (%s); reabrindo", motivo)
+            await asyncio.sleep(0.2)
+            with contextlib.suppress(Exception):
+                await self.ouvido.abrir()
+
+    def _ao_ouvir(self, tipo: str, texto: str) -> None:
+        """Um evento da escuta: o trecho provisório, o final e o fim do turno do cliente."""
+        if tipo == "parcial":
+            self.ultima_fala = time.monotonic()
+            if texto != self.parcial:
+                self.parcial, self.parcial_em = texto, time.monotonic()
                 self._conferir_antecipada()
-                if self._interrompe(texto):
-                    self._calar()
-            fecha = tipo == "pausa" or (tipo == "fim_da_fala" and not ficou_no_meio(texto))
-            if fecha and self.ouvindo:
-                fala = " ".join(self.ouvindo)
-                self.ouvindo = []
-                self.cutucou = False
-                if self.sem_resposta is not None:
-                    # o cliente continuou antes de o agente dizer algo: uma resposta só, para tudo
-                    fala = f"{self.sem_resposta} {fala}"
-                    self._calar()
-                self._fechar_turno(fala)
+            if self._interrompe(texto):
+                self._calar()
+            return
+        self.parcial = ""
+        if texto:
+            self.ouvindo.append(texto)
+            self.ultima_fala = time.monotonic()
+            self.parcial_em = time.monotonic()
+            self._conferir_antecipada()
+            if self._interrompe(texto):
+                self._calar()
+        fecha = tipo == "pausa" or (tipo == "fim_da_fala" and not ficou_no_meio(texto))
+        if fecha and self.ouvindo:
+            fala = " ".join(self.ouvindo)
+            self.ouvindo = []
+            self.cutucou = False
+            if self.sem_resposta is not None:
+                # o cliente continuou antes de o agente dizer algo: uma resposta só, para tudo
+                fala = f"{self.sem_resposta} {fala}"
+                self._calar()
+            self._fechar_turno(fala)
 
     def _fechar_turno(self, fala: str) -> None:
         if self.em_espera or self.em_ponte:
