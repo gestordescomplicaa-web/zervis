@@ -41,7 +41,8 @@ encerra todas (visto em 06/11/2026, com 3 sessões abertas).
 - [x] **Fila durável de tarefas** em SQLite (sessão, automação, ligação agendada), com estado e
   tentativas. Ao subir, retoma o que ficou no meio ou marca como interrompido, nunca some.
   [ADR 0069](adr/0069-fila-duravel-das-automacoes.md); as sessões ficam com o ADR 0068.
-- [ ] **Estado só em SQLite:** avisos, pendências e jobs saem do JSON.
+- [x] **Estado só em SQLite:** avisos, pendências e jobs saem do JSON.
+  [ADR 0070](adr/0070-estado-so-em-sqlite.md); também os leads, a prioridade e as ligações.
 - [ ] **Arquivos do painel sem reiniciar:** um arquivo novo em `portal/web` não pode depender de
   reiniciar o servidor (a página de Sessões falhou por isso em 06/11).
 

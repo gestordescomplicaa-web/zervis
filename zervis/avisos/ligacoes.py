@@ -4,7 +4,6 @@ sem resposta. Fica nos dados do Zé, as mais recentes; o texto é de terceiros, 
 """
 
 import contextlib
-import json
 import threading
 import time
 from collections.abc import Callable
@@ -14,6 +13,7 @@ from typing import Any
 
 from zervis.avisos.caixa import ident
 from zervis.avisos.pendentes import candidatos
+from zervis.dados.lista import Lista
 
 GUARDADAS = 200
 
@@ -54,17 +54,14 @@ def duracao_falada(segundos: int) -> str:
 
 class Ligacoes:
     def __init__(self, arquivo: Path, agora: Callable[[], float] = time.time) -> None:
-        self.arquivo = arquivo
+        self._banco = Lista(arquivo, "ligacoes")  # SQLite; importa o JSON de antes
+        self.arquivo = self._banco.arquivo
         self.agora = agora
         self._trava = threading.Lock()
 
     def _ler(self) -> list[Ligacao]:
-        try:
-            dados = json.loads(self.arquivo.read_text())
-        except (OSError, ValueError):
-            return []
         lista = []
-        for d in dados if isinstance(dados, list) else []:
+        for d in self._banco.ler():
             with contextlib.suppress(TypeError):
                 lista.append(Ligacao(**d))
         return lista
@@ -88,15 +85,9 @@ class Ligacoes:
             conversa,
             direcao,
         )
-        with self._trava:
+        with self._trava, self._banco.transacao():
             lista = [x for x in self._ler() if x.id != lig.id] + [lig]
-            self.arquivo.parent.mkdir(parents=True, exist_ok=True)
-            temporario = self.arquivo.with_suffix(".next")
-            temporario.touch(mode=0o600)
-            temporario.write_text(
-                json.dumps([asdict(x) for x in lista[-GUARDADAS:]], ensure_ascii=False)
-            )
-            temporario.replace(self.arquivo)
+            self._banco.gravar([asdict(x) for x in lista[-GUARDADAS:]])
         return lig
 
     def recentes(self, quantas: int = 10) -> list[Ligacao]:

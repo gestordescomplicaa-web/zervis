@@ -77,3 +77,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0067](0067-ligar-com-recado.md) | O Zé liga para dar um recado seu, agora ou agendado, e conta como foi | Em validação |
 | [0068](0068-supervisor-das-sessoes.md) | O supervisor das sessões (`zervis-oficina`): os terminais dos agentes fora do Zé, e reiniciar o Zé não derruba as sessões | Aceito |
 | [0069](0069-fila-duravel-das-automacoes.md) | A fila durável das automações: cada execução gravada com estado e tentativas; ao subir, o lembrete e a pergunta voltam, a ligação vira aviso | Aceito |
+| [0070](0070-estado-so-em-sqlite.md) | Estado só em SQLite: avisos, pendências, leads, prioridade e ligações saem do JSON regravado inteiro, com importação única | Aceito |

@@ -27,6 +27,8 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
   vários escritores com transações curtas, WAL e espera limitada (ADR 0032).
 - SQLite em modo WAL, migrações numeradas e testadas a partir de um banco vazio e de um banco da
   versão anterior.
+- Estado que muda (filas, pendências, registros) só em SQLite (`zervis/dados`, ADR 0070). Em
+  arquivo ficam a configuração que a pessoa edita e o `status.json` de 1 Hz.
 - Arquivos editáveis pelo usuário (memória curta, skills) com escrita atômica
   (temporário + `rename`) e permissão 0600 quando sensível.
 - Configuração validada por esquema na carga; erro de config = mensagem clara e serviço não sobe
