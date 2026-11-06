@@ -1,9 +1,10 @@
 # 0068 — O supervisor das sessões: reiniciar o Zé não derruba os agentes
 
 - Data: 06/11/2026
-- Status: **Em validação** (testado no `make check` com o Zé morto por SIGKILL e, na máquina,
-  com o systemd encerrando a unidade do Zé; falta o primeiro reinício do Zé de verdade com
-  sessões trabalhando).
+- Status: **Aceito** (testado no `make check` com o Zé morto por SIGKILL e na máquina, em
+  06/11/2026: `systemctl --user restart zervis` com duas sessões abertas, Claude e Codex; os dois
+  agentes continuaram com os mesmos processos e voltaram ao painel em 4,4 s, com a tela de antes.
+  Falta repetir com uma sessão no meio de um pedido.)
 
 ## Contexto
 

@@ -21,7 +21,13 @@ from zervis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.permissoes import Pedido
 from zervis.oficina.progresso import Progresso
-from zervis.oficina.sessoes import GANCHOS_DO_CODEX, Sessao, SessaoErro, Sessoes
+from zervis.oficina.sessoes import (
+    GANCHOS_DO_CODEX,
+    RETOMAR_CONVERSA,
+    Sessao,
+    SessaoErro,
+    Sessoes,
+)
 from zervis.rosto import tela
 
 log = logging.getLogger(__name__)
@@ -311,6 +317,15 @@ class ServicoOficina:
                 "urgente",
                 sessao.id,
                 f"a sessão {sessao.nome} pede para confiar nos ganchos",
+            )
+            return
+        if mensagem == RETOMAR_CONVERSA:
+            self.n._aviso_da_oficina(
+                f"A sessão {sessao.nome} pergunta se retoma a conversa anterior ou começa outra. "
+                "Responda no terminal da sessão.",
+                "urgente",
+                sessao.id,
+                f"a sessão {sessao.nome} pede uma escolha",
             )
             return
         if self.n.sessoes.permissoes.pendentes(sessao.id):

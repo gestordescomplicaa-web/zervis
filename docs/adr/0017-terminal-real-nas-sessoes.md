@@ -68,3 +68,12 @@ no prompt; o Codex recebe `workspace-write`. Isso não garante isolamento equiva
 O pseudo-terminal de cada sessão passou a nascer no supervisor `zervis-oficina`, um serviço à
 parte, e não mais como filho do Zé: reiniciar o Zé não encerra as sessões
 ([ADR 0068](0068-supervisor-das-sessoes.md)). O resto desta decisão continua valendo.
+
+### A pergunta de retomar a conversa (06/11/2026)
+
+O Claude Code (2.1.319) pergunta antes de retomar uma conversa longa parada ("Resume this
+conversation?"): retomar gasta uma parte do limite de 5 horas. A pergunta aparece ao abrir o
+terminal e também no Enter de um pedido novo depois de muito tempo parado. A escolha é da
+pessoa: o Zé reconhece a tela, avisa (voz e painel) e recusa colar pedidos enquanto ela estiver
+aberta, porque o Enter escolheria "retomar" no lugar dela. Responder no terminal, ou a conversa
+andar, libera de novo (`tests/test_retomar_conversa.py`).

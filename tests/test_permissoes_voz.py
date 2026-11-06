@@ -274,3 +274,13 @@ def test_o_cerebro_nao_aprova_pedido_de_sessao() -> None:
     persona = (Path(__file__).parents[1] / "zervis/persona/ZE.md").read_text()
     persona = " ".join(persona.split())
     assert 'basta dizer "aprova tudo". Nunca diga "aprovado".' in persona
+
+
+def test_a_pergunta_de_retomar_vira_aviso_urgente(tmp_path: Path) -> None:
+    from zervis.oficina.sessoes import RETOMAR_CONVERSA
+
+    n = contexto(tmp_path)
+    avisos_genericos.clear()
+    ServicoOficina(n)._sessao_pede(Sessao(id="s1", nome="Loja", pasta="/x"), RETOMAR_CONVERSA)
+    assert len(avisos_genericos) == 1
+    assert "retoma a conversa anterior ou começa outra" in str(avisos_genericos[0])

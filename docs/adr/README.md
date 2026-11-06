@@ -75,4 +75,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0065](0065-propor-melhorias-como-pr.md) | Propor como PR: as melhorias do autodesenvolvimento vão para o GitHub | Em validação |
 | [0066](0066-transferir-ligacao-para-o-app.md) | Chamar você durante a ligação e passar para o app de voz, sem derrubar | Em validação |
 | [0067](0067-ligar-com-recado.md) | O Zé liga para dar um recado seu, agora ou agendado, e conta como foi | Em validação |
-| [0068](0068-supervisor-das-sessoes.md) | O supervisor das sessões (`zervis-oficina`): os terminais dos agentes fora do Zé, e reiniciar o Zé não derruba as sessões | Em validação |
+| [0068](0068-supervisor-das-sessoes.md) | O supervisor das sessões (`zervis-oficina`): os terminais dos agentes fora do Zé, e reiniciar o Zé não derruba as sessões | Aceito |
