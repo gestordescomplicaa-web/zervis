@@ -360,6 +360,15 @@ COMANDOS = {
         ("tem", "algum", "aviso"),
         ("le", "os", "avisos"),
         ("ler", "os", "avisos"),
+        # "Se quiser ouvir, é só pedir" (a oferta de vários avisos): o jeito de pedir.
+        ("fala", "os", "avisos"),
+        ("me", "fala", "os", "avisos"),
+        ("pode", "falar", "os", "avisos"),
+        ("pode", "ler", "os", "avisos"),
+        ("quero", "ouvir", "os", "avisos"),
+        ("ouvir", "os", "avisos"),
+        ("os", "avisos"),
+        ("me", "conta", "os", "avisos"),
     },
     # O pedido de permissão de uma sessão (ADR 0039), a qualquer momento: o Zé responde ao que
     # espera (o último que perguntou) e diz se não há nada esperando.
@@ -1075,6 +1084,11 @@ OFERTA = {
         ("proximo",),
         ("o", "proximo"),
         ("sim", "pode"),
+        ("quero", "ouvir"),
+        ("quero",),
+        ("pode", "falar"),
+        ("fala",),
+        ("pode", "ler"),
     },
     "avisos_depois": {("depois",), ("agora", "nao"), ("nao",), ("mais", "tarde"), ("deixa",)},
 }

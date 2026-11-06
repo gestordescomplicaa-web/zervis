@@ -20,7 +20,8 @@ from typing import Any
 
 VALIDADE_S = 12 * 3600
 PRIORIDADES = {"urgente": 0, "lembrete": 1, "notificacao": 2}
-NUMEROS = {2: "Duas", 3: "Três", 4: "Quatro", 5: "Cinco"}
+NUMEROS = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito",
+           9: "nove", 10: "dez"}  # fmt: skip
 _TRAVAS: dict[Path, threading.RLock] = {}
 _CRIAR_TRAVA = threading.Lock()
 
@@ -143,15 +144,17 @@ class Fila:
 
 
 def oferta(avisos: list[Aviso]) -> str:
-    """A frase que resume vários avisos e pergunta por onde começar (ADR 0029)."""
+    """A frase que diz que há avisos esperando, sem ler nenhum (ADR 0029): só os que têm nome
+    ("um lembrete", "a sessão do site") são citados; o resto vira "e mais dois". Antes, cada aviso
+    sem nome virava "um aviso", e a frase saía "um aviso, um aviso e um aviso" (06/11/2026)."""
     n = len(avisos)
-    titulos = [a.titulo or "um aviso" for a in avisos[:3]]
-    if n > 3:
-        titulos.append(f"mais {n - 3}")
-    lista = ", ".join(titulos[:-1]) + " e " + titulos[-1]
-    primeiro = avisos[0].titulo or "o primeiro"
-    pelo = (
-        primeiro.removeprefix("a sessão ").split(" ")[0] if primeiro.startswith("a sessão ") else ""
-    )
-    pergunta = f"Começo pela {pelo}?" if pelo else "Começo pelo primeiro?"
-    return f"{NUMEROS.get(n, str(n))} novidades: {lista}. {pergunta}"
+    quantos = NUMEROS.get(n, str(n))
+    nomes = [a.titulo for a in avisos if a.titulo][:3]
+    resto = n - len(nomes)
+    convite = "Se quiser ouvir, é só pedir."
+    if not nomes:
+        return f"Tenho {quantos} avisos. {convite}"
+    if resto:
+        nomes.append(f"mais {NUMEROS.get(resto, str(resto))}")
+    lista = nomes[0] if len(nomes) == 1 else ", ".join(nomes[:-1]) + " e " + nomes[-1]
+    return f"Tenho {quantos} avisos: {lista}. {convite}"

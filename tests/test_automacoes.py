@@ -93,7 +93,9 @@ def test_fila_um_aviso_ou_oferta_e_validade(tmp_path: Path) -> None:
     fila.guardar("Daqui a 5 minutos: reunião.", "agenda", expira=1.0)  # já expirou
     fila.guardar("Tenho uma sugestão para você aprovar.")
     texto, aviso = fila.oferecer() or ("", None)
-    assert aviso is None and texto.startswith("Duas novidades: um lembrete e um aviso.")
+    assert aviso is None and texto == (
+        "Tenho dois avisos: um lembrete e mais um. Se quiser ouvir, é só pedir."
+    )
     assert fila.oferecer() is None  # oferecidos não se oferecem de novo sozinhos
     assert fila.proximo().texto == "Lembrete: beber água."  # type: ignore[union-attr]
 
@@ -193,3 +195,16 @@ def test_instancias_do_mesmo_arquivo_compartilham_a_transacao(tmp_path: Path) ->
     with ThreadPoolExecutor(max_workers=8) as pool:
         ids = list(pool.map(criar, range(16)))
     assert {j.id for j in Jobs(arquivo).listar()} == set(ids)
+
+
+def test_varios_avisos_sem_nome_nao_viram_um_aviso_um_aviso() -> None:
+    # 06/11/2026: "Três novidades: um aviso, um aviso e um aviso. Começo pelo primeiro?"
+    from zervis.avisos.fila import Aviso, oferta
+
+    sem_nome = [Aviso(f"aviso {i}") for i in range(3)]
+    assert oferta(sem_nome) == "Tenho três avisos. Se quiser ouvir, é só pedir."
+    com_nome = [Aviso("a", titulo="a sessão do site"), Aviso("b", titulo="um lembrete"), *sem_nome]
+    assert oferta(com_nome) == (
+        "Tenho cinco avisos: a sessão do site, um lembrete e mais três. "
+        "Se quiser ouvir, é só pedir."
+    )
