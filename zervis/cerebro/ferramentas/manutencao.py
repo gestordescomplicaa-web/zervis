@@ -22,11 +22,14 @@ def ferramentas(manutencao: Manutencao | None) -> list[SdkMcpTool[Any]]:
         "para a sua sessão de manutenção (um agente de código no seu próprio repositório) e "
         "você só fala o resumo do agente. "
         "Use quando ele pedir para entrar, ativar, colocar, sair ou desligar a manutenção, com "
-        "qualquer palavra. Não é o menu de configurações.",
+        "qualquer palavra. Não é o menu de configurações. propor: publica no GitHub, num PR, as "
+        'melhorias da cópia ("manda essa melhoria como PR", "salva no GitHub"), depois de '
+        "conferir os testes e que não vai nenhum dado do usuário; sem isso, as melhorias ficam "
+        "só nesta máquina.",
         {
             "type": "object",
             "properties": {
-                "acao": {"type": "string", "enum": ["entrar", "sair", "situacao"]},
+                "acao": {"type": "string", "enum": ["entrar", "sair", "situacao", "propor"]},
                 "agente": {"type": "string", "enum": ["claude", "codex"]},
             },
             "required": ["acao"],
@@ -40,6 +43,9 @@ def ferramentas(manutencao: Manutencao | None) -> list[SdkMcpTool[Any]]:
             fala = await asyncio.to_thread(manutencao.entrar, str(args.get("agente") or ""))
         elif acao == "sair":
             fala = manutencao.sair()
+        elif acao == "propor":
+            r = await asyncio.to_thread(manutencao.propor)
+            return _texto({"publicado": r.ok, "diga": r.texto, "endereco": r.endereco})
         else:
             fala = manutencao.situacao(time.time())
         return _texto({"ligado": manutencao.ligado, "diga": fala})

@@ -107,7 +107,13 @@ async function desenharMelhorias() {
   const m = await api("ze/melhorias", {});
   if (!m.copia) { caixa.innerHTML = ""; return; }
   const n = m.commits.length;
-  if (!n && !m.sem_commit) { caixa.innerHTML = `<div class="faixa melhorias"><span>Nenhuma mudança pendente.</span></div>`; return; }
+  // O que só existe nesta máquina, aplicado ou não: sem o PR, não chega ao GitHub.
+  const locais = (m.nao_publicadas ?? []).length;
+  const publicar = locais
+    ? `<div class="linha"><span>${locais} ${locais === 1 ? "melhoria só nesta máquina" : "melhorias só nesta máquina"}, fora do GitHub.</span><span class="espaco"></span>
+        ${botao("Propor como PR", "melhorias-propor", sessaoAtual?.estado === "trabalhando" || atualizando() || window.unificandoSessoes ? "disabled" : "", "discreta")}</div>`
+    : "";
+  if (!n && !m.sem_commit) { caixa.innerHTML = `<div class="faixa melhorias"><span>Nenhuma mudança pendente.</span>${publicar}</div>`; return; }
   const resumo = `${n} ${n === 1 ? "mudança" : "mudanças"} · ${m.arquivos.length} ${m.arquivos.length === 1 ? "arquivo" : "arquivos"}`;
   const protegidos = m.protegidos.length
     ? `<p class="aviso">Mexe na zona protegida: <span class="mono">${m.protegidos.map(esc).join(", ")}</span></p>
@@ -122,6 +128,7 @@ async function desenharMelhorias() {
     ${!manut.ligada ? `<div class="linha"><span>Manutenção desligada.</span>${botao("Entrar em manutenção", "manutencao", 'data-ligar="true"', "discreta")}</div>` : ""}
     ${trabalhando ? '<p class="nota">Trabalho em andamento. Aguarde ou interrompa para aplicar.</p>' : ""}
     ${protegidos}
+    ${publicar}
     ${verMudancas ? `<pre>${esc(m.commits.join("\n"))}\n\n${esc(m.resumo)}</pre>` : ""}</div>`;
   $("revisei")?.addEventListener("change", (ev) => { revisouProtegidos = /** @type {HTMLInputElement} */ (ev.target).checked; desenharMelhorias(); });
 }
@@ -155,6 +162,12 @@ Object.assign(ACOES, {
   "melhorias-ver": async () => { verMudancas = !verMudancas; await desenharMelhorias(); },
   "melhorias-descartar": (b) => confirmar(b, "Descartar as melhorias da cópia? Isto não se desfaz.", async () => {
     const r = await api("ze/descartar", {}); toast(r.aviso); await desenharMelhorias();
+  }),
+  "melhorias-propor": (b) => confirmar(b, "Publicar no GitHub, num PR, as melhorias da cópia? O repositório é público: antes, o Zé confere os testes e que não vai nenhum dado seu.", async () => {
+    const r = await ocupado(b, () => api("ze/propor", { confirmado: true }));
+    toast(r.aviso);
+    if (r.endereco) window.open(r.endereco, "_blank", "noopener");
+    await desenharMelhorias();
   }),
   "melhorias-aplicar": async (b) => {
     const r = await ocupado(b, () => api("ze/aplicar", { revisei: revisouProtegidos }));

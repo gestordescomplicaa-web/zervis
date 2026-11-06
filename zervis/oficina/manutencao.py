@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from zervis import atividade, lugares
+from zervis.oficina import proposta
 from zervis.oficina.central import Central
 from zervis.oficina.sessoes import MOTORES, Sessao, SessaoErro, Sessoes
 
@@ -326,7 +327,10 @@ class Manutencao:
             "trabalho sobre o próprio Zérvis; pedido fora disso (outro projeto, um site, um "
             "script qualquer) você recusa e grava como resposta que ele deve abrir uma sessão "
             "comum. Zona protegida: não altere sem o usuário aprovar explicitamente nesta "
-            f"sessão: {', '.join(PROTEGIDOS)} e {CONFIG_DO_USUARIO}. Ao terminar, grave só o seu "
+            f"sessão: {', '.join(PROTEGIDOS)} e {CONFIG_DO_USUARIO}. O repositório é público: "
+            "nos testes e exemplos use só dados inventados, nunca um número, nome, mensagem ou "
+            "chave reais do usuário ou dos contatos dele; e não publique você mesmo (sem push, "
+            "sem PR): publicar é pelo Zé, que confere antes. Ao terminar, grave só o seu "
             f"Resumo falado (um parágrafo, sem símbolos nem caminhos, números por extenso) em "
             f"{resposta}. Se precisar perguntar algo ao usuário antes, grave só a pergunta em "
             f"{pergunta} e encerre a sua vez: a resposta chega como nova mensagem nesta sessão."
@@ -439,6 +443,11 @@ class Manutencao:
             "protegidos": sorted(a for a in arquivos if a.startswith(PROTEGIDOS)),
             "sem_commit": bool(sem_commit),
             "resumo": _git("diff", "--stat", f"HEAD...{s.branch}", repo=self.repo)[-1500:],
+            # O que só existe nesta máquina (aplicado ou não): o GitHub ainda não tem. Pela
+            # última busca da origem, sem rede aqui; propor busca de novo antes de publicar.
+            "nao_publicadas": _git(
+                "log", "--oneline", f"origin/master..{s.branch}", repo=self.repo
+            ).splitlines()[:30],
         }
 
     def aplicar(self, revisado: bool = False) -> tuple[bool, str]:
@@ -493,6 +502,25 @@ class Manutencao:
             )
             texto += " Desfiz a junção: a cópia continua com as melhorias."
         return ok, texto
+
+    def propor(self) -> proposta.Resultado:
+        """Publica as melhorias da cópia no GitHub, num PR (ver `proposta.py`): sem isto, elas
+        ficam só nesta máquina. Quem chama já tem a aprovação de quem usa."""
+        if self.central.em_andamento():
+            return proposta.Resultado(False, "Aguarde a unificação terminar antes de propor.")
+        s = self.copia()
+        if s is None:
+            return proposta.Resultado(False, "Não há cópia de melhorias para propor.")
+        if s.estado == "trabalhando":
+            return proposta.Resultado(False, "A sessão de melhorias ainda está trabalhando.")
+        r = proposta.propor(Path(s.worktree), s.branch, self.testar, PROTEGIDOS)
+        atividade.PADRAO.registrar(
+            "execucao" if r.ok else "falha",
+            "Propôs as melhorias como PR" if r.ok else "Não propôs as melhorias como PR",
+            motivo=r.texto,
+            endereco=r.endereco,
+        )
+        return r
 
     def descartar(self) -> str:
         """Joga fora o que a cópia tem a mais: ela volta a ser igual ao Zé em uso."""

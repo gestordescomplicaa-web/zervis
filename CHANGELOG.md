@@ -2,8 +2,15 @@
 
 ## Não lançado
 
+- Propor como PR: as melhorias do autodesenvolvimento vão para o GitHub. "Manda essa melhoria
+  como PR", pela voz, ou Melhorias → "Propor como PR", no painel. Antes de publicar, o Zé confere
+  os testes e se a mudança não leva dados seus: os números e nomes da sua agenda do WhatsApp,
+  suas chaves e tokens, sua pasta pessoal. Achando algo, ele diz o tipo e o lugar e não publica.
+  O painel mostra quantas melhorias estão só nesta máquina (ADR 0065).
+- O nome de um contato real que tinha entrado nos testes e na persona foi trocado por um
+  inventado.
 - WhatsApp: o Zé acha os contatos salvos na agenda do celular, mesmo quem não escreveu desde a
-  conexão. "Responde a Isabelle Vieira" procura na agenda (pelo nome inteiro, uma palavra, parte
+  conexão. "Responde a Marta Quintela" procura na agenda (pelo nome inteiro, uma palavra, parte
   dele ou os últimos dígitos), diz o número e manda com o seu "sim". Antes, ele só conhecia quem
   já tinha conversa no arquivo e dizia não saber da agenda.
 - A barra de carregamento fica só na Imersão: saiu do painel.
