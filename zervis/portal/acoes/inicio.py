@@ -11,6 +11,7 @@ from zervis.cerebro import rapido
 from zervis.portal.acoes.apoio import _latencia_de_hoje, linhas_do_registro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
+from zervis.rosto import andamento
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ class AcoesInicio(Pagina):
         cerebro = self.n.cerebro
         return {
             "ze": self.n.maquina.estado.value,
+            "andamento": andamento.PADRAO.para_tela(),  # a barra de carregamento (ADR 0064)
             "cerebro": {"provedor": self.n.provedor, "modelo": getattr(cerebro, "modelo", "")},
             "via_rapida": {
                 "ativa": isinstance(cerebro, rapido.Roteado),
