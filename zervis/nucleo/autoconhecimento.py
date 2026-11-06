@@ -54,7 +54,10 @@ GRUPOS = {
     "sistema": ("Sistema", "consulta o estado da máquina e roda as ações do sistema"),
     "automacoes": ("Automações", "agenda lembretes e perguntas e muda as automações"),
     "aprendizado": ("Aprendizado", "guarda memória, busca no histórico e cria ou corrige skills"),
-    "manutencao": ("Manutenção", "melhora o próprio código numa cópia isolada"),
+    "manutencao": (
+        "Manutenção",
+        "melhora o próprio código numa cópia isolada e propõe no GitHub, num PR",
+    ),
     "navegador": ("Navegador", "continua a leitura de uma página da internet"),
     "conectores": ("Conectores", "lista, testa e cadastra integrações com outros sistemas"),
     "atualizacoes": ("Atualizações", "verifica se há versão nova do Zé"),

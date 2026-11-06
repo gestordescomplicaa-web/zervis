@@ -60,6 +60,17 @@ class AcoesMelhorias(Pagina):
         atividade.PADRAO.origem = "painel"
         return {"aviso": self.n.aplicar_melhorias(revisado=bool(dados.get("revisei")))}
 
+    def propor_melhorias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Publica as melhorias da cópia no GitHub, num PR: só com a confirmação na página."""
+        if dados.get("confirmado") is not True:
+            atividade.PADRAO.registrar("negada", "Propor como PR sem confirmação", origem="painel")
+            raise PedidoInvalido("Confirme a publicação no GitHub.")
+        atividade.PADRAO.origem = "painel"
+        r = self.n.manutencao.propor()
+        if not r.ok:
+            raise PedidoInvalido(r.texto)
+        return {"aviso": r.texto, "endereco": r.endereco}
+
     def manutencao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Entra ou sai do estado de manutenção (ADR 0028)."""
         atividade.PADRAO.origem = "painel"

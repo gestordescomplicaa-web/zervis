@@ -85,6 +85,11 @@ class ServicoOficina:
                 f"Vou ligar o modo manutenção com o {agente}; "
                 "seus pedidos vão para a sessão de código."
             )
+        if entrada.get("acao") == "propor":
+            return (
+                "Vou publicar no GitHub, num PR, as melhorias da cópia, depois de conferir os "
+                "testes e que não vai nenhum dado seu. O repositório é público. Publico?"
+            )
         return "Vou desligar o modo manutenção." if entrada.get("acao") == "sair" else None
 
     def diagnosticar(self, registro: list[str]) -> tuple[str, str]:

@@ -118,6 +118,7 @@ class Acoes:
             "ze/central": self.central_de_melhorias,
             "ze/unificar": self.unificar_melhorias,
             "ze/aplicar": self.aplicar_melhorias,
+            "ze/propor": self.propor_melhorias,
             "ze/descartar": self.descartar_melhorias,
             "acesso/senha": self.definir_senha,
             "acesso/encerrar": self.encerrar_acessos,

@@ -1,5 +1,5 @@
 // Zérvis (06/11/2026): a agenda do celular, para o Zé achar quem nunca escreveu desde a conexão
-// ("responde a Isabelle Vieira"). O whatsmeow já sincroniza a agenda (app state) depois do
+// ("responde a Marta Quintela"). O whatsmeow já sincroniza a agenda (app state) depois do
 // pareamento e a guarda no store local: aqui só se lê, nada é pedido ao WhatsApp.
 
 package main

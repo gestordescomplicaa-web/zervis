@@ -323,17 +323,17 @@ AGENDA = [
     {"nome": "Ana Lima", "telefone": "5581999990010", "lid": ""},
     {"nome": "Ana Souza", "telefone": "5581999990020", "lid": ""},
     {"nome": "Bruno Sem Número", "telefone": "", "lid": "987654321"},
-    {"nome": "Isabelle Vieira", "telefone": "5581999990001", "lid": "123456789"},
+    {"nome": "Marta Quintela", "telefone": "5581999990001", "lid": "123456789"},
 ]
 
 
-@pytest.mark.parametrize("busca", ["Isabelle Vieira", "isabelle", "Vieira", "Isab", "0001"])
+@pytest.mark.parametrize("busca", ["Marta Quintela", "marta", "Quintela", "Quint", "0001"])
 def test_acha_na_agenda_quem_nunca_escreveu(tmp_path: Path, busca: str) -> None:
-    # O caso de 06/11/2026: "responde a Isabelle Vieira" e o Zé dizia não conhecer a agenda.
+    # O caso de 06/11/2026: "responde a Marta Quintela" e o Zé dizia não conhecer a agenda.
     central = CentralFalsa()
     central.contatos = AGENDA
     texto = _texto(_chamar(_nucleo(tmp_path, central), "whatsapp_contatos", {"busca": busca}))
-    assert "Isabelle Vieira: número 81 99999-0001" in texto and "whatsapp_enviar" in texto
+    assert "Marta Quintela: número 81 99999-0001" in texto and "whatsapp_enviar" in texto
     assert "Ana" not in texto
 
 
@@ -360,7 +360,7 @@ def test_agenda_fora_do_ar_e_livre_de_aprovacao(tmp_path: Path) -> None:
 
 def test_sem_conversa_no_arquivo_aponta_a_agenda(tmp_path: Path) -> None:
     n = _nucleo(tmp_path)
-    problema = w.prechecar(n)(w.RESPONDER, {"contato": "Isabelle Vieira", "texto": "oi"}) or ""
+    problema = w.prechecar(n)(w.RESPONDER, {"contato": "Marta Quintela", "texto": "oi"}) or ""
     assert "whatsapp_contatos" in problema
 
 

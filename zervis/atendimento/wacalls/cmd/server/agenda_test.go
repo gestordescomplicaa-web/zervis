@@ -22,8 +22,8 @@ func TestAgendaJuntaNumeroELIDESoTemQuemEstaSalvo(t *testing.T) {
 	lid := types.NewJID("123456789", types.HiddenUserServer)
 	soLID := types.NewJID("987654321", types.HiddenUserServer)
 	agenda := agendaFalsa{
-		pn:    {Found: true, FullName: "Isabelle Vieira", PushName: "Isa"},
-		lid:   {Found: true, FullName: "Isabelle Vieira"},
+		pn:    {Found: true, FullName: "Marta Quintela", PushName: "Martinha"},
+		lid:   {Found: true, FullName: "Marta Quintela"},
 		soLID: {Found: true, FirstName: "Bruno"},
 		types.NewJID("5581999990002", types.DefaultUserServer): {Found: true, PushName: "Só perfil"},
 		types.NewJID("120363000000000000", types.GroupServer):  {Found: true, FullName: "Grupo"},
@@ -33,12 +33,12 @@ func TestAgendaJuntaNumeroELIDESoTemQuemEstaSalvo(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(lista) != 2 {
-		t.Fatalf("esperava Bruno e Isabelle, veio %+v", lista)
+		t.Fatalf("esperava Bruno e Marta, veio %+v", lista)
 	}
 	if lista[0] != (contatoDaAgenda{Nome: "Bruno", LID: "987654321"}) {
 		t.Fatalf("contato só pelo LID: %+v", lista[0])
 	}
-	if lista[1] != (contatoDaAgenda{Nome: "Isabelle Vieira", Telefone: "5581999990001", LID: "123456789"}) {
+	if lista[1] != (contatoDaAgenda{Nome: "Marta Quintela", Telefone: "5581999990001", LID: "123456789"}) {
 		t.Fatalf("número e LID juntos: %+v", lista[1])
 	}
 }

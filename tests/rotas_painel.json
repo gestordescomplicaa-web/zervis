@@ -146,7 +146,8 @@
     "omniroute/salvar",
     "atualizacoes/procurar",
     "atualizacoes/canal",
-    "atualizacoes/aplicar"
+    "atualizacoes/aplicar",
+    "ze/propor"
   ],
   "envios": [
     "sessao/anexo"

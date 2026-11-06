@@ -67,6 +67,7 @@ SO_NO_PC = {
     "remoto/ativar",
     "remoto/desativar",
     "ze/aplicar",
+    "ze/propor",
     "ze/sessao",
     "ze/central",
     "ze/unificar",

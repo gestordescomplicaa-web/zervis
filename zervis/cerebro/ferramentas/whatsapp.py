@@ -477,7 +477,7 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         "Procura na agenda de contatos do celular, a que o WhatsApp sincroniza: quem está salvo, "
         "mesmo sem ter escrito desde a conexão. Pelo nome (inteiro, uma palavra ou parte, sem "
         "acento) ou pelos últimos dígitos. Devolve o nome como está salvo, o número e se já há "
-        'conversa no arquivo. Use para "responde a Isabelle Vieira", "manda para o João da '
+        'conversa no arquivo. Use para "responde a Marta Quintela", "manda para o João da '
         'oficina", "qual o número da Ana?" quando a pessoa não estiver na caixa. Só lê.',
         {
             "type": "object",
