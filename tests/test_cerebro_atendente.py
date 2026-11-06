@@ -90,7 +90,7 @@ def test_central_pre_aquece_e_troca_a_reserva_quando_a_persona_muda(
     try:
         atendente.executar(central.aquecer())
         texto = "Olá! Aqui é Bia. Como posso ajudar?"
-        assert central.saudacao == (lg.saudacao(perfil), b"voz:" + texto.encode())
+        assert central.saudacao == (f"cadu|{lg.saudacao(perfil)}", b"voz:" + texto.encode())
         assert len(criados) == 1 and "Você é Bia" in criados[0].iniciado
         assert texto in criados[0].aquecimento  # aquecido com a própria saudação
         atendente.executar(central.aquecer())  # nada mudou: a mesma reserva

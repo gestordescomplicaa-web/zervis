@@ -41,6 +41,8 @@ ESTADO = lugares.ESTADO / "atendimento.json"
 EVENTOS = 200
 AQUECER_S = 60.0  # confere se a persona ou o cérebro mudaram (a reserva antiga não serve)
 RESUMIR_S = 30.0  # o resumo da ligação; sem ele, o Zé avisa mesmo assim
+TOCAR_S = 45.0  # quanto o telefone toca antes de o Zé desistir
+RECADO_MAXIMO = 1000
 ESPERA_EVENTOS_S = 25.0
 CORPO_MAXIMO = 64 * 1024
 TEXTO_ENVIADO_MAXIMO = 2000  # uma resposta ditada; mais que isto não é resposta falada
@@ -127,15 +129,19 @@ class Central:
         self.token = ""  # o da API, que também abre a ponte de áudio (ADR 0066)
         self._ponte: Any = None  # o servidor da ponte, aberto na primeira transferência
         self.porta_da_ponte = 0
+        # As ligações que o Zé faz, pelo id da chamada: (atendeu, terminou com o motivo).
+        self.saindo: dict[str, tuple[asyncio.Event, asyncio.Future[str]]] = {}
         # Pré-aquecimento (como o `prewarm` do Ligatia): a saudação já sintetizada e um motor
         # iniciado esperando a próxima ligação; a ligação começa sem esperar nenhum dos dois.
-        self.saudacao: tuple[str, bytes] | None = None
+        self.saudacao: tuple[str, bytes] | None = None  # (texto e voz, o som)
         self.reserva: tuple[Any, str] | None = None  # (motor aquecido, o que ele recebeu)
         # Conectar o WhatsApp ao Zé é a escolha de deixá-lo ler as conversas privadas (a caixa de
         # entrada, ADR 0054): a captura vale enquanto ele está conectado, com ou sem o agente.
         self.whatsapp = wa or whatsapp.WhatsApp(
             self._recebida, lambda: True, ao_chamar=self._chamada_chegou
         )
+        if isinstance(self.whatsapp, whatsapp.WhatsApp):
+            self.whatsapp.ao_estado = self._estado_da_chamada
         self.atendente = atendente or agente.Atendente(
             criar_motor, self.whatsapp.enviar, self._passou, perfil=projeto.perfil
         )
@@ -200,6 +206,94 @@ class Central:
             resumo=resumo,
             conversa=conversa[-ligacao.CONVERSA_MAXIMA :],
         )
+
+    # --- o Zé ligando para dar um recado (ADR 0067) ---------------------------------------------
+
+    def _estado_da_chamada(self, evento: dict[str, Any]) -> None:
+        """Do fio dos eventos do WaCalls: atendida ou encerrada, para as ligações que o Zé faz."""
+        saida = self.saindo.get(str(evento.get("id", "")))
+        if saida is None:
+            return
+        conectou, fim = saida
+        laco = fim.get_loop()
+        if evento.get("type") == "call-ended":
+            motivo = str(evento.get("reason", ""))
+
+            def terminar() -> None:
+                if not fim.done():
+                    fim.set_result(motivo)
+
+            laco.call_soon_threadsafe(terminar)
+        elif evento.get("status") == "connected":
+            laco.call_soon_threadsafe(conectou.set)
+
+    async def fazer_ligacao(self, pedido: dict[str, str]) -> None:
+        """Liga, espera atender, dá o recado (com a conversa que vier: dúvida, resposta) e conta
+        ao Zé como foi. Enquanto toca, o modelo escreve a primeira fala e a voz a sintetiza."""
+        p = self.atendente.perfil
+        dono = usuario.ler().nome or "quem me pediu"
+        telefone, nome, recado = pedido["telefone"], pedido["nome"], pedido["recado"]
+        inicio = time.monotonic()
+        resultado, motivo, chamada, sessao = "falhou", "", "", ""
+        conversa: list[dict[str, str]] = []
+        falar = ligacao.falador(p.voz)
+        laco = asyncio.get_running_loop()
+        conectou, fim = asyncio.Event(), laco.create_future()
+        self.ligacoes.add(pedido["id"])
+        try:
+            sessao, chamada = await asyncio.to_thread(self.whatsapp.ligar, telefone)
+            self.saindo[chamada] = (conectou, fim)
+            abertura = await ligacao.compor_abertura(self.motor_de_voz(), dono, nome, recado)
+            som = await asyncio.to_thread(falar, ligacao.normalizar_voz(abertura))
+            esperar = asyncio.ensure_future(conectou.wait())
+            await asyncio.wait({esperar, fim}, timeout=TOCAR_S, return_when=asyncio.FIRST_COMPLETED)
+            esperar.cancel()
+            if fim.done():
+                resultado, motivo = "nao_atendeu", fim.result()
+                return
+            if not conectou.is_set():
+                resultado, motivo = "nao_atendeu", "timeout"
+                return
+            from websockets.asyncio.client import connect
+
+            url, cabecalho = self.whatsapp.audio(sessao, chamada)
+            async with connect(url, additional_headers=cabecalho, max_size=None) as conexao:
+                ouvido = ligacao.Ouvido(str(self.chave_deepgram()))
+                await ouvido.abrir()
+                feita = ligacao.Chamada(
+                    conexao, ouvido, self.motor_de_voz(), p, "", nome,
+                    self.atendente.registros, lambda *_: None, falar=falar,
+                    instrucoes=ligacao.sistema_do_recado(dono, nome, recado),
+                    abertura=abertura, saudacao_pronta=som,
+                )  # fmt: skip
+                termino = asyncio.ensure_future(feita.atender())
+                await asyncio.wait({termino, fim}, timeout=ligacao.CONVERSA_RECADO_S,
+                                   return_when=asyncio.FIRST_COMPLETED)  # fmt: skip
+                if not termino.done():
+                    feita.encerrar.set()
+                    await asyncio.wait({termino}, timeout=5)
+                conversa = feita.conversa
+                resultado = "entregue"
+        except Exception as erro:
+            log.warning("central: a ligação de recado falhou (%s)", type(erro).__name__)
+            motivo = str(erro)[:160] if isinstance(erro, whatsapp.WhatsAppErro) else ""
+        finally:
+            self.ligacoes.discard(pedido["id"])
+            self.saindo.pop(chamada, None)
+            if chamada and not fim.done():
+                with contextlib.suppress(Exception):
+                    await asyncio.to_thread(self.whatsapp.desligar, sessao, chamada)
+            resumo = ""
+            with contextlib.suppress(Exception):
+                resumo = await asyncio.wait_for(
+                    ligacao.resumir(self.motor_de_voz(), conversa), RESUMIR_S
+                )
+            self.eventos.publicar(
+                "ligacao_feita", id=pedido["id"], telefone=telefone, nome=nome,
+                resultado=resultado, motivo=motivo, duracao=round(time.monotonic() - inicio),
+                resumo=resumo, conversa=conversa[-ligacao.CONVERSA_MAXIMA :],
+            )  # fmt: skip
+            log.info("central: ligação de recado (%s %s)", resultado, motivo)
 
     # --- a ponte de áudio com o seu celular (ADR 0066) ------------------------------------------
 
@@ -295,15 +389,17 @@ class Central:
         if not p.ligacoes or not ligacao.voz_pronta():
             return
         texto = ligacao.saudacao(p)
-        if self.saudacao is None or self.saudacao[0] != texto:
-            pcm = await asyncio.to_thread(ligacao.falar_com_piper, ligacao.normalizar_voz(texto))
-            self.saudacao = (texto, pcm)
-        chave = json.dumps([ligacao.sistema(p), p.cerebro], ensure_ascii=False)
+        if self.saudacao is None or self.saudacao[0] != f"{p.voz}|{texto}":
+            falar = ligacao.falador(p.voz)
+            pcm = await asyncio.to_thread(falar, ligacao.normalizar_voz(texto))
+            self.saudacao = (f"{p.voz}|{texto}", pcm)
+        instrucoes = ligacao.sistema(p, usuario.ler().nome)  # as mesmas que a ligação usa
+        chave = json.dumps([instrucoes, p.cerebro], ensure_ascii=False)
         if self.reserva is not None and self.reserva[1] == chave:
             return  # sem renovar por tempo: cada aquecimento é uma chamada ao modelo
         self._soltar_reserva()
         motor = self.motor_de_voz()
-        await ligacao.aquecer_motor(motor, ligacao.sistema(p), texto)
+        await ligacao.aquecer_motor(motor, instrucoes, texto)
         self.reserva = (motor, chave)
         log.info("central: ligação pré-aquecida")
 
@@ -315,7 +411,8 @@ class Central:
 
     def _tomar_reserva(self, p: agente.Perfil) -> tuple[Any, bool]:
         """O motor pré-aquecido, se ainda serve para esta persona e este cérebro."""
-        chave = json.dumps([ligacao.sistema(p), p.cerebro], ensure_ascii=False)
+        instrucoes = ligacao.sistema(p, usuario.ler().nome)
+        chave = json.dumps([instrucoes, p.cerebro], ensure_ascii=False)
         if self.reserva is not None and self.reserva[1] == chave:
             motor, _ = self.reserva
             self.reserva = None
@@ -351,7 +448,7 @@ class Central:
             motor, iniciado = self._tomar_reserva(p)
             pronta = (
                 self.saudacao[1]
-                if self.saudacao and self.saudacao[0] == ligacao.saudacao(p)
+                if self.saudacao and self.saudacao[0] == f"{p.voz}|{ligacao.saudacao(p)}"
                 else None
             )
             async with connect(url, additional_headers=cabecalho, max_size=None) as conexao:
@@ -376,6 +473,7 @@ class Central:
                     self._passou,
                     iniciado=iniciado,
                     saudacao_pronta=pronta,
+                    falar=ligacao.falador(p.voz),
                     ao_chamar=chamar,
                     dono=usuario.ler().nome,
                 )
@@ -430,6 +528,20 @@ class Central:
             if not self.decidir(str(corpo.get("chamada", "")), atender):
                 return 409, {"erro": "Essa ligação não espera mais."}
             return 200, {"porta": self.abrir_ponte() if atender else 0}
+        if rota == ("POST", "/ligacao/fazer"):
+            # O Zé liga para dar um recado seu (ADR 0067), já aprovado pela voz.
+            pedido = {
+                "id": str(corpo.get("id", ""))[:40],
+                "telefone": agente.numero(str(corpo.get("telefone", ""))),
+                "nome": " ".join(str(corpo.get("nome", "")).split())[:80],
+                "recado": str(corpo.get("recado", "")).strip()[:RECADO_MAXIMO],
+            }
+            if not (8 <= len(pedido["telefone"]) <= 15 and pedido["recado"] and pedido["id"]):
+                return 400, {"erro": "Falta o número ou o recado."}
+            if self.ligacoes:
+                return 409, {"erro": "Já há uma ligação em andamento."}
+            self.atendente.agendar(self.fazer_ligacao(pedido))
+            return 200, {}
         if rota == ("POST", "/ligacao/encerrar"):
             self.encerrar(str(corpo.get("chamada", "")))
             return 200, {}

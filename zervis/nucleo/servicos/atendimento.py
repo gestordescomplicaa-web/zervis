@@ -247,6 +247,8 @@ class ServicoAtendimento:
             self._ligacao_terminou(evento)
         elif evento.get("tipo") == "chamando":
             self._ligacao_chamando(evento)
+        elif evento.get("tipo") == "ligacao_feita":
+            self._ligacao_feita(evento)
 
     def _ligacao_terminou(self, evento: dict[str, Any]) -> None:
         """O agente atendeu uma ligação: o Zé guarda o que foi dito e avisa quem ligou, quanto
@@ -277,6 +279,46 @@ class ServicoAtendimento:
         ):
             # O contexto do cérebro leva só quem e quando: o resumo vem do que o cliente disse.
             self._falar_lead(fala, f"Você avisou da ligação de {quem} (id {lig.id}).")
+
+    # --- o Zé ligando para dar um recado seu (ADR 0067) -----------------------------------------
+
+    def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str:
+        """Pede à Central a ligação (já aprovada pela voz, ou agendada com a aprovação); o
+        resultado chega depois, pelo evento "ligacao_feita"."""
+        ident = secrets.token_hex(6)
+        try:
+            self.n.central.fazer_ligacao(ident, telefone, nome, recado)
+        except cliente.CentralErro as erro:
+            self._avisar_resultado(f"não consegui ligar para {nome or 'o contato'}: {erro}")
+            raise RuntimeError(f"Não liguei: {erro}") from erro
+        atividade.PADRAO.registrar("execucao", f"WhatsApp: ligando para {nome}", recado=recado)
+        return f"Ligando para {nome}. Te aviso como foi."
+
+    def _ligacao_feita(self, evento: dict[str, Any]) -> None:
+        guardadas = getattr(self.n, "ligacoes", None)
+        lig = guardadas.registrar(evento, "feita") if guardadas is not None else None
+        nome = str(evento.get("nome", "")).strip()
+        quem = agente.nome_falado(nome) if nome else _numero_dito(str(evento.get("telefone", "")))
+        resultado, motivo = str(evento.get("resultado", "")), str(evento.get("motivo", ""))
+        if resultado == "entregue":
+            texto = f"liguei para {quem} e dei o seu recado."
+            if resumo := str(evento.get("resumo", "")).strip():
+                texto += " " + modo_fala.para_ouvir(resumo, limite=320)
+        elif resultado == "nao_atendeu":
+            texto = NAO_ATENDEU.get(motivo, "{quem} não atendeu.").format(quem=quem)
+        else:
+            texto = f"não consegui ligar para {quem}" + (f": {motivo}" if motivo else ".")
+        atividade.PADRAO.registrar(
+            "execucao", f"WhatsApp: ligação para {quem}", resultado=resultado, motivo=motivo,
+            id=lig.id if lig else "",
+        )  # fmt: skip
+        self._avisar_resultado(texto)
+
+    def _avisar_resultado(self, texto: str) -> None:
+        texto = texto[:1].upper() + texto[1:] if texto else texto
+        self.n._na_linha("aviso", texto)
+        if modo_fala.falar(self.n.modo_fala, "notificacao"):
+            self.n.eventos.put(e.Aviso(pendentes.chamando(usuario.PERFIL.nome, texto)))
 
     # --- chamar você durante a ligação (ADR 0066) -----------------------------------------------
 
@@ -423,6 +465,13 @@ class ServicoAtendimento:
             return "Avisos do WhatsApp ligados."
         self.n.mensagens.parar()
         return "Avisos do WhatsApp desligados."
+
+
+NAO_ATENDEU = {
+    "declined": "{quem} recusou a ligação. O recado não foi dado.",
+    "busy": "{quem} estava em outra ligação. O recado não foi dado.",
+    "timeout": "{quem} não atendeu. O recado não foi dado.",
+}
 
 
 def _numero_dito(telefone: str) -> str:

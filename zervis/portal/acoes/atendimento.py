@@ -67,6 +67,7 @@ class AcoesAtendimento(Pagina):
                 "modo": p.modo,
                 "numeros_teste": p.numeros_teste,
                 "ligacoes": p.ligacoes,
+                "voz": p.voz,
                 "cerebro": {
                     "atual": f"{p.cerebro['motor']}|{p.cerebro['modelo']}",
                     "nome": cerebro_do_agente.nome(p.cerebro),

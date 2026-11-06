@@ -82,6 +82,9 @@ def variantes(telefone: str) -> list[str]:
     return saida
 
 
+ESTADOS_DE_CHAMADA = ("call-status", "call-ended")
+
+
 @dataclass(frozen=True)
 class Recebida:
     id: str
@@ -351,6 +354,8 @@ class WhatsApp:
     ) -> None:
         self.ao_receber = ao_receber
         self.ao_chamar = ao_chamar  # uma ligação chegando (evento "incoming" do WaCalls)
+        # O estado das ligações (tocando, atendida, encerrada e por quê): as que o Zé faz.
+        self.ao_estado: Callable[[dict[str, Any]], None] | None = None
         self.capturar = capturar
         self.pasta = pasta
         self.fonte = fonte
@@ -439,7 +444,8 @@ class WhatsApp:
             receptor.parar()
 
     def _ouvir_chamadas(self, filho: Filho) -> None:
-        """Os eventos do WaCalls (SSE) enquanto esta subida durar; só "incoming" interessa."""
+        """Os eventos do WaCalls (SSE) enquanto esta subida durar: a ligação chegando e o estado
+        das que o Zé faz."""
         while self.filho is filho:
             pedido = urllib.request.Request(
                 f"http://127.0.0.1:{self.porta}/api/events",
@@ -455,12 +461,41 @@ class WhatsApp:
                             continue
                         with contextlib.suppress(ValueError):
                             evento = json.loads(texto[5:])
-                            if isinstance(evento, dict) and evento.get("type") == "incoming":
+                            if not isinstance(evento, dict):
+                                continue
+                            if evento.get("type") == "incoming":
                                 assert self.ao_chamar is not None  # noqa: S101 (conferido acima)
                                 self.ao_chamar(evento)
+                            elif evento.get("type") in ESTADOS_DE_CHAMADA and self.ao_estado:
+                                self.ao_estado(evento)
             except (urllib.error.URLError, OSError):
                 pass
             time.sleep(1.0)
+
+    def ligar(self, telefone: str) -> tuple[str, str]:
+        """Liga para o número (o Zé fazendo uma ligação): (sessão, id da chamada). No Brasil, o
+        WhatsApp confere com e sem o nono dígito qual existe."""
+        sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
+        if not sessoes:
+            raise WhatsAppErro("WhatsApp não conectado.")
+        sid = str(sessoes[0]["id"])
+        # A consulta também prepara no WaCalls o identificador (LID) que a oferta da ligação
+        # precisa para tocar em alguns celulares; a primeira variante que existe é a discada.
+        destino = ""
+        for candidato in variantes(telefone):
+            with contextlib.suppress(WhatsAppErro):
+                r = self._api("POST", f"/api/sessions/{sid}/resolve-phones",
+                              {"phones": [candidato]}, espera=10.0)  # fmt: skip
+                if r.get("registered"):
+                    destino = candidato
+                    break
+        if not destino:
+            raise WhatsAppErro("Esse número não está no WhatsApp.")
+        r = self._api("POST", f"/api/sessions/{sid}/calls", {"phone": destino}, espera=20.0)
+        chamada = str((r.get("call") or {}).get("callId", ""))
+        if not chamada:
+            raise WhatsAppErro("A ligação não saiu.")
+        return sid, chamada
 
     def atender(self, sessao: str, chamada: str) -> None:
         self._api("POST", f"/api/sessions/{sessao}/calls/{chamada}/accept", {}, espera=15.0)

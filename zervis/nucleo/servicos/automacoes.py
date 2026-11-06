@@ -1,6 +1,7 @@
 """Serviço de automacoes; pode ser exercitado com dependências próprias, sem subir o núcleo."""
 
 import asyncio
+import json
 import logging
 import queue
 import threading
@@ -51,6 +52,7 @@ class ContextoAutomacoes(Protocol):
     _versoes_procurando: threading.Event
 
     def _na_linha(self, tipo: str, texto: str) -> None: ...
+    def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str: ...
     async def _rodar_pergunta(self, job: Job) -> None: ...
 
 
@@ -73,6 +75,13 @@ class ServicoAutomacoes:
                     "titulo": "um lembrete",
                 }
                 self.n.eventos.put(e.Aviso(lembrete))
+            elif job.tipo == "ligacao":
+                log.info("automação %s: ligação agendada", job.id)
+                self.n.jobs.registrar(job.id, "ok", momento)
+                threading.Thread(
+                    target=self._ligar_agendado, args=(job.texto,), name="ligacao-agendada",
+                    daemon=True,
+                ).start()  # fmt: skip
             else:
                 self.n._rodando.add(job.id)
                 asyncio.run_coroutine_threadsafe(self.n._rodar_pergunta(job), self.n.ponte.laco)
@@ -107,6 +116,17 @@ class ServicoAutomacoes:
                     self.n.eventos.put(e.Aviso(texto))
                 else:
                     self.n.fila.guardar(texto, "agenda", expira)  # some quando a reunião começa
+
+    def _ligar_agendado(self, texto: str) -> None:
+        """A ligação agendada (ADR 0067): aprovada pela voz quando foi agendada; o resultado vem
+        como aviso, como a de agora."""
+        try:
+            pedido = json.loads(texto)
+            self.n.fazer_ligacao(str(pedido["t"]), str(pedido.get("n", "")), str(pedido["r"]))
+        except (ValueError, KeyError, TypeError):
+            log.warning("ligação agendada com o pedido ilegível")
+        except RuntimeError:
+            pass  # o aviso de que não ligou já saiu
 
     def _procurar_versao(self) -> None:
         """A procura diária de atualização (pela rede, numa thread): na tela e, se o modo de

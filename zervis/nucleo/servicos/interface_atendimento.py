@@ -38,6 +38,9 @@ class InterfaceAtendimento(InterfaceServico):
     def agenda_whatsapp(self) -> list[dict[str, str]]:
         return servico(self, ServicoAtendimento).agenda_whatsapp()
 
+    def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str:
+        return servico(self, ServicoAtendimento).fazer_ligacao(telefone, nome, recado)
+
     def decidir_ligacao(self, atender: bool) -> str:
         return servico(self, ServicoAtendimento).decidir_ligacao(atender)
 

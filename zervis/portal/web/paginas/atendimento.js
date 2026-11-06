@@ -109,11 +109,13 @@ function vigiarAtendimento(estado) {
 function cartaoFuncionamento(g) {
   const estado = !g.ligado ? "Desligado" : g.modo === "todos" ? "Respondendo a todos" : "Em teste";
   const modo = (valor, rotulo) => botao(rotulo, "agente-modo", `data-modo="${valor}" aria-pressed="${g.modo === valor}"`);
+  const voz = (valor, rotulo) => botao(rotulo, "agente-voz", `data-voz="${valor}" aria-pressed="${g.voz === valor}"`);
   const falta = !g.publicado ? "Publique o agente para ligar." : "";
   return cartao("", `<div class="cabeca"><h2>Atendimento</h2>${etiquetaDe(g.ligado, estado)}</div>
     <div class="itens">
       ${item("Responder no WhatsApp", falta || "O agente responde às mensagens que chegam.", liga(g.ligado, "atendente-ligado", g.publicado || g.ligado ? "" : "disabled", "Responder no WhatsApp"))}
       ${item("Atender ligações", g.ligacoes_falta && !g.ligacoes ? esc(g.ligacoes_falta) : "O agente atende as ligações do WhatsApp por voz.", liga(g.ligacoes, "atendente-ligacoes", g.ligacoes || !g.ligacoes_falta ? "" : "disabled", "Atender ligações"))}
+      ${item("Voz nas ligações", g.voz === "ze" ? "A voz escolhida em Voz, com o Cadu como reserva." : "Cadu, gerada neste computador.", `<div class="segmentos" role="group" aria-label="Voz nas ligações">${voz("cadu", "Local")}${voz("ze", "Voz do Zé")}</div>`)}
       ${item("Para quem responde", g.modo === "teste" ? "Só os números de teste, para conferir antes de abrir." : "Qualquer conversa privada. Grupos nunca.", `<div class="segmentos" role="group" aria-label="Para quem responde">${modo("teste", "Números de teste")}${modo("todos", "Todos")}</div>`)}
     </div>
     <div class="linha" data-numeros ${g.modo === "teste" ? "" : "hidden"}>
@@ -214,6 +216,7 @@ Object.assign(MUDAR, {
 });
 
 Object.assign(ACOES, {
+  "agente-voz": (b) => salvar({ voz: b.dataset.voz }),
   "agente-modo": (b) => {
     if (b.getAttribute("aria-pressed") === "true") return;
     if (b.dataset.modo === "todos") confirmar(b, "Responder a todos os contatos?", () => salvar({ modo: "todos" }));

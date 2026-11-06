@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- O Zé faz ligações com um recado seu, como um recado de caixa postal: "liga para a Ana e diz que
+  a reunião mudou", ou agendado, "às 17h liga para o João e pede para ele comprar o pão". Com o
+  seu "sim", ele liga pelo WhatsApp, se apresenta como seu assistente, dá o recado, responde só
+  com o que está nele e ouve uma resposta. Depois, avisa como foi: atendeu e o que disse, recusou,
+  não atendeu ou não deu para ligar (ADR 0067).
+- Voz nas ligações (Atendimento): Local (o Cadu, no computador) ou a voz do Zé (a escolhida em
+  Voz). Vale para as ligações que o agente atende e para as que o Zé faz.
 - Ligação passada ao app: o áudio saía travado e com a voz alterada. O Zé respondia ao "sim"
   pelo modo Ao vivo com a ligação já no celular, e a fala dele trocava a taxa do áudio e
   silenciava o microfone por instantes. Agora, enquanto a ligação está no celular, só ela fala

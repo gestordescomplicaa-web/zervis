@@ -11,6 +11,7 @@ nunca. O texto dos outros é de terceiros: vai entre <<< e >>>, como dado. O age
 """
 
 import asyncio
+import json
 import re
 from datetime import datetime
 from typing import Any, Protocol
@@ -25,6 +26,7 @@ from zervis.avisos.pendentes import Pendentes, candidatos
 from zervis.avisos.prioridade import Prioridade, digitos, mesmo_numero
 
 RESPONDER = "mcp__jarvis__whatsapp_responder"
+LIGAR = "mcp__jarvis__whatsapp_ligar"
 _NUMERO_DITO = re.compile(r"\+?[\d\s().-]+")
 ENVIAR = "mcp__jarvis__whatsapp_enviar"
 ESQUECER = "mcp__jarvis__whatsapp_esquecer"
@@ -45,6 +47,7 @@ class Nucleo(Protocol):
     caixa: Caixa
     prioridade: Prioridade
     ligacoes: Ligacoes
+    jobs: Any
 
     def responder_whatsapp(self, chat: str, nome: str, texto: str) -> str: ...
     def iniciar_whatsapp(self, telefone: str, nome: str, texto: str) -> str: ...
@@ -52,6 +55,7 @@ class Nucleo(Protocol):
     def estado_whatsapp(self) -> dict[str, Any]: ...
     def agenda_whatsapp(self) -> list[dict[str, str]]: ...
     def decidir_ligacao(self, atender: bool) -> str: ...
+    def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str: ...
     def encerrar_ligacao(self) -> str: ...
 
 
@@ -374,6 +378,52 @@ def _novo(entrada: dict[str, Any]) -> tuple[str, str, str, str]:
     return telefone, nome, texto, ""
 
 
+RECADO_MAXIMO = 500
+
+
+def _ligar(entrada: dict[str, Any], agora: datetime) -> tuple[str, str, str, datetime | None, str]:
+    """(o número, o nome, o recado, quando, o problema) de uma ligação com recado (ADR 0067);
+    sem `quando`, é agora. O problema é a recusa, antes de perguntar ao usuário."""
+    from zervis.automacoes.agenda import interpretar
+
+    telefone = numero(str(entrada.get("numero", "")))
+    nome = " ".join(str(entrada.get("nome", "")).split())[:80]
+    recado = " ".join(str(entrada.get("recado", "")).split())
+    quando_dito = str(entrada.get("quando", "")).strip()
+    quando: datetime | None = None
+    if quando_dito:
+        try:
+            quando = interpretar(quando_dito).primeira(agora)
+        except ValueError:
+            return (
+                telefone,
+                nome,
+                recado,
+                None,
+                "Horário inválido: use '2026-11-06 17:00' ou 'em 30m'.",
+            )
+    if not telefone:
+        return (
+            telefone,
+            nome,
+            recado,
+            quando,
+            "Número inválido: passe com o DDD (whatsapp_contatos acha o da agenda).",
+        )
+    if not nome:
+        return telefone, nome, recado, quando, "Diga para quem é a ligação."
+    if not recado:
+        return telefone, nome, recado, quando, "Falta o recado."
+    if len(recado) > RECADO_MAXIMO:
+        return telefone, nome, recado, quando, "Recado longo demais para uma ligação; resuma."
+    return telefone, nome, recado, quando, ""
+
+
+def _quando_falado(quando: datetime, agora: datetime) -> str:
+    dia = "hoje" if quando.date() == agora.date() else f"no dia {quando:%d/%m}"
+    return f"{dia} às {quando:%H:%M}"
+
+
 def prechecar(n: Nucleo) -> Any:
     """Para o ClaudeBrain: recusa sem perguntar ao usuário a resposta que não teria destino."""
 
@@ -382,6 +432,8 @@ def prechecar(n: Nucleo) -> Any:
             return nao_achou(n.caixa, _contato(entrada))
         if nome == ENVIAR:
             return _novo(entrada)[3] or None
+        if nome == LIGAR:
+            return _ligar(entrada, datetime.now(fuso.local()))[4] or None
         if nome != RESPONDER:
             return None
         return _alvo(n, entrada)[2] or None
@@ -403,6 +455,21 @@ def descritor(n: Nucleo) -> Any:
             return (
                 f"Vou começar uma conversa no WhatsApp com {quem}, no número "
                 f"{numero_falado(telefone)}, e mandar: {fim} É para {quem} mesmo? Envio?"
+            )
+        if nome == LIGAR:
+            agora = datetime.now(fuso.local())
+            telefone, quem, recado, quando, problema = _ligar(entrada, agora)
+            if problema:
+                return None
+            fim = recado if recado.endswith((".", "!", "?")) else f"{recado}."
+            if quando is not None:
+                return (
+                    f"Vou agendar uma ligação {_quando_falado(quando, agora)} para {quem}, no "
+                    f"número {numero_falado(telefone)}, com o recado: {fim} Agendo?"
+                )
+            return (
+                f"Vou ligar agora para {quem}, no número {numero_falado(telefone)}, com o "
+                f"recado: {fim} Ligo?"
             )
         if nome != RESPONDER:
             return None
@@ -570,6 +637,48 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         return _texto(await asyncio.to_thread(n.decidir_ligacao, acao == "atender"))
 
     @tool(
+        "whatsapp_ligar",
+        "Faz uma ligação pelo WhatsApp para dar um recado do usuário, como um recado de caixa "
+        'postal: "liga para a Ana e diz que a reunião mudou para as 15h". O Zé se apresenta como '
+        "assistente do usuário, dá o recado, responde dúvidas só com o que está nele, ouve uma "
+        "resposta, e depois avisa o usuário se a pessoa atendeu e o que disse. Com `quando`, a "
+        "ligação fica agendada (mesmos formatos das automações: '2026-11-06 17:00', 'em 30m'). "
+        "Passe o número (whatsapp_contatos acha o da agenda), o nome e o recado como o usuário "
+        "pediu, sem inventar. O usuário confirma por voz ouvindo o nome, o número, o recado e a "
+        "hora.",
+        {
+            "type": "object",
+            "properties": {
+                "numero": {"type": "string", "description": "11 98765-4321, +1 415 555 1234"},
+                "nome": {"type": "string", "description": "Para quem: a Ana, Embalagens G6"},
+                "recado": {"type": "string", "description": "O recado, como o usuário pediu"},
+                "quando": {"type": "string", "description": "Vazio: agora. Ou '2026-11-06 17:00'"},
+            },
+            "required": ["numero", "nome", "recado"],
+        },
+    )
+    async def whatsapp_ligar(args: dict[str, Any]) -> dict[str, Any]:
+        agora = datetime.now(fuso.local())
+        telefone, nome, recado, quando, problema = _ligar(args, agora)
+        if problema:
+            return _texto(problema, erro=True)
+        if quando is None:
+            try:
+                return _texto(await asyncio.to_thread(n.fazer_ligacao, telefone, nome, recado))
+            except RuntimeError as erro:
+                return _texto(str(erro), erro=True)
+        pedido = json.dumps({"t": telefone, "n": nome, "r": recado}, ensure_ascii=False)
+        try:
+            job = n.jobs.criar(f"Ligar para {nome}"[:60], quando.strftime("%Y-%m-%d %H:%M"),
+                               "ligacao", pedido, agora)  # fmt: skip
+        except ValueError as erro:
+            return _texto(str(erro), erro=True)
+        return _texto(
+            f"Ligação para {nome} agendada {_quando_falado(quando, agora)} (automação {job.id}). "
+            "O resultado vira aviso."
+        )
+
+    @tool(
         "whatsapp_esquecer",
         'Apaga do arquivo do Zé uma conversa inteira ("esquece a conversa com a Ana"). Só do '
         "arquivo do Zé: no WhatsApp nada muda. Pede a confirmação do usuário.",
@@ -699,6 +808,7 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         whatsapp_contatos,
         whatsapp_ligacoes,
         whatsapp_ligacao,
+        whatsapp_ligar,
         whatsapp_esquecer,
         whatsapp_leads,
         whatsapp_responder,

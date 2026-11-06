@@ -28,6 +28,7 @@ class Ligacao:
     desfecho: str  # normal, passou, limite, silencio, falha
     resumo: str
     conversa: list[dict[str, str]] = field(default_factory=list)
+    direcao: str = "recebida"  # ou "feita": o Zé ligou para dar um recado seu (ADR 0067)
 
     @property
     def quem(self) -> str:
@@ -68,7 +69,7 @@ class Ligacoes:
                 lista.append(Ligacao(**d))
         return lista
 
-    def registrar(self, evento: dict[str, Any]) -> Ligacao:
+    def registrar(self, evento: dict[str, Any], direcao: str = "recebida") -> Ligacao:
         quando = float(evento.get("quando") or self.agora())
         telefone = str(evento.get("telefone", ""))
         conversa = [
@@ -82,9 +83,10 @@ class Ligacoes:
             telefone,
             " ".join(str(evento.get("nome", "")).split())[:80],
             int(evento.get("duracao") or 0),
-            str(evento.get("desfecho", "")),
+            str(evento.get("desfecho") or evento.get("resultado") or ""),
             " ".join(str(evento.get("resumo", "")).split())[:600],
             conversa,
+            direcao,
         )
         with self._trava:
             lista = [x for x in self._ler() if x.id != lig.id] + [lig]
