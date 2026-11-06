@@ -4,6 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from zervis.avisos import central
 from zervis.avisos.fila import Fila
 from zervis.nucleo import estados as e
@@ -89,3 +91,11 @@ def test_repete_a_ultima_fala_inteira_sem_o_cerebro() -> None:
     n.marca = 4  # outro pedido: começa de novo
     Nucleo._executar(n, e.Falar("São três horas."))  # type: ignore[arg-type]
     assert Nucleo._comando_especial(n, "repetir", "") == "São três horas."  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "fala", ["Zé, quero ouvir os avisos", "fala os avisos", "pode ler os avisos", "os avisos"]
+)
+def test_pedir_os_avisos_depois_do_convite(fala: str) -> None:
+    assert e.comando(fala) == "avisos_proximo"
+    assert e.resposta_a_oferta("quero ouvir") == "avisos_proximo"

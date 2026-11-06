@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- Vários avisos esperando: o Zé diz "Tenho três avisos. Se quiser ouvir, é só pedir.", citando só
+  os que têm nome (um lembrete, a sessão do site). Antes, cada aviso sem nome virava "um aviso",
+  e a frase saía "um aviso, um aviso e um aviso". "Quero ouvir os avisos", "fala os avisos" e
+  "pode ler os avisos" pedem o próximo.
 - Ligações do WhatsApp: o Zé fica sabendo do que foi falado. Ao fim de cada ligação que o agente
   atendeu, ele avisa quem ligou (pelo nome da agenda, ou o número), quanto durou e um resumo
   ("você recebeu uma ligação da Ana, de 3 minutos. Quer fechar o pacote e pediu retorno hoje").
