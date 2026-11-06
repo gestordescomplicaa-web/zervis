@@ -296,6 +296,8 @@ class Central:
                 chat=str(corpo.get("chat", "")),
             )
             return 200, {"id": ident}
+        if rota == ("GET", "/whatsapp/agenda"):
+            return 200, {"contatos": self.whatsapp.agenda()}
         if rota == ("GET", "/pausados"):
             return 200, {"pausados": self.atendente.registros.pausados()}
         if rota == ("POST", "/devolver"):

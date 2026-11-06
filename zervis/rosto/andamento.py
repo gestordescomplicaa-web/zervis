@@ -44,6 +44,7 @@ ROTULOS = {
     "whatsapp_conversas": "Olhando o WhatsApp",
     "whatsapp_ler": "Lendo a conversa",
     "whatsapp_buscar": "Procurando no WhatsApp",
+    "whatsapp_contatos": "Procurando na agenda",
     "whatsapp_responder": "Enviando no WhatsApp",
     "whatsapp_enviar": "Enviando no WhatsApp",
     "instagram_perfil": "Lendo o Instagram",

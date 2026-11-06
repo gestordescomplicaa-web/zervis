@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- WhatsApp: o Zé acha os contatos salvos na agenda do celular, mesmo quem não escreveu desde a
+  conexão. "Responde a Isabelle Vieira" procura na agenda (pelo nome inteiro, uma palavra, parte
+  dele ou os últimos dígitos), diz o número e manda com o seu "sim". Antes, ele só conhecia quem
+  já tinha conversa no arquivo e dizia não saber da agenda.
+- A barra de carregamento fica só na Imersão: saiu do painel.
+
 ## 0.2.0 (06/11/2026)
 
 A segunda versão publicada: o Zé que trabalha pela voz, de verdade, no dia a dia. Destaques:

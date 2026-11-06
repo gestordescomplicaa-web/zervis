@@ -69,7 +69,8 @@ GRUPOS = {
     "instagram": ("Instagram", "lê o perfil e as métricas das publicações, sem publicar nada"),
     "whatsapp": (
         "WhatsApp",
-        "guarda e busca tudo do WhatsApp, vigia a lista de prioridade e responde o que você dita",
+        "guarda e busca tudo do WhatsApp, acha os contatos da agenda, vigia a lista de "
+        "prioridade e responde o que você dita",
     ),
 }
 
