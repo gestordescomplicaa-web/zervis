@@ -38,8 +38,9 @@ encerra todas (visto em 06/11/2026, com 3 sessões abertas).
 - [x] **Supervisor de sessões separado** (`zervis-oficina`), dono dos terminais. O Zé conversa com
   ele por socket local e, ao reiniciar, reconecta sem perder nada.
   [ADR 0068](adr/0068-supervisor-das-sessoes.md); aceite em `tests/test_supervisor.py`.
-- [ ] **Fila durável de tarefas** em SQLite (sessão, automação, ligação agendada), com estado e
+- [x] **Fila durável de tarefas** em SQLite (sessão, automação, ligação agendada), com estado e
   tentativas. Ao subir, retoma o que ficou no meio ou marca como interrompido, nunca some.
+  [ADR 0069](adr/0069-fila-duravel-das-automacoes.md); as sessões ficam com o ADR 0068.
 - [ ] **Estado só em SQLite:** avisos, pendências e jobs saem do JSON.
 - [ ] **Arquivos do painel sem reiniciar:** um arquivo novo em `portal/web` não pode depender de
   reiniciar o servidor (a página de Sessões falhou por isso em 06/11).

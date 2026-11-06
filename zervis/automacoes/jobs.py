@@ -13,8 +13,14 @@ SQLite com transações entre processos sobrevive a reinícios; importa o `jobs.
 `ultimo_status` é um conjunto fechado: quem
 lê nunca conclui "o usuário recebeu" só porque é "ok" (o aviso pode estar esperando na fila).
 Atrasado por o `jarvisd` estar parado: roda uma vez ao subir, sem repetir as perdidas.
+
+A fila durável (plano de maturidade, Frente 1): cada vez que uma automação vence vira uma
+execução no mesmo banco, na mesma transação que avança a agenda (pendente → rodando →
+concluída, falhou ou interrompida, com as tentativas). Assim, um Zé morto no meio não perde a
+execução nem a repete às cegas: ao subir, `retomar_ao_subir` decide pelo tipo (ADR 0069).
 """
 
+import contextlib
 import threading
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -27,6 +33,11 @@ from zervis.dados.documentos import Documentos, lista_json
 TIPOS = ("lembrete", "pergunta", "ligacao")  # ligacao: o Zé liga com um recado (ADR 0067)
 STATUS = ("nunca", "ok", "erro", "bloqueado")
 LIMITE_TEXTO = 600
+ESTADOS = ("pendente", "rodando", "concluida", "falhou", "interrompida")
+ABERTAS = ("pendente", "rodando")
+# Uma pergunta interrompida roda de novo, até este total: só lê a internet, repetir é seguro.
+TENTATIVAS = 2
+GUARDADAS = 200  # execuções terminadas que ficam no histórico
 _TRAVAS: dict[Path, threading.RLock] = {}
 _CRIAR_TRAVA = threading.Lock()
 
@@ -55,6 +66,26 @@ class Job:
         )
         estado = "ativo" if self.ativo else "pausado"
         return f"{self.nome} ({self.tipo}, {self.agenda}; próxima {quando}; {estado})"
+
+
+@dataclass
+class Execucao:
+    """Uma vez em que a automação venceu, do disparo até o fim."""
+
+    job: str
+    nome: str
+    tipo: str
+    texto: str
+    criada: str
+    id: str = field(default_factory=lambda: uuid.uuid4().hex[:10])
+    estado: str = "pendente"
+    tentativas: int = 0
+    atualizada: str = ""
+    erro: str = ""
+
+
+def _agora_iso(agora: datetime) -> str:
+    return agora.isoformat(timespec="seconds")
 
 
 class Jobs:
@@ -154,3 +185,101 @@ class Jobs:
                 proxima=seguinte.isoformat() if seguinte else "",
                 ativo=job.ativo and seguinte is not None,
             )
+
+    # --- a fila durável das execuções ------------------------------------------------------
+
+    def execucoes(self) -> list[Execucao]:
+        with self._trava, self._dados.banco.transacao():
+            return [Execucao(**dados) for dados in self._dados.listar("execucoes")]
+
+    def _guardar_execucao(self, x: Execucao) -> None:
+        self._dados.guardar("execucoes", asdict(x), x.id)
+
+    def pendentes(self) -> list[Execucao]:
+        return [x for x in self.execucoes() if x.estado == "pendente"]
+
+    def disparar(self, agora: datetime) -> list[Execucao]:
+        """As automações vencidas viram execuções pendentes, e a agenda delas avança, tudo numa
+        transação: ou as duas coisas ficam gravadas, ou nenhuma. Uma automação com execução
+        ainda aberta espera ela terminar (sem acumular)."""
+        with self._trava, self._dados.banco.transacao():
+            abertas = {x.job for x in self.execucoes() if x.estado in ABERTAS}
+            novas = []
+            for job in self.vencidos(agora):
+                if job.id in abertas:
+                    continue
+                x = Execucao(
+                    job.id, job.nome, job.tipo, job.texto, _agora_iso(agora),
+                    atualizada=_agora_iso(agora),
+                )  # fmt: skip
+                self._guardar_execucao(x)
+                seguinte = interpretar(job.agenda).seguinte(agora)
+                self._mudar(
+                    job.id,
+                    proxima=seguinte.isoformat() if seguinte else "",
+                    ativo=job.ativo and seguinte is not None,
+                )
+                novas.append(x)
+            return novas
+
+    def _execucao(self, id_: str) -> Execucao:
+        dados = self._dados.ler("execucoes", id_)
+        if dados is None:
+            raise JobErro(f"execução {id_} não encontrada")
+        return Execucao(**dados)
+
+    def iniciar(self, id_: str, agora: datetime) -> Execucao:
+        """Antes de rodar: uma tentativa a mais, gravada antes do efeito."""
+        with self._trava, self._dados.banco.transacao():
+            x = self._execucao(id_)
+            x.estado, x.tentativas, x.atualizada = "rodando", x.tentativas + 1, _agora_iso(agora)
+            self._guardar_execucao(x)
+            return x
+
+    def concluir(self, id_: str, status: str, agora: datetime, erro: str = "") -> Execucao:
+        """Depois de rodar: o fim da execução e o último resultado da automação."""
+        with self._trava, self._dados.banco.transacao():
+            if status not in STATUS[1:]:
+                raise JobErro(f"status desconhecido: {status}")
+            x = self._execucao(id_)
+            x.estado = "concluida" if status == "ok" else "falhou"
+            x.erro, x.atualizada = erro[:200], _agora_iso(agora)
+            self._guardar_execucao(x)
+            with contextlib.suppress(JobErro):  # a automação pode ter sido removida
+                self._mudar(
+                    x.job, ultima=_agora_iso(agora), ultimo_status=status, ultimo_erro=erro[:200]
+                )
+            self._podar()
+            return x
+
+    def _podar(self) -> None:
+        terminadas = [x for x in self.execucoes() if x.estado not in ABERTAS]
+        for x in terminadas[: max(0, len(terminadas) - GUARDADAS)]:
+            self._dados.remover("execucoes", x.id)
+
+    def retomar_ao_subir(self, agora: datetime) -> list[Execucao]:
+        """O que estava rodando quando o Zé caiu. O lembrete volta para a fila (repetir um
+        lembrete é melhor que perdê-lo); a pergunta também, até `TENTATIVAS`; a ligação não:
+        ela pode ter sido feita, e ligar duas vezes não se desfaz. Devolve as interrompidas,
+        para o Zé avisar."""
+        interrompidas = []
+        with self._trava, self._dados.banco.transacao():
+            for x in self.execucoes():
+                if x.estado != "rodando":
+                    continue
+                x.atualizada = _agora_iso(agora)
+                if x.tipo == "lembrete" or (x.tipo == "pergunta" and x.tentativas < TENTATIVAS):
+                    x.estado = "pendente"
+                else:
+                    x.estado, x.erro = "interrompida", "o Zé reiniciou no meio"
+                    interrompidas.append(x)
+                self._guardar_execucao(x)
+            for x in interrompidas:
+                with contextlib.suppress(JobErro):
+                    self._mudar(
+                        x.job,
+                        ultima=x.atualizada,
+                        ultimo_status="erro",
+                        ultimo_erro="interrompida por um reinício",
+                    )
+        return interrompidas

@@ -12,7 +12,7 @@ from zervis import atividade
 from zervis.automacoes import executor
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.calendario import Calendario
-from zervis.automacoes.jobs import Job, Jobs
+from zervis.automacoes.jobs import Execucao, Jobs
 from zervis.avisos import modo as modo_fala
 from zervis.avisos.fila import PRIORIDADES, Fila
 from zervis.cerebro.base import Ponte
@@ -53,7 +53,7 @@ class ContextoAutomacoes(Protocol):
 
     def _na_linha(self, tipo: str, texto: str) -> None: ...
     def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str: ...
-    async def _rodar_pergunta(self, job: Job) -> None: ...
+    async def _rodar_pergunta(self, x: Execucao) -> None: ...
 
 
 class ServicoAutomacoes:
@@ -62,29 +62,11 @@ class ServicoAutomacoes:
 
     def _agendador(self, agora: float) -> None:
         momento = datetime.fromtimestamp(agora, FUSO)
-        for job in self.n.jobs.vencidos(momento):
-            if job.id in self.n._rodando:
-                continue
-            if job.tipo == "lembrete":
-                log.info("automação %s: lembrete", job.id)
-                self.n._na_linha("lembrete", job.texto)
-                self.n.jobs.registrar(job.id, "ok", momento)
-                lembrete = f"Lembrete: {job.texto}"
-                self.n._meta[lembrete] = {
-                    "prioridade": PRIORIDADES["lembrete"],
-                    "titulo": "um lembrete",
-                }
-                self.n.eventos.put(e.Aviso(lembrete))
-            elif job.tipo == "ligacao":
-                log.info("automação %s: ligação agendada", job.id)
-                self.n.jobs.registrar(job.id, "ok", momento)
-                threading.Thread(
-                    target=self._ligar_agendado, args=(job.texto,), name="ligacao-agendada",
-                    daemon=True,
-                ).start()  # fmt: skip
-            else:
-                self.n._rodando.add(job.id)
-                asyncio.run_coroutine_threadsafe(self.n._rodar_pergunta(job), self.n.ponte.laco)
+        # A fila durável (ADR 0069): vencer vira uma execução gravada; rodar vem depois.
+        self.n.jobs.disparar(momento)
+        for x in self.n.jobs.pendentes():
+            if x.id not in self.n._rodando:
+                self._executar(x, momento)
         for texto in self.n.eventos_sistema.novos():
             log.info("evento do sistema: %s", texto)
             self.n.eventos.put(e.Aviso(texto))
@@ -117,16 +99,60 @@ class ServicoAutomacoes:
                 else:
                     self.n.fila.guardar(texto, "agenda", expira)  # some quando a reunião começa
 
-    def _ligar_agendado(self, texto: str) -> None:
+    def _executar(self, x: Execucao, momento: datetime) -> None:
+        """Marca a tentativa antes do efeito: se o Zé cair no meio, quem sobe sabe."""
+        x = self.n.jobs.iniciar(x.id, momento)
+        if x.tipo == "lembrete":
+            log.info("automação %s: lembrete", x.job)
+            self.n._na_linha("lembrete", x.texto)
+            lembrete = f"Lembrete: {x.texto}"
+            self.n._meta[lembrete] = {
+                "prioridade": PRIORIDADES["lembrete"],
+                "titulo": "um lembrete",
+            }
+            self.n.eventos.put(e.Aviso(lembrete))
+            self.n.jobs.concluir(x.id, "ok", momento)
+        elif x.tipo == "ligacao":
+            log.info("automação %s: ligação agendada", x.job)
+            self.n._rodando.add(x.id)
+            threading.Thread(
+                target=self._ligar_agendado, args=(x,), name="ligacao-agendada", daemon=True
+            ).start()
+        else:
+            self.n._rodando.add(x.id)
+            asyncio.run_coroutine_threadsafe(self.n._rodar_pergunta(x), self.n.ponte.laco)
+
+    def retomar_execucoes(self) -> None:
+        """Ao subir: o que o Zé deixou no meio volta para a fila ou vira aviso (ADR 0069)."""
+        for x in self.n.jobs.retomar_ao_subir(datetime.now(FUSO)):
+            if x.tipo == "ligacao":
+                texto = (
+                    f"A ligação agendada {x.nome} foi interrompida por um reinício e pode não "
+                    "ter sido feita. Peça de novo se ainda quiser."
+                )
+            else:
+                texto = f"A automação {x.nome} foi interrompida por um reinício."
+            atividade.PADRAO.registrar(
+                "falha", f"Automação interrompida: {x.nome}", origem="automacoes"
+            )
+            self.n._na_linha("aviso", texto)
+            self.n.fila.guardar(texto, "automacao")
+
+    def _ligar_agendado(self, x: Execucao) -> None:
         """A ligação agendada (ADR 0067): aprovada pela voz quando foi agendada; o resultado vem
         como aviso, como a de agora."""
+        status, erro = "ok", ""
         try:
-            pedido = json.loads(texto)
+            pedido = json.loads(x.texto)
             self.n.fazer_ligacao(str(pedido["t"]), str(pedido.get("n", "")), str(pedido["r"]))
         except (ValueError, KeyError, TypeError):
             log.warning("ligação agendada com o pedido ilegível")
+            status, erro = "erro", "pedido ilegível"
         except RuntimeError:
-            pass  # o aviso de que não ligou já saiu
+            status, erro = "erro", "não ligou"  # o aviso de que não ligou já saiu
+        finally:
+            self.n.jobs.concluir(x.id, status, datetime.now(FUSO), erro)
+            self.n._rodando.discard(x.id)
 
     def _procurar_versao(self) -> None:
         """A procura diária de atualização (pela rede, numa thread): na tela e, se o modo de
@@ -157,19 +183,19 @@ class ServicoAutomacoes:
         finally:
             self.n._n8n_conferindo.clear()
 
-    async def _rodar_pergunta(self, job: Job) -> None:
+    async def _rodar_pergunta(self, x: Execucao) -> None:
         momento = datetime.now(FUSO)
         try:
             texto, uso = await executor.executar(
-                job.texto, self.n.cfg["cerebro"]["modelo"], DADOS / "cerebro", carimbo(momento)
+                x.texto, self.n.cfg["cerebro"]["modelo"], DADOS / "cerebro", carimbo(momento)
             )
             self.n.consumo.somar(uso, "automação")
-            self.n.jobs.registrar(job.id, "ok" if texto else "erro", momento)
+            self.n.jobs.concluir(x.id, "ok" if texto else "erro", datetime.now(FUSO))
             if texto:
                 self.n.eventos.put(e.Aviso(texto))
         except Exception as erro:
-            log.exception("automação %s falhou", job.id)
-            self.n.jobs.registrar(job.id, "erro", momento, type(erro).__name__)
-            self.n.eventos.put(e.Aviso(f"A automação {job.nome} falhou."))
+            log.exception("automação %s falhou", x.job)
+            self.n.jobs.concluir(x.id, "erro", datetime.now(FUSO), type(erro).__name__)
+            self.n.eventos.put(e.Aviso(f"A automação {x.nome} falhou."))
         finally:
-            self.n._rodando.discard(job.id)
+            self.n._rodando.discard(x.id)
