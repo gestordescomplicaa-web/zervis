@@ -86,7 +86,7 @@ def test_sobrevive_ao_reinicio_privado_e_expira_em_um_dia(tmp_path: Path) -> Non
     leads, relogio = _pendentes(tmp_path)
     leads.novo("Ana", "quanto custa?", "1@s.whatsapp.net", "5581999990000")
     arquivo = tmp_path / "pendentes.json"
-    assert stat.S_IMODE(arquivo.stat().st_mode) == 0o600
+    assert stat.S_IMODE(leads.arquivo.stat().st_mode) == 0o600  # o banco guarda o texto dele
     depois = p.Pendentes(arquivo, relogio)
     assert [(x.nome, x.telefone) for x in depois.abertas()] == [("Ana", "5581999990000")]
     relogio.t += p.VALIDADE_S + 1

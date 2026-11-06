@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from zervis import usuario
+from zervis.dados.lista import Lista
 from zervis.habilidades.skills import SkillErro, Skills
 from zervis.memoria.curta import Memoria, MemoriaErro, Mudanca
 
@@ -182,32 +183,28 @@ class Pendencias:
     """Propostas esperando o usuário; sobrevivem a reinícios."""
 
     def __init__(self, arquivo: Path) -> None:
-        self.arquivo = arquivo
+        self._banco = Lista(arquivo, "pendencias")  # SQLite; importa o JSON de antes
+        self.arquivo = self._banco.arquivo
 
     def listar(self) -> list[Proposta]:
-        try:
-            brutas = json.loads(self.arquivo.read_text())
-        except (OSError, ValueError):
-            return []
-        return [Proposta(**p) for p in brutas if isinstance(p, dict)]
+        campos = set(Proposta.__dataclass_fields__)
+        return [Proposta(**{k: v for k, v in p.items() if k in campos}) for p in self._banco.ler()]
 
     def _gravar(self, propostas: list[Proposta]) -> None:
-        self.arquivo.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        temporario = self.arquivo.with_suffix(".next")
-        temporario.write_text(json.dumps([asdict(p) for p in propostas], ensure_ascii=False))
-        temporario.chmod(0o600)
-        temporario.replace(self.arquivo)
+        self._banco.gravar([asdict(p) for p in propostas])
 
     def adicionar(self, novas: list[Proposta]) -> None:
-        self._gravar([*self.listar(), *novas])
+        with self._banco.transacao():
+            self._gravar([*self.listar(), *novas])
 
     def tirar(self, id_: str) -> Proposta:
-        todas = self.listar()
-        achada = next((p for p in todas if p.id == id_), None)
-        if achada is None:
-            raise KeyError(id_)
-        self._gravar([p for p in todas if p.id != id_])
-        return achada
+        with self._banco.transacao():
+            todas = self.listar()
+            achada = next((p for p in todas if p.id == id_), None)
+            if achada is None:
+                raise KeyError(id_)
+            self._gravar([p for p in todas if p.id != id_])
+            return achada
 
     def achar(self, id_: str) -> Proposta | None:
         return next((p for p in self.listar() if p.id == id_), None)

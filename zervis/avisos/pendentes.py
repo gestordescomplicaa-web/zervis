@@ -5,13 +5,11 @@ e lembra de 10 em 10 minutos, até 6 vezes, enquanto você não responder. Respo
 (a mensagem que você envia volta pelo WhatsApp conectado), pedir ao Zé que responda ou dizer que
 já viu encerra. Depois dos lembretes, a pendência fica na lista, sem insistir, por um dia.
 
-O arquivo guarda o texto do lead até lá (0600): é o que o Zé lê quando você pede. Grupo nunca
-chega aqui (o WhatsApp do Zé só entrega conversa privada).
+O banco (`whatsapp-pendentes.db`, 0600) guarda o texto do lead até lá: é o que o Zé lê quando
+você pede. Grupo nunca chega aqui (o WhatsApp do Zé só entrega conversa privada).
 """
 
-import json
 import re
-import tempfile
 import threading
 import time
 import unicodedata
@@ -24,6 +22,7 @@ from typing import Any
 from zervis import lugares
 from zervis.avisos.mensagens import nome_falado
 from zervis.avisos.modo import para_ouvir
+from zervis.dados.lista import Lista
 
 ARQUIVO = lugares.ESTADO / "whatsapp-pendentes.json"
 INTERVALO_S = 10 * 60
@@ -129,33 +128,21 @@ def para_o_celular(p: Pendente) -> dict[str, Any]:
 
 class Pendentes:
     def __init__(self, arquivo: Path = ARQUIVO, agora: Callable[[], float] = time.time) -> None:
-        self.arquivo = arquivo
+        self._banco = Lista(arquivo, "pendentes")  # SQLite; importa o JSON de antes
+        self.arquivo = self._banco.arquivo
         self.agora = agora
         self._trava = threading.RLock()
         self._lista: list[Pendente] | None = None  # o núcleo é o único dono: lido uma vez
 
     def _ler(self) -> list[Pendente]:
         if self._lista is None:
-            try:
-                self._lista = _da_lista(json.loads(self.arquivo.read_text()))
-            except (OSError, ValueError, TypeError):
-                self._lista = []
+            self._lista = _da_lista(self._banco.ler())
         limite = self.agora() - VALIDADE_S
         return [p for p in self._lista if max(p.chegou, p.ultima, p.respondida) > limite]
 
     def _gravar(self, lista: list[Pendente]) -> None:
         self._lista = lista
-        self.arquivo.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=self.arquivo.parent, delete=False
-        ) as arquivo:
-            temporario = Path(arquivo.name)  # nasce 0600: guarda o texto de terceiros
-            try:
-                json.dump([asdict(p) for p in lista], arquivo, ensure_ascii=False)
-                arquivo.flush()
-                temporario.replace(self.arquivo)
-            finally:
-                temporario.unlink(missing_ok=True)
+        self._banco.gravar([asdict(p) for p in lista])
 
     def todas(self) -> list[Pendente]:
         """As abertas primeiro (a mais antiga antes), depois as respondidas, da mais recente."""

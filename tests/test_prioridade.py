@@ -44,7 +44,7 @@ def _lista(tmp_path: Path) -> tuple[pr.Prioridade, Relogio]:
 def test_monitorar_fica_ate_tirar_e_aprende_a_conversa(tmp_path: Path) -> None:
     lista, relogio = _lista(tmp_path)
     lista.monitorar("Ana", telefone="81 98765-0000")
-    assert stat.S_IMODE((tmp_path / "prioridade.json").stat().st_mode) == 0o600
+    assert stat.S_IMODE(lista.arquivo.stat().st_mode) == 0o600
     v = lista.chegou("558187650000@s.whatsapp.net", "558187650000")  # o WhatsApp sem o nono
     assert v is not None and v.motivo == "pedido"
     relogio.t += 30 * 24 * 3600

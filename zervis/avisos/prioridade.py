@@ -8,12 +8,10 @@ Três jeitos de entrar:
 - **silêncio**: "não me avisa mais do açougue". Nada dele vira aviso, lembrete ou lead, até você
   dizer "pode voltar a avisar"; as mensagens continuam no arquivo.
 
-Fica em `<estado>/whatsapp-prioridade.json` (0600). Só conversa privada chega até aqui.
+Fica em `<estado>/whatsapp-prioridade.db` (SQLite, 0600). Só conversa privada chega até aqui.
 """
 
-import json
 import re
-import tempfile
 import threading
 import time
 import uuid
@@ -25,6 +23,7 @@ from typing import Any
 from zervis import lugares
 from zervis.avisos.mensagens import nome_falado
 from zervis.avisos.pendentes import pelo_nome
+from zervis.dados.lista import Lista
 
 ARQUIVO = lugares.ESTADO / "whatsapp-prioridade.json"
 ESPERA_S = 24 * 3600  # quanto o Zé espera a resposta ao que ele mandou por você
@@ -83,33 +82,21 @@ def _da_lista(brutos: Any) -> list[Vigiado]:
 
 class Prioridade:
     def __init__(self, arquivo: Path = ARQUIVO, agora: Callable[[], float] = time.time) -> None:
-        self.arquivo = arquivo
+        self._banco = Lista(arquivo, "prioridade")  # SQLite; importa o JSON de antes
+        self.arquivo = self._banco.arquivo
         self.agora = agora
         self._trava = threading.RLock()
         self._lista: list[Vigiado] | None = None
 
     def _ler(self) -> list[Vigiado]:
         if self._lista is None:
-            try:
-                self._lista = _da_lista(json.loads(self.arquivo.read_text()))
-            except (OSError, ValueError, TypeError):
-                self._lista = []
+            self._lista = _da_lista(self._banco.ler())
         agora = self.agora()
         return [v for v in self._lista if not v.ate or v.ate > agora]
 
     def _gravar(self, lista: list[Vigiado]) -> None:
         self._lista = lista[-MAXIMO:]
-        self.arquivo.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=self.arquivo.parent, delete=False
-        ) as arquivo:
-            temporario = Path(arquivo.name)  # nasce 0600
-            try:
-                json.dump([asdict(v) for v in self._lista], arquivo, ensure_ascii=False)
-                arquivo.flush()
-                temporario.replace(self.arquivo)
-            finally:
-                temporario.unlink(missing_ok=True)
+        self._banco.gravar([asdict(v) for v in self._lista])
 
     def todos(self) -> list[Vigiado]:
         with self._trava:

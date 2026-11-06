@@ -262,7 +262,7 @@ def test_fila_preserva_tres_resultados_publicados_simultaneamente(
     with ThreadPoolExecutor(max_workers=3) as pool:
         list(pool.map(publicar, ["Loja", "Site", "Blog"]))
     assert {a.sessao for a in Fila(arquivo).validos()} == {"Loja", "Site", "Blog"}
-    assert arquivo.stat().st_mode & 0o777 == 0o600
+    assert Fila(arquivo).arquivo.stat().st_mode & 0o777 == 0o600  # o banco, privado
 
 
 @pytest.mark.parametrize("modelo_falha", [False, True])
