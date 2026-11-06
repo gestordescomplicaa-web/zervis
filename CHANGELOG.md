@@ -8,7 +8,10 @@ A terceira versão publicada: o Zé que atende e faz ligações por você. Desta
 
 - **Ligações pelo WhatsApp:** o Zé liga para dar um recado seu, agora ou agendado, e conta como
   foi; quando alguém pede para falar com você, a ligação passa para o celular sem cair; ao fim de
-  cada ligação, ele avisa quem ligou e o que foi falado; e a voz das ligações pode ser a do Zé.
+  cada ligação, ele avisa quem ligou e o que foi falado; a voz das ligações pode ser a do Zé; e
+  a ligação não cai mais quando a pessoa fica em silêncio.
+- **Voz:** com o app conectado, os avisos chegam a ele mesmo no Silencioso; no Ao vivo, uma voz
+  ao fundo não cancela mais o pedido em andamento.
 - **Propor como PR:** as melhorias do autodesenvolvimento vão para o GitHub, conferidas antes
   para não levar dados seus.
 - **WhatsApp:** os contatos salvos na agenda do celular, mesmo quem nunca escreveu.
