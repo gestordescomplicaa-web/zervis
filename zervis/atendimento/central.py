@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from zervis import lugares
+from zervis import lugares, usuario
 from zervis.atendimento import agente, ligacao, projeto, whatsapp
 
 log = logging.getLogger(__name__)
@@ -123,6 +123,10 @@ class Central:
         self.motor_de_voz = motor_de_voz or _motor_de_voz
         self.chave_deepgram = chave_deepgram or _chave_deepgram
         self.ligacoes: set[str] = set()  # as chamadas em andamento
+        self.atendidas: dict[str, ligacao.Chamada] = {}  # as que o agente atende, pelo id
+        self.token = ""  # o da API, que também abre a ponte de áudio (ADR 0066)
+        self._ponte: Any = None  # o servidor da ponte, aberto na primeira transferência
+        self.porta_da_ponte = 0
         # Pré-aquecimento (como o `prewarm` do Ligatia): a saudação já sintetizada e um motor
         # iniciado esperando a próxima ligação; a ligação começa sem esperar nenhum dos dois.
         self.saudacao: tuple[str, bytes] | None = None
@@ -196,6 +200,71 @@ class Central:
             resumo=resumo,
             conversa=conversa[-ligacao.CONVERSA_MAXIMA :],
         )
+
+    # --- a ponte de áudio com o seu celular (ADR 0066) ------------------------------------------
+
+    def decidir(self, chamada: str, atender: bool) -> bool:
+        """Da thread da API: a resposta vai ao laço da ligação. Falso se ela não espera mais."""
+        atendida = self.atendidas.get(chamada)
+        if atendida is None or not atendida.em_espera:
+            return False
+        decisao = "atender" if atender else "recusar"
+        return bool(self.atendente.executar(_decidir(atendida, decisao), prazo=5.0))
+
+    def encerrar(self, chamada: str) -> None:
+        """Você desligou pelo celular: a ponte fecha e a ligação termina."""
+        if (atendida := self.atendidas.get(chamada)) is not None:
+            self.atendente.agendar(_fechar_ponte(atendida))
+
+    def abrir_ponte(self) -> int:
+        """O servidor da ponte (WebSocket, só local, com o token da API), aberto uma vez."""
+        if self._ponte is None:
+            self._ponte = self.atendente.executar(self._servir_ponte(), prazo=10.0)
+            self.porta_da_ponte = int(self._ponte.sockets[0].getsockname()[1])
+        return self.porta_da_ponte
+
+    async def _servir_ponte(self) -> Any:
+        from websockets.asyncio.server import serve
+
+        return await serve(self._na_ponte, "127.0.0.1", 0, max_size=2**16)
+
+    async def _na_ponte(self, ws: Any) -> None:
+        """`/ponte/<chamada>`: o Zé manda a sua voz e recebe a da pessoa, em PCM 16 kHz."""
+        recebido = str(ws.request.headers.get("X-Atendimento-Token", ""))
+        chamada = str(ws.request.path).removeprefix("/ponte/")
+        atendida = self.atendidas.get(chamada)
+        if not self.token or not hmac.compare_digest(recebido.encode(), self.token.encode()):
+            await ws.close(4401, "token")
+            return
+        if atendida is None:
+            await ws.close(4404, "ligação")
+            return
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(atendida.ponte_pronta.wait(), 10.0)
+        if not atendida.em_ponte:
+            await ws.close(4409, "sem ponte")
+            return
+
+        async def da_pessoa() -> None:
+            while True:
+                await ws.send(await atendida.para_ponte.get())
+
+        envio = asyncio.ensure_future(da_pessoa())
+        fim = asyncio.ensure_future(atendida.ponte_fim.wait())
+        try:
+            async for mensagem in ws:
+                if isinstance(mensagem, bytes):
+                    atendida.ouvir_dono(mensagem)
+                if fim.done():
+                    break
+        except Exception:
+            log.info("central: a ponte caiu")
+        finally:
+            envio.cancel()
+            fim.cancel()
+            atendida.ponte_fim.set()
+            with contextlib.suppress(Exception):
+                await ws.close()
 
     def _nome_na_agenda(self, telefone: str) -> str:
         """Como quem ligou está salvo na agenda do celular (vazio se não está)."""
@@ -289,6 +358,13 @@ class Central:
                 ouvido = ligacao.Ouvido(str(self.chave_deepgram()))
                 await ouvido.abrir()
                 nome = await quem if quem.done() else ""  # sem esperar a agenda para atender
+
+                def chamar(nome_dito: str, numero: str, assunto: str) -> None:
+                    self.eventos.publicar(
+                        "chamando", chamada=chamada, nome=nome or "", telefone=numero,
+                        assunto=assunto,
+                    )  # fmt: skip
+
                 atendida = ligacao.Chamada(
                     conexao,
                     ouvido,
@@ -300,12 +376,16 @@ class Central:
                     self._passou,
                     iniciado=iniciado,
                     saudacao_pronta=pronta,
+                    ao_chamar=chamar,
+                    dono=usuario.ler().nome,
                 )
+                self.atendidas[chamada] = atendida
                 desfecho = await atendida.atender()
         except Exception:
             log.exception("central: a ligação falhou")
         finally:
             self.ligacoes.discard(chamada)
+            self.atendidas.pop(chamada, None)
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(self.whatsapp.desligar, sessao, chamada)
             duracao = time.monotonic() - inicio
@@ -344,6 +424,15 @@ class Central:
             return 200, {"id": ident}
         if rota == ("GET", "/whatsapp/agenda"):
             return 200, {"contatos": self.whatsapp.agenda()}
+        if rota == ("POST", "/ligacao/decidir"):
+            # Você atende ou não quem pediu para falar com você (ADR 0066), pelo Zé.
+            atender = corpo.get("atender") is True
+            if not self.decidir(str(corpo.get("chamada", "")), atender):
+                return 409, {"erro": "Essa ligação não espera mais."}
+            return 200, {"porta": self.abrir_ponte() if atender else 0}
+        if rota == ("POST", "/ligacao/encerrar"):
+            self.encerrar(str(corpo.get("chamada", "")))
+            return 200, {}
         if rota == ("GET", "/pausados"):
             return 200, {"pausados": self.atendente.registros.pausados()}
         if rota == ("POST", "/devolver"):
@@ -426,6 +515,14 @@ class Central:
         self.atendente.parar()
 
 
+async def _decidir(atendida: ligacao.Chamada, decisao: str) -> bool:
+    return atendida.decidir(decisao)
+
+
+async def _fechar_ponte(atendida: ligacao.Chamada) -> None:
+    atendida.ponte_fim.set()
+
+
 def _motor_de_voz() -> Any:
     """O cérebro escolhido para o agente (página Atendimento); um por ligação."""
     from zervis.atendimento import cerebro
@@ -456,6 +553,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     token = garantir_token()
     central = Central(_motor)
+    central.token = token
     porta = central.servir(token)
     ESTADO.parent.mkdir(parents=True, exist_ok=True)
     ESTADO.write_text(json.dumps({"porta": porta, "pid": os.getpid(), "versao": central.versao}))

@@ -340,6 +340,8 @@ class Nucleo(
         self.caixa = caixa.Caixa()  # as conversas privadas recentes do WhatsApp (ADR 0054)
         self.prioridade = prioridade.Prioridade()  # quem o Zé vigia em tempo real (ADR 0055)
         self.ligacoes = ligacoes.Ligacoes(DADOS / "ligacoes.json")  # o que foi dito nas ligações
+        self.ligacao_pendente: dict[str, str] | None = None  # quem espera você na linha
+        self.ponte_ligacao: Any = None  # a ligação passada para o app de voz (ADR 0066)
         self.instagram = instagram.Instagram()  # métricas do Instagram, só leitura (ADR 0057)
         # A pesquisa profunda (ADR 0059): o SearXNG próprio e o vigia semanal das fontes de fora.
         self.buscador = Buscador()

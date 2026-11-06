@@ -1147,6 +1147,7 @@ class Maquina:
     escutar_depois: bool = False  # o aviso em fala abre a escuta ao terminar (mãos livres)
     reperguntou: bool = False  # a confirmação já foi repetida uma vez por resposta confusa
     segurando: bool = False  # botão de falar apertado: o pedido fecha ao soltar
+    em_ligacao: bool = False  # uma ligação do WhatsApp no app (ADR 0066): os avisos esperam
     ao_vivo: bool = False  # "Conectar voz": ouve sem parar até desconectar (ADR 0023)
     prazo_conversa_s: float = PRAZO_CONVERSA_S
     historico: list[Estado] = field(default_factory=list)
@@ -1249,6 +1250,8 @@ class Maquina:
                 self._ir(Estado.PENSANDO)  # o cérebro segue com a negativa: a resposta dele vem
                 return [CortarFala()]
             case Aviso(texto, escutar, sequencial):
+                if self.em_ligacao:
+                    return [ReterAviso(texto)]  # você está falando com alguém pelo app
                 if self.estado is Estado.ATIVO or (
                     (self.ao_vivo or sequencial)
                     and self.estado is Estado.OUVINDO

@@ -25,8 +25,11 @@ class ContextoAtendimento(Protocol):
     cfg: Any
     eventos: Any
     leads: Any
+    ligacao_pendente: Any
+    maquina: Any
     mensagens: Any
     modo_fala: Any
+    ponte_ligacao: Any
     prioridade: Any
 
     def _atendente_passou(self, nome: str, motivo: str) -> None: ...
@@ -44,14 +47,16 @@ class ServicoAtendimento:
 
     # --- leads esperando resposta (ADR 0053) ---------------------------------------------------
 
-    def _falar_lead(self, fala: str, contexto: str, pedido: bool = False) -> None:
+    def _falar_lead(
+        self, fala: str, contexto: str, pedido: bool = False, escutar: bool = False
+    ) -> None:
         """A fala leva o texto do lead, inteira; o contexto do cérebro, só o nome: o texto é de
         terceiros e não entra na conversa como se fosse do Zé."""
         lidos = self.n.avisos_lidos
         lidos[fala] = contexto
         while len(lidos) > 20:
             del lidos[next(iter(lidos))]
-        self.n.eventos.put(e.Aviso(fala, pedido=pedido))
+        self.n.eventos.put(e.Aviso(fala, escutar=escutar, pedido=pedido))
 
     def _avisar_lead(self, fala: str, tela: str, contexto: str) -> None:
         if tela:
@@ -240,6 +245,8 @@ class ServicoAtendimento:
             self._lead_respondido(chat, _quando(evento))
         elif evento.get("tipo") == "ligacao":
             self._ligacao_terminou(evento)
+        elif evento.get("tipo") == "chamando":
+            self._ligacao_chamando(evento)
 
     def _ligacao_terminou(self, evento: dict[str, Any]) -> None:
         """O agente atendeu uma ligação: o Zé guarda o que foi dito e avisa quem ligou, quanto
@@ -254,6 +261,9 @@ class ServicoAtendimento:
         )  # fmt: skip
         if lig.desfecho == "falha" and not lig.conversa:
             return  # nem chegou a ser atendida: nada a contar
+        if lig.desfecho == "transferida":
+            self.n._na_linha("aviso", f"Ligação de {lig.quem}, atendida por você: {lig.resumo}")
+            return  # você estava nela: fica guardada, sem aviso falado
         quem = agente.nome_falado(lig.nome) if lig.nome else lig.quem
         partes = [f"você recebeu uma ligação de {quem}, de {ligacoes.duracao_falada(lig.duracao)}."]
         if lig.desfecho == "passou":
@@ -267,6 +277,93 @@ class ServicoAtendimento:
         ):
             # O contexto do cérebro leva só quem e quando: o resumo vem do que o cliente disse.
             self._falar_lead(fala, f"Você avisou da ligação de {quem} (id {lig.id}).")
+
+    # --- chamar você durante a ligação (ADR 0066) -----------------------------------------------
+
+    def _ligacao_chamando(self, evento: dict[str, Any]) -> None:
+        """Alguém na linha pediu para falar com você: o Zé pergunta pelo app de voz e espera o
+        "sim" (pela voz ou pelos botões da notificação). Sem o app conectado, não há por onde
+        atender: o agente diz que você não pode agora e anota o recado."""
+        chamada = str(evento.get("chamada", ""))
+        nome, telefone = str(evento.get("nome", "")), str(evento.get("telefone", ""))
+        quem = agente.nome_falado(nome) if nome else _numero_dito(telefone)
+        assunto = " ".join(str(evento.get("assunto", "")).split())[:120] or "um assunto"
+        fonte = getattr(self.n, "_fonte", None)
+        if fonte is None or not getattr(fonte, "do_app", False):
+            self.n._na_linha("aviso", f"{quem} ligou e queria falar com você: {assunto}.")
+            with contextlib.suppress(cliente.CentralErro):
+                self.n.central.decidir_ligacao(chamada, False)
+            return
+        self.n.ligacao_pendente = {"id": chamada, "quem": quem, "assunto": assunto}
+        atividade.PADRAO.registrar(
+            "execucao", f"Atendimento: {quem} quer falar com você", origem="atendente"
+        )
+        fonte.controle(tipo="ligacao", estado="chamando", id=chamada, nome=quem, assunto=assunto)
+        fala = pendentes.chamando(
+            usuario.PERFIL.nome,
+            f"{quem} está na linha e quer falar com você sobre {assunto}. Pode atender?",
+        )
+        self.n._na_linha("aviso", f"{quem} está na linha e quer falar com você: {assunto}.")
+        self._falar_lead(
+            fala,
+            f"Você perguntou se o usuário atende a ligação de {quem}, que espera na linha. "
+            "Se ele disser que sim (atende, pode passar), use whatsapp_ligacao com atender; se "
+            "disser que não, com recusar.",
+            escutar=True,  # a resposta vem sem "Ei Zé", como no "Aprovo?"
+        )
+
+    def decidir_ligacao(self, atender: bool) -> str:
+        """A sua resposta a quem espera na linha. Atendendo, a ligação vem para o app."""
+        pendente = getattr(self.n, "ligacao_pendente", None)
+        if not pendente:
+            return "Nenhuma ligação esperando por você."
+        self.n.ligacao_pendente = None
+        fonte = getattr(self.n, "_fonte", None)
+        atender = atender and fonte is not None and getattr(fonte, "do_app", False)
+        try:
+            url = self.n.central.decidir_ligacao(pendente["id"], atender)
+        except cliente.CentralErro:
+            return "A ligação já terminou."
+        if not atender:
+            self._ligacao_ao_celular(pendente["id"], "fim")
+            quem = pendente["quem"]
+            return f"Certo. O agente diz que você não pode agora e anota o recado de {quem}."
+        from zervis.transporte.ponte import Ponte
+
+        ponte = Ponte(url, self.n.central.token, fonte, self._ponte_fechou)
+        try:
+            ponte.iniciar()
+        except Exception:
+            log.exception("ponte: não abriu")
+            with contextlib.suppress(cliente.CentralErro):
+                self.n.central.encerrar_ligacao(pendente["id"])
+            return "Não consegui passar a ligação para o celular."
+        ponte.chamada = pendente["id"]
+        self.n.ponte_ligacao = ponte
+        self.n.maquina.em_ligacao = True  # os avisos esperam a ligação acabar
+        self._ligacao_ao_celular(pendente["id"], "em_curso", pendente["quem"])
+        atividade.PADRAO.registrar("execucao", f"Atendimento: você atendeu {pendente['quem']}")
+        return f"Passando {pendente['quem']} para você."
+
+    def encerrar_ligacao(self) -> str:
+        ponte = getattr(self.n, "ponte_ligacao", None)
+        if ponte is None:
+            return "Nenhuma ligação em andamento."
+        with contextlib.suppress(cliente.CentralErro):
+            self.n.central.encerrar_ligacao(getattr(ponte, "chamada", ""))
+        ponte.fechar()
+        return "Ligação encerrada."
+
+    def _ponte_fechou(self, ponte: Any) -> None:
+        if getattr(self.n, "ponte_ligacao", None) is ponte:
+            self.n.ponte_ligacao = None
+        self.n.maquina.em_ligacao = False
+        self._ligacao_ao_celular(getattr(ponte, "chamada", ""), "fim")
+
+    def _ligacao_ao_celular(self, chamada: str, estado: str, quem: str = "") -> None:
+        fonte = getattr(self.n, "_fonte", None)
+        if fonte is not None and getattr(fonte, "do_app", False):
+            fonte.controle(tipo="ligacao", estado=estado, id=chamada, nome=quem)
 
     def _motor_do_atendente(self) -> rapido.Motor:
         """Um modelo sem ferramentas para cada resposta do agente de atendimento."""
@@ -326,6 +423,10 @@ class ServicoAtendimento:
             return "Avisos do WhatsApp ligados."
         self.n.mensagens.parar()
         return "Avisos do WhatsApp desligados."
+
+
+def _numero_dito(telefone: str) -> str:
+    return f"o número {ligacoes.numero_falado(telefone)}" if telefone else "um número oculto"
 
 
 def _quando(evento: dict[str, Any]) -> float:

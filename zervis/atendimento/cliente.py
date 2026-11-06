@@ -189,6 +189,20 @@ class Cliente:
         lista = self._api("GET", "/whatsapp/agenda", espera=20.0).get("contatos", [])
         return [c for c in lista if isinstance(c, dict)]
 
+    def decidir_ligacao(self, chamada: str, atender: bool) -> str:
+        """Você atende ou não quem pediu para falar com você (ADR 0066). Atendendo, devolve o
+        endereço da ponte de áudio; senão, vazio."""
+        r = self._api("POST", "/ligacao/decidir", {"chamada": chamada, "atender": atender})
+        porta = int(r.get("porta") or 0)
+        return f"ws://127.0.0.1:{porta}/ponte/{chamada}" if atender and porta else ""
+
+    def encerrar_ligacao(self, chamada: str) -> None:
+        self._api("POST", "/ligacao/encerrar", {"chamada": chamada})
+
+    @property
+    def token(self) -> str:
+        return central.garantir_token(self.arquivo_token)
+
     def pausados(self) -> list[dict[str, Any]]:
         try:
             lista = self._api("GET", "/pausados").get("pausados", [])

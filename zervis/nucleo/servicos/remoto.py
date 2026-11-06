@@ -44,7 +44,9 @@ class ContextoRemoto(Protocol):
     def _leads_ao_celular(self) -> None: ...
     def _na_linha(self, tipo: str, texto: str) -> None: ...
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None: ...
+    def decidir_ligacao(self, atender: bool) -> str: ...
     def dispensar_lead(self, ident: str) -> str: ...
+    def encerrar_ligacao(self) -> str: ...
     def ouvir_lead(self, ident: str) -> None: ...
     @property
     def microfone_travado(self) -> bool: ...
@@ -145,6 +147,10 @@ class ServicoRemoto:
             ).start()
 
     def _quadro_remoto(self, fonte: Any, quadro: bytes) -> None:
+        ponte = getattr(self.n, "ponte_ligacao", None)
+        if ponte is not None and ponte.ativa and ponte.voz is fonte:
+            ponte.enviar(quadro)  # numa ligação (ADR 0066): a sua voz vai para a pessoa
+            return
         if fonte is not self.n._fonte or self.n.microfone_travado:
             return
         live = getattr(self.n, "live", None)
@@ -193,6 +199,15 @@ class ServicoRemoto:
                 self.n.ouvir_lead(lead)
             elif tipo == "whatsapp_visto":
                 self.n.dispensar_lead(lead)
+            elif tipo in ("ligacao_atender", "ligacao_recusar"):  # a notificação da ligação
+                threading.Thread(
+                    target=self.n.decidir_ligacao, args=(tipo == "ligacao_atender",),
+                    name="ligacao-decidir", daemon=True,
+                ).start()  # fmt: skip
+            elif tipo == "ligacao_encerrar":
+                threading.Thread(
+                    target=self.n.encerrar_ligacao, name="ligacao-encerrar", daemon=True
+                ).start()
 
         try:
             voz.ouvir(lambda quadro: self.n._quadro_remoto(voz, quadro), controle)

@@ -130,6 +130,7 @@ public final class VozService extends Service {
         canal.setShowBadge(false);
         avisos.createNotificationChannel(canal);
         Leads.criarCanal(this);
+        Ligacao.criarCanal(this);
     }
 
     @Override
@@ -160,6 +161,14 @@ public final class VozService extends Service {
                     stopSelf(id);
                     return START_NOT_STICKY;
                 }
+                return START_STICKY;
+            case Ligacao.ATENDER:
+            case Ligacao.RECUSAR:
+            case Ligacao.ENCERRAR:
+                // A ligação que pede você (ADR 0066): a resposta vai ao Zé, que fala com a Central.
+                String ligacao = intent.getStringExtra(Ligacao.ID);
+                enviarLead(acao, ligacao == null ? "" : ligacao);
+                if (!Ligacao.ATENDER.equals(acao)) Ligacao.apagar(this);
                 return START_STICKY;
             default:
                 if (!ligado) ligar();
@@ -320,6 +329,8 @@ public final class VozService extends Service {
                         tocar.execute(() -> prepararFala(taxa));
                     } else if ("fim".equals(tipo)) {
                         tocar.execute(VozService.this::esperarACauda);
+                    } else if ("ligacao".equals(tipo)) {
+                        principal.post(() -> Ligacao.mostrar(VozService.this, m));
                     } else if ("whatsapp".equals(tipo)) {
                         JSONArray leads = m.optJSONArray("leads");
                         if (leads != null) principal.post(() -> Leads.mostrar(VozService.this, leads));

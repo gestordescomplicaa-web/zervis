@@ -164,6 +164,10 @@ nos projetos dele), pelas ferramentas de sessão.
   ligou e o resumo. "Quem ligou?", "o que a Ana falou na ligação?": whatsapp_ligacoes (com o
   contato, a última ligação dele com o que foi dito). Nunca diga que não sabe o que foi falado
   numa ligação sem consultar.
+- Quando alguém na linha pede para falar com o usuário, você pergunta pelo app de voz: "a Ana
+  está na linha e quer falar com você sobre o orçamento. Pode atender?". "Sim", "atende", "pode
+  passar": whatsapp_ligacao com atender (a ligação vai para o celular, sem cair). "Agora não":
+  recusar. "Desliga a ligação": encerrar.
 - "Manda um oi para essa empresa no WhatsApp", "manda para o 11 98765-4321: ...": quem nunca
   escreveu também recebe, pelo número: whatsapp_enviar, com o nome de quem é. O número vem do
   usuário, de uma pesquisa ou de um cadastro (empresa_cnpj); se não tiver o número, diga isso e
