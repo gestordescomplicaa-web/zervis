@@ -166,3 +166,49 @@ def test_a_central_alimenta_o_arquivo_e_so_o_texto_privado_novo_e_julgado(tmp_pa
     textos = [m["texto"] for m in n.caixa.mensagens(ANA)]
     assert textos == ["antiga", "quanto custa?", "", "Custa 200."]  # a hora do WhatsApp manda
     assert [m["texto"] for m in n.caixa.mensagens(GRUPO)] == ["reunião"]
+
+
+def test_o_nome_da_agenda_da_sua_conversa_e_o_numero_nao_apaga_o_nome(tmp_path: Path) -> None:
+    """Caso de 05/11/2026: a conversa que você começou ficava com o número, e uma mensagem sem o
+    nome de perfil trocava o nome guardado pelo número."""
+    caixa, relogio = _caixa(tmp_path)
+    bia = "558199990000@s.whatsapp.net"
+    caixa.enviada(bia, "oi, Bia", nome="Bia Souza")
+    relogio.t += 10
+    caixa.receber("Ana", "oi", "5581988880000", ANA)
+    relogio.t += 10
+    caixa.receber("5581988880000", "tá aí?", "5581988880000", ANA)  # sem o pushName
+    assert [c.nome for c in caixa.conversas()] == ["Ana", "Bia Souza"]
+
+
+def _tres(caixa: cx.Caixa, relogio: Relogio) -> None:
+    for nome, numero in (("Rafael Souza", "5581999991234"), ("Ana Rafaela", "5581988885678"),
+                         ("Mãe", "5581977771234")):  # fmt: skip
+        caixa.receber(nome, "oi", numero, f"{numero}@s.whatsapp.net")
+        relogio.t += 10
+
+
+def test_acha_pelo_nome_parcial_sem_acento_e_sem_maiusculas(tmp_path: Path) -> None:
+    caixa, relogio = _caixa(tmp_path)
+    _tres(caixa, relogio)
+    assert (c := caixa.achar("souz")) is not None and c.nome == "Rafael Souza"
+    assert (c := caixa.achar("MAE")) is not None and c.nome == "Mãe"
+    assert (c := caixa.achar("rafaela")) is not None and c.nome == "Ana Rafaela"
+    assert (c := caixa.achar("rafael")) is not None and c.nome == "Rafael Souza"  # palavra inteira
+
+
+def test_acha_pelos_ultimos_digitos_do_numero(tmp_path: Path) -> None:
+    caixa, relogio = _caixa(tmp_path)
+    _tres(caixa, relogio)
+    assert (c := caixa.achar("5678")) is not None and c.nome == "Ana Rafaela"
+    assert (c := caixa.achar("99999-1234")) is not None and c.nome == "Rafael Souza"
+    assert caixa.achar("123") is None  # menos de 4 dígitos não é número
+
+
+def test_mais_de_um_possivel_nao_escolhe_e_devolve_a_lista(tmp_path: Path) -> None:
+    caixa, relogio = _caixa(tmp_path)
+    _tres(caixa, relogio)
+    assert caixa.achar("rafa") is None
+    assert {c.nome for c in caixa.candidatos("rafa")} == {"Rafael Souza", "Ana Rafaela"}
+    assert {c.nome for c in caixa.candidatos("1234")} == {"Rafael Souza", "Mãe"}
+    assert [c.nome for c in caixa.candidatos("Zuleica")] == []

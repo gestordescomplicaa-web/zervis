@@ -21,7 +21,8 @@ from typing import Any
 
 from zervis import lugares
 from zervis.avisos.mensagens import nome_falado
-from zervis.avisos.pendentes import pelo_nome
+from zervis.avisos.pendentes import candidatos
+from zervis.avisos.prioridade import digitos, mesmo_numero
 from zervis.dados import Banco
 
 ARQUIVO = lugares.DADOS / "whatsapp-arquivo.db"
@@ -36,6 +37,8 @@ MIDIAS = {
 }
 _VAZIAS = {"a", "o", "as", "os", "de", "da", "do", "das", "dos", "e", "em", "no", "na", "um",
            "uma", "que", "pra", "para", "com", "por", "se", "me", "eu", "ele", "ela"}  # fmt: skip
+_NUMERO = re.compile(r"\+?[\d\s().-]+")  # "4321", "98765-4321", "+55 (81) 9..."
+FINAL = 4  # os últimos dígitos que bastam para achar um contato
 
 
 def ident(chat: str) -> str:
@@ -207,6 +210,8 @@ class Caixa:
             atual = db.execute(
                 "SELECT nome, telefone FROM conversas WHERE chat=?", (chat,)
             ).fetchone()
+            if atual is not None and nome.isdigit():
+                nome = ""  # o número, na falta do nome de perfil, não apaga o nome guardado
             if atual is None:
                 db.execute(
                     "INSERT INTO conversas(chat, ident, nome, telefone, grupo) VALUES (?,?,?,?,?)",
@@ -263,11 +268,15 @@ class Caixa:
         evento: str = "",
         grupo: bool = False,
         grupo_nome: str = "",
+        nome: str = "",
     ) -> bool:
-        """Uma mensagem sua (pelo celular ou pelo Zé)."""
+        """Uma mensagem sua (pelo celular ou pelo Zé); `nome` é o de quem recebe, na agenda."""
         if not chat:
             return False
-        nome = " ".join(grupo_nome.split())[:80] if grupo else ""
+        if grupo:
+            nome = " ".join(grupo_nome.split())[:80]
+        else:
+            nome = nome_falado(nome) if nome.strip() else ""
         return self._anotar(chat, nome, True, "você", texto, midia, quando, evento, grupo=grupo)
 
     # --- o que o Zé lê ---------------------------------------------------------------------
@@ -310,15 +319,26 @@ class Caixa:
         return float(linha[0] or 0.0)
 
     def achar(self, quem: str) -> Conversa | None:
-        """Pelo id da conversa, ou pelo nome falado (contato ou grupo); quem espera resposta vem
-        antes. Nome que serve a mais de uma conversa não escolhe sozinho."""
+        """A conversa pedida, se só uma serve (`candidatos`); mais de uma não escolhe sozinho."""
+        achados = self.candidatos(quem)
+        return achados[0] if len(achados) == 1 else None
+
+    def candidatos(self, quem: str) -> list[Conversa]:
+        """As conversas que servem ao pedido: pelo id; pelos últimos dígitos do número (4 ou mais)
+        ou o número inteiro; ou pelo nome falado (contato ou grupo), inteiro, uma palavra ou parte
+        dele, quem espera resposta antes."""
         quem = " ".join(quem.split())
         if not quem:
-            return None
+            return []
         lista = self.conversas()
         if c := next((x for x in lista if quem in (x.id, x.chat)), None):
-            return c
-        return pelo_nome(
+            return [c]
+        if _NUMERO.fullmatch(quem):
+            final = digitos(quem)
+            if len(final) < FINAL:
+                return []
+            return [x for x in lista if not x.grupo and _confere_numero(_numero(x), final)]
+        return candidatos(
             [[x for x in lista if x.sem_resposta], lista], quem, lambda x: (x.nome, x.chat)
         )
 
@@ -352,3 +372,16 @@ def _do_chat(chat: str, grupo: bool) -> str:
         return "um grupo"
     numero = re.match(r"\d+", chat)
     return numero.group(0) if numero and chat.endswith("@s.whatsapp.net") else "um contato"
+
+
+def _numero(c: Conversa) -> str:
+    """O telefone da conversa: o que chegou com a mensagem ou, sem ele, o do JID."""
+    if c.telefone:
+        return c.telefone
+    numero = re.match(r"\d+", c.chat)
+    return numero.group(0) if numero and c.chat.endswith("@s.whatsapp.net") else ""
+
+
+def _confere_numero(numero: str, dito: str) -> bool:
+    """O final do número, ou ele inteiro (com ou sem o país e o nono dígito)."""
+    return bool(numero) and (numero.endswith(dito) or mesmo_numero(numero, dito))

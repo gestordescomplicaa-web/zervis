@@ -77,11 +77,14 @@ type mensagemNormalizada struct {
 	Direction string `json:"direction"` // inbound | outbound
 	ChatJID   string `json:"chat_jid"`
 	SenderJID string `json:"sender_jid"`
-	Phone     string `json:"phone"`           // forma discável, quando dá pra resolver
-	LID       string `json:"lid"`             // forma oculta, quando existe
-	PushName  string `json:"push_name"`       // como a pessoa se identifica no WhatsApp
-	Type      string `json:"type"`            // text | media
-	Media     string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
+	Phone     string `json:"phone"`     // forma discável, quando dá pra resolver
+	LID       string `json:"lid"`       // forma oculta, quando existe
+	PushName  string `json:"push_name"` // como a pessoa se identifica no WhatsApp
+	// Zérvis: como o contato está salvo na agenda do celular (vazio se não está). Na mensagem
+	// enviada, é o do outro lado; PushName, nela, é o seu.
+	ContactName string `json:"contact_name,omitempty"`
+	Type        string `json:"type"`            // text | media
+	Media       string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
 	// Zérvis (ADR 0056): no grupo, ChatJID é o grupo, e Phone/LID/PushName são de quem falou.
 	IsGroup    bool   `json:"is_group,omitempty"`
 	GroupName  string `json:"group_name,omitempty"`
@@ -254,19 +257,20 @@ func (s *Session) handleMessage(evt *events.Message) {
 	}
 
 	m := mensagemNormalizada{
-		EventID:    eventID,
-		SessionID:  s.id,
-		Direction:  direcao,
-		ChatJID:    evt.Info.Chat.String(),
-		SenderJID:  evt.Info.Sender.String(),
-		Phone:      telefone,
-		LID:        lid,
-		PushName:   evt.Info.PushName,
-		Type:       tipo,
-		Media:      midia,
-		IsGroup:    evt.Info.Chat.Server == types.GroupServer,
-		Content:    texto,
-		OccurredAt: evt.Info.Timestamp.UTC().Format(time.RFC3339),
+		EventID:     eventID,
+		SessionID:   s.id,
+		Direction:   direcao,
+		ChatJID:     evt.Info.Chat.String(),
+		SenderJID:   evt.Info.Sender.String(),
+		Phone:       telefone,
+		LID:         lid,
+		PushName:    evt.Info.PushName,
+		ContactName: s.nomeNaAgenda(telefone, lid),
+		Type:        tipo,
+		Media:       midia,
+		IsGroup:     evt.Info.Chat.Server == types.GroupServer,
+		Content:     texto,
+		OccurredAt:  evt.Info.Timestamp.UTC().Format(time.RFC3339),
 	}
 	if m.IsGroup {
 		m.GroupName = s.nomeDoGrupo(evt.Info.Chat)
@@ -287,6 +291,48 @@ func (s *Session) handleMessage(evt *events.Message) {
 	// de que a captura esta viva. Sem numero de telefone no log — ele nao
 	// acrescenta nada ao diagnostico e o log e lido por mais gente que o banco.
 	s.log.Info("mensagem capturada", "direcao", direcao, "tipo", tipo)
+}
+
+// agendaDeContatos é a parte do store do whatsmeow com a agenda do celular, que o próprio
+// whatsmeow sincroniza (app state) depois do pareamento: nada é pedido ao WhatsApp aqui.
+type agendaDeContatos interface {
+	GetContact(ctx context.Context, user types.JID) (types.ContactInfo, error)
+}
+
+func (s *Session) nomeNaAgenda(telefone, lid string) string {
+	if s.client == nil || s.client.Store == nil || s.client.Store.Contacts == nil {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(s.mgr.appCtx, 2*time.Second)
+	defer cancel()
+	return nomeNaAgenda(ctx, s.client.Store.Contacts, telefone, lid)
+}
+
+// nomeNaAgenda procura pelo número e pelo LID: a agenda guarda o contato pela forma que veio na
+// sincronização, e uma não acha a outra. O nome completo; sem ele, o primeiro nome.
+func nomeNaAgenda(ctx context.Context, agenda agendaDeContatos, telefone, lid string) string {
+	if agenda == nil {
+		return ""
+	}
+	var jids []types.JID
+	if telefone != "" {
+		jids = append(jids, types.NewJID(telefone, types.DefaultUserServer))
+	}
+	if lid != "" {
+		jids = append(jids, types.NewJID(lid, types.HiddenUserServer))
+	}
+	for _, jid := range jids {
+		info, err := agenda.GetContact(ctx, jid)
+		if err != nil || !info.Found {
+			continue
+		}
+		for _, nome := range []string{info.FullName, info.FirstName} {
+			if nome = strings.TrimSpace(nome); nome != "" {
+				return nome
+			}
+		}
+	}
+	return ""
 }
 
 // avisarCapturaDesligada diz, no maximo uma vez por minuto, que mensagens estao

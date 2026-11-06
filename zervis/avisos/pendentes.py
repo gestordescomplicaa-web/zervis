@@ -265,18 +265,28 @@ def pelo_nome[T](
 ) -> T | None:
     """O contato pelo nome falado ("a Ana", "o João Silva", só "João"), no primeiro grupo que
     tiver; `de` dá (nome, chat). Nome que serve a mais de uma conversa não escolhe sozinho."""
+    achados = candidatos(grupos, quem, de)
+    return achados[0] if len(achados) == 1 else None
+
+
+def candidatos[T](
+    grupos: Sequence[Sequence[T]], quem: str, de: Callable[[T], tuple[str, str]]
+) -> list[T]:
+    """Quem serve ao nome falado, sem acento nem maiúsculas: o nome inteiro ou uma palavra dele
+    (só o primeiro nome), no primeiro grupo que tiver; sem nenhum, parte do nome ("Sou" acha
+    "Souza"). Mais de um é para quem pediu escolher."""
     procurado = _chave(quem)
     if not procurado:
-        return None
-    for grupo in grupos:
-        for confere in (
-            lambda nome: nome == procurado,
-            lambda nome: procurado in nome.split(),  # só o primeiro nome
-        ):
-            achados = {de(x)[1]: x for x in grupo if confere(_chave(de(x)[0]))}
-            if achados:
-                return next(iter(achados.values())) if len(achados) == 1 else None
-    return None
+        return []
+    exato: Callable[[str], bool] = lambda nome: nome == procurado  # noqa: E731
+    palavra: Callable[[str], bool] = lambda nome: procurado in nome.split()  # noqa: E731
+    parte: Callable[[str], bool] = lambda nome: len(procurado) >= 3 and procurado in nome  # noqa: E731
+    passos = [(g, c) for g in grupos for c in (exato, palavra)] + [(g, parte) for g in grupos]
+    for grupo, confere in passos:
+        achados = {de(x)[1]: x for x in grupo if confere(_chave(de(x)[0]))}
+        if achados:
+            return list(achados.values())
+    return []
 
 
 def _chave(nome: str) -> str:
