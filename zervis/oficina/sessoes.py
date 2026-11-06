@@ -226,6 +226,9 @@ class Sessoes:
         self._lidos: dict[str, int] = {}  # quanto do arquivo de eventos de cada sessão já foi lido
         self._limite_visto: set[str] = set()
         self._ganchos_avisados: set[str] = set()  # o Codex pediu para confiar nos ganchos
+        # O Claude pergunta se retoma a conversa parada: nada é colado até a pessoa responder.
+        self.retomada_pendente: set[str] = set()
+        self._cauda: dict[str, bytes] = {}  # o fim da tela, para um texto partido em dois
         self._saida_limite: dict[str, bytes] = {}  # avisos de limite podem vir em vários quadros
         self.em_foco: tuple[str, float] = ("", 0.0)  # a sessão de que se fala agora, e quando
         self.trava = threading.Lock()
@@ -602,6 +605,10 @@ class Sessoes:
         s = self.ler(id_)
         self.exigir_editavel(id_)
         self._exigir_disponivel()
+        aberto = (t := self.terminais.get(id_)) is not None and t.vivo
+        if not self.legado and aberto and id_ in self.retomada_pendente:
+            # O Enter do pedido escolheria "retomar" pela pessoa, gastando o limite dela.
+            raise SessaoErro(ESPERA_RETOMAR)
         self.focar(id_)
         pasta = self.pasta_de_anexos(id_)
         caminhos = []
@@ -960,6 +967,7 @@ class Sessoes:
             terminal = self.terminais.get(id_)
             if terminal is None or not terminal.vivo:
                 raise SessaoErro("O terminal desta sessão está fechado.")
+            self.retomada_pendente.discard(id_)  # a pessoa está respondendo no terminal
             terminal.escrever(dados)
 
     def abrir_terminal(
@@ -1068,6 +1076,8 @@ class Sessoes:
         return arquivo
 
     def _terminal_saiu(self, id_: str, codigo: int, *, resumo_chave: str = "") -> None:
+        self.retomada_pendente.discard(id_)
+        self._cauda.pop(id_, None)
         if resumo_chave:  # só a chave deste terminal: o seguinte, se já abriu, tem a dele
             self.permissoes.esquecer(id_, resumo=resumo_chave)
         with contextlib.suppress(SessaoErro):
@@ -1082,6 +1092,14 @@ class Sessoes:
     def _olhar_saida(self, id_: str, dados: bytes) -> None:
         """A tela só dispara conferência. Histórico e prompts nunca comprovam limite."""
         junto = self._saida_limite.get(id_, b"")[-64:] + dados  # pode vir partido em dois
+        cauda = self._cauda.get(id_, b"")[-64:] + dados
+        self._cauda[id_] = cauda[-64:]
+        if id_ not in self.retomada_pendente and TELA_RETOMAR in cauda:
+            self.retomada_pendente.add(id_)
+            self._cauda.pop(id_, None)
+            if self.ao_avisar is not None:
+                with contextlib.suppress(SessaoErro):
+                    self.ao_avisar(self.ler(id_), RETOMAR_CONVERSA)
         if id_ not in self._ganchos_avisados and b"Hooks need review" in junto:
             # O Codex quer que a pessoa confie nos ganchos do Zé (uma vez por conta): sem isso,
             # a aprovação pela voz e pelo painel não funciona nesta sessão.
@@ -1141,6 +1159,7 @@ class Sessoes:
             if Path(str(e.get("transcript_path") or "")).is_file():
                 self._mudar(id_, sdk_sessao=str(e["session_id"]))
         elif nome == "UserPromptSubmit":
+            self.retomada_pendente.discard(id_)  # a conversa andou: a pergunta foi respondida
             # Um pedido novo: o que esperava de um turno anterior ficou para trás.
             self.permissoes.retirar(id_, fora_do_turno=str(e.get("prompt_id", "")))
             if e.get("session_id"):
@@ -1748,6 +1767,15 @@ GANCHO_CODEX = (
     " pass\n"
 )
 GANCHOS_DO_CODEX = "hooks need review"  # a mensagem do aviso, para quem avisa saber o que é
+# O Claude Code pergunta antes de retomar uma conversa longa parada (o cache esfriou): retomar
+# gasta uma parte do limite de 5 horas, e a escolha é da pessoa (visto em 06/11/2026). A
+# pergunta aparece ao abrir o terminal com a conversa e também no Enter de um pedido novo.
+TELA_RETOMAR = b"Resume this conversation?"
+RETOMAR_CONVERSA = "resume this conversation"  # a mensagem do aviso
+ESPERA_RETOMAR = (
+    "A sessão espera a escolha entre retomar a conversa ou começar outra. "
+    "Responda no terminal da sessão."
+)
 NOME_DE_FERRAMENTA = re.compile(r"[A-Za-z0-9_-]{1,64}")
 PRAZO_PERMISSAO_S = PRAZO_S
 # Os comandos de teste e verificação rodam sem pergunta, para a sessão iterar sozinha até o
