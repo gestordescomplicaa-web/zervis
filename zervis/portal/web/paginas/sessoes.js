@@ -1,17 +1,5 @@
 // --- Sessões: o terminal do agente, com pasta, anexos e explorador ---
 
-let explorador = innerWidth > 1100;
-
-/** @param {boolean} mostrar */
-function mostrarExplorador(mostrar) {
-  explorador = mostrar;
-  document.querySelector('.conversa-topo [data-acao="explorador"]')?.setAttribute("aria-pressed", String(mostrar));
-  document.querySelector(".sessao-aberta")?.classList.toggle("sem-explorador", !mostrar);
-}
-
-// Até 1100 px os arquivos ocupam o lugar do terminal. Ao estreitar a janela (dividir a tela, por
-// exemplo), fecham sozinhos e o terminal continua à vista; o botão Arquivos os abre de novo.
-matchMedia("(max-width: 1100px)").addEventListener("change", (e) => { if (e.matches && explorador) mostrarExplorador(false); });
 let abertas = new Set();
 let modoBusca = "nomes";
 
@@ -21,8 +9,9 @@ const ha = (iso) => { const s = (Date.now() - new Date(iso).getTime()) / 1000; r
 
 const pintar = (raiz) => /** @type {NodeListOf<HTMLElement>} */ (raiz.querySelectorAll(".avatar[data-matiz]")).forEach((a) => a.style.setProperty("--matiz", a.dataset.matiz));
 
-PAGINAS.sessoes = async () => `<div class="sessoes">
+PAGINAS.sessoes = async () => `<div class="sessoes" style="${larguraSalva("lista")}">
   <aside class="sessoes-lista"><div class="sessoes-topo"><p class="rotulo">Sessões</p><button type="button" class="mais" data-acao="sessao-nova" aria-label="Nova sessão">+</button></div><div id="lista-sessoes"></div></aside>
+  ${divisor("lista", "Largura da lista de sessões")}
   <div class="barra-voltar"><button type="button" class="voltar" data-acao="sessoes-voltar">Sessões</button></div>
   <div id="lado-sessao" class="lado"><div class="nova-sessao">${vazio("Escolha uma sessão ou crie uma no +.")}</div></div></div>`;
 
@@ -149,11 +138,12 @@ async function abrirSessao(id) {
   sessaoAtual = sessao;
   const lado = $("lado-sessao");
   const trabalhando = sessao.estado === "trabalhando";
-  lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}"><section class="conversa">
+  lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}" style="${larguraSalva("explorador")}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
-      <div class="titulo-sessao"><h2>${esc(sessao.nome)}</h2><small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}</small></div>
+      <div class="titulo-sessao"><div class="nome-sessao"><h2 title="${esc(sessao.nome)}">${esc(sessao.nome)}</h2>
+        <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span></div>
+        <small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}</small></div>
       <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}${seletorModeloSessao(sessao)}</div>
-      <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span>
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
         ${botao("Interromper", "sessao-interromper", 'id="interromper-trabalho" hidden', "discreta")}${botao("Conectores", "sessao-conectores")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
     <div id="excluir-sessao"></div>
@@ -176,6 +166,7 @@ async function abrirSessao(id) {
     <div class="terminal-fechado" id="terminal-fechado" hidden><strong>Terminal fechado</strong>
       <span>Ao reabrir, a conversa continua de onde parou.</span>${botao("Reabrir", "terminal-reabrir", "", "principal")}</div>
     </section>
+    ${divisor("explorador", "Largura dos arquivos")}
     <aside class="explorador" aria-label="Arquivos">
       <header><strong title="${esc(sessao.pasta)}">${esc(sessao.pasta.split("/").pop())}</strong>
         <button type="button" class="icone" data-acao="md-abrir" title="Novo arquivo" aria-label="Novo arquivo">+</button>

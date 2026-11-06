@@ -128,7 +128,7 @@ function escolha(nome, rotulo, grupos, atual, titulo) {
     `<button type="button" role="option" class="escolha-item" data-acao="escolha-item" data-valor="${esc(i.valor)}" aria-selected="${i.valor === atual}">
       <span class="marca-escolha">${i.valor === atual ? "✓" : ""}</span><span class="texto-escolha"><strong>${esc(i.nome)}</strong>${i.detalhe ? `<small>${esc(i.detalhe)}</small>` : ""}</span></button>`).join("")).join("");
   return `<div class="escolha" data-escolha="${esc(nome)}">
-    <button type="button" class="escolha-botao" data-acao="escolha-abrir" aria-haspopup="listbox" aria-expanded="false" title="${esc(titulo)}">${esc(rotulo)}<span class="seta" aria-hidden="true">▾</span></button>
+    <button type="button" class="escolha-botao" data-acao="escolha-abrir" aria-haspopup="listbox" aria-expanded="false" title="${esc(titulo)}"><span class="valor-escolha">${esc(rotulo)}</span><span class="seta" aria-hidden="true">▾</span></button>
     <div class="escolha-menu" role="listbox" aria-label="${esc(titulo)}" hidden>${itens}</div></div>`;
 }
 
