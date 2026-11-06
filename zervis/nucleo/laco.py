@@ -840,7 +840,8 @@ class Nucleo(
     # --- laço ---------------------------------------------------------------------------
 
     def tratar(self, evento: e.Evento) -> None:
-        if isinstance(evento, e.Aviso) and self.modo_fala == "silencioso" and not evento.pedido:
+        silencioso = modo_fala.efetivo(self) == "silencioso"
+        if isinstance(evento, e.Aviso) and silencioso and not evento.pedido:
             log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
             self._mostrar(evento.texto)
             return

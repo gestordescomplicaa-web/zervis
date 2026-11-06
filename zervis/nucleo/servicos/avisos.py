@@ -166,7 +166,7 @@ class ServicoAvisos:
         self.n._na_linha("aviso", texto)
         if id_:
             self.n.sessoes.focar(id_)
-        if modo_fala.falar(self.n.modo_fala, tipo):
+        if modo_fala.falar(modo_fala.efetivo(self.n), tipo):
             escutar = self.n.modo_fala == "live" and self.n.chamado == "voz"
             self.n.eventos.put(e.Aviso(texto, escutar=escutar, sequencial=bool(id_)))
 

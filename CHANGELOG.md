@@ -2,6 +2,17 @@
 
 ## Não lançado
 
+- Avisos com o app de voz no Silencioso: o Zé conversava pelo app, dizia "eu te aviso" e o aviso
+  (o fim de uma sessão, o resultado de uma ligação) ia só para a tela do computador. O Silencioso
+  é do PC: com o app conectado, os avisos vão para ele. Os leads seguem como antes: no Silencioso,
+  a notificação do celular é o aviso.
+- Ao vivo: uma fala por cima com menos de duas palavras ("Amor", "Ah", uma voz ao fundo) não
+  interrompe mais o que o Zé está fazendo. Antes, o pedido em andamento era cancelado e se
+  perdia ("um instante" e mais nada).
+- A via rápida que estoura o tempo no meio da marca de passar a vez não fala mais "complet": o
+  pedido segue para o cérebro completo.
+- Frases de bastidor que o modelo às vezes escreve em inglês ("Session is now stopped; read it.")
+  não viram voz.
 - Ligações: o agente desligava na cara uns 13 s depois da saudação quando a pessoa ficava em
   silêncio. A escuta (Deepgram) fecha sem receber áudio, e o WhatsApp quase não manda pacote no
   silêncio; a Central tratava isso como o fim da ligação. Agora a escuta é mantida viva e, se cair,
