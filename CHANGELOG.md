@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Sessões: o cabeçalho fica em duas linhas (nome, estado e pasta com as ações ao lado; agente,
+  conta e modelo embaixo) e não embaralha mais quando falta espaço. A lista de sessões e os
+  arquivos têm uma borda para arrastar e ajustar a largura (duplo clique volta ao padrão).
 - Atendimento: "Voz do Zé" em Voz nas ligações não ficava escolhida. A escolha era gravada, mas
   o perfil do agente publicado voltava com a voz local, e as ligações seguiam com o Cadu. Agora
   todos os ajustes da página valem sobre a versão publicada.
