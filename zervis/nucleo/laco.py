@@ -117,6 +117,7 @@ from zervis.nucleo.servicos.voz import ServicoVoz
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import SessaoErro, Sessoes
+from zervis.oficina.supervisor import Oficina, caminho_padrao
 from zervis.pesquisa import saude
 from zervis.pesquisa.buscador import Buscador
 from zervis.pesquisa.guardadas import Guardadas, guardando
@@ -452,6 +453,8 @@ class Nucleo(
             self._sessao_terminou,
             projetos_novos=cfg.caminho("oficina", "raiz_projetos"),
             skills=self.skills,
+            # Os terminais num serviço à parte: reiniciar o Zé não derruba as sessões (ADR 0068).
+            oficina=Oficina(caminho_padrao()),
         )
         self.sessoes.ao_avisar = self._sessao_pede
         # A pasta do agente de atendimento: um projeto do usuário, ao lado dos outros (ADR 0031).

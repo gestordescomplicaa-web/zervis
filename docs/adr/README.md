@@ -72,3 +72,7 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0062](0062-app-voz-como-ligacao.md) | O app de voz como uma ligação no viva-voz (o cancelamento de eco do Android em qualquer volume) e o eco pelo texto | Em validação |
 | [0063](0063-cerebro-local.md) | O cérebro local: um modelo do Ollama (Gemma 4 E4B na GPU integrada) com as ferramentas e a aprovação do Zé, sem gastar os planos | Em validação |
 | [0064](0064-barra-de-andamento.md) | A barra de carregamento: o passo (rótulo de cada ferramenta) e o tempo esperado (as medianas reais), na Imersão e no painel | Em validação |
+| [0065](0065-propor-melhorias-como-pr.md) | Propor como PR: as melhorias do autodesenvolvimento vão para o GitHub | Em validação |
+| [0066](0066-transferir-ligacao-para-o-app.md) | Chamar você durante a ligação e passar para o app de voz, sem derrubar | Em validação |
+| [0067](0067-ligar-com-recado.md) | O Zé liga para dar um recado seu, agora ou agendado, e conta como foi | Em validação |
+| [0068](0068-supervisor-das-sessoes.md) | O supervisor das sessões (`zervis-oficina`): os terminais dos agentes fora do Zé, e reiniciar o Zé não derruba as sessões | Em validação |

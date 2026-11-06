@@ -168,12 +168,21 @@ class Permissoes:
             self._prazos[sessao] = self.prazo_s if prazo_s is None else prazo_s
         return nova
 
-    def esquecer(self, sessao: str, chave: str) -> None:
-        """O terminal dessa chave fechou: ela some e, se a sessão não abriu outro, os pedidos
-        dela saem."""
+    def adotar(self, sessao: str, resumo: str, prazo_s: float | None = None) -> None:
+        """A chave de um terminal que continuou aberto no supervisor enquanto o Zé reiniciava
+        (ADR 0068): só o resumo fica guardado, e o gancho do agente segue com a chave dele."""
         with self._mudou:
-            if self._chaves.get(_resumo(chave)) == sessao:
-                del self._chaves[_resumo(chave)]
+            self._chaves = {r: s for r, s in self._chaves.items() if s != sessao}
+            self._chaves[resumo] = sessao
+            self._prazos[sessao] = self.prazo_s if prazo_s is None else prazo_s
+
+    def esquecer(self, sessao: str, chave: str = "", *, resumo: str = "") -> None:
+        """O terminal dessa chave (ou desse resumo) fechou: ela some e, se a sessão não abriu
+        outro, os pedidos dela saem."""
+        resumo = resumo or _resumo(chave)
+        with self._mudou:
+            if self._chaves.get(resumo) == sessao:
+                del self._chaves[resumo]
             outro = sessao in self._chaves.values()
         if not outro:
             self.retirar(sessao)
@@ -269,3 +278,6 @@ class Permissoes:
 
 def _resumo(chave: str) -> str:
     return hashlib.sha256(chave.encode()).hexdigest()
+
+
+resumo = _resumo  # o que se guarda de uma chave: com ele, o Zé a reconhece sem conhecê-la

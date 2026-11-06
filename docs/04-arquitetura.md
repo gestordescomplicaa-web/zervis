@@ -63,7 +63,7 @@ pendente não podem ser excluídas.
 | `zervis/skills` | Catálogo progressivo, escrita com pendência e diff, uso e curadoria | — |
 | `zervis/automacoes` | Jobs (`jobs.json` atômico), agendador | Falar diretamente: entrega para os avisos |
 | `zervis/avisos` | Fila durável com prioridade, expiração e retenção enquanto inativo | — |
-| `zervis/oficina` | Sessões de código próprias (agentes Claude/Codex por pasta de projeto, com conversa que continua), explorador de arquivos e o modo manutenção | Codar ele mesmo |
+| `zervis/oficina` | Sessões de código próprias (agentes Claude/Codex por pasta de projeto, com conversa que continua), explorador de arquivos e o modo manutenção. Os terminais dos agentes ficam no supervisor `zervis-oficina`, um serviço à parte, e sobrevivem ao reinício do Zé (ADR 0068) | Codar ele mesmo |
 | `zervis/imersivo` | O modo imersivo (ADR 0014): servidor, página, avatar, mãos | — |
 | `zervis/sistema` | Omarchy e Hyprland: catálogo de ações dos metadados `omarchy-*`, leitura de estado, eventos (hooks e socket do Hyprland), política de risco | Simular teclado |
 | `zervis/revisao` | Revisão em segundo plano a cada N turnos → pendências | Aplicar mudanças sem aprovação |
