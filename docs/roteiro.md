@@ -5,6 +5,12 @@ o Hermes e o OpenClaw, só que mais enxuto, rápido e eficiente. Linux primeiro:
 controle completo da máquina, outro Linux (Ubuntu) com o controle reduzido e, depois, uma VPS sem
 tela e sem microfone (painel, texto e, adiante, o celular). Windows fica fora por enquanto.
 
+## Agora: plano de maturidade (06/11/2026)
+
+O trabalho em andamento segue o [plano de maturidade](plano-maturidade.md): três fases (0.4.0,
+0.5.0, 0.6.0) para levar o Zérvis de 6,4 a 7,8, com funções novas congeladas nas Fases A e B.
+Comece pelo primeiro item sem marcar da fase atual.
+
 ## Onde estamos (passagem de 16/10/2026)
 
 Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro é o histórico.
