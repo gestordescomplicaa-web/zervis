@@ -19,7 +19,7 @@ Silencioso continua só na tela. O modo fica em `<config>/fala.json`.
 import json
 import re
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from zervis import lugares
 
@@ -47,6 +47,17 @@ def gravar(modo: str, arquivo: Path = ARQUIVO) -> str:
     temporario = arquivo.with_suffix(".next")
     temporario.write_text(json.dumps({"modo": modo}))
     temporario.replace(arquivo)
+    return modo
+
+
+def efetivo(nucleo: Any) -> str:
+    """O modo que vale para os avisos agora. O Silencioso é do PC (ADR 0018): com o app de voz
+    conectado, você está falando com o Zé por ele, e os avisos vão para lá. Antes, no Silencioso,
+    o Zé conversava pelo app, prometia "eu te aviso" e o aviso ia só para a tela (06/11/2026)."""
+    modo = str(getattr(nucleo, "modo_fala", ""))
+    fonte = getattr(nucleo, "_fonte", None)
+    if modo == "silencioso" and getattr(fonte, "do_app", False):
+        return "normal"
     return modo
 
 

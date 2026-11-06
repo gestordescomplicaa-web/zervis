@@ -42,6 +42,9 @@ FIM_MIN_S = 0.4  # os do LIGATIA: menor espera depois do fim provável da frase
 # A escolha "Espera" da página Voz vira o teto: quanto o Zé aguarda numa frase pela metade.
 FIM_MAX_S = {"rapida": 1.5, "normal": 2.0, "longa": 3.0}
 INTERRUPCAO_MIN_S = 0.5  # fala por cima mais curta que isto (tosse, "hum") não corta
+# Fala por cima com menos palavras que isto não corta (06/11/2026: "Amor", "Ah", uma voz ao fundo
+# cancelavam o pedido em andamento, e o que o Zé fazia se perdia).
+INTERRUPCAO_MIN_PALAVRAS = 2
 # No começo de cada conexão, a fala do Zé não é cortada por este tempo: o cancelamento de eco do
 # aparelho ainda se ajusta e a própria voz voltaria pelo microfone. O LiveKit usa 3 s; o
 # navegador e o celular já chegam com o cancelamento ligado.
@@ -284,6 +287,7 @@ class Live:
                 },
                 "interruption": {
                     "min_duration": INTERRUPCAO_MIN_S,
+                    "min_words": INTERRUPCAO_MIN_PALAVRAS,
                     # Retomar depois de um "hum" pede pausar a fala no aparelho, que o app e o
                     # navegador ainda não fazem (ADR 0042, próximos passos).
                     "resume_false_interruption": False,

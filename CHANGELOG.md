@@ -5,6 +5,24 @@
 - Sessões: o cabeçalho fica em duas linhas (nome, estado e pasta com as ações ao lado; agente,
   conta e modelo embaixo) e não embaralha mais quando falta espaço. A lista de sessões e os
   arquivos têm uma borda para arrastar e ajustar a largura (duplo clique volta ao padrão).
+- Avisos com o app de voz no Silencioso: o Zé conversava pelo app, dizia "eu te aviso" e o aviso
+  (o fim de uma sessão, o resultado de uma ligação) ia só para a tela do computador. O Silencioso
+  é do PC: com o app conectado, os avisos vão para ele. Os leads seguem como antes: no Silencioso,
+  a notificação do celular é o aviso.
+- Ao vivo: uma fala por cima com menos de duas palavras ("Amor", "Ah", uma voz ao fundo) não
+  interrompe mais o que o Zé está fazendo. Antes, o pedido em andamento era cancelado e se
+  perdia ("um instante" e mais nada).
+- A via rápida que estoura o tempo no meio da marca de passar a vez não fala mais "complet": o
+  pedido segue para o cérebro completo.
+- Frases de bastidor que o modelo às vezes escreve em inglês ("Session is now stopped; read it.")
+  não viram voz.
+- Ligações: o agente desligava na cara uns 13 s depois da saudação quando a pessoa ficava em
+  silêncio. A escuta (Deepgram) fecha sem receber áudio, e o WhatsApp quase não manda pacote no
+  silêncio; a Central tratava isso como o fim da ligação. Agora a escuta é mantida viva e, se cair,
+  reabre sem derrubar a ligação. O motivo de cada fim sem despedida fica no registro.
+- Ligações no modo teste: quem ligava de um número de teste às vezes não era atendido (o telefone
+  tocava até cair), porque o WhatsApp mandava só o identificador interno, sem o número. Agora o
+  número vem da agenda ou é conferido com os números de teste.
 - Atendimento: "Voz do Zé" em Voz nas ligações não ficava escolhida. A escolha era gravada, mas
   o perfil do agente publicado voltava com a voz local, e as ligações seguiam com o Cadu. Agora
   todos os ajustes da página valem sobre a versão publicada.

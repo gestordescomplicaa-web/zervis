@@ -246,7 +246,7 @@ class ServicoRemoto:
         texto = f"Um aparelho entrou no painel: {nome}."
         log.warning("painel: %s", texto)
         self.n._na_linha("aviso", texto)
-        if modo_fala.falar(self.n.modo_fala, "urgente"):
+        if modo_fala.falar(modo_fala.efetivo(self.n), "urgente"):
             self.n.eventos.put(e.Aviso(texto))
 
     def _tunel_pronto(self, endereco: str) -> None:

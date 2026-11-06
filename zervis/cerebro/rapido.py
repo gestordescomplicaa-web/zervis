@@ -940,7 +940,7 @@ class Roteado:
                 yield buffer
         if not decidido:
             decisao = self._decidir(buffer, fim=True)
-            if decisao == "passar" or not buffer.strip():
+            if decisao in ("passar", "falar_nada") or not buffer.strip():
                 yield None
                 return
             yield buffer
@@ -956,8 +956,13 @@ class Roteado:
         inicio = resto.lstrip()
         if not inicio:
             return "falar" if fim and buffer.strip() else "esperar"
-        if inicio.startswith("[") and "]" not in inicio and len(inicio) < 14 and not fim:
-            return "esperar"  # uma marca chegando pela metade
+        if inicio.startswith("[") and "]" not in inicio and len(inicio) < 14:
+            if not fim:
+                return "esperar"  # uma marca chegando pela metade
+            # A resposta acabou no meio da marca ("[complet", 06/11/2026: o motor estourou o
+            # tempo e "complet" foi falado). O começo de [completo] passa a vez; outra marca
+            # pela metade não é fala.
+            return "passar" if PASSAR.startswith(inicio.lower()) else "falar_nada"
         return "falar"
 
     async def _completo(

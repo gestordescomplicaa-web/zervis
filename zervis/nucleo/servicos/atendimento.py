@@ -42,6 +42,7 @@ class ServicoAtendimento:
 
     def _mensagem_importante(self, texto: str) -> None:
         self.n._na_linha("aviso", texto)
+        # Um lead: no Silencioso, a notificação do celular é o aviso (ADR 0053), sem fala.
         if modo_fala.falar(self.n.modo_fala, "urgente"):
             self.n.eventos.put(e.Aviso(texto))
 
@@ -61,6 +62,7 @@ class ServicoAtendimento:
     def _avisar_lead(self, fala: str, tela: str, contexto: str) -> None:
         if tela:
             self.n._na_linha("aviso", tela)  # a tela e a linha do tempo, só com o nome
+        # No Silencioso, a notificação do lead no celular é o aviso (ADR 0053), sem fala.
         if modo_fala.falar(self.n.modo_fala, "urgente"):
             self._falar_lead(fala, contexto)
         self._leads_ao_celular()
@@ -275,7 +277,7 @@ class ServicoAtendimento:
         fala = pendentes.chamando(usuario.PERFIL.nome, " ".join(partes))
         self.n._na_linha("aviso", f"Ligação de {lig.quem}: {lig.resumo or 'sem resumo'}")
         if modo_fala.falar(
-            self.n.modo_fala, "urgente" if lig.desfecho == "passou" else "notificacao"
+            modo_fala.efetivo(self.n), "urgente" if lig.desfecho == "passou" else "notificacao"
         ):
             # O contexto do cérebro leva só quem e quando: o resumo vem do que o cliente disse.
             self._falar_lead(fala, f"Você avisou da ligação de {quem} (id {lig.id}).")
@@ -317,7 +319,7 @@ class ServicoAtendimento:
     def _avisar_resultado(self, texto: str) -> None:
         texto = texto[:1].upper() + texto[1:] if texto else texto
         self.n._na_linha("aviso", texto)
-        if modo_fala.falar(self.n.modo_fala, "notificacao"):
+        if modo_fala.falar(modo_fala.efetivo(self.n), "notificacao"):
             self.n.eventos.put(e.Aviso(pendentes.chamando(usuario.PERFIL.nome, texto)))
 
     # --- chamar você durante a ligação (ADR 0066) -----------------------------------------------
@@ -423,7 +425,7 @@ class ServicoAtendimento:
         self.n._na_linha("aviso", f"{nome}, no WhatsApp, precisa de você: {motivo}")
         if motivo.startswith("ligação"):
             return  # o fim da ligação avisa, com o resumo (`_ligacao_terminou`)
-        if modo_fala.falar(self.n.modo_fala, "urgente"):
+        if modo_fala.falar(modo_fala.efetivo(self.n), "urgente"):
             self.n.eventos.put(
                 e.Aviso(f"{agente.nome_falado(nome)}, no WhatsApp, precisa de você.")
             )

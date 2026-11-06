@@ -360,6 +360,27 @@ class Central:
             with contextlib.suppress(Exception):
                 await ws.close()
 
+    def _telefone_do_lid(self, lid: str) -> str:
+        """O número de quem liga quando só veio o identificador: pela agenda (que guarda o par
+        quando o WhatsApp já sincronizou) e, no modo teste, perguntando ao WhatsApp o
+        identificador de cada número de teste."""
+        if not lid:
+            return ""
+        with contextlib.suppress(Exception):
+            agenda = self.whatsapp.agenda()
+            if achado := next((c["telefone"] for c in agenda if c.get("lid") == lid), ""):
+                return str(achado)
+        p = self.atendente.perfil
+        if p.modo != "teste":
+            return ""
+        for numero in p.numeros_teste:
+            with contextlib.suppress(Exception):
+                if any(
+                    i.split("@")[0].split(":")[0] == lid for i in self.whatsapp.identidades(numero)
+                ):
+                    return numero
+        return ""
+
     def _nome_na_agenda(self, telefone: str) -> str:
         """Como quem ligou está salvo na agenda do celular (vazio se não está)."""
         if not telefone:
@@ -431,6 +452,12 @@ class Central:
     async def atender_ligacao(self, evento: dict[str, Any]) -> None:
         sessao, chamada = str(evento.get("sessionId", "")), str(evento.get("id", ""))
         telefone = agente.numero(str(evento.get("phone", "")))
+        peer = str(evento.get("peer", ""))
+        if not telefone and peer.endswith("@lid"):
+            # Só o identificador do WhatsApp, ainda sem o número (06/11/2026: no modo teste, o
+            # número de teste ficava "fora das regras" e o telefone tocava sem atender). A
+            # agenda sincronizada guarda o par.
+            telefone = await asyncio.to_thread(self._telefone_do_lid, peer.split("@")[0])
         if (motivo := self.vai_atender(telefone, chamada)) is not None:
             log.info("central: ligação não atendida (%s)", motivo)
             return
