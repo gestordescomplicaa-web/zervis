@@ -51,6 +51,8 @@ class Nucleo(Protocol):
     def dispensar_lead(self, ident: str) -> str: ...
     def estado_whatsapp(self) -> dict[str, Any]: ...
     def agenda_whatsapp(self) -> list[dict[str, str]]: ...
+    def decidir_ligacao(self, atender: bool) -> str: ...
+    def encerrar_ligacao(self) -> str: ...
 
 
 def _ha(segundos: float) -> str:
@@ -547,6 +549,27 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         return _texto(texto, erro=erro)
 
     @tool(
+        "whatsapp_ligacao",
+        "A ligação de quem espera na linha para falar com o usuário (você acabou de perguntar "
+        '"pode atender?"): atender passa a ligação para o app de voz do celular, sem derrubar; '
+        "recusar faz o agente dizer que ele não pode agora e anotar o recado; encerrar desliga "
+        'a ligação que ele está atendendo. "Sim", "atende", "pode passar": atender. "Agora não", '
+        '"não posso": recusar.',
+        {
+            "type": "object",
+            "properties": {"acao": {"type": "string", "enum": ["atender", "recusar", "encerrar"]}},
+            "required": ["acao"],
+        },
+    )
+    async def whatsapp_ligacao(args: dict[str, Any]) -> dict[str, Any]:
+        acao = str(args.get("acao", ""))
+        if acao == "encerrar":
+            return _texto(await asyncio.to_thread(n.encerrar_ligacao))
+        if acao not in ("atender", "recusar"):
+            return _texto("Ação desconhecida: use atender, recusar ou encerrar.", erro=True)
+        return _texto(await asyncio.to_thread(n.decidir_ligacao, acao == "atender"))
+
+    @tool(
         "whatsapp_esquecer",
         'Apaga do arquivo do Zé uma conversa inteira ("esquece a conversa com a Ana"). Só do '
         "arquivo do Zé: no WhatsApp nada muda. Pede a confirmação do usuário.",
@@ -675,6 +698,7 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         whatsapp_buscar,
         whatsapp_contatos,
         whatsapp_ligacoes,
+        whatsapp_ligacao,
         whatsapp_esquecer,
         whatsapp_leads,
         whatsapp_responder,

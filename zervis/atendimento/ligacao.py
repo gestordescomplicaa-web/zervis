@@ -16,6 +16,11 @@ volta no mesmo canal.
   andamento é descartada.
 - **Passar para você:** o agente diz que alguém vai retornar, encerra a ligação, para de atender
   aquele contato e o Zé avisa. `[[DESLIGAR]]` encerra depois da despedida.
+- **Chamar você, sem derrubar (ADR 0066):** se a pessoa pede para falar com você, o agente diz que
+  vai ver se você pode atender e põe a ligação em espera (`[[CHAMAR: assunto]]`). O Zé pergunta
+  pelo app de voz; com o seu "sim", a ligação vira uma ponte de áudio com o celular (`ponte_*`):
+  o agente sai e você fala com a pessoa. Sem resposta, ou com "agora não", o agente diz que você
+  não pode agora e anota o recado.
 """
 
 import asyncio
@@ -57,8 +62,15 @@ PARAMETROS = {
     "utterance_end_ms": "1200",
     "vad_events": "true",
 }
+_CHAMAR = re.compile(r"\[\[\s*CHAMAR\s*:?\s*([^\]]*)\]\]", re.I)
+ESPERA_DONO_S = 45.0  # a pessoa em espera, enquanto o Zé pergunta se você atende
+LEMBRAR_ESPERA_S = 15.0  # "só mais um instante" de tempos em tempos, para ela não desistir
+PONTE_MAXIMA_S = 2.0  # o que a sua voz pode atrasar na ponte: além disso, descarta o mais velho
 REGRAS_DA_LIGACAO = (
     "Nesta ligação:\n"
+    "- Se a pessoa pedir para falar com {dono} (ou com o responsável, com um humano): diga, numa "
+    "frase, que vai ver se ele pode atender agora, sem prometer, e termine com "
+    "[[CHAMAR: o assunto, em poucas palavras]].\n"
     "- Para passar para uma pessoa: diga que alguém da equipe vai retornar a ligação em breve e "
     "termine com [[PASSAR: motivo]].\n"
     "- Concluir um assunto não encerra a ligação: pergunte se pode ajudar em mais alguma coisa. "
@@ -105,8 +117,8 @@ class Conexao(Protocol):
     def __aiter__(self) -> AsyncIterator[Any]: ...
 
 
-def sistema(p: agente.Perfil) -> str:
-    return agente.sistema(p, "voz") + "\n\n" + REGRAS_DA_LIGACAO
+def sistema(p: agente.Perfil, dono: str = "") -> str:
+    return agente.sistema(p, "voz") + "\n\n" + REGRAS_DA_LIGACAO.format(dono=dono or "o dono")
 
 
 def saudacao(p: agente.Perfil) -> str:
@@ -237,6 +249,14 @@ class Tocador:
         if pcm:
             self._quieto.clear()
 
+    def empurrar(self, quadro: bytes, maximo: int) -> None:
+        """Um quadro já do tamanho certo (a sua voz, na ponte), sem passar de `maximo` na fila:
+        se atrasou, sai o mais velho."""
+        if self.fila.qsize() >= maximo:
+            self.fila.get_nowait()
+        self.fila.put_nowait(quadro)
+        self._quieto.clear()
+
     def calar(self) -> None:
         while not self.fila.empty():
             self.fila.get_nowait()
@@ -322,6 +342,8 @@ class Chamada:
         quadro_s: float = QUADRO_S,
         iniciado: bool = False,
         saudacao_pronta: bytes | None = None,
+        ao_chamar: Callable[[str, str, str], None] | None = None,
+        dono: str = "",
     ) -> None:
         self.conexao = conexao
         self.ouvido = ouvido
@@ -333,7 +355,20 @@ class Chamada:
         self.ao_passar = ao_passar
         self.falar = falar
         self.tocador = Tocador(conexao.send, quadro_s)
-        self.instrucoes = sistema(perfil)
+        self.instrucoes = sistema(perfil, dono)
+        self.dono = dono or "ele"
+        # Chamar você (ADR 0066): (nome, telefone, assunto) vai ao Zé; a resposta, por `decidir`.
+        self.ao_chamar = ao_chamar
+        self.decisao: asyncio.Future[str] | None = None
+        self.em_espera = False
+        self.em_ponte = False
+        self.ponte_pronta = asyncio.Event()
+        self.ponte_fim = asyncio.Event()
+        self.para_ponte: asyncio.Queue[bytes] = asyncio.Queue(
+            maxsize=int(PONTE_MAXIMA_S / QUADRO_S)
+        )
+        self._da_ponte = b""  # a sua voz que ainda não fecha um quadro de 60 ms
+        self._espera: asyncio.Task[None] | None = None
         self.iniciado = iniciado  # o motor veio pronto da reserva (pré-aquecido)
         self.saudacao_pronta = saudacao_pronta  # a saudação já sintetizada
         self.encerrar = asyncio.Event()
@@ -404,6 +439,8 @@ class Chamada:
                 if time.monotonic() - inicio > DURACAO_MAXIMA_S:
                     self.desfecho = "limite"
                     await self._despedir("Nosso tempo de ligação acabou. Obrigado por ligar!")
+                elif self.em_espera or self.em_ponte:
+                    self.ultima_fala = time.monotonic()  # a espera e a ponte não são silêncio
                 elif self._calado() > SILENCIO_MAXIMO_S:
                     if self.cutucou:
                         self.desfecho = "silencio"
@@ -415,7 +452,8 @@ class Chamada:
             return self.desfecho
         finally:
             self._descartar_antecipada()
-            for t in (self.resposta, self._preparo):
+            self.ponte_fim.set()  # a ponte (se houver) fecha com a ligação
+            for t in (self.resposta, self._preparo, self._espera):
                 if t is not None:
                     t.cancel()
             for t in tarefas:
@@ -440,7 +478,11 @@ class Chamada:
     async def _receber_audio(self) -> None:
         async for mensagem in self.conexao:
             if isinstance(mensagem, bytes) and mensagem:
-                await self.ouvido.enviar(mensagem)
+                await self.ouvido.enviar(mensagem)  # na ponte também: a conversa fica anotada
+                if self.em_ponte:
+                    if self.para_ponte.full():
+                        self.para_ponte.get_nowait()  # o celular atrasou: fica o mais novo
+                    self.para_ponte.put_nowait(mensagem)
 
     # --- o turno do cliente ---------------------------------------------------------------------
 
@@ -477,6 +519,9 @@ class Chamada:
                 self._fechar_turno(fala)
 
     def _fechar_turno(self, fala: str) -> None:
+        if self.em_espera or self.em_ponte:
+            self._anotar("cliente", fala)  # esperando você, ou falando com você: só anota
+            return
         if self.antecipada is not None and _mesmas_palavras(self.antecipada[0], fala):
             _, liberar, tarefa = self.antecipada
             self.antecipada = None
@@ -493,6 +538,8 @@ class Chamada:
         while True:
             await asyncio.sleep(0.05)
             if not self.antecipa or self.antecipada is not None or self.sem_resposta is not None:
+                continue
+            if self.em_espera or self.em_ponte:
                 continue
             if self.resposta is not None and not self.resposta.done():
                 continue
@@ -517,6 +564,8 @@ class Chamada:
             self.antecipacoes[1] += 1
 
     def _interrompe(self, texto: str) -> bool:
+        if self.em_espera or self.em_ponte:
+            return False  # o "só mais um instante" não se corta, e na ponte o agente já saiu
         respondendo = self.resposta is not None and not self.resposta.done()
         return (self.tocador.falando or respondendo) and len(
             texto.split()
@@ -559,21 +608,27 @@ class Chamada:
             self.sem_resposta = None
         self.tocador.tocar(pcm)
 
-    async def _responder(self, fala: str, liberar: asyncio.Event | None = None) -> None:
-        reacao = asyncio.ensure_future(self._reagir()) if liberar is None else None
+    async def _responder(
+        self, fala: str, liberar: asyncio.Event | None = None, nota: bool = False
+    ) -> None:
+        reacao = asyncio.ensure_future(self._reagir()) if liberar is None and not nota else None
         try:
-            await self._responder_de_fato(fala, liberar)
+            await self._responder_de_fato(fala, liberar, nota)
         finally:
             if reacao is not None:
                 reacao.cancel()
 
-    async def _responder_de_fato(self, fala: str, liberar: asyncio.Event | None) -> None:
+    async def _responder_de_fato(
+        self, fala: str, liberar: asyncio.Event | None, nota: bool = False
+    ) -> None:
         if self._preparo is not None:
             await self._preparo
         historico = self.registros.historico(self.telefone) if self.telefone else []
-        if liberar is None:
+        if liberar is None and not nota:
             self.sem_resposta = fala
-        if getattr(self.motor, "com_estado", False):
+        if nota:  # uma nota do sistema (você não pode atender agora): não é fala do cliente
+            conteudo = fala
+        elif getattr(self.motor, "com_estado", False):
             conteudo = f"O cliente disse:\n<<<\n{fala.replace('<<<', ' ').replace('>>>', ' ')}\n>>>"
         else:
             conteudo = agente.pedido(historico, fala)
@@ -594,9 +649,14 @@ class Chamada:
         if self.sem_resposta is not None:
             self._anotar("cliente", fala)
             self.sem_resposta = None
-        texto, motivo = agente.separar(_DESLIGAR.sub("", tudo))
+        chamar = _CHAMAR.search(tudo)
+        texto, motivo = agente.separar(_CHAMAR.sub("", _DESLIGAR.sub("", tudo)))
         self._anotar("agente", texto)
-        if motivo is not None:
+        if chamar is not None and self.ao_chamar is not None and not self.em_espera:
+            self._espera = asyncio.ensure_future(self._chamar(chamar.group(1).strip()))
+        elif chamar is not None:
+            await self._nao_pode_atender()  # sem o Zé para perguntar: o recado
+        elif motivo is not None:
             self.desfecho = "passou"
             if self.telefone:
                 self.registros.pausar(self.telefone, self.nome, f"Ligação: {motivo}")
@@ -606,6 +666,69 @@ class Chamada:
         elif _DESLIGAR.search(tudo):
             await self.tocador.terminar()
             self.encerrar.set()
+
+    # --- chamar você e a ponte (ADR 0066) --------------------------------------------------------
+
+    def decidir(self, decisao: str) -> bool:
+        """A sua resposta, do laço da ligação: "atender" ou "recusar". Falso se não espera mais."""
+        if self.decisao is None or self.decisao.done():
+            return False
+        self.decisao.set_result(decisao)
+        return True
+
+    async def _chamar(self, assunto: str) -> None:
+        """A pessoa em espera: o Zé pergunta se você atende; sem resposta, o recado."""
+        self.em_espera = True
+        self.decisao = asyncio.get_running_loop().create_future()
+        try:
+            await self.tocador.terminar()  # "vou ver se ele pode atender" já foi dito
+            assert self.ao_chamar is not None  # noqa: S101 (conferido por quem chama)
+            self.ao_chamar(self.nome, self.telefone, assunto or "um assunto")
+            inicio = time.monotonic()
+            decisao = "sem_resposta"
+            while time.monotonic() - inicio < ESPERA_DONO_S:
+                with contextlib.suppress(TimeoutError):
+                    decisao = await asyncio.wait_for(asyncio.shield(self.decisao), LEMBRAR_ESPERA_S)
+                    break
+                if time.monotonic() - inicio < ESPERA_DONO_S:
+                    await self.dizer("Só mais um instante, por favor.")
+        finally:
+            self.em_espera = False
+            if not self.decisao.done():
+                self.decisao.cancel()
+        if decisao == "atender":
+            await self._ponte()
+        else:
+            await self._nao_pode_atender()
+
+    async def _nao_pode_atender(self) -> None:
+        nota = (
+            f"[Nota do sistema: {self.dono} não pode atender agora. Diga isso com gentileza, "
+            "numa frase, ofereça anotar o recado e combine o retorno. Não repita a saudação.]"
+        )
+        self.ultima_fala = time.monotonic()
+        self.resposta = asyncio.ensure_future(self._responder(nota, nota=True))
+
+    async def _ponte(self) -> None:
+        """Você atendeu: o agente sai, e a ligação passa a ser você e a pessoa, pelo celular."""
+        await self.dizer(f"Pronto, vou te passar para {self.dono}.")
+        await self.tocador.terminar()
+        self._anotar("agente", f"[A ligação foi passada para {self.dono}.]")
+        self.desfecho = "transferida"
+        self.em_ponte = True
+        self.ponte_pronta.set()
+        await self.ponte_fim.wait()
+        self.encerrar.set()  # você desligou (ou o celular caiu): a ligação termina
+
+    def ouvir_dono(self, pcm: bytes) -> None:
+        """A sua voz, do celular (quadros de 80 ms), em quadros de 60 ms para o WhatsApp."""
+        if not self.em_ponte:
+            return
+        junto = self._da_ponte + pcm
+        corte = len(junto) // QUADRO * QUADRO
+        self._da_ponte = junto[corte:]
+        for i in range(0, corte, QUADRO):
+            self.tocador.empurrar(junto[i : i + QUADRO], int(PONTE_MAXIMA_S / QUADRO_S))
 
 
 def _mesmas_palavras(a: str, b: str) -> bool:

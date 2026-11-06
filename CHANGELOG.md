@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- Ligações do WhatsApp: quando alguém pede para falar com você, o agente põe em espera e o Zé
+  pergunta pelo app de voz ("a Ana está na linha e quer falar com você sobre o orçamento. Pode
+  atender?"). Com o "sim", falado ou no botão "Atender" da notificação, a ligação passa para o
+  celular sem cair, e você fala direto com a pessoa. Com "agora não", ou sem resposta em 45 s, o
+  agente diz que você não pode e anota o recado. Durante a ligação, os avisos esperam (ADR 0066).
 - Ligações do WhatsApp: o Zé fica sabendo do que foi falado. Ao fim de cada ligação que o agente
   atendeu, ele avisa quem ligou (pelo nome da agenda, ou o número), quanto durou e um resumo
   ("você recebeu uma ligação da Ana, de 3 minutos. Quer fechar o pacote e pediu retorno hoje").
