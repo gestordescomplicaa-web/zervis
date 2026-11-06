@@ -38,12 +38,14 @@ from zervis.cerebro import contas, mcp_externo, modelos
 from zervis.dados.documentos import Documentos, linhas_json, objeto_json
 from zervis.memoria import aimemory
 from zervis.oficina import continuidade, fallback
-from zervis.oficina.permissoes import PRAZO_CODEX_S, PRAZO_S, Permissoes, assinatura
+from zervis.oficina.permissoes import PRAZO_CODEX_S, PRAZO_S, Permissoes, assinatura, resumo
+from zervis.oficina.supervisor import Oficina, TerminalRemoto
 from zervis.oficina.terminal import Terminal
 
 log = logging.getLogger(__name__)
 FUSO = fuso.local()
 MAXIMO_TRABALHANDO = 3
+LIDOS = "eventos-lidos"  # até onde o arquivo de eventos de cada sessão já foi consumido
 MOTORES = ("claude", "codex")
 PASSAGEM = continuidade.PASSAGEM
 PEDIDO_AGORA = continuidade.PEDIDO_AGORA
@@ -197,6 +199,7 @@ class Sessoes:
         rodar: Callable[["Sessoes", Sessao, str], Any] | None = None,
         projetos_novos: Path | None = None,
         skills: Any = None,
+        oficina: Oficina | None = None,
     ) -> None:
         self.skills = (
             skills  # as skills do usuário (habilidades.skills.Skills): sessões também leem
@@ -219,7 +222,7 @@ class Sessoes:
         # com `rodar` (testes, ou trabalho sem tela), roda sem terminal.
         self.legado = rodar is not None
         self.rodar = rodar or rodar_agente
-        self.terminais: dict[str, Terminal] = {}
+        self.terminais: dict[str, Terminal | TerminalRemoto] = {}
         self._lidos: dict[str, int] = {}  # quanto do arquivo de eventos de cada sessão já foi lido
         self._limite_visto: set[str] = set()
         self._ganchos_avisados: set[str] = set()  # o Codex pediu para confiar nos ganchos
@@ -236,16 +239,109 @@ class Sessoes:
             threading.Thread(
                 target=self._vigiar_eventos, name="sessoes-eventos", daemon=True
             ).start()
-        # Uma sessão que estava trabalhando quando o Zé caiu não está mais: o pedido fica guardado
-        # como interrompido, para o Zé avisar e oferecer continuar.
+        # Com o supervisor (ADR 0068), os terminais vivem fora do Zé: os que continuaram abertos
+        # enquanto ele reiniciava são reencontrados aqui. Sem ele, cada terminal é um filho do Zé.
+        self.oficina = oficina if oficina is not None and not self.legado else None
+        if self.oficina is not None and not self.oficina.conectar():
+            log.warning("supervisor das sessões indisponível: os terminais ficam no Zé")
+            self.oficina = None
+        continuam = self._retomar_terminais()
+        # Uma sessão que estava trabalhando quando o Zé caiu, e cujo agente não continuou, não
+        # está mais: o pedido fica guardado como interrompido, para o Zé avisar e oferecer
+        # continuar.
         self.interrompidas_ao_subir: list[Sessao] = []
         for s in self.listar():
-            if s.estado == "trabalhando":
+            if s.estado == "trabalhando" and s.id not in continuam:
                 s.estado = "parada"
                 s.interrompida = s.ultimo_pedido or s.interrompida or "(pedido sem registro)"
                 self._gravar(s)
                 self.anotar(s.id, "sistema", "O Zé reiniciou no meio do trabalho.")
                 self.interrompidas_ao_subir.append(s)
+
+    def _retomar_terminais(self) -> set[str]:
+        """Os agentes que continuaram no supervisor: voltam para `terminais` com a chave de
+        permissão e a posição dos eventos de antes. Devolve as sessões ainda vivas."""
+        if self.oficina is None:
+            return set()
+        try:
+            achados = self.oficina.listar()
+        except OSError as erro:
+            log.warning("supervisor das sessões não respondeu à lista: %s", erro)
+            return set()
+        vivas: set[str] = set()
+        for info in achados:
+            id_ = str(info.get("nome", ""))
+            bruto = info.get("meta")
+            meta: dict[str, Any] = bruto if isinstance(bruto, dict) else {}
+            try:
+                self.ler(id_)
+            except SessaoErro:  # a sessão não existe mais (excluída noutra instalação)
+                with contextlib.suppress(OSError, TimeoutError):
+                    self.oficina.encerrar(id_)
+                continue
+            chave = str(meta.get("chave", ""))
+            if chave:
+                prazo = meta.get("prazo")
+                self.permissoes.adotar(id_, chave, float(prazo) if prazo else None)
+            lidos = self._dados.ler(LIDOS, id_)
+            if lidos is not None:
+                self._lidos[id_] = int(lidos.get("posicao", 0))
+            else:
+                with contextlib.suppress(OSError):
+                    self._lidos[id_] = self.eventos(id_).stat().st_size
+            self.fallback.inicios[id_] = float(info.get("criado") or time.time())
+            ao_sair, ao_ler = self._avisos_do_terminal(id_, chave)
+            self.terminais[id_] = self.oficina.retomar(info, ao_sair=ao_sair, ao_ler=ao_ler)
+            if info.get("vivo"):
+                vivas.add(id_)
+        if vivas:
+            log.info("sessões que continuaram durante o reinício: %s", ", ".join(sorted(vivas)))
+        return vivas
+
+    def _avisos_do_terminal(
+        self, id_: str, resumo_chave: str
+    ) -> tuple[Callable[[int], None], Callable[[bytes], None]]:
+        def ao_sair(codigo: int) -> None:
+            self._terminal_saiu(id_, codigo, resumo_chave=resumo_chave)
+
+        def ao_ler(dados: bytes) -> None:
+            self._olhar_saida(id_, dados)
+
+        return ao_sair, ao_ler
+
+    def _novo_terminal(
+        self,
+        id_: str,
+        comando: list[str],
+        pasta: Path,
+        ambiente: dict[str, str],
+        chave: str,
+        prazo: float | None,
+        colunas: int,
+        linhas: int,
+    ) -> Terminal | TerminalRemoto:
+        """O terminal no supervisor (sobrevive ao reinício do Zé); sem ele, um filho do Zé."""
+        resumo_chave = resumo(chave) if chave else ""
+        ao_sair, ao_ler = self._avisos_do_terminal(id_, resumo_chave)
+        if self.oficina is not None:
+            meta = {"chave": resumo_chave, "prazo": prazo}
+            try:
+                return self.oficina.abrir(
+                    id_, comando, pasta, ambiente, ao_sair, ao_ler, colunas, linhas, meta
+                )
+            except FileNotFoundError:
+                raise
+            except OSError as erro:
+                log.warning("supervisor das sessões falhou (%s): terminal no próprio Zé", erro)
+        return Terminal(
+            comando, pasta, ambiente, ao_sair=ao_sair, ao_ler=ao_ler, colunas=colunas, linhas=linhas
+        )
+
+    def soltar_terminais(self) -> None:
+        """O Zé está fechando: os agentes no supervisor continuam (ADR 0068)."""
+        if self.oficina is not None:
+            self.oficina.soltar()
+            self.terminais.clear()
 
     # --- disco ---------------------------------------------------------------------------
 
@@ -868,7 +964,7 @@ class Sessoes:
 
     def abrir_terminal(
         self, id_: str, pedido: str = "", colunas: int = 120, linhas: int = 32
-    ) -> Terminal:
+    ) -> Terminal | TerminalRemoto:
         """O agente da sessão num terminal: o mesmo se já estiver aberto; senão, abre retomando a
         conversa nativa. Depois de uma troca de agente, a passagem chega sem gastar um turno:
         como contexto (hook do Claude; instruções do Codex numa conversa nova) ou, no Codex que
@@ -876,7 +972,9 @@ class Sessoes:
         with self._operacoes:
             return self._abrir_terminal(id_, pedido, colunas, linhas)
 
-    def _abrir_terminal(self, id_: str, pedido: str, colunas: int, linhas: int) -> Terminal:
+    def _abrir_terminal(
+        self, id_: str, pedido: str, colunas: int, linhas: int
+    ) -> Terminal | TerminalRemoto:
         self.exigir_editavel(id_)
         terminal = self.terminais.get(id_)
         if terminal is not None and (terminal.vivo or self.reservada()):
@@ -904,6 +1002,7 @@ class Sessoes:
             ligar_skills_no_projeto(Path(s.onde), self.skills)
         self.eventos(id_).touch(mode=0o600)
         self._lidos[id_] = self.eventos(id_).stat().st_size
+        self._dados.guardar(LIDOS, {"posicao": self._lidos[id_]}, id_)
         externos = conectores_do_projeto(s)
         arquivo_mcp = (
             arquivo_de_conectores(self._dir(id_) / CONECTORES, externos)
@@ -927,7 +1026,8 @@ class Sessoes:
                 }
         try:
             self.fallback.inicios[id_] = time.time()
-            terminal = Terminal(
+            terminal = self._novo_terminal(
+                id_,
                 comando_terminal(
                     s,
                     pedido,
@@ -939,10 +1039,10 @@ class Sessoes:
                 ),
                 s.onde,
                 {**ambiente_da_conta(s), **segredos},
-                ao_sair=lambda codigo: self._terminal_saiu(id_, codigo, chave),
-                ao_ler=lambda dados: self._olhar_saida(id_, dados),
-                colunas=colunas,
-                linhas=linhas,
+                chave,
+                prazo if chave else None,
+                colunas,
+                linhas,
             )
         except FileNotFoundError:
             raise SessaoErro(
@@ -967,9 +1067,9 @@ class Sessoes:
         arquivo.chmod(0o600)
         return arquivo
 
-    def _terminal_saiu(self, id_: str, codigo: int, chave: str = "") -> None:
-        if chave:  # só a chave deste terminal: o seguinte, se já abriu, tem a dele
-            self.permissoes.esquecer(id_, chave)
+    def _terminal_saiu(self, id_: str, codigo: int, *, resumo_chave: str = "") -> None:
+        if resumo_chave:  # só a chave deste terminal: o seguinte, se já abriu, tem a dele
+            self.permissoes.esquecer(id_, resumo=resumo_chave)
         with contextlib.suppress(SessaoErro):
             if codigo not in SAIDAS_NORMAIS:  # fechar o terminal é normal; erro fica na conversa
                 self.anotar(id_, "sistema", f"O agente saiu ({codigo}).")
@@ -1026,6 +1126,8 @@ class Sessoes:
             novo = f.read(tamanho - inicio)
         corte = novo.rfind(b"\n") + 1  # só linhas completas
         self._lidos[id_] = inicio + corte
+        if corte:  # guardada: um reinício do Zé continua daqui, sem repetir nem perder evento
+            self._dados.guardar(LIDOS, {"posicao": self._lidos[id_]}, id_)
         for linha in novo[:corte].splitlines():
             with contextlib.suppress(ValueError):
                 if isinstance(evento := json.loads(linha), dict):
@@ -1214,6 +1316,7 @@ class Sessoes:
         with self._dados.banco.transacao():
             self._dados.remover("sessoes", id_)
             self._dados.remover("mensagens-" + id_)
+            self._dados.remover(LIDOS, id_)
         self.terminais.pop(id_, None)
         self.tarefas.pop(id_, None)
         self._lidos.pop(id_, None)

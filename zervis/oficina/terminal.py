@@ -47,7 +47,50 @@ def _grupo_ativo(grupo: int) -> bool:
     return False
 
 
-class Terminal:
+class Colagem:
+    """Colar um pedido e deixar um rascunho: o mesmo para o terminal local e o do supervisor
+    (`oficina/supervisor.py`), que só precisam saber escrever e dizer onde a saída está."""
+
+    pid: int
+
+    @property
+    def fim(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def vivo(self) -> bool:
+        raise NotImplementedError
+
+    def escrever(self, dados: bytes) -> None:
+        raise NotImplementedError
+
+    def colar(self, texto: str) -> None:
+        """Um pedido inteiro, como colado (bracketed paste) e confirmado com Enter."""
+        self.escrever(b"\x1b[200~" + texto.encode() + b"\x1b[201~")
+        time.sleep(0.15)  # o agente separa o colar do Enter
+        self.escrever(b"\r")
+
+    def rascunho(
+        self, texto: str, quieto_s: float = 1.5, minimo_s: float = 3.0, limite_s: float = 30.0
+    ) -> None:
+        """Cola `texto` no campo do agente sem Enter, quando ele terminar de abrir (passados
+        `minimo_s`, a tela fica quieta por `quieto_s`). Vai junto com o próximo pedido."""
+
+        def esperar_e_colar() -> None:
+            inicio = time.monotonic()
+            visto = self.fim
+            while time.monotonic() - inicio < limite_s and self.vivo:
+                time.sleep(quieto_s)
+                pronto = time.monotonic() - inicio >= minimo_s
+                if pronto and self.fim == visto and visto > 0:
+                    break
+                visto = self.fim
+            self.escrever(b"\x1b[200~" + texto.encode() + b"\x1b[201~")
+
+        threading.Thread(target=esperar_e_colar, name=f"rascunho-{self.pid}", daemon=True).start()
+
+
+class Terminal(Colagem):
     def __init__(
         self,
         comando: Sequence[str],
@@ -57,6 +100,7 @@ class Terminal:
         ao_ler: Callable[[bytes], None] | None = None,
         colunas: int = 120,
         linhas: int = 32,
+        herdar: bool = True,
     ) -> None:
         self.comando = list(comando)
         self.saida = bytearray()
@@ -67,10 +111,13 @@ class Terminal:
         self.codigo: int | None = None
         # Tudo montado antes do fork: o Zé tem várias threads, e o filho só pode chamar o sistema
         # (chdir e execve) até virar o agente, sem rodar mais nada do Python.
-        programa = shutil.which(self.comando[0])
+        # `herdar=False`: o ambiente já vem inteiro (o supervisor recebe o do Zé, e o dele não
+        # pode vazar nem esconder uma chave que o Zé tirou).
+        base = os.environ if herdar else {}
+        env = {**base, **ambiente, "TERM": "xterm-256color", "COLORTERM": "truecolor"}
+        programa = shutil.which(self.comando[0], path=env.get("PATH"))
         if programa is None:
             raise FileNotFoundError(self.comando[0])
-        env = {**os.environ, **ambiente, "TERM": "xterm-256color", "COLORTERM": "truecolor"}
         pasta_ = os.fsencode(pasta)
         pid, fd = pty.fork()
         if pid == 0:  # o filho: vira o agente
@@ -140,31 +187,6 @@ class Terminal:
     def escrever(self, dados: bytes) -> None:
         if self.vivo:
             os.write(self.fd, dados)
-
-    def colar(self, texto: str) -> None:
-        """Um pedido inteiro, como colado (bracketed paste) e confirmado com Enter."""
-        self.escrever(b"\x1b[200~" + texto.encode() + b"\x1b[201~")
-        time.sleep(0.15)  # o agente separa o colar do Enter
-        self.escrever(b"\r")
-
-    def rascunho(
-        self, texto: str, quieto_s: float = 1.5, minimo_s: float = 3.0, limite_s: float = 30.0
-    ) -> None:
-        """Cola `texto` no campo do agente sem Enter, quando ele terminar de abrir (passados
-        `minimo_s`, a tela fica quieta por `quieto_s`). Vai junto com o próximo pedido."""
-
-        def esperar_e_colar() -> None:
-            inicio = time.monotonic()
-            visto = self.fim
-            while time.monotonic() - inicio < limite_s and self.vivo:
-                time.sleep(quieto_s)
-                pronto = time.monotonic() - inicio >= minimo_s
-                if pronto and self.fim == visto and visto > 0:
-                    break
-                visto = self.fim
-            self.escrever(b"\x1b[200~" + texto.encode() + b"\x1b[201~")
-
-        threading.Thread(target=esperar_e_colar, name=f"rascunho-{self.pid}", daemon=True).start()
 
     def redimensionar(self, colunas: int, linhas: int) -> None:
         if self.vivo:

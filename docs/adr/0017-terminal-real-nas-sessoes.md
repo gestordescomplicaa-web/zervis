@@ -62,3 +62,9 @@ Esse encerramento não é uma sandbox: processos que se desvinculem do terminal 
 agente ainda precisam de contenção própria. A separação de arquivos é opcional (`isolada`); sem
 ela, sessões podem trabalhar na mesma pasta. O Claude interativo recebe `acceptEdits` e regras
 no prompt; o Codex recebe `workspace-write`. Isso não garante isolamento equivalente entre eles.
+
+### Os terminais fora do Zé (06/11/2026)
+
+O pseudo-terminal de cada sessão passou a nascer no supervisor `zervis-oficina`, um serviço à
+parte, e não mais como filho do Zé: reiniciar o Zé não encerra as sessões
+([ADR 0068](0068-supervisor-das-sessoes.md)). O resto desta decisão continua valendo.

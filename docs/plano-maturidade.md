@@ -35,8 +35,9 @@ Notas do Zérvis: do código e dos testes. Dos concorrentes: documentação e re
 Hoje as sessões de Claude e Codex são processos filhos do processo principal: reiniciar o Zé
 encerra todas (visto em 06/11/2026, com 3 sessões abertas).
 
-- [ ] **Supervisor de sessões separado** (`zervis-oficina`), dono dos terminais. O Zé conversa com
-  ele por socket local e, ao reiniciar, reconecta sem perder nada. Exige ADR.
+- [x] **Supervisor de sessões separado** (`zervis-oficina`), dono dos terminais. O Zé conversa com
+  ele por socket local e, ao reiniciar, reconecta sem perder nada.
+  [ADR 0068](adr/0068-supervisor-das-sessoes.md); aceite em `tests/test_supervisor.py`.
 - [ ] **Fila durável de tarefas** em SQLite (sessão, automação, ligação agendada), com estado e
   tentativas. Ao subir, retoma o que ficou no meio ou marca como interrompido, nunca some.
 - [ ] **Estado só em SQLite:** avisos, pendências e jobs saem do JSON.
