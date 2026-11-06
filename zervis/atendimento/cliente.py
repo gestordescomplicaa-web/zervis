@@ -196,6 +196,12 @@ class Cliente:
         porta = int(r.get("porta") or 0)
         return f"ws://127.0.0.1:{porta}/ponte/{chamada}" if atender and porta else ""
 
+    def fazer_ligacao(self, ident: str, telefone: str, nome: str, recado: str) -> None:
+        """O Zé liga para dar o seu recado (ADR 0067); o resultado chega pelo evento
+        "ligacao_feita"."""
+        corpo = {"id": ident, "telefone": telefone, "nome": nome, "recado": recado}
+        self._api("POST", "/ligacao/fazer", corpo)
+
     def encerrar_ligacao(self, chamada: str) -> None:
         self._api("POST", "/ligacao/encerrar", {"chamada": chamada})
 

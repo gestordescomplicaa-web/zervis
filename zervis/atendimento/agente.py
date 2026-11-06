@@ -72,6 +72,7 @@ class Perfil:
     modo: str = "teste"
     numeros_teste: list[str] = field(default_factory=list)
     ligacoes: bool = False  # também atende ligações do WhatsApp (voz)
+    voz: str = "cadu"  # quem fala nas ligações: "cadu" (local) ou "ze" (a voz da página Voz)
     cerebro: dict[str, str] = field(default_factory=lambda: dict(cerebro_do_agente.PADRAO))
 
 
@@ -111,6 +112,10 @@ def validar(dados: dict[str, Any], atual: Perfil) -> Perfil:
         p.ligado = bool(dados["ligado"])
     if "ligacoes" in dados:
         p.ligacoes = bool(dados["ligacoes"])
+    if "voz" in dados:
+        if dados["voz"] not in VOZES:
+            raise AgenteErro("Voz inválida.")
+        p.voz = str(dados["voz"])
     if "cerebro" in dados:
         try:
             p.cerebro = cerebro_do_agente.validar(dados["cerebro"])
@@ -132,7 +137,8 @@ def validar(dados: dict[str, Any], atual: Perfil) -> Perfil:
     return p
 
 
-AJUSTES = ("ligado", "modo", "numeros_teste", "ligacoes", "cerebro")
+AJUSTES = ("ligado", "modo", "numeros_teste", "ligacoes", "voz", "cerebro")
+VOZES = ("cadu", "ze")
 
 
 def gravar(p: Perfil, pasta: Path = PASTA) -> None:
