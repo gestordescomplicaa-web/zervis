@@ -495,6 +495,86 @@ def separar_fontes(texto: str) -> tuple[str, str]:
     return texto[: m.start()], texto[m.start() :].strip()
 
 
+# Frases de bastidor que o modelo às vezes escreve em inglês no meio da resposta ("Session is now
+# stopped; read it.", 06/11/2026): não são para o usuário e não viram voz.
+_INGLES = frozenset(
+    [
+        "the",
+        "is",
+        "are",
+        "was",
+        "now",
+        "it",
+        "its",
+        "this",
+        "that",
+        "read",
+        "check",
+        "let",
+        "me",
+        "i",
+        "i'll",
+        "we",
+        "will",
+        "done",
+        "ok",
+        "okay",
+        "so",
+        "session",
+        "stopped",
+        "running",
+        "tool",
+        "result",
+        "output",
+        "need",
+        "to",
+        "of",
+        "and",
+        "has",
+        "been",
+        "see",
+        "look",
+        "wait",
+    ]
+)
+_PORTUGUES = frozenset(
+    [
+        "é",
+        "o",
+        "a",
+        "os",
+        "as",
+        "de",
+        "do",
+        "da",
+        "que",
+        "não",
+        "para",
+        "com",
+        "um",
+        "uma",
+        "eu",
+        "você",
+        "está",
+        "tem",
+    ]
+)
+
+
+def bastidor_em_ingles(frase: str) -> bool:
+    """Uma frase inteira em inglês, de bastidor: três palavras ou mais, quase todas do inglês
+    comum e nenhuma do português. Nome de produto no meio de uma frase em português passa."""
+    palavras_ = re.findall(r"[a-zà-ú']+", frase.lower())
+    if len(palavras_) < 3 or re.search(r"[à-ú]", frase.lower()) or _PORTUGUES & set(palavras_):
+        return False
+    return sum(p in _INGLES for p in palavras_) / len(palavras_) >= 0.5
+
+
+def _sem_bastidor(texto: str) -> str:
+    frases = re.split(r"(?<=[.!?])\s+", texto)
+    return " ".join(f for f in frases if not bastidor_em_ingles(f))
+
+
 def para_fala(texto: str, limite: int = 2400) -> str:
     """Markdown/code/URLs out; long answers cut at a sentence. O Zé novo não tem chat: as
     frases antigas ("disponível no chat") viraram referências neutras (teste de 06/10/2026)."""
@@ -511,7 +591,7 @@ def para_fala(texto: str, limite: int = 2400) -> str:
     value = re.sub(r"^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)", "", value, flags=re.M)
     value = re.sub(r"\*\*|__|~~", "", value)
     value = re.sub(r"[|*]", " ", value)  # "~" and "_" stay: home paths, "about", file names
-    value = " ".join(value.split())
+    value = _sem_bastidor(" ".join(value.split()))
     if len(value) > limite:
         head = value[: limite - 100]
         end = max(head.rfind(". "), head.rfind("! "), head.rfind("? "))

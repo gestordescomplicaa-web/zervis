@@ -472,6 +472,16 @@ class WhatsApp:
                 pass
             time.sleep(1.0)
 
+    def identidades(self, telefone: str) -> list[str]:
+        """Como o WhatsApp identifica o número (o LID, `123@lid`, ou o próprio número): a mesma
+        consulta que prepara o mapa número-LID no WaCalls. Vazia se o número não está nele."""
+        sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
+        if not sessoes:
+            return []
+        r = self._api("POST", f"/api/sessions/{sessoes[0]['id']}/resolve-phones",
+                      {"phones": variantes(telefone)}, espera=10.0)  # fmt: skip
+        return [str(x) for x in r.get("registered") or []]
+
     def ligar(self, telefone: str) -> tuple[str, str]:
         """Liga para o número (o Zé fazendo uma ligação): (sessão, id da chamada). No Brasil, o
         WhatsApp confere com e sem o nono dígito qual existe."""

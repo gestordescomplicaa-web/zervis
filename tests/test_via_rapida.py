@@ -408,3 +408,11 @@ def test_frase_de_espera_so_quando_a_resposta_demora(monkeypatch: pytest.MonkeyP
     segunda = falar(r, "E mais uma")
     assert primeira in ("Só um momento. Abri o Mapa.", "Um instante. Abri o Mapa.")
     assert {primeira, segunda} == {"Só um momento. Abri o Mapa.", "Um instante. Abri o Mapa."}
+
+
+def test_marca_pela_metade_no_fim_nao_vira_fala() -> None:
+    # 06/11/2026: o motor estourou o tempo no meio de "[completo]" e o Zé falou "complet".
+    assert rapido.Roteado._decidir("[complet", fim=True) == "passar"
+    assert rapido.Roteado._decidir("[compl", fim=True) == "passar"
+    assert rapido.Roteado._decidir("[alegr", fim=True) == "falar_nada"
+    assert rapido.Roteado._decidir("[complet") == "esperar"  # ainda chegando

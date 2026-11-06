@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -468,3 +469,82 @@ def test_quem_ligou_pelo_nome_da_agenda() -> None:
 
     central.whatsapp = SimpleNamespace(agenda=fora)  # type: ignore[assignment]
     assert central._nome_na_agenda("5511999990000") == ""
+
+
+def test_a_escuta_fica_viva_no_silencio(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 06/11/2026: o Deepgram fecha em ~12 s sem áudio, e a ligação caía 13 s depois da saudação.
+    import json
+
+    monkeypatch.setattr(lg, "MANTER_S", 0.01)
+
+    class WsFalso:
+        def __init__(self) -> None:
+            self.enviados: list[Any] = []
+            self.fechado = False
+
+        async def send(self, dados: Any) -> None:
+            if self.fechado:
+                raise ConnectionError("fechou")
+            self.enviados.append(dados)
+
+    async def cena() -> None:
+        ouvido = lg.Ouvido("chave")
+        ws = WsFalso()
+        ouvido._ws = ws
+        ouvido._vivo = asyncio.ensure_future(ouvido._manter(ws))
+        await asyncio.sleep(0.05)
+        assert {"type": "KeepAlive"} in [json.loads(m) for m in ws.enviados]
+        ws.fechado = True
+        await ouvido.enviar(b"\x00\x00")  # a escuta caída não derruba quem manda o áudio
+        ouvido._vivo.cancel()
+
+    asyncio.run(cena())
+
+
+def test_a_escuta_cai_e_volta_sem_derrubar_a_ligacao(tmp_path: Path) -> None:
+    class OuvidoQueCai(Ouvido):
+        def __init__(self) -> None:
+            super().__init__()
+            self.aberturas = 0
+
+        async def abrir(self) -> None:
+            self.aberturas += 1
+
+        async def eventos(self) -> AsyncIterator[tuple[str, str]]:
+            if self.aberturas == 0:
+                raise ConnectionError("1011 did not receive audio data")
+            while True:
+                yield await self.fila.get()
+
+    async def cena() -> None:
+        chamada, conexao, _, motor, _, _ = _chamada(tmp_path, lambda _: ["Claro!"])
+        ouvido = OuvidoQueCai()
+        chamada.ouvido = ouvido
+        tarefa = asyncio.ensure_future(chamada.atender())
+        await _ate(lambda: ouvido.aberturas == 1)
+        await ouvido.fila.put(("fim_da_fala", "vocês abrem sábado?"))
+        await _ate(lambda: bool(motor.pedidos))
+        assert not tarefa.done()  # a ligação seguiu
+        conexao.fim.set()
+        await asyncio.wait_for(tarefa, 3)
+
+    asyncio.run(cena())
+
+
+def test_quem_liga_so_com_o_identificador_e_achado_pelo_numero_de_teste() -> None:
+    from types import SimpleNamespace
+
+    from zervis.atendimento import central as c
+
+    central = c.Central.__new__(c.Central)
+    perfil = ag.Perfil(modo="teste", numeros_teste=["5511999990000", "5521988880000"])
+    central.atendente = SimpleNamespace(perfil=perfil)  # type: ignore[assignment]
+    central.whatsapp = SimpleNamespace(  # type: ignore[assignment]
+        agenda=lambda: [{"nome": "Ana", "telefone": "5531977770000", "lid": "111"}],
+        identidades=lambda numero: ["222@lid"] if numero == "5521988880000" else [],
+    )
+    assert central._telefone_do_lid("111") == "5531977770000"  # pela agenda
+    assert central._telefone_do_lid("222") == "5521988880000"  # pelo número de teste
+    assert central._telefone_do_lid("333") == ""
+    perfil.modo = "todos"
+    assert central._telefone_do_lid("222") == ""
