@@ -93,18 +93,28 @@ async def main():
                 ORB['andamento'] = {'rotulo': 'Pesquisando a fundo na internet', 'esperado_s': 12, 'ts': time.time()}
                 assert await esperar('document.querySelector("#jv-andamento .rotulo").textContent.startsWith("Pesquisando a fundo na internet…")')
                 await asyncio.sleep(1.5)
-                largura = await ev('parseFloat(document.querySelector("#jv-andamento .cheio").style.width)')
+                largura = await ev('window.jarvisAndamento.progresso * 100')
                 assert 3 < largura < 95, largura  # moving, never full before the answer
                 passed.append('thinking: the step label and a moving bar below 95%')
+                ORB['andamento'] = {'rotulo': 'Lendo as páginas', 'esperado_s': 6, 'ts': time.time() + .001}
+                assert await esperar('[...document.querySelectorAll("#jv-andamento .rastro .feito")].map(e => e.textContent).join("|") === "Pensando|Pesquisando a fundo na internet"')
+                assert await ev('document.querySelector("#jv-andamento .rastro .agora").textContent === "Lendo as páginas"')
+                await asyncio.sleep(1.2)
+                passed.append('a new step: the previous one stays in the trail as done')
                 shot = await call('Page.captureScreenshot', {'format': 'png'})
                 import base64
                 SAIDA.write_bytes(base64.b64decode(shot['data']))
 
                 ORB.update(state='speaking')
                 ORB.pop('andamento')
-                assert await esperar('document.querySelector("#jv-andamento .cheio").style.width === "100%"', 5)
+                assert await esperar('window.jarvisAndamento.progresso === 1', 5)
                 assert await esperar('!document.getElementById("jv-andamento").classList.contains("ativo")', 5)
                 passed.append('speaking: the bar fills and goes away')
+                ORB.update(state='thinking')
+                assert await esperar('window.jarvisAndamento.ativo')
+                assert await ev('window.jarvisAndamento.progresso < .3')
+                assert not await ev('document.querySelector("#jv-andamento .rastro .feito")')
+                passed.append('a new request starts from zero, with an empty trail')
                 assert not errors, errors
                 print('\n'.join('PASS ' + p for p in passed))
         finally:

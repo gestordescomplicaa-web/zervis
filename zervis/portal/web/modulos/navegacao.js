@@ -183,9 +183,10 @@ function faixaFora(ligar) {
   if (ligar && !f) { f = document.createElement("div"); f.className = "faixa-fora"; f.role = "status"; f.textContent = "Reconectando…"; document.body.append(f); }
   if (!ligar) f?.remove();
 }
-// A barra de carregamento no topo (ADR 0064): o que o Zé está fazendo e uma barra que anda como
-// num jogo, rápida no começo e mais devagar perto do fim; só completa quando a resposta começa.
-const andamento = { ativo: false, inicio: 0, base: 0, desde: 0, tau: 3, texto: "Pensando", visto: 0, saiu: 0, fim: 0 };
+// A barra de carregamento no topo (ADR 0064): um painel holográfico como as apresentações do Zé,
+// com o que ele está fazendo e uma barra em células que anda como num jogo, rápida no começo e mais
+// devagar perto do fim; só completa quando a resposta começa.
+const andamento = { ativo: false, inicio: 0, base: 0, desde: 0, tau: 3, texto: "", visto: 0, saiu: 0, fim: 0, mostrado: 0 };
 const ANDAMENTO_TETO = 0.95;
 const agoraS = () => performance.now() / 1000;
 const progressoAndamento = (t) => andamento.base + (ANDAMENTO_TETO - andamento.base) * (1 - Math.exp(-(t - andamento.desde) / andamento.tau));
@@ -195,6 +196,10 @@ function etapaAndamento(texto, esperado) {
   const t = agoraS();
   andamento.base = Math.min(ANDAMENTO_TETO, andamento.ativo ? progressoAndamento(t) : 0);
   andamento.desde = t; andamento.tau = Math.max(0.6, esperado); andamento.texto = texto;
+  const rotulo = /** @type {HTMLElement | null} */ (document.querySelector("#andamento .andamento-rotulo"));
+  if (!rotulo) return;
+  rotulo.textContent = `${texto}…`;
+  rotulo.classList.remove("novo"); void rotulo.offsetWidth; rotulo.classList.add("novo");
 }
 
 /** @param {string} estado @param {{rotulo?: string, esperado_s?: number, ts?: number} | undefined} passo */
@@ -203,32 +208,60 @@ function andamentoPainel(estado, passo) {
   if (!barra) {
     barra = document.createElement("div");
     barra.id = "andamento"; barra.setAttribute("role", "progressbar"); barra.setAttribute("aria-label", "O que o Zé está fazendo");
-    barra.innerHTML = '<div class="andamento-cheio"></div><span class="andamento-rotulo"></span>';
+    barra.setAttribute("aria-valuemin", "0"); barra.setAttribute("aria-valuemax", "100");
+    const celulas = "<i></i>".repeat(30);
+    barra.innerHTML = `<div class="vidro"><span class="varre"></span>
+      <div class="cab"><i></i><span class="andamento-estado">Zé · processando</span><span class="relogio">T+00:00</span></div>
+      <div class="linha"><span class="andamento-rotulo"></span><span class="pct">0%</span></div>
+      <div class="trilho"><div class="celulas apagadas">${celulas}</div><div class="celulas acesas">${celulas}</div><span class="cabeca"></span></div></div>`;
     document.body.appendChild(barra);
     requestAnimationFrame(desenharAndamento);
   }
   const t = agoraS();
   if (estado === "pensando") {
     andamento.saiu = 0;
-    if (!andamento.ativo) { andamento.ativo = true; andamento.inicio = t; andamento.visto = passo?.ts ?? 0; etapaAndamento("Pensando", 3); barra.classList.add("ativo"); }
+    if (!andamento.ativo) {
+      // Um pedido novo começa do zero, não de onde o anterior parou.
+      Object.assign(andamento, { ativo: true, inicio: t, base: 0, desde: t, fim: 0, mostrado: 0, visto: passo?.ts ?? 0 });
+      barra.classList.remove("saindo", "pronto"); barra.classList.add("ativo");
+      /** @type {HTMLElement} */ (barra.querySelector(".andamento-estado")).textContent = "Zé · processando";
+      etapaAndamento("Pensando", 3);
+    }
     if (passo?.ts && passo.ts !== andamento.visto) { andamento.visto = passo.ts; etapaAndamento(passo.rotulo || "Pensando", Number(passo.esperado_s) || 3); }
   } else if (andamento.ativo) {
     andamento.saiu = andamento.saiu || t;
-    if (t - andamento.saiu > 1.5 || estado === "ativo" || estado === "inativo") { andamento.ativo = false; andamento.fim = t; }
+    if (t - andamento.saiu > 1.5 || estado === "ativo" || estado === "inativo") {
+      andamento.ativo = false; andamento.fim = t;
+      barra.classList.add("pronto");
+      /** @type {HTMLElement} */ (barra.querySelector(".andamento-estado")).textContent = "Zé · pronto";
+      /** @type {HTMLElement} */ (barra.querySelector(".andamento-rotulo")).textContent = "Resposta pronta";
+    }
   }
+}
+
+/** @param {HTMLElement} barra @param {number} p */
+function mostrarAndamento(barra, p) {
+  andamento.mostrado = p;
+  barra.style.setProperty("--p", p.toFixed(4));
+  const n = Math.round(p * 100);
+  /** @type {HTMLElement} */ (barra.querySelector(".pct")).textContent = `${n}%`;
+  barra.setAttribute("aria-valuenow", String(n));
 }
 
 function desenharAndamento() {
   const barra = $("andamento");
   if (!barra) return;
-  const cheio = /** @type {HTMLElement} */ (barra.querySelector(".andamento-cheio"));
   const t = agoraS();
   if (andamento.ativo) {
-    cheio.style.width = (progressoAndamento(t) * 100).toFixed(1) + "%";
-    /** @type {HTMLElement} */ (barra.querySelector(".andamento-rotulo")).textContent = `${andamento.texto}… ${Math.round(t - andamento.inicio)} s`;
+    mostrarAndamento(barra, progressoAndamento(t));
+    const s = t - andamento.inicio;
+    /** @type {HTMLElement} */ (barra.querySelector(".relogio")).textContent =
+      `T+${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   } else if (andamento.fim) {
-    cheio.style.width = "100%";
-    if (t - andamento.fim > 0.6) { barra.classList.remove("ativo"); andamento.fim = 0; }
+    // Completa em ~0,3 s (não salta), brilha e se desfaz como os painéis do Zé.
+    if (andamento.mostrado < 1) mostrarAndamento(barra, Math.min(1, andamento.mostrado + (1 - andamento.mostrado) * 0.25 + 0.01));
+    if (t - andamento.fim > 0.9) barra.classList.add("saindo");
+    if (t - andamento.fim > 1.45) { barra.classList.remove("ativo", "saindo", "pronto"); andamento.fim = 0; }
   }
   requestAnimationFrame(desenharAndamento);
 }
