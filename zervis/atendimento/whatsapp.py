@@ -85,7 +85,7 @@ def variantes(telefone: str) -> list[str]:
 @dataclass(frozen=True)
 class Recebida:
     id: str
-    nome: str  # como a pessoa se identifica no WhatsApp, ou o número
+    nome: str  # como está salva na agenda, como se identifica no WhatsApp, ou o número
     telefone: str
     texto: str
     de_mim: bool = False  # enviada por este número (pelo celular ou pelo próprio agente)
@@ -95,6 +95,7 @@ class Recebida:
     grupo: bool = False
     grupo_nome: str = ""
     quando: float = 0.0  # a hora da mensagem no WhatsApp (epoch); 0 = desconhecida
+    agenda: str = ""  # como está salva na agenda do celular; na sua mensagem, quem recebe
 
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
@@ -219,14 +220,16 @@ def recebidas(corpo: Any) -> list[Recebida]:
         elif not texto:
             continue
         telefone = str(m.get("phone") or "")
-        nome = " ".join(str(m.get("push_name") or "").split()) or telefone or "um contato"
+        agenda = " ".join(str(m.get("contact_name") or "").split())[:80]
+        perfil = " ".join(str(m.get("push_name") or "").split())
+        nome = agenda or perfil or telefone or "um contato"
         de_mim = m.get("direction") == "outbound"
         ident = str(m.get("event_id") or "")
         nome_grupo = " ".join(str(m.get("group_name") or "").split())[:80] if em_grupo else ""
         saida.append(
             Recebida(
                 ident, nome, telefone, texto, de_mim, chat, midia, em_grupo, nome_grupo,
-                _hora(m.get("occurred_at")),
+                _hora(m.get("occurred_at")), agenda,
             )
         )  # fmt: skip
     return saida

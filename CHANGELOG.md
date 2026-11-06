@@ -2,6 +2,43 @@
 
 ## Não lançado
 
+## 0.2.0 (06/11/2026)
+
+A segunda versão publicada: o Zé que trabalha pela voz, de verdade, no dia a dia. Destaques:
+
+- **WhatsApp como recepcionista:** caixa de entrada e arquivo de tudo o que passa (conversas e
+  grupos), leads falados com lembrete, lista de prioridade, responder e começar conversas pela
+  voz com o seu "sim", e os contatos da agenda reconhecidos por parte do nome ou pelo final do
+  número.
+- **Pesquisa profunda** com buscador próprio (SearXNG) e leitor de páginas, CNPJ, pesquisas
+  guardadas e o vigia semanal das fontes.
+- **Cérebro local** pelo Ollama (Gemma 4 E4B), com as mesmas ferramentas e aprovações, sem
+  gastar os planos.
+- **Voz em todo lugar:** o Live (conversa como numa ligação), vozes da nuvem opcionais, o app
+  Zé Voz no Android com a tela bloqueada e sem eco no viva-voz, e o endereço fixo para usar de
+  qualquer lugar.
+- **Imersão:** cenas que explicam ("me explica X"), hologramas e modelos 3D, mapas de verdade,
+  fotos e vídeos reais com crédito, o Zé em constelação, o fundo escuro e a barra de
+  carregamento em holograma.
+- **Oficina:** aprovar pela voz e pelo painel o que as sessões do Claude e do Codex pedem,
+  outros modelos nas sessões e o autodesenvolvimento mais seguro.
+- **Instagram** só leitura, o Zé que se conhece ("o que você sabe fazer?"), atualizações pelo
+  painel e a bateria de avaliação do cérebro.
+
+O detalhe de cada mudança:
+
+- Autodesenvolvimento: quando os testes falham depois de juntar as melhorias, o Zé desfaz a
+  junção (a pasta volta ao código que está rodando, e a cópia continua com as melhorias para a
+  sessão corrigir) e diz quais testes falharam. A saída inteira fica em
+  `~/.local/state/zervis/manutencao/testes.log`. Antes, a junção ficava na pasta com o Zé no
+  código antigo, e o motivo se perdia.
+- WhatsApp: o Zé reconhece os contatos pelo nome salvo na agenda (antes, só pelo nome de perfil,
+  e quem não tinha ficava com o número) e acha por nome inteiro, palavra ou parte, sem acento,
+  ou pelos 4 ou mais últimos dígitos. Com mais de um possível, ele pergunta qual. Feito pelo
+  próprio Zé, no autodesenvolvimento.
+- Barra de carregamento em holograma, como as apresentações do Zé: um painel no topo que se
+  materializa, com o passo, a porcentagem, células que acendem como num jogo, os passos já
+  feitos e um feixe até o Zé. Um pedido novo sempre começa do zero.
 - Barra de carregamento no topo da Imersão e do painel: enquanto o Zé pensa, ela mostra o que ele
   está fazendo ("Pesquisando na internet… 12 s", "Lendo a página", "Montando a cena") e anda como
   num jogo, pelo tempo que cada coisa costuma levar (as médias reais do seu Zé); completa quando a

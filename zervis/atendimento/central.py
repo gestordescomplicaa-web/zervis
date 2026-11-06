@@ -152,7 +152,8 @@ class Central:
         if r.grupo:
             comum |= {"grupo": True, "grupo_nome": r.grupo_nome}
         if r.de_mim:  # a sua resposta: no arquivo, e encerra a pendência do lead (ADR 0053)
-            self.eventos.publicar("respondida", **comum)
+            nome = {"nome": r.agenda} if r.agenda and not r.grupo else {}
+            self.eventos.publicar("respondida", **nome, **comum)
         else:
             self.eventos.publicar("mensagem", nome=r.nome, telefone=r.telefone, **comum)
         if not r.midia and not r.grupo:

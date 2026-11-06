@@ -216,3 +216,11 @@ def test_central_desligada_mostra_o_estado_local(
     finally:
         ze.parar()
         lancador.parar()
+
+
+def test_a_sua_mensagem_leva_o_nome_da_agenda_de_quem_recebe(tmp_path: Path) -> None:
+    central, _, _ = _central(tmp_path)
+    chat = "5511@s.whatsapp.net"
+    central._recebida(Recebida("s:1", "Ana", "5511", "oi", True, chat, agenda="Ana Souza"))
+    [evento], _ = central.eventos.depois(0)
+    assert (evento["tipo"], evento["nome"]) == ("respondida", "Ana Souza")

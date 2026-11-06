@@ -226,7 +226,7 @@ class ServicoAtendimento:
                 caixa.enviada(
                     chat, str(evento.get("texto", "")), str(evento.get("midia", "")),
                     _hora(evento), str(evento.get("evento", "")), bool(evento.get("grupo")),
-                    str(evento.get("grupo_nome", "")),
+                    str(evento.get("grupo_nome", "")), str(evento.get("nome", "")),
                 )  # fmt: skip
             self._lead_respondido(chat, _quando(evento))
         elif evento.get("tipo") == "ligacao":
