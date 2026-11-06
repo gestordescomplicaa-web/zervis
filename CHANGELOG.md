@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Atendimento: "Voz do Zé" em Voz nas ligações não ficava escolhida. A escolha era gravada, mas
+  o perfil do agente publicado voltava com a voz local, e as ligações seguiam com o Cadu. Agora
+  todos os ajustes da página valem sobre a versão publicada.
 - O Zé faz ligações com um recado seu, como um recado de caixa postal: "liga para a Ana e diz que
   a reunião mudou", ou agendado, "às 17h liga para o João e pede para ele comprar o pão". Com o
   seu "sim", ele liga pelo WhatsApp, se apresenta como seu assistente, dá o recado, responde só

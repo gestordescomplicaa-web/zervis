@@ -240,10 +240,12 @@ def registrar_publicacao(raiz: Path) -> None:
 
 
 def _com_ajustes(base: agente.Perfil, pasta: Path) -> agente.Perfil:
+    """Os ajustes da página (`agente.AJUSTES`) valem por cima da persona publicada, todos: a voz
+    das ligações ficou de fora quando era copiada campo a campo, e a escolha não valia
+    (06/11/2026)."""
     ajustes = agente.ler(pasta)
-    base.ligado, base.modo, base.numeros_teste = ajustes.ligado, ajustes.modo, ajustes.numeros_teste
-    base.ligacoes = ajustes.ligacoes
-    base.cerebro = ajustes.cerebro
+    for campo in agente.AJUSTES:
+        setattr(base, campo, getattr(ajustes, campo))
     return base
 
 

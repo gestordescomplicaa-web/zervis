@@ -426,3 +426,19 @@ def test_chave_de_api_pela_pagina_e_volta_ao_padrao_ao_remover(
     assert r["memoria"]["contatos"] == 0
     with pytest.raises(PedidoInvalido):
         acoes.chave_do_atendente({"motor": "qualquer", "chave": "x"})
+
+
+def test_todos_os_ajustes_da_pagina_valem_sobre_o_publicado(tmp_path: Path) -> None:
+    # 06/11/2026: "Voz do Zé" gravava, mas o perfil publicado voltava com a voz local, e a página
+    # mostrava "Local" de novo (os ajustes eram copiados campo a campo, sem a voz).
+    raiz, pasta = tmp_path / "agente", tmp_path / "dados"
+    pasta.mkdir()
+    (pasta / "agente.json").write_text('{"nome": "Bia", "persona": "Simpática."}')
+    projeto.migrar(raiz, pasta)
+    ajustes = {"ligado": True, "modo": "todos", "ligacoes": True, "voz": "ze"}
+    ag.gravar(ag.validar(ajustes, ag.ler(pasta)), pasta)
+    p = projeto.perfil(pasta)
+    assert p.nome == "Bia" and (p.ligado, p.modo, p.ligacoes, p.voz) == (True, "todos", True, "ze")
+    assert projeto.rascunho(raiz, pasta).voz == "ze"
+    for campo in ag.AJUSTES:  # o que a página ajusta existe no perfil
+        assert hasattr(p, campo)
