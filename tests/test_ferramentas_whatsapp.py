@@ -368,3 +368,56 @@ def test_a_central_devolve_a_agenda() -> None:
     central = c.Central.__new__(c.Central)
     central.whatsapp = SimpleNamespace(agenda=lambda: AGENDA)  # type: ignore[assignment]
     assert central.responder("GET", "/whatsapp/agenda", {}) == (200, {"contatos": AGENDA})
+
+
+LIGACAO = {
+    "tipo": "ligacao",
+    "quando": 999_000.0,
+    "telefone": "5581999990030",
+    "nome": "Ana Lima",
+    "desfecho": "passou",
+    "duracao": 190,
+    "resumo": "Quer fechar o pacote de limpeza e pediu para você retornar hoje.",
+    "conversa": [
+        {"quem": "agente", "texto": "Olá! Como posso ajudar?"},
+        {"quem": "cliente", "texto": "Quero fechar o pacote, pode falar com o dono?"},
+    ],
+}
+
+
+def test_o_ze_sabe_o_que_foi_falado_na_ligacao(tmp_path: Path) -> None:
+    from queue import Queue
+
+    from zervis.avisos.ligacoes import Ligacoes
+
+    n = _nucleo(tmp_path)
+    n.ligacoes = Ligacoes(tmp_path / "ligacoes.json", n.relogio)
+    n.modo_fala, n.avisos_lidos, n.eventos, linha = "normal", {}, Queue(), []
+    n._na_linha = lambda tipo, texto: linha.append(texto)
+    ServicoAtendimento(n)._evento_da_central(LIGACAO)
+    fala = n.eventos.get_nowait().texto
+    assert "ligação de Ana Lima, de 3 minutos" in fala and "pediu para falar com você" in fala
+    assert "pacote de limpeza" in fala
+    assert linha == [f"Ligação de Ana Lima: {LIGACAO['resumo']}"]
+    assert "pacote de limpeza" not in next(iter(n.avisos_lidos.values()))  # só quem, no contexto
+    lista = _texto(_chamar(n, "whatsapp_ligacoes", {}))
+    assert "Ana Lima (id" in lista and "pediu para falar com você" in lista
+    lida = _texto(_chamar(n, "whatsapp_ligacoes", {"contato": "ana"}))
+    assert "Cliente: <<<Quero fechar o pacote, pode falar com o dono?>>>" in lida
+    assert _chamar(n, "whatsapp_ligacoes", {"contato": "Zuleica"})["is_error"]
+    assert "mcp__jarvis__whatsapp_ligacoes" in LIVRES
+
+
+def test_ligacao_no_silencioso_so_fica_guardada(tmp_path: Path) -> None:
+    from queue import Queue
+
+    from zervis.avisos.ligacoes import Ligacoes
+
+    n = _nucleo(tmp_path)
+    n.ligacoes = Ligacoes(tmp_path / "ligacoes.json", n.relogio)
+    n.modo_fala, n.avisos_lidos, n.eventos = "silencioso", {}, Queue()
+    n._na_linha = lambda tipo, texto: None
+    sem_nome = {**LIGACAO, "nome": "", "desfecho": "normal", "duracao": 20}
+    ServicoAtendimento(n)._evento_da_central(sem_nome)
+    assert n.eventos.empty() and len(n.ligacoes.recentes()) == 1
+    assert "o número 81 99999-0030" in _texto(_chamar(n, "whatsapp_ligacoes", {}))
