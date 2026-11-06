@@ -280,3 +280,33 @@ def test_conversa_nova_que_falha_diz_o_motivo(tmp_path: Path) -> None:
     resposta = _chamar(n, "whatsapp_enviar", args)
     assert resposta["is_error"] and "não está no WhatsApp" in _texto(resposta)
     assert n.prioridade.todos() == []
+
+
+def test_acha_o_contato_pela_parte_do_nome_ou_pelo_final_do_numero(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path)
+    n.caixa.receber("Bia Souza", "bom dia", "558199991234", BIA)
+    assert "Conversa com Bia Souza" in _texto(_chamar(n, "whatsapp_ler", {"contato": "souza"}))
+    assert "Conversa com Bia Souza" in _texto(_chamar(n, "whatsapp_ler", {"contato": "1234"}))
+    frase = w.descritor(n)(w.RESPONDER, {"contato": "1234", "texto": "bom dia"})
+    assert frase == "Vou responder a Bia Souza no WhatsApp: bom dia. Envio?"
+
+
+def test_contato_ambiguo_devolve_a_lista_para_escolher(tmp_path: Path) -> None:
+    n = _nucleo(tmp_path)
+    n.caixa.receber("Ana Souza", "oi", "", ANA)
+    n.caixa.receber("Bia Souza", "oi", "558199991234", BIA)
+    for nome, args in (
+        ("whatsapp_ler", {"contato": "souza"}),
+        ("whatsapp_buscar", {"consulta": "oi", "contato": "souza"}),
+        ("whatsapp_esquecer", {"contato": "souza"}),
+        ("whatsapp_prioridade", {"acao": "adicionar", "contato": "souza"}),
+        ("whatsapp_responder", {"contato": "souza", "texto": "oi"}),
+    ):
+        r = _chamar(n, nome, args)
+        assert r["is_error"], nome
+        assert "Ana Souza (id " in _texto(r) and "Bia Souza (id " in _texto(r), nome
+    assert "final 1234" in _texto(_chamar(n, "whatsapp_ler", {"contato": "souza"}))
+    for ferramenta in (w.RESPONDER, w.ESQUECER):
+        problema = w.prechecar(n)(ferramenta, {"contato": "souza", "texto": "oi"}) or ""
+        assert "Ana Souza" in problema and "Bia Souza" in problema, ferramenta
+    assert n.central.enviados == [] and len(n.caixa.conversas()) == 2

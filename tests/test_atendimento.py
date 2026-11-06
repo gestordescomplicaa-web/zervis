@@ -468,3 +468,20 @@ def test_envio_a_numero_tenta_com_e_sem_o_nono_digito(
     monkeypatch.setattr(wa, "_api", api)
     assert wa.enviar("5511987654321", "oi", "chave") == "s1:m1"
     assert pedidos[0]["phones"] == ["5511987654321", "551187654321"]
+
+
+def test_o_nome_salvo_na_agenda_vem_antes_do_push_name() -> None:
+    """Caso de 05/11/2026: o Zé mostrava só o número de quem está salvo na agenda do celular."""
+    lote = _lote(
+        _msg(contact_name=" Ana  da Padaria "),
+        _msg(event_id="s:2", push_name="", contact_name="Ana da Padaria"),
+        _msg(event_id="s:3", direction="outbound", push_name="Eu", contact_name="Ana da Padaria"),
+        _msg(event_id="s:4", direction="outbound", push_name="Eu"),
+    )
+    nomes = [(r.nome, r.agenda) for r in w.recebidas(lote)]
+    assert nomes == [
+        ("Ana da Padaria", "Ana da Padaria"),
+        ("Ana da Padaria", "Ana da Padaria"),
+        ("Ana da Padaria", "Ana da Padaria"),  # na sua mensagem, o nome do outro lado
+        ("Eu", ""),
+    ]

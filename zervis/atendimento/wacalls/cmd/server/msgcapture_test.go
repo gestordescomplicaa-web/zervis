@@ -240,3 +240,34 @@ func TestTipoDaMidiaELegenda(t *testing.T) {
 		}
 	}
 }
+
+// ---------- Zérvis: o nome salvo na agenda do celular ----------
+
+type agendaFalsa map[types.JID]types.ContactInfo
+
+func (a agendaFalsa) GetContact(_ context.Context, jid types.JID) (types.ContactInfo, error) {
+	return a[jid], nil
+}
+
+func TestNomeDaAgendaPeloNumeroOuPeloLID(t *testing.T) {
+	agenda := agendaFalsa{
+		jidPN("5581999990000"):    {Found: true, FullName: " Ana Souza ", FirstName: "Ana", PushName: "Aninha"},
+		jidLID("100000000000001"): {Found: true, FirstName: "Bia"},
+		jidPN("5581988880000"):    {Found: true, PushName: "Caio"}, // só o pushName: não é agenda
+	}
+	casos := []struct{ telefone, lid, nome string }{
+		{"5581999990000", "", "Ana Souza"},          // o nome completo da agenda
+		{"", "100000000000001", "Bia"},              // salvo pelo LID, só o primeiro nome
+		{"5581977770000", "100000000000001", "Bia"}, // o número não está; o LID está
+		{"5581988880000", "", ""},                   // não está na agenda
+		{"", "", ""},
+	}
+	for _, c := range casos {
+		if got := nomeNaAgenda(context.Background(), agenda, c.telefone, c.lid); got != c.nome {
+			t.Fatalf("%s/%s: %q, esperado %q", c.telefone, c.lid, got, c.nome)
+		}
+	}
+	if got := nomeNaAgenda(context.Background(), nil, "5581999990000", ""); got != "" {
+		t.Fatalf("sem agenda: %q", got)
+	}
+}
