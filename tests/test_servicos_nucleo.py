@@ -78,20 +78,22 @@ def test_foco_sem_sessao_nao_altera_pedido() -> None:
     assert ServicoFoco(contexto)._com_foco("oi") == "oi"
 
 
-def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
+def test_agendador_entrega_lembrete_com_dependencias_proprias(tmp_path: Path) -> None:
     import queue
     import threading
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
-    from zervis.automacoes.jobs import Job
+    from zervis.automacoes.agenda import FUSO
+    from zervis.automacoes.jobs import Jobs
     from zervis.nucleo import estados as e
     from zervis.nucleo.servicos.automacoes import ServicoAutomacoes
 
     agora = time.time()
     anotadas: list[str] = []
-    job = Job("Teste", "em 1m", "lembrete", "Reunião.", datetime.now().isoformat())
+    jobs = Jobs(tmp_path / "jobs.json")
+    jobs.criar("Teste", "em 1m", "lembrete", "Reunião.", datetime.now(FUSO) - timedelta(minutes=2))
     contexto: Any = SimpleNamespace(
-        jobs=SimpleNamespace(vencidos=lambda _: [job], registrar=lambda *_: None),
+        jobs=jobs,
         _rodando=set(),
         _meta={},
         _na_linha=lambda _, t: anotadas.append(t),
@@ -108,6 +110,7 @@ def test_agendador_entrega_lembrete_com_dependencias_proprias() -> None:
     ServicoAutomacoes(contexto)._agendador(agora)
     assert anotadas == ["Reunião."]
     assert contexto.eventos.get_nowait() == e.Aviso("Lembrete: Reunião.")
+    assert [x.estado for x in jobs.execucoes()] == ["concluida"]
 
 
 def test_oficina_recomeca_o_diagnostico_sem_apagar_a_atividade(

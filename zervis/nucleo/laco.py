@@ -331,7 +331,7 @@ class Nucleo(
         self.fila = Fila(ESTADO / "avisos.json")  # durável: reinício não perde aviso
         self.jobs = Jobs(DADOS / "automacoes" / "jobs.json")
         self.calendario = Calendario(ESTADO / "agenda-avisada.json")
-        self._rodando: set[str] = set()  # automações do tipo pergunta em execução
+        self._rodando: set[str] = set()  # execuções de automação em andamento
         self._agenda_em = 0.0
         self.avisos_falados: list[tuple[float, str]] = []
         # Avisos que leem um texto de terceiros (a mensagem de um lead, ADR 0053): falados
@@ -1292,6 +1292,7 @@ class Nucleo(
             )
         self.memoria_longa.iniciar()
         self._avisar_interrompidas()
+        self._retomar_execucoes()
         self._ligar_voz_remota()
         if tunel.escolhido():  # o acesso de qualquer lugar continua depois de um reinício
             # O convite do primeiro acesso (servidor) abre o túnel antes da senha existir: é por
