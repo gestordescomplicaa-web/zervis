@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- Sessões: o cabeçalho fica em duas linhas (nome, estado e pasta com as ações ao lado; agente,
+  conta e modelo embaixo) e não embaralha mais quando falta espaço. A lista de sessões e os
+  arquivos têm uma borda para arrastar e ajustar a largura (duplo clique volta ao padrão).
 - Avisos com o app de voz no Silencioso: o Zé conversava pelo app, dizia "eu te aviso" e o aviso
   (o fim de uma sessão, o resultado de uma ligação) ia só para a tela do computador. O Silencioso
   é do PC: com o app conectado, os avisos vão para ele. Os leads seguem como antes: no Silencioso,

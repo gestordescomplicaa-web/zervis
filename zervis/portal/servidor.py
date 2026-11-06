@@ -76,6 +76,7 @@ ARQUIVOS = {
     "/modulos/terminal.js": "modulos/terminal.js",
     "/modulos/conectores-sessao.js": "modulos/conectores-sessao.js",
     "/modulos/permissoes-sessao.js": "modulos/permissoes-sessao.js",
+    "/modulos/paineis-sessao.js": "modulos/paineis-sessao.js",
     "/modulos/voz.js": "modulos/voz.js",
     "/paginas/automacoes.js": "paginas/automacoes.js",
     "/paginas/configurar.js": "paginas/configurar.js",
