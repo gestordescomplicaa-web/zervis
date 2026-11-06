@@ -464,6 +464,7 @@ class Manutencao:
         self.ao_etapa("juntando")
         if _git("status", "--porcelain", "--untracked-files=no", repo=self.repo).strip():
             return False, "O repositório do Zé tem alterações sem commit. Resolva antes de aplicar."
+        antes = _git("rev-parse", "HEAD", repo=self.repo).strip()
         if _git_ok("merge", "--ff-only", s.branch, repo=self.repo) != 0:
             mensagem = f"Autodesenvolvimento do Zé ({s.branch})"
             if _git_ok("merge", "--no-ff", "-m", mensagem, s.branch, repo=self.repo) != 0:
@@ -481,7 +482,17 @@ class Manutencao:
             protegidos=m["protegidos"],
             autorizacao="revisada" if m["protegidos"] else "aprovada",
         )
-        return self.reiniciar(revisado=True)
+        ok, texto = self.reiniciar(revisado=True)
+        if not ok:
+            # O Zé em uso não reiniciou: a pasta dele volta ao código que está rodando, e a cópia
+            # fica com as melhorias para a sessão corrigir e aplicar de novo (05/11/2026: a junção
+            # ficava na pasta, com o Zé no código antigo e o `update` recusando).
+            _git_ok("reset", "--hard", antes, repo=self.repo)
+            atividade.PADRAO.registrar(
+                "execucao", "Desfez a junção das melhorias", commits=m["commits"], motivo=texto
+            )
+            texto += " Desfiz a junção: a cópia continua com as melhorias."
+        return ok, texto
 
     def descartar(self) -> str:
         """Joga fora o que a cópia tem a mais: ela volta a ser igual ao Zé em uso."""
@@ -522,7 +533,10 @@ class Manutencao:
             check=False,
         )
         if testes.returncode != 0:
-            return False, "Não reiniciei: os testes falharam. Peça para a sessão corrigir antes."
+            falhas = self._guardar_testes(testes.stdout + testes.stderr)
+            return False, (
+                f"Não reiniciei: os testes falharam ({falhas}). Peça para a sessão corrigir antes."
+            )
         self.ao_etapa("reiniciando")
         reinicio = subprocess.run(  # noqa: S603 (script nosso, fora do cgroup do jarvisd)
             [
@@ -542,6 +556,33 @@ class Manutencao:
         if reinicio.returncode:
             return False, "Não foi possível iniciar o reinício. Consulte o registro técnico."
         return True, "Atualização aprovada, reiniciando automaticamente."
+
+    def _guardar_testes(self, saida: str) -> str:
+        """Guarda a saída do `make check` que falhou (antes ia fora, e ninguém sabia o porquê) e
+        diz, curto, o que falhou: os testes pelo nome, ou a última linha (lint, tipos, Go)."""
+        registro = self.pasta / "testes.log"
+        with contextlib.suppress(OSError):
+            registro.write_text(saida[-200_000:])
+            registro.chmod(0o600)
+        nomes = [
+            linha.split("::")[-1].split(" ")[0]
+            for linha in saida.splitlines()
+            if linha.startswith("FAILED ") or linha.startswith("ERROR ")
+        ]
+        if nomes:
+            resumo = ", ".join(dict.fromkeys(nomes[:3])) + (
+                f" e mais {len(nomes) - 3}" if len(nomes) > 3 else ""
+            )
+        else:
+            linhas = [linha.strip() for linha in saida.splitlines() if linha.strip()]
+            resumo = linhas[-1][:160] if linhas else "sem saída"
+        atividade.PADRAO.registrar(
+            "execucao",
+            "Os testes do Zé falharam antes do reinício",
+            falhas=resumo,
+            registro=str(registro),
+        )
+        return resumo
 
     def resultado_do_reinicio(self) -> str | None:
         """O que o script deixou dito sobre o último reinício (uma vez só)."""

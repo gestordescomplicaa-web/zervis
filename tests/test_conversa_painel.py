@@ -5,6 +5,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
+from zervis.memoria import linha as linha_mod
 from zervis.memoria.conversas import Conversas
 from zervis.memoria.linha import LinhaDoTempo, agora
 from zervis.nucleo import estados as e
@@ -12,10 +15,16 @@ from zervis.nucleo.laco import Nucleo
 from zervis.portal.acoes import Acoes
 
 
-def test_fio_de_hoje_junta_conversa_e_avisos_em_ordem(tmp_path: Path) -> None:
+def test_fio_de_hoje_junta_conversa_e_avisos_em_ordem(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # O relógio no meio do dia: logo depois da meia-noite, "5 minutos atrás" já era ontem e o
+    # teste falhava sem bug nenhum (06/11/2026, no make check do autodesenvolvimento).
+    meio_dia = agora().replace(hour=12, minute=0, second=0, microsecond=0)
+    monkeypatch.setattr(linha_mod, "agora", lambda: meio_dia)
     conversas = Conversas(tmp_path / "conversas")
     linha = LinhaDoTempo(tmp_path / "linha.jsonl")
-    hoje = agora()
+    hoje = meio_dia
     conversas.registrar("que horas são?", "Três da tarde.", hoje - timedelta(minutes=5))
     linha.registrar("lembrete", "Hora de beber água.", hoje - timedelta(minutes=2))
     linha.registrar("lembrete", "Daqui a pouco.", hoje + timedelta(hours=1))  # ainda não tocou

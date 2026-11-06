@@ -284,6 +284,39 @@ def test_etapas_acompanham_o_git_e_so_confirmam_depois_do_reinicio(
     assert f is not None and f["estado"] == "pronto"
 
 
+def test_testes_falhando_depois_de_juntar_desfazem_a_juncao_e_dizem_o_que_falhou(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # O caso de 05/11/2026: a cópia passou, a junção foi feita, o make check da pasta em uso
+    # falhou, e a junção ficou lá com o Zé no código antigo, sem dizer o porquê.
+    m = nova(repo, SessoesFalsas())
+    m.entrar()
+    s = m.copia()
+    assert s is not None
+    antes = _cabeca(repo)
+    _commit(Path(s.worktree), "docs/novo.md", "novo\n")
+    m.testar = lambda pasta: True
+    original = subprocess.run
+    saida = (
+        "...\nFAILED tests/test_x.py::test_um - AssertionError\nFAILED tests/test_y.py::test_dois\n"
+    )
+
+    def executar(args: Any, **kw: Any) -> Any:
+        if args[0] == "/usr/bin/make":
+            return subprocess.CompletedProcess(args, 2, saida, "")
+        if args[0] == "/usr/bin/systemd-run":
+            raise AssertionError("não reinicia com os testes vermelhos")
+        return original(args, **kw)
+
+    monkeypatch.setattr(subprocess, "run", executar)
+    ok, texto = m.aplicar()
+    assert not ok and "test_um, test_dois" in texto and "Desfiz a junção" in texto
+    assert _cabeca(repo) == antes  # a pasta igual ao Zé rodando
+    assert not (repo / "docs/novo.md").exists()
+    assert len(m.mudancas()["commits"]) == 1  # a cópia guarda a melhoria para aplicar de novo
+    assert (m.pasta / "testes.log").read_text() == saida
+
+
 def test_falha_ao_agendar_reinicio_nao_e_anunciada_como_reiniciando(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -368,6 +401,12 @@ def test_o_cerebro_tem_a_ferramenta_e_ela_pede_aprovacao(repo: Path) -> None:
     )
     assert descrever(nome, {"acao": "sair"}) == "Vou desligar o modo manutenção."
     assert descrever("mcp__jarvis__tela_agir", {}) is None
+
+
+def _cabeca(pasta: Path) -> str:
+    return subprocess.check_output(  # noqa: S603 (git num repositório temporário do teste)
+        ["/usr/bin/git", "-C", str(pasta), "rev-parse", "HEAD"], text=True
+    ).strip()
 
 
 def _commit(pasta: Path, arquivo: str, texto: str) -> None:
