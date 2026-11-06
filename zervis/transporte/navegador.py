@@ -60,6 +60,10 @@ class VozNavegador:
         self.do_app = do_app
         # A fala do Zé que volta pelo microfone (caixa de som, alto-falante) sai aqui (ADR 0051).
         self.eco = eco if eco is not None else Eco()
+        # Numa ligação passada ao app (ADR 0066), a sua voz vai crua para a pessoa: o celular, no
+        # modo de ligação, já tira o eco, e o filtro do Zé (feito para ele entender pedidos)
+        # alterava a voz de uma conversa entre pessoas.
+        self.sem_eco = False
 
     @property
     def conectada(self) -> bool:
@@ -93,7 +97,8 @@ class VozNavegador:
                 while len(resto) >= BYTES_QUADRO:
                     # (o quadro chega inteiro com este pacote: termina agora, menos o que sobrou)
                     fim = agora - (len(resto) - BYTES_QUADRO) / 2 / TAXA
-                    ao_quadro(self.eco.limpar(resto[:BYTES_QUADRO], fim))
+                    quadro = resto[:BYTES_QUADRO]
+                    ao_quadro(quadro if self.sem_eco else self.eco.limpar(quadro, fim))
                     resto = resto[BYTES_QUADRO:]
         except FechouErro:
             return
