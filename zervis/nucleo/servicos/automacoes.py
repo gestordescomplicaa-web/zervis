@@ -108,7 +108,7 @@ class ServicoAutomacoes:
             if (atualizou := self.n.versoes.resultado_novo()) is not None:
                 atividade.PADRAO.registrar("execucao", atualizou, origem="atualizacoes")
                 self.n._na_linha("aviso", atualizou)
-                if modo_fala.falar(self.n.modo_fala, "notificacao"):
+                if modo_fala.falar(modo_fala.efetivo(self.n), "notificacao"):
                     self.n.eventos.put(e.Aviso(atualizou))
             for texto, expira in self.n.calendario.vencidos(agora):
                 log.info("agenda: %s", texto)
@@ -134,7 +134,7 @@ class ServicoAutomacoes:
         try:
             if (texto := self.n.versoes.procurar_do_dia()) is not None:
                 self.n._na_linha("aviso", texto)
-                if modo_fala.falar(self.n.modo_fala, "notificacao"):
+                if modo_fala.falar(modo_fala.efetivo(self.n), "notificacao"):
                     self.n.eventos.put(e.Aviso(texto))
         except Exception:
             log.exception("procura de atualização falhou")
@@ -149,7 +149,7 @@ class ServicoAutomacoes:
                 log.info("vigia do n8n: %s", texto)
                 atividade.PADRAO.registrar("execucao", texto, origem="vigia")
                 self.n._na_linha("aviso", texto)
-                if modo_fala.falar(self.n.modo_fala, prioridade):
+                if modo_fala.falar(modo_fala.efetivo(self.n), prioridade):
                     self.n._meta[texto] = {"prioridade": PRIORIDADES[prioridade], "titulo": "o n8n"}
                     self.n.eventos.put(e.Aviso(texto))
         except Exception:
