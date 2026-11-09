@@ -71,8 +71,9 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
   (`python -m zervis.voz.latencia --caminhos 7` e o placar). Primeira medição, 03 a 09/11/2026:
   via rápida com p50 de 3,9 s (a meta é p95 abaixo de 2,5 s). No Ao vivo, 216 turnos foram ao
   cérebro sem nunca receber o primeiro token, quase todos em 03 e 06/11/2026: a investigar.
-- [ ] **Custo por tarefa** na Atividade. Cada pedido de voz ou texto já leva o total de tokens e
-  as partes (via rápida, cérebro, pesquisa); falta o das tarefas das sessões de código.
+- [x] **Custo por tarefa** na Atividade: cada pedido de voz ou texto leva o total de tokens e as
+  partes (via rápida, cérebro, pesquisa), e cada tarefa de uma sessão de código, o que o agente
+  gastou no turno, lido da conversa dele (`zervis/oficina/custo.py`).
 - [x] **Placar público** em `docs/placar.md`, atualizado a cada versão: nota por área (93% na
   primeira rodada noturna), latência por caminho e tokens por cenário (`zervis placar`).
 
