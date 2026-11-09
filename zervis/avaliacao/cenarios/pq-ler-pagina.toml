@@ -1,0 +1,11 @@
+nome = "Ler uma página pelo endereço"
+area = "pesquisa"
+pedido = "Resume essa página para mim: https://exemplo.com/blog/automacao-no-varejo"
+
+[ferramentas]
+pagina_ler = '{"titulo": "Automação no varejo", "texto": "Lojas pequenas que automatizaram o atendimento no WhatsApp responderam 3 vezes mais rápido e venderam 12% a mais no trimestre."}'
+
+[espera]
+usa = ["pagina_ler"]
+entrada = { pagina_ler = ["exemplo.com/blog/automacao-no-varejo"] }
+resposta_alguma = ["12", "doze", "r[aá]pido"]

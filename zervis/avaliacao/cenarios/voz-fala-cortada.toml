@@ -1,0 +1,10 @@
+# 06/11/2026: a transcrição entregou só "Sim Ei Zé." e "Existe uma possibilidade.". O Zé não
+# adivinha um pedido: pergunta o que a pessoa quer.
+nome = "Fala cortada pela transcrição: pergunta o que a pessoa quer"
+area = "voz"
+pedido = "Existe uma possibilidade."
+
+[espera]
+nao_usa = ["sessao_criar", "sessao_enviar", "whatsapp_responder", "whatsapp_enviar", "automacao_lembrete", "memoria"]
+resposta_alguma = ['\?', "pode falar", "diga", "pois não"]
+palavras = 30

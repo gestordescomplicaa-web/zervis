@@ -1,0 +1,16 @@
+nome = "Parar uma sessão: a certa, pelo nome"
+area = "sessoes"
+pedido = "Para a sessão da Padaria Maria."
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false, "conectores": []},
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/srv/projetos/padaria-maria", "motor": "claude",
+  "estado": "trabalhando", "ultimo_recado": "Ajustando o cardápio do site.", "copia_isolada": false, "conectores": []}]'''
+sessao_parar = '{"parada": true, "sessao": "Padaria Maria"}'
+
+[espera]
+usa = ["sessao_parar"]
+entrada_alguma = { sessao_parar = ["s3", "padaria"] }
+nao_usa = ["sessao_enviar"]

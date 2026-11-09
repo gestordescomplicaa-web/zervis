@@ -1,5 +1,6 @@
 # O estado do vigia vem em conectores_listar (19/10/2026).
 nome = "O n8n está de pé? Responde pelo vigia, do cliente certo"
+area = "sessoes"
 pedido = "O n8n da Padaria Maria está de pé?"
 
 [ferramentas]

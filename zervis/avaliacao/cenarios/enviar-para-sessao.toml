@@ -1,4 +1,5 @@
 nome = "Manda uma tarefa para a sessão certa e diz que avisa"
+area = "sessoes"
 pedido = "Manda a sessão da Loja do João rodar os testes e me avisar se algo quebrar."
 
 [ferramentas]

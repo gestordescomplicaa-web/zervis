@@ -1,0 +1,7 @@
+nome = "Bom dia: responde curto, sem ferramenta"
+area = "voz"
+pedido = "Bom dia, Zé!"
+
+[espera]
+nao_usa = ["sessoes_listar", "whatsapp_conversas", "internet_pesquisar", "tela_agir", "ze_sobre"]
+palavras = 25

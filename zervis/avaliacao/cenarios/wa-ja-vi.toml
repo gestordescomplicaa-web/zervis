@@ -1,0 +1,11 @@
+nome = "Já vi o lead: para de lembrar"
+area = "whatsapp"
+pedido = "Já vi a da Fernanda, pode parar de me lembrar."
+
+[ferramentas]
+whatsapp_leads = '''{"esperando": [{"id": "l1", "nome": "Fernanda Lopes", "ha": "40 min", "mensagem": "Quero saber o valor do plano mensal."}], "respondidos": []}'''
+whatsapp_ja_vi = '{"ok": true, "lead": "Fernanda Lopes"}'
+
+[espera]
+usa = ["whatsapp_ja_vi"]
+nao_usa = ["whatsapp_responder", "whatsapp_esquecer"]

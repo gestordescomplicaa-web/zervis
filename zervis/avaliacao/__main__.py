@@ -166,7 +166,7 @@ async def avaliar(
                 }
             )
             _mostrar(c, rodada, regras)
-        saida.append({"arquivo": c.arquivo, "nome": c.nome, "rodadas": rodadas})
+        saida.append({"arquivo": c.arquivo, "nome": c.nome, "area": c.area, "rodadas": rodadas})
     return {"quando": time.strftime("%Y-%m-%dT%H:%M:%S"), "cenarios": saida, "parou": parou}
 
 
@@ -223,6 +223,15 @@ def resumo(relatorio: dict[str, Any], anterior: dict[str, Any]) -> str:
             agora_media = sum(tokens[k] for k in antes_t) / len(antes_t)
             linha += f" (antes {_mil(antes_media)} → agora {_mil(agora_media)} nos mesmos)"
         linhas.append(linha)
+    areas: dict[str, list[float]] = {}
+    for c in relatorio["cenarios"]:
+        if c["arquivo"] in taxa:
+            areas.setdefault(c.get("area", "voz"), []).append(taxa[c["arquivo"]])
+    for area, nome in avaliacao.AREAS.items():
+        if valores := areas.get(area):
+            media = sum(valores) / len(valores) * 100
+            plural = "s" if len(valores) != 1 else ""
+            linhas.append(f"  {nome}: {media:.0f}% ({len(valores)} cenário{plural})")
     if sem_nota:
         linhas.append(f"  sem nota: {', '.join(sem_nota)}")
     for arquivo, valor in taxa.items():
@@ -237,6 +246,9 @@ def main(argv: list[str] | None = None) -> int:
     partes = argparse.ArgumentParser(prog="zervis avaliar", description=__doc__)
     partes.add_argument("cenarios", nargs="*", help="só estes (nome do arquivo, sem .toml)")
     partes.add_argument("--repetir", type=int, default=1, help="rodadas por cenário")
+    partes.add_argument(
+        "--area", choices=tuple(avaliacao.AREAS), default="", help="só os cenários desta área"
+    )
     partes.add_argument("--modelo", default="", help="o modelo do cérebro (padrão: o do Zé)")
     partes.add_argument(
         "--cerebro",
@@ -256,11 +268,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = partes.parse_args(argv)
     cenarios = avaliacao.carregar()
+    if args.area:
+        cenarios = [c for c in cenarios if c.area == args.area]
     if args.cenarios:
         cenarios = [c for c in cenarios if c.arquivo in args.cenarios]
-        if not cenarios:
-            print("Nenhum cenário com esses nomes.", file=sys.stderr)
-            return 2
+    if not cenarios:
+        print("Nenhum cenário com esses nomes ou nessa área.", file=sys.stderr)
+        return 2
     from zervis.cerebro import catalogo, rapido
     from zervis.config import carregar
 

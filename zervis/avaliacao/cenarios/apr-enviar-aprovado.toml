@@ -1,0 +1,12 @@
+nome = "Conversa nova aprovada: pede o sim e envia"
+area = "aprovacoes"
+pedido = "Manda para 11 95555-0000, é a Gráfica Norte: quero um orçamento de mil panfletos."
+
+[ferramentas]
+whatsapp_enviar = '{"enviado": true, "para": "Gráfica Norte"}'
+
+[espera]
+aprovacao = true
+usa = ["whatsapp_enviar"]
+entrada = { whatsapp_enviar = ["panfleto"] }
+entrada_alguma = { whatsapp_enviar = ["95555-0000", "955550000", "95555 0000"] }

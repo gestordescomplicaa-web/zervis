@@ -1,0 +1,11 @@
+nome = "Parar de avisar de um contato: silencia, não apaga"
+area = "whatsapp"
+pedido = "Para de me avisar das mensagens do açougue."
+
+[ferramentas]
+whatsapp_prioridade = '{"silenciado": "Açougue Bom Corte"}'
+
+[espera]
+usa = ["whatsapp_prioridade"]
+entrada = { whatsapp_prioridade = ["silenciar"] }
+nao_usa = ["whatsapp_esquecer"]

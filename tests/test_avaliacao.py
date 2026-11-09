@@ -54,10 +54,22 @@ def _cenario(**espera: Any) -> Cenario:
 
 def test_os_cenarios_da_bateria_carregam_e_citam_ferramentas_reais() -> None:
     cenarios = avaliacao.carregar()
-    assert len(cenarios) >= 10
+    assert len(cenarios) >= 100  # plano de maturidade, Frente 3: 100+ cenários em 8 áreas
     for c in cenarios:
         avaliacao.simuladas(c, Rodada())  # recusa ferramenta que não existe
         assert c.espera, c.arquivo
+    por_area = {a: sum(c.area == a for c in cenarios) for a in avaliacao.AREAS}
+    assert min(por_area.values()) >= 10, por_area
+
+
+def test_a_bateria_tem_as_ferramentas_do_whatsapp_das_ligacoes_e_da_pesquisa() -> None:
+    nomes = {f.name.split("__")[-1] for f in avaliacao.definicoes()}
+    assert {
+        "whatsapp_responder",
+        "whatsapp_ligar",
+        "whatsapp_ligacoes",
+        "pesquisa_profunda",
+    } <= nomes
 
 
 def test_as_ferramentas_simuladas_tem_as_descricoes_reais_e_nao_executam_nada() -> None:
@@ -134,7 +146,17 @@ def test_cenario_invalido_e_recusado(tmp_path: Path) -> None:
     (tmp_path / "sem-pedido.toml").write_text('nome = "x"\n')
     with pytest.raises(avaliacao.AvaliacaoErro, match="pedido"):
         avaliacao.carregar(tmp_path)
-    (tmp_path / "sem-pedido.toml").write_text('pedido = "oi"\n[ferramentas]\nnao_existe = "x"\n')
+    (tmp_path / "sem-pedido.toml").write_text('pedido = "oi"\n')
+    with pytest.raises(avaliacao.AvaliacaoErro, match="area"):
+        avaliacao.carregar(tmp_path)
+    (tmp_path / "sem-pedido.toml").write_text(
+        'pedido = "oi"\narea = "voz"\n[espera]\nusar = ["x"]\n'
+    )
+    with pytest.raises(avaliacao.AvaliacaoErro, match="chave desconhecida: usar"):
+        avaliacao.carregar(tmp_path)
+    (tmp_path / "sem-pedido.toml").write_text(
+        'pedido = "oi"\narea = "voz"\n[ferramentas]\nnao_existe = "x"\n'
+    )
     (cenario,) = avaliacao.carregar(tmp_path)
     with pytest.raises(avaliacao.AvaliacaoErro, match="desconhecida"):
         avaliacao.simuladas(cenario, Rodada())
@@ -144,11 +166,14 @@ def test_resumo_compara_com_a_rodada_anterior() -> None:
     from zervis.avaliacao.__main__ import resumo
 
     def rel(**taxas: list[bool]) -> dict[str, Any]:
-        return {"cenarios": [{"arquivo": a, "rodadas": [{"passou": p} for p in v]}
+        return {"cenarios": [{"arquivo": a, "area": "voz" if a == "a" else "whatsapp",
+                              "rodadas": [{"passou": p} for p in v]}
                              for a, v in taxas.items()]}  # fmt: skip
 
     texto = resumo(rel(a=[True, True], b=[True, False]), rel(a=[True, False], b=[True, False]))
     assert "Nota: 75%" in texto and "1 de 2" in texto
+    assert "Voz e fala curta: 100% (1 cenário)" in texto
+    assert "WhatsApp e atendimento: 50% (1 cenário)" in texto
     assert "melhorou: a (50% → 100%)" in texto and "b" not in texto.split("melhorou")[1]
 
 
@@ -245,3 +270,14 @@ def test_a_referencia_e_do_mesmo_cerebro(tmp_path: Path, monkeypatch: pytest.Mon
     (tmp_path / "2.json").write_text(rel("claude:sonnet", False))
     assert executor._anterior("codex:gpt")["cenarios"][0]["rodadas"][0]["passou"] is True
     assert executor._anterior("claude:sonnet")["cenarios"][0]["rodadas"][0]["passou"] is False
+
+
+def test_aprovacao_e_teto_de_palavras_do_cenario() -> None:
+    c = _cenario(aprovacao=True, palavras=3)
+    curta = Rodada(resposta="Pronto, mandei.", aprovacoes=["Envio para a Ana, confirma?"])
+    assert avaliacao.nota(avaliacao.julgar(c, curta))
+    longa = Rodada(resposta="Pronto, mandei para a Ana agora.")
+    falhas = {r.regra for r in avaliacao.julgar(c, longa) if not r.ok}
+    assert falhas == {"pediu aprovação", "até 3 palavras"}
+    leitura = _cenario(aprovacao=False)
+    assert not avaliacao.nota(avaliacao.julgar(leitura, curta))

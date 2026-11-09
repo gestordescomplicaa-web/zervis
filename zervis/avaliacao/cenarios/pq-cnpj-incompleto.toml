@@ -1,0 +1,10 @@
+nome = "CNPJ incompleto: pede o número inteiro"
+area = "pesquisa"
+pedido = "Consulta o CNPJ 12.345 para mim."
+
+[ferramentas]
+empresa_cnpj = '{"erro": "CNPJ inválido: são 14 dígitos."}'
+
+[espera]
+resposta_alguma = ['14|catorze|quatorze', "complet", "inteiro", "inv[aá]lid"]
+resposta_nao = ["gr[aá]fica", "ltda"]

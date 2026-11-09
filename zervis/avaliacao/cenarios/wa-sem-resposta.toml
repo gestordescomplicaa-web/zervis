@@ -1,0 +1,13 @@
+nome = "Quem espera resposta: filtra os que esperam"
+area = "whatsapp"
+pedido = "Tem alguém esperando resposta minha no WhatsApp?"
+
+[ferramentas]
+whatsapp_conversas = '''{"conectado": true, "conversas": [
+ {"id": "c1", "nome": "Ana Beatriz", "ultima": "Pode me mandar o orçamento até sexta?", "quando": "há 20 min", "espera_resposta": true},
+ {"id": "c2", "nome": "Carlos Mendes", "ultima": "Fechado, obrigado!", "quando": "há 2 h", "espera_resposta": false}]}'''
+
+[espera]
+usa = ["whatsapp_conversas"]
+resposta = ["ana"]
+resposta_alguma = ["or[cç]amento", "sexta"]

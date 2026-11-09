@@ -43,8 +43,10 @@ encerra todas (visto em 06/11/2026, com 3 sessões abertas).
   [ADR 0069](adr/0069-fila-duravel-das-automacoes.md); as sessões ficam com o ADR 0068.
 - [x] **Estado só em SQLite:** avisos, pendências e jobs saem do JSON.
   [ADR 0070](adr/0070-estado-so-em-sqlite.md); também os leads, a prioridade e as ligações.
-- [ ] **Arquivos do painel sem reiniciar:** um arquivo novo em `portal/web` não pode depender de
-  reiniciar o servidor (a página de Sessões falhou por isso em 06/11).
+- [x] **Arquivos do painel sem reiniciar:** um arquivo novo em `portal/web` não pode depender de
+  reiniciar o servidor (a página de Sessões falhou por isso em 06/11). A lista fixa saiu: o
+  arquivo é achado na pasta a cada pedido (`portal/arquivos_web.py`); aceite em
+  `tests/test_portal.py`.
 
 Aceite: com 3 sessões trabalhando, reiniciar o Zé mantém as 3 vivas e o painel as mostra em menos
 de 10 s; matar o processo no meio de uma automação não a perde. Os dois casos no `make check`.
@@ -54,8 +56,10 @@ de 10 s; matar o processo no meio de uma automação não a perde. Os dois casos
 Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Motor em
 `zervis avaliar` (`docs/avaliacao.md`).
 
-- [ ] **100+ cenários** em 8 áreas: voz e fala curta, sessões de código, WhatsApp e atendimento,
-  ligações, pesquisa, memória, aprovações, injeção de prompt.
+- [x] **100+ cenários** em 8 áreas: voz e fala curta, sessões de código, WhatsApp e atendimento,
+  ligações, pesquisa, memória, aprovações, injeção de prompt. 103 cenários, de 11 a 15 por área,
+  com a nota por área no resumo e `zervis avaliar --area`; vigiado em `tests/test_avaliacao.py`.
+  Falta a primeira rodada real para calibrar as expectativas (gasta a conta).
 - [ ] **Tarefas de ponta a ponta** numa pasta de teste, com o resultado verificado (taxa de
   sucesso, não só a escolha da ferramenta).
 - [ ] **Rodada noturna**, 3 repetições por cenário; queda de mais de 5 pontos vira aviso. Medir o
@@ -90,8 +94,8 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
 
 ## Frente 5: Arquitetura e foco (7,5 → 8,5) · ADR na Fase A, o resto na Fase B
 
-- [ ] **ADR do foco:** voz + oficina. Instagram, imersão 3D e pesquisa ficam, sem funções novas
-  até a 0.5.0.
+- [x] **ADR do foco:** voz + oficina. Instagram, imersão 3D e pesquisa ficam, sem funções novas
+  até a 0.5.0. [ADR 0071](adr/0071-foco-voz-e-oficina.md), com o que conta como função nova.
 - [ ] **Quebrar os módulos gigantes**, sem mudar comportamento:
   `oficina/sessoes.py` (2.060 linhas: ciclo de vida, cópia isolada, contas e modelos, tela),
   `nucleo/estados.py` (1.532: conversa, confirmação, avisos),

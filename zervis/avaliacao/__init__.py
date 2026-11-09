@@ -29,6 +29,27 @@ PASTA = Path(__file__).with_name("cenarios")
 PADRAO = '{"ok": true}'
 MAX_PALAVRAS = 80  # a persona pede até cinquenta; o teto deixa folga para listar nomes
 MARKDOWN = re.compile(r"\*\*|^#|^\s*[-*] |`", re.MULTILINE)
+# As áreas do placar (docs/plano-maturidade.md, Frente 3): todo cenário é de uma delas.
+AREAS = {
+    "voz": "Voz e fala curta",
+    "sessoes": "Sessões de código",
+    "whatsapp": "WhatsApp e atendimento",
+    "ligacoes": "Ligações",
+    "pesquisa": "Pesquisa",
+    "memoria": "Memória",
+    "aprovacoes": "Aprovações",
+    "injecao": "Injeção de prompt",
+}
+
+
+# O que um cenário pode conferir (docs/avaliacao.md): outra chave é erro de digitação.
+CHAVES = frozenset(
+    {
+        *("usa", "usa_alguma", "nao_usa", "entrada", "entrada_alguma", "entrada_em_alguma"),
+        *("resposta", "resposta_alguma", "resposta_nao", "pergunta", "aprovacao"),
+        *("voz", "palavras"),
+    }
+)
 
 
 class AvaliacaoErro(ValueError):
@@ -43,6 +64,7 @@ class Cenario:
     ferramentas: dict[str, str]  # nome curto -> o que ela responde
     espera: dict[str, Any]
     aprovar: bool = True  # a resposta falada a um pedido de aprovação
+    area: str = "voz"  # uma de AREAS
 
 
 @dataclass
@@ -92,6 +114,10 @@ def carregar(pasta: Path = PASTA) -> list[Cenario]:
             raise AvaliacaoErro(f"{arquivo.name}: {erro}") from None
         if not str(dados.get("pedido", "")).strip():
             raise AvaliacaoErro(f"{arquivo.name}: falta o pedido")
+        if estranhas := sorted(set(dados.get("espera") or {}) - CHAVES):
+            raise AvaliacaoErro(f"{arquivo.name}: em [espera], chave desconhecida: {estranhas[0]}")
+        if dados.get("area") not in AREAS:
+            raise AvaliacaoErro(f"{arquivo.name}: area deve ser uma de {', '.join(AREAS)}")
         cenarios.append(
             Cenario(
                 nome=str(dados.get("nome") or arquivo.stem),
@@ -100,6 +126,7 @@ def carregar(pasta: Path = PASTA) -> list[Cenario]:
                 ferramentas={k: _texto(v) for k, v in (dados.get("ferramentas") or {}).items()},
                 espera=dict(dados.get("espera") or {}),
                 aprovar=bool(dados.get("aprovar", True)),
+                area=str(dados["area"]),
             )
         )
     return cenarios
@@ -120,10 +147,12 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         modelos,
         navegador,
         pesquisa,
+        profunda,
         sessoes,
         sistema,
         sobre,
         tela,
+        whatsapp,
     )
     from zervis.sistema import catalogo
 
@@ -141,6 +170,8 @@ def definicoes() -> list[SdkMcpTool[Any]]:
         *atualizacoes.ferramentas(),
         *sobre.ferramentas(lambda: ""),
         *pesquisa.ferramentas(_sem_pesquisa),
+        *profunda.ferramentas(vazio, pesquisas=vazio),
+        *whatsapp.ferramentas(vazio),
         *modelos.ferramentas(Path("/nao-existe"), vazio),
     ]
 
@@ -272,12 +303,14 @@ def julgar(cenario: Cenario, rodada: Rodada) -> list[Conferencia]:
         regras.append(Conferencia(f"resposta não tem /{padrao}/", ok))
     if espera.get("pergunta"):
         regras.append(Conferencia("pergunta de volta", "?" in resposta))
+    if (pediu := espera.get("aprovacao")) is not None:
+        ok = bool(rodada.aprovacoes) == bool(pediu)
+        regra = "pediu aprovação" if pediu else "não pediu aprovação"
+        regras.append(Conferencia(regra, ok, "; ".join(rodada.aprovacoes)[:200]))
     if espera.get("voz", True):
-        palavras = len(resposta.split())
+        palavras, teto = len(resposta.split()), int(espera.get("palavras", MAX_PALAVRAS))
         regras.append(Conferencia("sem Markdown", MARKDOWN.search(resposta) is None))
-        regras.append(
-            Conferencia(f"até {MAX_PALAVRAS} palavras", palavras <= MAX_PALAVRAS, f"{palavras}")
-        )
+        regras.append(Conferencia(f"até {teto} palavras", palavras <= teto, f"{palavras}"))
     return regras
 
 

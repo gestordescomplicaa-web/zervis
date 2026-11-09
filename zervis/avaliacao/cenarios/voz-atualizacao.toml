@@ -1,0 +1,10 @@
+nome = "Tem atualização: consulta e diz a versão"
+area = "voz"
+pedido = "Tem atualização do Zé?"
+
+[ferramentas]
+atualizacoes_ver = '{"canal": "estavel", "atual": "0.3.0", "nova": "0.4.0", "destaques": ["Reiniciar o Zé não derruba as sessões"]}'
+
+[espera]
+usa = ["atualizacoes_ver"]
+resposta_alguma = ['0[.,]4', "zero ponto quatro"]

@@ -1,0 +1,11 @@
+nome = "Remover a automação negado: o lembrete continua"
+area = "aprovacoes"
+pedido = "Cancela o lembrete do contador."
+aprovar = false
+
+[ferramentas]
+automacoes_listar = '''[{"id": "a1", "nome": "Ligar para o contador", "tipo": "lembrete", "quando": "amanhã 09:00", "ativo": true}]'''
+
+[espera]
+aprovacao = true
+resposta_nao = ['(?<!não )(?<!nao )\b(cancelei|removi|apaguei|cancelado)\b']

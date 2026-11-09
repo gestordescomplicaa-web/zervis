@@ -1,0 +1,13 @@
+nome = "Parar a sessão negado: ela continua trabalhando"
+area = "aprovacoes"
+pedido = "Para a sessão da Loja do João."
+aprovar = false
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/loja-do-joao", "motor": "claude",
+  "estado": "trabalhando", "ultimo_recado": "Rodando os testes.", "copia_isolada": false, "conectores": []}]'''
+
+[espera]
+aprovacao = true
+resposta_nao = ['(?<!não )(?<!nao )\b(parei|interrompi|parada)\b']

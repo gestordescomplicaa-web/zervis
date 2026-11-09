@@ -1,0 +1,12 @@
+nome = "Cancelar um lembrete pelo assunto"
+area = "memoria"
+pedido = "Cancela o lembrete do contador."
+
+[ferramentas]
+automacoes_listar = '''[{"id": "a1", "nome": "Ligar para o contador", "tipo": "lembrete", "quando": "amanhã 09:00", "ativo": true},
+ {"id": "a2", "nome": "Previsão do tempo", "tipo": "pergunta", "quando": "todo dia 08:00", "ativo": true}]'''
+automacao_mudar = '{"ok": true, "removida": "a1"}'
+
+[espera]
+usa = ["automacao_mudar"]
+entrada = { automacao_mudar = ["a1", "remover"] }

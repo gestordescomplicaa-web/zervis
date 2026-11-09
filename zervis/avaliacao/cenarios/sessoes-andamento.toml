@@ -1,0 +1,19 @@
+nome = "Andamento de uma sessão: lê a certa e resume"
+area = "sessoes"
+pedido = "Como está a sessão da Padaria Maria?"
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false, "conectores": []},
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/srv/projetos/padaria-maria", "motor": "claude",
+  "estado": "trabalhando", "ultimo_recado": "Ajustando o cardápio do site.", "copia_isolada": false, "conectores": []}]'''
+sessao_ler = '''{"id": "s3", "nome": "Padaria Maria", "estado": "trabalhando", "mensagens": [
+ {"quem": "voce", "texto": "atualiza o cardápio do site com os preços novos"},
+ {"quem": "agente", "texto": "Atualizei 14 dos 20 itens do cardápio; faltam as bebidas."}]}'''
+
+[espera]
+usa = ["sessao_ler"]
+entrada_alguma = { sessao_ler = ["s3", "padaria"] }
+nao_usa = ["sessao_enviar"]
+resposta_alguma = ["card[aá]pio", "bebida"]

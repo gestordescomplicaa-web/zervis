@@ -1,0 +1,11 @@
+nome = "Computador lento: lê o estado da máquina e diz o que pesa"
+area = "voz"
+pedido = "O computador está lento, o que está pesando?"
+
+[ferramentas]
+sistema_estado = '{"cpu": "92%", "memoria_livre": "1,1 GB de 16 GB", "swap": "3,8 GB", "processos": [{"nome": "chromium", "cpu": "61%", "memoria": "6,2 GB"}, {"nome": "node", "cpu": "18%", "memoria": "1,4 GB"}]}'
+
+[espera]
+usa = ["sistema_estado"]
+nao_usa = ["sistema_executar"]
+resposta = ["chromium"]

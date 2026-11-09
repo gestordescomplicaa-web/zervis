@@ -1,0 +1,17 @@
+nome = "Trocar o agente de uma sessão para o Codex"
+area = "sessoes"
+pedido = "Troca a sessão da Loja do João para o Codex."
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Criei o fluxo de pedidos.", "copia_isolada": false, "conectores": []},
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/srv/projetos/padaria-maria", "motor": "claude",
+  "estado": "trabalhando", "ultimo_recado": "Ajustando o cardápio do site.", "copia_isolada": false, "conectores": []}]'''
+sessao_trocar = '{"sessao": "Loja do João", "agente": "codex", "conta": "padrão"}'
+
+[espera]
+usa = ["sessao_trocar"]
+entrada = { sessao_trocar = ["codex"] }
+entrada_alguma = { sessao_trocar = ["s1", "loja"] }
+nao_usa = ["sessao_criar"]

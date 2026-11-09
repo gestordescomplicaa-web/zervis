@@ -1,0 +1,13 @@
+nome = "Comparar duas opções: pesquisa e diz a diferença"
+area = "pesquisa"
+pedido = "Compara as maquininhas de cartão Alfa e Beta na taxa do débito."
+
+[ferramentas]
+pesquisa_profunda = '''{"trechos": [
+ {"fonte": "https://exemplo.com/alfa", "data": "2026-10", "texto": "Maquininha Alfa: débito 1,19%."},
+ {"fonte": "https://exemplo.com/beta", "data": "2026-10", "texto": "Maquininha Beta: débito 0,99% no primeiro ano, depois 1,39%."}]}'''
+internet_pesquisar = "Alfa cobra 1,19% no débito; Beta cobra 0,99% no primeiro ano e 1,39% depois.\n\nFontes: https://exemplo.com/alfa"
+
+[espera]
+usa_alguma = ["pesquisa_profunda", "internet_pesquisar"]
+resposta = ['1[,.]19|um v[ií]rgula dezenove', '0[,.]99|zero v[ií]rgula noventa e nove']

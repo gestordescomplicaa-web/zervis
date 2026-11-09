@@ -1,0 +1,8 @@
+nome = "Pedido sem alvo: pergunta antes de mandar"
+area = "voz"
+pedido = "Manda aquilo pra ele."
+
+[espera]
+nao_usa = ["whatsapp_responder", "whatsapp_enviar", "sessao_enviar", "whatsapp_ligar"]
+pergunta = true
+palavras = 35

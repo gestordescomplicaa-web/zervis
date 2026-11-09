@@ -38,6 +38,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from zervis import ambiente
 from zervis.oficina.permissoes import ChaveInvalida, Permissoes
+from zervis.portal import arquivos_web
 from zervis.portal.senha import Acesso, SenhaErro
 from zervis.portal.voz_app import AparelhosDeVoz, PareamentoErro
 from zervis.transporte import websocket
@@ -57,62 +58,6 @@ MAXIMO_CORPO = 64 * 1024
 # é notada na volta), e uma pausa curta enquanto a conta é trocada (o terminal novo ainda sobe).
 ESPERA_SAIDA_S = 10.0
 PAUSA_TROCANDO_S = 0.3
-TIPOS = {
-    ".html": "text/html",
-    ".css": "text/css",
-    ".js": "text/javascript",
-    ".svg": "image/svg+xml",
-    ".webp": "image/webp",
-    ".webmanifest": "application/manifest+json",
-}
-ARQUIVOS = {
-    "/": "index.html",
-    "/painel.css": "painel.css",
-    "/painel.js": "painel.js",
-    "/modulos/acoes.js": "modulos/acoes.js",
-    "/modulos/imersao.js": "modulos/imersao.js",
-    "/modulos/modelos.js": "modulos/modelos.js",
-    "/modulos/navegacao.js": "modulos/navegacao.js",
-    "/modulos/terminal.js": "modulos/terminal.js",
-    "/modulos/conectores-sessao.js": "modulos/conectores-sessao.js",
-    "/modulos/permissoes-sessao.js": "modulos/permissoes-sessao.js",
-    "/modulos/paineis-sessao.js": "modulos/paineis-sessao.js",
-    "/modulos/voz.js": "modulos/voz.js",
-    "/paginas/automacoes.js": "paginas/automacoes.js",
-    "/paginas/configurar.js": "paginas/configurar.js",
-    "/paginas/foco.js": "paginas/foco.js",
-    "/paginas/inicio.js": "paginas/inicio.js",
-    "/paginas/modelos.js": "paginas/modelos.js",
-    "/paginas/perfil.js": "paginas/perfil.js",
-    "/paginas/sessoes.js": "paginas/sessoes.js",
-    "/paginas/voz.js": "paginas/voz.js",
-    "/ze.webp": "ze.webp",  # o ícone do Zé (menu lateral e aba)
-    # O terminal das sessões (xterm.js, MIT; ver THIRD_PARTY.md), servido daqui, sem CDN.
-    "/vendor/xterm/xterm.js": "vendor/xterm/xterm.js",
-    "/vendor/xterm/xterm.css": "vendor/xterm/xterm.css",
-    "/vendor/xterm/addon-fit.js": "vendor/xterm/addon-fit.js",
-    # O cliente da voz remota (livekit-client, Apache-2.0; ver THIRD_PARTY.md).
-    "/vendor/livekit/livekit-client.umd.js": "vendor/livekit/livekit-client.umd.js",
-    # O microfone do navegador em pedaços de 80 ms a 16 kHz (voz pelo HTTPS do painel).
-    "/voz-captura.js": "voz-captura.js",
-    # A página de volta do login de um conector (aberta sem o cookie; ver `_retorno_oauth`).
-    "/oauth-retorno.js": "oauth-retorno.js",
-    "/paginas/atividade.js": "paginas/atividade.js",  # páginas carregadas sob demanda
-    "/paginas/melhorias.js": "paginas/melhorias.js",
-    "/paginas/conectores.js": "paginas/conectores.js",
-    "/paginas/conversa.js": "paginas/conversa.js",
-    "/paginas/skills.js": "paginas/skills.js",
-    "/paginas/memoria.js": "paginas/memoria.js",
-    "/paginas/atendimento.js": "paginas/atendimento.js",
-    "/paginas/atualizacoes.js": "paginas/atualizacoes.js",
-    "/paginas/pesquisas.js": "paginas/pesquisas.js",
-    # O ícone na tela inicial do celular (instalar como app).
-    "/manifest.webmanifest": "manifest.webmanifest",
-    "/icones/ze-192.webp": "icones/ze-192.webp",
-    "/icones/ze-512.webp": "icones/ze-512.webp",
-    # O holograma da Imersão no celular.
-    "/imagens/holograma.webp": "imagens/holograma.webp",
-}
 
 # O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).
 LIVRES = {
@@ -620,8 +565,8 @@ class Portal:
                     else:
                         self._ir("/entrar")
                     return
-                if caminho in ARQUIVOS:
-                    arquivo = WEB / ARQUIVOS[caminho]
+                arquivo = arquivos_web.achar(WEB, caminho)
+                if arquivo is not None:
                     corpo = arquivo.read_bytes()
                     if arquivo.name == "index.html":
                         corpo = corpo.replace(b"__TOKEN__", portal.token.encode())
@@ -631,7 +576,7 @@ class Portal:
                             and portal.acesso.confiavel(self._cookie())
                         )
                         corpo = corpo.replace(b"__AJUSTES__", b"1" if ajustes else b"0")
-                    self._enviar(200, corpo, TIPOS[arquivo.suffix])
+                    self._enviar(200, corpo, arquivos_web.TIPOS[arquivo.suffix])
                     return
                 if not caminho.startswith("/api/"):
                     self._json(404, {"erro": "não existe"})

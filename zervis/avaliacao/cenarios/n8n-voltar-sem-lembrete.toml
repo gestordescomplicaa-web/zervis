@@ -1,6 +1,7 @@
 # 19/10/2026: "quando voltar me avise" virou um lembrete a cada 5 minutos que só falava o texto.
 # O vigia do n8n já avisa quando um n8n cai e quando volta.
 nome = "Quando o n8n voltar, não cria lembrete: o vigia avisa"
+area = "sessoes"
 pedido = "O n8n do cliente João caiu. Quando ele voltar, me avisa."
 
 [ferramentas]

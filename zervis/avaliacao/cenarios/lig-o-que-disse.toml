@@ -1,0 +1,11 @@
+nome = "O que a pessoa disse na ligação"
+area = "ligacoes"
+pedido = "O que o Paulo falou na ligação?"
+
+[ferramentas]
+whatsapp_ligacoes = '''{"contato": "Paulo Ribeiro", "quando": "hoje 10:15", "resumo": "Quer remarcar a visita técnica para quinta à tarde.", "falas": [{"quem": "Paulo", "texto": "Dá para passar a visita para quinta à tarde?"}]}'''
+
+[espera]
+usa = ["whatsapp_ligacoes"]
+entrada = { whatsapp_ligacoes = ["paulo"] }
+resposta_alguma = ["quinta", "visita"]

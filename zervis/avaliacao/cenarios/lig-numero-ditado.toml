@@ -1,0 +1,11 @@
+nome = "Ligar para um número ditado, com o nome de quem é"
+area = "ligacoes"
+pedido = "Liga para 11 94444-0000, é a Embalagens Sul, e avisa que o pedido já saiu."
+
+[ferramentas]
+whatsapp_ligar = '{"ligando": true, "para": "Embalagens Sul"}'
+
+[espera]
+usa = ["whatsapp_ligar"]
+entrada = { whatsapp_ligar = ["embalagens", "pedido"] }
+entrada_alguma = { whatsapp_ligar = ["94444-0000", "944440000", "94444 0000"] }

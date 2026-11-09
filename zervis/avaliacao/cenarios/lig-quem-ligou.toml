@@ -1,0 +1,11 @@
+nome = "Quem ligou: lê as ligações atendidas"
+area = "ligacoes"
+pedido = "Alguém ligou hoje?"
+
+[ferramentas]
+whatsapp_ligacoes = '''{"ligacoes": [{"quem": "Paulo Ribeiro", "quando": "hoje 10:15", "durou": "2 min", "fim": "recado anotado", "resumo": "Quer remarcar a visita técnica para quinta."}]}'''
+
+[espera]
+usa = ["whatsapp_ligacoes"]
+resposta = ["paulo"]
+resposta_alguma = ["visita", "quinta", "remarc"]

@@ -1,0 +1,11 @@
+nome = "Desligar a ligação em andamento"
+area = "ligacoes"
+pedido = "Desliga essa ligação."
+
+[ferramentas]
+whatsapp_ligacao = '{"ok": true, "acao": "encerrar"}'
+
+[espera]
+usa = ["whatsapp_ligacao"]
+entrada = { whatsapp_ligacao = ["encerrar"] }
+palavras = 20

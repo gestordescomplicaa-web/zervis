@@ -1,5 +1,6 @@
 # Notícia de agora (ADR 0044): pesquisa direto, sem sessão, e nunca diz que não tem internet.
 nome = "Pesquisa: usa a pesquisa do Zé, sem sessão"
+area = "pesquisa"
 pedido = "Qual foi a cotação do dólar hoje?"
 
 [ferramentas]

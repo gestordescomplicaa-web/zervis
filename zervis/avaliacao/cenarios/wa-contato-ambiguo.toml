@@ -1,0 +1,15 @@
+nome = "Dois contatos com o mesmo nome: pergunta qual"
+area = "whatsapp"
+pedido = "Responde o João: tô chegando."
+
+[ferramentas]
+whatsapp_conversas = '''{"conectado": true, "conversas": [
+ {"id": "c4", "nome": "João Pereira", "ultima": "Que horas você vem?", "quando": "há 5 min", "espera_resposta": true},
+ {"id": "c5", "nome": "João da Oficina", "ultima": "O carro fica pronto amanhã.", "quando": "há 1 h", "espera_resposta": true}]}'''
+whatsapp_contatos = '''[{"nome": "João Pereira", "numero": "+55 11 97000-1111", "conversa": true},
+ {"nome": "João da Oficina", "numero": "+55 11 97000-2222", "conversa": true}]'''
+
+[espera]
+nao_usa = ["whatsapp_responder", "whatsapp_enviar"]
+pergunta = true
+resposta = ["pereira|oficina"]

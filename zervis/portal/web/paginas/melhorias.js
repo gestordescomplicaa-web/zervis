@@ -99,7 +99,8 @@ async function mostrarDiagnostico(texto) {
     <div class="linha botoes">${botao("Recomeçar diagnóstico", "diagnostico-recomecar", 'title="O próximo diagnóstico conta a partir de agora. O histórico continua na Atividade."', "discreta")}</div>`;
 }
 
-let revisouProtegidos = false, verMudancas = false;
+// Propor leva minutos (os testes): enquanto isso, o botão fica "Propondo…" e não abre outro PR.
+let revisouProtegidos = false, verMudancas = false, propondo = false;
 
 async function desenharMelhorias() {
   const caixa = $("melhorias-ze");
@@ -111,7 +112,7 @@ async function desenharMelhorias() {
   const locais = (m.nao_publicadas ?? []).length;
   const publicar = locais
     ? `<div class="linha"><span>${locais} ${locais === 1 ? "melhoria só nesta máquina" : "melhorias só nesta máquina"}, fora do GitHub.</span><span class="espaco"></span>
-        ${botao("Propor como PR", "melhorias-propor", sessaoAtual?.estado === "trabalhando" || atualizando() || window.unificandoSessoes ? "disabled" : "", "discreta")}</div>`
+        ${botao(propondo ? "Propondo…" : "Propor como PR", "melhorias-propor", propondo || sessaoAtual?.estado === "trabalhando" || atualizando() || window.unificandoSessoes ? "disabled" : "", "discreta")}</div>`
     : "";
   if (!n && !m.sem_commit) { caixa.innerHTML = `<div class="faixa melhorias"><span>Nenhuma mudança pendente.</span>${publicar}</div>`; return; }
   const resumo = `${n} ${n === 1 ? "mudança" : "mudanças"} · ${m.arquivos.length} ${m.arquivos.length === 1 ? "arquivo" : "arquivos"}`;
@@ -164,10 +165,17 @@ Object.assign(ACOES, {
     const r = await api("ze/descartar", {}); toast(r.aviso); await desenharMelhorias();
   }),
   "melhorias-propor": (b) => confirmar(b, "Publicar no GitHub, num PR, as melhorias da cópia? O repositório é público: antes, o Zé confere os testes e que não vai nenhum dado seu.", async () => {
-    const r = await ocupado(b, () => api("ze/propor", { confirmado: true }));
-    toast(r.aviso);
-    if (r.endereco) window.open(r.endereco, "_blank", "noopener");
+    propondo = true;
+    toast("Conferindo os testes e os dados antes de publicar.", 8000);
     await desenharMelhorias();
+    try {
+      const r = await api("ze/propor", { confirmado: true });
+      toast(r.aviso);
+      if (r.endereco) window.open(r.endereco, "_blank", "noopener");
+    } finally {
+      propondo = false;
+      await desenharMelhorias();
+    }
   }),
   "melhorias-aplicar": async (b) => {
     const r = await ocupado(b, () => api("ze/aplicar", { revisei: revisouProtegidos }));

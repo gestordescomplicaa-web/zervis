@@ -1,0 +1,12 @@
+nome = "Pausar uma automação sem apagar"
+area = "memoria"
+pedido = "Pausa a previsão do tempo de todo dia por enquanto."
+
+[ferramentas]
+automacoes_listar = '''[{"id": "a1", "nome": "Ligar para o contador", "tipo": "lembrete", "quando": "amanhã 09:00", "ativo": true},
+ {"id": "a2", "nome": "Previsão do tempo", "tipo": "pergunta", "quando": "todo dia 08:00", "ativo": true}]'''
+automacao_mudar = '{"ok": true, "pausada": "a2"}'
+
+[espera]
+usa = ["automacao_mudar"]
+entrada = { automacao_mudar = ["a2", "pausar"] }

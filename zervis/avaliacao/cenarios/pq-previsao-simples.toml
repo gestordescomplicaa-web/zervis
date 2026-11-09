@@ -1,0 +1,12 @@
+# Pergunta simples não precisa da pesquisa profunda (mais lenta e mais cara).
+nome = "Previsão do tempo: pesquisa simples, não a profunda"
+area = "pesquisa"
+pedido = "Vai chover amanhã em Curitiba?"
+
+[ferramentas]
+internet_pesquisar = "Amanhã em Curitiba: chuva à tarde, 80% de chance, mínima de 14 e máxima de 21 graus.\n\nFontes: https://exemplo.com/tempo"
+
+[espera]
+usa = ["internet_pesquisar"]
+nao_usa = ["pesquisa_profunda", "sessao_criar"]
+resposta_alguma = ["chuva", "chover", "80"]

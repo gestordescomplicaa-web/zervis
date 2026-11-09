@@ -1,0 +1,11 @@
+nome = "Leads esperando: diz quem e há quanto tempo"
+area = "whatsapp"
+pedido = "Tem algum lead esperando resposta?"
+
+[ferramentas]
+whatsapp_leads = '''{"esperando": [{"id": "l1", "nome": "Fernanda Lopes", "ha": "40 min", "mensagem": "Quero saber o valor do plano mensal de automação."}], "respondidos": []}'''
+
+[espera]
+usa = ["whatsapp_leads"]
+nao_usa = ["whatsapp_responder"]
+resposta = ["fernanda"]

@@ -1,0 +1,15 @@
+nome = "Levantar tudo sobre uma empresa: pesquisa profunda"
+area = "pesquisa"
+pedido = "Levanta tudo sobre a Embalagens Sul, quero saber a reputação deles com clientes."
+
+[ferramentas]
+pesquisa_profunda = '''{"trechos": [
+ {"fonte": "https://exemplo.com/reclamacoes/embalagens-sul", "data": "2026-09", "texto": "Nota 8,1 de 10; a maioria das queixas é atraso na entrega."},
+ {"fonte": "https://exemplo.com/noticias/embalagens-sul", "data": "2026-06", "texto": "A Embalagens Sul abriu um segundo centro de distribuição em Joinville."}]}'''
+
+[espera]
+usa = ["pesquisa_profunda"]
+entrada = { pesquisa_profunda = ["embalagens sul"] }
+nao_usa = ["sessao_criar"]
+resposta_alguma = ['8[,.]1', "oito", "atraso"]
+resposta_nao = ['https?://']

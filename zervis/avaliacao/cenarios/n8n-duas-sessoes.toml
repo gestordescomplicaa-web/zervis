@@ -1,5 +1,6 @@
 # Duas sessões com n8n: o Zé pergunta qual, dizendo os nomes (pedido de 19/10/2026).
 nome = "Pergunta sobre o n8n com duas sessões: pergunta qual"
+area = "sessoes"
 pedido = "Quais fluxos estão ativos no n8n?"
 
 [ferramentas]

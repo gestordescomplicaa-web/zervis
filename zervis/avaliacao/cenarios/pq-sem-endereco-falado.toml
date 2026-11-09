@@ -1,0 +1,12 @@
+# A resposta é falada: as fontes não são lidas como endereço.
+nome = "Resposta pesquisada não lê endereços em voz alta"
+area = "pesquisa"
+pedido = "O que mudou no limite de faturamento do MEI este ano?"
+
+[ferramentas]
+internet_pesquisar = "Em 2026 o limite de faturamento do MEI segue em R$ 81 mil por ano; um projeto para subir a R$ 130 mil ainda está no Senado.\n\nFontes: https://exemplo.gov.br/mei e https://exemplo.com/noticia-mei"
+
+[espera]
+usa = ["internet_pesquisar"]
+resposta_alguma = ["81", "oitenta e um"]
+resposta_nao = ['https?://', 'www\.', '\.gov\.br']

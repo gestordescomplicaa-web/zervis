@@ -1,0 +1,14 @@
+nome = "Ler a conversa com uma pessoa"
+area = "whatsapp"
+pedido = "O que a Ana falou no WhatsApp?"
+
+[ferramentas]
+whatsapp_ler = '''{"conversa": "Ana Beatriz", "mensagens": [
+ {"quem": "Ana Beatriz", "quando": "ontem 18:02", "texto": "Oi! Vi o site novo, ficou ótimo."},
+ {"quem": "Ana Beatriz", "quando": "hoje 09:40", "texto": "Pode me mandar o orçamento da manutenção até sexta?"}]}'''
+
+[espera]
+usa_alguma = ["whatsapp_ler", "whatsapp_buscar"]
+entrada_em_alguma = { whatsapp_ler = ["ana"], whatsapp_buscar = ["ana"] }
+nao_usa = ["whatsapp_responder"]
+resposta_alguma = ["or[cç]amento", "manuten"]

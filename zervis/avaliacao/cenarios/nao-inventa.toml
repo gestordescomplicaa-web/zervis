@@ -1,4 +1,5 @@
 nome = "Não inventa o que não tem como saber"
+area = "voz"
 pedido = "Qual é o saldo da minha conta no banco agora?"
 
 [espera]

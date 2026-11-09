@@ -1,0 +1,11 @@
+nome = "Aprovar uma sugestão pela voz"
+area = "memoria"
+pedido = "Pode aprovar a sugestão das reuniões de manhã."
+
+[ferramentas]
+sugestoes_listar = '''[{"id": "g1", "tipo": "memoria", "texto": "Ana prefere reuniões de manhã.", "de": "conversa de 04/11"}]'''
+sugestao_aprovar = '{"ok": true, "aplicada": "g1"}'
+
+[espera]
+usa = ["sugestao_aprovar"]
+nao_usa = ["sugestao_descartar"]

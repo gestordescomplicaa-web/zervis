@@ -1,0 +1,17 @@
+# 05/11/2026: quem está salvo no celular mas não escreveu não está na caixa (whatsapp_contatos).
+nome = "Contato da agenda sem conversa: acha o número e começa a conversa"
+area = "whatsapp"
+pedido = "Manda para a Marta Quintela: chego às três."
+
+[ferramentas]
+whatsapp_conversas = '''{"conectado": true, "conversas": [
+ {"id": "c1", "nome": "Ana Beatriz", "ultima": "Pode me mandar o orçamento até sexta?", "quando": "há 20 min", "espera_resposta": true},
+ {"id": "c2", "nome": "Carlos Mendes", "ultima": "Fechado, obrigado!", "quando": "há 2 h", "espera_resposta": false}]}'''
+whatsapp_responder = '{"erro": "Marta Quintela não está na caixa. Procure com whatsapp_contatos."}'
+whatsapp_contatos = '[{"nome": "Marta Quintela", "numero": "+55 41 98111-2233", "conversa": false}]'
+whatsapp_enviar = '{"enviado": true, "para": "Marta Quintela"}'
+
+[espera]
+usa = ["whatsapp_contatos", "whatsapp_enviar"]
+entrada = { whatsapp_enviar = ["98111"] }
+entrada_alguma = { whatsapp_enviar = ["três", "3", "15"] }
