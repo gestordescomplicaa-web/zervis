@@ -37,15 +37,34 @@ from urllib.parse import urlencode
 import numpy as np
 
 from zervis.atendimento import agente
+from zervis.atendimento.fala_da_ligacao import _FIM_DE_FRASE as _FIM_DE_FRASE
+from zervis.atendimento.fala_da_ligacao import _RE_CIFRAO as _RE_CIFRAO
+from zervis.atendimento.fala_da_ligacao import _RE_HORA as _RE_HORA
+from zervis.atendimento.fala_da_ligacao import _RE_HORA_MIN as _RE_HORA_MIN
+from zervis.atendimento.fala_da_ligacao import _RE_KG as _RE_KG
+from zervis.atendimento.fala_da_ligacao import _RE_KM as _RE_KM
+from zervis.atendimento.fala_da_ligacao import _RE_META as _RE_META
+from zervis.atendimento.fala_da_ligacao import _RE_MIN as _RE_MIN
+from zervis.atendimento.fala_da_ligacao import _RE_NUMERO as _RE_NUMERO
+from zervis.atendimento.fala_da_ligacao import _RE_PCT as _RE_PCT
+from zervis.atendimento.fala_da_ligacao import _RE_REAIS as _RE_REAIS
+from zervis.atendimento.fala_da_ligacao import _RE_REAIS_DUP as _RE_REAIS_DUP
+from zervis.atendimento.fala_da_ligacao import _RE_SEG as _RE_SEG
+from zervis.atendimento.fala_da_ligacao import QUADRO as QUADRO
+from zervis.atendimento.fala_da_ligacao import QUADRO_S as QUADRO_S
+from zervis.atendimento.fala_da_ligacao import TAXA as TAXA
+from zervis.atendimento.fala_da_ligacao import Tocador as Tocador
+from zervis.atendimento.fala_da_ligacao import _reais as _reais
+from zervis.atendimento.fala_da_ligacao import e_raciocinio as e_raciocinio
+from zervis.atendimento.fala_da_ligacao import frases_prontas as frases_prontas
+from zervis.atendimento.fala_da_ligacao import normalizar_voz as normalizar_voz
+from zervis.atendimento.fala_da_ligacao import para_16k as para_16k
 from zervis.voz import deepgram
 from zervis.voz.escuta import ficou_no_meio
 from zervis.voz.fala import para_fala
 
 log = logging.getLogger(__name__)
 
-TAXA = 16000
-QUADRO = 960 * 2  # 60 ms de PCM 16 kHz Int16LE: o quadro do codec do WhatsApp
-QUADRO_S = 0.06
 DURACAO_MAXIMA_S = 15 * 60
 SILENCIO_MAXIMO_S = 45.0  # ninguém fala: o agente pergunta uma vez e depois encerra
 PALAVRAS_PARA_INTERROMPER = 2
@@ -54,7 +73,6 @@ ESPERA_ANTECIPAR_S = 0.25  # o texto parou de mudar por isto: a resposta começa
 REACAO_S = 0.8  # sem nenhuma palavra do modelo até aqui, uma reação curta evita o silêncio
 REACOES = ("Uhum.", "Certo.", "Entendi.")
 _SO_REACAO = frozenset({"uhum", "certo", "entendi", "claro", "ok", "ta", "beleza", "hum"})
-_FIM_DE_FRASE = re.compile(r"(?<=[.!?…])\s+")
 _DESLIGAR = re.compile(r"\[\[\s*DESLIGAR\s*\]\]", re.I)
 PARAMETROS = {
     **deepgram.PARAMETROS,
@@ -129,68 +147,6 @@ def saudacao(p: agente.Perfil) -> str:
     return f"Olá! Aqui é {p.nome}{empresa}. Como posso ajudar?"
 
 
-# Do Ligatia (RECEBE_LIGACAO/assistente.py, `_normalizar_voz` e `_RE_META`), do mesmo autor:
-# o que o modelo escreve abreviado vira o que se fala, e frase de raciocínio interno nunca vira voz.
-_RE_HORA_MIN = re.compile(r"\b(\d{1,2})\s*h\s*(\d{2})\b")
-_RE_HORA = re.compile(r"(?<=\d)\s*h\b")
-_RE_MIN = re.compile(r"(?<=\d)\s*min\b")
-_RE_SEG = re.compile(r"(?<=\d)\s*seg\b")
-_RE_KG = re.compile(r"(?<=\d)\s*kg\b")
-_RE_KM = re.compile(r"(?<=\d)\s*km\b")
-_RE_REAIS = re.compile(r"R\$\s*([\d.]*\d)(?:,(\d{1,2}))?", re.IGNORECASE)
-_RE_CIFRAO = re.compile(r"R\$\s*", re.IGNORECASE)
-_RE_REAIS_DUP = re.compile(r"\breais\s+reais\b", re.IGNORECASE)
-_RE_PCT = re.compile(r"(?<=\d)\s*%")
-_RE_NUMERO = re.compile(r"\bn[º°]", re.IGNORECASE)
-_RE_META = re.compile(
-    r"(?:\b(?:devo|preciso)\s+(?:encerrar|finalizar|desligar)\s+(?:a\s+)?(?:chamada|liga\w+))"
-    r"|(?:\bo\s+cliente\s+(?:j[áa]\s+)?(?:se\s+despediu|encerrou|pediu|quer|disse|falou))"
-    r"|(?:\b(?:let me|i should|i will|i need to|we need to|i can help"
-    r"|the user|the customer|ok so)\b)",
-    re.IGNORECASE,
-)
-
-
-def _reais(m: "re.Match[str]") -> str:
-    """R$ 1.500,00 -> '1500 reais'; R$ 50,50 -> '50 reais e 50 centavos'."""
-    inteiro, centavos = m.group(1), m.group(2)
-    if centavos is None and "." in inteiro:
-        cabeca, _, cauda = inteiro.rpartition(".")
-        if cabeca and len(cauda) == 2:
-            inteiro, centavos = cabeca, cauda
-    inteiro = inteiro.replace(".", "")
-    try:
-        n = int(inteiro)
-    except ValueError:
-        return f"{inteiro} reais"
-    texto = f"{n} {'real' if n == 1 else 'reais'}"
-    if centavos:
-        c = int((centavos + "00")[:2])
-        if c:
-            texto += f" e {c} {'centavo' if c == 1 else 'centavos'}"
-    return texto
-
-
-def normalizar_voz(texto: str) -> str:
-    """Abreviações que a voz leria errado: '8h30' -> '8 horas e 30', 'R$ 150' -> '150 reais'."""
-    t = _RE_HORA_MIN.sub(r"\1 horas e \2", texto)
-    t = _RE_HORA.sub(" horas", t)
-    t = _RE_MIN.sub(" minutos", t)
-    t = _RE_SEG.sub(" segundos", t)
-    t = _RE_KG.sub(" quilos", t)
-    t = _RE_KM.sub(" quilômetros", t)
-    t = _RE_REAIS.sub(_reais, t)
-    t = _RE_CIFRAO.sub("", t)
-    t = _RE_REAIS_DUP.sub("reais", t)
-    t = _RE_PCT.sub(" por cento", t)
-    return _RE_NUMERO.sub("número", t)
-
-
-def e_raciocinio(frase: str) -> bool:
-    """Frase de bastidor do modelo ("devo encerrar a chamada", "o cliente já se despediu")."""
-    return _RE_META.search(frase) is not None
-
-
 async def aquecer_motor(motor: Any, instrucoes: str, saudacao_dita: str) -> None:
     """Pré-aquecimento (o `prewarm` do Ligatia): iniciar não basta; a primeira resposta de um
     motor leva o dobro das seguintes (medido: 3,6 s contra 1,7 s). Aquece com a própria saudação,
@@ -202,14 +158,6 @@ async def aquecer_motor(motor: Any, instrucoes: str, saudacao_dita: str) -> None
     )
     async for _ in motor.gerar(instrucoes, [{"role": "user", "content": pedido}]):
         pass
-
-
-def para_16k(audio: np.ndarray, taxa: int) -> bytes:
-    """Float32 na taxa do Piper -> Int16LE a 16 kHz (interpolação linear: voz, não música)."""
-    if taxa != TAXA and len(audio):
-        tempo = np.arange(0, len(audio) * TAXA // taxa) * (taxa / TAXA)
-        audio = np.interp(tempo, np.arange(len(audio)), audio).astype(np.float32)
-    return bytes((np.clip(audio, -1.0, 1.0) * 32767).astype("<i2").tobytes())
 
 
 def _falar_com(motor: Any, texto: str) -> bytes:
@@ -296,69 +244,6 @@ async def compor_abertura(motor: agente.Motor, dono: str, quem: str, recado: str
             await motor.fechar()
     texto = " ".join("".join(partes).split()).strip().strip('"')
     return texto[:600] if texto and "Zé" in texto else padrao
-
-
-def frases_prontas(buffer: str) -> tuple[list[str], str]:
-    """As frases completas do que o modelo já escreveu e o resto, que ainda pode crescer. A marca
-    `[[...]]` nunca vai para a voz."""
-    corte = buffer.find("[[")
-    falavel = buffer if corte < 0 else buffer[:corte]
-    partes = _FIM_DE_FRASE.split(falavel)
-    if corte >= 0:
-        return [p for p in partes if p.strip()], buffer[corte:]
-    return [p for p in partes[:-1] if p.strip()], partes[-1]
-
-
-class Tocador:
-    """Manda a voz ao WaCalls no ritmo da fala; `calar` descarta o que ainda não tocou."""
-
-    def __init__(self, enviar: Callable[[bytes], Any], quadro_s: float = QUADRO_S) -> None:
-        self.enviar = enviar
-        self.quadro_s = quadro_s
-        self.fila: asyncio.Queue[bytes] = asyncio.Queue()
-        self._tocando = False
-        self._quieto = asyncio.Event()
-        self._quieto.set()
-
-    @property
-    def falando(self) -> bool:
-        return self._tocando or not self.fila.empty()
-
-    def tocar(self, pcm: bytes) -> None:
-        for i in range(0, len(pcm), QUADRO):
-            self.fila.put_nowait(pcm[i : i + QUADRO].ljust(QUADRO, b"\0"))
-        if pcm:
-            self._quieto.clear()
-
-    def empurrar(self, quadro: bytes, maximo: int) -> None:
-        """Um quadro já do tamanho certo (a sua voz, na ponte), sem passar de `maximo` na fila:
-        se atrasou, sai o mais velho."""
-        if self.fila.qsize() >= maximo:
-            self.fila.get_nowait()
-        self.fila.put_nowait(quadro)
-        self._quieto.clear()
-
-    def calar(self) -> None:
-        while not self.fila.empty():
-            self.fila.get_nowait()
-        if not self._tocando:
-            self._quieto.set()
-
-    async def terminar(self) -> None:
-        await self._quieto.wait()
-
-    async def rodar(self) -> None:
-        proximo = time.monotonic()
-        while True:
-            quadro = await self.fila.get()
-            self._tocando = True
-            proximo = max(proximo, time.monotonic())
-            await self.enviar(quadro)
-            proximo += self.quadro_s
-            await asyncio.sleep(max(0.0, proximo - time.monotonic()))
-            if self.fila.empty():
-                self._tocando = False
-                self._quieto.set()
 
 
 class Ouvido:
