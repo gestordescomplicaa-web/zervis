@@ -2,6 +2,11 @@ nome = "Corrigir o que a memória sabe, sem duplicar"
 area = "memoria"
 pedido = "Não trabalho mais na agência, agora sou autônoma. Atualiza isso."
 
+# A memória do começo da conversa, como na produção. Sem ela (rodada de 09/11/2026), o cérebro
+# não sabia o texto antigo: adicionava, trocava e removia, três aprovações.
+[memoria]
+usuario = ["Ana trabalha na Agência Pixel como gestora de automação."]
+
 [ferramentas]
 memoria = '{"ok": true, "usuario": "Ana trabalha na Agência Pixel como gestora de automação."}'
 

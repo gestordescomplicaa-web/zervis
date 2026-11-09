@@ -13,6 +13,7 @@ O modelo varia de uma vez para outra: `repetir` dá a taxa de acerto de cada cen
 import dataclasses
 import json
 import re
+import tempfile
 import time
 import tomllib
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -24,6 +25,8 @@ from typing import Any, Protocol
 from claude_agent_sdk import SdkMcpTool
 
 from zervis.cerebro.base import Aprovar, EventoCerebro, Fim, Resposta, Texto
+from zervis.config import PADRAO as PADRAO_CONFIG
+from zervis.memoria.curta import TITULOS, Memoria, Mudanca
 
 PASTA = Path(__file__).with_name("cenarios")
 PADRAO = '{"ok": true}'
@@ -65,6 +68,9 @@ class Cenario:
     espera: dict[str, Any]
     aprovar: bool = True  # a resposta falada a um pedido de aprovação
     area: str = "voz"  # uma de AREAS
+    # A memória curta do começo da conversa ({"usuario": [...], "jarvis": [...]}), como na
+    # produção, onde ela entra no prompt: sem ela, "atualiza isso" não sabe o que trocar.
+    memoria: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -118,6 +124,9 @@ def carregar(pasta: Path = PASTA) -> list[Cenario]:
             raise AvaliacaoErro(f"{arquivo.name}: em [espera], chave desconhecida: {estranhas[0]}")
         if dados.get("area") not in AREAS:
             raise AvaliacaoErro(f"{arquivo.name}: area deve ser uma de {', '.join(AREAS)}")
+        memoria = dados.get("memoria") or {}
+        if estranhas := sorted(set(memoria) - set(TITULOS)):
+            raise AvaliacaoErro(f"{arquivo.name}: em [memoria], alvo desconhecido: {estranhas[0]}")
         cenarios.append(
             Cenario(
                 nome=str(dados.get("nome") or arquivo.stem),
@@ -127,9 +136,23 @@ def carregar(pasta: Path = PASTA) -> list[Cenario]:
                 espera=dict(dados.get("espera") or {}),
                 aprovar=bool(dados.get("aprovar", True)),
                 area=str(dados["area"]),
+                memoria={alvo: [str(e) for e in v] for alvo, v in memoria.items()},
             )
         )
     return cenarios
+
+
+def foto_da_memoria(memoria: dict[str, list[str]]) -> str:
+    """O mesmo bloco que a produção põe no prompt (`Memoria.foto`), com as entradas do cenário."""
+    padrao = PADRAO_CONFIG["memoria"]
+    with tempfile.TemporaryDirectory() as pasta:
+        curta = Memoria(
+            Path(pasta), {"usuario": padrao["limite_usuario"], "jarvis": padrao["limite_jarvis"]}
+        )
+        for alvo, entradas in memoria.items():
+            for texto in entradas:
+                curta.aplicar(Mudanca("adicionar", alvo, texto))
+        return curta.foto()
 
 
 # --- as ferramentas do Zé, com a execução simulada --------------------------------------------
@@ -219,6 +242,8 @@ async def rodar(cenario: Cenario, criar: CriarCerebro, persona: str) -> Rodada:
         return Resposta(cenario.aprovar, "sim" if cenario.aprovar else "não")
 
     cerebro = criar(simuladas(cenario, rodada))
+    if cenario.memoria:
+        persona = f"{persona}\n\n{foto_da_memoria(cenario.memoria)}"
     inicio = time.monotonic()
     try:
         await cerebro.start(persona, aprovar)

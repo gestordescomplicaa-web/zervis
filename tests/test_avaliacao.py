@@ -281,3 +281,27 @@ def test_aprovacao_e_teto_de_palavras_do_cenario() -> None:
     assert falhas == {"pediu aprovação", "até 3 palavras"}
     leitura = _cenario(aprovacao=False)
     assert not avaliacao.nota(avaliacao.julgar(leitura, curta))
+
+
+def test_o_cenario_leva_a_memoria_do_comeco_da_conversa(tmp_path: Path) -> None:
+    """Como na produção: a foto da memória vai no prompt. Sem ela, "atualiza isso" não sabe o
+    que trocar (rodada de 09/11/2026)."""
+    (tmp_path / "mem.toml").write_text(
+        'nome = "x"\narea = "memoria"\npedido = "Atualiza isso."\n'
+        '[memoria]\nusuario = ["Ana trabalha na Agência Pixel."]\n[espera]\nusa = ["memoria"]\n'
+    )
+    (cenario,) = avaliacao.carregar(tmp_path)
+    cerebros: list[Roteiro] = []
+
+    def criar(ferramentas: list[Any]) -> Roteiro:
+        cerebros.append(Roteiro(ferramentas, [], "Pronto."))
+        return cerebros[-1]
+
+    asyncio.run(avaliacao.rodar(cenario, criar, "PERSONA"))
+    assert cerebros[0].persona.startswith("PERSONA\n\n## Memória (foto do começo")
+    assert "- Ana trabalha na Agência Pixel." in cerebros[0].persona
+    (tmp_path / "mem.toml").write_text(
+        'nome = "x"\narea = "memoria"\npedido = "x"\n[memoria]\noutro = ["y"]\n[espera]\nusa = []\n'
+    )
+    with pytest.raises(avaliacao.AvaliacaoErro, match="alvo desconhecido"):
+        avaliacao.carregar(tmp_path)
