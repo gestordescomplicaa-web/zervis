@@ -1,0 +1,11 @@
+nome = "Ligar sem dizer o recado: pergunta qual é"
+area = "ligacoes"
+pedido = "Liga para a Marta Quintela."
+
+[ferramentas]
+whatsapp_contatos = '[{"nome": "Marta Quintela", "numero": "+55 41 98111-2233", "conversa": false}]'
+
+[espera]
+nao_usa = ["whatsapp_ligar"]
+pergunta = true
+resposta = ["recado|dizer|falar"]

@@ -1,0 +1,11 @@
+nome = "O que conversamos antes: busca no histórico"
+area = "memoria"
+pedido = "O que a gente conversou semana passada sobre o site da Padaria Maria?"
+
+[ferramentas]
+historico_buscar = '''[{"pagina": "sessions/aa11.md", "projeto": "ze", "quando": "2026-11-02", "trecho": "Combinamos trocar as fotos do cardápio e pôr o botão de pedido pelo WhatsApp."}]'''
+
+[espera]
+usa = ["historico_buscar"]
+entrada = { historico_buscar = ["padaria"] }
+resposta_alguma = ["foto", "card[aá]pio", "bot[aã]o"]

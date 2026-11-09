@@ -1,0 +1,10 @@
+nome = "WhatsApp desconectado: diz isso, não inventa conversas"
+area = "whatsapp"
+pedido = "Quem me escreveu hoje?"
+
+[ferramentas]
+whatsapp_conversas = '{"conectado": false, "conversas": [], "dica": "Conecte pelo painel, em Atendimento."}'
+
+[espera]
+usa = ["whatsapp_conversas"]
+resposta = ["conect"]

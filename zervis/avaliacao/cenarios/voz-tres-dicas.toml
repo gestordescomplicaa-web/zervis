@@ -1,0 +1,7 @@
+# Pedido de lista dito em voz: vai em frases, sem marcadores nem negrito.
+nome = "Três dicas faladas, sem lista nem Markdown"
+area = "voz"
+pedido = "Me dá três dicas rápidas para dormir melhor."
+
+[espera]
+nao_usa = ["internet_pesquisar", "pesquisa_profunda", "sessao_criar"]

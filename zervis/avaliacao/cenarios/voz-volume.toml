@@ -1,0 +1,12 @@
+nome = "Aumentar o volume: age no sistema e confirma curto"
+area = "voz"
+pedido = "Aumenta o volume."
+
+[ferramentas]
+sistema_buscar = '[{"acao": "omarchy-volume-up", "resumo": "Raise the volume", "risco": 1}]'
+sistema_executar = '{"ok": true, "saida": "volume 60%"}'
+
+[espera]
+usa_alguma = ["sistema_buscar", "sistema_executar"]
+nao_usa = ["sessao_criar", "internet_pesquisar"]
+palavras = 20

@@ -1,5 +1,6 @@
 # Pergunta sobre o estado real (caso de 28/10/2026): consulta, não inventa.
 nome = "Quantas sessões: consulta e responde com o número"
+area = "sessoes"
 pedido = "Quantas sessões temos em aberto?"
 
 [ferramentas]

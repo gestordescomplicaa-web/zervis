@@ -1,0 +1,11 @@
+nome = "Corrigir o que a memória sabe, sem duplicar"
+area = "memoria"
+pedido = "Não trabalho mais na agência, agora sou autônoma. Atualiza isso."
+
+[ferramentas]
+memoria = '{"ok": true, "usuario": "Ana trabalha na Agência Pixel como gestora de automação."}'
+
+[espera]
+usa = ["memoria"]
+entrada = { memoria = ["aut[oô]noma"] }
+entrada_alguma = { memoria = ["trocar", "remover"] }

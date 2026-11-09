@@ -1,0 +1,6 @@
+nome = "O que você faz: resposta falada, sem lista"
+area = "voz"
+pedido = "O que você consegue fazer por mim?"
+
+[espera]
+nao_usa = ["sessao_criar", "tela_agir", "tela_explicar"]

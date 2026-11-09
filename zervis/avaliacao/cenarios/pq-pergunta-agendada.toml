@@ -1,0 +1,12 @@
+nome = "Previsão todo dia: pergunta agendada, não lembrete"
+area = "pesquisa"
+pedido = "Todo dia às oito da manhã me diz a previsão do tempo."
+
+[ferramentas]
+automacao_pergunta = '{"criada": "Previsão do tempo (pergunta, todo dia 08:00; ativa)", "id": "a2"}'
+
+[espera]
+usa = ["automacao_pergunta"]
+nao_usa = ["automacao_lembrete", "internet_pesquisar"]
+entrada = { automacao_pergunta = ["tempo"] }
+entrada_alguma = { automacao_pergunta = ["08:00", "8:00", "8h", "08h"] }

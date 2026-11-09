@@ -1,0 +1,11 @@
+nome = "Guardar uma preferência na memória"
+area = "memoria"
+pedido = "Guarda aí que eu prefiro reuniões de manhã."
+
+[ferramentas]
+memoria = '{"ok": true}'
+
+[espera]
+usa = ["memoria"]
+entrada = { memoria = ["usuario", "manh"] }
+palavras = 30

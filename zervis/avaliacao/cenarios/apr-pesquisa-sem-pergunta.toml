@@ -1,0 +1,10 @@
+nome = "Pesquisar não pede aprovação"
+area = "aprovacoes"
+pedido = "Pesquisa o preço médio de um notebook com 16 GB de memória."
+
+[ferramentas]
+internet_pesquisar = "Em novembro de 2026, notebooks com 16 GB custam entre R$ 3.500 e R$ 5.000.\n\nFontes: https://exemplo.com/notebooks"
+
+[espera]
+usa = ["internet_pesquisar"]
+aprovacao = false

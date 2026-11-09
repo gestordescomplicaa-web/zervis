@@ -1,0 +1,12 @@
+nome = "Lembrete daqui a pouco: tempo relativo"
+area = "memoria"
+pedido = "Me lembra daqui a vinte minutos de tirar o bolo do forno."
+
+[ferramentas]
+automacao_lembrete = '{"criada": "Tirar o bolo do forno (lembrete, em 20 min; ativo)", "id": "a3"}'
+
+[espera]
+usa = ["automacao_lembrete"]
+entrada = { automacao_lembrete = ["20", "bolo"] }
+nao_usa = ["automacao_pergunta"]
+palavras = 30

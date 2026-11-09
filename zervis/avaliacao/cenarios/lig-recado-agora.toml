@@ -1,0 +1,13 @@
+nome = "Ligar para dar um recado: número da agenda e o recado fiel"
+area = "ligacoes"
+pedido = "Liga para a Marta Quintela e diz que a reunião mudou para as três da tarde."
+
+[ferramentas]
+whatsapp_contatos = '[{"nome": "Marta Quintela", "numero": "+55 41 98111-2233", "conversa": false}]'
+whatsapp_ligar = '{"ligando": true, "para": "Marta Quintela"}'
+
+[espera]
+usa = ["whatsapp_contatos", "whatsapp_ligar"]
+entrada = { whatsapp_ligar = ["98111", "reuni"] }
+entrada_alguma = { whatsapp_ligar = ["15", "três", "3"] }
+aprovacao = true

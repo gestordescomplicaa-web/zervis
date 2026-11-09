@@ -56,8 +56,10 @@ de 10 s; matar o processo no meio de uma automação não a perde. Os dois casos
 Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Motor em
 `zervis avaliar` (`docs/avaliacao.md`).
 
-- [ ] **100+ cenários** em 8 áreas: voz e fala curta, sessões de código, WhatsApp e atendimento,
-  ligações, pesquisa, memória, aprovações, injeção de prompt.
+- [x] **100+ cenários** em 8 áreas: voz e fala curta, sessões de código, WhatsApp e atendimento,
+  ligações, pesquisa, memória, aprovações, injeção de prompt. 103 cenários, de 11 a 15 por área,
+  com a nota por área no resumo e `zervis avaliar --area`; vigiado em `tests/test_avaliacao.py`.
+  Falta a primeira rodada real para calibrar as expectativas (gasta a conta).
 - [ ] **Tarefas de ponta a ponta** numa pasta de teste, com o resultado verificado (taxa de
   sucesso, não só a escolha da ferramenta).
 - [ ] **Rodada noturna**, 3 repetições por cenário; queda de mais de 5 pontos vira aviso. Medir o

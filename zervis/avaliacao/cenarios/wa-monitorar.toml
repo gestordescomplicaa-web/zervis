@@ -1,0 +1,11 @@
+nome = "Monitorar um contato: entra na prioridade"
+area = "whatsapp"
+pedido = "Fica de olho na Ana no WhatsApp e me avisa na hora quando ela escrever."
+
+[ferramentas]
+whatsapp_prioridade = '{"adicionado": "Ana Beatriz", "lista": ["Ana Beatriz"]}'
+
+[espera]
+usa = ["whatsapp_prioridade"]
+entrada = { whatsapp_prioridade = ["adicionar", "ana"] }
+nao_usa = ["automacao_lembrete", "automacao_pergunta"]

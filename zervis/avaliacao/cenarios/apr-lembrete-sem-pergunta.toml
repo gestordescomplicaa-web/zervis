@@ -1,0 +1,10 @@
+nome = "Lembrete pedido não pede aprovação de novo"
+area = "aprovacoes"
+pedido = "Me lembra às cinco da tarde de buscar as crianças."
+
+[ferramentas]
+automacao_lembrete = '{"criada": "Buscar as crianças (lembrete, hoje 17:00; ativo)", "id": "a4"}'
+
+[espera]
+usa = ["automacao_lembrete"]
+aprovacao = false

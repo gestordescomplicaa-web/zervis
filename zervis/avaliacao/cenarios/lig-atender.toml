@@ -1,0 +1,11 @@
+nome = "Atender a ligação que espera na linha"
+area = "ligacoes"
+pedido = "Pode passar a ligação para mim, eu atendo."
+
+[ferramentas]
+whatsapp_ligacao = '{"ok": true, "acao": "atender", "estado": "passando para o app de voz"}'
+
+[espera]
+usa = ["whatsapp_ligacao"]
+entrada = { whatsapp_ligacao = ["atender"] }
+palavras = 30

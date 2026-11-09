@@ -1,0 +1,11 @@
+nome = "Qual modelo responde: consulta o próprio Zé"
+area = "voz"
+pedido = "Qual modelo está respondendo agora?"
+
+[ferramentas]
+ze_sobre = '{"cerebro": "claude", "modelo": "claude-sonnet-5-5", "respostas_rapidas": "desligadas", "voz": "Piper, Cadu"}'
+
+[espera]
+usa = ["ze_sobre"]
+resposta = ["sonnet"]
+palavras = 40

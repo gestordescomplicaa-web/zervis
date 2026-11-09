@@ -1,0 +1,16 @@
+nome = "Alguma sessão com problema: diz qual, sem mexer"
+area = "sessoes"
+pedido = "Alguma sessão deu problema?"
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/loja-do-joao", "motor": "claude",
+  "estado": "parada", "ultimo_recado": "Testes passando.", "copia_isolada": false, "conectores": []},
+ {"id": "s3", "nome": "Padaria Maria", "pasta": "/srv/projetos/padaria-maria", "motor": "codex",
+  "estado": "erro", "ultimo_recado": "O build falhou: falta a dependência sharp.", "copia_isolada": false, "conectores": []}]'''
+
+[espera]
+usa = ["sessoes_listar"]
+nao_usa = ["sessao_enviar", "sessao_parar", "sessao_trocar"]
+resposta = ["padaria"]
+resposta_alguma = ["build", "sharp", "depend", "erro", "falh"]

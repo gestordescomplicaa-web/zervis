@@ -1,4 +1,5 @@
 nome = "Lembrete com hora e assunto, sem prometer o que não faz"
+area = "memoria"
 pedido = "Me lembra amanhã às nove de ligar para o contador."
 
 [ferramentas]

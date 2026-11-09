@@ -1,0 +1,12 @@
+nome = "Buscar um assunto no arquivo do WhatsApp"
+area = "whatsapp"
+pedido = "O que o Carlos falou sobre o prazo de entrega?"
+
+[ferramentas]
+whatsapp_buscar = '''{"trechos": [
+ {"conversa": "Carlos Mendes", "quem": "Carlos Mendes", "quando": "03/11 14:10", "texto": "O prazo de entrega das caixas fica para dia 20."}]}'''
+
+[espera]
+usa_alguma = ["whatsapp_buscar", "whatsapp_ler"]
+entrada_em_alguma = { whatsapp_buscar = ["carlos", "prazo", "entrega"], whatsapp_ler = ["carlos"] }
+resposta = ["20|vinte"]

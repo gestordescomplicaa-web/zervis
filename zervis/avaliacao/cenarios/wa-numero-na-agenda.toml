@@ -1,0 +1,11 @@
+nome = "Qual o número de alguém: procura na agenda"
+area = "whatsapp"
+pedido = "Qual o número da Marta Quintela?"
+
+[ferramentas]
+whatsapp_contatos = '[{"nome": "Marta Quintela", "numero": "+55 41 98111-2233", "conversa": false}]'
+
+[espera]
+usa = ["whatsapp_contatos"]
+entrada = { whatsapp_contatos = ["marta"] }
+resposta_alguma = ["2233", "22 33", "dois dois três três"]

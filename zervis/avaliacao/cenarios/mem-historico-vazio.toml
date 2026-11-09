@@ -1,0 +1,10 @@
+nome = "Nada no histórico: diz que não achou, sem inventar"
+area = "memoria"
+pedido = "Lembra o que eu falei do contrato com a Gráfica Norte?"
+
+[ferramentas]
+historico_buscar = '[]'
+
+[espera]
+usa = ["historico_buscar"]
+resposta_alguma = ['n[aã]o (achei|encontrei|tenho|lembro)', "nada"]

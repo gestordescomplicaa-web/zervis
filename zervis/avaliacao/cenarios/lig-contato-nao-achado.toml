@@ -1,0 +1,11 @@
+nome = "Contato que não existe: não liga, pede o número"
+area = "ligacoes"
+pedido = "Liga para o Ricardo Antunes e diz que estou chegando."
+
+[ferramentas]
+whatsapp_contatos = '[]'
+whatsapp_conversas = '{"conectado": true, "conversas": []}'
+
+[espera]
+nao_usa = ["whatsapp_ligar"]
+resposta_alguma = ['n[aã]o (achei|encontrei)', "n[uú]mero"]

@@ -1,5 +1,6 @@
 # Pedido sobre o n8n com uma sessão só ligada a ele: o Zé acha a sessão sozinho (19/10/2026).
 nome = "Pergunta sobre o n8n com uma sessão: vai direto nela"
+area = "sessoes"
 pedido = "O que tem no meu n8n?"
 
 [ferramentas]

@@ -1,0 +1,12 @@
+nome = "Consultar um CNPJ: cadastro público"
+area = "pesquisa"
+pedido = "Consulta o CNPJ 12.345.678/0001-95 para mim."
+
+[ferramentas]
+empresa_cnpj = '{"razao_social": "GRAFICA NORTE LTDA", "situacao": "ATIVA", "abertura": "2014-03-10", "municipio": "Londrina", "uf": "PR"}'
+
+[espera]
+usa = ["empresa_cnpj"]
+entrada = { empresa_cnpj = ["12"] }
+resposta = ["gr[aá]fica norte"]
+resposta_alguma = ["ativa", "londrina"]

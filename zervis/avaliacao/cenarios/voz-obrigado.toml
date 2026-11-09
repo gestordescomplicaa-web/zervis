@@ -1,0 +1,7 @@
+nome = "Agradecimento encerra sem puxar assunto"
+area = "voz"
+pedido = "Valeu, era só isso."
+
+[espera]
+nao_usa = ["sessoes_listar", "whatsapp_conversas", "internet_pesquisar", "automacoes_listar"]
+palavras = 15

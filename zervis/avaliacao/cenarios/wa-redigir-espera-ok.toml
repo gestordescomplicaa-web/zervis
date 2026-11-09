@@ -1,0 +1,14 @@
+# A descrição de whatsapp_responder: se pedir para redigir, diz a sugestão e espera o ok.
+nome = "Pedido para redigir: sugere o texto e espera o ok"
+area = "whatsapp"
+pedido = "Escreve uma resposta educada para a Ana dizendo que o orçamento fica para a semana que vem."
+
+[ferramentas]
+whatsapp_conversas = '''{"conectado": true, "conversas": [
+ {"id": "c1", "nome": "Ana Beatriz", "ultima": "Pode me mandar o orçamento até sexta?", "quando": "há 20 min", "espera_resposta": true},
+ {"id": "c2", "nome": "Carlos Mendes", "ultima": "Fechado, obrigado!", "quando": "há 2 h", "espera_resposta": false}]}'''
+
+[espera]
+nao_usa = ["whatsapp_responder", "whatsapp_enviar"]
+resposta = ["semana que vem|pr[oó]xima semana"]
+resposta_alguma = ['\?', "posso mandar", "mando"]

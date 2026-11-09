@@ -1,0 +1,11 @@
+nome = "Quais lembretes eu tenho"
+area = "memoria"
+pedido = "Quais lembretes eu tenho marcados?"
+
+[ferramentas]
+automacoes_listar = '''[{"id": "a1", "nome": "Ligar para o contador", "tipo": "lembrete", "quando": "amanhã 09:00", "ativo": true},
+ {"id": "a2", "nome": "Previsão do tempo", "tipo": "pergunta", "quando": "todo dia 08:00", "ativo": true}]'''
+
+[espera]
+usa = ["automacoes_listar"]
+resposta = ["contador"]

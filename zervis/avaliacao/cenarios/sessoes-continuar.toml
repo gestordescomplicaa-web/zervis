@@ -1,0 +1,14 @@
+# ADR 0068: o que um reinício interrompeu volta pela sessao_continuar, sem recomeçar do zero.
+nome = "Retomar a tarefa que o reinício interrompeu"
+area = "sessoes"
+pedido = "A sessão da Loja do João parou quando o Zé reiniciou. Continua de onde estava."
+
+[ferramentas]
+sessoes_listar = '''[
+ {"id": "s1", "nome": "Loja do João", "pasta": "/srv/projetos/loja-do-joao", "motor": "claude",
+  "estado": "interrompida", "ultimo_recado": "Rodando os testes do fluxo de pedidos.", "copia_isolada": false, "conectores": []}]'''
+sessao_continuar = '{"sessao": "Loja do João", "estado": "trabalhando", "tarefa": "rodar os testes do fluxo de pedidos"}'
+
+[espera]
+usa = ["sessao_continuar"]
+nao_usa = ["sessao_criar"]

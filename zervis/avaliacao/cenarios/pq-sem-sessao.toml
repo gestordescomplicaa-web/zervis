@@ -1,0 +1,12 @@
+nome = "Pesquisa de assunto técnico: pesquisa, não abre sessão"
+area = "pesquisa"
+pedido = "Pesquisa quais ferramentas de automação de código aberto estão em alta."
+
+[ferramentas]
+internet_pesquisar = "As mais citadas em 2026: n8n, Activepieces e Windmill.\n\nFontes: https://exemplo.com/automacao"
+pesquisa_profunda = '{"trechos": [{"fonte": "https://exemplo.com/automacao", "data": "2026-10", "texto": "n8n, Activepieces e Windmill lideram as menções."}]}'
+
+[espera]
+usa_alguma = ["internet_pesquisar", "pesquisa_profunda"]
+nao_usa = ["sessao_criar", "sessao_enviar"]
+resposta = ["n8n"]

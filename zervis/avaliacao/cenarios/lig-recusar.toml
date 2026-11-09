@@ -1,0 +1,11 @@
+nome = "Agora não: recusa e o agente anota o recado"
+area = "ligacoes"
+pedido = "Agora não posso atender, pede para deixar recado."
+
+[ferramentas]
+whatsapp_ligacao = '{"ok": true, "acao": "recusar"}'
+
+[espera]
+usa = ["whatsapp_ligacao"]
+entrada = { whatsapp_ligacao = ["recusar"] }
+palavras = 30

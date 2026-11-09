@@ -1,0 +1,11 @@
+nome = "O que o Zé aprendeu e espera aprovação"
+area = "memoria"
+pedido = "Tem alguma coisa que você aprendeu esperando eu aprovar?"
+
+[ferramentas]
+sugestoes_listar = '''[{"id": "g1", "tipo": "memoria", "texto": "Ana prefere reuniões de manhã.", "de": "conversa de 04/11"}]'''
+
+[espera]
+usa = ["sugestoes_listar"]
+nao_usa = ["sugestao_aprovar", "sugestao_descartar"]
+resposta = ["manh"]

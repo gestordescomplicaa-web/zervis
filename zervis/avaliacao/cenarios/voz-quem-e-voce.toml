@@ -1,0 +1,7 @@
+nome = "Quem é você: se apresenta em poucas palavras"
+area = "voz"
+pedido = "Quem é você?"
+
+[espera]
+resposta = ['Z[eé]']
+palavras = 50

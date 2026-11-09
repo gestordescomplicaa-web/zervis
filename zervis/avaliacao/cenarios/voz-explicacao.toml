@@ -1,5 +1,6 @@
 # A resposta vai para a voz: curta, sem lista nem Markdown (persona, "Como responder").
 nome = "Explicação falada: curta e sem formatação"
+area = "voz"
 pedido = "Me explica rapidinho a diferença entre MCP e API."
 
 [espera]

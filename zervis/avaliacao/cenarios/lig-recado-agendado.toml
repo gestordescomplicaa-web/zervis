@@ -1,0 +1,14 @@
+# ADR 0067: a ligação agendada vai pelo `quando` da própria ligação, não por um lembrete.
+nome = "Ligação agendada: usa o quando, não um lembrete"
+area = "ligacoes"
+pedido = "Amanhã às nove liga para a Marta Quintela lembrando do pagamento do aluguel."
+
+[ferramentas]
+whatsapp_contatos = '[{"nome": "Marta Quintela", "numero": "+55 41 98111-2233", "conversa": false}]'
+whatsapp_ligar = '{"agendada": true, "para": "Marta Quintela", "quando": "amanhã 09:00"}'
+
+[espera]
+usa = ["whatsapp_ligar"]
+entrada = { whatsapp_ligar = ["quando", "aluguel"] }
+entrada_alguma = { whatsapp_ligar = ["09:00", "9:00", " 9h", "09h"] }
+nao_usa = ["automacao_lembrete", "automacao_pergunta"]

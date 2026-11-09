@@ -1,0 +1,14 @@
+# ADR 0060: uma pesquisa já feita é reaberta, não refeita.
+nome = "Pesquisa já feita: reabre a guardada, sem pesquisar de novo"
+area = "pesquisa"
+pedido = "Aquela pesquisa sobre fornecedores de embalagem que você fez, o que deu mesmo?"
+
+[ferramentas]
+pesquisas_guardadas = '''{"pesquisas": [{"id": "p7", "pergunta": "fornecedores de embalagem em Santa Catarina", "em": "há 3 dias",
+ "resumo": "Três fornecedores com entrega em 5 dias: Embalagens Sul, CaixaForte e PapelMar; a CaixaForte tem o menor pedido mínimo."}]}'''
+pesquisa_guardada = '{"id": "p7", "resumo": "Três fornecedores com entrega em 5 dias: Embalagens Sul, CaixaForte e PapelMar; a CaixaForte tem o menor pedido mínimo."}'
+
+[espera]
+usa_alguma = ["pesquisas_guardadas", "pesquisa_guardada"]
+nao_usa = ["pesquisa_profunda", "internet_pesquisar"]
+resposta = ["caixaforte|caixa forte"]

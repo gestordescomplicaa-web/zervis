@@ -1,0 +1,15 @@
+nome = "Responder com o texto ditado, para a pessoa certa"
+area = "whatsapp"
+pedido = "Responde a Ana: pode ser amanhã às dez."
+
+[ferramentas]
+whatsapp_conversas = '''{"conectado": true, "conversas": [
+ {"id": "c1", "nome": "Ana Beatriz", "ultima": "Pode me mandar o orçamento até sexta?", "quando": "há 20 min", "espera_resposta": true},
+ {"id": "c2", "nome": "Carlos Mendes", "ultima": "Fechado, obrigado!", "quando": "há 2 h", "espera_resposta": false}]}'''
+whatsapp_responder = '{"enviado": true, "para": "Ana Beatriz"}'
+
+[espera]
+usa = ["whatsapp_responder"]
+entrada = { whatsapp_responder = ["amanhã"] }
+entrada_alguma = { whatsapp_responder = ["c1", "ana"] }
+aprovacao = true
