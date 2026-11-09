@@ -711,6 +711,24 @@ def test_apertar_durante_a_fala_interrompe_e_ouve() -> None:
     assert not m.segurando  # perdeu o rosto: nada fica apertado
 
 
+def test_soltar_que_nao_chegou_nao_prende_os_proximos_pedidos() -> None:
+    """09/11/2026: um toque no espaço trava o "Falar" do painel, e o "soltar" não chegou (o
+    painel fechado, o segundo toque nunca veio). O pedido fechou pelo teto de 60 s, e todo "Ei
+    Zé" seguinte também esperou os 60 s: o botão continuava apertado no Zé."""
+    from zervis.nucleo import estados as e
+
+    m = e.Maquina()
+    m.tratar(e.Presenca(True), 0.0)
+    m.tratar(e.Apertou(), 1.0)
+    assert m.segurando
+    m.tratar(e.FimDeFala("como vai a Loja?"), 61.0)  # fechou pelo teto, sem o soltar
+    assert m.estado is e.Estado.PENSANDO and not m.segurando
+    m.tratar(e.RespostaFim(), 62.0)
+    m.tratar(e.Ativacao(), 70.0)  # o próximo pedido, pela voz
+    assert m.estado is e.Estado.OUVINDO and not m.segurando
+    assert m.tratar(e.Soltou(), 71.0) == []  # o soltar atrasado não fecha o pedido novo
+
+
 def test_pedido_pelo_botao_nao_abre_conversa() -> None:
     from zervis.nucleo import estados as e
 

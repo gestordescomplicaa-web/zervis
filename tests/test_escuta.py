@@ -121,3 +121,14 @@ def test_o_que_pede_continuacao() -> None:
     assert not ficou_no_meio("Liga a luz")
     assert not ficou_no_meio("Faz isso")
     assert not ficou_no_meio("")
+
+
+def test_o_teto_aparece_como_teto_e_nao_como_silencio() -> None:
+    """09/11/2026: o registro dizia "pelo silêncio" num pedido que só fechou pelo limite de 60 s,
+    com o botão preso: o diagnóstico procurou ruído no headset."""
+    s = Segmentador(maximo_quadros=10, segurando=True)
+    assert len(_alimentar(s, "vv........")) == 1
+    assert s.fechou_pelo_teto and not s.fechou_pelo_modelo
+    s = Segmentador()
+    assert len(_alimentar(s, "vv" + "." * 38)) == 1  # 3 s de silêncio: fecha pelo silêncio
+    assert not s.fechou_pelo_teto
