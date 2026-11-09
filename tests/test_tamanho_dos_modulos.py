@@ -12,7 +12,6 @@ RAIZ = Path(__file__).resolve().parents[1] / "zervis"
 GRANDES = {
     "oficina/sessoes.py": 2222,  # com o custo das tarefas (#135)
     "atendimento/ligacao.py": 876,
-    "cerebro/ferramentas/whatsapp.py": 820,
 }
 
 

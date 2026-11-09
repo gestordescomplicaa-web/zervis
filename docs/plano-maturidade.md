@@ -110,6 +110,7 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   Nenhum módulo acima de 800 linhas, vigiado por teste. `nucleo/estados.py` dividido em
   `voz_tipos.py`, `entender.py` e `comandos.py` (a máquina ficou com 470 linhas); `nucleo/laco.py` (1.466 → 751) em `retrato.py`, `efeitos.py`,
   `ouvir.py` e `ciclo.py`; `cerebro/rapido.py` (1.122 → 696) com os motores em `motores.py`;
+  `cerebro/ferramentas/whatsapp.py` (820 → 653) com a leitura em `whatsapp_leitura.py`;
   `tests/test_tamanho_dos_modulos.py` vigia: os que faltam não crescem.
 - [ ] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
 
