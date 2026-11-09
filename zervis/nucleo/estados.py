@@ -11,1119 +11,191 @@ Assim as cinco invariantes viram testes diretos:
   5. Uma fala por vez; avisos só saem em ATIVO, sem pedido em andamento.
 """
 
-import difflib
-import re
-import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
 
-
-class Estado(Enum):
-    INATIVO = "inativo"
-    ATIVO = "ativo"
-    OUVINDO = "ouvindo"
-    PENSANDO = "pensando"
-    FALANDO = "falando"
-    CONFIRMANDO = "confirmando"
-
-
-# --- eventos -------------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Presenca:
-    ativo: bool
-
-
-@dataclass(frozen=True)
-class Ativacao:
-    """O detector ouviu "Ei Zé"."""
-
-
-@dataclass(frozen=True)
-class FimDeFala:
-    """Transcrição do que o usuário disse depois da ativação (ou da pergunta de confirmação)."""
-
-    texto: str
-
-
-@dataclass(frozen=True)
-class Digitado:
-    """Pedido escrito no Teclado do Núcleo: vale como fala autorizada, sem "Ei Zé"."""
-
-    texto: str
-
-
-@dataclass(frozen=True)
-class Silencio:
-    """O prazo de escuta acabou sem fala."""
-
-
-@dataclass(frozen=True)
-class Frase:
-    """Uma frase pronta do cérebro, para falar já."""
-
-    texto: str
-
-
-@dataclass(frozen=True)
-class RespostaFim:
-    """O cérebro terminou a resposta."""
-
-
-@dataclass(frozen=True)
-class FalaOcioso:
-    """A saída de voz terminou tudo o que tinha para falar."""
-
-
-@dataclass(frozen=True)
-class PedidoAprovacao:
-    descricao: str
-
-
-@dataclass(frozen=True)
-class AprovacaoExpirou:
-    """O cérebro desistiu de esperar a confirmação (rede de segurança): sai da pergunta."""
-
-
-@dataclass(frozen=True)
-class Aviso:
-    texto: str
-    escutar: bool = False  # mãos livres: depois do aviso, ouve a resposta sem o chamado
-    sequencial: bool = False  # resultados de sessões saem também nas pausas da conversa
-    pedido: bool = False  # a pessoa pediu para ouvir (o "Ouvir" do celular): vale no Silencioso
-
-
-@dataclass(frozen=True)
-class Tempo:
-    """Batida do relógio do laço, para os prazos."""
-
-
-@dataclass(frozen=True)
-class Apertou:
-    """O botão de falar foi apertado (painel, atalho ou fone): vale como o chamado."""
-
-
-@dataclass(frozen=True)
-class Soltou:
-    """O botão de falar foi solto: o pedido fecha agora."""
-
-
-@dataclass(frozen=True)
-class AoVivo:
-    """A voz ao vivo ligou ou desligou ("Conectar voz"): ouvir sem parar, sem o chamado."""
-
-    ligado: bool
-
-
-@dataclass(frozen=True)
-class FalaAoVivo:
-    """Uma fala da pessoa pelo Live (ADR 0042): a vez dela fechou e o texto veio junto. Vale
-    como o `FimDeFala`; os instantes alimentam as latências (fim da fala e fim da vez)."""
-
-    texto: str
-    fim_fala_em: float = 0.0
-    fechado_em: float = 0.0
-
-
-@dataclass(frozen=True)
-class Interrompido:
-    """No Live, a pessoa falou por cima do Zé e a fala foi cortada (ADR 0042)."""
-
-
-Evento = (
-    Presenca
-    | Ativacao
-    | FimDeFala
-    | Digitado
-    | Silencio
-    | Frase
-    | RespostaFim
-    | FalaOcioso
-    | PedidoAprovacao
-    | AprovacaoExpirou
-    | Aviso
-    | Tempo
-    | Apertou
-    | Soltou
-    | AoVivo
-    | FalaAoVivo
-    | Interrompido
+from zervis.nucleo.comandos import (
+    _DE,
+    _NAO_E_NOME,
+    _WA,
+    BRILHO_SEM_ALVO,
+    COMANDOS,
+    FALAS_DAS_AREAS,
+    MANUTENCAO_APOIO,
+    MANUTENCAO_DESLIGAR,
+    MANUTENCAO_LIGAR,
+    ORBE_ARTIGOS,
+    ORBE_DENTRO,
+    ORBE_TIPOS,
+    ORBE_VERBOS,
+    ORBES_PADRAO,
+    TROCAR_APOIO,
+    TROCAR_NOMES,
+    TROCAR_VERBOS,
+    WHATSAPP_LOCAL,
+    _parece_manutencao,
+    comando,
+    manutencao,
+    orbe,
+    resposta_a_permissao,
+    troca,
+    whatsapp_local,
+)
+from zervis.nucleo.entender import (
+    APROVA,
+    APROVA_NO_COMECO,
+    CHAMADOS,
+    CONCORDANCIAS,
+    CORRIGE,
+    ENCERRAR_APOIO,
+    ENCERRAR_PRINCIPAIS,
+    INTERROMPER,
+    NAO_ENTENDI,
+    NEGA,
+    NOMES,
+    OFERTA,
+    REPERGUNTA,
+    RESPOSTA_CURTA,
+    TUDO,
+    VACILOS,
+    encerra,
+    entender_resposta,
+    palavras,
+    pedido_valido,
+    resposta_a_oferta,
+    sem_chamado,
+    sem_nome,
+    so_concordancia,
+)
+from zervis.nucleo.voz_tipos import (
+    AbrirMicrofone,
+    AoVivo,
+    Apertou,
+    AprovacaoExpirou,
+    Ativacao,
+    Aviso,
+    Bip,
+    Comando,
+    CortarFala,
+    Digitado,
+    Efeito,
+    EnviarAoCerebro,
+    Estado,
+    Evento,
+    FalaAoVivo,
+    FalaOcioso,
+    Falar,
+    FecharMicrofone,
+    FecharPedido,
+    FimDeFala,
+    Frase,
+    InterromperCerebro,
+    Interrompido,
+    PedidoAprovacao,
+    Presenca,
+    ResponderAprovacao,
+    RespostaFim,
+    ReterAviso,
+    Silencio,
+    Soltou,
+    Tempo,
 )
 
-# --- efeitos -------------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class AbrirMicrofone:
-    pass
-
-
-@dataclass(frozen=True)
-class FecharMicrofone:
-    pass
-
-
-@dataclass(frozen=True)
-class CortarFala:
-    pass
-
-
-@dataclass(frozen=True)
-class Bip:
-    pass
-
-
-@dataclass(frozen=True)
-class EnviarAoCerebro:
-    texto: str
-
-
-@dataclass(frozen=True)
-class InterromperCerebro:
-    pass
-
-
-@dataclass(frozen=True)
-class Falar:
-    texto: str
-
-
-@dataclass(frozen=True)
-class ResponderAprovacao:
-    aprovado: bool
-    fala: str = ""  # o que o usuário disse; numa correção, o cérebro ajusta o pedido
-
-
-@dataclass(frozen=True)
-class ReterAviso:
-    texto: str
-
-
-@dataclass(frozen=True)
-class FecharPedido:
-    """O botão foi solto: o laço fecha o pedido com o que já ouviu, sem esperar a pausa."""
-
-
-@dataclass(frozen=True)
-class Comando:
-    """Pedido resolvido no próprio Zé, sem o cérebro ("nova conversa", "relatório de uso")."""
-
-    nome: str
-
-
-Efeito = (
-    AbrirMicrofone
-    | FecharMicrofone
-    | CortarFala
-    | Bip
-    | EnviarAoCerebro
-    | InterromperCerebro
-    | Falar
-    | ResponderAprovacao
-    | ReterAviso
-    | Comando
-    | FecharPedido
-)
+# Quem importa daqui continua importando daqui: os nomes moram nos três módulos acima.
+__all__ = [
+    "APROVA",
+    "APROVA_NO_COMECO",
+    "BRILHO_SEM_ALVO",
+    "CHAMADOS",
+    "COMANDOS",
+    "CONCORDANCIAS",
+    "CORRIGE",
+    "ENCERRAR_APOIO",
+    "ENCERRAR_PRINCIPAIS",
+    "FALAS_DAS_AREAS",
+    "INTERROMPER",
+    "MANUTENCAO_APOIO",
+    "MANUTENCAO_DESLIGAR",
+    "MANUTENCAO_LIGAR",
+    "NAO_ENTENDI",
+    "NEGA",
+    "NOMES",
+    "OFERTA",
+    "ORBES_PADRAO",
+    "ORBE_ARTIGOS",
+    "ORBE_DENTRO",
+    "ORBE_TIPOS",
+    "ORBE_VERBOS",
+    "PRAZO_AO_VIVO_S",
+    "PRAZO_CONFIRMACAO_S",
+    "PRAZO_CONVERSA_S",
+    "PRAZO_ESCUTA_S",
+    "PRAZO_SEGURANDO_S",
+    "REPERGUNTA",
+    "RESPOSTA_CURTA",
+    "TROCAR_APOIO",
+    "TROCAR_NOMES",
+    "TROCAR_VERBOS",
+    "TUDO",
+    "VACILOS",
+    "WHATSAPP_LOCAL",
+    "_DE",
+    "_NAO_E_NOME",
+    "_WA",
+    "AbrirMicrofone",
+    "AoVivo",
+    "Apertou",
+    "AprovacaoExpirou",
+    "Ativacao",
+    "Aviso",
+    "Bip",
+    "Comando",
+    "CortarFala",
+    "Digitado",
+    "Efeito",
+    "EnviarAoCerebro",
+    "Estado",
+    "Evento",
+    "FalaAoVivo",
+    "FalaOcioso",
+    "Falar",
+    "FecharMicrofone",
+    "FecharPedido",
+    "FimDeFala",
+    "Frase",
+    "InterromperCerebro",
+    "Interrompido",
+    "Maquina",
+    "PedidoAprovacao",
+    "Presenca",
+    "ResponderAprovacao",
+    "RespostaFim",
+    "ReterAviso",
+    "Silencio",
+    "Soltou",
+    "Tempo",
+    "_parece_manutencao",
+    "comando",
+    "encerra",
+    "entender_resposta",
+    "manutencao",
+    "orbe",
+    "palavras",
+    "pedido_valido",
+    "resposta_a_oferta",
+    "resposta_a_permissao",
+    "sem_chamado",
+    "sem_nome",
+    "so_concordancia",
+    "troca",
+    "whatsapp_local",
+]
 
 PRAZO_ESCUTA_S = 20.0
 PRAZO_SEGURANDO_S = 120.0  # botão apertado: o pedido fecha ao soltar, não no silêncio
 PRAZO_AO_VIVO_S = 24 * 3600.0  # ao vivo: o silêncio não encerra a escuta
 PRAZO_CONVERSA_S = 8.0
 PRAZO_CONFIRMACAO_S = 40.0
-# Resposta à pergunta de confirmação (pedido do usuário, 06/10/2026: entender o que ele fala,
-# não só "sim" e "não", que às vezes nem saem direito). Negação ou correção ganham de tudo:
-# "pode não", "sim, mas troca o projeto" não aprovam. O que não der para entender pergunta de novo.
-NEGA = {
-    "nao",
-    "nada",
-    "negativo",
-    "nunca",
-    "jamais",
-    "nem",
-    "cancela",
-    "cancelar",
-    "espera",
-    "pera",
-    "deixa",  # "para" fica de fora: é preposição ("pode mandar para o Codex")
-    "pare",
-    "aguarda",
-    "segura",
-}
-CORRIGE = {"mas", "porem", "troca", "muda", "outro", "outra", "antes"}
-APROVA = {
-    "sim",
-    "si",
-    "pode",
-    "claro",
-    "manda",
-    "beleza",
-    "blz",
-    "ok",
-    "okay",
-    "okey",
-    "isso",
-    "vai",
-    "confirmo",
-    "confirmado",
-    "positivo",
-    "bora",
-    "certo",
-    "fechado",
-    "autorizo",
-    "autorizado",
-    "faz",
-    "faca",
-    "perfeito",
-    "exato",
-    "exatamente",
-    "show",
-    "tranquilo",
-    "demorou",
-    "firmeza",
-    "aham",
-    "uhum",
-    "yes",
-    "valeu",
-    "dale",
-}
-REPERGUNTA = "Não entendi. É sim ou não?"
-TUDO = {"tudo", "todos", "todas"}  # "sim, aprova tudo": todos os pedidos da sessão
-RESPOSTA_CURTA = 5  # palavras: "sim", "pode publicar", "não, deixa pra depois"
-# O "sim" de uma permissão vem no começo e é claro: "vai", "faz" e "valeu" começam outras
-# frases ("vai chover?", "faz um resumo", "valeu, Zé").
-APROVA_NO_COMECO = (APROVA | {"aprova", "aprovado", "aprovo"}) - {
-    "vai",
-    "faz",
-    "faca",
-    "valeu",
-    "demorou",
-    "tranquilo",
-    "firmeza",
-}
-
-
-def entender_resposta(texto: str) -> bool | None:
-    """True aprova, False nega, None não deu para entender."""
-    p = set(palavras(texto))
-    if p & (NEGA | CORRIGE):
-        return False
-    if p & APROVA:
-        return True
-    return None
-
-
-NAO_ENTENDI = "Não consegui entender. Pode repetir?"
-# Frase curta feita só destas palavras, com pelo menos uma das principais, encerra a conversa.
-# O Whisper escreve "Ok", "OK", "Okay", "Okey" e às vezes repete ("Ok, ok."). Teste de 06/10/2026:
-# a lista exata ("ok" sozinho) não pegou o "ok" do usuário e a conversa não fechava.
-# O comando "interromper" é "Ei Zé" (corta a resposta) seguido de uma destas ordens de parar:
-# sem elas, "Ei Zé, para" ia ao cérebro como um pedido novo.
-ENCERRAR_PRINCIPAIS = {"ok", "okay", "okey", "obrigado", "valeu", "tchau", "chega", "parar"}
-INTERROMPER = {"para", "pare", "interromper", "interrompe", "cancela", "cancelar", "silencio"}
-ENCERRAR_PRINCIPAIS |= INTERROMPER
-ENCERRAR_APOIO = {"ta", "bom", "pode", "entao", "por", "hoje", "muito", "e", "so", "isso", "ja"}
-ENCERRAR_APOIO |= {"de", "falar", "a", "resposta", "jarvis", "ze"}
-
-
-def encerra(texto: str) -> bool:
-    p = palavras(texto)
-    return (
-        0 < len(p) <= 4
-        and any(w in ENCERRAR_PRINCIPAIS for w in p)
-        and all(w in ENCERRAR_PRINCIPAIS | ENCERRAR_APOIO for w in p)
-    )
-
-
-# As áreas do Mapa e como o usuário as chama: "mostra as sessões" é mostrar_sessoes.
-FALAS_DAS_AREAS = {
-    "memoria": (("a", "memoria"), ("sua", "memoria"), ("as", "memorias"), ("suas", "memorias")),
-    "sessoes": (("as", "sessoes"), ("minhas", "sessoes"), ("os", "agentes"), ("meus", "agentes")),
-    "automacoes": (
-        ("as", "automacoes"),
-        ("minhas", "automacoes"),
-        ("os", "lembretes"),
-        ("meus", "lembretes"),
-        ("as", "tarefas"),
-        ("minhas", "tarefas"),
-    ),
-}
-
-COMANDOS = {
-    # A central de avisos (ADR 0029): ouvir o que espera e o detalhe do último.
-    "avisos_proximo": {
-        ("proximo", "aviso"),
-        ("quais", "avisos"),
-        ("quais", "sao", "os", "avisos"),
-        ("tem", "aviso"),
-        ("tem", "algum", "aviso"),
-        ("le", "os", "avisos"),
-        ("ler", "os", "avisos"),
-    },
-    # O pedido de permissão de uma sessão (ADR 0039), a qualquer momento: o Zé responde ao que
-    # espera (o último que perguntou) e diz se não há nada esperando.
-    "permissao_sim": {
-        ("aprova",),
-        ("aprovar",),
-        ("aprovo",),
-        ("aprove",),
-        ("pode", "aprovar"),
-        ("aprova", "a", "sessao"),
-        ("aprova", "o", "pedido"),
-        ("autoriza",),
-        ("autoriza", "a", "sessao"),
-    },
-    # Todos os pedidos que esperam, da mesma sessão: uma pesquisa pedia um por site e o "aprova
-    # tudo" ia para o cérebro, que dizia "aprovado" sem aprovar nada (caso real de 27/10/2026).
-    "permissao_tudo": {
-        (verbo, *resto)
-        for verbo in ("aprova", "aprovar", "aprovo", "aprove", "autoriza", "autorizo")
-        for resto in (("tudo",), ("todos",), ("todas",), ("tudo", "ai"), ("todos", "eles"))
-    }
-    | {("pode", "aprovar", "tudo"), ("pode", "aprovar", "todos"), ("pode", "autorizar", "tudo")},
-    "permissao_nao": {
-        ("nega",),
-        ("negar",),
-        ("nega", "a", "sessao"),
-        ("nega", "o", "pedido"),
-        ("nao", "aprova"),
-        ("nao", "autoriza"),
-        ("recusa",),
-    },
-    # Repetir a última fala (aviso ou resposta), na hora e igual, sem passar pelo cérebro.
-    "repetir": {
-        ("repete",),
-        ("repita",),
-        ("repete", "por", "favor"),
-        ("repita", "por", "favor"),
-        ("pode", "repetir"),
-        ("repete", "ai"),
-        ("fala", "de", "novo"),
-        ("nao", "entendi"),
-        ("nao", "ouvi"),
-        ("o", "que", "voce", "disse"),
-    },
-    "aviso_detalhe": {
-        ("o", "que", "ela", "disse"),
-        ("o", "que", "ele", "disse"),
-        ("o", "que", "a", "sessao", "disse"),
-        ("le", "a", "resposta"),
-        ("ler", "a", "resposta"),
-        ("mais", "detalhes"),
-        ("detalhes",),
-    },
-    # O modo de fala (ADR 0018). Silencioso fecha a escuta: volta pelo painel ou pelo atalho.
-    "modo_silencioso": {
-        ("modo", "silencioso"),
-        ("fica", "em", "silencio"),
-        ("fique", "em", "silencio"),
-        ("silencio",),
-    },
-    "modo_avisos": {
-        ("modo", "normal"),
-        ("modo", "avisos"),  # o nome antigo continua valendo
-        ("modo", "aviso"),
-        ("modo", "de", "avisos"),
-    },
-    "modo_live": {
-        ("modo", "live"),
-        ("modo", "laive"),
-        ("modo", "ao", "vivo"),
-        ("modo", "maos", "livres"),  # o nome antigo continua valendo
-        ("modo", "mao", "livre"),
-        ("maos", "livres"),
-    },
-    "nova_conversa": {
-        ("nova", "conversa"),
-        ("conversa", "nova"),
-        ("comecar", "uma", "nova", "conversa"),
-        ("comeca", "uma", "nova", "conversa"),
-    },
-    "relatorio_de_uso": {
-        ("relatorio", "de", "uso"),
-        ("quanto", "eu", "ja", "usei"),
-        ("quanto", "ja", "usei"),
-        ("como", "esta", "o", "uso"),
-        ("baterias",),
-        ("como", "estao", "as", "baterias"),
-        ("como", "esta", "a", "bateria"),
-        ("quanto", "tem", "de", "bateria"),
-    },
-    # O mapa do cérebro no Barehands (06/10/2026): abre na tela sem gastar o cérebro.
-    "mostrar_mapa": {
-        (*inicio, *alvo)
-        for inicio in (
-            ("mostra",),
-            ("mostrar",),
-            ("me", "mostra"),
-            ("abre",),
-            ("abrir",),
-        )
-        for alvo in (
-            ("o", "seu", "cerebro"),
-            ("seu", "cerebro"),
-            ("o", "cerebro"),
-            ("o", "mapa"),
-            ("o", "mapa", "do", "cerebro"),
-            ("o", "mapa", "do", "seu", "cerebro"),
-        )
-    }
-    | {("mapa", "do", "cerebro"), ("seu", "cerebro")},
-    # Calibrador das mãos no Barehands (07/10/2026): guiado na tela, sem o cérebro.
-    "calibrar_maos": {
-        (verbo, *alvo)
-        for verbo in ("calibra", "calibrar", "calibre")
-        for alvo in (
-            ("as", "maos"),
-            ("a", "mao"),
-            ("maos",),
-            ("minhas", "maos"),
-            ("minha", "mao"),
-            ("as", "minhas", "maos"),
-            ("a", "minha", "mao"),
-        )
-    }
-    | {("calibracao", "das", "maos"), ("calibracao", "da", "mao")},
-    "maos_padrao": {
-        (*verbo, *alvo)
-        for verbo in (("volta",), ("voltar",), ("volte",), ("restaura",), ("restaurar",))
-        for alvo in (
-            ("as", "maos", "ao", "padrao"),
-            ("a", "calibracao", "padrao"),
-            ("a", "calibracao", "original"),
-            ("a", "calibracao", "das", "maos"),
-            ("a", "camera", "ao", "padrao"),
-        )
-    }
-    | {("calibracao", "padrao"), ("calibracao", "original")},
-    # Brilho da câmera e cores do Zé no Barehands (07/10/2026). "Da câmera" é
-    # obrigatório: o brilho da TELA é outra coisa e fica com o cérebro.
-    **{
-        nome: {
-            (*verbo, *alvo)
-            for verbo in verbos
-            for alvo in (
-                ("o", "brilho", "da", "camera"),
-                ("brilho", "da", "camera"),
-                ("o", "filtro", "da", "camera"),
-                ("filtro", "da", "camera"),
-            )
-        }
-        for nome, verbos in (
-            ("brilho_mais", (("aumenta",), ("aumentar",), ("aumente",), ("sobe",), ("subir",))),
-            ("brilho_menos", (("diminui",), ("diminuir",), ("diminua",), ("abaixa",), ("baixa",))),
-            ("brilho_liga", (("liga",), ("ligar",), ("ativa",), ("ativar",), ("acende",))),
-            ("brilho_desliga", (("desliga",), ("desligar",), ("desativa",), ("desativar",))),
-        )
-    },
-    # Avisos de lead quente no WhatsApp (14/10/2026).
-    **{
-        nome: {
-            (verbo, *artigo, objeto, "do", *app)
-            for verbo in verbos
-            for artigo, objeto in ((("os",), "avisos"), ((), "avisos"), (("as",), "mensagens"))
-            for app in (("whatsapp",), ("whats", "app"), ("zap",))
-        }
-        for nome, verbos in (
-            ("whatsapp_liga", ("liga", "ligar", "ligue", "ativa", "ativar", "ative")),
-            ("whatsapp_desliga", ("desliga", "desligar", "desligue", "desativa", "desativar")),
-        )
-    },
-    "configuracoes": {
-        (*verbo, *alvo)
-        for verbo in (("abre",), ("abrir",), ("mostra",), ("me", "mostra"))
-        for alvo in (
-            ("as", "configuracoes"),
-            ("configuracoes",),
-            ("o", "menu", "de", "configuracoes"),
-        )
-    },
-    # Sem "abre/fecha o Núcleo" desde 29/10/2026: não há mais orbes em volta do Zé (ADR 0047);
-    # cada tela do Núcleo abre pelo nome ("abre o Guia"). A janela do Zé é outra coisa:
-    # fechá-la apaga a câmera.
-    "janela_fechar": {
-        (*verbo, *alvo)
-        for verbo in (("fecha",), ("feche",), ("fechar",), ("desliga",))
-        for alvo in (
-            ("a", "janela", "do", "jarvis"),
-            ("a", "sua", "janela"),
-            ("sua", "janela"),
-            ("a", "camera", "do", "jarvis"),
-        )
-    }
-    | {("desliga", "o", "nucleo"), ("desliga", "a", "camera")},
-    "reiniciar": {
-        (*verbo, *alvo)
-        for verbo in (("reinicia",), ("reinicie",), ("reiniciar",))
-        for alvo in (("o", "jarvis"), ("jarvis",), ())
-    }
-    | {("se", "reinicia"), ("se", "reinicie")},
-    "reiniciar:revisado": {
-        (*verbo, *alvo, "eu", "revisei")
-        for verbo in (("reinicia",), ("reinicie",))
-        for alvo in (("o", "jarvis"), ())
-    },
-    "rodada_melhoria": {
-        (*verbo, *alvo)
-        for verbo in ((), ("faz", "uma"), ("faca", "uma"), ("comeca", "uma"), ("inicia", "uma"))
-        for alvo in (("rodada", "de", "melhoria"), ("rodada", "de", "melhorias"))
-    },
-    # O visual do Zé na tela (07/10/2026): o avatar holográfico ou o anel original.
-    "visual_avatar": {
-        (*verbo, *alvo)
-        for verbo in (
-            ("mostra",),
-            ("mostre",),
-            ("usa",),
-            ("use",),
-            ("volta",),
-            ("coloca",),
-            ("liga",),
-            ("ativa",),
-            ("ative",),
-        )
-        for alvo in (("o", "avatar"), ("seu", "avatar"), ("avatar",), ("o", "seu", "avatar"))
-    }
-    | {("avatar",), ("modo", "avatar")},
-    # O Zé dá uma volta completa na tela (08/10/2026, para humanizar o avatar).
-    # O Foco (08/10/2026): onde ele parou e o que está pendente, sem gastar o cérebro.
-    "foco_onde": {
-        ("no", "que", "eu", "estava"),
-        ("em", "que", "eu", "estava"),
-        ("no", "que", "eu", "parei"),
-        ("onde", "eu", "parei"),
-        ("onde", "parei"),
-        ("onde", "eu", "estava"),
-        ("o", "que", "eu", "estava", "fazendo"),
-        ("qual", "e", "o", "meu", "foco"),
-        ("qual", "o", "meu", "foco"),
-        ("qual", "e", "o", "foco"),
-        ("qual", "e", "o", "meu", "foco", "agora"),
-    },
-    "foco_mostrar": {
-        (*verbo, *alvo)
-        for verbo in (
-            ("mostra",),
-            ("mostre",),
-            ("abre",),
-            ("abra",),
-            ("aba",),
-            ("ver",),
-            ("quero", "ver"),
-        )
-        for alvo in (
-            ("o", "meu", "foco"),
-            ("meu", "foco"),
-            ("o", "foco"),
-            ("as", "minhas", "frentes"),
-            ("minhas", "frentes"),
-            ("o", "modo", "foco"),
-            ("modo", "foco"),
-            ("o", "quadro", "do", "foco"),
-            ("a", "tela", "do", "foco"),
-            ("o", "foco", "na", "tela"),
-            ("o", "foco", "para", "eu", "ver"),
-            ("o", "modo", "foco", "para", "eu", "ver"),
-        )
-    }
-    | {("foco",), ("meu", "foco"), ("modo", "foco"), ("o", "modo", "foco")},
-    "foco_pendentes": {
-        ("o", "que", "esta", "pendente"),
-        ("o", "que", "ta", "pendente"),
-        ("o", "que", "tem", "pendente"),
-        ("o", "que", "eu", "tenho", "pendente"),
-        ("o", "que", "tenho", "pendente"),
-        ("o", "que", "falta"),
-        ("o", "que", "ficou", "pendente"),
-        ("minhas", "frentes"),
-        ("quais", "sao", "as", "minhas", "frentes"),
-        ("quais", "sao", "minhas", "frentes"),
-        ("mostra", "minhas", "frentes"),
-    },
-    "avatar_voltinha": {
-        (*verbo, *giro, *fim)
-        for verbo in (("da",), ("de",), ("faz",), ("faca",), ("da", "ai"), ("mostra",))
-        for giro in (
-            ("uma", "voltinha"),
-            ("uma", "volta"),
-            ("uma", "girada"),
-            ("uma", "giradinha"),
-            ("uma", "rodadinha"),
-            ("um", "giro"),
-            ("um", "girinho"),
-        )
-        for fim in ((), ("pra", "mim"), ("para", "mim"), ("ai",), ("ai", "pra", "mim"))
-    }
-    | {("gira",), ("gire",), ("gira", "ai"), ("roda",), ("roda", "ai"), ("vira", "uma", "volta")},
-    "visual_anel": {
-        (*verbo, *alvo)
-        for verbo in (
-            ("mostra",),
-            ("mostre",),
-            ("usa",),
-            ("use",),
-            ("volta",),
-            ("coloca",),
-            ("volta", "para"),
-            ("volta", "pro"),
-        )
-        for alvo in (("o", "anel"), ("seu", "anel"), ("anel",))
-    }
-    | {("tira", "o", "avatar"), ("esconde", "o", "avatar"), ("desliga", "o", "avatar")},
-    "teclado_abrir": {
-        (*verbo, *alvo)
-        for verbo in (("abre",), ("abra",), ("abrir",), ("mostra",), ("mostre",))
-        for alvo in (("o", "teclado"), ("teclado",), ("seu", "teclado"))
-    },
-    "teclado_fechar": {
-        (*verbo, *alvo)
-        for verbo in (("fecha",), ("feche",), ("fechar",), ("esconde",))
-        for alvo in (("o", "teclado"), ("teclado",), ("seu", "teclado"))
-    },
-    "mapa_fechar": {
-        (*verbo, *alvo)
-        for verbo in (("fecha",), ("fechar",), ("esconde",))
-        for alvo in (("o", "seu", "cerebro"), ("seu", "cerebro"), ("o", "cerebro"), ("o", "mapa"))
-    },
-    **{
-        f"mostrar_{area}": {
-            (*verbo, *alvo)
-            for verbo in (("mostra",), ("me", "mostra"), ("abre",), ("abra",), ("mostrar",))
-            for alvo in alvos
-        }
-        for area, alvos in FALAS_DAS_AREAS.items()
-    },
-    # Temas de cor: "tema <cor>", "muda o tema para <cor>", "coloca/usa o tema <cor>".
-    **{
-        f"tema_{tema}": {
-            frase
-            for cor in cores
-            for frase in (
-                ("tema", *cor),
-                ("o", "tema", *cor),
-                ("muda", "o", "tema", "para", *cor),
-                ("muda", "o", "tema", "pra", *cor),
-                ("muda", "para", "o", "tema", *cor),
-                ("coloca", "o", "tema", *cor),
-                ("usa", "o", "tema", *cor),
-                ("deixa", "o", "jarvis", *cor),
-            )
-        }
-        for tema, cores in (
-            ("roxo", (("roxo",), ("violeta",))),
-            ("marinho", (("marinho",), ("azul", "marinho"))),
-            ("esmeralda", (("esmeralda",), ("verde",))),
-            ("grafite", (("grafite",), ("cinza",))),
-        )
-    },
-    "tema_original": {
-        ("tema", "original"),
-        ("o", "tema", "original"),
-        ("tema", "azul"),
-        ("volta", "o", "tema", "original"),
-        ("volta", "para", "o", "tema", "original"),
-        ("volta", "pro", "tema", "original"),
-        ("muda", "o", "tema", "para", "o", "original"),
-        ("coloca", "o", "tema", "original"),
-        ("deixa", "o", "jarvis", "azul"),
-    },
-}
-# Troca de cérebro (ADR 0010): verbo + nome, com só palavras de apoio no meio. O Whisper
-# escreve o GPT como "GPT", "G P T" ou "gpt"; as letras soltas são juntadas antes de comparar.
-TROCAR_VERBOS = {"muda", "mudar", "troca", "trocar", "usa", "usar", "passa", "volta", "coloca"}
-TROCAR_APOIO = {"para", "pra", "pro", "o", "a", "de", "cerebro", "modelo", "agora", "com", "no"}
-TROCAR_NOMES = {
-    "claude": "claude",
-    "cloud": "claude",
-    "clode": "claude",
-    "sonnet": "claude",
-    "gpt": "gpt",
-    "chatgpt": "gpt",
-    "codex": "gpt",
-    "luna": "gpt",
-    "gemini": "gemini",
-    "jemini": "gemini",
-    "geminai": "gemini",
-    "automatico": "auto",
-    "auto": "auto",
-    "omniroute": "auto",
-    "local": "local",  # o Ollama desta máquina (ADR 0063)
-    "gemma": "local",
-    "ollama": "local",
-}
-
-
-def troca(texto: str) -> str | None:
-    p = palavras(texto)
-    if not 2 <= len(p) <= 7 or p[0] not in TROCAR_VERBOS:
-        return None
-    nome = "".join(w for w in p[1:] if w not in TROCAR_APOIO)
-    return TROCAR_NOMES.get(nome)
-
-
-# "Aumenta o brilho" sem dizer de quê: é o da câmera do Núcleo quando ele é a janela ativa;
-# fora dele, segue para o cérebro (o brilho do monitor, pelas ações do Omarchy).
-BRILHO_SEM_ALVO = {
-    nome: {
-        (*verbo, *alvo)
-        for verbo in verbos
-        for alvo in (
-            ("o", "brilho"),
-            ("brilho",),
-            ("o", "brilho", "ai"),
-            ("um", "pouco", "o", "brilho"),
-        )
-    }
-    for nome, verbos in (
-        ("brilho_mais", (("aumenta",), ("aumentar",), ("aumente",), ("sobe",), ("mais",))),
-        ("brilho_menos", (("diminui",), ("diminuir",), ("diminua",), ("abaixa",), ("menos",))),
-        ("brilho_liga", (("liga",), ("ligar",), ("ativa",))),
-        ("brilho_desliga", (("desliga",), ("desligar",), ("desativa",))),
-    )
-}
-
-
-# O modo manutenção pela intenção, não por uma frase exata: "coloque no modo manutenção" foi ao
-# cérebro em 07/10/2026 e virou o menu de configurações. Uma palavra parecida com "manutenção"
-# (o Whisper erra: "manuntenção") mais um verbo de ligar, de desligar ou de perguntar a situação.
-MANUTENCAO_LIGAR = {
-    "entra",
-    "entre",
-    "entrar",
-    "ativa",
-    "ative",
-    "ativar",
-    "liga",
-    "ligue",
-    "ligar",
-    "coloca",
-    "coloque",
-    "colocar",
-    "bota",
-    "bote",
-    "botar",
-    "poe",
-    "ponha",
-    "inicia",
-    "inicie",
-    "iniciar",
-    "abre",
-    "abra",
-    "vai",
-    "va",
-    "vamos",
-    "habilita",
-    "habilite",
-    "comeca",
-    "comece",
-}
-MANUTENCAO_DESLIGAR = {
-    "sai",
-    "saia",
-    "sair",
-    "desliga",
-    "desligue",
-    "desligar",
-    "desativa",
-    "desative",
-    "fecha",
-    "feche",
-    "encerra",
-    "encerre",
-    "termina",
-    "termine",
-    "finaliza",
-    "finalize",
-}
-# Só vale como comando se a frase não tiver mais nada: "coloque um botão de manutenção no menu",
-# no modo ligado, é um pedido para a sessão, não "ligar o modo".
-MANUTENCAO_APOIO = (
-    {
-        "modo",
-        "de",
-        "o",
-        "a",
-        "em",
-        "no",
-        "na",
-        "do",
-        "da",
-        "para",
-        "pra",
-        "pro",
-        "por",
-        "favor",
-        "agora",
-        "com",
-        "codex",
-        "claude",
-        "cloud",
-        "voce",
-        "teu",  # "saia do teu modo manutenção" (08/10/2026) foi à sessão em vez de desligar
-        "seu",
-        "tua",
-        "sua",
-        "se",
-        "entao",
-        "ai",
-        "me",
-        "situacao",
-        "status",
-        "como",
-        "esta",
-        "ta",
-        "anda",
-        "vai",
-    }
-    | MANUTENCAO_LIGAR
-    | MANUTENCAO_DESLIGAR
-)
-
-
-def _parece_manutencao(palavra: str) -> bool:
-    return palavra.startswith("manu") and (
-        difflib.SequenceMatcher(None, palavra, "manutencao").ratio() >= 0.75
-    )
-
-
-def manutencao(texto: str) -> str | None:
-    p = sem_nome(palavras(texto))
-    if not 1 <= len(p) <= 10 or not any(_parece_manutencao(w) for w in p):
-        return None
-    if "nao" in p or any(w not in MANUTENCAO_APOIO and not _parece_manutencao(w) for w in p):
-        return None  # "o que é o modo manutenção?", "não entra...", um pedido: não é comando
-    if any(w in MANUTENCAO_DESLIGAR for w in p):
-        return "manutencao_sair"
-    if any(w in ("situacao", "status") for w in p) or (
-        p[0] == "como" and any(w in ("esta", "ta", "anda", "vai") for w in p)
-    ):
-        return "manutencao_situacao"
-    agente = ":codex" if "codex" in p else ":claude" if {"claude", "cloud"} & set(p) else ""
-    return "manutencao_entrar" + agente
-
-
-# Os orbes pelo nome falado, do manifesto do Núcleo (o laço troca o padrão pelos de lá).
-ORBES_PADRAO = {"mapa": "Mapa", "cerebro": "Mapa", "guia": "Guia", "acervo": "Acervo"}
-ORBE_VERBOS = {
-    **dict.fromkeys(("abre", "abra", "abrir", "mostra", "mostre"), "abrir"),
-    **dict.fromkeys(("fecha", "feche", "fechar"), "fechar"),
-}
-ORBE_ARTIGOS = {"o", "a", "os", "as", "seu", "sua", "meu", "minha", "aba", "orbe", "painel"}
-ORBE_DENTRO = {"do", "da", "no", "na"}
-ORBE_TIPOS = {"arquivo", "nota", "modelo", "imagem", "pasta", "projeto", "agente", "tarefa"}
-
-
-def orbe(texto: str, orbes: dict[str, str] | None = None) -> str | None:
-    """Um orbe ou um item do Núcleo pelo nome: "abre o Guia" -> abrir_orbe:Guia; "abre o burrinho
-    no Acervo" -> abrir_item:Acervo:burrinho; "abre o burrinho do núcleo" -> abrir_item::burrinho;
-    "fecha o Guia" -> fechar_alvo:Guia. "Abre o burrinho", sem dizer onde, fica com o cérebro."""
-    orbes = ORBES_PADRAO if orbes is None else orbes
-    p = list(palavras(texto))
-    if p[:2] == ["me", "mostra"]:
-        p = p[1:]
-    if not 2 <= len(p) <= 9 or (acao := ORBE_VERBOS.get(p[0])) is None:
-        return None
-    resto, dentro, do_nucleo = p[1:], None, False
-    for n in (3, 2, 1):  # "... no Acervo", "... do seu núcleo"
-        cauda = " ".join(resto[-n:])
-        if len(resto) > n + 1 and resto[-n - 1] in ORBE_DENTRO:
-            if cauda in ("nucleo", "seu nucleo"):
-                resto, do_nucleo = resto[: -n - 1], True
-                break
-            if cauda in orbes:
-                resto, dentro = resto[: -n - 1], orbes[cauda]
-                break
-    while resto and resto[0] in ORBE_ARTIGOS:
-        resto = resto[1:]
-    if len(resto) > 1 and resto[0] in ORBE_TIPOS:  # "o arquivo burrinho" -> burrinho
-        resto = resto[1:]
-    nome = " ".join(resto)
-    if not nome and dentro is not None:  # "abre a aba do Guia": o próprio orbe
-        nome = next(k for k, v in orbes.items() if v == dentro)
-        dentro = None
-    if not nome:
-        return None
-    if nome in orbes and dentro is None:
-        return f"{acao}_orbe:{orbes[nome]}" if acao == "abrir" else f"fechar_alvo:{orbes[nome]}"
-    if dentro is None and not do_nucleo:
-        return None
-    return f"abrir_item:{dentro or ''}:{nome}" if acao == "abrir" else f"fechar_alvo:{nome}"
-
-
-# O nome falado (08/10/2026: o Zé passou a se chamar Zé; "Jarvis" ainda vale). Os comandos
-# escritos com "o jarvis" ("reinicia o jarvis") valem com qualquer um dos nomes.
-NOMES = {"jarvis", "ze", "zervis"}  # "Zérvis, ..." também chama (03/11/2026)
-CHAMADOS = {
-    ("ei", "ze"),
-    ("hey", "ze"),
-    ("hei", "ze"),
-    ("ei", "jarvis"),
-    ("hey", "jarvis"),
-    # Como o Deepgram ouve "Ei Zé" às vezes (08/10/2026: "Eis é saia do modo manutenção").
-    ("eis", "e"),
-    ("ei", "se"),
-    ("hey", "se"),
-}
-# Hesitações no começo da fala ("Um, desative o modo manutenção", 08/10/2026).
-VACILOS = {"um", "uh", "hum", "hm", "ah", "ahn", "eh", "e"}
-# Ao vivo, quem conversa concorda enquanto ouve ("entendi", "beleza", "tá"). Sozinha, a
-# concordância não é pedido: mandada ao cérebro, virava ação ("Entendi." ligou o modo manutenção
-# no teste de 27/10/2026). Depois de uma pergunta do Zé, ela é a resposta e segue.
-CONCORDANCIAS = {
-    *("entendi", "entendido", "beleza", "blz", "certo", "ta", "bom", "show", "perfeito"),
-    *("otimo", "legal", "uhum", "aham", "ahan", "sei", "isso", "massa", "joia", "ok", "okay"),
-}
-
-
-def so_concordancia(texto: str) -> bool:
-    p = palavras(texto)
-    return (
-        0 < len(p) <= 3
-        and all(w in CONCORDANCIAS | VACILOS for w in p)
-        and any(w in CONCORDANCIAS for w in p)
-    )
-
-
-def sem_nome(p: tuple[str, ...]) -> tuple[str, ...]:
-    """Tira o chamado ou o nome do começo ("Ei Zé, abre o guia") e põe "jarvis" no lugar de "zé"."""
-    while len(p) > 1 and p[0] in VACILOS and p[:2] not in CHAMADOS:
-        p = p[1:]
-    if p[:2] in CHAMADOS and len(p) > 2:
-        p = p[2:]
-    elif p[:1] and p[0] in NOMES and len(p) > 1:  # "Zé, entra no modo manutenção"
-        p = p[1:]
-    return tuple("jarvis" if w == "ze" else w for w in p)
-
-
-# As leituras do WhatsApp que o Zé responde sozinho, sem o cérebro e sem gastar token (ADR 0056):
-# frases fechadas, inteiras; o resto ("o que a Ana disse do orçamento?") vai ao cérebro.
-_WA = r"(?: (?:no|do|pelo) (?:whatsapp|whats app|zap))?"
-_DE = r"(?:da|do|de|com a|com o|com)"
-_NAO_E_NOME = {"e", "responde", "responder", "manda", "mandar", "diz", "fala", "resume", "depois"}
-WHATSAPP_LOCAL = {
-    "whatsapp_quem": (
-        rf"quem (?:foi (?:a|o) ultim[ao](?: pessoa| contato)? (?:que|a) )?(?:me )?"
-        rf"(?:mandou|enviou|escreveu)(?: (?:uma )?mensagem)?(?: (?:pra|para) mim)?{_WA}",
-        rf"(?:de quem foi|qual foi|quem mandou) a ultima mensagem(?: que (?:eu )?recebi)?{_WA}",
-        rf"(?:tem|chegou) (?:alguma )?mensagem(?: nova)?(?: (?:pra|para) mim)?{_WA}",
-    ),
-    "whatsapp_esperando": (
-        rf"(?:tem )?(?:alguem|quem) (?:esta |ta )?esperando(?: (?:a )?(?:minha )?resposta)?{_WA}",
-        rf"quem (?:eu )?(?:preciso|tenho que) responder{_WA}",
-    ),
-    "whatsapp_lista": (
-        rf"quem (?:esta|ta) na (?:minha )?lista(?: de prioridade)?{_WA}",
-        rf"quem (?:voce|vc) (?:esta|ta) monitorando{_WA}",
-    ),
-    "whatsapp_ler": (
-        rf"(?:me )?(?:le|leia|ler)(?: (?:pra|para) mim)? (?:a |as )?(?:ultimas? )?"
-        rf"(?:mensage(?:m|ns)|conversa) {_DE} (?P<nome>[a-z0-9]+(?: [a-z0-9]+){{0,2}}?){_WA}",
-    ),
-}
-
-
-def whatsapp_local(texto: str) -> str | None:
-    """`whatsapp_quem`, `whatsapp_esperando`, `whatsapp_lista` ou `whatsapp_ler:<nome>`."""
-    frase = " ".join(texto) if isinstance(texto, tuple) else " ".join(palavras(texto))
-    for nome, modelos in WHATSAPP_LOCAL.items():
-        for modelo in modelos:
-            if achado := re.fullmatch(modelo, frase):
-                quem = achado.groupdict().get("nome")
-                if quem and set(quem.split()) & _NAO_E_NOME:
-                    return None  # "lê a da Ana e responde": pede mais que ler, vai ao cérebro
-                return f"{nome}:{quem}" if quem else nome
-    return None
-
-
-def comando(
-    texto: str, nucleo_em_foco: bool = False, orbes: dict[str, str] | None = None
-) -> str | None:
-    p = palavras(texto)
-    if (limpo := sem_nome(p)) != p:
-        p, texto = limpo, " ".join(limpo)
-    if (nome := whatsapp_local(" ".join(p))) is not None:
-        return nome
-    if nucleo_em_foco and (nome := next((n for n, f in BRILHO_SEM_ALVO.items() if p in f), None)):
-        return nome
-    if (destino := troca(texto)) is not None:
-        return f"trocar:{destino}"
-    if (nome := manutencao(texto)) is not None:
-        return nome
-    return next((nome for nome, frases in COMANDOS.items() if p in frases), None) or orbe(
-        texto, orbes
-    )
-
-
-# Respostas a uma oferta de avisos (ADR 0029), só logo depois dela.
-OFERTA = {
-    "avisos_proximo": {
-        ("sim",),
-        ("pode",),
-        ("comeca",),
-        ("pode", "comecar"),
-        ("vai",),
-        ("manda",),
-        ("proximo",),
-        ("o", "proximo"),
-        ("sim", "pode"),
-    },
-    "avisos_depois": {("depois",), ("agora", "nao"), ("nao",), ("mais", "tarde"), ("deixa",)},
-}
-
-
-def resposta_a_permissao(texto: str) -> str | None:
-    """Logo depois da pergunta de uma sessão ("Aprovo?"), uma resposta curta: o não ganha de
-    tudo (uma negação ou correção em qualquer lugar); o sim precisa vir no começo ("sim",
-    "pode publicar"). A janela dura a pergunta e a escuta, então pergunta ("vai chover
-    amanhã?"), frase longa e "não entendi" seguem como pedido e não decidem nada."""
-    p = sem_nome(palavras(texto))
-    if "?" in texto or p in COMANDOS["repetir"] or not 0 < len(p) <= RESPOSTA_CURTA:
-        return None
-    if set(p) & (NEGA | CORRIGE):
-        return "permissao_nao"
-    if p[0] not in APROVA_NO_COMECO:
-        return None
-    return "permissao_tudo" if set(p) & TUDO else "permissao_sim"
-
-
-def resposta_a_oferta(texto: str) -> str | None:
-    p = sem_nome(palavras(texto))
-    return next((nome for nome, frases in OFERTA.items() if p in frases), None)
-
-
-def palavras(texto: str) -> tuple[str, ...]:
-    """Minúsculas, sem acentos e sem pontuação: "Sim, pode!" -> ("sim", "pode")."""
-    sem_acento = unicodedata.normalize("NFKD", texto.casefold())
-    return tuple(
-        re.findall(r"[^\W_]+", "".join(c for c in sem_acento if not unicodedata.combining(c)))
-    )
-
-
-def sem_chamado(texto: str) -> str | None:
-    """O pedido sem o chamado do começo ("Ei Zé, que horas são?" -> "que horas são?"); o texto
-    como veio se não começar pelo chamado; None se for só o chamado (a pessoa o repetiu ou não
-    ouviu o bip; testes da voz pelo navegador, 12/10/2026)."""
-    p = palavras(texto)
-    so = p
-    while so[:1] and so[0] in VACILOS and so[:2] not in CHAMADOS:
-        so = so[1:]
-    if so and (so in CHAMADOS or (len(so) == 1 and so[0] in NOMES)):
-        return None
-    n = 0
-    while n < len(p) - 1 and p[n] in VACILOS and p[n : n + 2] not in CHAMADOS:
-        n += 1
-    if p[n : n + 2] in CHAMADOS:
-        n += 2
-    elif p[n : n + 1] and p[n] in NOMES:
-        n += 1
-    else:
-        return texto
-    return re.sub(rf"^\W*(?:\w+\W+){{{n - 1}}}\w+\W*", "", texto.strip())
-
-
-def pedido_valido(texto: str) -> bool:
-    return any(len(p) > 1 or p.isdigit() for p in palavras(texto))
 
 
 @dataclass
