@@ -39,3 +39,8 @@ outros projetos no meio do trabalho (visto no registro de 13/10/2026).
   com regras para não quebrar o próprio sistema.
 - O painel está no limite do orçamento de abertura (130 KB); a próxima função global precisa
   liberar espaço (mover páginas raras para `web/paginas/`).
+
+## Revisão (09/11/2026)
+
+O modo manutenção não captura mais a fala: o pedido à sessão de autodesenvolvimento é
+explícito, pelo cérebro ([ADR 0072](0072-autodesenvolvimento-so-corrige.md)). O resto continua.

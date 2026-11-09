@@ -465,8 +465,8 @@ class Nucleo(
         self.atualizacao = Progresso(ESTADO / "manutencao")  # aplicar, em tempo real no painel
         self.manutencao.ao_etapa = self.atualizacao.etapa
         self.manutencao.atualizando = lambda: self.atualizacao.reserva() is not None
+        self.manutencao.contexto = lambda: self._contexto_da_manutencao()
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
-        self.maquina.manutencao = lambda: self.manutencao.ligado
         self.maquina.oferta = lambda: time.monotonic() < self._oferta_ate
         self.maquina.permissao = lambda: time.monotonic() < self._permissao_ate
         self.maquina.ze_perguntou = lambda: (
@@ -759,9 +759,7 @@ class Nucleo(
                 atividade.PADRAO.registrar(
                     "execucao", f"Comando local: {nome}", autorizacao="comando local"
                 )
-                self._abrir_latencia(
-                    "manutencao" if nome.startswith("manutencao_pedido:") else "comando"
-                )
+                self._abrir_latencia("comando")
                 self._comando(nome)
             case e.ReterAviso(texto):
                 if self._comecados.get(texto, 0) >= 2:
@@ -817,12 +815,6 @@ class Nucleo(
         try:
             if nome == "manutencao_entrar":
                 resposta = m.entrar(argumento)
-            elif nome == "manutencao_pedido":
-                if not m.ligado:
-                    resposta = "Manutenção desligada. Faça o pedido na conversa."
-                else:
-                    resposta = m.encaminhar(argumento, self._contexto_da_manutencao(), time.time())
-                    self._na_linha("manutencao", f"Pedido à sessão de código: {argumento}")
             elif nome == "rodada_melhoria":
                 resposta = self._rodada_de_melhoria()
             elif not self._no_proprio_pc():

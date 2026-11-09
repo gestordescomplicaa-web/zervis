@@ -1,8 +1,9 @@
 """Ferramenta do modo manutenção: o cérebro liga ou desliga quando a frase escapou do comando local.
 
 "Coloque no modo manutenção" chegou ao cérebro em 07/10/2026 e, sem ferramenta, ele abriu o menu
-de configurações. Não é de leitura: ligar manda os próximos pedidos para a sessão de código, então
-passa pela aprovação falada (a frase vem do laço).
+de configurações. Desde o ADR 0072, a fala comum nunca vai para a sessão de autodesenvolvimento:
+o pedido a ela é explícito (`pedir`). Não é de leitura: passa pela aprovação falada (a frase vem
+do laço).
 """
 
 import asyncio
@@ -18,18 +19,24 @@ from zervis.oficina.manutencao import Manutencao
 def ferramentas(manutencao: Manutencao | None) -> list[SdkMcpTool[Any]]:
     @tool(
         "modo_manutencao",
-        "Liga ou desliga o modo manutenção, ou diz como está. Ligado, os pedidos do usuário vão "
-        "para a sua sessão de manutenção (um agente de código no seu próprio repositório) e "
-        "você só fala o resumo do agente. "
-        "Use quando ele pedir para entrar, ativar, colocar, sair ou desligar a manutenção, com "
-        "qualquer palavra. Não é o menu de configurações. propor: publica no GitHub, num PR, as "
+        "Liga ou desliga o modo manutenção, ou diz como está. Use quando ele pedir para entrar, "
+        "ativar, colocar, sair ou desligar a manutenção, com qualquer palavra. Não é o menu de "
+        "configurações. pedir: manda ao autodesenvolvimento (um agente de código no seu próprio "
+        "repositório) a correção de uma falha sua, só quando o usuário pedir explicitamente "
+        '("manda para o autodesenvolvimento corrigir...") ou responder a uma pergunta dele; '
+        "pedido: o que corrigir, com o que deu errado. Funções novas e outros projetos não: são "
+        "das sessões comuns. propor: publica no GitHub, num PR, as "
         'melhorias da cópia ("manda essa melhoria como PR", "salva no GitHub"), depois de '
         "conferir os testes e que não vai nenhum dado do usuário; sem isso, as melhorias ficam "
         "só nesta máquina.",
         {
             "type": "object",
             "properties": {
-                "acao": {"type": "string", "enum": ["entrar", "sair", "situacao", "propor"]},
+                "acao": {
+                    "type": "string",
+                    "enum": ["entrar", "sair", "situacao", "pedir", "propor"],
+                },
+                "pedido": {"type": "string"},
                 "agente": {"type": "string", "enum": ["claude", "codex"]},
             },
             "required": ["acao"],
@@ -43,6 +50,11 @@ def ferramentas(manutencao: Manutencao | None) -> list[SdkMcpTool[Any]]:
             fala = await asyncio.to_thread(manutencao.entrar, str(args.get("agente") or ""))
         elif acao == "sair":
             fala = manutencao.sair()
+        elif acao == "pedir":
+            pedido = str(args.get("pedido") or "").strip()
+            if not pedido:
+                return _erro(ValueError("diga o que corrigir"))
+            fala = await asyncio.to_thread(manutencao.pedir, pedido, time.time())
         elif acao == "propor":
             r = await asyncio.to_thread(manutencao.propor)
             return _texto({"publicado": r.ok, "diga": r.texto, "endereco": r.endereco})

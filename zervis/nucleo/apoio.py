@@ -65,7 +65,7 @@ CHAMADOS_GUARDADOS = 10  # os últimos sons que dispararam o chamado (ESTADO/cha
 PRIMEIRA_FALA_S = 6.0  # depois do chamado, sem nenhuma fala nesse tempo, a escuta fecha
 OFERTA_S = 45.0  # quanto tempo "sim", "próximo" e "depois" respondem a uma oferta de avisos
 LIMITE_ESCRITO = 4000  # caracteres de um pedido escrito no painel
-EM_SEGUNDO_PLANO = ("manutencao_entrar", "manutencao_pedido", "rodada_melhoria", "reiniciar")
+EM_SEGUNDO_PLANO = ("manutencao_entrar", "rodada_melhoria", "reiniciar")
 # Os que mostram algo no Núcleo (abrem a janela se ela estiver fechada): nome -> (ações, fala).
 MOSTRAR_NA_TELA: dict[str, tuple[list[dict[str, Any]], str]] = {
     "teclado_abrir": ([{"acao": "teclado", "valor": "abrir"}], "Teclado aberto; pode escrever."),

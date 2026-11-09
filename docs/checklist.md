@@ -149,7 +149,7 @@ Conceito: o Zé no navegador do celular, em casa ou fora, com senha e autenticad
 - ✅ Diagnosticar, propor, implementar na cópia
 - ✅ Aplicar, volta automática, descartar, conflito
 - 🟡 Aplicar espera as outras sessões; só do próprio PC
-- ⬜ Pedido por voz no modo manutenção
+- ⬜ Pedido explícito ao autodesenvolvimento por voz ("manda para o autodesenvolvimento corrigir…"), e a fala comum indo ao cérebro com o modo ligado (ADR 0072)
 
 ## 13. Perfil, configuração inicial e painel
 

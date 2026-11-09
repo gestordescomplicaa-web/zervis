@@ -79,3 +79,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0069](0069-fila-duravel-das-automacoes.md) | A fila durável das automações: cada execução gravada com estado e tentativas; ao subir, o lembrete e a pergunta voltam, a ligação vira aviso | Aceito |
 | [0070](0070-estado-so-em-sqlite.md) | Estado só em SQLite: avisos, pendências, leads, prioridade e ligações saem do JSON regravado inteiro, com importação única | Aceito |
 | [0071](0071-foco-voz-e-oficina.md) | O foco: voz e oficina; Instagram, Imersão, pesquisa, cérebro local, WhatsApp e ligações só recebem correção até a 0.5.0 | Aceito |
+| [0072](0072-autodesenvolvimento-so-corrige.md) | O autodesenvolvimento só corrige as falhas do próprio Zé; a fala comum nunca vai para a sessão dele, o pedido é explícito | Aceito |

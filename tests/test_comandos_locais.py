@@ -181,11 +181,6 @@ def rodar(nome: str, janela_aberta: bool = True) -> tuple[str, list[tuple[str, A
         ("manutencao_entrar:codex", "Modo manutenção ligado.", [("entrar", "codex")]),
         ("manutencao_sair", "Saí do modo manutenção.", []),
         ("manutencao_situacao", "Nenhum pedido em andamento.", []),
-        (
-            "manutencao_pedido:melhora o teclado",
-            "Mandei para o Claude.",
-            [("encaminhar", "melhora o teclado")],
-        ),
         ("reiniciar", "Vou me reiniciar.", [("reiniciar", False)]),
         (
             "reiniciar:revisado",
@@ -205,18 +200,6 @@ def test_todo_comando_da_tabela_tem_quem_o_execute() -> None:
     for nome in e.COMANDOS:
         fala, _ = rodar(nome)
         assert fala and (fala != "baterias" or nome == "relatorio_de_uso"), nome
-
-
-def test_pedido_enfileirado_nao_entra_na_sessao_depois_de_sair_da_manutencao() -> None:
-    registro = Registro()
-    n = Nucleo.__new__(Nucleo)
-    manutencao = ManutencaoFalsa(registro)
-    manutencao.ligado = False
-    n.manutencao = manutencao  # type: ignore[assignment]
-    n.eventos = registro  # type: ignore[assignment]
-    n._responder_depois("manutencao_pedido", "Diminua o brilho em cinquenta por cento")
-    assert not any(tipo == "encaminhar" for tipo, _ in registro.feito)
-    assert ("evento", e.Frase("Manutenção desligada. Faça o pedido na conversa.")) in registro.feito
 
 
 def test_com_a_janela_fechada_mostrar_abre_e_fechar_nao_faz_nada() -> None:

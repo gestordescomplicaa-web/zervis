@@ -87,10 +87,9 @@ class ServicoOficina:
             return None
         if entrada.get("acao") == "entrar":
             agente = "Codex" if entrada.get("agente") == "codex" else "Claude"
-            return (
-                f"Vou ligar o modo manutenção com o {agente}; "
-                "seus pedidos vão para a sessão de código."
-            )
+            return f"Vou ligar o modo manutenção com o {agente}."
+        if entrada.get("acao") == "pedir":
+            return f"Vou mandar ao autodesenvolvimento: {entrada.get('pedido', '')}"
         if entrada.get("acao") == "propor":
             return (
                 "Vou publicar no GitHub, num PR, as melhorias da cópia, depois de conferir os "
