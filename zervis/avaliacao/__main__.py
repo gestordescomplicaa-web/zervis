@@ -18,7 +18,7 @@ from typing import Any
 from claude_agent_sdk import SdkMcpTool
 
 from zervis import avaliacao, lugares, usuario
-from zervis.avaliacao import Cenario, Cerebro, Conferencia
+from zervis.avaliacao import Cenario, Cerebro, Conferencia, placar
 
 HISTORICO = lugares.ESTADO / "avaliacao"
 
@@ -242,10 +242,25 @@ def resumo(relatorio: dict[str, Any], anterior: dict[str, Any]) -> str:
     return "\n".join(linhas)
 
 
+def avisar_queda(texto: str) -> None:
+    """A queda vira um aviso do Zé, na fila durável que ele lê (SQLite: vale de outro
+    processo, ADR 0070)."""
+    from zervis.avisos.fila import Fila
+
+    print(texto)
+    Fila(lugares.ESTADO / "avisos.json").guardar(texto, origem="avaliacao", titulo="Avaliação")
+
+
 def main(argv: list[str] | None = None) -> int:
     partes = argparse.ArgumentParser(prog="zervis avaliar", description=__doc__)
     partes.add_argument("cenarios", nargs="*", help="só estes (nome do arquivo, sem .toml)")
-    partes.add_argument("--repetir", type=int, default=1, help="rodadas por cenário")
+    partes.add_argument("--repetir", type=int, default=0, help="rodadas por cenário (padrão: 1)")
+    partes.add_argument(
+        "--noturna",
+        action="store_true",
+        help="a rodada noturna: 3 vezes cada (sem --repetir) e um aviso do Zé se uma área cair "
+        f"mais de {placar.QUEDA:.0f} pontos desde a última noturna",
+    )
     partes.add_argument(
         "--area", choices=tuple(avaliacao.AREAS), default="", help="só os cenários desta área"
     )
@@ -290,9 +305,13 @@ def main(argv: list[str] | None = None) -> int:
         via = rapido.efetiva(cfg["via_rapida"])
         criar = com_rapidas(criar, via)
         rotulo += f" + rápidas:{via['motor']}:{via['modelo']}"
-    print(f"Avaliando {len(cenarios)} cenários com {rotulo} ({args.repetir}x cada)…\n")
-    relatorio = asyncio.run(avaliar(cenarios, criar, max(1, args.repetir)))
+    repetir = max(1, args.repetir or (3 if args.noturna else 1))
+    print(f"Avaliando {len(cenarios)} cenários com {rotulo} ({repetir}x cada)…\n")
+    relatorio = asyncio.run(avaliar(cenarios, criar, repetir))
     relatorio["modelo"], relatorio["rotulo"] = modelo, rotulo
+    if args.noturna:
+        relatorio["noturna"] = True
+        noturna_antes = placar.ultima_noturna(HISTORICO, rotulo)
     anterior = _anterior(rotulo)
     print()
     print(resumo(relatorio, anterior))
@@ -307,6 +326,8 @@ def main(argv: list[str] | None = None) -> int:
     destino = HISTORICO / f"{time.strftime('%Y%m%d-%H%M%S')}.json"
     destino.write_text(json.dumps(relatorio, ensure_ascii=False, indent=1))
     print(f"Relatório: {destino}")
+    if args.noturna and noturna_antes and (caidas := placar.quedas(relatorio, noturna_antes)):
+        avisar_queda(placar.aviso_de_queda(caidas))
     return 0 if all(v == 1 for v in _taxas(relatorio).values()) and not relatorio["parou"] else 1
 
 

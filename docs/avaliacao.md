@@ -11,6 +11,8 @@ zervis avaliar --repetir 3         # cada cenário três vezes: a taxa de acerto
 zervis avaliar lembrete nao-inventa  # só estes
 zervis avaliar --area whatsapp      # só uma área (voz, sessoes, whatsapp, ligacoes, ...)
 zervis avaliar --assinatura        # pelo login da assinatura, não pela chave do painel
+zervis avaliar --noturna           # a rodada noturna: 3x cada e aviso se uma área cair
+zervis placar --saida docs/placar.md  # o placar público, a cada versão
 ```
 
 Gasta a conta do Claude de quem usa, por isso não roda no `make check` (lá, o motor é testado com
@@ -18,6 +20,18 @@ um cérebro falso, em `tests/test_avaliacao.py`). O relatório de cada rodada va
 `~/.local/state/zervis/avaliacao/` e é comparado, cenário a cenário, com a última vez que cada um
 rodou ("melhorou", "piorou"). Uma rodada em que o cérebro não respondeu (limite da conta, rede)
 fica sem nota, e no limite da conta a bateria para.
+
+## Rodada noturna e placar
+
+`--noturna` roda cada cenário três vezes e compara a nota de cada área com a última rodada
+noturna do mesmo cérebro: uma queda de mais de 5 pontos vira um aviso do Zé (a fila de avisos
+fica em SQLite, então vale de outro processo). A frequência só se fixa depois de medir quanto a
+rodada gasta da conta.
+
+`zervis placar` junta a última rodada noturna (ou, sem ela, a última com ao menos metade dos
+cenários), a latência da voz por caminho nos últimos 7 dias (`--dias`) e o gasto em tokens por
+cenário, num Markdown só com números agregados: [placar](placar.md). A latência também sai
+sozinha, em JSON: `python -m zervis.voz.latencia --caminhos 7`.
 
 ## Escrever um cenário
 

@@ -63,11 +63,17 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
 - [ ] **Tarefas de ponta a ponta** numa pasta de teste, com o resultado verificado (taxa de
   sucesso, não só a escolha da ferramenta).
 - [ ] **Rodada noturna**, 3 repetições por cenário; queda de mais de 5 pontos vira aviso. Medir o
-  custo antes de fixar a frequência.
-- [ ] **Latência de voz sempre medida:** do fim da fala ao primeiro som, p50 e p95, por caminho
-  (via rápida, cérebro completo, Ao vivo).
+  custo antes de fixar a frequência. `zervis avaliar --noturna` pronto (a queda vira aviso pela
+  fila durável); falta a primeira rodada para medir o custo e agendar.
+- [x] **Latência de voz sempre medida:** do fim da fala ao primeiro som, p50 e p95, por caminho
+  (via rápida, cérebro completo, comando local), no recorte e no Ao vivo
+  (`python -m zervis.voz.latencia --caminhos 7` e o placar). Primeira medição, 03 a 09/11/2026:
+  via rápida com p50 de 3,9 s (a meta é p95 abaixo de 2,5 s). No Ao vivo, 216 turnos foram ao
+  cérebro sem nunca receber o primeiro token, quase todos em 03 e 06/11/2026: a investigar.
 - [ ] **Custo por tarefa** na Atividade.
-- [ ] **Placar público** em `docs/placar.md`, atualizado a cada versão.
+- [ ] **Placar público** em `docs/placar.md`, atualizado a cada versão. `zervis placar` gera
+  (nota por área, latência por caminho, tokens por cenário); falta a nota da primeira rodada
+  noturna.
 
 Aceite: 100+ cenários rodando toda noite; placar na 0.4.0 com sucesso por área, p50/p95 e custo.
 Metas iniciais (confirmar após a primeira medição): 90% de sucesso, p95 de voz abaixo de 2,5 s na
