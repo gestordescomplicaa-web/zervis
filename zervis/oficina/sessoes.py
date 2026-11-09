@@ -33,11 +33,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from zervis import caminhos, fuso
+from zervis import atividade, caminhos, fuso
 from zervis.cerebro import contas, mcp_externo, modelos
+from zervis.cerebro.consumo import mil
 from zervis.dados.documentos import Documentos, linhas_json, objeto_json
 from zervis.memoria import aimemory
-from zervis.oficina import continuidade, fallback
+from zervis.oficina import continuidade, custo, fallback
 from zervis.oficina.permissoes import PRAZO_CODEX_S, PRAZO_S, Permissoes, assinatura, resumo
 from zervis.oficina.supervisor import Oficina, TerminalRemoto
 from zervis.oficina.terminal import Terminal
@@ -1205,7 +1206,7 @@ class Sessoes:
             resposta = str(e.get("last_assistant_message") or "")  # o hook já traz a resposta
             if not resposta:
                 resposta = _ultima_resposta_claude(str(e.get("transcript_path", "")))
-            self._fim_do_turno(id_, resposta)
+            self._fim_do_turno(id_, resposta, str(e.get("transcript_path") or ""))
         elif nome == "agent-turn-complete":
             if _turno_auxiliar_do_codex(e):
                 return  # o Codex gerando o título da conversa, noutro fio: não é o turno
@@ -1232,7 +1233,7 @@ class Sessoes:
             self._mudar(id_, ultimo_pedido=texto)
         return texto.strip()
 
-    def _fim_do_turno(self, id_: str, resposta: str) -> None:
+    def _fim_do_turno(self, id_: str, resposta: str, conversa: str = "") -> None:
         atual = self.ler(id_)
         if atual.estado != "trabalhando":
             return  # uma notificação repetida não registra nem anuncia o mesmo turno de novo
@@ -1250,11 +1251,41 @@ class Sessoes:
         )
         if final.motor == "codex":
             aimemory.capturar_codex(final.sdk_sessao, final.onde, final.ultimo_pedido, resposta)
+        self._registrar_custo(final, conversa)
         if self.ao_terminar is not None:
             try:
                 self.ao_terminar(final, resumo)
             except Exception:
                 log.exception("aviso do fim da sessão falhou")
+
+    def _registrar_custo(self, s: "Sessao", conversa: str) -> None:
+        """Quanto a tarefa gastou, na Atividade (plano de maturidade, Frente 3): lido da conversa
+        do próprio agente, sem gastar nada. Sem a conversa, nada se registra."""
+        arquivo = Path(conversa) if conversa else None
+        if (arquivo is None or not arquivo.is_file()) and s.sdk_sessao:
+            try:
+                cs = contas.Contas()
+                conta = cs.achar(s.conta) if s.conta else cs.em_uso(s.motor)
+            except contas.ContaErro:
+                return
+            arquivo = _arquivo_da_conversa(s.motor, s.sdk_sessao, conta.onde)
+        gasto = custo.do_turno(arquivo, s.motor)
+        if gasto is None:
+            return
+        total = custo.total(gasto)
+        partes = (
+            f"{gasto['modelo'] or NOMES_MOTORES.get(s.motor, s.motor)} · lido do cache "
+            f"{mil(gasto['cache_lido'])} · novo {mil(gasto['entrada'] + gasto['cache_criado'])} "
+            f"· escrito {mil(gasto['saida'])}"
+        )
+        atividade.PADRAO.registrar(
+            "execucao",
+            f"Sessão {s.nome}: tarefa terminada",
+            origem="sessao",
+            entrada=s.ultimo_pedido,
+            consumo=total,
+            consumo_partes=partes,
+        )
 
     def excluir(self, id_: str) -> str:
         """Encerra o agente e exclui a sessão; alterações na cópia bloqueiam a exclusão.
