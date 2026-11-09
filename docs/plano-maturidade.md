@@ -108,7 +108,8 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   `nucleo/estados.py` (1.532: conversa, confirmação, avisos),
   `nucleo/laco.py` (1.470: laço, efeitos de voz, efeitos do cérebro).
   Nenhum módulo acima de 800 linhas, vigiado por teste. `nucleo/estados.py` dividido em
-  `voz_tipos.py`, `entender.py` e `comandos.py` (a máquina ficou com 470 linhas);
+  `voz_tipos.py`, `entender.py` e `comandos.py` (a máquina ficou com 470 linhas); `nucleo/laco.py` (1.466 → 751) em `retrato.py`, `efeitos.py`,
+  `ouvir.py` e `ciclo.py`;
   `tests/test_tamanho_dos_modulos.py` vigia: os que faltam não crescem.
 - [ ] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
 
