@@ -2,6 +2,50 @@
 
 ## Não lançado
 
+## 0.4.0 (09/11/2026)
+
+A quarta versão publicada: o Zé mais confiável e medido. Fecha a Fase A do
+[plano de maturidade](docs/plano-maturidade.md). Destaques:
+
+- **Reiniciar o Zé não derruba as sessões:** os agentes (Claude e Codex) rodam num supervisor à
+  parte e voltam ao painel com a mesma tela depois de uma atualização, um ajuste ou uma queda.
+- **Nada se perde num reinício:** as automações retomam o que ficou no meio, e os avisos,
+  pendências, leads e ligações ficam num banco que não perde escrita.
+- **Voz:** o pedido não fica mais preso esperando um minuto quando o botão "Falar" ficou travado.
+- **Placar público:** a nota do Zé por área (93% na primeira rodada), a latência da voz por
+  caminho e o gasto em tokens, em [docs/placar.md](docs/placar.md).
+- **Quanto cada coisa gasta:** cada pedido e cada tarefa das sessões mostra os tokens na Atividade.
+
+O detalhe de cada mudança:
+
+- Sessões: reiniciar o Zé (atualização, ajuste, queda) encerrava todas as sessões no meio do
+  trabalho. Agora os terminais ficam num serviço próprio (`zervis-oficina`), e o Zé reencontra
+  cada um ao subir, com a mesma tela e sem repetir avisos (ADR 0068).
+- Sessões: quando o Claude pergunta se retoma a conversa anterior, o Zé avisa e deixa você
+  escolher no terminal, em vez de responder sozinho.
+- Automações: cada execução é gravada com estado e tentativas. Num reinício, o lembrete e a
+  pergunta voltam; a ligação agendada não é refeita sozinha, vira um aviso (ADR 0069). A ligação
+  agendada que não saiu fica como erro (antes, era marcada como feita antes de discar).
+- Avisos, pendências, leads, a lista de prioridade e as ligações saem do JSON regravado inteiro
+  para o SQLite: dois processos não perdem a escrita um do outro, e um arquivo cortado não vira
+  lista vazia. O que havia é importado uma vez (ADR 0070).
+- Voz: o botão "Falar" travado (um toque rápido no espaço, no painel) e o painel fechado faziam
+  todo pedido seguinte, até pelo "Ei Zé", esperar o teto de 60 s. O botão agora vale para um
+  pedido só. O registro diz "pelo teto de 60 s" quando é o teto que fecha o pedido.
+- Autodesenvolvimento: a fala comum não vai mais para a sessão de código com o modo manutenção
+  ligado; o pedido a ela é explícito ("manda para o autodesenvolvimento corrigir…"). O papel
+  dele passa a ser corrigir as falhas do próprio Zé (ADR 0072). "Propor como PR" faz uma
+  proposta por vez e não abre PR repetido.
+- Painel: um arquivo novo do painel vale sem reiniciar o Zé.
+- Avaliação: 103 cenários em oito áreas, com a nota de cada área; `zervis avaliar --noturna`
+  (três vezes cada, e um aviso se uma área cair mais de 5 pontos) e `zervis placar`.
+- Latência da voz medida do fim da fala ao primeiro som, por caminho (via rápida, cérebro,
+  comando local; recorte e Ao vivo): `python -m zervis.voz.latencia --caminhos 7`.
+- Atividade: cada pedido leva o total de tokens e as partes (via rápida, cérebro, pesquisa); cada
+  tarefa de uma sessão, o que o agente gastou no turno.
+- WhatsApp: com um nome que serve a duas pessoas, o Zé pergunta qual antes de responder.
+- Foco até a 0.5.0: voz e oficina; o resto só recebe correção (ADR 0071).
+
 ## 0.3.0 (06/11/2026)
 
 A terceira versão publicada: o Zé que atende e faz ligações por você. Destaques:

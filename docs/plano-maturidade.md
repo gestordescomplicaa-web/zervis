@@ -30,6 +30,9 @@ Notas do Zérvis: do código e dos testes. Dos concorrentes: documentação e re
 | B | 0.5.0 | 2 e 5 | Zero ações indevidas na bateria de injeção; nenhum módulo acima de 800 linhas | ≈ 7,5 |
 | C | 0.6.0 | 4 | Atendimento pela API oficial do WhatsApp; 3 PRs de fora aceitos | ≈ 7,8 |
 
+Fase A: os dois portões passaram na 0.4.0 (09/11/2026). Ficam abertos, para quando valer o gasto
+de tokens: agendar a rodada noturna (a primeira gastou 21,6 milhões) e as tarefas de ponta a ponta.
+
 ## Frente 1: Confiabilidade (6,0 → 8,0) · Fase A
 
 Hoje as sessões de Claude e Codex são processos filhos do processo principal: reiniciar o Zé
