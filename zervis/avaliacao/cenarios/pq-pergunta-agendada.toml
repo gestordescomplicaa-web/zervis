@@ -9,4 +9,5 @@ automacao_pergunta = '{"criada": "Previsão do tempo (pergunta, todo dia 08:00; 
 usa = ["automacao_pergunta"]
 nao_usa = ["automacao_lembrete", "internet_pesquisar"]
 entrada = { automacao_pergunta = ["tempo"] }
-entrada_alguma = { automacao_pergunta = ["08:00", "8:00", "8h", "08h"] }
+# "cron 0 8 * * *" também é às oito (a rodada de 09/11/2026 agendou assim, certo).
+entrada_alguma = { automacao_pergunta = ["08:00", "8:00", "8h", "08h", "0 8 "] }

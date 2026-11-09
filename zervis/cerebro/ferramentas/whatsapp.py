@@ -712,7 +712,9 @@ def ferramentas(n: Nucleo | None) -> list[SdkMcpTool[Any]]:
         "que o usuário ditou. O texto vai como o usuário quer que chegue, na voz dele (primeira "
         "pessoa), sem inventar nem acrescentar nada; se ele pedir para você redigir, diga a "
         "sugestão e espere o ok antes. O usuário confirma por voz, ouvindo o destinatário e o "
-        "texto. Nunca a grupo. A quem não escreveu (não está na caixa), use whatsapp_enviar.",
+        "texto. Nunca a grupo. A quem não escreveu (não está na caixa), use whatsapp_enviar. "
+        "Um nome que pode ser de mais de uma pessoa (dois Joões na caixa ou na agenda): veja "
+        "whatsapp_conversas e pergunte qual antes de chamar esta.",
         {
             "type": "object",
             "properties": {
