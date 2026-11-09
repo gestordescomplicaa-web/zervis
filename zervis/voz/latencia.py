@@ -15,7 +15,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -152,6 +152,80 @@ def resumir(registros: list[dict[str, Any]]) -> dict[str, Any]:
             }
         )
     return {"versao": 1, "turnos": len(registros), "grupos": saida}
+
+
+# Os caminhos do placar (plano de maturidade, Frente 3): por onde a resposta saiu e se a fala
+# veio pelo Ao vivo (o Live do Deepgram) ou pelo recorte de sempre.
+CAMINHOS = {"via_rapida": "Via rápida", "cerebro": "Cérebro completo", "comando": "Comando local"}
+MODOS = {"recorte": "Recorte", "ao_vivo": "Ao vivo"}
+
+
+def caminho(r: dict[str, Any]) -> tuple[str, str] | None:
+    """(modo, caminho) de um turno de voz; None para o que não é um pedido falado comum."""
+    if r.get("origem") != "voz":
+        return None
+    modo = "ao_vivo" if r.get("fim_por") == "live" else "recorte"
+    if str(r.get("provedor", "")).startswith("rapida:"):
+        return modo, "via_rapida"
+    if r.get("rota") == "cerebro":
+        return modo, "cerebro"
+    if r.get("rota") in ("comando", "controle"):
+        return modo, "comando"
+    return None
+
+
+def _p(valores: list[float], q: float) -> float:
+    return valores[max(0, math.ceil(len(valores) * q) - 1)]
+
+
+def _falhou(r: dict[str, Any]) -> bool:
+    resultado = str(r.get("resultado", ""))
+    return resultado == "sem_som" or resultado.startswith("erro")
+
+
+def por_caminho(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Do fim da fala ao primeiro som, por caminho: p50 e p95 dos turnos que falaram, e quantos
+    falharam (sem som ou com erro; ser cortado ou um comando de controle não é falha)."""
+    grupos: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for r in registros:
+        if (chave := caminho(r)) is not None:
+            grupos.setdefault(chave, []).append(r)
+    saida = []
+    for modo in MODOS:
+        for nome in CAMINHOS:
+            linhas = grupos.get((modo, nome), [])
+            valores = sorted(
+                float(v)
+                for r in linhas
+                if r.get("resultado") == "concluido"
+                and isinstance(v := (r.get("etapas_ms") or {}).get("total"), (int, float))
+                and not isinstance(v, bool)
+                and math.isfinite(v)
+                and v >= 0
+            )
+            if not valores:
+                continue
+            saida.append(
+                {
+                    "modo": modo,
+                    "caminho": nome,
+                    "turnos": len(linhas),
+                    "n": len(valores),
+                    "p50_ms": round(_p(valores, 0.5), 1),
+                    "p95_ms": round(_p(valores, 0.95), 1),
+                    "falhas": sum(_falhou(r) for r in linhas),
+                }
+            )
+    return saida
+
+
+def ler_dias(pasta: Path, dias: int, ate: date | None = None) -> list[dict[str, Any]]:
+    """Os turnos dos últimos `dias` dias, até `ate` (hoje) inclusive."""
+    fim = ate or datetime.now(FUSO).date()
+    registros: list[dict[str, Any]] = []
+    for i in range(max(1, dias)):
+        registros += ler_turnos(pasta / f"{(fim - timedelta(days=i)).isoformat()}.jsonl")
+    return registros
 
 
 class Latencias:
@@ -291,8 +365,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Resumo diário de latência da voz, em ms")
     parser.add_argument("--dia", default=datetime.now(FUSO).date().isoformat())
     parser.add_argument("--pasta", type=Path, default=lugares.ESTADO / "latencias")
+    parser.add_argument(
+        "--caminhos",
+        type=int,
+        metavar="DIAS",
+        default=0,
+        help="p50 e p95 do fim da fala ao primeiro som, por caminho, nos últimos DIAS dias",
+    )
     args = parser.parse_args()
     dia = datetime.strptime(args.dia, "%Y-%m-%d").date().isoformat()
+    if args.caminhos:
+        registros = ler_dias(args.pasta, args.caminhos, date.fromisoformat(dia))
+        print(json.dumps(por_caminho(registros), ensure_ascii=False, indent=2))
+        return
     print(
         json.dumps(
             {"dia": dia, **resumir(ler_turnos(args.pasta / f"{dia}.jsonl"))},

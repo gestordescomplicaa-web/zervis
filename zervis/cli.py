@@ -439,11 +439,20 @@ def main(argv: list[str] | None = None) -> int:
         help="a bateria de avaliação do cérebro (gasta a conta do Claude)",
         add_help=False,
     )
+    sub.add_parser(
+        "placar",
+        help="o placar: nota por área, latência da voz e gasto (para docs/placar.md)",
+        add_help=False,
+    )
     args, resto = partes.parse_known_args(argv)
     if args.acao == "avaliar":
         from zervis.avaliacao.__main__ import main as avaliar
 
         return avaliar(resto)
+    if args.acao == "placar":
+        from zervis.avaliacao.placar import main as placar
+
+        return placar(resto)
     if resto:
         partes.error(f"argumentos desconhecidos: {' '.join(resto)}")
     if args.acao == "status":
