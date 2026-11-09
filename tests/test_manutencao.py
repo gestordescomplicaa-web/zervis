@@ -365,19 +365,33 @@ def test_comandos_da_manutencao(fala: str, nome: str | None) -> None:
     assert e.comando(fala) == nome
 
 
-def test_no_modo_manutencao_o_pedido_vai_para_a_sessao_e_comandos_seguem_locais() -> None:
-    m = e.Maquina(manutencao=lambda: True)
+def test_a_fala_comum_nunca_vai_para_a_sessao_de_autodesenvolvimento() -> None:
+    """ADR 0072: em 09/11/2026, com o modo ligado, "Sim Ei Zé." e "Acabou o limite." viraram
+    pedidos à sessão de código, e a voz ficou presa nela."""
+    m = e.Maquina()
     m.tratar(e.Presenca(True), 0)
     m.tratar(e.Ativacao(), 1)
-    assert m.tratar(e.FimDeFala("melhora o teclado"), 2) == [
-        e.Comando("manutencao_pedido:melhora o teclado")
-    ]
-    assert m.tratar(e.Digitado("Hey Zé"), 2.5)[-1] == e.EnviarAoCerebro("Hey Zé")  # só o chamado
+    assert m.tratar(e.FimDeFala("Acabou o limite."), 2) == [e.EnviarAoCerebro("Acabou o limite.")]
     assert m.tratar(e.Digitado("abre o guia"), 3) == [
         e.CortarFala(),
         e.InterromperCerebro(),
         e.Comando("abrir_orbe:Guia"),
     ]
+
+
+def test_pedir_ao_autodesenvolvimento_so_com_o_modo_ligado(repo: Path) -> None:
+    oficina = SessoesFalsas()
+    m = nova(repo, oficina)
+    m.contexto = lambda: "Janela aberta."
+    assert m.pedir("corrige o timeout da via rápida", 1.0).startswith(
+        "O modo manutenção está desligado."
+    )
+    assert not oficina.enviados
+    m.entrar("claude")
+    assert m.pedir("corrige o timeout da via rápida", 2.0) == (
+        "Mandei para o Claude. Aviso quando terminar."
+    )
+    assert "Contexto agora: Janela aberta." in oficina.enviados[0][1]
 
 
 def test_a_guarda_do_reinicio_ve_commits_feitos_fora_de_um_pedido(repo: Path) -> None:
@@ -397,7 +411,10 @@ def test_o_cerebro_tem_a_ferramenta_e_ela_pede_aprovacao(repo: Path) -> None:
     descrever = Nucleo._descrever_manutencao
     nome = "mcp__jarvis__modo_manutencao"
     assert descrever(nome, {"acao": "entrar", "agente": "codex"}) == (
-        "Vou ligar o modo manutenção com o Codex; seus pedidos vão para a sessão de código."
+        "Vou ligar o modo manutenção com o Codex."
+    )
+    assert descrever(nome, {"acao": "pedir", "pedido": "corrige o anel"}) == (
+        "Vou mandar ao autodesenvolvimento: corrige o anel"
     )
     assert descrever(nome, {"acao": "sair"}) == "Vou desligar o modo manutenção."
     assert descrever("mcp__jarvis__tela_agir", {}) is None

@@ -985,14 +985,6 @@ def so_concordancia(texto: str) -> bool:
     )
 
 
-def so_chamado(texto: str) -> bool:
-    """A fala é só o chamado ("Hey Zé"): no modo manutenção não vira pedido para a sessão."""
-    p = palavras(texto)
-    while p[:1] and p[0] in VACILOS:
-        p = p[1:]
-    return not p or p in CHAMADOS or (len(p) == 1 and p[0] in NOMES | {"ei", "hey", "oi"})
-
-
 def sem_nome(p: tuple[str, ...]) -> tuple[str, ...]:
     """Tira o chamado ou o nome do começo ("Ei Zé, abre o guia") e põe "jarvis" no lugar de "zé"."""
     while len(p) > 1 and p[0] in VACILOS and p[:2] not in CHAMADOS:
@@ -1155,8 +1147,6 @@ class Maquina:
     nucleo_em_foco: Callable[[], bool] = field(default=lambda: False)
     # Os orbes pelo nome falado (manifesto do Núcleo; o laço preenche).
     orbes: dict[str, str] = field(default_factory=lambda: dict(ORBES_PADRAO))
-    # Modo manutenção ligado: o que não for comando local vai para a sessão de código.
-    manutencao: Callable[[], bool] = field(default=lambda: False)
     # Uma oferta de avisos acabou de ser feita ("Começo pela Loja?", ADR 0029): "sim", "próximo"
     # e "depois" respondem a ela, não vão ao cérebro.
     oferta: Callable[[], bool] = field(default=lambda: False)
@@ -1415,15 +1405,14 @@ class Maquina:
         return [*efeitos, self._pedido(texto)]
 
     def _pedido(self, texto: str) -> Efeito:
-        """Comando local, a sessão de código (modo manutenção) ou o cérebro, nessa ordem."""
+        """Comando local ou o cérebro. O modo manutenção não captura a fala (ADR 0072): um
+        pedido ao autodesenvolvimento é explícito e vai pelo cérebro."""
         if self.permissao() and (nome := resposta_a_permissao(texto)):  # o Teclado também
             return Comando(nome)
         if self.oferta() and (nome := resposta_a_oferta(texto)):
             return Comando(nome)
         if nome := comando(texto, self.nucleo_em_foco(), self.orbes):
             return Comando(nome)
-        if self.manutencao() and not so_chamado(texto):
-            return Comando(f"manutencao_pedido:{texto}")
         return EnviarAoCerebro(texto)
 
     def _silencio(self) -> list[Efeito]:

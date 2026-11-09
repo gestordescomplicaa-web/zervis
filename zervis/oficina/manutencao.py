@@ -161,6 +161,8 @@ class Manutencao:
         # Cada etapa de aplicar, para o painel mostrar o andamento (zervis/oficina/progresso.py).
         self.ao_etapa: Callable[[str], None] = lambda _etapa: None
         self.atualizando: Callable[[], bool] = lambda: False
+        # O que o Zé vê agora (tela, último erro), mandado junto com cada pedido; o laço liga.
+        self.contexto: Callable[[], str] = lambda: ""
 
     # --- estado (sobrevive ao reinício, que faz parte da manutenção) -----------------------
 
@@ -243,9 +245,16 @@ class Manutencao:
         self._gravar()
         log.info("manutenção ligada com %s (sessão %s)", agente, self.estado.sessao)
         return (
-            f"Modo manutenção ligado, com o {AGENTES[agente]}. O que você pedir vai para a "
-            "sessão de manutenção. Para voltar, diga: sai do modo manutenção."
+            f"Modo manutenção ligado, com o {AGENTES[agente]}. Para pedir uma correção, diga: "
+            "manda para o autodesenvolvimento, e o que corrigir."
         )
+
+    def pedir(self, texto: str, agora: float) -> str:
+        """Um pedido explícito ao autodesenvolvimento (ou a resposta à pergunta dele). A fala
+        comum nunca vem para cá (ADR 0072)."""
+        if not self.estado.ligado:
+            return "O modo manutenção está desligado. Diga: entra no modo manutenção."
+        return self.encaminhar(texto, self.contexto(), agora)
 
     def sair(self) -> str:
         self.estado.ligado = False
