@@ -107,7 +107,7 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
 
 - [x] **ADR do foco:** voz + oficina. Instagram, imersão 3D e pesquisa ficam, sem funções novas
   até a 0.5.0. [ADR 0071](adr/0071-foco-voz-e-oficina.md), com o que conta como função nova.
-- [ ] **Quebrar os módulos gigantes**, sem mudar comportamento:
+- [x] **Quebrar os módulos gigantes**, sem mudar comportamento:
   `oficina/sessoes.py` (2.060 linhas: ciclo de vida, cópia isolada, contas e modelos, tela),
   `nucleo/estados.py` (1.532: conversa, confirmação, avisos),
   `nucleo/laco.py` (1.470: laço, efeitos de voz, efeitos do cérebro).
@@ -116,7 +116,9 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   `ouvir.py` e `ciclo.py`; `cerebro/rapido.py` (1.122 → 696) com os motores em `motores.py`;
   `cerebro/ferramentas/whatsapp.py` (820 → 653) com a leitura em `whatsapp_leitura.py`;
   `atendimento/ligacao.py` (876 → 761) com a fala em `fala_da_ligacao.py`;
-  `oficina/sessoes.py` (2.222 → 1.714) com os agentes em `agentes.py`, falta a classe;
+  `oficina/sessoes.py` (2.222 → 761) com os agentes em `agentes.py` e a classe em
+  `sessoes_eventos.py`, `sessoes_copia.py`, `sessoes_envio.py` e `sessoes_leitura.py`. Nenhum
+  módulo acima de 800 linhas (09/11/2026);
   `tests/test_tamanho_dos_modulos.py` vigia: os que faltam não crescem.
 - [ ] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
 

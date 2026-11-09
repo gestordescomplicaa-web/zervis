@@ -8,10 +8,8 @@ from pathlib import Path
 
 LIMITE = 800
 RAIZ = Path(__file__).resolve().parents[1] / "zervis"
-# Os que falta dividir, com o teto de hoje (09/11/2026).
-GRANDES = {
-    "oficina/sessoes.py": 1714,
-}
+# Os que falta dividir, com o teto de hoje. Vazio desde 09/11/2026: todos abaixo do limite.
+GRANDES: dict[str, int] = {}
 
 
 def test_nenhum_modulo_passa_do_limite_e_os_grandes_nao_crescem() -> None:
