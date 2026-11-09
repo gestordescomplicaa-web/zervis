@@ -12,7 +12,7 @@ from zervis import atividade, usuario
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.jobs import Jobs
 from zervis.cerebro.base import Ponte
-from zervis.cerebro.consumo import Consumo
+from zervis.cerebro.consumo import Consumo, da_atividade
 from zervis.config import Config
 from zervis.foco.frentes import Foco
 from zervis.habilidades import revisao
@@ -149,11 +149,15 @@ class ServicoMemoria:
         pedido = turno["pessoa"]
         if self.n.voz.muda and turno["jarvis"]:
             self.n._mostrar(turno["jarvis"])
-        atividade.PADRAO.registrar("pedido", pedido, resposta=turno["jarvis"])
+        gasto, self.n._gasto_do_turno = getattr(self.n, "_gasto_do_turno", None), None
+        # O custo de cada pedido na Atividade (plano de maturidade, Frente 3): os tokens de todas
+        # as partes (via rápida, cérebro, ferramentas que chamam um modelo) e quem respondeu.
+        atividade.PADRAO.registrar(
+            "pedido", pedido, resposta=turno["jarvis"], **da_atividade(gasto)
+        )
         if atividade.e_correcao(pedido):
             atividade.PADRAO.registrar("correcao", pedido)
         try:
-            gasto, self.n._gasto_do_turno = getattr(self.n, "_gasto_do_turno", None), None
             feito = self.n.conversas.registrar(
                 turno["pessoa"], turno["jarvis"], self.n._pedido_quando, gasto
             )
