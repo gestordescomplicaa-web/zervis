@@ -1190,6 +1190,11 @@ class Maquina:
         if estado is not self.estado:
             self.historico.append(estado)
         self.estado = estado
+        # O botão vale para um pedido: saiu da escuta (fechou, foi ao cérebro), deixa de estar
+        # apertado, tenha o "soltar" chegado ou não. Sem isto, um soltar perdido (o painel
+        # fechado com o "Falar" travado) fazia todo pedido seguinte esperar o teto de 60 s.
+        if estado not in (Estado.OUVINDO, Estado.CONFIRMANDO):
+            self.segurando = False
 
     def tratar(self, evento: Evento, agora: float) -> list[Efeito]:
         if isinstance(evento, Presenca):

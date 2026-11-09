@@ -229,10 +229,18 @@ class ServicoVoz:
 
     def _pedido_fechado(self, trecho: bytes, por: str = "") -> None:
         """O áudio do pedido está completo (pausa, fim de turno ou botão solto): transcreve."""
-        por = por or ("modelo" if self.n.segmentador.fechou_pelo_modelo else "silencio")
+        s = self.n.segmentador
+        por = por or (
+            "modelo" if s.fechou_pelo_modelo else "teto" if s.fechou_pelo_teto else "silencio"
+        )
         self.n.status.tempos["fim_pelo_modelo"] = self.n.segmentador.fechou_pelo_modelo
         notas = " ".join(f"{n:.2f}" for n in self.n.segmentador.notas_do_ultimo)
-        nomes = {"modelo": "pelo modelo", "silencio": "pelo silêncio", "botao": "pelo botão"}
+        nomes = {
+            "modelo": "pelo modelo",
+            "silencio": "pelo silêncio",
+            "botao": "pelo botão",
+            "teto": f"pelo teto de {s.maximo_quadros * DURACAO_QUADRO_S:.0f} s, sem pausa",
+        }
         log.info("pedido fechado %s (fim de turno: %s)", nomes[por], notas or "sem consulta")
         self.n._transcricao_inicio = time.monotonic()
         turno = None
