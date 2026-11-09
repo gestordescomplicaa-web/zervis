@@ -10,6 +10,9 @@ rápida.
   [essência](docs/essencia.md): nenhuma mudança pode contrariá-la.
 - Uma mudança grande (nova função, mudança de arquitetura) começa numa *issue*, para combinarmos o
   caminho antes de você gastar tempo. Correções pequenas podem ir direto num PR.
+- Até a versão 0.5.0, funções novas estão congeladas: entram correções, testes, segurança,
+  desempenho e os itens do [plano de maturidade](docs/plano-maturidade.md)
+  ([ADR 0071](docs/adr/0071-foco-voz-e-oficina.md)). Ideia nova vira uma issue para depois.
 - Falha de segurança **não** vai numa issue pública: veja [SECURITY.md](SECURITY.md).
 
 ## Como propor

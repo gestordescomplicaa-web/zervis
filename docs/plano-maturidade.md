@@ -92,8 +92,8 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
 
 ## Frente 5: Arquitetura e foco (7,5 → 8,5) · ADR na Fase A, o resto na Fase B
 
-- [ ] **ADR do foco:** voz + oficina. Instagram, imersão 3D e pesquisa ficam, sem funções novas
-  até a 0.5.0.
+- [x] **ADR do foco:** voz + oficina. Instagram, imersão 3D e pesquisa ficam, sem funções novas
+  até a 0.5.0. [ADR 0071](adr/0071-foco-voz-e-oficina.md), com o que conta como função nova.
 - [ ] **Quebrar os módulos gigantes**, sem mudar comportamento:
   `oficina/sessoes.py` (2.060 linhas: ciclo de vida, cópia isolada, contas e modelos, tela),
   `nucleo/estados.py` (1.532: conversa, confirmação, avisos),
