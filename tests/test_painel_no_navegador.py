@@ -1713,3 +1713,58 @@ def test_pesquisas_abrem_com_as_fontes_e_o_texto_das_paginas_nao_vira_html(
         tmp_path, extras={"pesquisas/ler": lambda dados: aberta, "pesquisas/buscar": buscar}
     ) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_propor_como_pr_mostra_que_esta_propondo_e_nao_repete(tmp_path: Path) -> None:
+    """09/11/2026: o "Sim" não dava sinal durante os minutos dos testes; cada clique a mais abriu
+    outro PR igual (quatro no total)."""
+    import threading
+
+    respostas = json.loads(RESPOSTAS.read_text())
+    sessao = respostas["escritas"]["sessao/ler"]
+    sessao["sessao"]["estado"] = "parada"
+    mudancas = respostas["escritas"]["ze/melhorias"]
+    mudancas["nao_publicadas"] = ["abc1234 Documenta o exemplo"]
+    chamadas: list[dict[str, Any]] = []
+    solta = threading.Event()
+
+    def propor(dados: dict[str, Any]) -> dict[str, str]:
+        chamadas.append(dados)
+        solta.wait(20)  # os testes da cópia levam minutos
+        return {"aviso": "Abri o PR 9 no GitHub, com 1 melhoria(s)."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            botao = "document.querySelector('[data-acao=melhorias-propor]')"
+            await _esperar(nav, f"!!{botao} && !{botao}.disabled")
+            await nav.avaliar(f"{botao}.click()")
+            await nav.avaliar("document.querySelector('[data-acao=confirmar-sim]').click()")
+            await _esperar(nav, f"!!{botao} && {botao}.disabled")
+            assert await nav.avaliar(f"{botao}.textContent === 'Propondo…'")
+            assert await nav.avaliar(
+                "[...document.querySelectorAll('[data-acao=confirmar-sim]')].every(b => b.disabled)"
+            )
+            await nav.avaliar(f"{botao}.click()")  # travado: não pede outra confirmação
+            assert not await nav.avaliar(
+                "!!document.querySelector('[data-acao=confirmar-sim]:not([disabled])')"
+            )
+            solta.set()
+            await _esperar(nav, "document.querySelector('.toast').textContent.includes('PR 9')")
+            await _esperar(nav, f"!!{botao} && !{botao}.disabled")
+            assert await nav.avaliar(f"{botao}.textContent === 'Propor como PR'")
+            assert chamadas == [{"confirmado": True}]
+            assert not nav.erros, nav.erros
+
+    extras: dict[str, Escrita] = {
+        "sessao/ler": lambda _: copy.deepcopy(sessao),
+        "ze/melhorias": lambda _: copy.deepcopy(mudancas),
+        "ze/propor": propor,
+    }
+    try:
+        with _painel(tmp_path, extras=extras) as (depuracao, url):
+            asyncio.run(conferir(depuracao, url))
+    finally:
+        solta.set()

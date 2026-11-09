@@ -13,10 +13,12 @@ A aprovação ("sim" falado ou a confirmação no painel) vem antes, de quem cha
 """
 
 import contextlib
+import json
 import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -25,6 +27,9 @@ from pathlib import Path
 from zervis.oficina import vazamento
 
 ESPERA_GIT_S = 120
+# Uma proposta por vez: os testes levam minutos, e um segundo "sim" no meio abria outro PR igual
+# (09/11/2026: quatro PRs do mesmo commit, um por clique).
+_PROPONDO = threading.Lock()
 CANDIDATOS_GH = (
     "~/.local/share/mise/shims/gh",
     "~/.local/bin/gh",
@@ -110,6 +115,34 @@ def propor(
     agora: Callable[[], float] = time.time,
 ) -> Resultado:
     """Publica a cópia de melhorias (`branch`, na pasta `copia`) e abre o PR."""
+    if not _PROPONDO.acquire(blocking=False):
+        return Resultado(False, "Já estou propondo estas melhorias. Aguarde o resultado.")
+    try:
+        return _propor(copia, branch, testar, protegidos, sensiveis, gh, agora)
+    finally:
+        _PROPONDO.release()
+
+
+def _pr_aberto(copia: Path, gh: str, branch: str) -> str:
+    """O endereço de um PR aberto que já leva exatamente estes commits, ou vazio."""
+    ponta = _git(copia, "rev-parse", branch).stdout.strip()
+    lista = _rodar([gh, "pr", "list", "--state", "open", "--json", "url,headRefOid"], copia)
+    try:
+        abertos = json.loads(lista.stdout) if lista.returncode == 0 else []
+    except ValueError:
+        return ""
+    return next((p["url"] for p in abertos if ponta and p.get("headRefOid") == ponta), "")
+
+
+def _propor(
+    copia: Path,
+    branch: str,
+    testar: Callable[[Path], bool],
+    protegidos: tuple[str, ...],
+    sensiveis: Callable[[], vazamento.Sensiveis],
+    gh: str | None,
+    agora: Callable[[], float],
+) -> Resultado:
     if _git(copia, "status", "--porcelain").stdout.strip():
         return Resultado(False, "A cópia tem alterações sem commit. Peça para a sessão concluir.")
     if _git(copia, "fetch", "--quiet", "origin").returncode != 0:
@@ -120,6 +153,12 @@ def propor(
     lista = [c for c in commits.splitlines() if c.strip()]
     if not lista:
         return Resultado(False, "Não há nada novo para propor: o GitHub já tem tudo da cópia.")
+    gh = gh if gh is not None else achar_gh()
+    if not gh:
+        return Resultado(False, "O GitHub não está conectado nesta máquina (falta o gh).")
+    if aberto := _pr_aberto(copia, gh, branch):
+        numero = aberto.rsplit("/", 1)[-1]
+        return Resultado(True, f"O PR {numero} já tem estas melhorias.", aberto)
     if not testar(copia):
         return Resultado(
             False, "Não publiquei: os testes falharam na cópia. Peça para a sessão corrigir."
@@ -135,9 +174,6 @@ def propor(
             f"Não publiquei: a mudança leva dados seus ({lugares}{mais}). Peça para a sessão "
             "trocar por dados de exemplo.",
         )
-    gh = gh if gh is not None else achar_gh()
-    if not gh:
-        return Resultado(False, "O GitHub não está conectado nesta máquina (falta o gh).")
     nome = f"ze/melhoria-{time.strftime('%Y%m%d-%H%M%S', time.localtime(agora()))}"
 
     def enviar(*args: str) -> subprocess.CompletedProcess[str]:

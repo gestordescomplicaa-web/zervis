@@ -43,6 +43,8 @@ def mundo(tmp_path: Path) -> dict[str, Path]:
     gh.write_text(
         "#!/bin/sh\n"
         f'printf "%s\\n" "$@" >> "{chamadas}"\n'
+        f'test "$2" = list && {{ cat "{tmp_path / "gh-abertos"}" 2>/dev/null || echo "[]"; '
+        "exit 0; }\n"
         'test "$1" = pr && echo "https://github.com/dono/zervis/pull/7"\n'
         f'exit "$(cat "{tmp_path / "gh-sai"}" 2>/dev/null || echo 0)"\n'
     )
@@ -74,6 +76,7 @@ def test_publica_a_branch_e_abre_o_pr_com_o_que_foi_conferido(mundo: dict[str, P
     assert r.ok and r.endereco.endswith("/pull/7") and "PR 7" in r.texto
     assert "ze/melhoria-" in _branches(mundo["origem"])
     args = mundo["chamadas"].read_text().splitlines()
+    args = args[args.index("create") - 1 :]  # antes, a consulta dos PRs já abertos
     assert args[:2] == ["pr", "create"] and args[args.index("--base") + 1] == "master"
     assert args[args.index("--title") + 1] == "Ajusta a configuração"
     corpo = args[args.index("--body") + 1 :]
@@ -87,7 +90,8 @@ def test_dado_pessoal_nao_sai_da_maquina(mundo: dict[str, Path]) -> None:
     r = _propor(mundo, s=s)
     assert not r.ok and "número de telefone da sua agenda em tests/test_x.py:1" in r.texto
     assert "88887777" not in r.texto
-    assert "melhoria" not in _branches(mundo["origem"]) and not mundo["chamadas"].exists()
+    assert "melhoria" not in _branches(mundo["origem"])
+    assert "create" not in mundo["chamadas"].read_text()
 
 
 def test_testes_vermelhos_ou_nada_novo_nao_publicam(mundo: dict[str, Path]) -> None:
@@ -145,3 +149,64 @@ def test_pela_voz_pergunta_antes_e_pelo_painel_so_confirmado() -> None:
         "aviso": "Abri o PR 7 no GitHub.",
         "endereco": "https://x/pull/7",
     }
+
+
+def test_pr_aberto_com_os_mesmos_commits_nao_abre_outro(
+    mundo: dict[str, Path], tmp_path: Path
+) -> None:
+    """09/11/2026: quatro cliques no "Sim" abriram quatro PRs do mesmo commit."""
+    import json
+
+    _commit(mundo["copia"], "docs/x.md", "x\n", "Documenta x")
+    ponta = _git(mundo["copia"], "rev-parse", "HEAD").strip()
+    url = "https://github.com/dono/zervis/pull/5"
+    (tmp_path / "gh-abertos").write_text(json.dumps([{"url": url, "headRefOid": ponta}]))
+    testados: list[Path] = []
+
+    def testar(pasta: Path) -> bool:
+        testados.append(pasta)
+        return True
+
+    r = proposta.propor(
+        mundo["copia"], "ze/abc", testar, (),
+        sensiveis=vazamento.Sensiveis, gh=str(mundo["gh"]), agora=lambda: 1_793_900_000.0,
+    )  # fmt: skip
+    assert r.ok and r.endereco == url and "PR 5 já tem" in r.texto
+    assert not testados and "melhoria" not in _branches(mundo["origem"])
+    assert "create" not in mundo["chamadas"].read_text()
+
+
+def test_um_segundo_sim_enquanto_testa_nao_abre_outro_pr(mundo: dict[str, Path]) -> None:
+    import threading
+
+    _commit(mundo["copia"], "docs/y.md", "y\n", "Documenta y")
+    testando, solta = threading.Event(), threading.Event()
+
+    def testar(_pasta: Path) -> bool:
+        testando.set()
+        return solta.wait(10)
+
+    resultados: list[proposta.Resultado] = []
+
+    def primeira() -> None:
+        resultados.append(
+            proposta.propor(
+                mundo["copia"],
+                "ze/abc",
+                testar,
+                (),
+                sensiveis=vazamento.Sensiveis,
+                gh=str(mundo["gh"]),
+                agora=lambda: 1_793_900_000.0,
+            )
+        )
+
+    t = threading.Thread(target=primeira)
+    t.start()
+    assert testando.wait(10)
+    segunda = _propor(mundo)
+    solta.set()
+    t.join(10)
+    assert not segunda.ok and "Já estou propondo" in segunda.texto
+    assert resultados[0].ok
+    assert mundo["chamadas"].read_text().count("create") == 1

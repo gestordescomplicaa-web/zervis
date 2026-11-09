@@ -19,7 +19,18 @@ const ACOES = {
     Object.assign(acessoTela, completo(c), trocou ? { omniPendente: false } : { cerebro: "omniroute" });
     desenharAcesso(); mostrar("resultado-acesso", trocou, c.aviso);
   },
-  "confirmar-sim": async (b) => { const f = pendentes.get(b.dataset.id); pendentes.delete(b.dataset.id); if (f) await f(); },
+  // O "Sim" e o "Não" travam enquanto a ação roda: sem isso, parecia que nada acontecia.
+  "confirmar-sim": async (b) => {
+    const f = pendentes.get(b.dataset.id); pendentes.delete(b.dataset.id);
+    if (!f) return;
+    const lugar = /** @type {HTMLElement | null} */ (b.closest("[data-antes]"));
+    lugar?.querySelectorAll("button").forEach((x) => { x.disabled = true; });
+    try { await f(); } catch (erro) {
+      // Falhou: volta o botão de antes, para tentar de novo. Deu certo: a página já se redesenhou.
+      if (lugar?.isConnected && lugar.dataset.antes !== undefined) { lugar.innerHTML = lugar.dataset.antes; delete lugar.dataset.antes; }
+      throw erro;
+    }
+  },
   "confirmar-nao": (b) => { const l = /** @type {HTMLElement} */ (b.closest("[data-antes]")); l.innerHTML = l.dataset.antes; delete l.dataset.antes; pendentes.delete(b.dataset.id); },
   // imersão
   "imersao-cheia": () => (/** @type {HTMLIFrameElement} */ (moldura.querySelector("iframe")) || moldura).requestFullscreen?.().catch(() => {}),
