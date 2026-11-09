@@ -43,8 +43,10 @@ encerra todas (visto em 06/11/2026, com 3 sessões abertas).
   [ADR 0069](adr/0069-fila-duravel-das-automacoes.md); as sessões ficam com o ADR 0068.
 - [x] **Estado só em SQLite:** avisos, pendências e jobs saem do JSON.
   [ADR 0070](adr/0070-estado-so-em-sqlite.md); também os leads, a prioridade e as ligações.
-- [ ] **Arquivos do painel sem reiniciar:** um arquivo novo em `portal/web` não pode depender de
-  reiniciar o servidor (a página de Sessões falhou por isso em 06/11).
+- [x] **Arquivos do painel sem reiniciar:** um arquivo novo em `portal/web` não pode depender de
+  reiniciar o servidor (a página de Sessões falhou por isso em 06/11). A lista fixa saiu: o
+  arquivo é achado na pasta a cada pedido (`portal/arquivos_web.py`); aceite em
+  `tests/test_portal.py`.
 
 Aceite: com 3 sessões trabalhando, reiniciar o Zé mantém as 3 vivas e o painel as mostra em menos
 de 10 s; matar o processo no meio de uma automação não a perde. Os dois casos no `make check`.

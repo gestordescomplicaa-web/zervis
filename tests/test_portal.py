@@ -440,11 +440,53 @@ def test_conexao_codex_usa_a_conta_do_codex(
 
 
 def test_terminal_e_paginas_carregam_sob_demanda() -> None:
-    from zervis.portal.servidor import ARQUIVOS, WEB
+    import re
+
+    from zervis.portal import arquivos_web
+    from zervis.portal.servidor import WEB
 
     html = (WEB / "index.html").read_text()
     assert "/vendor/xterm/" not in html
     assert "/paginas/" not in html
-    for rota, arquivo in ARQUIVOS.items():
-        if rota.startswith(("/modulos/", "/paginas/")):
-            assert (WEB / arquivo).is_file(), rota
+    for js in WEB.rglob("*.js"):  # cada módulo ou página pedido pelo painel existe e é servido
+        for rota in re.findall(r"[\"'](/(?:modulos|paginas)/[a-z0-9-]+\.js)", js.read_text()):
+            assert arquivos_web.achar(WEB, rota) is not None, (js.name, rota)
+
+
+def test_arquivo_novo_do_painel_vale_sem_reiniciar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Plano de maturidade, Frente 1: um arquivo novo em portal/web não pede reinício."""
+    from zervis.portal import servidor
+
+    (tmp_path / "index.html").write_text("<p>__TOKEN__</p>")
+    (tmp_path / "segredo.txt").write_text("fora do painel")
+    (tmp_path / "tipos.d.ts").write_text("declare const x: number;")
+    monkeypatch.setattr(servidor, "WEB", tmp_path / "web")
+    (tmp_path / "web").mkdir()
+    (tmp_path / "web" / "index.html").write_text("<p>__TOKEN__</p>")
+    p = Portal({}, {}, porta=0)
+    p.iniciar()
+    try:
+        assert pedir(p, "GET", "/paginas/nova.js", cracha=None)[0] == 404
+        (tmp_path / "web" / "paginas").mkdir()
+        (tmp_path / "web" / "paginas" / "nova.js").write_text("export const ok = 1;")
+        assert pedir(p, "GET", "/paginas/nova.js", cracha=None) == (200, "export const ok = 1;")
+        (tmp_path / "web" / "fora.js").symlink_to(tmp_path / "segredo.txt")
+        (tmp_path / "web" / ".oculto.js").write_text("x")
+        (tmp_path / "web" / "LICENSE").write_text("x")
+        for caminho in (
+            "/../segredo.txt",
+            "/paginas/../../segredo.txt",
+            "/%2e%2e/segredo.txt",
+            "/fora.js",
+            "/.oculto.js",
+            "/LICENSE",
+            "/tipos.d.ts",
+            "//etc/passwd",
+            "/paginas\\nova.js",
+            "/paginas/",
+        ):
+            assert pedir(p, "GET", caminho, cracha=None)[0] == 404, caminho
+    finally:
+        p.parar()
