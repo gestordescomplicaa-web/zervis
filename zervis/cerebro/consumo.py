@@ -43,6 +43,30 @@ def gasto(uso: dict[str, Any] | None, rotulo: str, modelo: str = "") -> dict[str
     }
 
 
+PARTES = {"rapida": "via rápida", "completo": "cérebro", "pesquisa": "pesquisa"}
+
+
+def da_atividade(gasto: dict[str, Any] | None) -> dict[str, Any]:
+    """O gasto de uma mensagem (`_gasto_do_turno`) nos campos da Atividade: o total de tokens
+    (`consumo`) e cada parte ("via rápida 1,2 mil"). Sem gasto (comando local), nada."""
+    partes = (gasto or {}).get("partes") or []
+    if not partes:
+        return {}
+    por_parte: dict[str, int] = {}
+    for p in partes:
+        rotulo = PARTES.get(str(p.get("rotulo", "")), str(p.get("rotulo", "")))
+        por_parte[rotulo] = por_parte.get(rotulo, 0) + sum(int(p.get(c) or 0) for c in CAMPOS)
+    return {
+        "consumo": sum(por_parte.values()),
+        "consumo_partes": " · ".join(f"{r} {mil(n)}" for r, n in por_parte.items()),
+    }
+
+
+def mil(n: int) -> str:
+    """Tokens para ler: "820", "4,4 mil"."""
+    return str(n) if n < 1000 else f"{n / 1000:.1f} mil".replace(".", ",")
+
+
 def somar_usos(*usos: dict[str, Any] | None) -> dict[str, Any] | None:
     """Os usos de várias chamadas como um só (nas chaves do SDK), para o consumo do dia."""
     validos = [u for u in usos if u]

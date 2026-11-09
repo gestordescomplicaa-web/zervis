@@ -22,8 +22,9 @@ PAGINAS.atividade = async () => {
   const contagem = Object.entries(TIPOS_ATIVIDADE).map(([t, n]) => `<span class="contagem" data-tipo="${t}"><strong>${resumo[t] || 0}</strong> ${n}</span>`).join("");
   const filtros = [["problemas", "Problemas"], ["execucoes", "Execuções"], ["pedidos", "Pedidos"], ["tudo", "Tudo"]].map(([v, n]) => botao(n, "atividade-filtro", `data-filtro="${v}" aria-pressed="${v === filtroAtividade}"`)).join("");
   const linha = (i) => {
-    const meta = [TIPOS_ATIVIDADE[i.tipo], i.origem, i.autorizacao, i.motivo, i.erro].filter(Boolean).map(esc).join(" · ");
-    const extra = { entrada: i.entrada, resultado: i.resultado, resposta: i.resposta, fala: i.fala, duracao_ms: i.duracao_ms };
+    const custo = i.consumo ? `${i.consumo < 1000 ? i.consumo : (i.consumo / 1000).toFixed(1).replace(".", ",") + " mil"} tokens` : "";
+    const meta = [TIPOS_ATIVIDADE[i.tipo], i.origem, i.autorizacao, i.motivo, i.erro, custo].filter(Boolean).map(esc).join(" · ");
+    const extra = { entrada: i.entrada, resultado: i.resultado, resposta: i.resposta, fala: i.fala, duracao_ms: i.duracao_ms, consumo: i.consumo_partes };
     const tem = Object.values(extra).some((v) => v !== undefined && v !== "");
     return `<details class="evento" data-tipo="${i.tipo}"><summary><time>${horaEvento(i.quando)}</time><span class="marcador"></span><span class="titulo-evento">${esc(i.titulo)}</span><small>${meta}</small></summary>${tem ? `<pre>${esc(JSON.stringify(extra, null, 2))}</pre>` : ""}</details>`;
   };
