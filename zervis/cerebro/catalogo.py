@@ -91,6 +91,9 @@ class Extras:
     autoaprovar: Callable[[str, dict[str, Any]], bool] | None = None
     frase_exata: Callable[[str, dict[str, Any]], str | None] | None = None
     depois: Callable[[str, Any], Any | None] | None = None
+    de_fora: Callable[[str], str] | None = None
+    com_efeito: frozenset[str] = frozenset()
+    autoaprovar_de_fora: Callable[[str, dict[str, Any]], bool] | None = None
 
 
 def criar(
@@ -116,6 +119,9 @@ def criar(
         "autoaprovar": x.autoaprovar,
         "frase_exata": x.frase_exata,
         "depois": x.depois,
+        "de_fora": x.de_fora,
+        "com_efeito": x.com_efeito,
+        "autoaprovar_de_fora": x.autoaprovar_de_fora,
     }
     if id_ == "local":
         try:

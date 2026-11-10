@@ -147,6 +147,9 @@ class ClaudeBrain:
         autoaprovar: Callable[[str, dict[str, Any]], bool] | None = None,
         frase_exata: Callable[[str, dict[str, Any]], str | None] | None = None,
         depois: Callable[[str, Any], Any | None] | None = None,
+        de_fora: Callable[[str], str] | None = None,
+        com_efeito: frozenset[str] = frozenset(),
+        autoaprovar_de_fora: Callable[[str, dict[str, Any]], bool] | None = None,
     ) -> None:
         self.modelo = modelo
         self.ferramentas = ferramentas
@@ -169,6 +172,15 @@ class ClaudeBrain:
         # O que uma ferramenta devolveu, como o modelo deve ver (o navegador corta e mascara);
         # None = sem mudança. Roda também nas livres, que não passam pelo can_use_tool.
         self.depois = depois
+        # Entrada de fora (plano de maturidade, Frente 2): depois de uma ferramenta que traz texto
+        # de terceiros (`de_fora` diz de onde; "" = não traz), o turno é "de fora". Nele, a
+        # política de risco só libera o que `autoaprovar_de_fora` liberar, e as livres que mudam
+        # algo (`com_efeito`) pedem a aprovação falada como as outras: uma mensagem, uma página
+        # ou um conector não executam nada sem o usuário, pela voz dele.
+        self.de_fora = de_fora
+        self.com_efeito = com_efeito
+        self.autoaprovar_de_fora = autoaprovar_de_fora
+        self.fonte_de_fora = ""  # de onde veio o texto de terceiros deste turno ("": nenhum)
         self.assinatura = assinatura  # False pelo OmniRoute: o RateLimitEvent não é da assinatura
         self.cliente: ClaudeSDKClient | None = None
         self.persona = ""
@@ -199,7 +211,10 @@ class ClaudeBrain:
             disallowed_tools=list(self.bloqueadas),
             mcp_servers=self.mcp,
             can_use_tool=self._pode_usar,
-            hooks={"PostToolUse": [HookMatcher(hooks=[self._depois_da_ferramenta])]},
+            hooks={
+                "PreToolUse": [HookMatcher(hooks=[self._antes_da_ferramenta])],
+                "PostToolUse": [HookMatcher(hooks=[self._depois_da_ferramenta])],
+            },
             permission_mode="default",
             setting_sources=[],
             strict_mcp_config=True,
@@ -216,11 +231,49 @@ class ClaudeBrain:
             self.cliente = cliente
         return self.cliente
 
+    def precisa_perguntar(self, nome: str) -> bool:
+        """A ferramenta passa pela aprovação: as que não são livres, e, num turno de fora, as
+        livres que mudam alguma coisa."""
+        return nome not in self.livres or (bool(self.fonte_de_fora) and nome in self.com_efeito)
+
+    def viu(self, nome: str) -> None:
+        """Depois de cada ferramenta: se ela trouxe texto de terceiros, o turno passa a ser de
+        fora até o fim (o próximo pedido do usuário recomeça limpo)."""
+        if self.fonte_de_fora or self.de_fora is None:
+            return
+        if fonte := self.de_fora(nome):
+            self.fonte_de_fora = fonte
+            log.info("turno de fora: leu %s (%s)", fonte, nome)
+
+    async def _antes_da_ferramenta(
+        self, entrada: HookInput, _id: str | None, _contexto: HookContext
+    ) -> SyncHookJSONOutput:
+        """As livres não passam pelo `can_use_tool`: num turno de fora, as que mudam algo
+        passam pela mesma aprovação aqui."""
+        if entrada["hook_event_name"] != "PreToolUse":
+            return {}
+        nome = entrada["tool_name"]
+        if nome not in self.livres or not self.precisa_perguntar(nome):
+            return {}
+        decisao = await self._pode_usar(
+            nome, entrada.get("tool_input") or {}, ToolPermissionContext()
+        )
+        if isinstance(decisao, PermissionResultDeny):
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": decisao.message,
+                }
+            }
+        return {}
+
     async def _depois_da_ferramenta(
         self, entrada: HookInput, _id: str | None, _contexto: HookContext
     ) -> SyncHookJSONOutput:
         if entrada["hook_event_name"] != "PostToolUse":
             return {}
+        self.viu(entrada["tool_name"])
         try:
             atividade.registrar_externa(
                 entrada["tool_name"], entrada.get("tool_input"), entrada["tool_response"]
@@ -252,7 +305,8 @@ class ClaudeBrain:
                 "negada", titulo, ferramenta=curto, entrada=entrada, motivo=erro
             )
             return PermissionResultDeny(message=erro)
-        if self.autoaprovar is not None and self.autoaprovar(nome, entrada):
+        liberar = self.autoaprovar_de_fora if self.fonte_de_fora else self.autoaprovar
+        if liberar is not None and liberar(nome, entrada):
             log.info("ferramenta %s: liberada pela política de risco", nome)
             atividade.PADRAO.autorizada(curto, "livre (risco baixo)")
             return PermissionResultAllow()
@@ -295,6 +349,7 @@ class ClaudeBrain:
         self.uso = None  # o desta resposta; o núcleo soma no consumo do dia
         self._erro_resposta = None
         self.ferramentas_usadas = []
+        self.fonte_de_fora = ""  # um pedido novo do usuário começa limpo
         try:
             async with asyncio.timeout(self.tempo_limite_s) as prazo:
                 cliente = await self._conectar()

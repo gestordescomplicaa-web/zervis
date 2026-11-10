@@ -285,7 +285,7 @@ class LocalBrain(ClaudeBrain):
             return {**resposta, "content": f"Ferramenta {curto!r} não existe. Use as da lista."}
         # Marca antes de aprovar/executar: uma falha posterior não repete a ação na reserva.
         self.ferramentas_usadas.append(nome)
-        if nome not in self.livres:
+        if self.precisa_perguntar(nome):
             decisao = await self._pode_usar(nome, argumentos, ToolPermissionContext())
             if isinstance(decisao, PermissionResultDeny):
                 return {**resposta, "content": decisao.message}
@@ -294,6 +294,7 @@ class LocalBrain(ClaudeBrain):
         except Exception as erro:
             return {**resposta, "content": f"Falhou: {type(erro).__name__}"}
         bruto = resultado.model_dump(mode="json", by_alias=True)
+        self.viu(nome)
         try:
             atividade.registrar_externa(nome, argumentos, bruto)
         except Exception:
@@ -319,6 +320,7 @@ class LocalBrain(ClaudeBrain):
 
     async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
         self.uso, self.ferramentas_usadas, self._parar = None, [], False
+        self.fonte_de_fora = ""  # um pedido novo do usuário começa limpo
         entrada = saida = 0
         try:
             await self._preparar()
