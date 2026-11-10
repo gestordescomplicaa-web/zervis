@@ -85,7 +85,10 @@ from zervis.oficina.agentes import confiar_pasta_codex as confiar_pasta_codex
 from zervis.oficina.agentes import conversa_claude_existe as conversa_claude_existe
 from zervis.oficina.agentes import copiar_conversa as copiar_conversa
 from zervis.oficina.agentes import ganchos_codex as ganchos_codex
+from zervis.oficina.agentes import git_comum as git_comum
+from zervis.oficina.agentes import isolar as isolar
 from zervis.oficina.agentes import ligar_skills_no_projeto as ligar_skills_no_projeto
+from zervis.oficina.agentes import pastas_da_conta as pastas_da_conta
 from zervis.oficina.agentes import pede_aprovacao as pede_aprovacao
 from zervis.oficina.agentes import regras_de_skills as regras_de_skills
 from zervis.oficina.permissoes import Permissoes
@@ -150,6 +153,8 @@ class Sessao:
     modelo: str = ""  # vazio: o padrão da conta
     esforco: str = ""  # esforço de raciocínio (Codex); vazio: o padrão do modelo
     isolada: bool = False
+    # Protegida (ADR 0074): o agente roda no isolamento e só enxerga a pasta do projeto.
+    protegida: bool = False
     worktree: str = ""
     branch: str = ""
     base: str = ""  # o commit de onde a cópia isolada saiu
@@ -402,14 +407,22 @@ class Sessoes:
         modelo: str = "",
         isolada: bool = False,
         origem: str = "painel",
+        protegida: bool = False,
     ) -> Sessao:
         with self._operacoes:
-            return self._criar(nome, pasta, motor, modelo, isolada, origem)
+            return self._criar(nome, pasta, motor, modelo, isolada, origem, protegida)
 
     def _criar(
-        self, nome: str, pasta: str, motor: str, modelo: str, isolada: bool, origem: str
+        self,
+        nome: str,
+        pasta: str,
+        motor: str,
+        modelo: str,
+        isolada: bool,
+        origem: str,
+        protegida: bool = False,
     ) -> Sessao:
-        return sessoes_envio._criar(self, nome, pasta, motor, modelo, isolada, origem)
+        return sessoes_envio._criar(self, nome, pasta, motor, modelo, isolada, origem, protegida)
 
     def criar_projeto(self, nome: str) -> Path:
         return sessoes_envio.criar_projeto(self, nome)
