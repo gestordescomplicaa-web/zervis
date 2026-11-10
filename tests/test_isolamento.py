@@ -118,3 +118,14 @@ def test_links_do_sistema_e_da_casa_nao_quebram_o_isolamento(tmp_path: Path) -> 
     feito = subprocess.run(comando, capture_output=True, text=True, timeout=30)  # noqa: S603
     assert feito.returncode == 0, feito.stderr
     assert feito.stdout == "[user]\n"
+
+
+@precisa_do_bwrap
+def test_os_outros_processos_da_maquina_ficam_fora(tmp_path: Path) -> None:
+    """Nem a lista nem a linha de comando dos outros processos (a do Zé, a de outra sessão)."""
+    casa, projeto = _casa(tmp_path)
+    feito = _rodar(casa, projeto, "ls /proc | grep -c '^[0-9]'; cat /proc/1/cmdline")
+    assert feito.returncode == 0, feito.stderr
+    linhas = feito.stdout.splitlines()
+    assert int(linhas[0]) < 10  # o próprio shell e o bwrap, não as centenas da máquina
+    assert "systemd" not in feito.stdout and "init" not in feito.stdout
