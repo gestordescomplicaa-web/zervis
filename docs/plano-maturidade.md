@@ -93,9 +93,13 @@ ligações, web) chegam a um cérebro com ferramentas.
 - [ ] **Sandbox das sessões** (bubblewrap no PC, contêiner na VPS): só a pasta do projeto;
   `~/.ssh`, `~/.config` e os dados do Zé ficam fora. Ligar por projeto antes de virar padrão.
   [ADR 0074](adr/0074-sessoes-protegidas.md): ligada por sessão no painel ("Protegida"), com o
-  aceite no `make check` (`tests/test_isolamento.py`); falta virar o padrão e o contêiner na VPS.
+  aceite no `make check` (`tests/test_isolamento.py`) e a primeira sessão de verdade em
+  10/11/2026; falta virar o padrão e o contêiner na VPS.
 - [ ] **Cofre de segredos fora do agente:** credencial por chamada, com escopo e prazo; o segredo
   inteiro nunca vai ao modelo.
+  [ADR 0075](adr/0075-segredos-fora-do-agente.md): o agente não herda os segredos do Zé (só o
+  próprio login e o que a sessão entrega), e a sessão protegida não alcança o D-Bus, o chaveiro
+  nem o ssh-agent; falta a credencial por chamada para os conectores.
 - [x] **Entrada externa não confiável por regra:** turno vindo de WhatsApp, ligação, e-mail ou web
   só lê e responde; executar algo exige a sua aprovação pelo canal confiável.
   [ADR 0073](adr/0073-entrada-de-fora.md): depois de ler texto de terceiros, o turno é "de fora" e

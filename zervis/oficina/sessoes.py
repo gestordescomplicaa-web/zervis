@@ -15,7 +15,6 @@ import asyncio
 import contextlib
 import json
 import logging
-import os
 import re
 import subprocess
 import threading
@@ -76,6 +75,8 @@ from zervis.oficina.agentes import _tabela_toml as _tabela_toml
 from zervis.oficina.agentes import _turno_auxiliar_do_codex as _turno_auxiliar_do_codex
 from zervis.oficina.agentes import _ultima_resposta_claude as _ultima_resposta_claude
 from zervis.oficina.agentes import ambiente_da_conta as ambiente_da_conta
+from zervis.oficina.agentes import ambiente_do_agente as ambiente_do_agente
+from zervis.oficina.agentes import ambiente_para_sdk as ambiente_para_sdk
 from zervis.oficina.agentes import arquivo_de_conectores as arquivo_de_conectores
 from zervis.oficina.agentes import comando_terminal as comando_terminal
 from zervis.oficina.agentes import conectores_codex as conectores_codex
@@ -685,7 +686,7 @@ async def rodar_claude(sessoes: Sessoes, s: Sessao, texto: str) -> str:
         disallowed_tools=["Task", "Agent", *externos.bloqueadas],
         # O ai-memory recebe o que a sessão faz (ADR 0016): os hooks dele só nesta sessão.
         settings=json.dumps(hooks) if (hooks := aimemory.hooks_claude()) else None,
-        env=ambiente_da_conta(s),
+        env=ambiente_para_sdk(s),
     )
     ultimo = ""
     async with ClaudeSDKClient(options=opcoes) as cliente:
@@ -725,7 +726,7 @@ async def rodar_codex(sessoes: Sessoes, s: Sessao, texto: str) -> str:
     processo = await asyncio.create_subprocess_exec(
         *_comando_codex(s, texto, conectores),
         cwd=s.onde,
-        env={**os.environ, **ambiente_da_conta(s), **segredos},
+        env=ambiente_do_agente(s, segredos),
         stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,

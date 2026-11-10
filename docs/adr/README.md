@@ -81,4 +81,5 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0071](0071-foco-voz-e-oficina.md) | O foco: voz e oficina; Instagram, Imersão, pesquisa, cérebro local, WhatsApp e ligações só recebem correção até a 0.5.0 | Aceito |
 | [0072](0072-autodesenvolvimento-so-corrige.md) | O autodesenvolvimento só corrige as falhas do próprio Zé; a fala comum nunca vai para a sessão dele, o pedido é explícito | Aceito |
 | [0073](0073-entrada-de-fora.md) | Entrada de fora: depois de ler texto de terceiros (WhatsApp, internet, conectores), nada se executa sem o sim falado | Aceito |
-| [0074](0074-sessoes-protegidas.md) | Sessões protegidas: o agente roda no bubblewrap e só enxerga a pasta do projeto | Em validação |
+| [0074](0074-sessoes-protegidas.md) | Sessões protegidas: o agente roda no bubblewrap e só enxerga a pasta do projeto | Aceita |
+| [0075](0075-segredos-fora-do-agente.md) | Segredos fora do agente: o ambiente sem os segredos do Zé e o `/run/user` escondido | Aceita |
