@@ -1,3 +1,6 @@
+import { camposPerfil } from "../modulos/modelos.js";
+import { PAGINAS, api, botao, cabeca, cartao, sub } from "../painel.js";
+
 // Página perfil, carregada sob demanda.
 PAGINAS.perfil = async function() {
     const cfg = await api("configuracao");

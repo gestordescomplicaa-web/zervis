@@ -1,3 +1,7 @@
+import { ACOES } from "./acoes.js";
+import { $, api, botao, esc, item, ocupado, sub, toast } from "../painel.js";
+import { compartilhado, carregadas } from "./estado.js";
+
 // Os conectores (MCP) de cada projeto, escolhidos dentro da sessão: na criação e no topo da
 // sessão aberta. Carregado com a página de sessões.
 
@@ -11,7 +15,7 @@ function listaConectores(lista, marca) {
 }
 
 /** Na sessão nova, a pasta pode nem existir: a lista sai da página Conectores. */
-async function conectoresDaNovaSessao() {
+export async function conectoresDaNovaSessao() {
   const { conectores } = await api("conectores").catch(() => ({ conectores: [] }));
   const lugar = document.getElementById("ns-campo-isolada");
   if (!lugar) return;
@@ -22,7 +26,7 @@ async function conectoresDaNovaSessao() {
 }
 
 /** Os conectores marcados na lista (os travados contam: continuam como estão). */
-const conectoresMarcados = (marca) => [.../** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll(`[data-${marca}]:checked`))].map((c) => c.getAttribute(`data-${marca}`));
+export const conectoresMarcados = (marca) => [.../** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll(`[data-${marca}]:checked`))].map((c) => c.getAttribute(`data-${marca}`));
 
 Object.assign(ACOES, {
   "sessao-conectores": async (b) => {
@@ -30,15 +34,18 @@ Object.assign(ACOES, {
     if (!document.getElementById("conectores-da-sessao")) $("copia-sessao").insertAdjacentHTML("afterend", '<section id="conectores-da-sessao" class="cartao" hidden></section>');
     const area = $("conectores-da-sessao");
     if (!area.hidden) { area.hidden = true; b.setAttribute("aria-expanded", "false"); return; }
-    const { conectores } = await ocupado(b, () => api("sessao/conectores", { id: sessaoAberta }));
+    const { conectores } = await ocupado(b, () => api("sessao/conectores", { id: compartilhado.sessaoAberta }));
     area.innerHTML = `${listaConectores(conectores, "conector-sessao")}
       ${conectores.length ? sub("Valem em todas as sessões deste projeto. Ao salvar, o agente reabre e a conversa continua.") : ""}
       <div class="linha">${conectores.length ? botao("Salvar", "sessao-conectores-salvar", "", "principal") : ""}${botao("Fechar", "sessao-conectores", "", "discreta")}</div>`;
     area.hidden = false; b.setAttribute("aria-expanded", "true");
   },
   "sessao-conectores-salvar": async (b) => {
-    const id = sessaoAberta;
+    const id = compartilhado.sessaoAberta;
     const r = await ocupado(b, () => api("sessao/conectores/salvar", { id, nomes: conectoresMarcados("conector-sessao") }));
-    toast(r.aviso); await abrirSessao(id);
+    toast(r.aviso); await carregadas.abrirSessao(id);
   },
 });
+
+// Para o núcleo do painel (as ações, a navegação), que chama este módulo depois que ele carrega.
+Object.assign(carregadas, { conectoresMarcados });

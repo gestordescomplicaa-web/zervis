@@ -64,6 +64,19 @@ class _Navegador:
         self.ws = ws
         self.numero = 0
         self.erros: list[str] = []
+        self.atalhos = False
+
+    async def comando(self, metodo: str, parametros: dict[str, Any]) -> Any:
+        """Um comando do protocolo de depuração, esperando a resposta dele."""
+        self.numero += 1
+        numero = self.numero
+        await self.ws.send(json.dumps({"id": numero, "method": metodo, "params": parametros}))
+        while True:
+            resposta = json.loads(await asyncio.wait_for(self.ws.recv(), 15))
+            if resposta.get("id") == numero:
+                if "error" in resposta:
+                    raise RuntimeError(f"{metodo}: {resposta['error']}")
+                return resposta.get("result")
 
     async def avaliar(self, expressao: str) -> Any:
         self.numero += 1
@@ -140,14 +153,53 @@ def _chromium(perfil: Path) -> tuple[subprocess.Popen[bytes], str]:
     return processo, alvo["webSocketDebuggerUrl"]
 
 
+# O painel é feito de módulos ES, sem globais. Os testes alcançam o que precisam pelos mesmos
+# módulos que a página carregou, com os nomes de antes na janela: um script que o Chromium roda em
+# cada documento novo (sobrevive ao painel recarregar quando o Zé reinicia).
+ATALHOS = """(() => {
+  if (!location.protocol.startsWith("http") || window.__atalhosInstalados) return;
+  window.__atalhosInstalados = true;
+  const E = "/modulos/estado.js", N = "/modulos/navegacao.js", P = "/painel.js";
+  const cache = {};
+  const carregar = (m) => import(m).then((x) => (cache[m] = x));
+  const chamar = (m, nome) => (...a) =>
+    cache[m] ? cache[m][nome](...a) : carregar(m).then((x) => x[nome](...a));
+  const doEstado = (nome) => ({
+    configurable: true,
+    get: () => cache[E]?.compartilhado[nome],
+    set: (v) => { cache[E].compartilhado[nome] = v; },
+  });
+  const estado = ["term", "termId", "termWs", "termWsPronto", "sessaoAberta", "filaEscrita",
+    "atualizacaoRecebida"];
+  Object.defineProperties(window, Object.fromEntries(estado.map((n) => [n, doEstado(n)])));
+  Object.defineProperty(window, "cachePaginas", {
+    configurable: true, get: () => cache[P]?.cachePaginas,
+  });
+  Object.assign(window, {
+    api: chamar(P, "api"),
+    abrir: chamar(N, "abrir"),
+    batimento: chamar(N, "batimento"),
+    escreverNoTerminal: (...a) => cache[E].carregadas.escreverNoTerminal(...a),
+    acompanharCentral: chamar("/paginas/melhorias.js", "acompanharCentral"),
+    acompanharSessao: (...a) => cache[E].carregadas.acompanharSessao(...a),
+    formSessao: (...a) => cache[E].carregadas.formSessao(...a),
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    Promise.all([E, N, P].map(carregar)).then(() => { window.__atalhos = true; });
+  });
+})()"""
+
+
 async def _carregar(nav: _Navegador, endereco: str) -> None:
     await nav.avaliar("0")
     await nav.ws.send(json.dumps({"id": 0, "method": "Runtime.enable"}))
+    if not nav.atalhos:
+        nav.atalhos = True
+        await nav.comando("Page.enable", {})
+        await nav.comando("Page.addScriptToEvaluateOnNewDocument", {"source": ATALHOS})
     await nav.avaliar(f"location.href = {json.dumps(endereco)}")
     for _ in range(100):
-        if await nav.avaliar(
-            "typeof abrir === 'function' && !!document.querySelector('#conteudo')"
-        ):
+        if await nav.avaliar("window.__atalhos === true && !!document.querySelector('#conteudo')"):
             break
         await asyncio.sleep(0.1)
     await asyncio.sleep(0.5)
@@ -891,7 +943,7 @@ def test_autodesenvolvimento_interrompe_troca_agente_e_permite_revisar(tmp_path:
             await nav.avaliar(
                 "document.querySelector('[data-acao=manutencao][data-ligar=true]').click()"
             )
-            await _esperar(nav, "manut.ligada === true")
+            await _esperar(nav, "import('/paginas/melhorias.js').then((m) => m.manut.ligada)")
             await nav.avaliar("document.querySelector('#revisei').click()")
             await _esperar(nav, "!document.querySelector('[data-acao=melhorias-aplicar]').disabled")
             await nav.avaliar("document.querySelector('[data-acao=melhorias-aplicar]').click()")

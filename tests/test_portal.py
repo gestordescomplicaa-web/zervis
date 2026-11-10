@@ -361,10 +361,23 @@ def test_conferir_a_chave_do_deepgram_distingue_recusa_de_rede() -> None:
 
 def test_os_arquivos_da_pagina_sao_leves() -> None:
     web = Path(__file__).resolve().parents[1] / "zervis/portal/web"
+    import posixpath
     import re
 
     html = (web / "index.html").read_text()
-    scripts = re.findall(r'<script src="/([^"\n]+)"', html)
+    # A abertura: a entrada e tudo o que ela importa (os módulos ES), sem as páginas sob demanda.
+    scripts: set[str] = set()
+    fila = re.findall(r'<script[^>]* src="/([^"\n]+)"', html)
+    assert fila, "o painel sem script de entrada"
+    while fila:
+        arquivo = fila.pop()
+        if arquivo in scripts:
+            continue
+        scripts.add(arquivo)
+        texto = (web / arquivo).read_text()
+        for alvo in re.findall(r'^import (?:[^;]*? from )?"([^"]+)";', texto, re.MULTILINE):
+            fila.append(posixpath.normpath(posixpath.join(posixpath.dirname(arquivo), alvo)))
+    assert not any(s.startswith("paginas/") for s in scripts), scripts  # páginas ficam sob demanda
     abertura = sum((web / f).stat().st_size for f in ("index.html", "painel.css", *scripts))
     assert abertura < 130_000, abertura  # docs/plano-painel.md: o que carrega ao abrir
     for pagina in (web / "paginas").glob("*.js"):  # páginas sob demanda, cada uma pequena

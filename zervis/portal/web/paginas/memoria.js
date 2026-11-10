@@ -1,3 +1,6 @@
+import { ACOES, recarregar } from "../modulos/acoes.js";
+import { PAGINAS, api, botao, cabeca, cartao, confirmar, esc, item, ocupado, sub, toast, vazio, xis } from "../painel.js";
+
 // A página Memória, carregada sob demanda pelo painel: a memória curta, as sugestões que o Zé
 // aprendeu e o estado da memória dos projetos (ai-memory).
 

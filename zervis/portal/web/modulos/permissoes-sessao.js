@@ -1,8 +1,11 @@
+import { $, api, botao, esc, ocupado, toast } from "../painel.js";
+import { compartilhado, carregadas } from "./estado.js";
+
 // Os pedidos de permissão das sessões do Claude, aprovados ou negados pelo painel (também do
 // celular), ao mesmo tempo que o terminal pergunta (ADR 0039). Carregado com a página de sessões.
 
 /** A linha da sessão na lista: o pedido de aprovação vem antes de tudo. */
-const rotuloSessao = (s) => s.permissoes?.length ? "pede aprovação" : s.estado === "trabalhando" ? "trabalhando…" : esc(s.resumo || s.pasta);
+export const rotuloSessao = (s) => s.permissoes?.length ? "pede aprovação" : s.estado === "trabalhando" ? "trabalhando…" : esc(s.resumo || s.pasta);
 
 /** O que a sessão espera aprovar (ADR 0039): a frase do Zé, os argumentos e Aprovar/Negar. O
  * terminal pergunta ao mesmo tempo; o primeiro que responde decide. */
@@ -12,7 +15,7 @@ function faixaPermissao(sessao) {
 }
 
 /** Redesenha a faixa só quando os pedidos mudam (o relógio da página passa a cada 1,5 s). */
-function atualizarPermissao(sessao) {
+export function atualizarPermissao(sessao) {
   if (!$("permissao-sessao")) $("limite-sessao")?.insertAdjacentHTML("afterend", '<div id="permissao-sessao"></div>');
   const area = $("permissao-sessao");
   const versao = JSON.stringify((sessao.permissoes || []).map((p) => p.id));
@@ -23,13 +26,16 @@ function atualizarPermissao(sessao) {
 
 /** Aprovar ou negar pelo painel; se o terminal respondeu antes, o Zé diz que já foi respondido.
  * @param {HTMLButtonElement} b @param {boolean} aprovar */
-async function decidirPermissao(b, aprovar) {
-  const id = sessaoAberta;
+export async function decidirPermissao(b, aprovar) {
+  const id = compartilhado.sessaoAberta;
   try {
     const r = await ocupado(b, () => api("sessao/permissao", { id, pedido: b.dataset.pedido, aprovar }));
     toast(r.aviso);
   } catch (erro) {
     toast(erro.message);
   }
-  if (id === sessaoAberta) await acompanharSessao();
+  if (id === compartilhado.sessaoAberta) await carregadas.acompanharSessao();
 }
+
+// Para o núcleo do painel (as ações, a navegação), que chama este módulo depois que ele carrega.
+Object.assign(carregadas, { decidirPermissao });

@@ -1,3 +1,9 @@
+import { ACOES } from "../modulos/acoes.js";
+import { atualizando, desenharAtualizacao } from "../modulos/navegacao.js";
+import { abrirSessao, acompanharSessao } from "./sessoes.js";
+import { $, AJUSTES, PAGINAS, api, botao, cabeca, confirmar, esc, ocupado, relogio, sub, toast, valorCampo } from "../painel.js";
+import { compartilhado, carregadas } from "../modulos/estado.js";
+
 // A página Autodesenvolvimento (ADR 0025, 0026 e 0028): o estado de manutenção, o diagnóstico do que
 // deu errado e a sessão em que o Zé se aprimora, numa cópia isolada, com aprovar ou descartar.
 // Carregada sob demanda; só no PC do Zé.
@@ -12,16 +18,16 @@ PAGINAS.melhorias = async () => {
     <div class="sessoes so-ze no-lado"><div id="lado-sessao" class="lado"></div></div></div>`;
 };
 
-let manut = { ligada: false, aguardando: false };
+export let manut = { ligada: false, aguardando: false };
 let centralEscolhida = "", estadoCentral = "";
 
-async function acompanharCentral() {
-  const vez = navegacao;
+export async function acompanharCentral() {
+  const vez = compartilhado.navegacao;
   const c = await api("ze/central", {});
   const caixa = $("centralizacao");
-  if (!caixa || vez !== navegacao) return c;
+  if (!caixa || vez !== compartilhado.navegacao) return c;
   const mudou = estadoCentral === "em_andamento" && c.estado === "concluida";
-  if (!!window.unificandoSessoes !== (c.estado === "em_andamento")) cicloAtualizacao++;
+  if (!!window.unificandoSessoes !== (c.estado === "em_andamento")) compartilhado.cicloAtualizacao++;
   window.unificandoSessoes = c.estado === "em_andamento";
   estadoCentral = c.estado;
   centralEscolhida = c.sessao || centralEscolhida;
@@ -30,7 +36,7 @@ async function acompanharCentral() {
   // Depois de unificar, a sessão é o estado normal da página, sem um cartão permanente.
   caixa.hidden = !varias && !ocupada && !["erro", "interrompida"].includes(c.estado);
   window.desenharTravaSessoes?.();
-  const trava = ocupada || atualizando() || !centralEscolhida || (sessaoAtual?.melhorias && sessaoAtual.estado === "trabalhando");
+  const trava = ocupada || atualizando() || !centralEscolhida || (compartilhado.sessaoAtual?.melhorias && compartilhado.sessaoAtual.estado === "trabalhando");
   const unificar = /** @type {HTMLButtonElement | null} */ (caixa.querySelector('[data-acao="central-unificar"]'));
   if (unificar) unificar.disabled = trava;
   const versao = JSON.stringify([c, atualizando()]);
@@ -51,7 +57,7 @@ async function acompanharCentral() {
   if (mudou && c.sessao) {
     toast("Sessões unificadas. Histórico preservado.");
     revisouProtegidos = false;
-    sessaoAberta = c.sessao;
+    compartilhado.sessaoAberta = c.sessao;
     await abrirSessao(c.sessao);
   }
   return c;
@@ -71,18 +77,18 @@ window.desenharManutencao = (m) => {
 };
 
 /** @param {number} vez */
-async function prepararMelhorias(vez) {
+export async function prepararMelhorias(vez) {
   if (!AJUSTES) return;
   window.desenharManutencao((await api("estado")).manutencao);
   const c = await acompanharCentral();
-  if (vez !== navegacao) return;
+  if (vez !== compartilhado.navegacao) return;
   if (!c.sessao && c.candidatas.length > 1) {
     relogio(vez, () => acompanharMelhorias().catch(() => {}));
     return;
   }
   const { id } = await api("ze/sessao", {});
-  if (vez !== navegacao) return;
-  sessaoAberta = id;
+  if (vez !== compartilhado.navegacao) return;
+  compartilhado.sessaoAberta = id;
   await abrirSessao(id);
   relogio(vez, () => acompanharMelhorias().catch(() => {}));
 }
@@ -102,7 +108,7 @@ async function mostrarDiagnostico(texto) {
 // Propor leva minutos (os testes): enquanto isso, o botão fica "Propondo…" e não abre outro PR.
 let revisouProtegidos = false, verMudancas = false, propondo = false;
 
-async function desenharMelhorias() {
+export async function desenharMelhorias() {
   const caixa = $("melhorias-ze");
   if (!caixa) return;
   const m = await api("ze/melhorias", {});
@@ -112,14 +118,14 @@ async function desenharMelhorias() {
   const locais = (m.nao_publicadas ?? []).length;
   const publicar = locais
     ? `<div class="linha"><span>${locais} ${locais === 1 ? "melhoria só nesta máquina" : "melhorias só nesta máquina"}, fora do GitHub.</span><span class="espaco"></span>
-        ${botao(propondo ? "Propondo…" : "Propor como PR", "melhorias-propor", propondo || sessaoAtual?.estado === "trabalhando" || atualizando() || window.unificandoSessoes ? "disabled" : "", "discreta")}</div>`
+        ${botao(propondo ? "Propondo…" : "Propor como PR", "melhorias-propor", propondo || compartilhado.sessaoAtual?.estado === "trabalhando" || atualizando() || window.unificandoSessoes ? "disabled" : "", "discreta")}</div>`
     : "";
   if (!n && !m.sem_commit) { caixa.innerHTML = `<div class="faixa melhorias"><span>Nenhuma mudança pendente.</span>${publicar}</div>`; return; }
   const resumo = `${n} ${n === 1 ? "mudança" : "mudanças"} · ${m.arquivos.length} ${m.arquivos.length === 1 ? "arquivo" : "arquivos"}`;
   const protegidos = m.protegidos.length
     ? `<p class="aviso">Mexe na zona protegida: <span class="mono">${m.protegidos.map(esc).join(", ")}</span></p>
        <label class="interruptor"><input type="checkbox" id="revisei" ${revisouProtegidos ? "checked" : ""}> Revisei as mudanças na zona protegida</label>` : "";
-  const trabalhando = sessaoAtual?.estado === "trabalhando";
+  const trabalhando = compartilhado.sessaoAtual?.estado === "trabalhando";
   const pode = !trabalhando && !atualizando() && !window.unificandoSessoes && manut.ligada && n && !m.sem_commit && (!m.protegidos.length || revisouProtegidos);
   caixa.innerHTML = `<div class="faixa melhorias"><div class="linha"><strong>Mudanças do Zé</strong><span>${resumo}</span><span class="espaco"></span>
       ${botao(verMudancas ? "Ocultar mudanças" : "Ver mudanças", "melhorias-ver", "", "discreta")}
@@ -209,3 +215,6 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .faixa.melhorias pre { margin: 0; max-height: 40vh; overflow: auto; padding: 12px; border-radius: 10px;
   background: var(--fundo-2); font: 12px/1.5 var(--mono); white-space: pre-wrap; }
 ` }));
+
+// Para quem chama esta página depois que ela carrega (a navegação, as ações).
+Object.assign(carregadas, { desenharMelhorias, prepararMelhorias });

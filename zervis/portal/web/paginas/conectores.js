@@ -1,3 +1,6 @@
+import { ACOES, MUDAR, recarregar } from "../modulos/acoes.js";
+import { $, PAGINAS, api, botao, cabeca, confirmar, esc, item, liga, ocupado, sub, toast, valorCampo, vazio, xis } from "../painel.js";
+
 // A página Conectores (MCP), carregada sob demanda pelo painel: usa as funções dele.
 
 const PERMISSAO = { pergunta: "pede aprovação", livre: "livre", bloqueada: "bloqueada" };

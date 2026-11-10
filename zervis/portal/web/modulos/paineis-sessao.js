@@ -1,19 +1,19 @@
+import { compartilhado, carregadas } from "./estado.js";
 // Os painéis da sessão: os arquivos à vista ou não, e as larguras ajustáveis. A lista e os arquivos
 // têm uma alça na borda para arrastar (ou setas do teclado; duplo clique volta ao padrão). A largura
 // fica guardada neste navegador. Carregado com a página de sessões.
 
-let explorador = innerWidth > 1100;
 
 /** @param {boolean} mostrar */
-function mostrarExplorador(mostrar) {
-  explorador = mostrar;
+export function mostrarExplorador(mostrar) {
+  compartilhado.explorador = mostrar;
   document.querySelector('.conversa-topo [data-acao="explorador"]')?.setAttribute("aria-pressed", String(mostrar));
   document.querySelector(".sessao-aberta")?.classList.toggle("sem-explorador", !mostrar);
 }
 
 // Até 1100 px os arquivos ocupam o lugar do terminal. Ao estreitar a janela (dividir a tela, por
 // exemplo), fecham sozinhos e o terminal continua à vista; o botão Arquivos os abre de novo.
-matchMedia("(max-width: 1100px)").addEventListener("change", (e) => { if (e.matches && explorador) mostrarExplorador(false); });
+matchMedia("(max-width: 1100px)").addEventListener("change", (e) => { if (e.matches && compartilhado.explorador) mostrarExplorador(false); });
 
 const PAINEIS = {
   lista: { variavel: "--largura-lista", caixa: ".sessoes", lado: "esquerda", min: 200, max: 480 },
@@ -22,7 +22,7 @@ const PAINEIS = {
 const ESPACO_TERMINAL = 420; // o terminal nunca fica mais estreito que isto por causa de uma alça
 
 /** @param {"lista" | "explorador"} nome */
-function larguraSalva(nome) {
+export function larguraSalva(nome) {
   let px = 0;
   try { px = Number(localStorage.getItem(`zervis.largura.${nome}`)) || 0; } catch { /* sem armazenamento */ }
   const p = PAINEIS[nome];
@@ -30,7 +30,7 @@ function larguraSalva(nome) {
 }
 
 /** @param {"lista" | "explorador"} nome @param {string} rotulo */
-const divisor = (nome, rotulo) => `<div class="divisor" data-divisor="${nome}" role="separator" aria-orientation="vertical"
+export const divisor = (nome, rotulo) => `<div class="divisor" data-divisor="${nome}" role="separator" aria-orientation="vertical"
   aria-label="${rotulo}" tabindex="0" title="Arraste para ajustar a largura"></div>`;
 
 /** @param {HTMLElement} alca @param {number | null} px  null volta ao padrão */
@@ -89,3 +89,6 @@ document.addEventListener("keydown", (ev) => {
   const sinal = PAINEIS[/** @type {"lista" | "explorador"} */ (alca.dataset.divisor)].lado === "esquerda" ? 1 : -1;
   ajustarLargura(alca, larguraAtual(alca) + sinal * (ev.key === "ArrowRight" ? 16 : -16));
 });
+
+// Para o núcleo do painel (as ações, a navegação), que chama este módulo depois que ele carrega.
+Object.assign(carregadas, { mostrarExplorador });

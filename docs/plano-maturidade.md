@@ -135,7 +135,9 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   `sessoes_eventos.py`, `sessoes_copia.py`, `sessoes_envio.py` e `sessoes_leitura.py`. Nenhum
   módulo acima de 800 linhas (09/11/2026);
   `tests/test_tamanho_dos_modulos.py` vigia: os que faltam não crescem.
-- [ ] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
+- [x] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
+  [ADR 0077](adr/0077-painel-em-modulos-es.md): uma entrada (`modulos/principal.js`), o estado
+  que vários arquivos mudam em `modulos/estado.js`, as páginas sob demanda por `import()`.
 
 ## Frente 4: Plataforma e alcance (3,5 → 5,5) · Fase C
 

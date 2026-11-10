@@ -1,17 +1,17 @@
+import { $, api, botao, esc, item, mostrar, sub, valorCampo, xis } from "../painel.js";
+import { compartilhado, carregadas } from "./estado.js";
+
 // --- Modelos: provedor, modelo e chave ---
 
-/** @type {Record<string, any>} */
-let modelo = {};
-
-function desenharChave() {
+export function desenharChave() {
   const area = $("area-chave");
   if (!area) return;
-  $("campo-endereco").hidden = modelo.motor !== "ponte";
-  const k = modelo.chaves[modelo.motor] || { usa: false };
+  $("campo-endereco").hidden = compartilhado.modelo.motor !== "ponte";
+  const k = compartilhado.modelo.chaves[compartilhado.modelo.motor] || { usa: false };
   if (!k.usa) {
-    area.innerHTML = modelo.motor === "contas" ? '<p class="nota">Usa as contas configuradas em Contas.</p>'
-      : modelo.motor === "omniroute" ? '<p class="nota">Usa a conexão do OmniRoute configurada no Cérebro.</p>'
-      : contaEmUso(modelo.motor === "codex" ? "codex" : "claude");
+    area.innerHTML = compartilhado.modelo.motor === "contas" ? '<p class="nota">Usa as contas configuradas em Contas.</p>'
+      : compartilhado.modelo.motor === "omniroute" ? '<p class="nota">Usa a conexão do OmniRoute configurada no Cérebro.</p>'
+      : contaEmUso(compartilhado.modelo.motor === "codex" ? "codex" : "claude");
     return;
   }
   const estado = k.tem ? `<span class="etiqueta bom">chave guardada · …${esc(k.fim)}</span>` : '<span class="etiqueta alerta">sem chave</span>';
@@ -21,16 +21,11 @@ function desenharChave() {
 
 // --- Perfil e acesso ao Claude (também na configuração inicial) ---
 
-let passo = 1;
-/** @type {Record<string, any>} */
-let acessoTela = {};
-let agentes = [];
-
-const seletorAgente = (atual, lista = agentes) => `<div class="segmentos" role="group" aria-label="Agente">${lista.map((a) => a.disponivel
+const seletorAgente = (atual, lista = compartilhado.agentes) => `<div class="segmentos" role="group" aria-label="Agente">${lista.map((a) => a.disponivel
   ? `<button type="button" data-acao="cerebro-escolher" data-agente="${esc(a.id)}" aria-pressed="${a.id === atual}">${esc(a.nome)}</button>`
   : `<button type="button" disabled>${esc(a.nome)} <small>Em breve</small></button>`).join("")}</div>`;
 
-function camposPerfil(cfg) {
+export function camposPerfil(cfg) {
   const p = cfg.perfil;
   const opcoes = cfg.fusos.map((f) => `<option value="${esc(f)}" ${f === p.fuso ? "selected" : ""}>${esc(f.replaceAll("_", " "))}</option>`).join("");
   return `<div class="campos">
@@ -40,23 +35,23 @@ function camposPerfil(cfg) {
   </div>`;
 }
 
-function prepararAcesso(cfg) {
-  acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, linkOpenai: cfg.chave_openai, openaiSalva: cfg.openai_salva, modelo: acessoTela.modelo };
+export function prepararAcesso(cfg) {
+  compartilhado.acessoTela = { ...cfg.acesso, agentes: cfg.agentes, link: cfg.chave_anthropic, linkOpenai: cfg.chave_openai, openaiSalva: cfg.openai_salva, modelo: compartilhado.acessoTela.modelo };
 }
 
 // Outra conta, outro plano: as listas de modelos do Cérebro e das Respostas rápidas mudam.
-async function modelosDaConta() {
+export async function modelosDaConta() {
   const c = await api("cerebro");
-  Object.assign(acessoTela, completo(c)); modelo.listas = c.listas; desenharAcesso();
-  if ($("campo-modelo")) $("campo-modelo").innerHTML = "Modelo" + campoModelo(modelo.motor, valorCampo("modelo")?.value);
+  Object.assign(compartilhado.acessoTela, completo(c)); compartilhado.modelo.listas = c.listas; desenharAcesso();
+  if ($("campo-modelo")) $("campo-modelo").innerHTML = "Modelo" + campoModelo(compartilhado.modelo.motor, valorCampo("modelo")?.value);
 }
 
-const completo = (c) => ({ cerebro: c.completo.provedor, modelo: c.completo.modelo, modelos: c.completo.modelos, omniroute: c.completo.omniroute, local: c.completo.local });
+export const completo = (c) => ({ cerebro: c.completo.provedor, modelo: c.completo.modelo, modelos: c.completo.modelos, omniroute: c.completo.omniroute, local: c.completo.local });
 
 // O modelo das Respostas rápidas: lista com a versão para Claude, Codex e Anthropic; campo livre
 // para os motores com modelos demais (OpenAI, OpenRouter, Ponte).
-function campoModelo(motor, atual) {
-  const lista = modelo.listas?.[motor];
+export function campoModelo(motor, atual) {
+  const lista = compartilhado.modelo.listas?.[motor];
   if (!lista?.length) return `<input id="modelo" class="mono" value="${esc(atual || "")}" placeholder="Padrão da conta" autocomplete="off" spellcheck="false">`;
   const escolhido = lista.find((m) => m.id === atual || m.id.includes(`-${atual}-`))?.id || atual || "";
   const opcoes = [...(lista.some((m) => m.id === escolhido) || !escolhido ? [] : [{ id: escolhido, nome: escolhido }]), ...lista];
@@ -100,14 +95,14 @@ function cartaoLocal(a) {
     <p class="resultado" id="resultado-acesso"></p>`;
 }
 
-function desenharAcesso() {
+export function desenharAcesso() {
   const area = $("cartao-acesso");
   if (!area) return;
-  const a = acessoTela, cerebro = area.dataset.contexto === "cerebro";
+  const a = compartilhado.acessoTela, cerebro = area.dataset.contexto === "cerebro";
   if (cerebro && a.cerebro === "omniroute") { area.innerHTML = cartaoOmni(a); return; }
   if (cerebro && a.cerebro === "local") { area.innerHTML = cartaoLocal(a); return; }
   const agente = cerebro && a.cerebro === "codex" ? "codex" : "claude";
-  const cs = contasTela.agentes.find((x) => x.id === agente);
+  const cs = compartilhado.contasTela.agentes.find((x) => x.id === agente);
   const pronto = agente === "codex" ? Boolean(cs?.contas.find((x) => x.id === cs.em_uso)?.logado) : Boolean(a.metodo);
   const estado = pronto ? '<span class="etiqueta bom">Configurado</span>' : '<span class="etiqueta alerta">Não configurado</span>';
   const temChave = a.metodo === "chave" && a.origem === "painel";
@@ -133,17 +128,14 @@ function desenharAcesso() {
     <p class="resultado" id="resultado-acesso"></p>`;
 }
 
-const lerPerfil = () => ({ nome: valorCampo("perfil-nome").value, sobre: valorCampo("perfil-sobre").value, fuso: valorCampo("perfil-fuso").value });
-
-
+export const lerPerfil = () => ({ nome: valorCampo("perfil-nome").value, sobre: valorCampo("perfil-sobre").value, fuso: valorCampo("perfil-fuso").value });
 
 // --- Contas dos agentes (ADR 0016): cada conta é uma pasta de login do próprio agente ---
 
-let contasTela = { agentes: [] };
 let vigiaContas = null;
 
 function contaEmUso(agente) {
-  const ag = contasTela.agentes.find((x) => x.id === agente);
+  const ag = compartilhado.contasTela.agentes.find((x) => x.id === agente);
   const c = ag?.contas.find((x) => x.id === ag.em_uso);
   if (!c) return "";
   return `<p class="nota">Conta: <strong>${esc(c.nome)}</strong>${c.email ? ` · ${esc(c.email)}` : ""}${c.logado ? "" : " · sem login"}</p>`;
@@ -177,10 +169,9 @@ function adicionarProvedor(p) {
 
 // --- Entrar na conta pelo painel (ADR 0035): o login do agente roda no Zé, a tela mostra o link
 // e recebe o código. Funciona num servidor sem tela e no celular.
-let loginTela = null;
 
 function caixaLogin(c) {
-  if (!loginTela || loginTela.id !== c.id) return "";
+  if (!compartilhado.loginTela || compartilhado.loginTela.id !== c.id) return "";
   return `<div class="login-agente" id="login-agente">
     <p class="nota">Abra o link, autorize com a conta e, se for pedido, cole o código aqui.</p>
     <pre class="mono login-texto" id="login-texto"></pre>
@@ -191,7 +182,7 @@ function caixaLogin(c) {
   </div>`;
 }
 
-function mostrarLogin(r) {
+export function mostrarLogin(r) {
   const texto = $("login-texto"), lista = $("login-links");
   if (!texto || !lista) return;
   texto.textContent = r.texto || "Iniciando o login…";
@@ -199,34 +190,34 @@ function mostrarLogin(r) {
   lista.innerHTML = (r.links || []).map((l) => `<a class="externo" href="${esc(l)}" target="_blank" rel="noopener">Abrir link ↗</a>`).join("");
 }
 
-async function acompanharLogin(id) {
-  while (loginTela && loginTela.id === id) {
+export async function acompanharLogin(id) {
+  while (compartilhado.loginTela && compartilhado.loginTela.id === id) {
     let r;
     try { r = await api("conta/login/ler", { id, espera: 2 }); } catch { await new Promise((ok) => setTimeout(ok, 1500)); continue; }
-    if (!loginTela || loginTela.id !== id) return;
+    if (!compartilhado.loginTela || compartilhado.loginTela.id !== id) return;
     mostrarLogin(r);
     if (r.codigo === 0) {
-      loginTela = null; contasTela = r.contas; desenharContas(); desenharAcesso();
+      compartilhado.loginTela = null; compartilhado.contasTela = r.contas; desenharContas(); desenharAcesso();
       mostrar("resultado-contas", true, r.aviso); await modelosDaConta(); return;
     }
-    if (!r.ativo) { mostrar("resultado-login", false, "O login não terminou."); loginTela = null; return; }
+    if (!r.ativo) { mostrar("resultado-login", false, "O login não terminou."); compartilhado.loginTela = null; return; }
   }
 }
 
-function desenharContas() {
+export function desenharContas() {
   const area = $("cartao-contas");
   if (!area) return;
   area.innerHTML = `<div class="cabeca"><h2>Contas</h2></div>
     ${sub("Contas dos agentes nesta máquina. O login é feito no próprio agente; o Zé só usa.")}
-    ${contasTela.agentes.map((ag) => `<h3 class="subtitulo">${esc(ag.nome)}${ag.instalado ? "" : ' <span class="etiqueta">Não instalado</span>'}</h3>
+    ${compartilhado.contasTela.agentes.map((ag) => `<h3 class="subtitulo">${esc(ag.nome)}${ag.instalado ? "" : ' <span class="etiqueta">Não instalado</span>'}</h3>
       <div class="itens">${ag.contas.map((c) => linhaConta(ag, c) + caixaLogin(c)).join("")}</div>
       <div class="add"><input data-nova-conta="${esc(ag.id)}" placeholder="Nome de outra conta do ${esc(ag.nome)}" maxlength="40" autocomplete="off">${botao("Adicionar", "conta-adicionar", `data-agente="${esc(ag.id)}"`)}</div>
       ${(ag.provedores || []).map(adicionarProvedor).join("")}`).join("")}
     <p class="resultado" id="resultado-contas"></p>`;
 }
 
-async function recarregarContas() {
-  contasTela = await api("contas");
+export async function recarregarContas() {
+  compartilhado.contasTela = await api("contas");
   desenharContas(); desenharAcesso();
 }
 
@@ -242,14 +233,12 @@ function vigiarContas() {
 
 // --- Escuta: a chave do Deepgram ---
 
-let escuta = {};
-
-function desenharEscuta() {
+export function desenharEscuta() {
   const area = $("cartao-escuta");
   if (!area) return;
-  const k = escuta.deepgram;
+  const k = compartilhado.escuta.deepgram;
   const estado = k.tem ? '<span class="etiqueta bom">Configurado</span>' : '<span class="etiqueta alerta">Não configurado</span>';
-  area.innerHTML = `<div class="cabeca"><h2>Reconhecimento de fala</h2>${estado}<a class="externo" href="${esc(escuta.cadastro)}" target="_blank" rel="noopener">Obter chave de API ↗</a></div>
+  area.innerHTML = `<div class="cabeca"><h2>Reconhecimento de fala</h2>${estado}<a class="externo" href="${esc(compartilhado.escuta.cadastro)}" target="_blank" rel="noopener">Obter chave de API ↗</a></div>
     ${sub("Deepgram. Converte a fala em texto nos comandos de voz.")}
     <div class="linha"><input id="chave-escuta" type="password" class="mono" placeholder="${k.tem ? "•••• " + esc(k.fim) : "Chave de API"}" autocomplete="off" spellcheck="false" aria-label="Chave de API do Deepgram">
       ${botao("Salvar", "escuta-guardar", "", "principal")}${botao("Testar conexão", "escuta-testar")}${k.tem ? botao("Remover", "escuta-apagar", "", "discreta") : ""}</div>
@@ -257,7 +246,9 @@ function desenharEscuta() {
 }
 
 /** O que "Só no Live" e "Sempre" querem dizer, e se as respostas rápidas estão em uso agora. */
-const notaDoQuando = (quando, ativa) => ((quando || "live") === "live" ? "Responde na conversa em tempo real (o Live); no Normal e no teclado, vai tudo ao modelo principal." : "Responde a conversa simples em qualquer modo.") + (ativa ? " Em uso agora." : "");
+export const notaDoQuando = (quando, ativa) => ((quando || "live") === "live" ? "Responde na conversa em tempo real (o Live); no Normal e no teclado, vai tudo ao modelo principal." : "Responde a conversa simples em qualquer modo.") + (ativa ? " Em uso agora." : "");
 
-const lerModelo = () => ({ ligada: /** @type {HTMLInputElement} */ (document.querySelector('[data-mudar="via-ligada"]')).checked, quando: modelo.quando || "live", motor: modelo.motor, modelo: valorCampo("modelo").value.trim(), endereco: valorCampo("endereco").value.trim() });
+export const lerModelo = () => ({ ligada: /** @type {HTMLInputElement} */ (document.querySelector('[data-mudar="via-ligada"]')).checked, quando: compartilhado.modelo.quando || "live", motor: compartilhado.modelo.motor, modelo: valorCampo("modelo").value.trim(), endereco: valorCampo("endereco").value.trim() });
 
+// Para o núcleo do painel (as ações, a navegação), que chama este módulo depois que ele carrega.
+Object.assign(carregadas, { acompanharLogin, campoModelo, completo, desenharAcesso, desenharChave, desenharContas, desenharEscuta, lerModelo, lerPerfil, modelosDaConta, mostrarLogin, notaDoQuando, recarregarContas });

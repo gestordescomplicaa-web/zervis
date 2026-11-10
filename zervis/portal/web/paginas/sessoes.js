@@ -1,7 +1,13 @@
-// --- Sessões: o terminal do agente, com pasta, anexos e explorador ---
+import { anexar, atualizarArvore, carregarPasta } from "../modulos/arquivos-sessao.js";
+import { conectoresDaNovaSessao } from "../modulos/conectores-sessao.js";
+import { carregarPagina } from "../modulos/navegacao.js";
+import { divisor, larguraSalva } from "../modulos/paineis-sessao.js";
+import { atualizarPermissao, rotuloSessao } from "../modulos/permissoes-sessao.js";
+import { abrirTerminal, travarAjustes } from "../modulos/terminal.js";
+import { $, PAGINAS, api, botao, cartao, esc, escolha, estadoSessao, fecharEscolhas, relogio, toast, vazio } from "../painel.js";
+import { compartilhado, carregadas } from "../modulos/estado.js";
 
-let abertas = new Set();
-let modoBusca = "nomes";
+// --- Sessões: o terminal do agente, com pasta, anexos e explorador ---
 
 const matiz = (t) => [...t].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 const inicial = (n) => esc((n.trim()[0] || "?").toUpperCase());
@@ -16,13 +22,13 @@ PAGINAS.sessoes = async () => `<div class="sessoes" style="${larguraSalva("lista
   <div id="lado-sessao" class="lado"><div class="nova-sessao">${vazio("Escolha uma sessão ou crie uma no +.")}</div></div></div>`;
 
 // No celular, uma coisa por vez: a lista ou a sessão aberta (com "Sessões" para voltar).
-const mostrarLado = (sim) => /** @type {HTMLElement} */ (document.querySelector(".sessoes"))?.classList.toggle("no-lado", sim);
+export const mostrarLado = (sim) => /** @type {HTMLElement} */ (document.querySelector(".sessoes"))?.classList.toggle("no-lado", sim);
 
-const itemSessao = (s) => `<button type="button" class="item-sessao" data-acao="sessao-abrir" data-id="${s.id}" aria-current="${s.id === sessaoAberta}">
+const itemSessao = (s) => `<button type="button" class="item-sessao" data-acao="sessao-abrir" data-id="${s.id}" aria-current="${s.id === compartilhado.sessaoAberta}">
   <span class="avatar ${s.estado === "trabalhando" ? "trabalhando" : ""}" data-matiz="${matiz(s.nome)}">${inicial(s.nome)}</span>
   <strong>${esc(s.nome)}</strong><time>${ha(s.atualizada)}</time><small>${rotuloSessao(s)}</small></button>`;
 
-async function listaSessoes() {
+export async function listaSessoes() {
   const lista = $("lista-sessoes");
   if (!lista) return;
   const sessoes = await api("sessoes");
@@ -31,7 +37,7 @@ async function listaSessoes() {
   $("ponto-sessoes").hidden = !sessoes.some((s) => s.estado === "trabalhando");
 }
 
-async function formSessao() {
+export async function formSessao() {
   mostrarLado(true);
   const [pastas, ct] = await Promise.all([api("pastas"), api("contas").catch(() => ({ agentes: [] }))]);
   // O agente de partida é o que tem conta conectada: o Claude, a menos que só o Codex tenha.
@@ -90,25 +96,23 @@ function faixaLimite(sessao) {
     <div class="botoes">${botoes || '<span class="nota">Nenhuma outra conta com login. Adicione uma em Modelos → Contas.</span>'}</div></div>`;
 }
 
-let sessaoAtual = null;
-
-async function trocarSessao(motor, conta, continuar) {
-  const id = sessaoAberta;
+export async function trocarSessao(motor, conta, continuar) {
+  const id = compartilhado.sessaoAberta;
   const r = await api("sessao/trocar", { id, motor, conta, continuar });
-  if (sessaoAberta !== id) return;
+  if (compartilhado.sessaoAberta !== id) return;
   toast(r.aviso);
-  await abrirSessao(sessaoAberta);
+  await abrirSessao(compartilhado.sessaoAberta);
 }
 
-async function carregarCopia(id) {
+export async function carregarCopia(id) {
   const area = $("copia-sessao");
-  if (!area || id !== sessaoAberta) return;
+  if (!area || id !== compartilhado.sessaoAberta) return;
   try {
     const c = await api("sessao/copia", { id });
-    if (id !== sessaoAberta || !area.isConnected) return;
+    if (id !== compartilhado.sessaoAberta || !area.isConnected) return;
     if (!c.copia) { area.hidden = true; return; }
     area.hidden = false;
-    const trabalhando = sessaoAtual?.estado === "trabalhando";
+    const trabalhando = compartilhado.sessaoAtual?.estado === "trabalhando";
     const aplicar = c.commits.length && !c.sem_commit && !trabalhando;
     const descartar = (c.commits.length || c.sem_commit) && !trabalhando;
     area.innerHTML = `<div class="cabeca"><h3>Cópia isolada</h3><span class="etiqueta">${c.sem_commit ? "Sem commit" : c.commits.length ? "Com mudanças" : "Sem mudanças"}</span></div>
@@ -116,37 +120,37 @@ async function carregarCopia(id) {
       ${c.commits.length ? `<details><summary>Commits (${c.commits.length})</summary><pre>${c.commits.map(esc).join("\n")}</pre></details>` : ""}
       <div class="botoes">${botao("Aplicar", "copia-aplicar", aplicar ? "" : "disabled", "principal")}${botao("Descartar", "copia-descartar", descartar ? "" : "disabled", "discreta")}${botao("Atualizar", "copia-atualizar", "", "discreta")}</div>`;
   } catch (erro) {
-    if (id !== sessaoAberta || !area.isConnected) return;
+    if (id !== compartilhado.sessaoAberta || !area.isConnected) return;
     area.hidden = false;
     area.innerHTML = `<p class="resultado erro">${esc(erro.message)}</p>${botao("Atualizar", "copia-atualizar", "", "discreta")}`;
   }
 }
 
-async function mudarCopia(acao) {
-  const id = sessaoAberta;
+export async function mudarCopia(acao) {
+  const id = compartilhado.sessaoAberta;
   const r = await api(`sessao/copia/${acao}`, { id, confirmado: true });
   toast(r.aviso);
-  if (id === sessaoAberta) await carregarCopia(id);
+  if (id === compartilhado.sessaoAberta) await carregarCopia(id);
 }
 
-async function abrirSessao(id) {
+export async function abrirSessao(id) {
   mostrarLado(true);
-  sessaoAberta = id;
+  compartilhado.sessaoAberta = id;
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".item-sessao")).forEach((b) => b.setAttribute("aria-current", String(b.dataset.id === id)));
   const [{ sessao }, ct] = await Promise.all([api("sessao/ler", { id, desde: 1e9 }), api("contas")]);
-  if (sessaoAberta !== id || !$("lado-sessao")) return;
+  if (compartilhado.sessaoAberta !== id || !$("lado-sessao")) return;
   contasSessao = ct;
-  sessaoAtual = sessao;
+  compartilhado.sessaoAtual = sessao;
   const lado = $("lado-sessao");
   const trabalhando = sessao.estado === "trabalhando";
-  lado.innerHTML = `<div class="sessao-aberta ${explorador ? "" : "sem-explorador"}" style="${larguraSalva("explorador")}"><section class="conversa">
+  lado.innerHTML = `<div class="sessao-aberta ${compartilhado.explorador ? "" : "sem-explorador"}" style="${larguraSalva("explorador")}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
       <div class="titulo-sessao"><div class="nome-sessao"><h2 title="${esc(sessao.nome)}">${esc(sessao.nome)}</h2>
         <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span></div>
         <small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}${sessao.protegida ? " · protegida" : ""}</small></div>
       <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}${seletorModeloSessao(sessao)}</div>
       <div class="botoes"><button type="button" class="mais" data-acao="anexar" aria-label="Anexar arquivo" title="Anexar arquivo (ou arraste, ou cole uma imagem)">+</button><input type="file" id="arquivos" multiple hidden>
-        ${botao("Interromper", "sessao-interromper", 'id="interromper-trabalho" hidden', "discreta")}${botao("Conectores", "sessao-conectores")}${botao("Arquivos", "explorador", `aria-pressed="${explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
+        ${botao("Interromper", "sessao-interromper", 'id="interromper-trabalho" hidden', "discreta")}${botao("Conectores", "sessao-conectores")}${botao("Arquivos", "explorador", `aria-pressed="${compartilhado.explorador}"`)}${botao("Excluir", "sessao-excluir", 'title="Excluir sessão"', "discreta")}</div></header>
     <div id="excluir-sessao"></div>
     <div id="interromper-sessao"></div>
     <div id="limite-sessao" data-limite="${sessao.limite}">${faixaLimite(sessao)}</div>
@@ -179,30 +183,30 @@ async function abrirSessao(id) {
       <div class="arvore" id="arvore" role="tree"></div>
     </aside></div>`;
   pintar(lado);
-  abertas = new Set();
+  compartilhado.abertas = new Set();
   travarAjustes(trabalhando);
   // A faixa de mudanças entra antes do terminal medir a tela: depois, ela o encolheria logo ao
   // abrir, e o agente redesenharia duas vezes (o que embaralha a tela dele).
-  if (sessao.melhorias) await carregarPagina("melhorias").then(() => desenharMelhorias()).catch(() => {});
+  if (sessao.melhorias) await carregarPagina("melhorias").then(() => carregadas.desenharMelhorias()).catch(() => {});
   if (!(sessao.melhorias && window.unificandoSessoes)) await abrirTerminal(id);
   await carregarPasta("", $("arvore"));
   if (sessao.isolada && !sessao.melhorias) await carregarCopia(id);
 }
 
-async function acompanharSessao() {
-  if (!sessaoAberta || !$("terminal")) return;
-  const id = sessaoAberta;
+export async function acompanharSessao() {
+  if (!compartilhado.sessaoAberta || !$("terminal")) return;
+  const id = compartilhado.sessaoAberta;
   const { sessao } = await api("sessao/ler", { id, desde: 1e9 });
-  if (sessaoAberta !== id || !$("estado-sessao")) return;
-  if (sessaoAtual?.conta_id !== sessao.conta_id || sessaoAtual?.motor !== sessao.motor || sessaoAtual?.modelo !== sessao.modelo) {
+  if (compartilhado.sessaoAberta !== id || !$("estado-sessao")) return;
+  if (compartilhado.sessaoAtual?.conta_id !== sessao.conta_id || compartilhado.sessaoAtual?.motor !== sessao.motor || compartilhado.sessaoAtual?.modelo !== sessao.modelo) {
     fecharEscolhas();
     $("ajustes-sessao").innerHTML = seletorConta(sessao) + seletorModeloSessao(sessao);
   }
-  sessaoAtual = sessao;
+  compartilhado.sessaoAtual = sessao;
   const etiqueta = $("estado-sessao");
   if (etiqueta.dataset.estado === "trabalhando" && sessao.estado !== "trabalhando") {
     atualizarArvore();
-    if (sessao.melhorias) window.desenharMelhorias?.();
+    if (sessao.melhorias) carregadas.desenharMelhorias?.();
   }
   etiqueta.dataset.estado = sessao.estado;
   etiqueta.textContent = estadoSessao(sessao);
@@ -223,80 +227,17 @@ async function acompanharSessao() {
 }
 
 /** @param {number} vez */
-async function prepararSessoes(vez) {
+export async function prepararSessoes(vez) {
   await listaSessoes();
-  if (vez !== navegacao) return;
+  if (vez !== compartilhado.navegacao) return;
   // A sessão do Zé (Melhorias) não abre aqui: só as que estão na lista.
-  if (sessaoAberta && !/** @type {HTMLElement} */ (document.querySelector(`.item-sessao[data-id="${sessaoAberta}"]`))) sessaoAberta = null;
-  if (sessaoAberta) await abrirSessao(sessaoAberta).catch(() => { sessaoAberta = null; });
+  if (compartilhado.sessaoAberta && !/** @type {HTMLElement} */ (document.querySelector(`.item-sessao[data-id="${compartilhado.sessaoAberta}"]`))) compartilhado.sessaoAberta = null;
+  if (compartilhado.sessaoAberta) await abrirSessao(compartilhado.sessaoAberta).catch(() => { compartilhado.sessaoAberta = null; });
   let volta = 0;
   relogio(vez, async () => {
     try { await acompanharSessao(); if (++volta % 2 === 0) await listaSessoes(); } catch { /* o batimento mostra se o Zé caiu */ }
   });
 }
 
-// Anexos (arrastar, colar ou "+"): o arquivo sobe para a pasta da sessão e o caminho vai para o
-// terminal, onde o agente lê.
-async function anexar(lista) {
-  for (const a of lista) {
-    if (a.size > 20 * 1024 * 1024) { toast(a.name + ": maior que 20 MB."); continue; }
-    const f = a.name ? a : new File([a], "colado-" + Date.now() + "." + (a.type.split("/")[1] || "png"), { type: a.type });
-    try { escreverNoTerminal(`"${await subirAnexo(f)}" `); } catch (erro) { toast(erro.message); }
-  }
-  term?.focus();
-}
-
-async function subirAnexo(arquivo) {
-  const r = await fetch(`/api/sessao/anexo?id=${encodeURIComponent(sessaoAberta)}&nome=${encodeURIComponent(arquivo.name)}`,
-    { method: "POST", headers: { "X-Ze-Token": TOKEN, "Content-Type": "application/octet-stream" }, body: arquivo });
-  const dados = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(arquivo.name + ": " + (dados.erro || "falha"));
-  return dados.caminho;
-}
-
-// explorador
-const noArvore = (i) => `<div class="no ${i.pasta ? "pasta" : ""} ${i.ignorado ? "ignorado" : ""}" role="treeitem" data-caminho="${esc(i.caminho)}" ${i.pasta ? 'aria-expanded="false"' : ""}>
-  <button type="button" class="linha-no" data-acao="no" data-caminho="${esc(i.caminho)}"><span class="seta">${i.pasta ? "›" : ""}</span><span class="nome-no">${esc(i.nome)}</span>${i.ignorado ? '<span class="sinal" title="ignorado pelo git">⊘</span>' : ""}</button>
-  ${i.pasta ? '<div class="filhos" role="group"></div>' : ""}</div>`;
-
-async function carregarPasta(caminho, recipiente) {
-  const { itens } = await api("sessao/arquivos", { id: sessaoAberta, pasta: caminho });
-  recipiente.innerHTML = itens.length ? itens.map(noArvore).join("") : vazio("vazia");
-  for (const sub of abertas) {
-    const no = /** @type {HTMLElement} */ (recipiente.querySelector(`:scope > .no[data-caminho="${CSS.escape(sub)}"]`));
-    if (no) await abrirPastaNo(no);
-  }
-}
-
-async function abrirPastaNo(no) {
-  no.setAttribute("aria-expanded", "true");
-  abertas.add(no.dataset.caminho);
-  await carregarPasta(no.dataset.caminho, /** @type {HTMLElement} */ (no.querySelector(".filhos")));
-}
-
-async function atualizarArvore() {
-  if (!$("arvore")) return;
-  if (valorCampo("buscar-arquivos").value.trim()) await buscarArquivos(); else await carregarPasta("", $("arvore"));
-}
-
-async function buscarArquivos() {
-  const termo = valorCampo("buscar-arquivos").value.trim();
-  if (termo.length < 2) { await carregarPasta("", $("arvore")); return; }
-  const { achados } = await api("sessao/buscar", { id: sessaoAberta, termo, modo: modoBusca });
-  $("arvore").innerHTML = achados.length
-    ? achados.map((a) => `<button type="button" class="achado" data-acao="ver-arquivo" data-caminho="${esc(a.caminho)}"><span class="mono">${esc(a.caminho)}${a.linha ? ":" + a.linha : ""}</span>${a.trecho ? `<small>${esc(a.trecho)}</small>` : ""}</button>`).join("")
-    : vazio("Nada encontrado.");
-}
-
-async function verArquivo(caminho) {
-  const a = await api("sessao/ver", { id: sessaoAberta, caminho });
-  const corpo = a.tipo === "texto" ? `<pre class="codigo">${esc(a.texto)}</pre>` : a.tipo === "imagem" ? `<img class="imagem-previa" src="${a.url}" alt="">` : vazio(a.tipo === "grande" ? "Imagem grande demais." : "Sem prévia.");
-  $("previa").innerHTML = `<header><span class="mono">${esc(caminho)}</span>${botao("Mencionar", "mencionar", `data-caminho="${esc(caminho)}"`)}${botao("Fechar", "previa-fechar", "", "discreta")}</header>${corpo}`;
-  $("previa").hidden = false;
-  $("terminal").hidden = true;
-}
-
-function fecharPrevia() {
-  if ($("previa")) { $("previa").hidden = true; $("previa").innerHTML = ""; }
-  if ($("terminal")) { $("terminal").hidden = false; term?.focus(); }
-}
+// Para quem chama esta página depois que ela carrega (a navegação, as ações).
+Object.assign(carregadas, { abrirSessao, acompanharSessao, carregarCopia, formSessao, listaSessoes, mostrarLado, mudarCopia, prepararSessoes, trocarSessao });

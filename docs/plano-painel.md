@@ -40,7 +40,8 @@ como está, como outra opção, e é o caminho futuro para óculos de realidade 
   pedido de API leva um token por sessão, entregue só na própria página (outro site não
   consegue lê-la).
 - `zervis/portal/acoes.py`: a ponte entre a API e o núcleo (o que ler, o que mudar).
-- `zervis/portal/web/`: `index.html`, `painel.css`, `painel.js`.
+- `zervis/portal/web/`: `index.html`, `painel.css`, `painel.js` e os módulos ES de `modulos/` e
+  `paginas/` (entrada em `modulos/principal.js`; ADR 0077).
 - As escolhas da via rápida feitas no painel ficam em `~/.local/state/zervis/via-rapida.json`
   (por cima da config, como a escolha do cérebro) e valem na hora, sem reiniciar.
 
