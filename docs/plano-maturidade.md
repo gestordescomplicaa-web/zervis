@@ -116,6 +116,7 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   `ouvir.py` e `ciclo.py`; `cerebro/rapido.py` (1.122 → 696) com os motores em `motores.py`;
   `cerebro/ferramentas/whatsapp.py` (820 → 653) com a leitura em `whatsapp_leitura.py`;
   `atendimento/ligacao.py` (876 → 761) com a fala em `fala_da_ligacao.py`;
+  `oficina/sessoes.py` (2.222 → 1.714) com os agentes em `agentes.py`, falta a classe;
   `tests/test_tamanho_dos_modulos.py` vigia: os que faltam não crescem.
 - [ ] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
 
