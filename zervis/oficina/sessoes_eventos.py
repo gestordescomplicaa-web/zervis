@@ -161,14 +161,18 @@ def _abrir_terminal(
         n.fallback.inicios[id_] = time.time()
         terminal = n._novo_terminal(
             id_,
-            ses.comando_terminal(
+            ses.isolar(
                 s,
-                pedido,
-                n.eventos(id_),
-                n._contexto(id_, contexto),
-                externos,
-                arquivo_mcp,
-                permissao,
+                ses.comando_terminal(
+                    s,
+                    pedido,
+                    n.eventos(id_),
+                    n._contexto(id_, contexto),
+                    externos,
+                    arquivo_mcp,
+                    permissao,
+                ),
+                n._dir(id_),
             ),
             s.onde,
             {**ses.ambiente_da_conta(s), **segredos},

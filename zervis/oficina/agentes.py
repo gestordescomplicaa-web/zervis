@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from zervis import caminhos
 from zervis.cerebro import contas, mcp_externo
 from zervis.memoria import aimemory
+from zervis.oficina import isolamento
 from zervis.oficina.permissoes import PRAZO_CODEX_S, PRAZO_S
 
 if TYPE_CHECKING:
@@ -617,3 +618,41 @@ def comando_terminal(
     if s.esforco:
         cmd += ["--effort", s.esforco]
     return [*cmd, *([pedido] if pedido else [])]
+
+
+def pastas_da_conta(s: "Sessao") -> list[Path]:
+    """Onde a conta do agente guarda o login e as conversas (e o `~/.claude.json` da conta
+    padrão do Claude, que fica fora da pasta)."""
+    try:
+        cs = contas.Contas()
+        conta = cs.achar(s.conta) if s.conta else cs.em_uso(s.motor)
+    except contas.ContaErro:
+        return []
+    pastas = [conta.onde]
+    if s.motor == "claude" and conta.onde == Path.home() / ".claude":
+        pastas.append(Path.home() / ".claude.json")
+    return pastas
+
+
+def git_comum(pasta: Path) -> list[Path]:
+    """O `.git` de verdade de uma cópia isolada (worktree): fica fora da pasta, e o agente precisa
+    dele para ler e fazer commit."""
+    feito = subprocess.run(  # noqa: S603 (git com argumentos fixos)
+        ["git", "-C", str(pasta), "rev-parse", "--path-format=absolute", "--git-common-dir"],  # noqa: S607
+        capture_output=True,
+        text=True,
+    )
+    comum = Path(feito.stdout.strip()) if feito.returncode == 0 and feito.stdout.strip() else None
+    if comum is None or comum.is_relative_to(pasta):
+        return []
+    return [comum]
+
+
+def isolar(s: "Sessao", comando: list[str], pasta_da_sessao: Path) -> list[str]:
+    """O comando do agente, dentro do isolamento quando a sessão é protegida (ADR 0074)."""
+    if not s.protegida:
+        return comando
+    onde = Path(s.worktree or s.pasta)
+    escrita = [onde, pasta_da_sessao, *pastas_da_conta(s), *git_comum(onde)]
+    leitura = [b.parent for b in (aimemory.binario(),) if b is not None]
+    return isolamento.envolver(comando, escrita, leitura, pasta=onde)

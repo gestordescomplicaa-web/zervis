@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from zervis.cerebro import contas, modelos
 from zervis.memoria import aimemory
-from zervis.oficina import continuidade
+from zervis.oficina import continuidade, isolamento
 from zervis.oficina import sessoes as ses
 
 if TYPE_CHECKING:
@@ -67,7 +67,14 @@ def criar_arquivo(
 
 
 def _criar(
-    n: "Sessoes", nome: str, pasta: str, motor: str, modelo: str, isolada: bool, origem: str
+    n: "Sessoes",
+    nome: str,
+    pasta: str,
+    motor: str,
+    modelo: str,
+    isolada: bool,
+    origem: str,
+    protegida: bool = False,
 ) -> ses.Sessao:
     nome = " ".join(nome.split())[:60]
     caminho = n._pasta_permitida(pasta)
@@ -78,6 +85,8 @@ def _criar(
         raise ses.SessaoErro("Já existe autodesenvolvimento neste projeto. Abra a sessão central.")
     if motor not in ses.MOTORES:
         raise ses.SessaoErro(f"motor desconhecido: {motor}")
+    if protegida and (n.legado or not isolamento.disponivel()):
+        raise ses.SessaoErro("Isolamento indisponível nesta máquina: instale o bubblewrap.")
     s = ses.Sessao(
         id=uuid.uuid4().hex[:8],
         nome=nome or caminho.name,
@@ -87,6 +96,7 @@ def _criar(
         modelo=modelo.strip(),
         isolada=isolada,
         origem=origem,
+        protegida=protegida,
     )
     if isolada:
         if ses._git(caminho, "rev-parse", "--is-inside-work-tree").stdout.strip() != "true":
@@ -102,6 +112,7 @@ def _criar(
         s.base = ses._git(caminho, "rev-parse", "HEAD").stdout.strip()
     n._gravar(s)
     onde = f"numa cópia isolada (branch {s.branch})" if isolada else "direto na pasta"
+    onde += ", protegida (o agente só vê o projeto)" if protegida else ""
     n.anotar(s.id, "sistema", f"Sessão criada em {caminho}, {onde}, com o {motor}.")
     n.focar(s.id)
     return s

@@ -40,6 +40,7 @@ class AcoesSessoes(Pagina):
             ],
             "esforco": s.esforco,
             "isolada": s.isolada,
+            "protegida": s.protegida,
             "branch": s.branch,
             "melhorias": s.origem == "manutencao" and bool(s.worktree),  # a sessão do Zé
             "estado": "trabalhando" if s.id in self.n.sessoes.trabalhando() else s.estado,
@@ -103,6 +104,7 @@ class AcoesSessoes(Pagina):
                 str(dados.get("motor", "claude")),
                 str(dados.get("modelo", "")),
                 bool(dados.get("isolada", False)),
+                protegida=bool(dados.get("protegida", False)),
             )
         )
         # Os conectores escolhidos valem antes do agente abrir pela primeira vez.
