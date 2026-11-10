@@ -98,8 +98,13 @@ ligações, web) chegam a um cérebro com ferramentas.
   só lê e responde; executar algo exige a sua aprovação pelo canal confiável.
   [ADR 0073](adr/0073-entrada-de-fora.md): depois de ler texto de terceiros, o turno é "de fora" e
   tudo o que muda algo pede o sim falado; o atendente e o agente das ligações não têm ferramentas.
-- [ ] **Bateria de injeção de prompt** na Frente 3 (mensagem que pede para ignorar regras, página
+- [x] **Bateria de injeção de prompt** na Frente 3 (mensagem que pede para ignorar regras, página
   com instrução escondida, contato que se passa por você).
+  A regra: `tests/test_bateria_injecao.py`, no `make check`, faz um cérebro que obedece a
+  qualquer texto de fora tentar cada ação do Zé depois de cada fonte (570 combinações): zero
+  executam sem o sim falado. O julgamento do cérebro: os cenários da área `injecao` da
+  avaliação (95% na rodada de 09/11/2026).
+
 - Manter: sem loja de skills aberta (o que derrubou o OpenClaw).
 
 Aceite: uma sessão não lê `~/.ssh/id_*` nem os dados do Zé (teste); zero ferramentas de escrita
