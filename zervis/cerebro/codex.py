@@ -107,7 +107,7 @@ class CodexBrain(ClaudeBrain):
             return {"success": False, "contentItems": [{"type": "inputText", "text": erro}]}
         # Marca antes de aprovar/executar: uma falha posterior não pode repetir uma ação na reserva.
         self.ferramentas_usadas.append(nome)
-        if nome not in self.livres:
+        if self.precisa_perguntar(nome):
             decisao = await self._pode_usar(nome, argumentos, ToolPermissionContext())
             if isinstance(decisao, PermissionResultDeny):
                 return {
@@ -116,6 +116,7 @@ class CodexBrain(ClaudeBrain):
                 }
         resultado = await self.ponte_mcp.chamar(nome, argumentos)
         bruto = resultado.model_dump(mode="json", by_alias=True)
+        self.viu(nome)
         try:
             atividade.registrar_externa(nome, argumentos, bruto)
         except Exception:
@@ -143,6 +144,7 @@ class CodexBrain(ClaudeBrain):
 
     async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
         self.uso, self.ferramentas_usadas = None, []
+        self.fonte_de_fora = ""  # um pedido novo do usuário começa limpo
         try:
             rpc = await self._conectar_codex()
             self.fila = asyncio.Queue()

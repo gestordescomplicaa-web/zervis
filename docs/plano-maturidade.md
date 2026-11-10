@@ -94,8 +94,10 @@ ligações, web) chegam a um cérebro com ferramentas.
   `~/.ssh`, `~/.config` e os dados do Zé ficam fora. Ligar por projeto antes de virar padrão.
 - [ ] **Cofre de segredos fora do agente:** credencial por chamada, com escopo e prazo; o segredo
   inteiro nunca vai ao modelo.
-- [ ] **Entrada externa não confiável por regra:** turno vindo de WhatsApp, ligação, e-mail ou web
+- [x] **Entrada externa não confiável por regra:** turno vindo de WhatsApp, ligação, e-mail ou web
   só lê e responde; executar algo exige a sua aprovação pelo canal confiável.
+  [ADR 0073](adr/0073-entrada-de-fora.md): depois de ler texto de terceiros, o turno é "de fora" e
+  tudo o que muda algo pede o sim falado; o atendente e o agente das ligações não têm ferramentas.
 - [ ] **Bateria de injeção de prompt** na Frente 3 (mensagem que pede para ignorar regras, página
   com instrução escondida, contato que se passa por você).
 - Manter: sem loja de skills aberta (o que derrubou o OpenClaw).

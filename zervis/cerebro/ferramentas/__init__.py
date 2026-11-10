@@ -98,6 +98,52 @@ LEITURA = [
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
+# Entrada de fora (plano de maturidade, Frente 2): as ferramentas cuja resposta traz texto de
+# terceiros, e de onde. Depois de uma delas, o turno é "de fora": nada se executa sem a
+# aprovação falada (`ClaudeBrain.viu`). Conectores de outros servidores (n8n, o navegador)
+# também contam.
+DE_FORA = {
+    "whatsapp_conversas": "as conversas do WhatsApp",
+    "whatsapp_ler": "uma conversa do WhatsApp",
+    "whatsapp_buscar": "o arquivo do WhatsApp",
+    "whatsapp_leads": "os leads do WhatsApp",
+    "whatsapp_ligacoes": "o que foi falado nas ligações",
+    "internet_pesquisar": "a internet",
+    "pesquisa_profunda": "a internet",
+    "pagina_ler": "uma página da internet",
+    "pagina_capturar": "uma página da internet",
+    "navegador_continuar": "uma página da internet",
+    "pesquisa_guardada": "uma pesquisa guardada",
+    "instagram_perfil": "o Instagram",
+    "instagram_posts": "o Instagram",
+    "historico_buscar": "o histórico",
+    "historico_ler": "o histórico",
+    "sessao_ler": "a resposta de uma sessão de código",
+}
+EMBUTIDAS_DE_FORA = {"WebSearch": "a internet", "WebFetch": "uma página da internet"}
+# As livres que mudam alguma coisa (as outras só leem): num turno de fora, pedem a aprovação.
+COM_EFEITO = frozenset(
+    f"mcp__{SERVIDOR}__{nome}"
+    for nome in (
+        "automacao_lembrete",
+        "sugestao_descartar",
+        "conector_testar",
+        "modelo3d_baixar",
+        "imagem_baixar",
+        "whatsapp_ja_vi",
+        "whatsapp_prioridade",
+    )
+)
+
+
+def de_fora(nome: str) -> str:
+    """De onde vem o texto de terceiros que a ferramenta devolve ("" se não traz nenhum)."""
+    if nome.startswith(f"mcp__{SERVIDOR}__"):
+        return DE_FORA.get(nome.removeprefix(f"mcp__{SERVIDOR}__"), "")
+    if nome.startswith("mcp__"):
+        return f"o conector {nome.split('__')[1]}"
+    return EMBUTIDAS_DE_FORA.get(nome, "")
+
 
 SKILL_ESCRITA = {f"mcp__{SERVIDOR}__skill_criar", f"mcp__{SERVIDOR}__skill_corrigir"}
 

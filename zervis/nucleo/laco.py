@@ -496,6 +496,9 @@ class Nucleo(
             ),
             frase_exata=self.sistema.frase_exata,
             depois=navegador.ajustar,
+            de_fora=ferramentas.de_fora,
+            com_efeito=ferramentas.COM_EFEITO,
+            autoaprovar_de_fora=navegador.autoaprovar,  # rolar a página não muda nada nela
         )
         self.escolhido = ESTADO / "cerebro"
         self.modelos_escolhidos = ESTADO / "cerebro-modelos.json"
