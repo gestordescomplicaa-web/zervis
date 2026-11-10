@@ -63,6 +63,48 @@ def ambiente_da_conta(s: "Sessao") -> dict[str, str]:
     return {variavel: str(conta.onde)} if os.environ.get(variavel) else {}
 
 
+# O ambiente do Zé vem do perfil de quem usa, que costuma exportar tokens de outros serviços
+# (visto em 10/11/2026: um token do n8n chegava a todas as sessões). Variáveis com nome de segredo
+# não passam para o agente; passam só as que a conta dele usa para entrar e as que a sessão
+# entrega de propósito (a conta, os conectores do projeto, a chave do gancho de permissão).
+SEGREDO = re.compile(
+    r"(?:^|_)(?:API_?KEY|KEY|KEYS|TOKEN|SECRET|PASSWORD|PASSWD|PASS|CREDENTIALS?|AUTH|COOKIE"
+    r"|PRIVATE|DSN|PAT)(?:_|$)",
+    re.IGNORECASE,
+)
+LIVRES = frozenset({"SSH_AUTH_SOCK"})  # um endereço, não um segredo (na protegida, fica fora)
+PROPRIOS = {
+    "claude": frozenset({"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"}),
+    "codex": frozenset({"OPENAI_API_KEY", "CODEX_API_KEY"}),
+}
+# O Claude Code pela Bedrock ou pela Vertex entra com as credenciais da nuvem.
+NUVEM = {"CLAUDE_CODE_USE_BEDROCK": "AWS_", "CLAUDE_CODE_USE_VERTEX": "GOOGLE_"}
+
+
+def sem_segredos(ambiente: dict[str, str], motor: str) -> dict[str, str]:
+    """O ambiente sem as variáveis de segredo que não são do login deste agente."""
+    proprios = PROPRIOS.get(motor, frozenset())
+    nuvens = tuple(p for v, p in NUVEM.items() if motor == "claude" and ambiente.get(v))
+
+    def passa(nome: str) -> bool:
+        if nome in proprios or nome in LIVRES or (nuvens and nome.startswith(nuvens)):
+            return True
+        return not SEGREDO.search(nome)
+
+    return {k: v for k, v in ambiente.items() if passa(k)}
+
+
+def ambiente_do_agente(s: "Sessao", extra: dict[str, str] | None = None) -> dict[str, str]:
+    """O ambiente inteiro do processo do agente: o do Zé sem os segredos, a conta e o `extra`."""
+    return {**sem_segredos(dict(os.environ), s.motor), **ambiente_da_conta(s), **(extra or {})}
+
+
+def ambiente_para_sdk(s: "Sessao") -> dict[str, str]:
+    """O SDK do Claude junta o ambiente do Zé por baixo do que recebe: os segredos vão vazios."""
+    limpo = sem_segredos(dict(os.environ), s.motor)
+    return {**{k: "" for k in os.environ if k not in limpo}, **ambiente_da_conta(s)}
+
+
 # Como os agentes avisam que a conta acabou: o Codex ("You've hit your usage limit", "rate limit
 # reached", "insufficient_quota") e o Claude ("Claude AI usage limit reached", "credit balance is
 # too low", "out of extra usage").

@@ -1,8 +1,8 @@
 # 0074 — Sessões protegidas: o agente só enxerga a pasta do projeto
 
 - Data: 09/11/2026
-- Status: **Em validação** (testado no `make check` e com o `claude` e o `codex` desta máquina
-  dentro do isolamento; falta o primeiro uso de verdade, numa sessão do painel).
+- Status: **Aceita** (testado no `make check`, com o `claude` e o `codex` desta máquina dentro do
+  isolamento, e na primeira sessão protegida de verdade, criada pelo painel em 10/11/2026).
 
 ## Contexto
 
@@ -36,5 +36,6 @@ Zé".
   É de propósito: publicar segue pelo usuário, como as regras das sessões já pediam.
 - Não é um contêiner: o processo é do mesmo usuário e a rede é a mesma. Na VPS, o plano prevê um
   contêiner (fica para a Fase C).
-- Falta: criar a sessão protegida pela voz, e o cofre de segredos (os segredos dos conectores
-  ainda vão no ambiente do agente).
+- Falta: criar a sessão protegida pela voz, e o cofre de segredos (o ambiente sem os segredos do
+  Zé e o `/run/user` escondido entraram no [ADR 0075](0075-segredos-fora-do-agente.md); os
+  segredos dos conectores ainda vão ao processo do agente).

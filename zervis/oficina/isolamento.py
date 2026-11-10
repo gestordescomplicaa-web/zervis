@@ -8,12 +8,15 @@ para leitura, e a pasta pessoal é trocada por uma vazia. Dela voltam só:
 - só para leitura: o que faz os programas rodarem (o `mise` e as instalações dele, o Claude Code,
   o `~/.local/bin`, o `~/.gitconfig`) e o Python do próprio Zé (um gancho usa).
 
-Fora ficam o `~/.ssh`, o resto do `~/.config`, os dados do Zé e das outras sessões, as chaves e o
-navegador. A rede continua: o agente precisa da API do modelo, e o gancho de permissão fala com
-o Zé por `127.0.0.1`. Não é um contêiner: o processo é do mesmo usuário, só não enxerga o resto.
+Fora ficam o `~/.ssh`, o resto do `~/.config`, os dados do Zé e das outras sessões, as chaves, o
+navegador e o `/run/user/<uid>` (D-Bus, chaveiro, ssh-agent). O ambiente do agente vai sem as
+variáveis de segredo do Zé (`agentes.sem_segredos`), protegida ou não. A rede continua: o
+agente precisa da API do modelo, e o gancho de permissão fala com o Zé por `127.0.0.1`.
+Não é um contêiner: o processo é do mesmo usuário, só não enxerga o resto.
 """
 
 import functools
+import os
 import shutil
 import subprocess
 import sys
@@ -62,6 +65,7 @@ def envolver(
     leitura: Iterable[Path] = (),
     casa: Path | None = None,
     pasta: Path | None = None,
+    runtime: Path | None = None,
 ) -> list[str]:
     """O `comando` dentro do isolamento. Caminhos que não existem ficam de fora."""
     casa = casa or Path.home()
@@ -73,9 +77,16 @@ def envolver(
         "--tmpfs", "/tmp",  # noqa: S108 (um /tmp novo e vazio, só dentro do isolamento)
         "--tmpfs", str(casa),
     ]  # fmt: skip
+    # O XDG_RUNTIME_DIR (/run/user/<uid>) guarda portas para fora do isolamento: o D-Bus
+    # (chaveiro; `systemd-run --user` roda um comando lá fora), o ssh-agent e o gpg-agent.
+    if runtime is None and (do_ambiente := os.environ.get("XDG_RUNTIME_DIR")):
+        runtime = Path(do_ambiente)
     vistos: set[str] = set()
     # O que o isolamento troca por vazio: só o que mora aqui precisa voltar.
     escondidas = [casa.resolve(), Path("/tmp").resolve()]  # noqa: S108
+    if runtime is not None and runtime.is_dir():
+        args += ["--tmpfs", str(runtime.resolve())]
+        escondidas.append(runtime.resolve())
 
     def escondido(caminho: Path) -> bool:
         return any(caminho.is_relative_to(raiz) for raiz in escondidas)

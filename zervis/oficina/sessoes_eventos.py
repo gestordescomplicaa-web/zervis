@@ -101,7 +101,14 @@ def _novo_terminal(
         except OSError as erro:
             ses.log.warning("supervisor das sessões falhou (%s): terminal no próprio Zé", erro)
     return Terminal(
-        comando, pasta, ambiente, ao_sair=ao_sair, ao_ler=ao_ler, colunas=colunas, linhas=linhas
+        comando,
+        pasta,
+        ambiente,
+        ao_sair=ao_sair,
+        ao_ler=ao_ler,
+        colunas=colunas,
+        linhas=linhas,
+        herdar=False,  # o ambiente já vem inteiro, sem os segredos do Zé
     )
 
 
@@ -175,7 +182,7 @@ def _abrir_terminal(
                 n._dir(id_),
             ),
             s.onde,
-            {**ses.ambiente_da_conta(s), **segredos},
+            ses.ambiente_do_agente(s, segredos),
             chave,
             prazo if chave else None,
             colunas,

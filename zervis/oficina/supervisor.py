@@ -591,12 +591,12 @@ class Oficina:
         linhas: int = 32,
         meta: dict[str, Any] | None = None,
     ) -> TerminalRemoto:
-        """Como `Terminal(...)`: o ambiente vai inteiro (o do Zé mais o da sessão)."""
+        """Como `Terminal(...)`, com o `ambiente` já inteiro (`agentes.ambiente_do_agente`)."""
         pedido = {
             "nome": nome,
             "comando": list(comando),
             "pasta": str(pasta),
-            "ambiente": {**os.environ, **ambiente},
+            "ambiente": dict(ambiente),
             "colunas": colunas,
             "linhas": linhas,
             "meta": meta or {},
