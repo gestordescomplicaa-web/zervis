@@ -655,4 +655,7 @@ def isolar(s: "Sessao", comando: list[str], pasta_da_sessao: Path) -> list[str]:
     onde = Path(s.worktree or s.pasta)
     escrita = [onde, pasta_da_sessao, *pastas_da_conta(s), *git_comum(onde)]
     leitura = [b.parent for b in (aimemory.binario(),) if b is not None]
+    # Onde o agente está instalado de verdade (o executável costuma ser um link para lá).
+    if executavel := shutil.which(comando[0]):
+        leitura.append(Path(executavel).resolve().parent.parent)
     return isolamento.envolver(comando, escrita, leitura, pasta=onde)
