@@ -63,6 +63,13 @@ jobs:
           echo "$navegador"
           timeout 120 "$navegador" --headless=new --dump-dom about:blank > /dev/null
 
+      # As sessões protegidas (ADR 0074) rodam no bubblewrap; o aceite delas não pode ser pulado.
+      - name: Bubblewrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends bubblewrap
+          bwrap --ro-bind / / --dev /dev true
+
       - name: make check
         run: |
           set -o pipefail
