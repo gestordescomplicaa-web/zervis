@@ -25,6 +25,7 @@ DA_CASA = (
     ".local/bin",
     ".local/share/mise",
     ".local/share/claude",
+    ".codex/packages",  # o Codex instalado pelo instalador dele (o ~/.local/bin/codex aponta aqui)
     ".local/share/uv/python",
     ".config/mise",
     ".config/git",
@@ -73,19 +74,34 @@ def envolver(
         "--tmpfs", str(casa),
     ]  # fmt: skip
     vistos: set[str] = set()
+    # O que o isolamento troca por vazio: só o que mora aqui precisa voltar.
+    escondidas = [casa.resolve(), Path("/tmp").resolve()]  # noqa: S108
+
+    def escondido(caminho: Path) -> bool:
+        return any(caminho.is_relative_to(raiz) for raiz in escondidas)
 
     def ligar(opcao: str, caminho: Path) -> None:
-        if str(caminho) in vistos or not caminho.exists():
+        if not caminho.exists():
             return
-        vistos.add(str(caminho))
-        args.extend([opcao, str(caminho), str(caminho)])
+        # Monta sempre o caminho de verdade: no Arch, /usr/sbin é um link para bin, e o bwrap
+        # não monta sobre um link ("Can't mount on symlink destination", 09/11/2026).
+        real = caminho.resolve()
+        if (opcao == "--bind" or escondido(real)) and str(real) not in vistos:
+            vistos.add(str(real))  # o resto do sistema já está visível, só para leitura
+            args.extend([opcao, str(real), str(real)])
+        # Chegando por um link que mora na parte escondida (um ~/.gitconfig que aponta para
+        # outro lugar), o mesmo link lá dentro.
+        absoluto = caminho.absolute()
+        if absoluto != real and escondido(absoluto) and str(absoluto) not in vistos:
+            vistos.add(str(absoluto))
+            args.extend(["--symlink", str(real), str(absoluto)])
 
     for relativo in DA_CASA:
         ligar("--ro-bind", casa / relativo)
     for caminho in [*leitura, *_python_do_ze()]:
         ligar("--ro-bind", caminho)
     for caminho in escrita:  # por último: valem por cima de uma leitura que as contenha
-        vistos.discard(str(caminho))
+        vistos.discard(str(caminho.resolve()))
         ligar("--bind", caminho)
     args += ["--die-with-parent"]
     if pasta is not None:

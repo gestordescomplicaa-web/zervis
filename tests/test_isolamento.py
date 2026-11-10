@@ -96,3 +96,25 @@ def test_sem_bubblewrap_nao_cria_sessao_protegida(
     s = sessoes.criar("Loja", str(raiz / "loja"), protegida=True)
     assert s.protegida and sessoes.ler(s.id).protegida  # fica gravado
     assert "protegida" in sessoes.mensagens(s.id)[0]["texto"]
+
+
+@precisa_do_bwrap
+def test_links_do_sistema_e_da_casa_nao_quebram_o_isolamento(tmp_path: Path) -> None:
+    """09/11/2026: no Arch, /usr/sbin é um link para bin, e o bwrap recusava montar ali ("Can't
+    mount on symlink destination"). O que só se lê fora da casa já está visível; um link dentro
+    da casa (o ~/.gitconfig que aponta para outro lugar) chega lá dentro como link."""
+    casa, projeto = _casa(tmp_path)
+    (casa / "dotfiles").mkdir()
+    (casa / "dotfiles" / "gitconfig").write_text("[user]\n")
+    (casa / ".gitconfig").symlink_to(casa / "dotfiles" / "gitconfig")
+    comando = isolamento.envolver(
+        ["sh", "-c", f"cat {casa / '.gitconfig'}"],
+        [projeto],
+        [Path("/usr/sbin"), Path("/usr/bin")],
+        casa=casa,
+        pasta=projeto,
+    )
+    assert "/usr/sbin" not in comando and "/usr/bin" not in comando  # o sistema já está visível
+    feito = subprocess.run(comando, capture_output=True, text=True, timeout=30)  # noqa: S603
+    assert feito.returncode == 0, feito.stderr
+    assert feito.stdout == "[user]\n"
