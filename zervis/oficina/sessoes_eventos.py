@@ -143,19 +143,20 @@ def _abrir_terminal(
     n.eventos(id_).touch(mode=0o600)
     n._lidos[id_] = n.eventos(id_).stat().st_size
     n._dados.guardar(ses.LIDOS, {"posicao": n._lidos[id_]}, id_)
-    externos = ses.conectores_do_projeto(s)
-    arquivo_mcp = (
-        ses.arquivo_de_conectores(n._dir(id_) / ses.CONECTORES, externos)
-        if s.motor == "claude"
-        else None
-    )
     permissao = n.permissoes.endereco
-    segredos = ses.conectores_codex(externos, bool(permissao))[1] if s.motor == "codex" else {}
     # A chave do gancho de permissão vai no ambiente do terminal, nunca na linha de comando.
     # O Codex só aceita gancho de comando, e o comando precisa ser sempre o mesmo (ele pede
     # para confiar em cada gancho novo): o endereço, o prazo e os eventos vão no ambiente.
     prazo = PRAZO_CODEX_S if s.motor == "codex" else None
     chave = n.permissoes.chave(id_, prazo) if permissao else ""
+    # Os conectores com segredo pela ponte do Zé (ADR 0076): ao agente, só a chave da sessão.
+    externos = n.ponte.para_agente(ses.conectores_do_projeto(s), chave)
+    arquivo_mcp = (
+        ses.arquivo_de_conectores(n._dir(id_) / ses.CONECTORES, externos)
+        if s.motor == "claude"
+        else None
+    )
+    segredos = ses.conectores_codex(externos, bool(permissao))[1] if s.motor == "codex" else {}
     if chave:
         segredos = {**segredos, ses.VARIAVEL_PERMISSAO: chave}
         if s.motor == "codex":

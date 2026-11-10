@@ -40,6 +40,5 @@ e o `systemd-run --user`, que roda um comando fora do isolamento), o ssh-agent e
 - A memória longa continua: o ai-memory fala com o servidor dele por `127.0.0.1`. Esse servidor
   não pede autenticação, então o agente ainda consegue buscar o histórico de todos os projetos;
   fechar isso é ligar a autenticação do ai-memory com uma chave só de leitura do projeto.
-- Falta para o cofre completo: os segredos dos conectores ainda vão inteiros ao processo do
-  agente (no ambiente, ou no arquivo 0600 do Claude). O próximo passo é a credencial por chamada,
-  com escopo e prazo, sem o segredo inteiro no agente.
+- Os segredos dos conectores saíram do agente no [ADR 0076](0076-ponte-dos-conectores.md) (a
+  ponte dos conectores).

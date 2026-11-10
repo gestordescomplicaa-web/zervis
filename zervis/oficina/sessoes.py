@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from zervis import fuso
-from zervis.cerebro import contas, modelos
+from zervis.cerebro import contas, mcp_externo, modelos
 from zervis.dados.documentos import Documentos, linhas_json, objeto_json
 from zervis.memoria import aimemory
 from zervis.oficina import (
@@ -93,6 +93,7 @@ from zervis.oficina.agentes import pastas_da_conta as pastas_da_conta
 from zervis.oficina.agentes import pede_aprovacao as pede_aprovacao
 from zervis.oficina.agentes import regras_de_skills as regras_de_skills
 from zervis.oficina.permissoes import Permissoes
+from zervis.oficina.ponte import Ponte
 from zervis.oficina.supervisor import Oficina, TerminalRemoto
 from zervis.oficina.terminal import Terminal
 
@@ -265,6 +266,10 @@ class Sessoes:
         self.ao_avisar: Callable[[Sessao, str], None] | None = None  # aprovação pedida no terminal
         # Os pedidos de permissão do Claude, decididos também fora do terminal (ADR 0039).
         self.permissoes = Permissoes()
+        # Os conectores com segredo passam pelo Zé (ADR 0076): o agente só leva a chave da sessão.
+        self.ponte = Ponte(
+            self.permissoes.sessao_da_chave, self._conectores, self.permissoes.tem_chave
+        )
         # Motivo para não aceitar trabalho agora (o Zé vai se atualizar, ADR 0028), ou None.
         self.reservada: Callable[[], str | None] = lambda: None
         # Sem `rodar`, cada sessão é um terminal real (o agente com todos os comandos dele);
@@ -340,6 +345,10 @@ class Sessoes:
             self.terminais.clear()
 
     # --- disco ---------------------------------------------------------------------------
+
+    def _conectores(self, id_: str) -> tuple[mcp_externo.Externos, Path]:
+        s = self.ler(id_)
+        return conectores_do_projeto(s), Path(s.onde)
 
     def _dir(self, id_: str) -> Path:
         if not re.fullmatch(r"[0-9a-f]{8}", id_):

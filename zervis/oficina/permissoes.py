@@ -187,6 +187,10 @@ class Permissoes:
         if not outro:
             self.retirar(sessao)
 
+    def tem_chave(self, sessao: str) -> bool:
+        with self._mudou:
+            return sessao in self._chaves.values()
+
     def sessao_da_chave(self, chave: str) -> str | None:
         with self._mudou:
             return self._chaves.get(_resumo(chave)) if chave else None
