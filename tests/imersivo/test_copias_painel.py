@@ -100,9 +100,12 @@ async def verificar(tmp_path):
             assert (onde / 'a.txt').read_text() == 'aplicado\n'
             assert (projeto / 'a.txt').read_text() == 'aplicado\n'
             # A configuração inicial não tem entrada no menu lateral.
-            await avaliar('carregarPagina("configurar")')  # sob demanda; depois troca o conteúdo
-            await avaliar('PAGINAS.configurar = async () => "<h1>Configuração</h1>"')
-            await avaliar('(async () => { location.hash = "#configurar"; await abrir(); })()')
+            # O painel é feito de módulos ES (ADR 0077): o teste os alcança pelo import.
+            await avaliar('''(async () => {
+                const nav = await import("/modulos/navegacao.js"), painel = await import("/painel.js");
+                await nav.carregarPagina("configurar");  // sob demanda; depois troca o conteúdo
+                painel.PAGINAS.configurar = async () => "<h1>Configuração</h1>";
+                location.hash = "#configurar"; await nav.abrir(); })()''')
             assert await avaliar('document.querySelector("#conteudo h1").textContent') == 'Configuração'
     finally:
         processo.terminate()

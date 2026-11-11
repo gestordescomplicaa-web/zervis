@@ -65,21 +65,25 @@ jobs:
 
       # As sessões protegidas (ADR 0074) rodam no bubblewrap; o aceite delas não pode ser pulado.
       # Os espelhos do Ubuntu da própria máquina do GitHub (azure.archive, security) às vezes ficam
-      # sem DNS (11/11/2026, uma manhã inteira): então todo o apt desta máquina (este passo e o
-      # instalador, adiante) usa o espelho oficial do kernel.org. O apt confere a assinatura do
-      # Ubuntu do mesmo jeito.
+      # sem DNS (11/11/2026, uma manhã inteira), e cada máquina alcança uns espelhos e não outros:
+      # então todo o apt desta máquina (este passo e o instalador, adiante) passa para o primeiro
+      # espelho oficial que responder, por IPv4. O apt confere a assinatura do Ubuntu do mesmo jeito.
       - name: Bubblewrap
         run: |
           apt_rapido="-o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
           if ! { sudo apt-get $apt_rapido update && sudo apt-get $apt_rapido install -y --no-install-recommends bubblewrap; }; then
-            echo "::warning::Espelhos do Ubuntu fora do ar; o apt passa a usar o mirrors.edge.kernel.org."
             versao=$(. /etc/os-release && echo "$VERSION_CODENAME")
             sudo mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/ubuntu.sources.fora 2>/dev/null || true
-            for parte in "" -updates -security -backports; do
-              echo "deb http://mirrors.edge.kernel.org/ubuntu ${versao}${parte} main restricted universe multiverse"
-            done | sudo tee /etc/apt/sources.list
-            sudo apt-get $apt_rapido update
-            sudo apt-get install -y --no-install-recommends bubblewrap
+            echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99ipv4
+            for espelho in http://us.archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu \
+                http://mirrors.mit.edu/ubuntu http://mirror.math.princeton.edu/pub/ubuntu; do
+              curl -4 -fsS -m 20 -o /dev/null "$espelho/dists/$versao/InRelease" || continue
+              echo "::warning::Espelhos do Ubuntu da máquina fora do ar; o apt passa a usar $espelho."
+              for parte in "" -updates -security -backports; do
+                echo "deb $espelho ${versao}${parte} main restricted universe multiverse"
+              done | sudo tee /etc/apt/sources.list
+              sudo apt-get $apt_rapido update && sudo apt-get install -y --no-install-recommends bubblewrap && break
+            done
           fi
           bwrap --ro-bind / / --dev /dev true
 
