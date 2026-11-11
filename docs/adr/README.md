@@ -87,3 +87,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0077](0077-painel-em-modulos-es.md) | O painel em módulos ES: imports explícitos, o estado compartilhado num lugar, sem build | Aceita |
 | [0078](0078-abertura.md) | A abertura: música e o resumo do dia, falado, ao abrir o Zérvis | Aceita |
 | [0079](0079-ze-como-programa.md) | No PC, o Zé é um programa: abrir liga, fechar a última janela desliga | Aceita |
+| [0080](0080-macaco-holografico.md) | O Zé como macaco holográfico: o busto livre preparado no Blender, boca, dentes e expressões | Aceita |

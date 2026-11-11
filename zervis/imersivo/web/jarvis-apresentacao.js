@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The Zé presents himself (ADR 0045, approved in the hologram lab on 29/10/2026): he moves to the
-// side, turns towards the board, and holographic panels materialize one by one, linked to him by
-// beams, while a caption says what each one shows. Every number comes from his self-knowledge
+// side, turns towards the board, and holographic panels materialize one by one, while a caption
+// says what each one shows (no beams from him to the panels since 11/11/2026: they crossed the
+// other panels). Every number comes from his self-knowledge
 // (GET /autoconhecimento, written by the Zé once a minute): the screen only shows what he knows of
 // himself. The panels are real board items (jarvisStage.adicionar): the hands grab, move, scale
 // and throw them away like any card. Start: the A key, Configurações → Apresentação, or the Zé's
@@ -15,12 +16,6 @@
   const espera = ms => new Promise(r => setTimeout(r, ms * ritmo));
   const reduzir = matchMedia("(prefers-reduced-motion: reduce)");
 
-  // Beams live behind the cards, in the board layer.
-  const feixes = document.createElementNS(NS, "svg");
-  feixes.id = "jv-feixes"; feixes.setAttribute("aria-hidden", "true");
-  feixes.innerHTML = `<defs><linearGradient id="jv-g-feixe" x1="0" x2="1"><stop offset="0" stop-color="#eafffb" stop-opacity=".9"/>
-    <stop offset="1" stop-color="var(--jv-acento, #8ff0e4)" stop-opacity=".25"/></linearGradient></defs>`;
-  const quadro = () => document.getElementById("behind");
   const legenda = Object.assign(document.createElement("div"), { id: "jv-legenda-ze" });
   legenda.setAttribute("aria-live", "polite");
   const dica = Object.assign(document.createElement("div"), { id: "jv-dica-ze" });
@@ -38,12 +33,11 @@
   }
 
   // ---- panels ----
-  const paineis = new Map();  // id -> {it, el, feixe, pacote, fase, quadro?}
+  const paineis = new Map();  // id -> {it, el, quadro?}
   const vw = () => innerWidth, vh = () => innerHeight;
   // fonte: what the bottom-right tag says (AO VIVO for his own data); ilustrativo marks a scene
   // whose numbers are an example, not a measurement.
-  // semFeixe: no beam from the Zé (the opening, ADR 0078: the lines crossed the other panels).
-  function painel(id, { cod, titulo, x, y, w, h, corpo = "", fonte = "AO VIVO", ilustrativo = false, classe = "", semFeixe = false }) {
+  function painel(id, { cod, titulo, x, y, w, h, corpo = "", fonte = "AO VIVO", ilustrativo = false, classe = "" }) {
     if (paineis.has(id)) return paineis.get(id);
     const el = document.createElement("div");
     el.className = "card jv-holo" + (classe ? " " + classe : ""); el.dataset.titulo = titulo;
@@ -54,34 +48,26 @@
       <div class="jv-h-regua"></div><div class="jv-h-corpo">${corpo}</div></div>`;
     const it = window.jarvisStage.adicionar(el, { x: (x + w / 2) * vw(), y: (y + h / 2) * vh() });
     it.ry = -.12;  // turned a little towards the Zé on the left
-    const f = document.createElementNS(NS, "path"); f.setAttribute("class", "feixe");
-    const p = document.createElementNS(NS, "circle"); p.setAttribute("r", "2.4"); p.setAttribute("class", "pacote");
-    if (semFeixe) { f.classList.add("oculto"); p.classList.add("oculto"); }
-    feixes.append(f, p);
-    const reg = { id, it, el, feixe: f, pacote: p, fase: Math.random() };
+    const reg = { id, it, el };
     paineis.set(id, reg);
     tom(1760, .12, .02, "sine", 0, .18); tom(420, .3, .015, "triangle", 1200);
     return reg;
   }
-  // Any other board item (a 3D hologram's model card) joins the show: beam, focus, cleared with it.
+  // Any other board item (a 3D hologram's model card) joins the show: focus, cleared with it.
   function anexar(id, it) {
     if (paineis.has(id)) return paineis.get(id);
-    const f = document.createElementNS(NS, "path"); f.setAttribute("class", "feixe");
-    const p = document.createElementNS(NS, "circle"); p.setAttribute("r", "2.4"); p.setAttribute("class", "pacote");
-    feixes.append(f, p);
-    const reg = { id, it, el: it.el, feixe: f, pacote: p, fase: Math.random() };
+    const reg = { id, it, el: it.el };
     paineis.set(id, reg);
     tom(1320, .18, .02, "sine", 0, .1); tom(330, .5, .02, "triangle", 990);
     return reg;
   }
   function tirar(reg) {
-    paineis.delete(reg.id); reg.feixe.remove(); reg.pacote.remove();
+    paineis.delete(reg.id);
     if (reg.el.isConnected) window.jarvisStage.remover(reg.it);
   }
   function focar(id) {
     for (const r of paineis.values()) {
       r.el.classList.toggle("foco", r.id === id); r.el.classList.toggle("recuado", !!id && r.id !== id);
-      r.feixe.classList.toggle("foco", r.id === id);
     }
   }
 
@@ -261,7 +247,6 @@
     return id;
   }
   function roteiro(id, passos) {
-    const q = quadro(); if (q && feixes.parentNode !== q) q.insertBefore(feixes, q.firstChild);
     apresentando = true; paraOCanto(); tom(110, 1.2, .03, "sawtooth", 440); tom(880, .4, .025, "sine", 0, 1);
     (async () => {
       await espera(700);
@@ -295,8 +280,7 @@
     return { apresentando: false };
   }
 
-  // ---- every frame: the Zé easing to his place, beams, live panels ----
-  const v = { x: 0, y: 0 };
+  // ---- every frame: the Zé easing to his place, live panels ----
   let ultimo = performance.now();
   (function laco(agora) {
     requestAnimationFrame(laco);
@@ -310,14 +294,8 @@
       if (alvo.fim && Math.hypot(alvo.x - anel.x, alvo.y - anel.y) < 1) alvo = null;
     }
     if (!paineis.size) return;
-    const ra = anel?.el.getBoundingClientRect();
-    v.x = ra ? ra.left + ra.width / 2 : vw() * .16; v.y = ra ? ra.top + ra.height * .45 : vh() * .45;
     for (const r of [...paineis.values()]) {
-      if (!r.el.isConnected || r.it.anim?.k === "out") { if (!r.el.isConnected) { paineis.delete(r.id); r.feixe.remove(); r.pacote.remove(); } continue; }
-      const b = r.el.getBoundingClientRect(), ax = b.left, ay = b.top + b.height / 2, mx = (v.x + ax) / 2;
-      r.feixe.setAttribute("d", `M${v.x.toFixed(1)},${v.y.toFixed(1)} C${mx.toFixed(1)},${v.y.toFixed(1)} ${mx.toFixed(1)},${ay.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`);
-      const L = r.feixe.getTotalLength();
-      if (L > 0 && !reduzir.matches) { const p = r.feixe.getPointAtLength(((t * .45 + r.fase) % 1) * L); r.pacote.setAttribute("cx", p.x); r.pacote.setAttribute("cy", p.y); }
+      if (!r.el.isConnected || r.it.anim?.k === "out") { if (!r.el.isConnected) paineis.delete(r.id); continue; }
       r.quadro?.(t);
     }
     if (apresentando && !paineis.size && !alvo) apresentando = false;
