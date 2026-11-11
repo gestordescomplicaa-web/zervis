@@ -9,9 +9,10 @@ para leitura, e a pasta pessoal é trocada por uma vazia. Dela voltam só:
   o `~/.local/bin`, o `~/.gitconfig`) e o Python do próprio Zé (um gancho usa).
 
 Fora ficam o `~/.ssh`, o resto do `~/.config`, os dados do Zé e das outras sessões, as chaves, o
-navegador e o `/run/user/<uid>` (D-Bus, chaveiro, ssh-agent). O ambiente do agente vai sem as
-variáveis de segredo do Zé (`agentes.sem_segredos`), protegida ou não. A rede continua: o
-agente precisa da API do modelo, e o gancho de permissão fala com o Zé por `127.0.0.1`.
+navegador, o `/run/user/<uid>` (D-Bus, chaveiro, ssh-agent) e os outros processos da máquina.
+O ambiente do agente vai sem as variáveis de segredo do Zé (`agentes.sem_segredos`), protegida
+ou não. A rede continua: o agente precisa da API do modelo, e o gancho de permissão fala com o
+Zé por `127.0.0.1`.
 Não é um contêiner: o processo é do mesmo usuário, só não enxerga o resto.
 """
 
@@ -73,6 +74,7 @@ def envolver(
         "bwrap",
         "--ro-bind", "/", "/",
         "--dev", "/dev",
+        "--unshare-pid",  # só os processos da sessão: nem a lista nem os comandos dos outros
         "--proc", "/proc",
         "--tmpfs", "/tmp",  # noqa: S108 (um /tmp novo e vazio, só dentro do isolamento)
         "--tmpfs", str(casa),

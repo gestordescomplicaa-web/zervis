@@ -23,7 +23,8 @@ Zé".
    - só leitura: o que faz os programas rodarem (`mise` e as instalações dele, o Claude Code, o
      `~/.local/bin`, o `~/.gitconfig`), o Python do Zé (um gancho usa) e o `ai-memory`.
    Fora ficam o `~/.ssh`, o resto do `~/.config`, os dados do Zé e das outras sessões e o
-   navegador.
+   navegador. Desde 10/11/2026 também os outros processos da máquina (`--unshare-pid`): o
+   agente não vê a lista nem a linha de comando deles.
 3. **A rede continua:** o agente precisa da API do modelo, e o gancho de permissão fala com o Zé
    por `127.0.0.1`.
 4. **Ligada sessão a sessão**, como o plano pede: vira o padrão depois de umas semanas sem
