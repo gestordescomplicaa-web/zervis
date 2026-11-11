@@ -111,7 +111,8 @@ jobs:
           done
           xdpyinfo -display :99 > /dev/null
           timeout 600 deploy/instalar-pc.sh 2>&1 | tee "$RUNNER_TEMP/instalador.log"
-          systemctl --user is-enabled zervis
+          # No PC, o Zé é um programa (ADR 0079): ligado agora, sem ligar sozinho no login.
+          ! systemctl --user is-enabled --quiet zervis
           systemctl --user is-active zervis
           test -f "$HOME/.local/share/applications/zervis.desktop"
           uv run python - <<'PY'
