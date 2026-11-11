@@ -135,3 +135,68 @@ def test_fontes_da_pesquisa_saem_da_fala() -> None:
         "As fontes de energia: sol e vento.",
         "",
     )
+
+
+def test_ate_onde_a_voz_chegou_no_pedaco() -> None:
+    from zervis.rosto.anel import falado_ate
+
+    texto = "x" * 100  # 6,5 s estimados
+    assert falado_ate(texto, 0.0, 6.5, gerando=False) == 0
+    assert falado_ate(texto, 3.25, 6.5, gerando=False) == 50
+    assert falado_ate(texto, 9.0, 6.5, gerando=False) == 100
+    # o áudio ainda chegando (só 2 s gerados): a estimativa pelo texto, não o fim do que já veio
+    assert falado_ate(texto, 1.95, 2.0, gerando=True) == 30
+    assert falado_ate("", 1.0, 0.0, gerando=True) == 0
+
+
+def test_o_anel_grava_o_pedaco_que_a_voz_esta_dizendo(tmp_path: Path) -> None:
+    import time
+
+    import numpy as np
+
+    from zervis.rosto.anel import Anel
+
+    anel = Anel(tmp_path, intervalo=0.01)
+    pcm = np.zeros(16000, dtype=np.float32)  # 1 s a 16 kHz
+    anel.comecar(lambda: pcm, 16000, "Primeiro o sol aquece.")
+    fim = time.monotonic() + 2
+    while not (tmp_path / "fala.json").exists() and time.monotonic() < fim:
+        time.sleep(0.01)
+    time.sleep(0.2)
+    anel.parar()
+    fala = json.loads((tmp_path / "fala.json").read_text())
+    assert fala["texto"] == "Primeiro o sol aquece." and 0 < fala["ate"] <= 22
+    assert fala["inicio"] <= fala["ts"] <= time.time()
+
+
+def test_a_voz_passa_ao_anel_o_texto_de_cada_pedaco() -> None:
+    import io
+
+    from zervis.voz.saida import Voz
+
+    recebidos: list[str] = []
+
+    class Onda:
+        def comecar(self, amostras: object, taxa: int, texto: str = "") -> None:
+            recebidos.append(texto)
+
+        def parar(self) -> None:
+            pass
+
+    class Tocador:
+        def __init__(self) -> None:
+            self.stdin = io.BytesIO()
+
+        def poll(self) -> int | None:
+            return 0
+
+        def wait(self) -> int:
+            return 0
+
+        def kill(self) -> None:
+            pass
+
+    voz = Voz(onda=Onda(), abrir_fluxo=lambda t: (16000, io.BytesIO(b"\0" * 64000)), folga_s=0)
+    voz.destino = lambda taxa: Tocador()
+    voz._falar(["Primeiro o sol.", "Depois a chuva."], voz.epoca, 0.0)
+    assert recebidos == ["Primeiro o sol.", "Depois a chuva."]

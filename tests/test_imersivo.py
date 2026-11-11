@@ -56,6 +56,16 @@ def test_sobe_com_a_pagina_e_le_o_estado_da_pasta_do_ze(imersivo: Imersivo) -> N
     (imersivo.pasta_estado / "wave.json").write_text(json.dumps(onda))
     orbe = pegar(imersivo, "/orb")
     assert orbe["state"] == "speaking" and orbe["wave"] == [0.5] * 64
+    # a frase que a voz está dizendo, para a cena do "explicar" andar no ritmo dela
+    fala = {"texto": "Primeiro o sol.", "ate": 8, "inicio": 100.0, "ts": time.time()}
+    (imersivo.pasta_estado / "fala.json").write_text(json.dumps(fala))
+    assert pegar(imersivo, "/orb")["fala"] == {
+        "texto": "Primeiro o sol.",
+        "ate": 8,
+        "inicio": 100.0,
+    }
+    (imersivo.pasta_estado / "fala.json").write_text(json.dumps({**fala, "ts": time.time() - 5}))
+    assert "fala" not in pegar(imersivo, "/orb")  # velha: a voz já parou
 
 
 def test_sem_manifesto_os_orbes_do_padrao_iguais_aos_do_ze(imersivo: Imersivo) -> None:

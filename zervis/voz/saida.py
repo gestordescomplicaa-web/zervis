@@ -74,7 +74,7 @@ class Tocador(Protocol):
 class Onda(Protocol):
     """O anel do Barehands acompanha a voz enquanto ela toca."""
 
-    def comecar(self, amostras: Callable[[], Amostras], taxa: int) -> None: ...
+    def comecar(self, amostras: Callable[[], Amostras], taxa: int, texto: str = "") -> None: ...
     def parar(self) -> None: ...
 
 
@@ -283,7 +283,7 @@ class Voz:
         self.reprodutor = reprodutor
         assert reprodutor.stdin is not None  # noqa: S101 (criado com PIPE)
         if self.onda:
-            self.onda.comecar(pedaco.pcm.amostras, taxa)
+            self.onda.comecar(pedaco.pcm.amostras, taxa, pedaco.texto)
         escritas = 0
         inicio = time.monotonic()
         faltou = False

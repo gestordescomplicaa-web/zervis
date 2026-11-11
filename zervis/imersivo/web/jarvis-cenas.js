@@ -531,6 +531,9 @@
         };
       }),
     }));
+    // each step waits for the Zé's voice to reach the next one (jarvis-ritmo.js)
+    const ritmo = window.jarvisRitmo?.ritmar(passos, id);
+    if (ritmo) passos.forEach((p, i) => { p.aguardar = ritmo[i]; });
     atual = c.titulo || "cena";
     palco.roteiro(id, passos);
     return { explicando: true, cena: atual, blocos: n, paginas, ...(c.ignorados.length ? { ignorados: c.ignorados } : {}) };
