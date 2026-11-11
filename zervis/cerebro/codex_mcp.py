@@ -13,6 +13,30 @@ from mcp.shared._httpx_utils import create_mcp_http_client
 from mcp.shared.memory import create_client_server_memory_streams
 
 
+async def abrir_transporte(
+    recursos: AsyncExitStack, cfg: dict[str, Any], pasta: str | None = None
+) -> tuple[Any, Any]:
+    """O caminho até um servidor MCP de fora (stdio, sse ou http), aberto dentro de `recursos`.
+    `pasta`: onde roda um servidor stdio (o projeto da sessão, na ponte dos conectores)."""
+    if cfg["type"] == "stdio":
+        parametros = StdioServerParameters(
+            command=cfg["command"], args=cfg.get("args", []), env=cfg.get("env"), cwd=pasta
+        )
+        return await recursos.enter_async_context(stdio_client(parametros))
+    if cfg["type"] == "sse":
+        return await recursos.enter_async_context(
+            sse_client(cfg["url"], headers=cfg.get("headers"), sse_read_timeout=120)
+        )
+    if cfg["type"] == "http":
+        http = await recursos.enter_async_context(
+            create_mcp_http_client(headers=cfg.get("headers"))
+        )
+        return await recursos.enter_async_context(
+            streamable_http_client(cfg["url"], http_client=http)
+        )
+    raise ValueError("Transporte MCP não suportado.")
+
+
 class FerramentasCodex:
     def __init__(self, servidores: dict[str, Any], bloqueadas: list[str]) -> None:
         self.servidores, self.bloqueadas = servidores, set(bloqueadas)
@@ -33,8 +57,6 @@ class FerramentasCodex:
         try:
             async with AsyncExitStack() as recursos:
                 for nome, cfg in self.servidores.items():
-                    leitura: Any
-                    escrita: Any
                     if cfg["type"] == "sdk":
                         cliente, servidor = await recursos.enter_async_context(
                             create_client_server_memory_streams()
@@ -45,29 +67,8 @@ class FerramentasCodex:
                         )
                         recursos.push_async_callback(self._parar, tarefa)
                         leitura, escrita = cliente
-                    elif cfg["type"] == "stdio":
-                        leitura, escrita = await recursos.enter_async_context(
-                            stdio_client(
-                                StdioServerParameters(
-                                    command=cfg["command"],
-                                    args=cfg.get("args", []),
-                                    env=cfg.get("env"),
-                                )
-                            )
-                        )
-                    elif cfg["type"] == "sse":
-                        leitura, escrita = await recursos.enter_async_context(
-                            sse_client(cfg["url"], headers=cfg.get("headers"), sse_read_timeout=120)
-                        )
-                    elif cfg["type"] == "http":
-                        http = await recursos.enter_async_context(
-                            create_mcp_http_client(headers=cfg.get("headers"))
-                        )
-                        leitura, escrita = await recursos.enter_async_context(
-                            streamable_http_client(cfg["url"], http_client=http)
-                        )
                     else:
-                        raise ValueError("Transporte MCP não suportado.")
+                        leitura, escrita = await abrir_transporte(recursos, cfg)
                     sessao = await recursos.enter_async_context(
                         ClientSession(leitura, escrita, read_timeout_seconds=120)
                     )

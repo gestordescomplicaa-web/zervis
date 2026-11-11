@@ -107,6 +107,7 @@ from zervis.nucleo.servicos.memoria import ServicoMemoria
 from zervis.nucleo.servicos.oficina import ServicoOficina
 from zervis.nucleo.servicos.remoto import ServicoRemoto
 from zervis.nucleo.servicos.voz import ServicoVoz
+from zervis.oficina import ponte as ponte_conectores
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import Sessoes
@@ -558,10 +559,12 @@ class Nucleo(
                 servidor=maquina_atual.detectar().servidor,
                 retorno_oauth=mcp_oauth.concluir_pela_volta,
                 permissoes=self.sessoes.permissoes,
+                conectores=self.sessoes.ponte.atender,
             )
             self.portal.iniciar()
             # Os pedidos de permissão das sessões do Claude chegam por esta rota (ADR 0039).
             self.sessoes.permissoes.endereco = f"{self.portal.endereco}sessoes/permissao"
+            self.sessoes.ponte.endereco = f"{self.portal.endereco}{ponte_conectores.CAMINHO}"
             self.sessoes.permissoes.ao_decidir = self._permissao_decidida
             self.sessoes.permissoes.ao_pedir = self._permissao_pedida
         except OSError as erro:
@@ -745,6 +748,7 @@ class Nucleo(
         self.central.parar()  # só para de ouvir: a Central continua atendendo
         self.testes_do_atendente.parar()
         self.memoria_longa.parar()
+        self.sessoes.ponte.parar()
         self.transcricoes.shutdown(wait=False, cancel_futures=True)
         self._pasta_exec.shutdown(wait=False, cancel_futures=True)
         with contextlib.suppress(Exception):

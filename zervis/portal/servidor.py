@@ -76,6 +76,10 @@ Voz = Callable[[websocket.Conexao, int], None]  # o canal de voz do navegador (b
 VozApp = Callable[[websocket.Conexao, int, str, dict[str, Any]], None]
 Escrita = Callable[[dict[str, Any]], Any]
 Envio = Callable[[bytes, dict[str, str]], Any]  # corpo cru (um arquivo) e os parâmetros da URL
+# A ponte dos conectores (`oficina.ponte`): método, conector, cabeçalhos e corpo; volta o status,
+# os cabeçalhos e o corpo da resposta.
+Conectores = Callable[[str, str, dict[str, str], bytes], tuple[int, list[tuple[str, str]], bytes]]
+CONECTORES = "sessoes/conectores"  # o mesmo `oficina.ponte.CAMINHO`
 MAXIMO_ENVIO = 20 * 1024 * 1024
 
 
@@ -101,9 +105,11 @@ class Portal:
         voz_app: VozApp | None = None,
         aparelhos_voz: AparelhosDeVoz | None = None,
         permissoes: Permissoes | None = None,
+        conectores: Conectores | None = None,
     ) -> None:
         self.acesso = acesso
         self.permissoes = permissoes  # os pedidos de permissão das sessões (ADR 0039)
+        self.conectores = conectores  # a ponte dos conectores das sessões (ADR 0076)
         self.voz_app = voz_app
         self.aparelhos_voz = aparelhos_voz
         self.retorno_oauth = retorno_oauth
@@ -398,6 +404,33 @@ class Portal:
                     return
                 self._json(200, resposta)
 
+            def _conector(self, metodo: str) -> None:
+                """Um conector de sessão pela ponte (ADR 0076): só do próprio PC; a chave da
+                sessão vai no `Authorization` e a ponte confere."""
+                if portal.conectores is None or not self._local():
+                    self._json(403, {"erro": "só do próprio PC"})
+                    return
+                tamanho = int(self.headers.get("Content-Length") or 0)
+                if tamanho > MAXIMO_CORPO:
+                    self._json(413, {"erro": "grande demais"})
+                    return
+                nome = self.path.split("?", 1)[0].removeprefix(f"/{CONECTORES}/")
+                cabecalhos = {k.lower(): v for k, v in self.headers.items()}
+                corpo = self.rfile.read(tamanho) if tamanho else b""
+                try:
+                    status, saida, resposta = portal.conectores(metodo, nome, cabecalhos, corpo)
+                except Exception:
+                    log.exception("ponte dos conectores")
+                    self._json(502, {"erro": "conector"})
+                    return
+                self.send_response(status)
+                for chave, valor in saida:
+                    if chave.lower() not in ("content-length", "connection", "date", "server"):
+                        self.send_header(chave, valor)
+                self.send_header("Content-Length", str(len(resposta)))
+                self.end_headers()
+                self.wfile.write(resposta)
+
             def _voz_app(self) -> None:
                 """A voz do app: a chave do pareamento no cabeçalho, sem cookie nem origem (não é
                 um navegador, e a chave não abre mais nada)."""
@@ -541,6 +574,9 @@ class Portal:
                     self._json(403, {"erro": "host"})
                     return
                 caminho = self.path.split("?", 1)[0]
+                if caminho.startswith(f"/{CONECTORES}/"):
+                    self._conector("GET")
+                    return
                 if caminho == "/oauth/retorno":
                     self._retorno_oauth()
                     return
@@ -590,10 +626,19 @@ class Portal:
                     return
                 self._responder(leitura)
 
+            def do_DELETE(self) -> None:
+                if self.path.startswith(f"/{CONECTORES}/"):
+                    self._conector("DELETE")
+                    return
+                self._json(405, {"erro": "método"})
+
             def do_POST(self) -> None:
                 caminho = self.path.split("?", 1)[0]
                 if caminho == "/sessoes/permissao":
                     self._permissao_da_sessao()
+                    return
+                if caminho.startswith(f"/{CONECTORES}/"):
+                    self._conector("POST")
                     return
                 if caminho == "/voz-app/parear" and self._host_local():
                     self._parear_voz_app()
