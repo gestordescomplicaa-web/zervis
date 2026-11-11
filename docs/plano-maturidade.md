@@ -33,6 +33,10 @@ Notas do Zérvis: do código e dos testes. Dos concorrentes: documentação e re
 Fase A: os dois portões passaram na 0.4.0 (09/11/2026). Ficam abertos, para quando valer o gasto
 de tokens: agendar a rodada noturna (a primeira gastou 21,6 milhões) e as tarefas de ponta a ponta.
 
+Fase B: os dois portões passaram na 0.5.0 (11/11/2026): zero ações indevidas nas 570 combinações
+da bateria de injeção, e nenhum módulo acima de 800 linhas. Ficam abertos: a sessão protegida
+como padrão e o contêiner na VPS.
+
 ## Frente 1: Confiabilidade (6,0 → 8,0) · Fase A
 
 Hoje as sessões de Claude e Codex são processos filhos do processo principal: reiniciar o Zé

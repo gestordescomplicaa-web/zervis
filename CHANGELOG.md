@@ -2,6 +2,51 @@
 
 ## Não lançado
 
+## 0.5.0 (11/11/2026)
+
+A quinta versão publicada: o Zé mais seguro e mais fácil de manter. Fecha a Fase B do
+[plano de maturidade](docs/plano-maturidade.md). Destaques:
+
+- **Sessões protegidas:** na Nova sessão, a opção "Protegida" faz o agente (Claude ou Codex) rodar
+  no bubblewrap, enxergando só a pasta do projeto. As chaves SSH, o resto da configuração, os
+  dados do Zé, as outras sessões e os outros processos da máquina ficam fora.
+- **Os segredos ficam com o Zé:** nenhum agente recebe os tokens de outros serviços que estão no
+  seu ambiente. Os conectores com senha passam pela ponte do Zé, e o agente leva só uma chave da
+  sessão, que deixa de valer quando o terminal fecha.
+- **Texto de terceiros não manda no Zé:** depois de ler uma mensagem do WhatsApp, uma página ou
+  uma ligação, nada que mude algo acontece sem o seu sim falado. Uma bateria de 570 tentativas de
+  injeção roda a cada mudança, com zero ações executadas.
+- **Código mais fácil de manter:** nenhum módulo passa de 800 linhas, e o painel virou módulos
+  ES, sem variáveis globais divididas entre arquivos.
+
+O detalhe de cada mudança:
+
+- Segurança: quando uma ferramenta devolve texto de terceiros (WhatsApp, ligações, internet,
+  Instagram, histórico, a resposta de uma sessão de código, conectores), o turno vira "de fora"
+  até o fim. Nele, tudo o que muda algo pede a aprovação falada, inclusive o que antes era livre,
+  e a política de risco não libera nada sozinha. Vale para os três cérebros (ADR 0073).
+- Segurança: `tests/test_bateria_injecao.py`, no `make check`, faz um cérebro que obedece a
+  qualquer texto de fora tentar cada ação do Zé depois de cada fonte: das 570 combinações,
+  nenhuma executa sem o sim falado.
+- Sessões: a sessão protegida roda o agente no bubblewrap, com o sistema só para leitura e a
+  pasta pessoal vazia. Voltam o projeto, a pasta da sessão e o login do agente (com escrita) e o
+  que faz os programas rodarem (só leitura). `git push` por SSH e `gh` não funcionam lá dentro,
+  de propósito. Ligada sessão por sessão (ADR 0074).
+- Sessões: na sessão protegida, o `/run/user` (D-Bus, chaveiro, ssh-agent, gpg-agent) fica
+  vazio, e o agente não vê os outros processos da máquina.
+- Sessões: o agente recebe o ambiente sem as variáveis de segredo do Zé, protegida ou não; leva
+  só o próprio login (ADR 0075). Antes, um token do n8n chegava a todas as sessões.
+- Sessões: um conector do projeto com segredo passa pela ponte do Zé no painel. O segredo fica no
+  processo do Zé, as ferramentas bloqueadas não aparecem nem rodam, e a chave da sessão só abre
+  os conectores daquele projeto, enquanto o terminal está aberto (ADR 0076).
+- Sessões: no Arch, a sessão protegida não abria (`Can't mount on symlink destination`); e o
+  Codex instalado pelo instalador dele não abria protegido.
+- Arquitetura: `sessoes.py`, `estados.py`, `laco.py`, `rapido.py`, `whatsapp.py` e `ligacao.py`
+  divididos sem mudar comportamento; `tests/test_tamanho_dos_modulos.py` não deixa nenhum módulo
+  passar de 800 linhas.
+- Painel: cada arquivo é um módulo ES, com o estado compartilhado num lugar só e as páginas
+  carregadas sob demanda, sem build (ADR 0077).
+
 ## 0.4.0 (09/11/2026)
 
 A quarta versão publicada: o Zé mais confiável e medido. Fecha a Fase A do
