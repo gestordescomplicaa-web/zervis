@@ -146,7 +146,12 @@ def _executar(n: "Nucleo", efeito: e.Efeito) -> None:
                 n._ultima_fala = n.voz.numero
                 live.falar(falado, n.voz.numero, ao_iniciar if turno else None)
             else:
-                n._ultima_fala = n.voz.falar(falado, ao_iniciar=ao_iniciar if turno else None)
+                pedidas: set[str] = getattr(n, "ouvir_mesmo_muda", set())
+                extra = {"mesmo_muda": True} if texto in pedidas else {}
+                pedidas.discard(texto)
+                n._ultima_fala = n.voz.falar(
+                    falado, ao_iniciar=ao_iniciar if turno else None, **extra
+                )
         case e.ResponderAprovacao(aprovado, fala):
             log.info("aprovação respondida: %s", "sim" if aprovado else "não")
             if not getattr(n.ponte, "aprovacao_pendente", True):

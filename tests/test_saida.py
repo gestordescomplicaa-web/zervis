@@ -178,3 +178,20 @@ def test_muda_nao_toca_e_avisa_que_ficou_ociosa() -> None:
     voz.falar("Modo silencioso.")
     assert ociosa.wait(2)
     assert abertos == []
+
+
+def test_pedido_para_ouvir_sai_mesmo_muda() -> None:
+    """A abertura e o "Ouvir" (ADR 0078): a pessoa pediu, então sai no Silencioso também."""
+    abertos: list[str] = []
+
+    def fluxo(texto: str) -> tuple[int, RespostaFalsa]:
+        abertos.append(texto)
+        return 24000, RespostaFalsa(b"")
+
+    ociosa = threading.Event()
+    voz = Voz(abrir_fluxo=fluxo, reprodutor=lambda t: ["/bin/cat"])
+    voz.muda = True
+    voz.ao_ficar_ociosa = lambda numero: ociosa.set()
+    voz.falar("Bom dia.", mesmo_muda=True)
+    assert ociosa.wait(3)
+    assert abertos == ["Bom dia."]

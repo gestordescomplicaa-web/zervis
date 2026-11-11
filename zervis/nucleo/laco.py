@@ -260,6 +260,7 @@ class Nucleo(
         self._ultima_fala = 0
         self.voz.ao_ficar_ociosa = self._voz_ociosa
         self.voz.muda = self.modo_fala == "silencioso"
+        self.ouvir_mesmo_muda: set[str] = set()  # avisos pedidos: saem no Silencioso
         # O Live (ADR 0042): com a voz conectada ao vivo, os ouvidos, a boca e o revezamento vão
         # para a sessão do LiveKit Agents; o pedido e a resposta continuam por aqui.
         self.live = Live(

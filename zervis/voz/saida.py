@@ -123,9 +123,10 @@ class Voz:
             abrir_fluxo = piper.PADRAO.abrir_fluxo
         self.abrir_fluxo = abrir_fluxo
         self.folga_s = folga_s
-        self.trabalhos: queue.Queue[tuple[int, str, float, int, Callable[[float], None] | None]] = (
-            queue.Queue()
-        )
+        # época, texto, pedido em, número, ao iniciar, mesmo muda
+        self.trabalhos: queue.Queue[
+            tuple[int, str, float, int, Callable[[float], None] | None, bool]
+        ] = queue.Queue()
         self.numero = 0  # cada fala pedida ganha um número; o aviso de ociosa diz até qual foi
         self.epoca = 0
         self.reprodutor: Tocador | None = None
@@ -141,9 +142,17 @@ class Voz:
         self.muda = False  # modo silencioso: nada sai no alto-falante, o resto segue igual
         threading.Thread(target=self._rodar, name="voz", daemon=True).start()
 
-    def falar(self, texto: str, ao_iniciar: Callable[[float], None] | None = None) -> int:
+    def falar(
+        self,
+        texto: str,
+        ao_iniciar: Callable[[float], None] | None = None,
+        mesmo_muda: bool = False,
+    ) -> int:
+        """`mesmo_muda`: a pessoa pediu para ouvir (a abertura, o "Ouvir"): sai no Silencioso."""
         self.numero += 1
-        self.trabalhos.put((self.epoca, texto, time.monotonic(), self.numero, ao_iniciar))
+        self.trabalhos.put(
+            (self.epoca, texto, time.monotonic(), self.numero, ao_iniciar, mesmo_muda)
+        )
         return self.numero
 
     @property
@@ -171,9 +180,9 @@ class Voz:
 
     def _rodar(self) -> None:
         while True:
-            epoca, texto, pedido_em, numero, ao_iniciar = self.trabalhos.get()
+            epoca, texto, pedido_em, numero, ao_iniciar, mesmo_muda = self.trabalhos.get()
             try:
-                if not self.muda:
+                if not self.muda or mesmo_muda:
                     self._falar(pedacos(texto), epoca, pedido_em, ao_iniciar)
                 self.ultimo_erro = None
                 if epoca == self.epoca:
