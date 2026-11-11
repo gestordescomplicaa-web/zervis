@@ -42,7 +42,8 @@
   const vw = () => innerWidth, vh = () => innerHeight;
   // fonte: what the bottom-right tag says (AO VIVO for his own data); ilustrativo marks a scene
   // whose numbers are an example, not a measurement.
-  function painel(id, { cod, titulo, x, y, w, h, corpo = "", fonte = "AO VIVO", ilustrativo = false, classe = "" }) {
+  // semFeixe: no beam from the Zé (the opening, ADR 0078: the lines crossed the other panels).
+  function painel(id, { cod, titulo, x, y, w, h, corpo = "", fonte = "AO VIVO", ilustrativo = false, classe = "", semFeixe = false }) {
     if (paineis.has(id)) return paineis.get(id);
     const el = document.createElement("div");
     el.className = "card jv-holo" + (classe ? " " + classe : ""); el.dataset.titulo = titulo;
@@ -55,6 +56,7 @@
     it.ry = -.12;  // turned a little towards the Zé on the left
     const f = document.createElementNS(NS, "path"); f.setAttribute("class", "feixe");
     const p = document.createElementNS(NS, "circle"); p.setAttribute("r", "2.4"); p.setAttribute("class", "pacote");
+    if (semFeixe) { f.classList.add("oculto"); p.classList.add("oculto"); }
     feixes.append(f, p);
     const reg = { id, it, el, feixe: f, pacote: p, fase: Math.random() };
     paineis.set(id, reg);
