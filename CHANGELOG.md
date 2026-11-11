@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **O Zé com a qualidade do laboratório:** o macaco holográfico ganhou o brilho de verdade, as
+  cores certas e mais resolução, e ocupa mais o espaço dele no anel.
+
 ## 0.5.0 (11/11/2026)
 
 A quinta versão publicada: o Zé mais seguro e mais fácil de manter. Fecha a Fase B do

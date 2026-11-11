@@ -111,6 +111,9 @@ async def main():
                 await asyncio.sleep(1)
                 shot = await call('Page.captureScreenshot', {'format': 'png'})
                 Path('/tmp/jarvis-macaco-atual.png').write_bytes(base64.b64decode(shot['data']))
+                await check('the hologram is drawn through the glow pass: a lit picture, not a black square', '''(() => {
+                    const i=jarvisAvatar.imagem()[0];return i.maximo>60&&i.acesos>.05;
+                })()''')
                 await check('the Blender monkey with its mouth and blink channels, mouth closed', '''(() => {
                     const d=jarvisAvatar.diagnostico()[0];return d.modelo==='macaco'&&d.expressoes.includes('Boca_Aberta')
                       &&d.expressoes.includes('Piscar')&&d.bocaAberta<.01;
@@ -265,7 +268,8 @@ async def main():
                     const r = jarvisStage.anel(); return r.x < innerWidth * .3 && document.getElementById("jv-legenda-ze").textContent.length > 0; })()''')
                 await ev('jarvisControle.executar({id:"a2",acoes:[{acao:"apresentar",valor:"encerrar"}]})')
                 for _ in range(150):
-                    if await ev(f'(()=>{{const r=jarvisStage.anel();return Math.abs(r.x-{antes["x"]})<3 && !document.querySelector(".card.jv-holo");}})()'):
+                    # back in place, not just close: the next scene takes where he stands as his place
+                    if await ev(f'(()=>{{const r=jarvisStage.anel();return Math.abs(r.x-{antes["x"]})<1 && !document.querySelector(".card.jv-holo");}})()'):
                         break
                     await asyncio.sleep(.1)
                 await check('encerrar clears the panels and the beams, and the Zé goes back', f'''(() => {{
@@ -297,8 +301,9 @@ async def main():
                 limpo = f'''(() => {{ const r = jarvisStage.anel();
                     return !document.querySelector(".card.jv-holo") && !document.querySelector("#jv-feixes")
                       && Math.abs(r.x - {antes["x"]}) < 3 && !jarvisApresentacao.apresentando; }})()'''
+                assentado = limpo.replace('< 3', '< 1')  # in place, not just close (the next scene keeps it)
                 for _ in range(150):
-                    if await ev(limpo):
+                    if await ev(assentado):
                         break
                     await asyncio.sleep(.1)
                 await check('"tira a animação" clears the scene and the Zé goes back to his place', limpo)
