@@ -1,4 +1,4 @@
-import { ESTADO_HOLO, desligarImersao, imersao, imersaoLigada, ligarImersao, telaHolograma } from "./imersao.js";
+import { ESTADO_HOLO, desligarImersao, imersao, imersaoLigada, ligarImersao, pedirAbertura, telaHolograma } from "./imersao.js";
 
 import { desenharModoFala, desenharVozRemota } from "./voz.js";
 import { $, ESTADOS, NO_PC, PAGINAS, api, cabeca, cachePaginas, conteudo, encher, esc, fecharTerminalTela, gravacoes, relogioSessoes, toast } from "../painel.js";
@@ -221,9 +221,20 @@ export async function batimento() {
   }
 }
 
-// Sem perfil, o painel abre na configuração inicial.
+// Sem perfil, o painel abre na configuração inicial. Aberto pelo programa (`?abertura=1`, ADR
+// 0078), vai para a Imersão com a abertura; o endereço esquece o pedido (recarregar não repete).
 async function comecar() {
+  const busca = new URLSearchParams(location.search);
+  const abertura = busca.get("abertura") === "1" && NO_PC; // a Imersão completa é só do PC
+  if (busca.has("abertura")) {
+    busca.delete("abertura");
+    history.replaceState(null, "", location.pathname + (busca.size ? `?${busca}` : "") + location.hash);
+  }
   try { if (!location.hash && !(await api("configuracao")).feita) location.hash = "#configurar"; } catch { /* o batimento mostra */ }
+  if (abertura && location.hash !== "#configurar") {
+    pedirAbertura();
+    if (location.hash !== "#imersao") { location.hash = "#imersao"; return; } // o hashchange abre
+  }
   abrir();
 }
 

@@ -77,7 +77,14 @@ def _atualizar_painel(n: "Nucleo", agora: float) -> None:
         n.trocar_cerebro(escolha)
     n.painel.mostrar(n.provedor, n.baterias(), n.modelos(), agora)
     n.painel.autoconhecimento(n.autoconhecimento, agora)
+    n.abertura.retratar(agora)
     n._mostrar_decisao(agora)
+
+
+def _falar_abertura(n: "Nucleo") -> None:
+    """A abertura pediu a fala de um painel (ADR 0078): vale como o "Ouvir" do celular."""
+    if (texto := n.abertura.fala()) is not None:
+        n.tratar(e.Aviso(texto, pedido=True))
 
 
 def _mostrar_decisao(n: "Nucleo", agora: float) -> None:
@@ -162,6 +169,7 @@ def rodar(n: "Nucleo") -> None:
                 n.transcrevendo = None
                 n.segmentador.limpar()
             n._ler_teclado()
+            _falar_abertura(n)
             while True:
                 try:
                     n.tratar(n.eventos.get_nowait())

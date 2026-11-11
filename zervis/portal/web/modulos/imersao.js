@@ -18,10 +18,14 @@ export const imersao = $("imersao");
 export const moldura = $("moldura");
 export const imersaoLigada = () => !!/** @type {HTMLIFrameElement} */ (moldura.querySelector("iframe"));
 
+// Abrir o programa (ADR 0078): a primeira Imersão leva o pedido da abertura, uma vez só.
+let abertura = false;
+export const pedirAbertura = () => { abertura = true; };
+
 export function ligarImersao() {
   if (imersaoLigada()) return;
   const q = document.createElement("iframe");
-  q.src = IMERSIVO; q.title = "Imersão"; q.allow = "camera; autoplay; fullscreen";
+  q.src = IMERSIVO + (abertura ? "&abertura=1" : ""); abertura = false; q.title = "Imersão"; q.allow = "camera; autoplay; fullscreen";
   moldura.replaceChildren(q);
   $("ponto-imersao").hidden = false;
 }

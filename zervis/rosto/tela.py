@@ -54,7 +54,9 @@ ACOES = {
     "mostrar_modelo": "alvo: o arquivo no Acervo que modelo3d_baixar devolveu "
     "(3d/baixados/...glb); valor: o título. Mostra o modelo 3D em holograma, que a pinça gira",
     "apresentar": "valor: quem (o Zé vai para o canto e mostra, em painéis holográficos, os "
-    "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente) "
+    "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente), "
+    "dia (o resumo do dia da abertura, falado: saudação, clima, agenda, sessões, WhatsApp e "
+    "manchetes; para 'apresenta o meu dia' e 'como está o meu dia') "
     "ou encerrar (recolhe os painéis). Só para 'se apresenta' sem assunto; um aspecto seu (um "
     "gráfico do que fez, conexões, falhas) é ze_sobre e tela_explicar",
     "expressao": "valor: alegria, duvida, raiva, tristeza ou neutro; segundos (opcional, "

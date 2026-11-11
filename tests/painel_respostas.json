@@ -907,6 +907,12 @@
      }
     ]
    }
+  },
+  "abertura": {
+   "ligada": true,
+   "cidade": "",
+   "cidade_do_fuso": "Sao Paulo",
+   "musica": false
   }
  },
  "escritas": {
