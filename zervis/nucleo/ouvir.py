@@ -58,6 +58,10 @@ def tratar(n: "Nucleo", evento: e.Evento) -> None:
         log.info("modo silencioso: aviso só na tela (%d caracteres)", len(evento.texto))
         n._mostrar(evento.texto)
         return
+    abertura = getattr(n, "abertura", None)
+    if isinstance(evento, e.Aviso) and not evento.pedido and abertura and abertura.rodando():
+        n._guardar(evento.texto)  # a entrada do programa não é atropelada: sai depois dela
+        return
     # Pedido para ouvir (a abertura, o "Ouvir" do celular): sai mesmo com a voz muda.
     pedidas = getattr(n, "ouvir_mesmo_muda", None)
     if isinstance(evento, e.Aviso) and evento.pedido and pedidas is not None:

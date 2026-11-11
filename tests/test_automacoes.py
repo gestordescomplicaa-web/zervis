@@ -83,6 +83,16 @@ def test_pausar_retomar_remover_e_validacao(tmp_path: Path) -> None:
         jobs.criar("x", "em pouco", "lembrete", "oi", AGORA)
 
 
+def test_avisos_sem_manchete_nao_viram_um_aviso_um_aviso_e_um_aviso(tmp_path: Path) -> None:
+    # Visto em 11/11/2026: três avisos da subida, sem título, saíram como "Três novidades: um
+    # aviso, um aviso e um aviso."
+    fila = Fila(tmp_path / "avisos.json")
+    for texto in ("O n8n voltou.", "A memória passou de 80%.", "Uma sessão continuou."):
+        fila.guardar(texto)
+    texto, aviso = fila.oferecer() or ("", None)
+    assert aviso is None and texto == "Três novidades esperando. Começo pela primeira?"
+
+
 def test_fila_um_aviso_ou_oferta_e_validade(tmp_path: Path) -> None:
     fila = Fila(tmp_path / "avisos.json")
     assert fila.oferecer() is None
@@ -93,7 +103,7 @@ def test_fila_um_aviso_ou_oferta_e_validade(tmp_path: Path) -> None:
     fila.guardar("Daqui a 5 minutos: reunião.", "agenda", expira=1.0)  # já expirou
     fila.guardar("Tenho uma sugestão para você aprovar.")
     texto, aviso = fila.oferecer() or ("", None)
-    assert aviso is None and texto.startswith("Duas novidades: um lembrete e um aviso.")
+    assert aviso is None and texto.startswith("Duas novidades: um lembrete e mais um aviso.")
     assert fila.oferecer() is None  # oferecidos não se oferecem de novo sozinhos
     assert fila.proximo().texto == "Lembrete: beber água."  # type: ignore[union-attr]
 

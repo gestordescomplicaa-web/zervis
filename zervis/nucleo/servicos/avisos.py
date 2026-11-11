@@ -73,6 +73,11 @@ class ServicoAvisos:
                 return
         except OSError:
             pass
+        abertura = getattr(self.n, "abertura", None)
+        if abertura is not None and abertura.rodando():
+            with contextlib.suppress(OSError):
+                marca.write_text(hoje)  # a abertura já fala o dia e o foco
+            return
         partes = []
         if self.n.foco.atual() is not None:
             partes.append(self.n.foco.onde_estava())
@@ -185,6 +190,9 @@ class ServicoAvisos:
 
     def _sair_da_fila(self) -> None:
         """Cada aviso de sessão sai na própria vez, sem pedir para avançar (ADR 0029)."""
+        abertura = getattr(self.n, "abertura", None)
+        if abertura is not None and abertura.rodando():
+            return  # no meio da abertura, nada é oferecido: os avisos saem depois dela
         saida = self.n.fila.oferecer()
         if saida is None:
             return

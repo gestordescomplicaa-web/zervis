@@ -66,6 +66,7 @@ class Clima(NamedTuple):
     maxima: int
     minima: int
     chuva: int  # a chance de chuva no dia, em %
+    horas: tuple[int, ...] = ()  # a temperatura de cada hora do dia (0h a 23h), para o gráfico
 
 
 def obter_json(url: str) -> Any:
@@ -98,6 +99,7 @@ def buscar(lugar: Lugar, obter: Obter = obter_json) -> Clima | None:
             "longitude": lugar.longitude,
             "current": "temperature_2m,weather_code",
             "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+            "hourly": "temperature_2m",
             "timezone": "auto",
             "forecast_days": 1,
         }
@@ -112,6 +114,11 @@ def buscar(lugar: Lugar, obter: Obter = obter_json) -> Clima | None:
             round(float(dia["temperature_2m_max"][0])),
             round(float(dia["temperature_2m_min"][0])),
             int(dia.get("precipitation_probability_max", [0])[0] or 0),
+            tuple(
+                round(float(t))
+                for t in (dados.get("hourly") or {}).get("temperature_2m", [])[:24]
+                if t is not None
+            ),
         )
     except Exception:
         log.info("abertura: o clima não veio", exc_info=True)

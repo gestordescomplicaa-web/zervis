@@ -27,14 +27,20 @@ import test_brain_navigation as tb  # noqa: E402
 MONTADO = '2026-11-11T09:00:00-03:00'
 DIA = {'montado': MONTADO, 'ligada': True, 'blocos': [
     {'tipo': 'relogio', 'saudacao': 'Bom dia, Ana', 'data': 'quarta-feira, 11 de novembro', 'fala': 'Bom dia, Ana.'},
-    {'tipo': 'clima', 'cidade': 'Fortaleza', 'temperatura': 30, 'ceu': 'garoa fraca', 'maxima': 31, 'minima': 24, 'chuva': 40, 'fala': 'Faz 30 graus.'},
+    {'tipo': 'clima', 'cidade': 'Fortaleza', 'temperatura': 30, 'ceu': 'garoa fraca', 'maxima': 31, 'minima': 24, 'chuva': 40,
+     'horas': [24, 24, 23, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31, 31, 30, 29, 28, 27, 26, 26, 25, 25, 24, 24], 'fala': 'Faz 30 graus.'},
     {'tipo': 'hoje', 'itens': [{'hora': '14:00', 'titulo': 'Reunião', 'tipo': 'compromisso'}, {'hora': '18:00', 'titulo': 'Relatório', 'tipo': 'automacao'}], 'total': 2, 'fala': 'Dois itens.'},
+    {'tipo': 'foco', 'atual': 'Lançar a loja', 'proximo_passo': 'subir as fotos', 'ativas': 2, 'travadas': 1, 'pausadas': 0,
+     'feitas_semana': 3, 'fala': 'No foco, a loja.'},
     {'tipo': 'sessoes', 'itens': [{'nome': 'Loja', 'situacao': 'Interrompida', 'chave': 'interrompida'}], 'total': 1, 'fala': 'A Loja parou.'},
     {'tipo': 'whatsapp', 'itens': [{'nome': '<b>Ana</b>', 'ha': 'há 1 h'}], 'total': 1, 'fala': 'Uma conversa.'},
+    {'tipo': 'instagram', 'usuario': 'ana.loja', 'seguidores': 15300, 'semana': 2,
+     'grafico': [{'rotulo': '01/11', 'valor': 30000}, {'rotulo': '08/11', 'valor': 4000}, {'rotulo': '10/11', 'valor': 12000}],
+     'destaque': {'legenda': 'Promoção', 'valor': '12 mil'}, 'fala': 'No Instagram, 15 mil.'},
     {'tipo': 'noticias', 'itens': [{'titulo': 'Manchete', 'fonte': 'G1'}], 'fala': 'Manchete.'},
     {'tipo': 'fim', 'fala': 'Esse é o seu dia.'},
 ]}
-CANAL: dict = {'falas': [], 'fala_ate': 0.0, 'musica': 0}
+CANAL: dict = {'falas': [], 'sinais': [], 'fala_ate': 0.0, 'musica': 0}
 SAIDA = Path(tempfile.gettempdir()) / 'jarvis-abertura.png'
 
 
@@ -68,7 +74,9 @@ class Handler(tb.Handler):
 
     def do_POST(self):
         d = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        if self.path == '/abertura/falar':
+        if self.path == '/abertura/falar' and d['passo'] < 0:  # began (-1) or skipped (-2): no line
+            CANAL['sinais'].append(d['passo'])
+        elif self.path == '/abertura/falar':
             assert self.headers['Content-Type'] == 'application/json'
             CANAL['falas'].append(d)
             CANAL['fala_ate'] = time.time() + .5
@@ -137,24 +145,36 @@ async def main():
                     paineis = await ev('document.querySelectorAll(".card.jv-holo.jv-ab").length')
                     if paineis > len(CANAL['falas']):
                         adiantados.append((paineis, len(CANAL['falas'])))
-                    if paineis == 6:
+                    if paineis == 8:
                         break
                     await asyncio.sleep(.05)
-                assert paineis == 6, paineis
+                assert paineis == 8, paineis
                 assert await ev('!document.getElementById("jv-legenda-ze").textContent')
                 assert not adiantados, adiantados
                 passed.append('one panel per block, each one only with its own line, in order, no caption')
                 assert await esperar('!jarvisAbertura.rodando', 30), CANAL['falas']
-                assert [f['passo'] for f in CANAL['falas']] == list(range(7)), CANAL['falas']
+                assert [f['passo'] for f in CANAL['falas']] == list(range(9)), CANAL['falas']
+                assert CANAL['sinais'] == [-1], CANAL['sinais']
+                passed.append('the opening tells the Zé it began, so his notices wait until it is over')
                 assert all(f['montado'] == MONTADO and set(f) == {'montado', 'passo'} for f in CANAL['falas'])
                 passed.append('each step asks the Zé for its own line, only by number, then the closing one')
                 assert await ev('''(() => { const t = [...document.querySelectorAll(".jv-ab h2")].map(h => h.textContent);
-                    return t.join("|") === "Hoje|Fortaleza|Hoje|Sessões de código|Sem resposta|Manchetes"
+                    return t.join("|") === "Hoje|Fortaleza|Hoje|Foco|Sessões de código|Sem resposta|@ana.loja|Manchetes"
                       && /^\\d\\d:\\d\\d$/.test(document.querySelector("[data-relogio]").textContent)
                       && document.querySelector(".jv-ab-clima b").textContent === "30°"
                       && !document.querySelector(".jv-ab b b")
                       && !document.querySelector("#jv-feixes"); })()''')
                 passed.append('the panels show the Zé\'s data, escaped, with a live clock, and no beams across them')
+                assert await esperar('''document.querySelector(".jv-ab-curva polyline")?.getAttribute("points").split(" ").length === 24
+                    && document.querySelectorAll(".jv-ab-dia i").length === 2 && !!document.querySelector(".jv-ab-dia b")
+                    && document.querySelectorAll(".jv-ab-barras .jv-barra").length === 3
+                    && document.querySelectorAll(".jv-ab .jv-grafico svg .jv-coluna").length === 3
+                    && document.querySelector('.jv-ab[data-titulo="@ana.loja"] .jv-heroi b').textContent.replace(/\\s/g, " ") === "15,3 mil"''', 5)
+                passed.append('small charts: the day\'s temperature, the agenda on the day, the fronts, the Instagram views')
+                assert await ev('''(() => { const r = [...document.querySelectorAll(".card.jv-holo.jv-ab")].map(e => e.getBoundingClientRect());
+                    return r.every((a, i) => r.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1
+                      || a.bottom <= b.top + 1 || b.bottom <= a.top + 1)) && r.every(a => a.right <= innerWidth + 1); })()''')
+                passed.append('eight panels in four columns, none over another, all on the screen')
                 assert await ev('!document.getElementById("jv-abertura-vinheta")')
                 passed.append('the panels stay on the board when it is over; the title is gone')
                 import base64
@@ -181,7 +201,8 @@ async def main():
                 falas = len(CANAL['falas'])
                 await asyncio.sleep(2.5)
                 assert len(CANAL['falas']) == falas, CANAL['falas']
-                passed.append('Esc skips it: the panels go and no more lines are asked for')
+                assert CANAL['sinais'][-1] == -2, CANAL['sinais']
+                passed.append('Esc skips it: the panels go, no more lines are asked for, and the Zé is told')
                 assert not errors, errors
                 print('\n'.join('PASS ' + p for p in passed))
         finally:

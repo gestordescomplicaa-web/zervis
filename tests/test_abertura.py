@@ -86,6 +86,90 @@ def test_o_dia_completo_em_ordem_e_falado() -> None:
     assert blocos["fim"]["fala"] == panorama.FECHAMENTO
 
 
+def test_o_foco_e_o_instagram_entram_com_os_numeros_para_os_graficos() -> None:
+    foco = panorama.Foco("Lançar a loja", "subir as fotos", 2, 1, 1, 3)
+    agora = MANHA.timestamp()
+    ig = panorama.Instagram(
+        "ana.loja",
+        15300,
+        [
+            panorama.Publicacao(agora - 86400, 12000, "Promoção de novembro"),
+            panorama.Publicacao(agora - 3 * 86400, 4000, "Bastidores"),
+            panorama.Publicacao(agora - 10 * 86400, 30000, "Antiga"),
+        ],
+    )
+    dia = panorama.montar(MANHA, "Ana", CLIMA, instagram=ig, foco=foco)
+    blocos = {b["tipo"]: b for b in dia["blocos"]}
+    assert list(blocos) == ["relogio", "clima", "foco", "instagram", "fim"]
+    assert blocos["foco"]["fala"] == (
+        "No foco, você estava em Lançar a loja; o próximo passo é subir as fotos. "
+        "Uma frente está travada. Nesta semana você concluiu três frentes."
+    )
+    assert (blocos["foco"]["ativas"], blocos["foco"]["travadas"]) == (2, 1)
+    assert blocos["instagram"]["fala"] == (
+        "No Instagram, você tem 15,3 mil seguidores. Nesta semana saíram duas publicações; "
+        "a que mais rendeu teve 12 mil visualizações."
+    )
+    # o gráfico: da mais antiga para a mais nova; o destaque é o melhor da semana
+    assert [g["valor"] for g in blocos["instagram"]["grafico"]] == [30000, 4000, 12000]
+    assert blocos["instagram"]["destaque"] == {"legenda": "Promoção de novembro", "valor": "12 mil"}
+    assert blocos["instagram"]["semana"] == 2
+    parado = panorama.Instagram("ana.loja", 980, [])
+    assert panorama.montar(MANHA, instagram=parado)["blocos"][1]["fala"] == (
+        "No Instagram, você tem 980 seguidores. Nesta semana não saiu publicação nova."
+    )
+    # sem frente nenhuma, não há card de foco
+    vazio = panorama.Foco("", "", 0, 0, 0, 0)
+    assert "foco" not in [b["tipo"] for b in panorama.montar(MANHA, foco=vazio)["blocos"]]
+
+
+def test_o_instagram_da_abertura_le_so_as_publicacoes_novas() -> None:
+    pedidos: list[str] = []
+
+    class Leitor:
+        conectado = True
+
+        def perfil(self) -> dict[str, Any]:
+            pedidos.append("perfil")
+            return {"username": "ana.loja", "followers_count": 15300}
+
+        def recentes(self, n: int) -> list[dict[str, Any]]:
+            pedidos.append(f"recentes {n}")
+            return [{"timestamp": "2026-11-10T12:00:00+0000", "caption": "Oi\n de novo",
+                     "metricas": {"views": 900}}]  # fmt: skip
+
+    ig = servico.ler_instagram(Leitor())
+    assert ig == panorama.Instagram(
+        "ana.loja",
+        15300,
+        [
+            panorama.Publicacao(
+                datetime.fromisoformat("2026-11-10T12:00:00+00:00").timestamp(), 900.0, "Oi de novo"
+            )
+        ],
+    )
+    assert pedidos == ["perfil", f"recentes {panorama.NO_GRAFICO}"]  # nunca todas as publicações
+    assert servico.ler_instagram(SimpleNamespace(conectado=False)) is None
+    assert servico.ler_instagram(None) is None
+
+
+def test_sem_rede_o_instagram_fica_o_ultimo_lido() -> None:
+    respostas: list[Any] = [
+        SimpleNamespace(conectado=True, perfil=lambda: {"username": "a", "followers_count": 5},
+                        recentes=lambda n: []),
+        SimpleNamespace(conectado=True, perfil=lambda: (_ for _ in ()).throw(OSError("rede"))),
+    ]  # fmt: skip
+    externas = Externas(
+        localizar=lambda c: None, buscar_noticias=lambda: [], instagram=lambda: respostas.pop(0)
+    )
+    externas.renovar("", 0.0)
+    externas.esperar()
+    assert externas.instagram == panorama.Instagram("a", 5, [])
+    externas.renovar("", 1e9)
+    externas.esperar()
+    assert externas.instagram == panorama.Instagram("a", 5, [])
+
+
 def test_pouca_chance_de_chuva_nao_entra_na_fala() -> None:
     seco = CLIMA._replace(chuva=10, ceu="")
     assert panorama.montar(MANHA, clima=seco)["blocos"][1]["fala"] == (
@@ -338,12 +422,77 @@ def test_a_pagina_escolhe_o_passo_e_o_ze_fala_o_texto_dele(
     assert abertura.fala(agora=time.time() + 60) is None  # velho demais (o Zé estava parado)
 
 
+def test_enquanto_a_abertura_roda_os_avisos_esperam(abertura: Abertura, tmp_path: Path) -> None:
+    # Ligada, a abertura já conta como vindo assim que o Zé sobe (abrir o programa a abre).
+    assert abertura.rodando()
+    abertura._rodando_ate = 0.0
+    abertura.retratar(time.time())
+    dia = rotas.panorama(tmp_path)
+    ultimo = len(dia["blocos"]) - 1
+    passos = [-1, 0, ultimo]
+    estados = []
+    for passo in passos:
+        time.sleep(0.01)
+        rotas.pedir_fala(tmp_path, {"montado": dia["montado"], "passo": passo})
+        fala = abertura.fala()
+        estados.append((fala is not None, abertura.rodando()))
+    # começou (sem fala), um passo (fala, segue rodando), o fechamento (fala, acabou)
+    assert estados == [(False, True), (True, True), (True, False)]
+    time.sleep(0.01)
+    rotas.pedir_fala(tmp_path, {"montado": dia["montado"], "passo": -1})
+    abertura.fala()
+    time.sleep(0.01)
+    rotas.pedir_fala(tmp_path, {"montado": dia["montado"], "passo": -2})  # pulada com o Esc
+    assert abertura.fala() is None and not abertura.rodando()
+    assert not abertura.rodando(time.time() + servico.INICIO_S + 1)
+    desligada = Abertura(tmp_path, _fontes(tmp_path, MANHA), _externas(),
+                         lambda: ajustes.Ajustes(False, "Recife"))  # fmt: skip
+    assert not desligada.rodando()
+
+
+def test_os_avisos_nao_atropelam_a_abertura(tmp_path: Path) -> None:
+    import queue
+
+    from zervis.avisos.fila import Fila
+    from zervis.nucleo.servicos.avisos import ServicoAvisos
+
+    # Visto em 11/11/2026: ao abrir o programa, a oferta dos avisos da subida entrou no meio da
+    # abertura. Com ela rodando, nada sai da fila; depois do fechamento, a oferta vem.
+
+    rodando = [True]
+    fila = Fila(tmp_path / "avisos.json")
+    for texto in ("O n8n voltou.", "A memória passou de 80%."):
+        fila.guardar(texto)
+    n: Any = SimpleNamespace(
+        abertura=SimpleNamespace(rodando=lambda: rodando[0]), fila=fila, eventos=queue.Queue(),
+        _meta={}, _oferta_ate=0.0,
+    )  # fmt: skip
+    ServicoAvisos(n)._sair_da_fila()
+    assert n.eventos.empty() and len(fila.validos()) == 2
+    rodando[0] = False
+    ServicoAvisos(n)._sair_da_fila()
+    assert n.eventos.get_nowait().texto == "Duas novidades esperando. Começo pela primeira?"
+
+
+def test_aviso_que_chega_no_meio_da_abertura_espera_na_fila() -> None:
+    from zervis.nucleo import estados as e
+    from zervis.nucleo import ouvir
+
+    guardados: list[str] = []
+    n: Any = SimpleNamespace(
+        modo_fala="normal", _fonte=None, abertura=SimpleNamespace(rodando=lambda: True),
+        _guardar=guardados.append,
+    )  # fmt: skip
+    ouvir.tratar(n, e.Aviso("A sessão Loja terminou."))
+    assert guardados == ["A sessão Loja terminou."]  # não foi falado: esperou na fila
+
+
 @pytest.mark.parametrize(
     "pedido",
     [
         {"montado": "x", "passo": 0},
         {"montado": "2026-11-11T09:00:00-03:00", "passo": "0"},
-        {"montado": "2026-11-11T09:00:00-03:00", "passo": -1},
+        {"montado": "2026-11-11T09:00:00-03:00", "passo": -3},
         {"montado": "2026-11-11T09:00:00-03:00", "passo": True},
         {"texto": "fale qualquer coisa"},
     ],
