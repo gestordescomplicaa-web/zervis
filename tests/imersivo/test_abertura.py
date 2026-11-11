@@ -141,8 +141,9 @@ async def main():
                         break
                     await asyncio.sleep(.05)
                 assert paineis == 6, paineis
+                assert await ev('!document.getElementById("jv-legenda-ze").textContent')
                 assert not adiantados, adiantados
-                passed.append('one panel per block, each one only with its own line, in order')
+                passed.append('one panel per block, each one only with its own line, in order, no caption')
                 assert await esperar('!jarvisAbertura.rodando', 30), CANAL['falas']
                 assert [f['passo'] for f in CANAL['falas']] == list(range(7)), CANAL['falas']
                 assert all(f['montado'] == MONTADO and set(f) == {'montado', 'passo'} for f in CANAL['falas'])
