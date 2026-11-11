@@ -1,3 +1,7 @@
+import { ACOES, ESCOLHAS, MUDAR, recarregar } from "../modulos/acoes.js";
+import { $, PAGINAS, api, botao, cabeca, cartao, confirmar, esc, escolha, item, liga, mostrar, ocupado, sub, toast, valorCampo, vazio } from "../painel.js";
+import { compartilhado } from "../modulos/estado.js";
+
 // A página Redes sociais (antes Atendimento; ADR 0031 e 0057), carregada sob demanda pelo painel:
 // usa as funções dele. Primeiro as redes ligadas ao Zé: WhatsApp (conexão), Instagram (métricas,
 // só leitura) e Avisos. Depois, à parte, o agente de atendimento: Atendimento (o que fica ligado),
@@ -246,7 +250,7 @@ Object.assign(ACOES, {
     try {
       await api("atendente/salvar", camposPersona());
       const s = await ocupado(b, () => api("atendente/sessao", {}));
-      sessaoAberta = s.id;
+      compartilhado.sessaoAberta = s.id;
       location.hash = "#sessoes";
     } catch (erro) { $("ag-resultado").textContent = erro.message; }
   },

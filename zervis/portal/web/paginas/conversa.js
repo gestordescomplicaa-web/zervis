@@ -1,3 +1,6 @@
+import { $, PAGINAS, api, cabeca, esc, sub, toast, valorCampo, vazio } from "../painel.js";
+import { compartilhado, carregadas } from "../modulos/estado.js";
+
 // A página Conversa, carregada sob demanda pelo painel: o fio de hoje com o Zé (o que a pessoa
 // falou ou escreveu, as respostas e os avisos) e o campo para escrever. É onde fica o que o Zé não
 // falou no Silencioso.
@@ -75,7 +78,7 @@ function montarFio() {
   // Uma enviada some quando o servidor já a mostra (na troca em curso ou no histórico).
   const vistas = itens.filter((i) => i.tipo === "voce").map((i) => i.texto);
   enviadas = enviadas.filter((m) => m.erro || !vistas.includes(m.texto));
-  const pensando = ["pensando", "falando"].includes(estadoZe);
+  const pensando = ["pensando", "falando"].includes(compartilhado.estadoZe);
   for (const m of enviadas) if (!m.erro && !pensando && Date.now() - m.em > 4000) m.entregue = true;
   const respondendo = itens.some((i) => i.pendente && i.tipo === "ze");
   const esperandoResposta = enviadas.some((m) => !m.erro && !m.entregue) || (pensando && !respondendo) || (itens.at(-1)?.pendente && !respondendo);
@@ -102,8 +105,8 @@ async function desenharFio() {
 /** Lê o fio de novo: rápido enquanto o Zé responde, devagar parado. */
 function vigiarFio(vez) {
   clearTimeout(fioTimer);
-  if (vez !== navegacao || !$("fio")) return;
-  const ativo = enviadas.some((m) => !m.erro && !m.entregue) || ["pensando", "falando"].includes(estadoZe) || ultimoFio.itens.some((i) => i.pendente);
+  if (vez !== compartilhado.navegacao || !$("fio")) return;
+  const ativo = enviadas.some((m) => !m.erro && !m.entregue) || ["pensando", "falando"].includes(compartilhado.estadoZe) || ultimoFio.itens.some((i) => i.pendente);
   fioTimer = setTimeout(async () => {
     await desenharFio().catch(() => {});
     vigiarFio(vez);
@@ -111,10 +114,10 @@ function vigiarFio(vez) {
 }
 
 /** @param {number} vez */
-async function prepararConversa(vez) {
+export async function prepararConversa(vez) {
   fioVisto = "";
   await desenharFio();
-  if (vez !== navegacao) return;
+  if (vez !== compartilhado.navegacao) return;
   vigiarFio(vez);
   const campo = /** @type {HTMLTextAreaElement} */ (valorCampo("escrever-texto"));
   const enviar = async (ev) => {
@@ -178,3 +181,6 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .escrever textarea { flex: 1; resize: none; min-height: 44px; max-height: 160px; padding: 11px 13px; border-radius: 12px;
   font: inherit; color: var(--texto); background: var(--fundo-2); border: 1px solid var(--borda-forte); }
 ` }));
+
+// Para quem chama esta página depois que ela carrega (a navegação, as ações).
+Object.assign(carregadas, { prepararConversa });

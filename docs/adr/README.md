@@ -84,3 +84,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0074](0074-sessoes-protegidas.md) | Sessões protegidas: o agente roda no bubblewrap e só enxerga a pasta do projeto | Aceita |
 | [0075](0075-segredos-fora-do-agente.md) | Segredos fora do agente: o ambiente sem os segredos do Zé e o `/run/user` escondido | Aceita |
 | [0076](0076-ponte-dos-conectores.md) | A ponte dos conectores: o segredo fica com o Zé, o agente leva só a chave da sessão | Aceita |
+| [0077](0077-painel-em-modulos-es.md) | O painel em módulos ES: imports explícitos, o estado compartilhado num lugar, sem build | Aceita |

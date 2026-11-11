@@ -1,3 +1,5 @@
+import { ESTADOS, PAGINAS, api, cabeca, cartao, esc, item, quando, seg, vazio } from "../painel.js";
+
 // Página inicio, carregada sob demanda.
 PAGINAS.inicio = async function() {
     const e = await api("inicio");

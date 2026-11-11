@@ -1,3 +1,5 @@
+import { PAGINAS, TIPO_AUTOMACAO, api, cabeca, esc, item, liga, quando, sub, vazio, xis } from "../painel.js";
+
 // Página automacoes, carregada sob demanda.
 PAGINAS.automacoes = async function() {
     const a = await api("automacoes");

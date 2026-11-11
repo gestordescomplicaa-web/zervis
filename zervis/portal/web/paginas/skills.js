@@ -1,3 +1,6 @@
+import { ACOES, MUDAR, recarregar } from "../modulos/acoes.js";
+import { $, PAGINAS, api, botao, cabeca, cartao, confirmar, entradaCampo, esc, item, liga, mostrar, ocupado, sub, toast, valorCampo, vazio, xis } from "../painel.js";
+
 // A página Skills, carregada sob demanda pelo painel: as skills do Zé (criar, editar, ligar,
 // excluir) e, só para leitura, as já instaladas no Claude Code e no Codex. O editor é um
 // formulário; o SKILL.md (o formato aberto dos agentes) é montado por trás.

@@ -1,3 +1,8 @@
+import { ACOES } from "../modulos/acoes.js";
+import { abrir } from "../modulos/navegacao.js";
+import { AJUSTES, PAGINAS, api, botao, cabeca, cartao, confirmar, esc, mostrar, ocupado, quando, relogio, sub, toast } from "../painel.js";
+import { compartilhado } from "../modulos/estado.js";
+
 // A página Atualizações, carregada sob demanda: procurar, escolher o canal e atualizar o Zé
 // (zervis/versoes.py). Atualizar roda fora do Zé e o reinicia; o painel recarrega sozinho quando
 // ele volta (o batimento vê o processo novo) e mostra o resultado aqui.
@@ -18,7 +23,7 @@ PAGINAS.atualizacoes = async () => {
     procurouAoAbrir = true;
     api("atualizacoes/procurar", {}).then(() => { if (location.hash === "#atualizacoes") abrir(); }).catch(() => {});
   }
-  if (r.rodando) relogio(navegacao, () => api("atualizacoes").then((n) => { if (!n.resultado?.rodando) abrir(); }).catch(() => {}));
+  if (r.rodando) relogio(compartilhado.navegacao, () => api("atualizacoes").then((n) => { if (!n.resultado?.rodando) abrir(); }).catch(() => {}));
   const canal = cartao("", `<div class="cabeca"><h2>Canal</h2></div>
     ${sub("De onde vêm as atualizações.")}
     <div class="modos-fala" role="radiogroup" aria-label="Canal">${CANAIS.map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="atualizacoes-canal" data-canal="${v}" aria-checked="${v === a.canal}" ${AJUSTES ? "" : "disabled"}><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`);
@@ -50,7 +55,7 @@ Object.assign(ACOES, {
   "atualizacoes-aplicar": (b) => confirmar(b, "Atualizar e reiniciar o Zé?", async () => {
     try {
       const r = await api("atualizacoes/aplicar", {});
-      versaoAplicada = Date.now(); // a queda que vem é o reinício: sem a faixa de "Reconectando"
+      compartilhado.versaoAplicada = Date.now(); // a queda que vem é o reinício: sem a faixa de "Reconectando"
       toast(r.aviso, 6000);
       await abrir();
     } catch (erro) {

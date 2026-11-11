@@ -1,3 +1,6 @@
+import { ACOES, recarregar } from "../modulos/acoes.js";
+import { $, PAGINAS, api, botao, cabeca, cartao, esc, sub, toast, vazio } from "../painel.js";
+
 // A página Atividade (ADR 0025), carregada sob demanda pelo painel: usa as funções dele.
 
 // --- Atividade: o que o Zé fez e onde tropeçou (ADR 0025), e o registro técnico ---

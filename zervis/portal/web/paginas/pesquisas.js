@@ -1,3 +1,7 @@
+import { ACOES } from "../modulos/acoes.js";
+import { abrir } from "../modulos/navegacao.js";
+import { PAGINAS, api, botao, cabeca, cartao, confirmar, esc, item, quando, sub, toast, vazio } from "../painel.js";
+
 // A página Pesquisas, carregada sob demanda: cada pesquisa que o Zé fez (a profunda e a
 // resumida), guardada com as fontes e os trechos lidos (zervis/pesquisa/guardadas.py, ADR 0060).
 // O que veio das páginas é texto de terceiros: tudo passa por esc(), e link só http(s).

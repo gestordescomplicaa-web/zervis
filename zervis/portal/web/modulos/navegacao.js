@@ -1,3 +1,9 @@
+import { ESTADO_HOLO, desligarImersao, imersao, imersaoLigada, ligarImersao, telaHolograma } from "./imersao.js";
+
+import { desenharModoFala, desenharVozRemota } from "./voz.js";
+import { $, ESTADOS, NO_PC, PAGINAS, api, cabeca, cachePaginas, conteudo, encher, esc, fecharTerminalTela, gravacoes, relogioSessoes, toast } from "../painel.js";
+import { compartilhado, carregadas } from "./estado.js";
+
 // --- navegação e batimento ---
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
@@ -6,9 +12,8 @@ const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/m
 const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que ocupam a tela
 /** @type {Record<string, string[]>} */
 const DEPENDENCIAS = {
- modelos: ['/modulos/modelos.js'], perfil: ['/modulos/modelos.js'], configurar: ['/modulos/modelos.js'],
- sessoes: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js', '/modulos/terminal.js', '/modulos/conectores-sessao.js', '/modulos/permissoes-sessao.js', '/modulos/paineis-sessao.js'],
- melhorias: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js', '/modulos/terminal.js', '/modulos/conectores-sessao.js', '/modulos/permissoes-sessao.js', '/modulos/paineis-sessao.js', '/paginas/sessoes.js'],
+ sessoes: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js'],
+ melhorias: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js'],
 };
 /** @type {Record<string, Promise<void>>} */
 const carregados = {};
@@ -31,11 +36,15 @@ function carregarEstilo(caminho) {
   document.head.appendChild(estilo);
  }));
 }
+/** Um módulo do painel, sob demanda (o navegador guarda: a segunda vez não busca de novo).
+ * @param {string} caminho @returns {Promise<unknown>} */
+const carregarModulo = (caminho) => import(caminho).catch(() => { throw new Error("Página indisponível."); });
 /** @param {string} nome */
-async function carregarPagina(nome) {
+export async function carregarPagina(nome) {
  if (["sessoes", "melhorias"].includes(nome)) await carregarEstilo("/vendor/xterm/xterm.css");
+ // A biblioteca do terminal (xterm) é um script comum; as páginas, módulos.
  for (const caminho of DEPENDENCIAS[nome] || []) await carregarScript(caminho);
- await carregarScript(SOB_DEMANDA[nome]);
+ await carregarModulo(SOB_DEMANDA[nome]);
 }
 
 // Sem cópia guardada: páginas com terminal ou relógio próprio, e a configuração inicial.
@@ -45,8 +54,8 @@ const SEM_GUARDA = [...CHEIAS, "atendimento", "configurar", "pesquisas"];
  * @param {string} secao @param {string} html */
 function mostrarPagina(secao, html) {
   conteudo.innerHTML = CHEIAS.includes(secao) ? html : `<div class="secao">${html}</div>`;
-  if (secao === "modelos") { desenharChave(); desenharEscuta(); desenharAcesso(); desenharContas(); }
-  if (secao === "configurar") { desenharAcesso(); desenharEscuta(); desenharContas(); }
+  if (secao === "modelos") { carregadas.desenharChave(); carregadas.desenharEscuta(); carregadas.desenharAcesso(); carregadas.desenharContas(); }
+  if (secao === "configurar") { carregadas.desenharAcesso(); carregadas.desenharEscuta(); carregadas.desenharContas(); }
   encher();
 }
 
@@ -56,8 +65,8 @@ function editando() {
   return !!a && conteudo.contains(a) && a.matches("input, textarea, select, [contenteditable]");
 }
 
-async function abrir() {
-  const vez = ++navegacao;
+export async function abrir() {
+  const vez = ++compartilhado.navegacao;
   const nome = (location.hash || "#inicio").slice(1);
   const secao = PAGINAS[nome] || SOB_DEMANDA[nome] || nome === "imersao" ? nome : "inicio";
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("nav a")).forEach((a) => (a.dataset.secao === secao ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
@@ -87,14 +96,14 @@ async function abrir() {
       if (guardada !== undefined) return; // sem resposta: fica o que já estava; a faixa avisa a queda
       throw erro;
     }
-    if (vez !== navegacao) return;
+    if (vez !== compartilhado.navegacao) return;
     if (!SEM_GUARDA.includes(secao) && gravacoes === gravacoesAntes) cachePaginas.set(secao, html);
     if (html !== guardada && !(guardada !== undefined && editando())) mostrarPagina(secao, html);
-    if (secao === "sessoes") await prepararSessoes(vez);
-    if (secao === "melhorias") await prepararMelhorias(vez);
-    if (secao === "conversa") await prepararConversa(vez);
+    if (secao === "sessoes") await carregadas.prepararSessoes(vez);
+    if (secao === "melhorias") await carregadas.prepararMelhorias(vez);
+    if (secao === "conversa") await carregadas.prepararConversa(vez);
   } catch (erro) {
-    if (vez !== navegacao) return;
+    if (vez !== compartilhado.navegacao) return;
     conteudo.innerHTML = `<div class="secao">${cabeca("Não foi possível abrir a página")}<p class="aviso">${esc(erro.message)}</p></div>`;
   }
 }
@@ -107,25 +116,22 @@ const TITULOS_ATUALIZACAO = {
   pronto: "Atualização aplicada", voltou: "Versão anterior restaurada",
 };
 /** @type {Atualizacao | null} */
-let atualizacao = null;
-let atualizacaoRecebida = 0;
-let cicloAtualizacao = 0;
+export let atualizacao = null;
 
 /** @param {number} s */
 const relogioMinutos = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, "0")}`;
-const atualizando = () => ["aplicando", "aguardando"].includes(atualizacao?.estado);
-let versaoAplicada = 0; // quando a página Atualizações mandou atualizar (o Zé vai reiniciar)
+export const atualizando = () => ["aplicando", "aguardando"].includes(atualizacao?.estado);
 // Só a fase de reinício explica a desconexão; nas demais, a faixa continua avisando a queda.
 const reiniciando = () => (atualizacao?.estado === "aplicando"
   && atualizacao.etapas.some((e) => e.id === "reiniciando" && e.estado === "atual")
-  && Date.now() - atualizacaoRecebida < 300000) || Date.now() - versaoAplicada < 180000;
+  && Date.now() - compartilhado.atualizacaoRecebida < 300000) || Date.now() - compartilhado.versaoAplicada < 180000;
 
 /** @param {Atualizacao | null} [a] */
-function desenharAtualizacao(a) {
+export function desenharAtualizacao(a) {
   if (a !== undefined) {
     const estavaAtualizando = atualizando();
-    atualizacao = a; atualizacaoRecebida = Date.now();
-    if (!estavaAtualizando && atualizando()) cicloAtualizacao++;
+    atualizacao = a; compartilhado.atualizacaoRecebida = Date.now();
+    if (!estavaAtualizando && atualizando()) compartilhado.cicloAtualizacao++;
   }
   window.desenharTravaSessoes?.();
   let cartao = /** @type {HTMLElement | null} */ (document.querySelector(".atualizacao"));
@@ -139,7 +145,7 @@ function desenharAtualizacao(a) {
     document.body.append(cartao);
   }
   const a2 = atualizacao;
-  const extra = atualizando() ? Math.max(0, (Date.now() - atualizacaoRecebida) / 1000) : 0;
+  const extra = atualizando() ? Math.max(0, (Date.now() - compartilhado.atualizacaoRecebida) / 1000) : 0;
   const etapas = a2.etapas.map((e) => ({ ...e, segundos: e.segundos + (e.estado === "atual" ? extra : 0) }));
   const total = etapas.reduce((t, e) => t + (e.estado === "feita" ? e.segundos : e.estimado), 0) || 1;
   const feito = etapas.reduce((t, e) => t + (e.estado === "feita" ? e.segundos : ["atual", "falhou"].includes(e.estado) ? Math.min(e.segundos, e.estimado * 0.95) : 0), 0);
@@ -183,7 +189,7 @@ function faixaFora(ligar) {
   if (ligar && !f) { f = document.createElement("div"); f.className = "faixa-fora"; f.role = "status"; f.textContent = "Reconectando…"; document.body.append(f); }
   if (!ligar) f?.remove();
 }
-async function batimento() {
+export async function batimento() {
   try {
     const e = await api("estado");
     if (inicioZe !== null && e.inicio !== inicioZe) { location.reload(); return; }
@@ -196,7 +202,7 @@ async function batimento() {
     telaVista = e.tela_ts;
     const icone = /** @type {HTMLElement} */ (document.querySelector(".icone-ze"));
     icone.dataset.estado = e.ze; icone.title = `Zé ${ESTADOS[e.ze] || e.ze}`;
-    estadoZe = e.ze;
+    compartilhado.estadoZe = e.ze;
     const holo = /** @type {HTMLElement} */ (document.querySelector(".holo"));
     if (holo && holo.dataset.estado !== e.ze) { holo.dataset.estado = e.ze; $("holo-estado").textContent = ESTADO_HOLO[e.ze] || ""; }
     desenharModoFala(e.modo_fala);
@@ -204,8 +210,8 @@ async function batimento() {
     $("ponto-atualizacoes").hidden = !e.versao?.disponivel;
     document.body.classList.toggle("manutencao", !!e.manutencao?.ligada); window.desenharManutencao?.(e.manutencao);
     desenharVozRemota();
-    if (sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
-      api("painel/vendo", { sessao: sessaoAberta }).catch(() => {});
+    if (compartilhado.sessaoAberta && $("terminal") && document.visibilityState === "visible" && document.hasFocus()) {
+      api("painel/vendo", { sessao: compartilhado.sessaoAberta }).catch(() => {});
     }
   } catch (erro) {
     if (erro.message === "token") { location.reload(); return; } // o Zé voltou com chave nova
@@ -221,7 +227,10 @@ async function comecar() {
   abrir();
 }
 
-window.addEventListener("hashchange", abrir);
-comecar();
-batimento();
-setInterval(batimento, 1000);
+/** Começa quando todos os módulos já carregaram (`principal.js`). */
+export function iniciarNavegacao() {
+  window.addEventListener("hashchange", abrir);
+  comecar();
+  batimento();
+  setInterval(batimento, 1000);
+}

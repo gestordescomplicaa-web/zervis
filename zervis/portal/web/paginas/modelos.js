@@ -1,12 +1,16 @@
+import { campoModelo, completo, notaDoQuando, prepararAcesso } from "../modulos/modelos.js";
+import { NOME_MOTOR, PAGINAS, api, botao, cabeca, cartao, esc, liga, sub } from "../painel.js";
+import { compartilhado } from "../modulos/estado.js";
+
 // Página modelos, carregada sob demanda.
 PAGINAS.modelos = async function() {
     const [c, esc_, cfg, ct] = await Promise.all([api("cerebro"), api("escuta"), api("configuracao"), api("contas")]);
-    contasTela = ct;
-    modelo = { ...c.via, chaves: c.chaves, listas: c.listas };
-    escuta = esc_;
+    compartilhado.contasTela = ct;
+    compartilhado.modelo = { ...c.via, chaves: c.chaves, listas: c.listas };
+    compartilhado.escuta = esc_;
     prepararAcesso(cfg);
-    Object.assign(acessoTela, completo(c));
-    agentes = c.agentes;
+    Object.assign(compartilhado.acessoTela, completo(c));
+    compartilhado.agentes = c.agentes;
     const sessoes = c.sessoes.total;
     return `${cabeca("Modelos")}${sub("Um modelo para cada tipo de tarefa.")}
       <section class="cartao" id="cartao-acesso" data-contexto="cerebro"></section>

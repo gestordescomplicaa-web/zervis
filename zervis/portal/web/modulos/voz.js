@@ -1,19 +1,22 @@
+import { recarregar } from "./acoes.js";
+import { $, NO_PC, TOKEN, api, escolha, toast } from "../painel.js";
+
 // --- Modo de fala: quando o Zé fala sem ser chamado (ADR 0018) ---
 
-const MODOS_FALA = [
+export const MODOS_FALA = [
   { valor: "silencioso", nome: "Silencioso", curto: "Sem voz", detalhe: "Não fala nem ouve. Tudo pela tela." },
   { valor: "avisos", nome: "Normal", curto: "Avisos e resultados", detalhe: "Fala avisos, urgências e um resumo do resultado de cada sessão." },
   { valor: "live", nome: "Live", curto: "Conversa em tempo real", detalhe: "Com a voz conectada, conversa como numa ligação: dá para cortar o Zé falando. Anuncia os resultados e responde na hora." },
 ];
-const MODOS_ESCUTA = [
+export const MODOS_ESCUTA = [
   { valor: "sempre", nome: "Sempre", detalhe: "Enquanto o Zé estiver em execução." },
   { valor: "janela", nome: "Com a janela aberta", detalhe: "Só com a janela do Zé aberta." },
 ];
-const nomeEscuta = (valor) => MODOS_ESCUTA.find((m) => m.valor === valor)?.nome || valor;
-const nomeModo = (valor) => MODOS_FALA.find((m) => m.valor === valor)?.nome || valor;
-let modoFala = null;
+export const nomeEscuta = (valor) => MODOS_ESCUTA.find((m) => m.valor === valor)?.nome || valor;
+export const nomeModo = (valor) => MODOS_FALA.find((m) => m.valor === valor)?.nome || valor;
+export let modoFala = null;
 
-function desenharModoFala(valor) {
+export function desenharModoFala(valor) {
   if (valor === modoFala) return;
   modoFala = valor;
   const itens = MODOS_FALA.map((m) => ({ valor: m.valor, nome: m.nome, detalhe: m.curto }));
@@ -21,7 +24,7 @@ function desenharModoFala(valor) {
   $("modo-fala").dataset.modo = valor;
 }
 
-async function mudarModoFala(valor) {
+export async function mudarModoFala(valor) {
   const r = await api("fala/modo", { modo: valor });
   desenharModoFala(r.modo);
   toast(r.aviso);
@@ -30,9 +33,9 @@ async function mudarModoFala(valor) {
 
 // --- Voz ao vivo pelo navegador: o microfone vai ao Zé pelo HTTPS do painel (WebSocket) ---
 
-let salaVoz = null, vozConectando = false, codigoPreparado = null;
+let salaVoz = null, vozConectando = false;
 
-function desenharVozRemota() {
+export function desenharVozRemota() {
   const on = !!salaVoz;
   // O botão liga o microfone e o alto-falante deste aparelho ao Zé; o modo (Fala: Live, Normal)
   // é outra escolha. Chamava-se "Ao vivo" e confundia com o modo Live (27/10/2026).
@@ -117,7 +120,7 @@ function agendarReligar() {
   religarVoz.espera = setTimeout(tentar, RELIGAR_MS[religarVoz.tentativas++]);
 }
 
-function ligarVoz() {
+export function ligarVoz() {
   clearTimeout(religarVoz.espera); religarVoz = { tentativas: 0, espera: null };
   if (salaVoz) { salaVoz.encerrar(); toast("Voz desconectada."); return; }
   conectarVoz(false);
@@ -181,7 +184,7 @@ const GRUPOS = "ze.grupos-fechados";
 function lerFechados() { try { return new Set(JSON.parse(localStorage.getItem(GRUPOS) || "[]")); } catch { return new Set(); } }
 lerFechados().forEach((g) => /** @type {HTMLElement} */ (document.querySelector(`.grupo[data-grupo="${g}"] .grupo-titulo`))?.setAttribute("aria-expanded", "false"));
 /** @type {HTMLElement} */ (document.querySelector("nav")).addEventListener("click", (ev) => { if (/** @type {HTMLAnchorElement} */ (/** @type {HTMLElement} */ (ev.target).closest("a"))) document.body.classList.remove("menu-aberto"); });
-function alternarGrupo(b) {
+export function alternarGrupo(b) {
   const aberto = b.getAttribute("aria-expanded") === "true", fechados = lerFechados(), g = /** @type {HTMLElement} */ (b.closest(".grupo")).dataset.grupo;
   b.setAttribute("aria-expanded", String(!aberto));
   aberto ? fechados.add(g) : fechados.delete(g);

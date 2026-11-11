@@ -1,3 +1,5 @@
+import { PAGINAS, api, botao, cabeca, cartao, esc, item, sub, vazio, xis } from "../painel.js";
+
 // Página foco, carregada sob demanda.
 PAGINAS.foco = async function() {
     const q = await api("foco");

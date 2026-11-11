@@ -1,3 +1,9 @@
+import { ACOES } from "../modulos/acoes.js";
+import { abrir } from "../modulos/navegacao.js";
+import { MODOS_ESCUTA, MODOS_FALA, nomeEscuta, nomeModo } from "../modulos/voz.js";
+import { ESPERAS, PAGINAS, api, botao, cabeca, cartao, confirmar, esc, ocupado, sub, toast, valorCampo } from "../painel.js";
+import { compartilhado } from "../modulos/estado.js";
+
 // Página voz, carregada sob demanda.
 PAGINAS.voz = async function() {
     const [e, o, r, s] = await Promise.all([api("estado"), api("escuta"), api("remoto"), api("sintese")]);
@@ -24,7 +30,7 @@ PAGINAS.voz = async function() {
         ${sub("O Zé no navegador do celular, em casa ou fora. Exige senha e código do autenticador.")}
         <div class="linha"><label>Senha de acesso${r.senha ? " (definida)" : ""}<input id="senha-acesso" type="password" autocomplete="new-password" placeholder="${r.senha ? "Nova senha" : "Mínimo de 8 caracteres"}"></label>${botao("Salvar senha", "senha-salvar")}</div>
         <div class="parte"><div class="cabeca"><h3 class="subtitulo">Código do autenticador</h3>${etiqueta(r.codigo, "Ligado", "Desligado")}</div>
-          ${codigoPreparado ? `<div class="acesso-qr">${codigoPreparado.qr}<div class="campos"><p>Leia com o aplicativo autenticador (Google Authenticator, Aegis…) ou digite a chave:</p><p class="mono">${esc(codigoPreparado.chave)}</p>
+          ${compartilhado.codigoPreparado ? `<div class="acesso-qr">${compartilhado.codigoPreparado.qr}<div class="campos"><p>Leia com o aplicativo autenticador (Google Authenticator, Aegis…) ou digite a chave:</p><p class="mono">${esc(compartilhado.codigoPreparado.chave)}</p>
             <div class="linha"><label>Código de 6 dígitos<input id="codigo-confirmar" inputmode="numeric" autocomplete="one-time-code" maxlength="7"></label>${botao("Confirmar", "codigo-confirmar", "", "principal")}</div></div></div>`
             : `<div class="linha">${r.codigo ? botao("Desligar", "codigo-desligar", "", "discreta") : botao("Ligar", "codigo-preparar", r.senha ? "" : "disabled")}</div>`}</div>
         <div class="parte"><div class="cabeca"><h3 class="subtitulo">Acesso de qualquer lugar</h3>${etiqueta(!!r.tunel.endereco, "Ativo", "Inativo")}</div>
