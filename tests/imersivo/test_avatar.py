@@ -1,4 +1,4 @@
-"""The avatar: the Zé's holographic chimpanzee (Blender glTF) inside the ring
+"""The avatar: the Zé's holographic monkey (Blender glTF, avatar/jarvis-macaco.js) inside the ring
 widget (a tap only pulses him: no Núcleo orbs since 29/10/2026), switchable back to the ring from the D menu, by the
 Zé (action visual) or by voice.
 
@@ -91,7 +91,7 @@ async def main():
                     if await ev('window.stageReady === true && window.jarvisAvatar?.montados === 1'):
                         break
                     await asyncio.sleep(.1)
-                await check('the ring widget wears the 3D chimpanzee over the hidden ring drawing', '''(() => {
+                await check('the ring widget wears the 3D monkey over the hidden ring drawing', '''(() => {
                     const r = document.querySelector(".ringcard"), c = r.querySelector("canvas.jv-avatar-cena");
                     return r.classList.contains("jv-avatar") && c && c.width > 0 && !r.classList.contains("jv-preparando")
                       && getComputedStyle(r.querySelector("canvas")).opacity === "0"; })()''')
@@ -110,9 +110,9 @@ async def main():
                     await asyncio.sleep(.1)
                 await asyncio.sleep(1)
                 shot = await call('Page.captureScreenshot', {'format': 'png'})
-                Path('/tmp/jarvis-chimpanze-atual.png').write_bytes(base64.b64decode(shot['data']))
-                await check('the Blender chimpanzee with its mouth and blink shape keys, mouth closed', '''(() => {
-                    const d=jarvisAvatar.diagnostico()[0];return d.modelo==='chimpanze'&&d.expressoes.includes('Boca_Aberta')
+                Path('/tmp/jarvis-macaco-atual.png').write_bytes(base64.b64decode(shot['data']))
+                await check('the Blender monkey with its mouth and blink channels, mouth closed', '''(() => {
+                    const d=jarvisAvatar.diagnostico()[0];return d.modelo==='macaco'&&d.expressoes.includes('Boca_Aberta')
                       &&d.expressoes.includes('Piscar')&&d.bocaAberta<.01;
                 })()''')
                 # Feed the real ring wave path; no alternate animation implementation.
@@ -123,7 +123,7 @@ async def main():
                     await asyncio.sleep(.1)
                 await check('the played speech waveform opens the mouth shape key', 'jarvisAvatar.diagnostico()[0].bocaAberta>.3')
                 shot = await call('Page.captureScreenshot', {'format': 'png'})
-                Path('/tmp/jarvis-chimpanze-falando.png').write_bytes(base64.b64decode(shot['data']))
+                Path('/tmp/jarvis-macaco-falando.png').write_bytes(base64.b64decode(shot['data']))
                 await ev('clearInterval(avatarFeed);window.avatarFeed=setInterval(()=>{jarvisRing.data={state:"speaking",wave:Array(64).fill(0)};},20)')
                 for _ in range(60):  # the mouth eases shut frame by frame: slower frames, longer wait
                     if await ev('jarvisAvatar.diagnostico()[0].boca<.025'):
@@ -242,20 +242,20 @@ async def main():
                 await check('rapid visual changes leave one live scene and one label', '''jarvisAvatar.montados===1
                     &&document.querySelectorAll('.jv-avatar-cena').length===1&&document.querySelectorAll('.jv-avatar-identidade').length===1''')
                 # The presentation (ADR 0045): the Zé moves aside and his own data materializes as
-                # real board items, linked to him by beams; encerrar brings everything back.
+                # real board items, with no beams to them (11/11/2026); encerrar brings everything back.
                 antes = await ev('(()=>{const r=jarvisStage.anel();return {x:r.x,y:r.y};})()')
                 await ev('jarvisApresentacao.ritmo=.03;jarvisControle.executar({id:"a1",acoes:[{acao:"apresentar",valor:"quem"}]})')
                 cinco = '''(() => {
                     const els = [...document.querySelectorAll(".card.jv-holo")];
                     return els.length === 5 && els.every(el => jarvisItemDe(el)?.type === "holo")
-                      && document.querySelectorAll("#jv-feixes .feixe").length === 5
+                      && !document.querySelector("#jv-feixes")
                       && document.querySelector(".jv-holo h2").textContent === "Identidade"
                       && !!document.querySelector(".jv-holo .jv-grafo canvas"); })()'''
                 for _ in range(150):  # slow software frames: the graph draws a moment after its panel
                     if await ev(cinco):
                         break
                     await asyncio.sleep(.1)
-                await check('the presentation shows five panels from the self-knowledge, as board items', cinco)
+                await check('the presentation shows five panels from the self-knowledge, as board items, with no beams', cinco)
                 for _ in range(40):
                     if await ev('document.querySelector(".jv-heroi b").textContent === "6"'):
                         break
@@ -270,7 +270,7 @@ async def main():
                     await asyncio.sleep(.1)
                 await check('encerrar clears the panels and the beams, and the Zé goes back', f'''(() => {{
                     const r = jarvisStage.anel(); return Math.abs(r.x - {antes["x"]}) < 3 && !document.querySelector(".card.jv-holo")
-                      && !document.querySelector("#jv-feixes .feixe") && !jarvisApresentacao.apresentando; }})()''')
+                      && !document.querySelector("#jv-feixes") && !jarvisApresentacao.apresentando; }})()''')
                 # A scene the Zé writes (ADR 0047): cleaned on the page, unknown blocks dropped, numbers
                 # without a source tagged ILUSTRATIVO, the blocks drawn on board items.
                 cena = {'titulo': 'Teste', 'passos': [
@@ -295,7 +295,7 @@ async def main():
                 # puts the Zé back where and how big he was.
                 await ev('jarvisControle.executar({id:"c2",acoes:[{acao:"fechar",alvo:"a animação"}]})')
                 limpo = f'''(() => {{ const r = jarvisStage.anel();
-                    return !document.querySelector(".card.jv-holo") && !document.querySelector("#jv-feixes .feixe")
+                    return !document.querySelector(".card.jv-holo") && !document.querySelector("#jv-feixes")
                       && Math.abs(r.x - {antes["x"]}) < 3 && !jarvisApresentacao.apresentando; }})()'''
                 for _ in range(150):
                     if await ev(limpo):
@@ -344,7 +344,7 @@ async def main():
                 await ev(f'jarvisApresentacao.ritmo=.03;jarvisControle.executar({{id:"h1",acoes:[{{acao:"explicar",cena:{json.dumps(cena3d)}}}]}})')
                 holo = '''(() => { const el = document.querySelector(".card.modelcard"), it = el && jarvisItemDe(el);
                     return !!it && it.type === "model" && it.def.src === "holograma:Teste 3D" && it.def.mmode === "holo"
-                      && document.querySelectorAll("#jv-feixes .feixe").length === 2; })()'''  # the scene's title and the hologram
+                      && jarvisApresentacao.paineis.length === 2; })()'''  # the scene's title and the hologram
                 for _ in range(150):
                     if await ev(holo):
                         break
@@ -424,7 +424,7 @@ async def main():
                     if await ev(no_feixe):
                         break
                     await asyncio.sleep(.1)
-                await check('a modelo block hangs the downloaded model on the Zé\'s beam (the bad path dropped)', no_feixe)
+                await check('a modelo block shows the downloaded model in the scene (the bad path dropped)', no_feixe)
                 await ev('jarvisApresentacao.encerrar()')
                 await asyncio.sleep(.6)
                 # The background (29/10/2026): the camera or the dark animated scene; the video only

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// The Zé: the holographic chimpanzee inside the original interactive ring.
+// The Zé: the holographic monkey inside the original interactive ring (avatar/jarvis-macaco.js,
+// since 11/11/2026; the chimpanzee before it stays in avatar/jarvis-chimpanze.js).
 // Speech comes from the real ring waveform. No extra microphone or audio connection.
 (() => {
   if (new URLSearchParams(location.search).get("role") === "render") return;
   const CHAVE = "jv-visual";
-  const EMOCOES = ["alegria", "duvida", "raiva", "tristeza"];  // avatar/jarvis-chimpanze.js: NOMES_DAS_EMOCOES
+  const EMOCOES = ["alegria", "duvida", "raiva", "tristeza"];  // avatar/jarvis-macaco.js: NOMES_DAS_EMOCOES
   const FORCAR = new URLSearchParams(location.search).get("avatar") === "forcar";
   const reduzir = matchMedia("(prefers-reduced-motion: reduce)");
   let ativo = true;
@@ -13,7 +14,7 @@
   // An emotion asked here (controller action, tests) wins over the one in /orb until it expires.
   let sentida = { nome: "", ate: 0 };
   let bibliotecas;
-  const carregar = () => (bibliotecas ||= Promise.all([import("three"), import("three/addons/loaders/GLTFLoader.js"), import("./avatar/jarvis-chimpanze.js")]));
+  const carregar = () => (bibliotecas ||= Promise.all([import("three"), import("three/addons/loaders/GLTFLoader.js"), import("./avatar/jarvis-macaco.js")]));
   const css = document.createElement("style");
   css.textContent = `
     .ringcard.jv-avatar > canvas:first-child, .ringcard.jv-preparando > canvas:first-child { opacity:0; }
@@ -40,7 +41,7 @@
   document.head.appendChild(css);
 
   async function montar(el, pedido) {
-    const [T, { GLTFLoader }, { criarChimpanze }] = await carregar();
+    const [T, { GLTFLoader }, { criarMacaco }] = await carregar();
     if (pedido.cancelado || !ativo || !el.isConnected) return null;
     const canvas = document.createElement("canvas"); canvas.className="jv-avatar-cena";
     canvas.setAttribute("aria-hidden","true"); el.appendChild(canvas);
@@ -68,11 +69,11 @@
       for(const [color,intensity,pos] of [[0xe0f8ff,4.5,[-3,5,4]],[0x3acadd,3,[4,2,-2]],[0x779bc8,.8,[2,-1,3]]]) {
         const light=new T.DirectionalLight(color,intensity); light.position.set(...pos); cena.add(light);
       }
-      robo=await criarChimpanze(T,GLTFLoader);
+      robo=await criarMacaco(T,GLTFLoader);
       if (pedido.cancelado || !ativo || !el.isConnected) { limpar(); return null; }
       // The hand's spin (stage.html "spin mode") turns the Zé inside the scene, never the flat card.
       const giro=new T.Group(); giro.add(robo.grupo); cena.add(giro);
-      if(robo.cenario){  // the constellation: a canvas 1.44x the card, the camera pulled back to keep the head size
+      if(robo.cenario){  // with the projector: a canvas 1.44x the card, the camera pulled back to keep the size
         cena.add(robo.cenario); canvas.classList.add("jv-constelacao"); lado=software?280:1100;
         camera.position.set(0,.12*1.44,8.15*1.44); camera.lookAt(0,-.3,0);
       }

@@ -1,6 +1,19 @@
 # Avatar Zé ORCA
 
-**Visual atual: a constelação (29/10/2026).** O mesmo chimpanzé do Blender desenhado como uma
+**Visual atual: o macaco holográfico (11/11/2026, ADR 0080).** O busto "Monkey / Australopithecus
+stone bust", de gamnok (CC BY 4.0, `LICENSE-macaco.txt`), preparado no Blender por
+`macaco_blender.py`: reduzido, com os lábios separados no vinco esculpido, a boca por dentro, a
+dentição de um chimpanzé (32 dentes, arcada em U, caninos arredondados) e as formas `jawOpen`,
+`alegria`, `tristeza`, `raiva` e `duvida`. Para refazer o `jarvis-macaco.glb` a partir do arquivo
+baixado do Sketchfab (o GLB com texturas 1k):
+
+    blender -b -P avatar/macaco_blender.py -- <monkey__australopithecus_stone_bust.glb> avatar/jarvis-macaco.glb
+
+`jarvis-macaco.js` o desenha como "contorno": volume escuro, silhueta de luz forte e olhos como dois
+pontos de luz, sobre o projetor da constelação; com a boca fechada, dentes e interior não são
+desenhados. A boca segue a voz e as emoções acionam as formas, pela mesma interface do chimpanzé.
+
+**Antes: a constelação (29/10/2026).** O mesmo chimpanzé do Blender desenhado como uma
 constelação de luz, aprovada no laboratório do holograma: cerca de 4 mil pontos espalhados por
 igual na cabeça, ligados aos vizinhos mais próximos (cerca de 7 mil ligações), com pulsos de luz
 correndo pelas ligações, um brilho na borda, a faixa de varredura, as falhas de sinal e uma

@@ -125,7 +125,7 @@
       const id_ = "abertura-" + b.tipo, onde = fazer ? lugar(i++) : null;
       const mostrar = () => {
         if (id !== rodada) return;
-        if (fazer) { P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab", semFeixe: true }); P().focar(id_); }
+        if (fazer) { P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab" }); P().focar(id_); }
       };
       // The script runner only waits: the panel comes with the voice.
       return { fala: "", aguardar: async () => {

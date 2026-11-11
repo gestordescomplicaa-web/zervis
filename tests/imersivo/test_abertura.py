@@ -153,7 +153,7 @@ async def main():
                       && /^\\d\\d:\\d\\d$/.test(document.querySelector("[data-relogio]").textContent)
                       && document.querySelector(".jv-ab-clima b").textContent === "30°"
                       && !document.querySelector(".jv-ab b b")
-                      && [...document.querySelectorAll("#jv-feixes .feixe")].every(f => getComputedStyle(f).display === "none"); })()''')
+                      && !document.querySelector("#jv-feixes"); })()''')
                 passed.append('the panels show the Zé\'s data, escaped, with a live clock, and no beams across them')
                 assert await ev('!document.getElementById("jv-abertura-vinheta")')
                 passed.append('the panels stay on the board when it is over; the title is gone')

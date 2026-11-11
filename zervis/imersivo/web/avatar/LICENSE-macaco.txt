@@ -1,0 +1,10 @@
+"Monkey / Australopithecus stone bust" by gamnok (https://sketchfab.com/ewapodermanska)
+is licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://sketchfab.com/3d-models/monkey-australopithecus-stone-bust-6cb471c89f634beaa0e3f62fb939d27d
+(downloaded 11/11/2026, the GLB with 1k textures).
+
+Changes for the Zé (jarvis-macaco.glb, made by macaco_blender.py): reduced to 60 thousand faces
+without texture; the lips split on the carved crease with a jaw opening; a mouth inside and a
+dentition added; four facial expressions added as shape keys.
