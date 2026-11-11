@@ -82,7 +82,7 @@ def test_pc_instala_servico_atalho_e_abre_painel(instalacao: tuple[Path, Path]) 
     assert "uv run python -m zervis.preparar" in comandos
     assert "uv run python -m zervis.cerebro.agentes_nativos" in comandos
     assert "systemctl --user import-environment DISPLAY" in comandos
-    assert "systemctl --user enable zervis" in comandos
+    assert "systemctl --user enable zervis" not in comandos  # no PC, um programa (ADR 0079)
     assert "systemctl --user restart zervis" in comandos
     assert "setsid " in comandos
     assert "primeiro_acesso" not in comandos
@@ -135,6 +135,7 @@ def test_servidor_preserva_linger_e_primeiro_acesso(instalacao: tuple[Path, Path
     assert resultado.returncode == 0, resultado.stdout + resultado.stderr
     comandos = registro.read_text()
     assert "loginctl enable-linger teste" in comandos
+    assert "systemctl --user enable zervis" in comandos  # o servidor fica sempre de pé
     assert "uv run python -m zervis.portal.primeiro_acesso" in comandos
     assert "setsid " not in comandos
     assert "import-environment" not in comandos
@@ -197,3 +198,78 @@ def test_reinstalar_mantem_a_porta_que_o_servico_ja_usa(
     assert "ZERVIS_PAINEL_PORTA=8797" in servico.read_text()
     assert "ZERVIS_PAINEL_PORTA=8797" in atalho.read_text()
     assert "http://127.0.0.1:8797/" in resultado.stdout
+
+
+def _atalho_com_servico(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, habilitado: bool, janelas: int = 0
+) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    """O atalho com um systemd e um pgrep de mentira, e o painel numa porta que responde.
+    `janelas`: quantas vezes o pgrep ainda acha uma janela do Zé aberta."""
+    import socket
+
+    binarios = tmp_path / "bin"
+    binarios.mkdir()
+    for comando in ("bash", "mkdir", "seq", "sleep", "cat", "rm"):
+        origem = shutil.which(comando)
+        assert origem is not None
+        (binarios / comando).symlink_to(origem)
+    registro = tmp_path / "systemctl.log"
+    contador = tmp_path / "janelas"
+    contador.write_text(str(janelas))
+    (binarios / "systemctl").write_text(
+        f"""#!/bin/sh
+echo "$*" >> "{registro}"
+case "$2" in
+  cat) exit 0 ;;
+  is-enabled) exit {0 if habilitado else 1} ;;
+  is-active) exit 1 ;;
+esac
+"""
+    )
+    (binarios / "pgrep").write_text(
+        f"""#!/bin/sh
+n=$(cat "{contador}")
+[ "$n" -gt 0 ] || exit 1
+echo $((n - 1)) > "{contador}"
+"""
+    )
+    (binarios / "chromium").write_text("#!/bin/sh\nprintf '<%s>\\n' \"$@\"\n")
+    for nome in ("systemctl", "pgrep", "chromium"):
+        (binarios / nome).chmod(0o755)
+    painel = socket.socket()
+    painel.bind(("127.0.0.1", 0))
+    painel.listen(8)
+    monkeypatch.setenv("PATH", str(binarios))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "dados"))
+    monkeypatch.setenv("ZERVIS_PAINEL_PORTA", str(painel.getsockname()[1]))
+    try:
+        resultado = _rodar(REPO, "abrir-painel.sh")
+    finally:
+        painel.close()
+    return resultado, registro.read_text().splitlines()
+
+
+def test_como_programa_abrir_liga_o_ze_e_fechar_desliga(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ADR 0079: sem a partida automática, o Zé só funciona com a janela aberta."""
+    resultado, systemctl = _atalho_com_servico(tmp_path, monkeypatch, habilitado=False, janelas=1)
+    assert resultado.returncode == 0, resultado.stderr
+    assert "<--app=" in resultado.stdout
+    assert systemctl == [
+        "--user cat zervis",
+        "--user is-enabled --quiet zervis",
+        "--user is-active --quiet zervis",
+        "--user start zervis",
+        "--user stop zervis",  # depois que a última janela fechou
+    ]
+    assert (tmp_path / "janelas").read_text().strip() == "0"  # esperou a janela fechar
+
+
+def test_com_a_partida_automatica_fechar_nao_desliga(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    resultado, systemctl = _atalho_com_servico(tmp_path, monkeypatch, habilitado=True)
+    assert resultado.returncode == 0, resultado.stderr
+    assert "<--app=" in resultado.stdout
+    assert "--user stop zervis" not in systemctl

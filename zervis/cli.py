@@ -139,11 +139,12 @@ def verificacoes(rodar: Rodar = rodar, responde: Responde = painel_responde) -> 
         )
     )
     habilitado = rodar(["systemctl", "--user", "is-enabled", "--quiet", SERVICO]).returncode == 0
+    # Desligado é o Zé como programa (ADR 0079): liga ao abrir e desliga ao fechar.
     lista.append(
-        Verificacao("Início automático", True, "Ligado.")
-        if habilitado
-        else Verificacao(
-            "Início automático", False, "Desligado.", f"systemctl --user enable {SERVICO}"
+        Verificacao(
+            "Início automático",
+            True,
+            "Ligado." if habilitado else "Desligado: o Zé liga ao abrir o programa.",
         )
     )
     numero = porta(rodar)
