@@ -100,7 +100,11 @@ if [ "$MODO" = pc ]; then
     systemctl --user import-environment "$variavel"
   done
 fi
-systemctl --user enable zervis
+# No servidor o Zé fica sempre de pé. No PC ele é um programa (ADR 0079): liga agora para a
+# configuração inicial e depois só ao abrir o atalho; fechar a última janela o desliga.
+if [ "$MODO" = servidor ]; then
+  systemctl --user enable zervis
+fi
 systemctl --user restart zervis
 
 # --- conferência -------------------------------------------------------------------------------

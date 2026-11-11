@@ -12,9 +12,13 @@ deploy/instalar-pc.sh
 
 O instalador reaproveita a preparação do servidor: uv fixado, `uv sync --frozen`, modelos de
 voz conferidos, agentes de código e Go verificado para o WhatsApp e as ligações. Instala o serviço
-`zervis` do usuário, habilita o início automático e abre `http://127.0.0.1:8795/`. Configure perfil,
+`zervis` do usuário, liga o Zé e abre `http://127.0.0.1:8795/`. Configure perfil,
 conta Claude ou Codex e Deepgram no
 painel. Sem Deepgram, a conversa por texto funciona. A instalação não configura acesso externo.
+
+No PC, o Zé é um programa (ADR 0079): não liga com o computador. Abrir o atalho Zérvis liga o
+Zé, e fechar a última janela dele o desliga; fechado, ele não escuta nem faz nada (nem
+lembretes, nem WhatsApp). Para deixá-lo sempre ligado: `systemctl --user enable zervis`.
 
 Se faltar uma versão compatível do Go, o instalador baixa Go 1.27.2 oficial para x86-64 ou arm64
 sem `sudo` e confere o SHA-256. Na primeira conexão do WhatsApp, compila o WaCalls e baixa seus
