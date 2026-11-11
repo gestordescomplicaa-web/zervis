@@ -141,8 +141,9 @@ async def main():
                         break
                     await asyncio.sleep(.05)
                 assert paineis == 6, paineis
+                assert await ev('!document.getElementById("jv-legenda-ze").textContent')
                 assert not adiantados, adiantados
-                passed.append('one panel per block, each one only with its own line, in order')
+                passed.append('one panel per block, each one only with its own line, in order, no caption')
                 assert await esperar('!jarvisAbertura.rodando', 30), CANAL['falas']
                 assert [f['passo'] for f in CANAL['falas']] == list(range(7)), CANAL['falas']
                 assert all(f['montado'] == MONTADO and set(f) == {'montado', 'passo'} for f in CANAL['falas'])
@@ -152,8 +153,8 @@ async def main():
                       && /^\\d\\d:\\d\\d$/.test(document.querySelector("[data-relogio]").textContent)
                       && document.querySelector(".jv-ab-clima b").textContent === "30°"
                       && !document.querySelector(".jv-ab b b")
-                      && document.querySelectorAll("#jv-feixes .feixe").length === 6; })()''')
-                passed.append('the panels show the Zé\'s data, escaped, with a live clock and beams')
+                      && [...document.querySelectorAll("#jv-feixes .feixe")].every(f => getComputedStyle(f).display === "none"); })()''')
+                passed.append('the panels show the Zé\'s data, escaped, with a live clock, and no beams across them')
                 assert await ev('!document.getElementById("jv-abertura-vinheta")')
                 passed.append('the panels stay on the board when it is over; the title is gone')
                 import base64

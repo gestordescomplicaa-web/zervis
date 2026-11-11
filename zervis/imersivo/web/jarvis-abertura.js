@@ -52,14 +52,14 @@
   async function estado() {
     try { const r = await fetch("/orb", { cache: "no-store" }); return r.ok ? (await r.json()).state : ""; } catch (_) { return ""; }
   }
-  // One subject at a time: the line is asked for first; its panel and caption come with the
+  // One subject at a time: the line is asked for first; its panel comes with the
   // voice (or after a short head start, if it is slow), and the next one waits for the end.
   async function falar(montado, passo, texto, id, mostrar) {
     falados.push(passo);
     try {
       await fetch("/abertura/falar", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ montado, passo }) });
-    } catch (_) { /* no voice: the caption still shows */ }
+    } catch (_) { /* no voice: the panel still shows */ }
     let comecou = false, mostrado = false;
     for (const t0 = performance.now(); id === rodada && performance.now() - t0 < 12000 * ritmo;) {
       if (await estado() === "speaking") { comecou = true; break; }
@@ -89,7 +89,8 @@
   }
 
   // ---- one panel per block, three columns by two rows to the right of the Zé ----
-  const lugar = i => ({ x: .215 + (i % 3) * .262, y: i < 3 ? .06 : .45, w: .245, h: .33 });  // the caption sits below
+  // No caption under the panels (11/11/2026): the Zé says it, and the room is for the panels.
+  const lugar = i => ({ x: .215 + (i % 3) * .262, y: i < 3 ? .05 : .48, w: .245, h: .38 });
   const lista = itens => `<ul class="jv-ab-lista">${itens.join("")}</ul>`;
   const mais = (b, mostrados) => b.total > mostrados ? `<p class="jv-ab-mais">+${b.total - mostrados}</p>` : "";
   const ICONES = { interrompida: ["alerta", "◐"], limite: ["alerta", "◷"], erro: ["critico", "✕"], trabalhando: ["bom", "●"] };
@@ -124,10 +125,9 @@
       const id_ = "abertura-" + b.tipo, onde = fazer ? lugar(i++) : null;
       const mostrar = () => {
         if (id !== rodada) return;
-        if (fazer) { P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab" }); P().focar(id_); }
-        P().dizer(fala);
+        if (fazer) { P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab", semFeixe: true }); P().focar(id_); }
       };
-      // The script runner only waits: the panel and the caption come with the voice.
+      // The script runner only waits: the panel comes with the voice.
       return { fala: "", aguardar: async () => {
         await (dia.montado ? falar(dia.montado, passo, fala, id, mostrar) : (mostrar(), espera(Math.max(3000, fala.length * 70))));
         if (id === rodada) feitos++;
