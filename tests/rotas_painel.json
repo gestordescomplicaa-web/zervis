@@ -22,7 +22,8 @@
     "conectores",
     "atendimento",
     "atualizacoes",
-    "pesquisas"
+    "pesquisas",
+    "abertura"
   ],
   "escritas": [
     "cerebro",
@@ -147,9 +148,12 @@
     "atualizacoes/procurar",
     "atualizacoes/canal",
     "atualizacoes/aplicar",
-    "ze/propor"
+    "ze/propor",
+    "abertura",
+    "abertura/musica/remover"
   ],
   "envios": [
-    "sessao/anexo"
+    "sessao/anexo",
+    "abertura/musica"
   ]
 }

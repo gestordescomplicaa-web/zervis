@@ -1,0 +1,42 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   The opening (jarvis-abertura.js, ADR 0078): the name over the music, then the day's panels,
+   built on the presentation's holographic panels (jarvis-apresentacao.css). */
+
+#jv-abertura-vinheta { position: fixed; left: 0; right: 0; top: 64%; z-index: 6; pointer-events: none;
+  display: grid; justify-items: center; gap: 10px; text-align: center; animation: jv-ab-acender 1.6s cubic-bezier(.2,.8,.2,1) both; }
+#jv-abertura-vinheta.saindo { animation: jv-ab-apagar .9s ease-in both; }
+#jv-abertura-vinheta h1 { margin: 0; font: 600 64px/1 "Chakra Petch", system-ui, sans-serif; letter-spacing: .42em; padding-left: .42em;
+  color: var(--jv-claro, #bffff2); text-shadow: 0 0 22px rgb(var(--jv-acento-rgb, 143 240 228) / .7), 0 0 4px rgb(var(--jv-acento-rgb, 143 240 228) / .9); }
+#jv-abertura-vinheta p { margin: 0; font: 500 12px "JetBrains Mono", monospace; letter-spacing: .32em; text-transform: uppercase;
+  color: var(--jv-suave, #a8d8cf); }
+#jv-abertura-vinheta .anel { width: min(520px, 60vw); height: 1px;
+  background: linear-gradient(90deg, transparent, var(--jv-acento, #8ff0e4), transparent);
+  box-shadow: 0 0 14px var(--jv-acento, #8ff0e4); animation: jv-ab-varrer 1.4s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes jv-ab-acender { 0% { opacity: 0; filter: blur(8px) brightness(3); letter-spacing: .8em; } 60% { opacity: 1; } 100% { filter: none; } }
+@keyframes jv-ab-apagar { to { opacity: 0; transform: translateY(-12px); filter: blur(6px); } }
+@keyframes jv-ab-varrer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.jv-holo.jv-ab .jv-ab-hora { display: block; font: 600 54px/1 "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums;
+  color: var(--jv-claro, #bffff2); text-shadow: 0 0 18px rgb(var(--jv-acento-rgb, 143 240 228) / .55); }
+.jv-holo.jv-ab .jv-ab-data { margin: 0; font: 500 14px "Chakra Petch", system-ui, sans-serif; letter-spacing: .04em; }
+.jv-holo.jv-ab .jv-ab-data::first-letter { text-transform: uppercase; }
+.jv-holo.jv-ab .jv-ab-oi { margin: auto 0 0; font: 500 11px "JetBrains Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--jv-suave, #a8d8cf); }
+.jv-holo.jv-ab .jv-ab-clima { display: flex; align-items: baseline; gap: 12px; }
+.jv-holo.jv-ab .jv-ab-clima b { font: 600 48px/1 "Chakra Petch", system-ui, sans-serif; color: var(--jv-claro, #bffff2);
+  text-shadow: 0 0 18px rgb(var(--jv-acento-rgb, 143 240 228) / .55); }
+.jv-holo.jv-ab .jv-ab-clima span { font: 500 14px "Chakra Petch", system-ui, sans-serif; }
+.jv-holo.jv-ab .jv-ab-clima span::first-letter { text-transform: uppercase; }
+.jv-holo.jv-ab .jv-ab-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; overflow: hidden;
+  font: 500 12px "Chakra Petch", system-ui, sans-serif; }
+.jv-holo.jv-ab .jv-ab-lista li { display: flex; align-items: baseline; gap: 10px; animation: jv-chegar .5s both; min-width: 0; }
+.jv-holo.jv-ab .jv-ab-lista time { flex: none; font: 400 10px "JetBrains Mono", monospace; color: var(--jv-suave, #a8d8cf); }
+.jv-holo.jv-ab .jv-ab-lista .jv-st { flex: none; }
+.jv-holo.jv-ab .jv-ab-lista .txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jv-holo.jv-ab .jv-ab-noticia { display: grid !important; gap: 1px; }
+.jv-holo.jv-ab .jv-ab-noticia .txt { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+.jv-holo.jv-ab .jv-ab-noticia small { font: 400 9px "JetBrains Mono", monospace; letter-spacing: .12em; color: var(--jv-suave, #a8d8cf); text-transform: uppercase; }
+.jv-holo.jv-ab .jv-ab-mais { margin: 0; font: 500 10px "JetBrains Mono", monospace; color: var(--jv-suave, #a8d8cf); letter-spacing: .14em; }
+
+@media (prefers-reduced-motion: reduce) {
+  #jv-abertura-vinheta, #jv-abertura-vinheta .anel { animation-duration: .01s; } }

@@ -157,7 +157,9 @@ def _chromium(perfil: Path) -> tuple[subprocess.Popen[bytes], str]:
 # módulos que a página carregou, com os nomes de antes na janela: um script que o Chromium roda em
 # cada documento novo (sobrevive ao painel recarregar quando o Zé reinicia).
 ATALHOS = """(() => {
-  if (!location.protocol.startsWith("http") || window.__atalhosInstalados) return;
+  // Só no painel: não numa moldura (a Imersão é outro servidor).
+  if (!location.protocol.startsWith("http") || window !== window.top) return;
+  if (window.__atalhosInstalados) return;
   window.__atalhosInstalados = true;
   const E = "/modulos/estado.js", N = "/modulos/navegacao.js", P = "/painel.js";
   const cache = {};
@@ -1820,3 +1822,34 @@ def test_propor_como_pr_mostra_que_esta_propondo_e_nao_repete(tmp_path: Path) ->
             asyncio.run(conferir(depuracao, url))
     finally:
         solta.set()
+
+
+async def _abrir_pelo_programa(depuracao: str, endereco: str) -> dict[str, Any]:
+    async with websockets.connect(depuracao, max_size=None) as ws:
+        nav = _Navegador(ws)
+        # A Imersão de verdade (8794) é a do Zé desta máquina: o teste nunca a abre (ela falaria).
+        await nav.comando("Network.enable", {})
+        await nav.comando("Network.setBlockedURLs", {"urls": ["*://127.0.0.1:8794/*"]})
+        await _carregar(nav, f"{endereco}?abertura=1")
+        moldura = '!!document.querySelector("#moldura iframe")'
+        await _esperar(nav, f'location.hash === "#imersao" && {moldura}')
+        primeira = await nav.avaliar(
+            '({busca: location.search, imersao: document.querySelector("#moldura iframe").src})'
+        )
+        await nav.avaliar("location.reload()")
+        await asyncio.sleep(0.3)
+        await _esperar(nav, f"window.__atalhos === true && {moldura}")
+        depois = await nav.avaliar('document.querySelector("#moldura iframe").src')
+        return {**primeira, "recarregada": depois, "erros": nav.erros[:]}
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_abrir_pelo_programa_leva_a_abertura_uma_vez(tmp_path: Path) -> None:
+    """ADR 0078: o atalho abre `/?abertura=1`; o painel vai para a Imersão com a abertura e o
+    endereço esquece o pedido (recarregar não repete)."""
+    with _painel(tmp_path) as (depuracao, endereco):
+        r = asyncio.run(_abrir_pelo_programa(depuracao, endereco))
+    assert r["busca"] == "", r
+    assert r["imersao"].endswith("&abertura=1"), r
+    assert "abertura" not in r["recarregada"], r
+    assert not r["erros"], r

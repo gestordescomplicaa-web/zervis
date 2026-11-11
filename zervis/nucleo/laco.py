@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from zervis import atividade, versoes
+from zervis.abertura.servico import Abertura
 from zervis.atendimento import agente, cliente, projeto
 from zervis.atendimento import ferramentas as atendente_ferramentas
 from zervis.automacoes.agenda import FUSO
@@ -514,6 +515,7 @@ class Nucleo(
         self.painel = Painel(cfg.caminho("barehands", "pasta_estado"))
         self.hud = hud.Hud(cfg.caminho("barehands", "pasta_estado"))
         self.teclado = Teclado(cfg.caminho("barehands", "pasta_estado"), self.hud)
+        self.abertura = Abertura(cfg.caminho("barehands", "pasta_estado"), self)  # ADR 0078
         self.limite_claude = ler_json(ESTADO / "limite_claude.json")
         self.baterias_omniroute: dict[str, Bateria] = {}
         self.modelo_auto: str | None = None  # o último que o OmniRoute escolheu no automático

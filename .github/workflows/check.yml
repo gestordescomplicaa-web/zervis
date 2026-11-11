@@ -64,10 +64,23 @@ jobs:
           timeout 120 "$navegador" --headless=new --dump-dom about:blank > /dev/null
 
       # As sessões protegidas (ADR 0074) rodam no bubblewrap; o aceite delas não pode ser pulado.
+      # Os espelhos do Ubuntu da própria máquina do GitHub (azure.archive, security) às vezes ficam
+      # sem DNS (11/11/2026, uma manhã inteira): então todo o apt desta máquina (este passo e o
+      # instalador, adiante) usa o espelho oficial do kernel.org. O apt confere a assinatura do
+      # Ubuntu do mesmo jeito.
       - name: Bubblewrap
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends bubblewrap
+          apt_rapido="-o Acquire::Retries=1 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
+          if ! { sudo apt-get $apt_rapido update && sudo apt-get $apt_rapido install -y --no-install-recommends bubblewrap; }; then
+            echo "::warning::Espelhos do Ubuntu fora do ar; o apt passa a usar o mirrors.edge.kernel.org."
+            versao=$(. /etc/os-release && echo "$VERSION_CODENAME")
+            sudo mv /etc/apt/sources.list.d/ubuntu.sources /etc/apt/ubuntu.sources.fora 2>/dev/null || true
+            for parte in "" -updates -security -backports; do
+              echo "deb http://mirrors.edge.kernel.org/ubuntu ${versao}${parte} main restricted universe multiverse"
+            done | sudo tee /etc/apt/sources.list
+            sudo apt-get $apt_rapido update
+            sudo apt-get install -y --no-install-recommends bubblewrap
+          fi
           bwrap --ro-bind / / --dev /dev true
 
       - name: make check

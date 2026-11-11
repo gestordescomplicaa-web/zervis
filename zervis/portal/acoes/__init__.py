@@ -11,6 +11,7 @@ from zervis.habilidades.skills import dos_agentes as skills_dos_agentes
 from zervis.memoria.curta import MemoriaErro
 from zervis.oficina import arquivos
 from zervis.oficina.sessoes import SessaoErro
+from zervis.portal.acoes.abertura import AcoesAbertura
 from zervis.portal.acoes.acesso import AcoesAcesso
 from zervis.portal.acoes.atendimento import AcoesAtendimento
 from zervis.portal.acoes.atualizacoes import AcoesAtualizacoes
@@ -50,6 +51,7 @@ class Acoes:
             AcoesInicio,
             AcoesAtualizacoes,
             AcoesPesquisas,
+            AcoesAbertura,
         ):
             pagina = tipo(
                 self, Servicos({nome: partial(getattr, nucleo, nome) for nome in tipo.dependencias})
@@ -76,6 +78,7 @@ class Acoes:
             "atividade": self.atividade,
             "autoconhecimento": self.autoconhecimento,
             "configuracao": self.configuracao,
+            "abertura": self.abertura,
             "contas": self.contas,
             "inicio": self.inicio,
             "cerebro": self.cerebro,
@@ -160,6 +163,8 @@ class Acoes:
             "sintese/apagar": self.apagar_chave_sintese,
             "sintese/escolher": self.escolher_sintese,
             "perfil": self.salvar_perfil,
+            "abertura": self.salvar_abertura,
+            "abertura/musica/remover": self.remover_musica,
             "acesso/chave": self.guardar_chave_claude,
             "acesso/chave-codex": self.guardar_chave_codex,
             "acesso/remover": self.remover_acesso,
@@ -225,7 +230,7 @@ class Acoes:
         }
 
     def envios(self) -> dict[str, Any]:
-        return {"sessao/anexo": self.anexar}
+        return {"sessao/anexo": self.anexar, "abertura/musica": self.enviar_musica}
 
     def _chamar(self, fazer: Any) -> Any:
         try:

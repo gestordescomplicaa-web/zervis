@@ -71,7 +71,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from zervis import lugares
-from zervis.imersivo import PASTAS_ACERVO, TIPOS_ACERVO
+from zervis.imersivo import PASTAS_ACERVO, TIPOS_ACERVO, abertura
 from zervis.imersivo.http import gravar_token
 
 HERE = Path(__file__).resolve().parent / "web"  # a página, o avatar e o Guia
@@ -384,6 +384,7 @@ class Handler(SimpleHTTPRequestHandler):
             "/tela/estado",
             "/teclado",
             "/foco",
+            "/abertura/falar",
         ):
             # barehands-jarvis: JSON only, so a random web page cannot fire
             # these without a CORS preflight (which this server never answers).
@@ -430,6 +431,9 @@ class Handler(SimpleHTTPRequestHandler):
                     )
                     tmp.replace(destino)
                     self._json({"id": pedido})
+                elif self.path == "/abertura/falar":
+                    abertura.pedir_fala(ESTADO, d)
+                    self._json({})
                 elif self.path == "/maos/diagnostico":
                     destino = ESTADO / "maos-diagnostico.json"
                     tmp = destino.with_suffix(".next")
@@ -490,6 +494,8 @@ class Handler(SimpleHTTPRequestHandler):
             "/orb",
             "/state",
             "/autoconhecimento",
+            "/abertura",
+            "/abertura/musica",
         )
         if leitura and not self._autorizado():
             self._json({"erro": "Pedido não autorizado."}, 403)
@@ -608,6 +614,18 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json(json.loads((ESTADO / "autoconhecimento.json").read_text()))
             except (OSError, ValueError):
                 self._json({})
+            return
+        if self.path == "/abertura":  # gdautomacao.ia: o dia, para a abertura (ADR 0078)
+            self._json(abertura.panorama(ESTADO))
+            return
+        if self.path == "/abertura/musica":
+            som = abertura.musica()
+            self.send_response(200 if som else 404)
+            self.send_header("Content-Type", som[1] if som else "text/plain")
+            self.send_header("Content-Length", str(len(som[0]) if som else 0))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(som[0] if som else b"")
             return
         if self.path == "/cerebros":
             # barehands-jarvis: brain batteries written by the Zé; a stale

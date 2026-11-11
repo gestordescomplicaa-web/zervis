@@ -249,7 +249,7 @@
   }
 
   // ---- the script runner ----
-  // A step: {mostrar: [() => painel], foco, fala, limpar}. limpar takes the panels already on the
+  // A step: {mostrar: [() => painel], foco, fala, limpar, aguardar?: (rodada) => Promise}. limpar takes the panels already on the
   // board away first (a scene with more blocks than fit goes page by page). Used by "quem" here
   // and by the scenes the Zé writes (jarvis-cenas.js).
   let rodada = 0, apresentando = false;
@@ -270,7 +270,8 @@
         if (passo.mostrar?.length) await espera(450);
         focar(passo.foco || null);
         dizer(passo.fala || "");
-        await espera(Math.max(2600, (passo.fala || "").length * 62));
+        // aguardar: the opening (jarvis-abertura.js) waits for the Zé's own voice to finish.
+        await (passo.aguardar ? passo.aguardar(id) : espera(Math.max(2600, (passo.fala || "").length * 62)));
       }
       if (id === rodada) { focar(null); setTimeout(() => id === rodada && dizer(""), 2500); }
     })();

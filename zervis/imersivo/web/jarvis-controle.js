@@ -62,10 +62,11 @@
       if (!window.jarvisAvatar) throw new Error("avatar indisponível");
       return window.jarvisAvatar.girar(a.valor ?? a.voltas ?? 1);
     },
-    // The Zé presents himself with his own data (ADR 0045): quem, or encerrar.
+    // The Zé presents himself with his own data (ADR 0045): quem, dia (the day, ADR 0078) or encerrar.
     apresentar: a => {
       if (!window.jarvisApresentacao) throw new Error("apresentação indisponível");
       const v = sem(a.valor ?? a.alvo ?? "quem");
+      if (v === "dia" && window.jarvisAbertura) return window.jarvisAbertura.iniciar({ musica: false });
       return v === "encerrar" || v === "fechar" ? window.jarvisApresentacao.encerrar() : window.jarvisApresentacao.apresentar(v || "quem");
     },
     // A ready-made model from the Acervo (ADR 0049): alvo = its path there, valor = a title.

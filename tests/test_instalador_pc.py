@@ -175,9 +175,10 @@ def test_painel_detecta_navegador(
     resultado = _rodar(REPO, "abrir-painel.sh")
     assert resultado.returncode == 0, resultado.stderr
     if navegador == "xdg-open":
-        assert resultado.stdout.strip() == "<http://127.0.0.1:8796/>"
+        assert resultado.stdout.strip() == "<http://127.0.0.1:8796/?abertura=1>"
     else:
-        assert "<--app=http://127.0.0.1:8796/>" in resultado.stdout
+        assert "<--app=http://127.0.0.1:8796/?abertura=1>" in resultado.stdout
+        assert "<--autoplay-policy=no-user-gesture-required>" in resultado.stdout
         assert f"<--user-data-dir={tmp_path}/dados com espacos/zervis/navegador-painel>" in (
             resultado.stdout
         )
