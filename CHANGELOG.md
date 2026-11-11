@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **As cenas no ritmo da voz:** quando o Zé explica algo na tela, cada parte aparece quando ele
+  chega a ela na fala, em vez de correr na frente e limpar a tela enquanto ele ainda fala.
 - **O Zé com a qualidade do laboratório:** o macaco holográfico ganhou o brilho de verdade, as
   cores certas e mais resolução, e ocupa mais o espaço dele no anel.
 

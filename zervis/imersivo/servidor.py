@@ -54,6 +54,7 @@ Your AI drives the ring by writing tiny files into the state folder:
   state/mood.json  {"mood": "green"|"amber"|"red", "ts": <unix time>}
   state/expressao.json  {"expressao": "alegria"|"duvida"|"raiva"|"tristeza", "ate": <unix time>}
   state/wave.json  {"samples": [0..1 x 64], "ts": <unix time>}
+  state/fala.json  the chunk being spoken and how far (zervis/imersivo/fala.py)
 Missing files are fine — the ring just idles.
 """
 
@@ -71,7 +72,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from zervis import lugares
-from zervis.imersivo import PASTAS_ACERVO, TIPOS_ACERVO, abertura
+from zervis.imersivo import PASTAS_ACERVO, TIPOS_ACERVO, abertura, fala
 from zervis.imersivo.http import gravar_token
 
 HERE = Path(__file__).resolve().parent / "web"  # a página, o avatar e o Guia
@@ -741,6 +742,8 @@ class Handler(SimpleHTTPRequestHandler):
                         out["wave"] = w.get("samples", [])[:64]
                 except Exception:
                     pass
+                if (dita := fala.atual(s_dir)) is not None:  # barehands-jarvis: ADR 0081
+                    out["fala"] = dita
             self._json(out)
             return
         if self.path == "/state":
