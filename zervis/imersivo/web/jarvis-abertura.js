@@ -16,13 +16,19 @@
   const falados = [];  // the steps whose line was asked for (the tests read it)
 
   // ---- the music: the file of whoever uses the Zé, or a short synthesized swell ----
+  // Web Audio, not an <audio>: a media element shows up as a player (MPRIS), and the Zé pauses
+  // every player while he speaks ("pausar mídia"), so the music stalled under his voice.
+  let ac = null, ganho = null;
   async function tocar() {
     try {
       const r = await fetch("/abertura/musica", { cache: "no-store" });
       if (r.ok) {
-        musica = new Audio(URL.createObjectURL(await r.blob()));
-        musica.volume = 0.9;
-        await musica.play();
+        ac ||= new AudioContext();
+        if (ac.state !== "running") await ac.resume();
+        const sinal = await ac.decodeAudioData(await r.arrayBuffer());
+        ganho = ac.createGain(); ganho.gain.value = .9; ganho.connect(ac.destination);
+        const fonte = ac.createBufferSource(); fonte.buffer = sinal; fonte.connect(ganho); fonte.start();
+        musica = fonte;
         return "arquivo";
       }
     } catch (_) { musica = null; }
@@ -32,39 +38,44 @@
     return "sintetizada";
   }
   function volume(alvo, ms = 500) {
-    const m = musica; if (!m) return;
-    const de = m.volume, t0 = performance.now();
-    (function passo() {
-      const k = Math.min(1, (performance.now() - t0) / ms);
-      m.volume = Math.max(0, Math.min(1, de + (alvo - de) * k));
-      if (k < 1 && m === musica) requestAnimationFrame(passo);
-      else if (alvo === 0 && k >= 1) m.pause();
-    })();
+    if (!musica || !ganho || !ac) return;
+    const g = ganho.gain, agora = ac.currentTime;
+    g.cancelScheduledValues(agora); g.setValueAtTime(g.value, agora); g.linearRampToValueAtTime(alvo, agora + ms / 1000);
+    if (alvo === 0) { const m = musica; setTimeout(() => { try { m.stop(); } catch (_) { /* already over */ } }, ms + 50); }
+  }
+  function calar() {
+    try { musica?.stop(); } catch (_) { /* already over */ }
+    musica = null;
   }
 
-  // ---- the Zé's voice: ask for the line, then follow /orb until he stops speaking ----
+  // ---- the Zé's voice: ask for the line, then follow /orb while he speaks ----
   async function estado() {
     try { const r = await fetch("/orb", { cache: "no-store" }); return r.ok ? (await r.json()).state : ""; } catch (_) { return ""; }
   }
-  async function falar(montado, passo, texto, id) {
+  // One subject at a time: the line is asked for first; its panel and caption come with the
+  // voice (or after a short head start, if it is slow), and the next one waits for the end.
+  async function falar(montado, passo, texto, id, mostrar) {
     falados.push(passo);
     try {
       await fetch("/abertura/falar", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ montado, passo }) });
     } catch (_) { /* no voice: the caption still shows */ }
-    let comecou = false;
-    for (const t0 = performance.now(); id === rodada && performance.now() - t0 < 6000 * ritmo;) {
+    let comecou = false, mostrado = false;
+    for (const t0 = performance.now(); id === rodada && performance.now() - t0 < 12000 * ritmo;) {
       if (await estado() === "speaking") { comecou = true; break; }
+      if (!mostrado && performance.now() - t0 > 2500 * ritmo) { mostrado = true; mostrar(); }
       await espera(150);
     }
-    if (!comecou) { await espera(Math.max(2200, texto.length * 55)); return; }
-    volume(.22);
+    if (!mostrado) mostrar();
+    if (!comecou) { await espera(Math.max(3000, texto.length * 70)); return; }
+    volume(.18);
     // Done after 600 ms in a row without speaking: the voice pauses between sentences.
     for (let calado = 0, t0 = performance.now(); id === rodada && calado < 4 && performance.now() - t0 < 60000;) {
       calado = await estado() === "speaking" ? 0 : calado + 1;
       await espera(150);
     }
-    volume(.5);
+    volume(.45);
+    await espera(400);
   }
 
   // ---- the opening title, over the music ----
@@ -109,17 +120,18 @@
     const blocos = Array.isArray(dia.blocos) ? dia.blocos : [];
     let i = 0;
     return blocos.map((b, passo) => {
-      const fazer = PAINEIS[b.tipo];
-      const p = { fala: String(b.fala || ""), aguardar: async () => {
-        await (dia.montado ? falar(dia.montado, passo, String(b.fala || ""), id) : espera(2600));
+      const fazer = PAINEIS[b.tipo], fala = String(b.fala || "");
+      const id_ = "abertura-" + b.tipo, onde = fazer ? lugar(i++) : null;
+      const mostrar = () => {
+        if (id !== rodada) return;
+        if (fazer) { P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab" }); P().focar(id_); }
+        P().dizer(fala);
+      };
+      // The script runner only waits: the panel and the caption come with the voice.
+      return { fala: "", aguardar: async () => {
+        await (dia.montado ? falar(dia.montado, passo, fala, id, mostrar) : (mostrar(), espera(Math.max(3000, fala.length * 70))));
         if (id === rodada) feitos++;
       } };
-      if (fazer) {
-        const onde = lugar(i++), id_ = "abertura-" + b.tipo;
-        p.mostrar = [() => P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab" })];
-        p.foco = id_;
-      }
-      return p;
     });
   }
 
@@ -164,7 +176,7 @@
 
   function encerrar() {
     rodada++; clearInterval(relogio);
-    if (musica) { musica.pause(); musica = null; }
+    calar();
     document.getElementById("jv-abertura-vinheta")?.remove();
     if (rodando && window.jarvisApresentacao?.apresentando) window.jarvisApresentacao.encerrar();
     rodando = false;

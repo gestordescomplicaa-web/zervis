@@ -130,9 +130,19 @@ async def main():
                 passed.append('the address forgets the request (a reload does not repeat it)')
                 assert CANAL['musica'] == 1
                 passed.append('the music of whoever uses the Zé is fetched')
-                assert await esperar('document.querySelectorAll(".card.jv-holo.jv-ab").length === 6', 30), await ev(
-                    'document.querySelectorAll(".card.jv-holo.jv-ab").length')
-                passed.append('one panel per block: clock, weather, agenda, sessions, WhatsApp, headlines')
+                # One subject at a time: a panel only comes with its own line, never ahead of it.
+                adiantados = []
+                fim = time.monotonic() + 40
+                while time.monotonic() < fim:
+                    paineis = await ev('document.querySelectorAll(".card.jv-holo.jv-ab").length')
+                    if paineis > len(CANAL['falas']):
+                        adiantados.append((paineis, len(CANAL['falas'])))
+                    if paineis == 6:
+                        break
+                    await asyncio.sleep(.05)
+                assert paineis == 6, paineis
+                assert not adiantados, adiantados
+                passed.append('one panel per block, each one only with its own line, in order')
                 assert await esperar('!jarvisAbertura.rodando', 30), CANAL['falas']
                 assert [f['passo'] for f in CANAL['falas']] == list(range(7)), CANAL['falas']
                 assert all(f['montado'] == MONTADO and set(f) == {'montado', 'passo'} for f in CANAL['falas'])
@@ -149,10 +159,19 @@ async def main():
                 import base64
                 SAIDA.write_bytes(base64.b64decode((await call('Page.captureScreenshot', {'format': 'png'}))['data']))
 
+                # The music is not a media player (MPRIS): the Zé pauses those while he speaks.
+                await ev('window.__tocou = 0; const tocar = HTMLMediaElement.prototype.play;'
+                         'HTMLMediaElement.prototype.play = function () { window.__tocou++; return tocar.call(this); };')
+                r = await ev('jarvisAbertura.iniciar().then(r => r.musica)')
+                assert r == 'arquivo' and CANAL['musica'] == 2, r
+                assert await ev('window.__tocou === 0')
+                await ev('jarvisAbertura.encerrar()')
+                passed.append('the music plays by Web Audio, not as a media player the Zé would pause')
+
                 CANAL['falas'].clear()
                 r = await ev('jarvisControle.executar({id:"d1",acoes:[{acao:"apresentar",valor:"dia"}]})')
                 assert await esperar('jarvisAbertura.rodando', 5), r
-                assert CANAL['musica'] == 1
+                assert CANAL['musica'] == 2
                 passed.append('"apresentar dia" replays the day, without the music')
                 assert await esperar('jarvisAbertura.falados.length >= 2', 15)
                 await call('Input.dispatchKeyEvent', {'type': 'keyDown', 'key': 'Escape', 'code': 'Escape', 'windowsVirtualKeyCode': 27})

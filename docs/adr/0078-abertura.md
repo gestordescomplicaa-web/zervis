@@ -35,6 +35,12 @@ ADR próprio.
    (`POST /abertura/falar`); o texto falado é sempre o que o Zé montou. A fala entra como um aviso
    pedido: com o Zé livre, fala na hora; numa conversa ou ligação, espera a vez. Sem a voz, a
    página segue pelo tempo da legenda.
+   Um assunto por vez: a página pede a fala primeiro, e o painel e a legenda chegam com a voz (ou
+   depois de 2,5 s, se ela demorar); o próximo espera o Zé terminar.
+   Visto no primeiro uso (11/11/2026): no Silencioso a voz ficava muda, e a abertura corria sem
+   falar. Um aviso pedido (a abertura, o "Ouvir" do celular) agora sai mesmo no Silencioso: foi a
+   pessoa que pediu. E a música tocava num elemento de áudio, que o Zé pausa como qualquer player
+   enquanto fala ("pausar mídia"): ela agora toca pela Web Audio, que não é um player.
 4. **As fontes de fora não gastam tokens nem pedem chave:** o clima pelo Open-Meteo (dados sob
    CC BY 4.0, com o crédito no painel) e as manchetes pelo RSS do Google Notícias Brasil, com a
    Agência Brasil de reserva. Ficam em cache por 20 minutos, buscadas fora do laço do Zé; uma
