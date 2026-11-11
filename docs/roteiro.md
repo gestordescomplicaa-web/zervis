@@ -44,7 +44,7 @@ Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro 
    `trycloudflare` muda quando o servidor reinicia.
 6. **Proteção da `master`** no GitHub (ADR 0036). Feito em 19/10/2026: só entra por PR com a CI
    verde, também para administradores; sem aprovação obrigatória (mantenedor único), sem
-   force-push nem apagar a branch. A primeira versão publicada é a `v0.1.0`; a atual, a `v0.4.0` (09/11/2026).
+   force-push nem apagar a branch. A primeira versão publicada é a `v0.1.0`; a atual, a `v0.5.0` (11/11/2026).
 
 **Depois** (sem urgência, decidido com dados): Opus na voz do navegador (o registro de um dia não
 mostrou buracos de áudio); Zé 3D animado no painel remoto, sem a câmera (hoje fora do PC aparece o
