@@ -13,6 +13,18 @@ baixado do Sketchfab (o GLB com texturas 1k):
 pontos de luz, sobre o projetor da constelação; com a boca fechada, dentes e interior não são
 desenhados. A boca segue a voz e as emoções acionam as formas, pela mesma interface do chimpanzé.
 
+**Qualidade do laboratório no anel (11/11/2026).** `jarvis-brilho.js` faz no anel o que o
+laboratório fazia em tela cheia: a cena é desenhada num alvo com 4 amostras (MSAA) e meia
+precisão, as partes claras viram um brilho em cinco níveis (a receita do `UnrealBloomPass`: força
+0,6, raio 0,25, limiar 0,18) e o resultado sai codificado em sRGB, como o `OutputPass`. O
+`UnrealBloomPass` do three.js escreve alfa 1 em tudo e cobriria a câmera, por isso o passe é
+próprio: a cena mantém o seu alfa e o brilho ganha o alfa da própria luz. Alguns pixels da cena
+saem como NaN (normais degeneradas do modelo) e o borrão os espalharia pela imagem inteira; a
+leitura da cena os zera. O desenho usa de 1,5 a 2 pixels por pixel da tela (até 1400 px de lado),
+a câmera fica mais perto (o busto ocupa mais o quadro) e o nome fica logo abaixo dos anéis do
+projetor. A sombra de CSS que imitava o brilho saiu. `jarvisAvatar.imagem()` lê a imagem pronta,
+e o teste confere que ela não é um quadrado preto.
+
 **Antes: a constelação (29/10/2026).** O mesmo chimpanzé do Blender desenhado como uma
 constelação de luz, aprovada no laboratório do holograma: cerca de 4 mil pontos espalhados por
 igual na cabeça, ligados aos vizinhos mais próximos (cerca de 7 mil ligações), com pulsos de luz

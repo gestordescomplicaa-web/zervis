@@ -32,7 +32,15 @@ Quem usa queria algo mais bonito e que fosse, de fato, um macaco.
 5. **Sem linhas** do Zé até os painéis em nenhuma apresentação (antes, só a abertura): cruzavam os
    outros painéis.
 
+6. **A qualidade do laboratório no anel** (11/11/2026, depois da aprovação): o anel desenhava com
+   bem menos pixels, sem o brilho (bloom) e sem a conversão para sRGB do laboratório, e o macaco
+   saía escuro e de contorno duro. `avatar/jarvis-brilho.js` traz o mesmo brilho e a mesma
+   conversão com fundo transparente; o desenho vai a 1,5 a 2 pixels por pixel da tela e a câmera
+   chega mais perto.
+
 ## Consequências
 
 - O chimpanzé continua no repositório (`jarvis-chimpanze.*`), sem uso, até sair numa limpeza.
 - O modelo novo tem 1,5 MB.
+- O brilho custa um alvo de 4 amostras e doze passes pequenos por quadro (a até 30 por segundo); a
+  sombra de CSS que ele substitui também pesava na placa.
