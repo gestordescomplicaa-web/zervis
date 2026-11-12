@@ -19,7 +19,7 @@ from zervis.imersivo import abertura as rotas
 
 FUSO = ZoneInfo("America/Fortaleza")
 MANHA = datetime(2026, 11, 11, 9, 5, tzinfo=FUSO)
-CLIMA = clima.Clima("Fortaleza", 30, "garoa fraca", 31, 24, 40)
+CLIMA = clima.Clima("Fortaleza", 30, "garoa fraca", 31, 24, 40, icone="chuva")
 
 
 # ---- o panorama ----
@@ -46,45 +46,58 @@ def test_a_data_e_os_numeros_saem_como_se_fala() -> None:
 
 def test_sem_nada_no_dia_so_a_saudacao_e_o_fechamento() -> None:
     dia = panorama.montar(MANHA, "Ana")
-    assert [b["tipo"] for b in dia["blocos"]] == ["relogio", "fim"]
+    assert [b["tipo"] for b in dia["blocos"]] == ["agora", "fim"]
     assert dia["blocos"][0]["fala"] == "Bom dia, Ana. Hoje é quarta-feira, 11 de novembro."
+    assert dia["blocos"][0]["clima"] is None
     assert panorama.montar(MANHA)["blocos"][0]["saudacao"] == "Bom dia"  # sem perfil, sem nome
 
 
-def test_o_dia_completo_em_ordem_e_falado() -> None:
+def test_o_dia_completo_em_cenas_pelo_menu_e_falado() -> None:
     hoje = [
         panorama.Item(MANHA.replace(hour=16, minute=30), "Dentista", "compromisso"),
         panorama.Item(MANHA.replace(hour=14, minute=0), "Reunião da equipe", "compromisso"),
         panorama.Item(MANHA.replace(hour=18, minute=0), "Relatório", "automacao"),
     ]
-    sessoes = [panorama.SessaoParada("Loja", "interrompida")]
+    sessoes = [
+        panorama.SessaoParada("Loja", "interrompida"),
+        panorama.SessaoParada("Site", "trabalhando"),
+    ]
     conversas = [panorama.Conversa("Ana", MANHA.timestamp() - 7200)]
     manchetes = [noticias.Noticia(f"Manchete {i}", "G1") for i in range(6)]
     dia = panorama.montar(MANHA, "Ana", CLIMA, hoje, sessoes, conversas, manchetes)
     blocos = {b["tipo"]: b for b in dia["blocos"]}
-    assert list(blocos) == ["relogio", "clima", "hoje", "sessoes", "whatsapp", "noticias", "fim"]
-    assert blocos["clima"]["fala"] == (
+    # a hora e o clima; a agenda; as redes sociais; a atividade; as pendências; as manchetes
+    assert list(blocos) == ["agora", "hoje", "redes", "atividade", "pendencias", "noticias", "fim"]
+    assert blocos["agora"]["fala"] == (
+        "Bom dia, Ana. Hoje é quarta-feira, 11 de novembro. "
         "Em Fortaleza, faz 30 graus, com garoa fraca. Máxima de 31 e mínima de 24, "
         "com 40 por cento de chance de chuva."
     )
+    assert blocos["agora"]["clima"]["cidade"] == "Fortaleza"
     assert blocos["hoje"]["fala"] == (
         "Hoje você tem dois compromissos: às 14 horas, Reunião da equipe e às 16 horas e 30, "
         "Dentista. E roda uma automação: Relatório, às 18 horas."
     )
     assert [i["hora"] for i in blocos["hoje"]["itens"]] == ["14:00", "16:30", "18:00"]
-    assert blocos["sessoes"]["fala"] == (
-        "Uma sessão de código pede continuidade: Loja, que parou no meio."
-    )
-    assert blocos["sessoes"]["itens"] == [
-        {"nome": "Loja", "situacao": "Interrompida", "chave": "interrompida"}
+    assert blocos["hoje"]["foco"] is None
+    assert blocos["redes"]["fala"] == "No WhatsApp, uma conversa espera resposta: Ana."
+    assert blocos["redes"]["whatsapp"] == {
+        "itens": [{"nome": "Ana", "ha": "há 2 h", "min": 120}],
+        "total": 1,
+    }
+    assert blocos["redes"]["instagram"] is None
+    # a sessão que trabalha é atividade; a que parou pede quem usa
+    assert blocos["atividade"]["sessoes"] == ["Site"]
+    assert blocos["atividade"]["fala"] == "Uma sessão de código está trabalhando: Site."
+    assert blocos["pendencias"]["itens"] == [
+        {"area": "Sessões", "titulo": "Loja", "detalhe": "Interrompida", "nivel": "alerta"}
     ]
-    assert blocos["whatsapp"]["fala"] == "No WhatsApp, uma conversa espera resposta: Ana."
-    assert blocos["whatsapp"]["itens"] == [{"nome": "Ana", "ha": "há 2 h"}]
+    assert blocos["pendencias"]["fala"] == "Um item pede você: a sessão Loja parou no meio."
     assert len(blocos["noticias"]["itens"]) == panorama.MOSTRADOS
-    assert blocos["noticias"]["fala"] == (
-        "Nas manchetes de hoje: Manchete 0. Manchete 1. Manchete 2."
-    )
+    assert blocos["noticias"]["fala"] == "Nas manchetes de hoje: Manchete 0. Manchete 1."
     assert blocos["fim"]["fala"] == panorama.FECHAMENTO
+    # toda fala da abertura é reconhecida pelo jeito (nunca volta como aviso)
+    assert all(panorama.JEITO_DE_FALA.match(b["fala"]) for b in dia["blocos"])
 
 
 def test_o_foco_e_o_instagram_entram_com_os_numeros_para_os_graficos() -> None:
@@ -101,27 +114,107 @@ def test_o_foco_e_o_instagram_entram_com_os_numeros_para_os_graficos() -> None:
     )
     dia = panorama.montar(MANHA, "Ana", CLIMA, instagram=ig, foco=foco)
     blocos = {b["tipo"]: b for b in dia["blocos"]}
-    assert list(blocos) == ["relogio", "clima", "foco", "instagram", "fim"]
-    assert blocos["foco"]["fala"] == (
+    assert list(blocos) == ["agora", "hoje", "redes", "fim"]
+    assert blocos["hoje"]["fala"] == (
         "No foco, você estava em Lançar a loja; o próximo passo é subir as fotos. "
-        "Uma frente está travada. Nesta semana você concluiu três frentes."
+        "Uma frente está travada."
     )
-    assert (blocos["foco"]["ativas"], blocos["foco"]["travadas"]) == (2, 1)
-    assert blocos["instagram"]["fala"] == (
+    assert (blocos["hoje"]["foco"]["ativas"], blocos["hoje"]["foco"]["feitas_semana"]) == (2, 3)
+    assert blocos["hoje"]["itens"] == []
+    instagram = blocos["redes"]["instagram"]
+    assert blocos["redes"]["fala"] == (
         "No Instagram, você tem 15,3 mil seguidores. Nesta semana saíram duas publicações; "
         "a que mais rendeu teve 12 mil visualizações."
     )
     # o gráfico: da mais antiga para a mais nova; o destaque é o melhor da semana
-    assert [g["valor"] for g in blocos["instagram"]["grafico"]] == [30000, 4000, 12000]
-    assert blocos["instagram"]["destaque"] == {"legenda": "Promoção de novembro", "valor": "12 mil"}
-    assert blocos["instagram"]["semana"] == 2
+    assert [g["valor"] for g in instagram["grafico"]] == [30000, 4000, 12000]
+    assert instagram["destaque"] == {"legenda": "Promoção de novembro", "valor": "12 mil"}
+    assert instagram["semana"] == 2
     parado = panorama.Instagram("ana.loja", 980, [])
     assert panorama.montar(MANHA, instagram=parado)["blocos"][1]["fala"] == (
         "No Instagram, você tem 980 seguidores. Nesta semana não saiu publicação nova."
     )
-    # sem frente nenhuma, não há card de foco
+    # sem frente nenhuma e sem agenda, não há a cena de hoje
     vazio = panorama.Foco("", "", 0, 0, 0, 0)
-    assert "foco" not in [b["tipo"] for b in panorama.montar(MANHA, foco=vazio)["blocos"]]
+    assert "hoje" not in [b["tipo"] for b in panorama.montar(MANHA, foco=vazio)["blocos"]]
+
+
+def test_no_whatsapp_o_ze_fala_nomes_nunca_numeros() -> None:
+    # Visto em 11/11/2026: "quatro conversas", três citadas, e um telefone lido dígito a dígito.
+    agora = MANHA.timestamp()
+    conversas = [
+        panorama.Conversa("Ana", agora - 60),
+        panorama.Conversa("5511999990000", agora - 120),
+        panorama.Conversa("Bia", agora - 180),
+        panorama.Conversa("Caio", agora - 240),
+        panorama.Conversa("Duda", agora - 300),
+    ]
+    fala = panorama.montar(MANHA, conversas=conversas)["blocos"][1]["fala"]
+    assert fala == "No WhatsApp, cinco conversas esperam resposta: Ana, Bia, Caio e mais duas."
+    so_numeros = [panorama.Conversa("+55 11 99999-0000".replace("-", ""), agora - 60)]
+    assert panorama.montar(MANHA, conversas=so_numeros)["blocos"][1]["fala"] == (
+        "No WhatsApp, uma conversa espera resposta."
+    )
+    # no painel, o contato aparece como o WhatsApp o mostra
+    assert panorama.montar(MANHA, conversas=conversas)["blocos"][1]["whatsapp"]["total"] == 5
+
+
+def test_a_atividade_e_as_pendencias_levam_a_secao_do_menu() -> None:
+    atividade = panorama.Atividade(
+        120, 340, 12, [("2026-11-10", 50, 2), ("2026-11-11", 30, 1)], automacoes=2
+    )
+    pedem = panorama.pendencias(
+        [panorama.SessaoParada("Site", "erro"), panorama.SessaoParada("Zérvis", "trabalhando")],
+        ["Backup"],
+        melhorias=2,
+        sugestoes=1,
+        atualizacao=True,
+    )
+    # do mais grave para o menos; a sessão trabalhando não é pendência
+    assert [(x.area, x.nivel) for x in pedem] == [
+        ("Sessões", "critico"),
+        ("Automações", "critico"),
+        ("Autodesenvolvimento", "info"),
+        ("Memória", "info"),
+        ("Atualizações", "info"),
+    ]
+    dia = panorama.montar(MANHA, atividade=atividade, pedem=pedem)
+    blocos = {b["tipo"]: b for b in dia["blocos"]}
+    assert blocos["atividade"]["fala"] == (
+        "Nos últimos sete dias, atendi 120 pedidos e executei 340 ações, com 12 falhas. "
+        "Hoje duas automações rodaram."
+    )
+    assert blocos["atividade"]["por_dia"][-1] == {"dia": "2026-11-11", "registros": 30, "falhas": 1}
+    assert blocos["pendencias"]["total"] == 5
+    assert blocos["pendencias"]["areas"][0] == {"area": "Sessões", "n": 1}
+    assert blocos["pendencias"]["fala"] == (
+        "Cinco itens pedem você: a sessão Site parou com erro, a automação Backup falhou, "
+        "há duas melhorias prontas para aprovar e mais dois itens."
+    )
+    assert all(panorama.JEITO_DE_FALA.match(b["fala"]) for b in dia["blocos"])
+    # sem nada feito e sem nada esperando, as duas cenas não entram
+    parado = panorama.montar(MANHA, atividade=panorama.Atividade(0, 0, 0))
+    assert [b["tipo"] for b in parado["blocos"]] == ["agora", "fim"]
+
+
+def test_o_clima_cruza_com_a_agenda() -> None:
+    # chove a partir das 14h: o Zé diz a hora e avisa do compromisso que cai nela
+    chuva = tuple([10] * 14 + [70] * 10)
+    molhado = CLIMA._replace(chuva=80, chuva_horas=chuva)
+    hoje = [
+        panorama.Item(MANHA.replace(hour=10, minute=0), "Café", "compromisso"),
+        panorama.Item(MANHA.replace(hour=15, minute=0), "Reunião", "compromisso"),
+    ]
+    blocos = panorama.montar(MANHA, clima=molhado, hoje=hoje)["blocos"]
+    assert blocos[0]["fala"].endswith("com 80 por cento de chance de chuva, a partir das 14 horas.")
+    assert blocos[1]["fala"] == (
+        "Hoje você tem dois compromissos: às 10 horas, Café e às 15 horas, Reunião. "
+        "Há chuva prevista para a hora de Reunião."
+    )
+    assert [i["chuva"] for i in blocos[1]["itens"]] == [False, True]
+    # já chovendo agora, a hora não precisa ser dita
+    agora = panorama.montar(MANHA.replace(hour=15), clima=molhado)["blocos"][0]["fala"]
+    assert agora.endswith("com 80 por cento de chance de chuva.")
 
 
 def test_o_instagram_da_abertura_le_so_as_publicacoes_novas() -> None:
@@ -173,7 +266,8 @@ def test_sem_rede_o_instagram_fica_o_ultimo_lido() -> None:
 
 def test_pouca_chance_de_chuva_nao_entra_na_fala() -> None:
     seco = CLIMA._replace(chuva=10, ceu="")
-    assert panorama.montar(MANHA, clima=seco)["blocos"][1]["fala"] == (
+    assert panorama.montar(MANHA, clima=seco)["blocos"][0]["fala"] == (
+        "Bom dia. Hoje é quarta-feira, 11 de novembro. "
         "Em Fortaleza, faz 30 graus. Máxima de 31 e mínima de 24."
     )
 
@@ -190,14 +284,20 @@ def test_o_clima_pelo_open_meteo() -> None:
             return {"results": [{"name": "Fortaleza", "admin1": "Ceará", "latitude": -3.7,
                                  "longitude": -38.5}]}  # fmt: skip
         return {
-            "current": {"temperature_2m": 30.4, "weather_code": 51},
+            "current": {"temperature_2m": 30.4, "weather_code": 51, "is_day": 1},
             "daily": {"temperature_2m_max": [31.1], "temperature_2m_min": [24.2],
                       "precipitation_probability_max": [40]},
+            "hourly": {"temperature_2m": [24.4, 25.1, None], "precipitation_probability": [5, 60]},
         }  # fmt: skip
 
     lugar = clima.localizar("Fortaleza", obter)
     assert lugar == clima.Lugar("Fortaleza", "Ceará", -3.7, -38.5)
-    assert clima.buscar(lugar, obter) == CLIMA
+    # a temperatura e a chance de chuva de cada hora, e o desenho do céu
+    assert clima.buscar(lugar, obter) == CLIMA._replace(horas=(24, 25), chuva_horas=(5, 60))
+    assert "precipitation_probability" in pedidos[1] and "is_day" in pedidos[1]
+    assert [clima.icone(c, d) for c, d in ((0, True), (1, False), (2, True), (3, True), (45, True),
+                                           (63, True), (73, True), (95, True))] == [
+        "sol", "lua", "nuvens", "nublado", "neblina", "chuva", "neve", "trovoada"]  # fmt: skip
     assert "name=Fortaleza" in pedidos[0] and "latitude=-3.7" in pedidos[1]
     assert all(u.startswith("https://") for u in pedidos)
 
@@ -290,15 +390,25 @@ def _fontes(tmp_path: Path, agora: datetime) -> Any:
         trabalhando=lambda: ["c"],
     )
 
-    def job(nome: str, quando: datetime | None, ativo: bool = True) -> Any:
-        return SimpleNamespace(nome=nome, ativo=ativo, proxima=quando.isoformat() if quando else "")
+    def job(nome: str, quando: datetime | None, ativo: bool = True, **campos: Any) -> Any:
+        base = {"ultima": "", "ultimo_status": "nunca"}
+        return SimpleNamespace(
+            nome=nome,
+            ativo=ativo,
+            proxima=quando.isoformat() if quando else "",
+            **{**base, **campos},
+        )
 
     jobs = SimpleNamespace(
         listar=lambda: [
             job("Relatório", agora + timedelta(hours=3)),
             job("Amanhã", agora + timedelta(days=1)),
             job("Pausada", agora + timedelta(hours=1), ativo=False),
-            job("Já foi", agora - timedelta(hours=1)),
+            job("Já foi", agora - timedelta(hours=1), ultima=agora.isoformat(), ultimo_status="ok"),
+            job(
+                "Backup", None, ultima=(agora - timedelta(days=1)).isoformat(), ultimo_status="erro"
+            ),
+            job("Erro antigo", None, ativo=False, ultimo_status="erro"),
             job("Sem próxima", None),
         ]
     )
@@ -339,6 +449,13 @@ def _fontes(tmp_path: Path, agora: datetime) -> Any:
     return SimpleNamespace(
         sessoes=sessoes, jobs=jobs, calendario=SimpleNamespace(cache=cache), caixa=caixa,
         prioridade=prioridade,
+        pendencias=SimpleNamespace(listar=lambda: ["uma sugestão", "outra"]),
+        versoes=SimpleNamespace(foto=lambda: {"disponivel": True, "rodando": False}),
+        historico=lambda dias: SimpleNamespace(
+            dias=dias,
+            contagem={"pedido": 12, "execucao": 40, "falha": 3, "negada": 1},
+            por_dia=[SimpleNamespace(dia=agora.date().isoformat(), registros=20, falhas=1)],
+        ),
     )  # fmt: skip
 
 
@@ -355,6 +472,43 @@ def test_a_coleta_pega_so_o_que_pede_voce(tmp_path: Path) -> None:
         panorama.SessaoParada("Zérvis", "trabalhando"),
     ]
     assert [c.nome for c in partes["conversas"]] == ["Ana"]
+
+
+def test_a_coleta_traz_a_atividade_e_o_que_espera_no_menu(tmp_path: Path) -> None:
+    agora = datetime.now(FUSO).replace(hour=9, minute=0, second=0, microsecond=0)
+    fontes = _fontes(tmp_path, agora)
+    partes = servico.coletar(fontes, agora, melhorias=2)
+    # o que o Zé fez em sete dias, e só a automação que rodou hoje
+    assert partes["atividade"] == panorama.Atividade(
+        12, 40, 3, [(agora.date().isoformat(), 20, 1)], automacoes=1, dias=7
+    )
+    # a automação ativa que falhou, as melhorias, as sugestões de memória e a atualização
+    assert [(x.area, x.titulo, x.detalhe) for x in partes["pedem"]] == [
+        ("Automações", "Backup", "Falhou"),
+        ("Autodesenvolvimento", "Melhorias prontas", "2 para aprovar"),
+        ("Memória", "Sugestões", "2 para decidir"),
+        ("Atualizações", "Nova versão", "Disponível"),
+    ]
+    # uma fonte que falha só tira o item dela
+    fontes.versoes.foto = lambda: (_ for _ in ()).throw(OSError("git"))
+    del fontes.historico
+    partes = servico.coletar(fontes, agora)
+    assert partes["atividade"] is None
+    assert [x.area for x in partes["pedem"]] == ["Automações", "Memória"]
+
+
+def test_as_melhorias_prontas_sao_contadas_fora_do_laco() -> None:
+    contadas = [3]
+    externas = Externas(
+        localizar=lambda c: None, buscar_noticias=lambda: [], melhorias=lambda: contadas[0]
+    )
+    externas.renovar("", 0.0)
+    externas.esperar()
+    assert externas.melhorias == 3
+    externas._contar_melhorias = lambda: (_ for _ in ()).throw(OSError("git"))
+    externas.renovar("", 1e9)
+    externas.esperar()
+    assert externas.melhorias == 3  # sem conseguir contar, fica a última
 
 
 def test_uma_parte_que_falha_nao_derruba_a_abertura(tmp_path: Path) -> None:
@@ -396,9 +550,9 @@ def test_o_ze_grava_o_dia_para_a_imersao(abertura: Abertura, tmp_path: Path) -> 
     abertura.retratar(time.time())  # a busca terminou: regrava na hora, sem esperar o minuto
     dia = json.loads((tmp_path / "abertura.json").read_text())
     tipos = [b["tipo"] for b in dia["blocos"]]
-    assert tipos[0] == "relogio" and tipos[-1] == "fim"
-    assert "clima" in tipos and "noticias" in tipos
-    assert dia["blocos"][tipos.index("clima")]["cidade"] == "Recife"
+    assert tipos[0] == "agora" and tipos[-1] == "fim"
+    assert {"redes", "atividade", "pendencias", "noticias"} <= set(tipos)
+    assert dia["blocos"][0]["clima"]["cidade"] == "Recife"
     assert dia["ligada"] is True and dia["musica"] is False
     assert rotas.panorama(tmp_path) == dia
 
@@ -418,7 +572,8 @@ def test_o_primeiro_panorama_diz_que_falta_o_de_fora(abertura: Abertura, tmp_pat
     abertura.retratar(time.time())
     dia = rotas.panorama(tmp_path)
     assert dia["completo"] is True
-    assert {"clima", "noticias"} <= {b["tipo"] for b in dia["blocos"]}
+    assert dia["blocos"][0]["clima"] is not None
+    assert "noticias" in [b["tipo"] for b in dia["blocos"]]
 
 
 def test_a_pagina_escolhe_o_passo_e_o_ze_fala_o_texto_dele(

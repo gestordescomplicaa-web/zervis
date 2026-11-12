@@ -519,7 +519,7 @@ class Nucleo(
         self.abertura = Abertura(  # ADR 0078
             cfg.caminho("barehands", "pasta_estado"),
             self,
-            Externas(instagram=lambda: self.instagram),
+            Externas(instagram=lambda: self.instagram, melhorias=self._melhorias_prontas),
         )
         self.limite_claude = ler_json(ESTADO / "limite_claude.json")
         self.baterias_omniroute: dict[str, Bateria] = {}
@@ -654,6 +654,11 @@ class Nucleo(
 
     def historico(self, dias: int = 7) -> autoconhecimento.Historico:
         return retrato.historico(self, dias)
+
+    def _melhorias_prontas(self) -> int:
+        """Quantas mudanças o autodesenvolvimento tem para aprovar (a abertura, ADR 0078)."""
+        m = self.manutencao.mudancas()
+        return len(m.get("commits") or ()) or int(bool(m.get("arquivos")))
 
     def autoconhecimento(self) -> dict[str, Any]:
         """O retrato inteiro em dados, para a tela (ADR 0045)."""

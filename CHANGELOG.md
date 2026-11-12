@@ -8,6 +8,11 @@
 - **Os avisos esperam a abertura:** nada mais entra no meio da apresentação; a oferta vem no fim,
   sem repetir "um aviso, um aviso e um aviso". As falas da própria abertura não voltam mais como
   aviso fora de hora, e a música dela não é confundida com o "Ei Zé".
+- **A abertura em cenas:** o dia agora vem em cinco cenas, agrupadas como o menu: Agora (hora e
+  clima), Hoje (agenda e Foco num mostrador do dia), Redes sociais (WhatsApp e Instagram juntos),
+  Atividade (o que o Zé fez) e Pendências (o que espera você, com a seção de cada item). Cada cena
+  entra grande enquanto o Zé fala dela e encaixa num mosaico; as manchetes passam numa faixa. O Zé
+  avisa quando chove na hora de um compromisso e não lê mais números de telefone.
 - **A abertura com o dia inteiro:** ao abrir o programa, ela não começa mais antes de o Zé buscar o
   clima, o Instagram e as manchetes (abria só com três cards).
 - **As cenas no ritmo da voz:** quando o Zé explica algo na tela, cada parte aparece quando ele
