@@ -5,6 +5,7 @@ que o Zé fala. Bloco sem nada não entra (sem sessão parada, sem painel de ses
 Tudo aqui é puro: quem chama junta as fontes (`servico.coletar`) e passa o momento.
 """
 
+import re
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, NamedTuple
@@ -21,6 +22,12 @@ NUMEROS = ("zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oi
 FALADOS = 3  # quantos itens de cada bloco o Zé fala (o painel mostra mais)
 MOSTRADOS = 5
 FECHAMENTO = "Esse é o seu dia. Quando quiser, é só chamar."
+# O começo de cada fala da abertura: reconhece uma que tenha ido parar na fila de avisos.
+JEITO_DE_FALA = re.compile(
+    r"(Bom dia|Boa tarde|Boa noite)(, [^.]+)?\. Hoje é |Esse é o seu dia\.|No WhatsApp, \S+ "
+    r"conversas? espera|Em [^,]+, faz -?\d+ graus|No foco, |No Instagram, você tem |"
+    r"Nas manchetes de hoje: |Hoje você tem \S+ compromisso|\S+ sess(ão|ões) de código pede"
+)
 
 
 class Item(NamedTuple):

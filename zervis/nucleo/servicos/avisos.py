@@ -193,6 +193,10 @@ class ServicoAvisos:
         abertura = getattr(self.n, "abertura", None)
         if abertura is not None and abertura.rodando():
             return  # no meio da abertura, nada é oferecido: os avisos saem depois dela
+        if abertura is not None:
+            for aviso in self.n.fila.validos():
+                if abertura.e_fala(aviso.texto):  # uma fala da abertura não é aviso
+                    self.n.fila.remover(aviso.texto, aviso.sessao)
         saida = self.n.fila.oferecer()
         if saida is None:
             return

@@ -172,6 +172,12 @@ def _executar(n: "Nucleo", efeito: e.Efeito) -> None:
             n._abrir_latencia("comando")
             n._comando(nome)
         case e.ReterAviso(texto):
+            abertura = getattr(n, "abertura", None)
+            if abertura is not None and abertura.e_fala(texto):
+                # Uma fala da abertura que não coube na hora fica para trás: guardada, ela
+                # voltava depois como aviso, fora de hora ("Boa tarde" à noite, 11/11/2026).
+                log.info("fala da abertura não dita na hora: descartada")
+                return
             if n._comecados.get(texto, 0) >= 2:
                 # Já foi cortado uma vez e voltou: não lê pela terceira vez (ADR 0027).
                 log.info("aviso cortado de novo: fica só na tela")
