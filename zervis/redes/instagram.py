@@ -276,33 +276,57 @@ class Instagram:
                 saida[str(m.get("name"))] = valor
         return saida
 
+    def _cache(self, conta: str) -> dict[str, Any]:
+        cache = _ler(self.cache)
+        return cache if cache.get("conta") == conta else {"conta": conta}
+
+    def _com_metricas(
+        self, base: str, token: str, cache: dict[str, Any], lista: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Cada post de `lista` com as métricas, relendo só as vencidas; grava o cache."""
+        agora = self.agora()
+        metricas: dict[str, Any] = cache.setdefault("metricas", {})
+        vencidos = [p for p in lista if self._vencido(p, metricas.get(p["id"]), agora)]
+        if vencidos:
+            with concurrent.futures.ThreadPoolExecutor(PARALELO) as grupo:
+                lidas = list(grupo.map(lambda p: self._metricas(base, token, p), vencidos))
+            for p, m in zip(vencidos, lidas, strict=True):
+                metricas[p["id"]] = {"valores": m, "lido": agora}
+        _gravar_privado(self.cache, cache)
+        return [
+            {**p, "tipo": _tipo(p), "metricas": (metricas.get(p["id"]) or {}).get("valores", {})}
+            for p in lista
+        ]
+
     def posts(self) -> list[dict[str, Any]]:
         """As publicações (sem os stories), cada uma com as métricas, do cache quando valem."""
         with self._trava:
             base, conta, token = self._token()
-            cache = _ler(self.cache)
-            if cache.get("conta") != conta:
-                cache = {"conta": conta}
+            cache = self._cache(conta)
             agora = self.agora()
             if agora - float(cache.get("lista_em", 0)) > LISTA_S or "lista" not in cache:
                 cache["lista"] = [p for p in self._lista(base, conta, token) if _tipo(p) != "story"]
                 cache["lista_em"] = agora
-            metricas: dict[str, Any] = cache.setdefault("metricas", {})
-            vencidos = [p for p in cache["lista"] if self._vencido(p, metricas.get(p["id"]), agora)]
-            if vencidos:
-                with concurrent.futures.ThreadPoolExecutor(PARALELO) as grupo:
-                    lidas = list(grupo.map(lambda p: self._metricas(base, token, p), vencidos))
-                for p, m in zip(vencidos, lidas, strict=True):
-                    metricas[p["id"]] = {"valores": m, "lido": agora}
-            _gravar_privado(self.cache, cache)
-            return [
-                {
-                    **p,
-                    "tipo": _tipo(p),
-                    "metricas": (metricas.get(p["id"]) or {}).get("valores", {}),
-                }
-                for p in cache["lista"]
-            ]
+            return self._com_metricas(base, token, cache, cache["lista"])
+
+    def recentes(self, n: int = 6) -> list[dict[str, Any]]:
+        """As `n` publicações mais novas com as métricas, para a abertura: a lista do cache se
+        ainda vale, senão só a primeira página; as antigas não são relidas (o limite da Meta)."""
+        with self._trava:
+            base, conta, token = self._token()
+            cache = self._cache(conta)
+            if self.agora() - float(cache.get("lista_em", 0)) <= LISTA_S and "lista" in cache:
+                lista = list(cache["lista"][:n])
+            else:
+                caminho = f"{'me' if base == 'ig' else conta}/media"
+                pagina = self._pedir(
+                    base, caminho, {"fields": CAMPOS_POST, "limit": str(n + 4)}, token
+                )
+                dados = pagina.get("data", []) if isinstance(pagina, dict) else []
+                lista = [
+                    p for p in dados if isinstance(p, dict) and p.get("id") and _tipo(p) != "story"
+                ][:n]
+            return self._com_metricas(base, token, cache, lista)
 
     @staticmethod
     def _vencido(post: dict[str, Any], guardado: Any, agora: float) -> bool:

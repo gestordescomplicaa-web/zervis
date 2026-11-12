@@ -4,7 +4,11 @@
   `GET /abertura`). O clima e as notícias vêm de um cache renovado em segundo plano;
 - `abertura-falar.json`: a página grava `{montado, passo, ts}` (POST /abertura/falar) quando um
   painel aparece, e o Zé fala a fala daquele bloco. A página só escolhe o passo: o texto é
-  sempre o do panorama que o próprio Zé montou.
+  sempre o do panorama que o próprio Zé montou. O passo -1 diz que a abertura começou e o -2,
+  que foi pulada.
+
+Enquanto a abertura roda (`rodando`), os avisos esperam na fila e nada é oferecido: eles saem
+depois do fechamento ("Esse é o seu dia"), sem atropelar a entrada.
 """
 
 import contextlib
@@ -20,6 +24,8 @@ from typing import Any, Protocol
 from zervis import fuso, usuario
 from zervis.abertura import ajustes, clima, noticias, panorama
 from zervis.automacoes import calendario
+from zervis.redes import analise
+from zervis.redes.instagram import _epoch as instagram_epoch
 
 log = logging.getLogger(__name__)
 RETRATO_S = 60.0
@@ -27,6 +33,9 @@ EXTERNAS_S = 20 * 60.0  # o clima e as manchetes mudam devagar
 FALA_VALE_S = 15.0  # pedido de fala mais velho que isso (Zé parado, reinício) não vale
 CONVERSA_RECENTE_S = 24 * 3600.0
 GUARDADOS = 4  # panoramas lembrados: a página pode ter carregado o anterior
+INICIO_S = 60.0  # a abertura começou: a vinheta e a primeira fala cabem nisso
+SUBINDO_S = 25.0  # o Zé acabou de subir (o programa abriu): a página da abertura está vindo
+PASSO_S = 45.0  # um passo pedido: a fala dele e o pedido do próximo cabem nisso
 
 
 class FontesDoDia(Protocol):
@@ -37,6 +46,7 @@ class FontesDoDia(Protocol):
     calendario: Any
     caixa: Any
     prioridade: Any
+    foco: Any
 
 
 def _sessoes(fontes: FontesDoDia) -> list[panorama.SessaoParada]:
@@ -86,6 +96,22 @@ def _conversas(fontes: FontesDoDia, agora: float) -> list[panorama.Conversa]:
     ]
 
 
+def _foco(fontes: FontesDoDia, agora: datetime) -> panorama.Foco | None:
+    foco = getattr(fontes, "foco", None)
+    if foco is None:
+        return None
+    atual = foco.atual()
+    semana = (agora - timedelta(days=7)).isoformat()
+    return panorama.Foco(
+        atual.titulo if atual else "",
+        atual.proximo_passo if atual else "",
+        len(foco.com_estado("ativa")),
+        len(foco.com_estado("bloqueada")),
+        len(foco.com_estado("pausada")),
+        sum(1 for f in foco.com_estado("concluida") if (f.concluida_em or "") >= semana),
+    )
+
+
 def coletar(fontes: FontesDoDia, agora: datetime) -> dict[str, Any]:
     """As partes do Zé; cada uma que falhar fica vazia (a abertura nunca cai por uma delas)."""
 
@@ -100,21 +126,45 @@ def coletar(fontes: FontesDoDia, agora: datetime) -> dict[str, Any]:
         "hoje": tentar(lambda: _hoje(fontes, agora)),
         "sessoes": tentar(lambda: _sessoes(fontes)),
         "conversas": tentar(lambda: _conversas(fontes, agora.timestamp())),
+        "foco": (tentar(lambda: [_foco(fontes, agora)]) or [None])[0],
     }
 
 
+def ler_instagram(leitor: Any) -> panorama.Instagram | None:
+    """O perfil e as publicações mais novas pela conta conectada (zervis/redes/instagram.py);
+    None sem conta. Falha de rede ou de token sobe: quem chama fica com o último que leu."""
+    if leitor is None or not leitor.conectado:
+        return None
+    perfil = leitor.perfil()
+    publicacoes = [
+        panorama.Publicacao(
+            instagram_epoch(p.get("timestamp")),
+            analise.valor(p, "views"),
+            " ".join(str(p.get("caption") or "").split()),
+        )
+        for p in leitor.recentes(panorama.NO_GRAFICO)
+    ]
+    return panorama.Instagram(
+        str(perfil.get("username", "")), int(perfil.get("followers_count", 0) or 0), publicacoes
+    )
+
+
 class Externas:
-    """O clima e as manchetes, buscados fora do laço do Zé e guardados por 20 minutos."""
+    """O clima, as manchetes e o Instagram, buscados fora do laço do Zé e guardados por 20
+    minutos."""
 
     def __init__(
         self,
         localizar: Callable[[str], clima.Lugar | None] = clima.localizar,
         buscar_clima: Callable[[clima.Lugar], clima.Clima | None] = clima.buscar,
         buscar_noticias: Callable[[], list[noticias.Noticia]] = noticias.buscar,
+        instagram: Callable[[], Any] | None = None,
     ) -> None:
         self._localizar, self._clima, self._noticias = localizar, buscar_clima, buscar_noticias
+        self._leitor_instagram = instagram  # devolve o leitor do Zé (ou None)
         self.clima: clima.Clima | None = None
         self.noticias: list[noticias.Noticia] = []
+        self.instagram: panorama.Instagram | None = None
         self._lugares: dict[str, clima.Lugar | None] = {}
         self._cidade = ""
         self._buscado = float("-inf")
@@ -140,6 +190,11 @@ class Externas:
         self.clima = self._clima(lugar) if lugar is not None else None
         if novas := self._noticias():
             self.noticias = novas
+        if self._leitor_instagram is not None:
+            try:
+                self.instagram = ler_instagram(self._leitor_instagram())
+            except Exception as erro:  # sem rede, token vencido: fica o último lido
+                log.info("abertura: o Instagram não foi lido (%s)", type(erro).__name__)
         self.versao += 1
 
     def esperar(self, prazo: float = 10.0) -> None:
@@ -165,6 +220,10 @@ class Abertura:
         self.guardados: dict[str, list[str]] = {}  # montado -> as falas, na ordem dos blocos
         self._pedido = self.pasta / "abertura-falar.json"
         self._mtime = self._modificado()
+        self._rodando_ate = 0.0  # epoch: até quando a abertura conta como em andamento
+        with contextlib.suppress(Exception):
+            if self.ler_ajustes().ligada:  # abrir o programa sobe o Zé e abre a abertura
+                self._rodando_ate = time.time() + SUBINDO_S
 
     def cidade(self) -> str:
         return self.ler_ajustes().cidade or ajustes.cidade_do_fuso(str(fuso.local()))
@@ -179,6 +238,8 @@ class Abertura:
             partes["sessoes"],
             partes["conversas"],
             self.externas.noticias,
+            self.externas.instagram,
+            partes["foco"],
         )
         dia["ligada"] = self.ler_ajustes().ligada
         dia["musica"] = ajustes.musica() is not None
@@ -211,6 +272,10 @@ class Abertura:
         except OSError:
             return 0.0
 
+    def rodando(self, agora: float | None = None) -> bool:
+        """A abertura está na tela: os avisos esperam (nada de oferta no meio da entrada)."""
+        return (time.time() if agora is None else agora) < self._rodando_ate
+
     def fala(self, agora: float | None = None) -> str | None:
         """A fala pedida pela página, uma vez só (barato: só lê se o arquivo mudou)."""
         if (mtime := self._modificado()) == self._mtime:
@@ -225,6 +290,11 @@ class Abertura:
             passo = int(pedido["passo"])
         except (OSError, ValueError, KeyError, TypeError):
             return None
+        if passo in (-1, -2):
+            self._rodando_ate = agora + INICIO_S if passo == -1 else 0.0
+            return None
         if falas is None or not 0 <= passo < len(falas):
             return None
+        # o último passo é o fechamento: depois dele, os avisos voltam a sair
+        self._rodando_ate = agora + PASSO_S if passo < len(falas) - 1 else 0.0
         return falas[passo] or None

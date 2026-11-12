@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // The opening (ADR 0078): opening the Zérvis program lands here with ?abertura=1. The music
 // plays, the name lights up, and the Zé presents the day: one holographic panel per block of the
-// panorama he writes (GET /abertura: greeting, weather, agenda, code sessions, WhatsApp,
-// headlines), each one spoken in his own voice (POST /abertura/falar asks for that block's line;
+// panorama he writes (GET /abertura: greeting, weather with the day's curve, agenda on a line of
+// the day, focus, code sessions, WhatsApp, Instagram with its views, headlines), each one spoken
+// in his own voice (POST /abertura/falar asks for that block's line;
 // the text is always the one the Zé wrote). The music ducks while he speaks. Esc skips it.
 // Also: the Zé's "apresentar dia" action (jarvis-controle.js), without the music.
 (() => {
@@ -48,6 +49,14 @@
     musica = null;
   }
 
+  // ---- the opening tells the Zé it began (-1) or was skipped (-2): no step, no line ----
+  let montado = "";
+  function sinal(passo) {
+    if (!montado) return;
+    fetch("/abertura/falar", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ montado, passo }) }).catch(() => {});
+  }
+
   // ---- the Zé's voice: ask for the line, then follow /orb while he speaks ----
   async function estado() {
     try { const r = await fetch("/orb", { cache: "no-store" }); return r.ok ? (await r.json()).state : ""; } catch (_) { return ""; }
@@ -88,28 +97,66 @@
     return v;
   }
 
-  // ---- one panel per block, three columns by two rows to the right of the Zé ----
+  // ---- one panel per block, in two rows to the right of the Zé (three columns, four with seven) ----
   // No caption under the panels (11/11/2026): the Zé says it, and the room is for the panels.
-  const lugar = i => ({ x: .215 + (i % 3) * .262, y: i < 3 ? .05 : .48, w: .245, h: .38 });
+  const lugar = (i, total) => {
+    const colunas = Math.max(3, Math.ceil(total / 2)), passo = .786 / colunas;
+    return { x: .215 + (i % colunas) * passo, y: i < colunas ? .05 : .48, w: passo - .017, h: .38 };
+  };
+  const compacto = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+  // The day's temperature, hour by hour, with a dot on now.
+  function curva(horas) {
+    if (horas.length < 2) return "";
+    const min = Math.min(...horas), max = Math.max(...horas), y = t => 92 - (t - min) / Math.max(1, max - min) * 80;
+    const x = i => i / (horas.length - 1) * 100, agora = Math.min(horas.length - 1, new Date().getHours());
+    const pontos = horas.map((t, i) => `${x(i).toFixed(1)},${y(t).toFixed(1)}`).join(" ");
+    return `<div class="jv-ab-curva"><div class="traco"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pontos}"/></svg>
+      <i style="left:${x(agora)}%;top:${y(horas[agora])}%"></i></div><span>0h</span><span>12h</span><span>23h</span></div>`;
+  }
+  // The day from 6h to midnight: a mark for each item and one for now.
+  function linhaDoDia(itens) {
+    const lugar = hhmm => { const [h, m] = String(hhmm).split(":").map(Number); return Math.max(0, Math.min(100, ((h + m / 60) - 6) / 18 * 100)); };
+    const agora = new Date(), marcas = (itens || []).map(i => `<i class="${i.tipo === "automacao" ? "auto" : ""}" style="left:${lugar(i.hora)}%"></i>`);
+    return `<div class="jv-ab-dia">${marcas.join("")}<b style="left:${lugar(`${agora.getHours()}:${agora.getMinutes()}`)}%"></b><span>6h</span><span>12h</span><span>18h</span><span>24h</span></div>`;
+  }
   const lista = itens => `<ul class="jv-ab-lista">${itens.join("")}</ul>`;
   const mais = (b, mostrados) => b.total > mostrados ? `<p class="jv-ab-mais">+${b.total - mostrados}</p>` : "";
   const ICONES = { interrompida: ["alerta", "◐"], limite: ["alerta", "◷"], erro: ["critico", "✕"], trabalhando: ["bom", "●"] };
   const PAINEIS = {
-    relogio: b => ({ cod: "01 · AGORA", titulo: "Hoje", corpo: `<b class="jv-ab-hora" data-relogio>--:--</b>
+    relogio: b => ({ nome: "AGORA", titulo: "Hoje", corpo: `<b class="jv-ab-hora" data-relogio>--:--</b>
       <p class="jv-ab-data">${esc(b.data)}</p><p class="jv-ab-oi">${esc(b.saudacao)}</p>` }),
-    clima: b => ({ cod: "02 · CLIMA", titulo: b.cidade, fonte: "OPEN-METEO", corpo: `<div class="jv-ab-clima">
+    clima: b => ({ nome: "CLIMA", titulo: b.cidade, fonte: "OPEN-METEO", corpo: `<div class="jv-ab-clima">
       <b>${esc(b.temperatura)}°</b><span>${esc(b.ceu)}</span></div><dl class="jv-linhas">
-      <dt>Máxima</dt><dd>${esc(b.maxima)}°</dd><dt>Mínima</dt><dd>${esc(b.minima)}°</dd><dt>Chuva</dt><dd>${esc(b.chuva)}%</dd></dl>` }),
-    hoje: b => ({ cod: "03 · AGENDA", titulo: "Hoje", corpo: lista(b.itens.map((i, n) => `<li style="animation-delay:${.3 + n * .12}s">
+      <dt>Máxima</dt><dd>${esc(b.maxima)}°</dd><dt>Mínima</dt><dd>${esc(b.minima)}°</dd><dt>Chuva</dt><dd>${esc(b.chuva)}%</dd></dl>`
+      + curva(b.horas || []) }),
+    hoje: b => ({ nome: "AGENDA", titulo: "Hoje", corpo: linhaDoDia(b.itens) + lista(b.itens.map((i, n) => `<li style="animation-delay:${.3 + n * .12}s">
       <time>${esc(i.hora)}</time><span class="jv-st ${i.tipo === "automacao" ? "" : "bom"}" data-ico="${i.tipo === "automacao" ? "⟳" : "◆"}">${i.tipo === "automacao" ? "AUTOMAÇÃO" : "COMPROMISSO"}</span>
       <span class="txt">${esc(i.titulo)}</span></li>`)) + mais(b, b.itens.length) }),
-    sessoes: b => ({ cod: "04 · OFICINA", titulo: "Sessões de código", corpo: lista(b.itens.map((i, n) => {
+    sessoes: b => ({ nome: "OFICINA", titulo: "Sessões de código", corpo: lista(b.itens.map((i, n) => {
       const [cls, ico] = ICONES[i.chave] || ["", "·"];
       return `<li style="animation-delay:${.3 + n * .12}s"><span class="txt">${esc(i.nome)}</span><span class="jv-st ${cls}" data-ico="${ico}">${esc(i.situacao.toUpperCase())}</span></li>`;
     })) + mais(b, b.itens.length) }),
-    whatsapp: b => ({ cod: "05 · WHATSAPP", titulo: "Sem resposta", corpo: `<div class="jv-heroi"><span>CONVERSAS</span><b>${esc(b.total)}</b></div>`
+    whatsapp: b => ({ nome: "WHATSAPP", titulo: "Sem resposta", corpo: `<div class="jv-heroi"><span>CONVERSAS</span><b>${esc(b.total)}</b></div>`
       + lista(b.itens.map((i, n) => `<li style="animation-delay:${.3 + n * .12}s"><span class="txt">${esc(i.nome)}</span><time>${esc(i.ha)}</time></li>`)) }),
-    noticias: b => ({ cod: "06 · BRASIL", titulo: "Manchetes", fonte: "RSS", corpo: lista(b.itens.map((i, n) => `<li class="jv-ab-noticia" style="animation-delay:${.3 + n * .12}s">
+    // the current front, its next step and the fronts by state, as bars
+    foco: b => ({ nome: "FOCO", titulo: "Foco", corpo: `<p class="jv-ab-frente">${esc(b.atual || "Nenhuma frente ativa")}</p>`
+      + (b.proximo_passo ? `<p class="jv-ab-passo"><span>PRÓXIMO PASSO</span>${esc(b.proximo_passo)}</p>` : "") + '<div class="jv-ab-barras"></div>',
+    depois: reg => setTimeout(() => {
+      const g = reg.el.querySelector(".jv-ab-barras"), itens = [["Ativas", b.ativas], ["Travadas", b.travadas], ["Pausadas", b.pausadas],
+        ["Feitas na semana", b.feitas_semana]].filter(([, v]) => v > 0).map(([nome, valor]) => ({ nome, valor }));
+      if (g && reg.el.isConnected && itens.length) P().barras(g, itens);
+    }, 420) }),
+    // the followers, the week's posts and the views of the latest ones, as columns
+    instagram: b => ({ nome: "INSTAGRAM", titulo: "@" + b.usuario, fonte: "META", corpo: `<div class="jv-herois">
+      <div class="jv-heroi"><span>SEGUIDORES</span><b>${esc(compacto.format(b.seguidores || 0))}</b></div>
+      <div class="jv-heroi"><span>NA SEMANA</span><b>${esc(b.semana || 0)}</b><small>publicações</small></div></div>
+      <span class="jv-h-legenda">VISUALIZAÇÕES POR PUBLICAÇÃO</span><div class="jv-grafico"></div>`
+      + (b.destaque ? `<p class="jv-ab-destaque"><span class="txt">${esc(b.destaque.legenda || "(sem legenda)")}</span><b>${esc(b.destaque.valor)}</b></p>` : ""),
+    depois: reg => setTimeout(() => {
+      const g = reg.el.querySelector(".jv-grafico");
+      if (g && reg.el.isConnected && (b.grafico || []).length) P().colunas(g, b.grafico);
+    }, 420) }),
+    noticias: b => ({ nome: "BRASIL", titulo: "Manchetes", fonte: "RSS", corpo: lista(b.itens.map((i, n) => `<li class="jv-ab-noticia" style="animation-delay:${.3 + n * .12}s">
       <span class="txt">${esc(i.titulo)}</span><small>${esc(i.fonte)}</small></li>`)) }),
   };
   function marcarHora() {
@@ -119,13 +166,16 @@
 
   function passos(dia, id) {
     const blocos = Array.isArray(dia.blocos) ? dia.blocos : [];
+    const total = blocos.filter(b => PAINEIS[b.tipo]).length;
     let i = 0;
     return blocos.map((b, passo) => {
       const fazer = PAINEIS[b.tipo], fala = String(b.fala || "");
-      const id_ = "abertura-" + b.tipo, onde = fazer ? lugar(i++) : null;
+      const id_ = "abertura-" + b.tipo, ordem = fazer ? ++i : 0, onde = fazer ? lugar(ordem - 1, total) : null;
       const mostrar = () => {
-        if (id !== rodada) return;
-        if (fazer) { P().painel(id_, { ...onde, fonte: "AO VIVO", ...fazer(b), classe: "jv-ab" }); P().focar(id_); }
+        if (id !== rodada || !fazer) return;
+        const { nome, depois, ...painel } = fazer(b);
+        const reg = P().painel(id_, { ...onde, fonte: "AO VIVO", ...painel, cod: `${String(ordem).padStart(2, "0")} · ${nome}`, classe: "jv-ab" });
+        depois?.(reg); P().focar(id_);
       };
       // The script runner only waits: the panel comes with the voice.
       return { fala: "", aguardar: async () => {
@@ -158,6 +208,8 @@
     const dia = await panorama();
     if (id !== rodada) return { abertura: false };
     if (automatica && dia.ligada === false) { rodando = false; return { abertura: false, desligada: true }; }
+    montado = dia.montado || "";
+    sinal(-1);  // the Zé holds his notices until the opening is over
     const som = comMusica ? await tocar() : "sem";
     const v = vinheta(dia);
     await espera(2600);
@@ -175,6 +227,7 @@
   }
 
   function encerrar() {
+    if (rodando) sinal(-2);  // skipped: the notices may come now
     rodada++; clearInterval(relogio);
     calar();
     document.getElementById("jv-abertura-vinheta")?.remove();

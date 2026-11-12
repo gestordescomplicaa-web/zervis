@@ -38,5 +38,53 @@
 .jv-holo.jv-ab .jv-ab-noticia small { font: 400 9px "JetBrains Mono", monospace; letter-spacing: .12em; color: var(--jv-suave, #a8d8cf); text-transform: uppercase; }
 .jv-holo.jv-ab .jv-ab-mais { margin: 0; font: 500 10px "JetBrains Mono", monospace; color: var(--jv-suave, #a8d8cf); letter-spacing: .14em; }
 
+/* The small charts: the day's temperature, the day's agenda, the focus and the Instagram. */
+/* the weather's numbers in one row (each label over its value), so the day's curve fits under them */
+.jv-holo.jv-ab .jv-ab-clima + .jv-linhas { grid-template-columns: none; grid-template-rows: auto auto; grid-auto-flow: column;
+  justify-content: start; gap: 4px 22px; }
+.jv-holo.jv-ab .jv-herois { grid-template-columns: repeat(2, auto); justify-content: start; gap: 22px; }
+.jv-holo.jv-ab .jv-heroi b { font-size: 26px; }
+.jv-holo.jv-ab .jv-heroi small { margin-top: 3px; }
+.jv-holo.jv-ab .jv-ab-curva { position: relative; flex: none; height: 48px; margin-top: auto; padding-bottom: 12px; }
+.jv-holo.jv-ab .jv-ab-curva .traco { position: relative; height: 36px; }
+.jv-holo.jv-ab .jv-ab-curva svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.jv-holo.jv-ab .jv-ab-curva polyline { fill: none; stroke: var(--jv-acento, #8ff0e4); stroke-width: 1.6; vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgb(var(--jv-acento-rgb, 143 240 228) / .6)); stroke-dasharray: 400; stroke-dashoffset: 400;
+  animation: jv-ab-tracar 1.4s .3s cubic-bezier(.2,.8,.2,1) forwards; }
+.jv-holo.jv-ab .jv-ab-curva i { position: absolute; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%;
+  background: var(--jv-claro, #bffff2); box-shadow: 0 0 10px var(--jv-acento, #8ff0e4); }
+.jv-holo.jv-ab .jv-ab-curva span, .jv-holo.jv-ab .jv-ab-dia span { position: absolute; bottom: 0; font: 400 9px "JetBrains Mono", monospace;
+  color: var(--jv-suave, #a8d8cf); }
+.jv-holo.jv-ab .jv-ab-curva span:nth-of-type(1) { left: 0; }
+.jv-holo.jv-ab .jv-ab-curva span:nth-of-type(2) { left: 50%; transform: translateX(-50%); }
+.jv-holo.jv-ab .jv-ab-curva span:nth-of-type(3) { right: 0; }
+.jv-holo.jv-ab .jv-ab-dia { position: relative; height: 30px; margin-bottom: 10px; flex: none; }
+.jv-holo.jv-ab .jv-ab-dia::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 1px;
+  background: linear-gradient(90deg, rgb(var(--jv-acento-rgb, 143 240 228) / .15), rgb(var(--jv-acento-rgb, 143 240 228) / .5), rgb(var(--jv-acento-rgb, 143 240 228) / .15)); }
+.jv-holo.jv-ab .jv-ab-dia i { position: absolute; top: 4px; width: 9px; height: 9px; margin-left: -4.5px; transform: rotate(45deg);
+  background: var(--jv-acento, #8ff0e4); box-shadow: 0 0 8px var(--jv-acento, #8ff0e4); animation: jv-chegar .5s both; }
+.jv-holo.jv-ab .jv-ab-dia i.auto { background: transparent; border: 1px solid var(--jv-acento, #8ff0e4); }
+.jv-holo.jv-ab .jv-ab-dia b { position: absolute; top: 0; width: 2px; height: 17px; margin-left: -1px; background: var(--jv-claro, #bffff2);
+  box-shadow: 0 0 8px var(--jv-claro, #bffff2); }
+.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(1) { left: 0; }
+.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(2) { left: 33.3%; transform: translateX(-50%); }
+.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(3) { left: 66.6%; transform: translateX(-50%); }
+.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(4) { right: 0; }
+.jv-holo.jv-ab .jv-ab-frente { margin: 0; font: 600 16px/1.25 "Chakra Petch", system-ui, sans-serif; color: var(--jv-claro, #bffff2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jv-holo.jv-ab .jv-ab-passo { margin: 8px 0 0; font: 500 12px/1.3 "Chakra Petch", system-ui, sans-serif;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jv-holo.jv-ab .jv-ab-passo span, .jv-holo.jv-ab .jv-h-legenda { display: block; margin-bottom: 3px; font: 400 9px "JetBrains Mono", monospace;
+  letter-spacing: .16em; color: var(--jv-suave, #a8d8cf); }
+.jv-holo.jv-ab .jv-ab-barras { margin-top: auto; }
+.jv-holo.jv-ab .jv-ab-barras .jv-barra { grid-template-columns: minmax(0, 46%) 1fr 22px; gap: 8px; }
+.jv-holo.jv-ab .jv-grafico { flex: 1; min-height: 64px; margin-top: -4px; }
+@media (max-height: 820px) { .jv-holo.jv-ab .jv-ab-destaque { display: none; } }  /* the chart first on a short screen */
+.jv-holo.jv-ab .jv-ab-destaque { display: flex; gap: 8px; align-items: baseline; margin: 8px 0 0; font: 500 11px "Chakra Petch", system-ui, sans-serif; }
+.jv-holo.jv-ab .jv-ab-destaque .txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--jv-suave, #a8d8cf); }
+.jv-holo.jv-ab .jv-ab-destaque b { color: var(--jv-claro, #bffff2); }
+@keyframes jv-ab-tracar { to { stroke-dashoffset: 0; } }
+
 @media (prefers-reduced-motion: reduce) {
+  .jv-holo.jv-ab .jv-ab-curva polyline { animation: none; stroke-dashoffset: 0; }
   #jv-abertura-vinheta, #jv-abertura-vinheta .anel { animation-duration: .01s; } }

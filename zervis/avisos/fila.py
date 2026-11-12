@@ -130,12 +130,18 @@ class Fila:
             return oferta(avisos), None
 
 
+MAIS = {1: "mais um aviso", 2: "mais dois avisos", 3: "mais três avisos"}
+
+
 def oferta(avisos: list[Aviso]) -> str:
-    """A frase que resume vários avisos e pergunta por onde começar (ADR 0029)."""
+    """A frase que resume vários avisos e pergunta por onde começar (ADR 0029). Os sem manchete
+    viram uma conta só ("e mais dois avisos"), nunca "um aviso, um aviso e um aviso"."""
     n = len(avisos)
-    titulos = [a.titulo or "um aviso" for a in avisos[:3]]
-    if n > 3:
-        titulos.append(f"mais {n - 3}")
+    titulos = [a.titulo for a in avisos if a.titulo][:3]
+    if not titulos:
+        return f"{NUMEROS.get(n, str(n))} novidades esperando. Começo pela primeira?"
+    if resto := n - len(titulos):
+        titulos.append(MAIS.get(resto, f"mais {resto} avisos"))
     lista = ", ".join(titulos[:-1]) + " e " + titulos[-1]
     primeiro = avisos[0].titulo or "o primeiro"
     pelo = (

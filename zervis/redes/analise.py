@@ -42,7 +42,7 @@ def valor(post: dict[str, Any], chave: str) -> float:
     return float(post.get(reserva, 0) or 0) if reserva else 0.0
 
 
-def _numero(n: float) -> str:
+def curto(n: float) -> str:
     """15300 -> "15,3 mil"; 6000 -> "6 mil"; 250000 -> "250 mil"; 980 -> "980"."""
     if n >= 1_000_000:
         return f"{n / 1_000_000:.1f}".replace(".0", "").replace(".", ",") + " mi"
@@ -94,7 +94,7 @@ def ranking(
     for i, p in enumerate(lista[: max(1, min(20, quantos))], 1):
         dia = datetime.fromtimestamp(_epoch(p.get("timestamp")), fuso)
         numeros = ", ".join(
-            f"{_numero(valor(p, k))} {nome}"
+            f"{curto(valor(p, k))} {nome}"
             for k, nome in NOMES.items()
             if k in (p.get("metricas") or {}) or k in ("likes", "comments")
         )
@@ -115,8 +115,8 @@ def resumo(
     """O perfil agora, os totais do período e como as publicações do período se saíram."""
     usuario = perfil.get("username", "")
     linhas = [
-        f"@{usuario}: {_numero(perfil.get('followers_count', 0))} seguidores, segue "
-        f"{_numero(perfil.get('follows_count', 0))}, {perfil.get('media_count', 0)} publicações."
+        f"@{usuario}: {curto(perfil.get('followers_count', 0))} seguidores, segue "
+        f"{curto(perfil.get('follows_count', 0))}, {perfil.get('media_count', 0)} publicações."
     ]
     if periodo:
         nomes = {
@@ -126,7 +126,7 @@ def resumo(
             "profile_links_taps": "toques nos links do perfil",
             "follows_and_unfollows": "seguidores ganhos menos perdidos",
         }  # fmt: skip
-        totais = ", ".join(f"{_numero(v)} {nomes.get(k, k)}" for k, v in periodo.items())
+        totais = ", ".join(f"{curto(v)} {nomes.get(k, k)}" for k, v in periodo.items())
         linhas.append(f"Nos últimos {dias} dias, a conta teve: {totais}.")
     recentes = filtrar(posts, dias, "", agora)
     if recentes:
@@ -136,8 +136,8 @@ def resumo(
         melhor = max(recentes, key=lambda p: valor(p, "views"))
         linhas.append(
             f"Publicou {len(recentes)} vezes no período ({tipos}), com média de "
-            f"{_numero(media)} visualizações por publicação. A melhor teve "
-            f'{_numero(valor(melhor, "views"))}: "{_legenda(melhor)}".'
+            f"{curto(media)} visualizações por publicação. A melhor teve "
+            f'{curto(valor(melhor, "views"))}: "{_legenda(melhor)}".'
         )
     else:
         linhas.append(f"Nenhuma publicação nos últimos {dias} dias.")

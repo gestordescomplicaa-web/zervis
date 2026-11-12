@@ -11,6 +11,7 @@ from typing import Any, NamedTuple
 
 from zervis.abertura.clima import Clima
 from zervis.abertura.noticias import Noticia
+from zervis.redes.analise import curto
 
 DIAS = ("segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado",
         "domingo")  # fmt: skip
@@ -38,6 +39,36 @@ class SessaoParada(NamedTuple):
 class Conversa(NamedTuple):
     nome: str
     quando: float  # a última mensagem dele (epoch)
+
+
+class Publicacao(NamedTuple):
+    quando: float  # epoch
+    visualizacoes: float
+    legenda: str
+
+
+class Instagram(NamedTuple):
+    """O perfil de quem usa e as publicações mais novas (a mais nova primeiro)."""
+
+    usuario: str
+    seguidores: int
+    publicacoes: Sequence[Publicacao]
+
+
+class Foco(NamedTuple):
+    """As frentes de quem usa (zervis/foco): a atual e quantas há em cada estado."""
+
+    atual: str  # o título da frente atual ("" sem frente ativa)
+    proximo_passo: str
+    ativas: int
+    travadas: int
+    pausadas: int
+    feitas_semana: int
+
+
+SEMANA_S = 7 * 86400
+NO_GRAFICO = 6  # publicações no gráfico do painel
+LEGENDA = 60
 
 
 SITUACOES = {
@@ -164,6 +195,56 @@ def _whatsapp(conversas: Sequence[Conversa], agora: float) -> dict[str, Any]:
     }
 
 
+def _foco(f: Foco) -> dict[str, Any]:
+    if f.atual:
+        fala = f"No foco, você estava em {f.atual.rstrip('.')}"
+        fala += f"; o próximo passo é {f.proximo_passo.rstrip('.')}." if f.proximo_passo else "."
+    else:
+        fala = "No foco, nenhuma frente ativa agora."
+    if f.travadas:
+        travadas = quantos(f.travadas, "frente está travada", "frentes estão travadas", True)
+        fala += f" {travadas[0].upper()}{travadas[1:]}."
+    if f.feitas_semana:
+        fala += (
+            f" Nesta semana você concluiu {quantos(f.feitas_semana, 'frente', 'frentes', True)}."
+        )
+    return {"tipo": "foco", **f._asdict(), "fala": fala}
+
+
+def _instagram(ig: Instagram, agora: datetime) -> dict[str, Any]:
+    semana = [p for p in ig.publicacoes if agora.timestamp() - p.quando <= SEMANA_S]
+    fala = f"No Instagram, você tem {curto(ig.seguidores)} seguidores."
+    if semana:
+        melhor = max(semana, key=lambda p: p.visualizacoes)
+        fala += (
+            f" Nesta semana saíram {quantos(len(semana), 'publicação', 'publicações', True)}; "
+            f"a que mais rendeu teve {curto(melhor.visualizacoes)} visualizações."
+        )
+    else:
+        fala += " Nesta semana não saiu publicação nova."
+    grafico = list(reversed(ig.publicacoes[:NO_GRAFICO]))  # a mais antiga à esquerda
+    destaque = max(semana or ig.publicacoes, key=lambda p: p.visualizacoes, default=None)
+    return {
+        "tipo": "instagram",
+        "usuario": ig.usuario,
+        "seguidores": ig.seguidores,
+        "semana": len(semana),
+        "grafico": [
+            {
+                "rotulo": datetime.fromtimestamp(p.quando, agora.tzinfo).strftime("%d/%m"),
+                "valor": round(p.visualizacoes),
+            }
+            for p in grafico
+        ],
+        "destaque": (
+            {"legenda": destaque.legenda[:LEGENDA], "valor": curto(destaque.visualizacoes)}
+            if destaque
+            else None
+        ),
+        "fala": fala,
+    }
+
+
 def _noticias(noticias: Sequence[Noticia]) -> dict[str, Any]:
     falas = " ".join(f"{n.titulo.rstrip('.')}." for n in noticias[:FALADOS])
     return {
@@ -181,16 +262,22 @@ def montar(
     sessoes: Sequence[SessaoParada] = (),
     conversas: Sequence[Conversa] = (),
     noticias: Sequence[Noticia] = (),
+    instagram: Instagram | None = None,
+    foco: Foco | None = None,
 ) -> dict[str, Any]:
     blocos = [_relogio(agora, nome)]
     if clima is not None:
         blocos.append(_clima(clima))
     if hoje:
         blocos.append(_hoje(hoje))
+    if foco is not None and (foco.atual or foco.ativas or foco.travadas or foco.pausadas):
+        blocos.append(_foco(foco))
     if sessoes:
         blocos.append(_sessoes(sessoes))
     if conversas:
         blocos.append(_whatsapp(conversas, agora.timestamp()))
+    if instagram is not None:
+        blocos.append(_instagram(instagram, agora))
     if noticias:
         blocos.append(_noticias(noticias))
     blocos.append({"tipo": "fim", "fala": FECHAMENTO})

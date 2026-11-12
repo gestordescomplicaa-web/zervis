@@ -50,6 +50,20 @@ ADR próprio.
    `<dados>/abertura/` e conferida pelo começo do arquivo (MP3, OGG, WAV ou M4A, até 20 MB). Sem
    música, a página sintetiza uns poucos tons. Nada disso vai para o repositório.
 
+6. **Foco, Instagram e gráficos pequenos** (11/11/2026, segunda versão). Entram o card do Foco
+   (a frente atual, o próximo passo e as frentes por estado, em barras) e o do Instagram, só com
+   a conta conectada (seguidores, publicações da semana e as visualizações das seis mais novas,
+   em colunas). O clima ganha a curva da temperatura do dia, hora a hora (o mesmo pedido ao
+   Open-Meteo), e a agenda, a linha do dia com cada compromisso. Com mais de seis cards, eles se
+   arrumam em quatro colunas. O Instagram lê só as publicações mais novas
+   (`Instagram.recentes`), aproveitando o cache, para não gastar o limite da Meta.
+7. **Os avisos não atropelam a entrada.** A página avisa o Zé quando a abertura começa e quando é
+   pulada (passos -1 e -2 do mesmo `POST /abertura/falar`). Enquanto ela roda, e nos primeiros
+   segundos depois de o Zé subir, quando ela está ligada, todo aviso vai para a fila e nada é
+   oferecido; a oferta vem depois do fechamento. O "bom dia" separado não repete o dia. Avisos sem
+   manchete viram uma conta só ("Três novidades esperando"), nunca "um aviso, um aviso e um aviso"
+   (visto em 11/11/2026).
+
 ## Consequências
 
 - Abrir o programa leva uns 40 a 60 segundos de apresentação; quem não quiser desliga no Perfil
@@ -57,3 +71,5 @@ ADR próprio.
 - O nome dos contatos do WhatsApp e os títulos da agenda são falados em voz alta ao abrir.
 - O Zé consulta o Open-Meteo e o Google Notícias a cada 20 minutos enquanto roda, com a cidade
   configurada. Nenhum outro dado sai da máquina.
+- Com o Instagram conectado, o Zé lê o perfil e as publicações mais novas a cada 20 minutos (uns
+  dez pedidos por hora à Meta, só leitura).
