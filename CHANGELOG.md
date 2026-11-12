@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Imprimir de verdade:** o envio para a impressora travava no fim e o Zé desistia sem começar a
+  impressão, com o arquivo já no cartão. Agora o envio termina em segundos e a impressão começa.
+
 - **Imprimir pelo Zé:** a aba Projetos 3D acha a impressora Bambu Lab na rede, mostra o status e
   o filamento de cada bandeja, fatia a peça dizendo o tempo e os gramas, e imprime com o seu sim
   (pela voz ou confirmando no painel). Quando a impressão termina, o Zé avisa.

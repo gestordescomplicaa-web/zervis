@@ -160,9 +160,47 @@ class _FTPImplicito(ftplib.FTP_TLS):
             )
         return conexao, tamanho
 
+    def storbinary(
+        self, cmd: str, fp: Any, blocksize: int = 32768, callback: Any = None, rest: Any = None
+    ) -> str:
+        """Como o do `ftplib`, sem o fechamento do TLS no canal de dados (`unwrap`): a Bambu não
+        responde a ele, e o envio ficava esperando até o prazo com o arquivo já no cartão (visto
+        em 12/11/2026). Fechar o canal basta para ela confirmar."""
+        self.voidcmd("TYPE I")
+        conexao = self.transfercmd(cmd, rest)
+        try:
+            while bloco := fp.read(blocksize):
+                conexao.sendall(bloco)
+        finally:
+            conexao.close()
+        return self.voidresp()
+
+
+def _fechar(ftp: ftplib.FTP) -> None:
+    """Fecha sem reclamar: a conexão pode nem ter aberto (a impressora desligada)."""
+    if ftp.sock is None:
+        return
+    with contextlib.suppress(OSError, ftplib.Error, EOFError):
+        ftp.quit()
+
+
+def _tamanho_no_cartao(conexao: Conexao, nome: str) -> int | None:
+    ftp = _FTPImplicito(_contexto_tls())
+    try:
+        ftp.connect(conexao.ip, PORTA_FTP, timeout=20)
+        ftp.login(USUARIO, conexao.codigo)
+        return ftp.size(f"/{nome}")
+    except (OSError, ftplib.Error):
+        return None
+    finally:
+        _fechar(ftp)
+
 
 def enviar_arquivo(conexao: Conexao, origem: Path, nome: str) -> None:
+    """Sobe o 3MF para o cartão. Se a confirmação não vier, confere no cartão: chegou com o
+    tamanho certo, vale."""
     ftp = _FTPImplicito(_contexto_tls())
+    falha: Exception | None = None
     try:
         ftp.connect(conexao.ip, PORTA_FTP, timeout=30)
         ftp.login(USUARIO, conexao.codigo)
@@ -170,10 +208,11 @@ def enviar_arquivo(conexao: Conexao, origem: Path, nome: str) -> None:
         with origem.open("rb") as f:
             ftp.storbinary(f"STOR /{nome}", f)
     except (OSError, ftplib.Error) as erro:
-        raise ImpressoraErro(f"O arquivo não chegou à impressora ({erro}).") from None
+        falha = erro
     finally:
-        with contextlib.suppress(OSError, ftplib.Error):
-            ftp.quit()
+        _fechar(ftp)
+    if falha is not None and _tamanho_no_cartao(conexao, nome) != origem.stat().st_size:
+        raise ImpressoraErro(f"O arquivo não chegou à impressora ({falha}).")
 
 
 # ---- o MQTT -------------------------------------------------------------------------------

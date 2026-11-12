@@ -35,6 +35,12 @@ acesso. O Bambu Studio da máquina fatia por linha de comando.
 5. **O fim vira aviso:** depois de mandar, o Zé olha a impressora a cada minuto e avisa quando a
    impressão termina ou para antes do fim.
 
+6. **O envio não espera o fechamento do TLS** (12/11/2026, na primeira impressão de verdade). A
+   Bambu não responde ao fechamento do TLS no canal de dados, e o `storbinary` do `ftplib` ficava
+   esperando até o prazo (30 s) com o arquivo já inteiro no cartão; o Zé desistia e nunca mandava
+   começar. Agora o canal só fecha, e a confirmação vem na hora (10 s para 400 KB, com a A1). Se
+   mesmo assim ela não vier, vale o arquivo no cartão com o tamanho certo.
+
 ## Consequências
 
 - No modo desenvolvedor, a impressora sai da nuvem da Bambu: o app Bambu Handy e o acesso de fora
