@@ -13,6 +13,8 @@
   Atividade (o que o Zé fez) e Pendências (o que espera você, com a seção de cada item). Cada cena
   entra grande enquanto o Zé fala dela e encaixa num mosaico; as manchetes passam numa faixa. O Zé
   avisa quando chove na hora de um compromisso e não lê mais números de telefone.
+- **A abertura sem "O resto está na tela":** o Zé fala cada cena inteira, com falas mais curtas; o
+  detalhe fica no painel.
 - **A abertura com o dia inteiro:** ao abrir o programa, ela não começa mais antes de o Zé buscar o
   clima, o Instagram e as manchetes (abria só com três cards).
 - **As cenas no ritmo da voz:** quando o Zé explica algo na tela, cada parte aparece quando ele

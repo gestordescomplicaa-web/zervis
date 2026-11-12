@@ -92,6 +92,12 @@ ADR próprio.
     compromisso que cai numa hora de chuva. No WhatsApp ele fala nomes, nunca números de telefone
     (lia dígito por dígito), e o resto vira "e mais duas". As melhorias prontas são contadas pelo
     git fora do laço, junto com as outras fontes de 20 minutos.
+11. **As falas das cenas saem inteiras, e curtas** (11/11/2026, no primeiro uso das cenas). Juntas,
+    as falas passaram de 30 palavras, e a regra dos avisos longos (ADR 0027) cortava cada uma e
+    dizia "O resto está na tela", em quase toda cena. A fala que a página pede nunca vira
+    manchete: o Zé a escreveu para ser dita, e o painel dela já está na tela. E elas encurtaram:
+    a máxima e a mínima, os nomes das automações, a publicação que mais rendeu e o resto das
+    frentes ficam só no painel; o Zé diz dois nomes e "mais três", e uma manchete.
 
 ## Consequências
 

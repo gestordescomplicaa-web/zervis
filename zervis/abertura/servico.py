@@ -344,6 +344,10 @@ class Abertura:
             return True
         return bool(panorama.JEITO_DE_FALA.match(texto))
 
+    def pedida(self, texto: str) -> bool:
+        """`texto` é uma fala que a página pediu: sai inteira, sem virar manchete."""
+        return texto in self._faladas
+
     def rodando(self, agora: float | None = None) -> bool:
         """A abertura está na tela: os avisos esperam (nada de oferta no meio da entrada)."""
         return (time.time() if agora is None else agora) < self._rodando_ate

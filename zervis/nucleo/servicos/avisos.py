@@ -280,6 +280,11 @@ class ServicoAvisos:
             return None
         if texto in getattr(self.n, "avisos_lidos", {}):
             return aviso  # a mensagem de um lead: inteira, e o texto não vai para a tela
+        abertura = getattr(self.n, "abertura", None)
+        if abertura is not None and abertura.pedida(texto):
+            # A fala de uma cena da abertura: o Zé a escreveu para ser dita, e o painel já está
+            # na tela. Cortada, cada cena acabava em "O resto está na tela" (visto em 11/11/2026).
+            return aviso
         if curto != texto:
             if texto not in self.n._na_tela:
                 self.n._na_linha("aviso", texto)  # o texto inteiro fica na tela
