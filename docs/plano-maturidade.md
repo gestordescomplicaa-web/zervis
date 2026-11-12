@@ -7,35 +7,77 @@ já faz melhor que todos: voz e condução de sessões de código.
 Regra durante as Fases A e B: **funções novas congeladas**. Entram correções e o que as frentes
 pedem. Cada item feito é marcado aqui no mesmo PR que o entrega.
 
+Revisão de 11/11/2026, conferida no código depois da 0.5.0: nota **7,2** (o plano previa ≈ 7,5 ao
+fim da Fase B). O que falta para os 7,5 está em
+[Fecho da Fase B](#fecho-da-fase-b-revisão-de-11112026), e fecha antes da Fase C.
+
+Regra da Fase C: as funções novas voltaram (a abertura, ADR 0078). **Função nova entra com o teste
+dela na porta de qualidade** (a que roda na CI) e só depois do fecho da Fase B. A abertura levou
+oito PRs num dia (#153 a #166), cinco deles corrigindo o que só apareceu no uso real, porque os
+testes da Imersão não rodam na CI.
+
 ## Placar
 
-| Critério | Peso | Hoje | Meta | Frente |
-|---|---:|---:|---:|---|
-| Arquitetura e engenharia | 20% | 7,5 | 8,5 | 5 |
-| Proposta e diferencial | 15% | 8,0 | 8,5 | 5 |
-| Funciona de verdade | 15% | 7,5 | 8,0 | 1 e 3 |
-| Segurança | 15% | 6,5 | 8,0 | 2 |
-| Confiabilidade | 10% | 6,0 | 8,0 | 1 |
-| Avaliação mensurável | 10% | 4,5 | 7,5 | 3 |
-| Alcance e ecossistema | 15% | 3,5 | 5,5 | 4 |
-| **Média ponderada** | | **6,4** | **7,8** | |
+| Critério | Peso | 06/11 | 11/11 | Meta | Frente |
+|---|---:|---:|---:|---:|---|
+| Arquitetura e engenharia | 20% | 7,5 | 8,3 | 8,5 | 5 |
+| Proposta e diferencial | 15% | 8,0 | 8,2 | 8,5 | 5 |
+| Funciona de verdade | 15% | 7,5 | 7,6 | 8,0 | 1 e 3 |
+| Segurança | 15% | 6,5 | 7,8 | 8,0 | 2 |
+| Confiabilidade | 10% | 6,0 | 7,3 | 8,0 | 1 |
+| Avaliação mensurável | 10% | 4,5 | 6,5 | 7,5 | 3 |
+| Alcance e ecossistema | 15% | 3,5 | 4,0 | 5,5 | 4 |
+| **Média ponderada** | | **6,4** | **7,2** | **7,8** | |
 
 Notas do Zérvis: do código e dos testes. Dos concorrentes: documentação e reviews, sem execução.
+
+O que segura cada nota de 11/11 abaixo da meta:
+
+- **Arquitetura (8,3):** 54 mil linhas de Python com tipagem estrita, 1.735 testes, CI fixada e
+  nenhum módulo acima de 800 linhas. Fora da porta: o JavaScript do Zé na Imersão (4,7 mil linhas
+  nos `jarvis-*.js`), sem tipos e com os testes fora da CI.
+- **Funciona de verdade (7,6):** 93% na avaliação, mas a voz está fora da meta de latência (via
+  rápida com p50 de 3,9 s; a meta é p95 abaixo de 2,5 s).
+- **Segurança (7,8):** a bateria de injeção e os segredos fora do agente estão no `make check`; a
+  sessão protegida ainda vem desligada.
+- **Confiabilidade (7,3):** em 11/11 o Zé reiniciou três vezes e as quatro sessões seguiram vivas;
+  em sete dias, 366 ações e 7 falhas. Atualizar com o programa aberto desfaz a atualização.
+- **Avaliação (6,5):** `docs/placar.md` parou na "Versão 0.3.0" (rodada de 09/11); sem rodada
+  agendada e sem tarefas de ponta a ponta.
+- **Alcance (4,0):** só a instalação do zero no Ubuntu entrou (na CI); o resto da Frente 4 não
+  começou.
 
 ## Fases
 
 | Fase | Versão | Frentes | Portão (só fecha quando passa) | Nota |
 |---|---|---|---|---:|
 | A | 0.4.0 | 1, 3 e o ADR do foco (5) | Reinício não derruba sessões; placar publicado | ≈ 7,0 |
-| B | 0.5.0 | 2 e 5 | Zero ações indevidas na bateria de injeção; nenhum módulo acima de 800 linhas | ≈ 7,5 |
-| C | 0.6.0 | 4 | Atendimento pela API oficial do WhatsApp; 3 PRs de fora aceitos | ≈ 7,8 |
+| B | 0.5.0 | 2 e 5 | Zero ações indevidas na bateria de injeção; nenhum módulo acima de 800 linhas | ≈ 7,5 (medido: 7,2) |
+| Fecho da B | 0.5.x | 1, 2, 3 e 5 | Sessão protegida como padrão; placar da versão publicado; testes da Imersão na CI; atualizar com o programa aberto | ≈ 7,5 |
+| C | 0.6.0 | 4 | Atendimento pela API oficial do WhatsApp; uma instalação do zero feita por outra pessoa, sem ajuda | ≈ 7,8 |
 
 Fase A: os dois portões passaram na 0.4.0 (09/11/2026). Ficam abertos, para quando valer o gasto
 de tokens: agendar a rodada noturna (a primeira gastou 21,6 milhões) e as tarefas de ponta a ponta.
 
 Fase B: os dois portões passaram na 0.5.0 (11/11/2026): zero ações indevidas nas 570 combinações
-da bateria de injeção, e nenhum módulo acima de 800 linhas. Ficam abertos: a sessão protegida
-como padrão e o contêiner na VPS.
+da bateria de injeção, e nenhum módulo acima de 800 linhas. O que ficou aberto virou o fecho da
+fase, abaixo.
+
+Fase C: o portão "3 PRs de fora aceitos" saiu (não depende de quem mantém o projeto) e virou meta
+da Frente 4. No lugar entra algo que se pode fazer acontecer: outra pessoa instalar do zero, só
+com o README.
+
+## Fecho da Fase B (revisão de 11/11/2026)
+
+O que as Fases A e B deixaram aberto e o que a revisão achou no código. Fecha antes da Fase C;
+cada item está na frente dele, com o detalhe.
+
+- [ ] **Sessão protegida como padrão** (Frente 2): hoje `protegida` nasce desligada.
+- [ ] **Placar a cada versão** (Frente 3): o publicado diz "Versão 0.3.0" na 0.5.0.
+- [ ] **Rodada por versão, não por noite** (Frente 3): decidir e agendar.
+- [ ] **Latência da voz** (Frente 3): os 216 turnos sem primeiro token e a via rápida fora da meta.
+- [ ] **A Imersão na porta de qualidade** (Frente 5): testes na CI e tipos no JavaScript do Zé.
+- [ ] **Atualizar com o programa aberto** (Frente 1): hoje a atualização volta atrás.
 
 ## Frente 1: Confiabilidade (6,0 → 8,0) · Fase A
 
@@ -55,8 +97,19 @@ encerra todas (visto em 06/11/2026, com 3 sessões abertas).
   arquivo é achado na pasta a cada pedido (`portal/arquivos_web.py`); aceite em
   `tests/test_portal.py`.
 
+- [ ] **Atualizar com o programa aberto** (fecho da Fase B). No PC o Zé é um programa (ADR 0079):
+  fechar a última janela o desliga. A atualização reinicia o Zé e a janela do programa fecha
+  junto (a confirmar por quê: ela parece viver no navegador que o próprio Zé abre); o atalho
+  (`deploy/abrir-painel.sh`) entende que o programa foi fechado e desliga o Zé; em 90 s o painel
+  não responde e a atualização volta para a versão anterior (visto em 11/11/2026, 23:07, com o
+  #165; a das 21:36 só ficou porque o programa foi reaberto em seguida). O atalho precisa
+  distinguir reinício de fechamento: num reinício, espera o Zé voltar e reabre a janela. Vale
+  para qualquer reinício, não só o da atualização. Aceite com o systemd de mentira de
+  `tests/test_instalador_pc.py`.
+
 Aceite: com 3 sessões trabalhando, reiniciar o Zé mantém as 3 vivas e o painel as mostra em menos
 de 10 s; matar o processo no meio de uma automação não a perde. Os dois casos no `make check`.
+Atualizar pelo painel com o programa aberto termina na versão nova, com a janela de volta.
 
 ## Frente 3: Avaliação mensurável (4,5 → 7,5) · Fase A
 
@@ -73,6 +126,10 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
   custo antes de fixar a frequência. `zervis avaliar --noturna` pronto (a queda vira aviso pela
   fila durável). Primeira rodada em 09/11/2026: 93%, 29 min, 21,6 milhões de tokens; falta
   decidir a frequência e agendar.
+  Revisão de 11/11/2026: o custo foi medido, e toda noite não se paga (uns 650 milhões de tokens
+  por mês). Proposta: **uma rodada completa por versão**, antes de publicar, e entre versões só
+  as áreas tocadas (`zervis avaliar --area`). A decisão é de quem paga a conta; decidida, o item
+  fecha com a rodada da 0.5.x no placar.
 - [x] **Latência de voz sempre medida:** do fim da fala ao primeiro som, p50 e p95, por caminho
   (via rápida, cérebro completo, comando local), no recorte e no Ao vivo
   (`python -m zervis.voz.latencia --caminhos 7` e o placar). Primeira medição, 03 a 09/11/2026:
@@ -83,8 +140,16 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
   gastou no turno, lido da conversa dele (`zervis/oficina/custo.py`).
 - [x] **Placar público** em `docs/placar.md`, atualizado a cada versão: nota por área (93% na
   primeira rodada noturna), latência por caminho e tokens por cenário (`zervis placar`).
+- [ ] **O placar acompanha a versão** (fecho da Fase B). O publicado diz "Versão 0.3.0" e traz a
+  rodada de 09/11/2026: não acompanhou a 0.4.0 nem a 0.5.0. Um teste compara a versão do placar
+  com a do projeto, e gerar o placar entra nos passos de publicar uma versão.
+- [ ] **Latência da voz dentro da meta** (fecho da Fase B). A primeira medição ficou fora (via
+  rápida com p50 de 3,9 s e p95 de 27,9 s) e os 216 turnos do Ao vivo sem primeiro token seguem
+  sem causa. Achar a causa dos 216, tirar do p95 o que for falha e não lentidão, e então
+  confirmar ou corrigir a meta de 2,5 s com o número medido.
 
-Aceite: 100+ cenários rodando toda noite; placar na 0.4.0 com sucesso por área, p50/p95 e custo.
+Aceite: 100+ cenários rodando a cada versão (revisto em 11/11/2026: era toda noite); placar da
+versão com sucesso por área, p50/p95 e custo.
 Metas iniciais (confirmar após a primeira medição): 90% de sucesso, p95 de voz abaixo de 2,5 s na
 via rápida.
 
@@ -99,6 +164,10 @@ ligações, web) chegam a um cérebro com ferramentas.
   [ADR 0074](adr/0074-sessoes-protegidas.md): ligada por sessão no painel ("Protegida"), com o
   aceite no `make check` (`tests/test_isolamento.py`) e a primeira sessão de verdade em
   10/11/2026; falta virar o padrão e o contêiner na VPS.
+  Revisão de 11/11/2026: no código, `protegida` nasce `False` em `oficina/sessoes.py`. Enquanto
+  for assim, o aceite desta frente ("uma sessão não lê `~/.ssh`") só vale para quem marca a
+  opção. O padrão vira no fecho da Fase B, com a saída por sessão para o projeto que precisar;
+  o contêiner da VPS vai com a imagem Docker da Frente 4.
 - [x] **Cofre de segredos fora do agente:** credencial por chamada, com escopo e prazo; o segredo
   inteiro nunca vai ao modelo.
   [ADR 0075](adr/0075-segredos-fora-do-agente.md): o agente não herda os segredos do Zé (só o
@@ -142,17 +211,30 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
 - [x] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
   [ADR 0077](adr/0077-painel-em-modulos-es.md): uma entrada (`modulos/principal.js`), o estado
   que vários arquivos mudam em `modulos/estado.js`, as páginas sob demanda por `import()`.
+- [ ] **A Imersão na porta de qualidade** (fecho da Fase B). O painel tem tipos e testes na CI; a
+  Imersão, não: os testes dela (`make check-imersivo`, num Chromium de verdade) ficam fora do
+  `make check` e da CI, e os `jarvis-*.js` (4,7 mil linhas, o que é do Zé) não passam pelo
+  TypeScript. Foi por onde entraram os erros da abertura em 11/11/2026. Os testes da Imersão
+  entram na CI e os `jarvis-*.js`, no `npm run check`. O `stage.html` (3,7 mil linhas) é o
+  Barehands adaptado (`THIRD_PARTY.md`) e fica como veio: dividi-lo afasta do original.
 
 ## Frente 4: Plataforma e alcance (3,5 → 5,5) · Fase C
 
+É o critério de nota mais baixa (4,0) com 15% do peso: cada ponto aqui vale 0,15 na nota geral.
+Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
+
+- [x] **Instalação do zero no CI, no Ubuntu 24.04:** o `check` roda o instalador do PC numa
+  máquina limpa e confere o serviço, o atalho e o painel (ADR 0079).
+- [ ] **Imagem Docker para a VPS:** primeiro, porque também entrega o contêiner que falta na
+  Frente 2.
 - [ ] **WhatsApp pela API oficial** (Cloud API) para o atendimento a clientes; o caminho atual
   (whatsmeow e o protocolo de ligação) fica como opção pessoal. Banimento é fatal num atendimento.
 - [ ] **Cérebro pela API** como alternativa testada às CLIs por assinatura; reler os termos de uso
   de cada uma a cada versão.
-- [ ] **Instalação do zero no CI** (Ubuntu 24.04 e Arch); imagem Docker para a VPS.
+- [ ] **Instalação do zero no CI, no Arch.**
 - [ ] **Inglês** no painel e na persona, português como padrão.
 - [ ] **Primeiros contribuidores:** issues para iniciantes, placar como vitrine, vídeo da voz e da
-  oficina.
+  oficina. Meta, não portão: 3 PRs de fora aceitos.
 
 ## Riscos e fora do escopo
 
