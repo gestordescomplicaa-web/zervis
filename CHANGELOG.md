@@ -8,6 +8,8 @@
 - **Os avisos esperam a abertura:** nada mais entra no meio da apresentação; a oferta vem no fim,
   sem repetir "um aviso, um aviso e um aviso". As falas da própria abertura não voltam mais como
   aviso fora de hora, e a música dela não é confundida com o "Ei Zé".
+- **A abertura com o dia inteiro:** ao abrir o programa, ela não começa mais antes de o Zé buscar o
+  clima, o Instagram e as manchetes (abria só com três cards).
 - **As cenas no ritmo da voz:** quando o Zé explica algo na tela, cada parte aparece quando ele
   chega a ela na fala, em vez de correr na frente e limpar a tela enquanto ele ainda fala.
 - **O Zé com a qualidade do laboratório:** o macaco holográfico ganhou o brilho de verdade, as

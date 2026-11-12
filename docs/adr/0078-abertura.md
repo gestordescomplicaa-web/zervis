@@ -70,6 +70,11 @@ ADR próprio.
    durante a abertura, o chamado por voz não vale (o botão vale, e o Esc a pula); uma fala dela
    que não couber na hora é descartada; e as que já estavam na fila saem dela antes de qualquer
    oferta (reconhecidas pelo jeito: `panorama.JEITO_DE_FALA`).
+9. **A abertura espera o dia completo** (11/11/2026, à noite). Abrir o programa sobe o Zé, e o
+   primeiro panorama sai antes de terminar a primeira busca de fora: a página lia esse e abria só
+   com a hora, o Foco e o WhatsApp. O panorama agora diz se está `completo` (a primeira busca do
+   clima, das manchetes e do Instagram terminou); a página mantém o nome na tela, com a música,
+   até ele chegar, por até 12 segundos (sem rede, abre sem esses blocos).
 
 ## Consequências
 

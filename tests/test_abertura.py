@@ -2,6 +2,7 @@
 pedido de fala da Imersão e as ações do painel. Nada aqui sai para a rede."""
 
 import json
+import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -400,6 +401,24 @@ def test_o_ze_grava_o_dia_para_a_imersao(abertura: Abertura, tmp_path: Path) -> 
     assert dia["blocos"][tipos.index("clima")]["cidade"] == "Recife"
     assert dia["ligada"] is True and dia["musica"] is False
     assert rotas.panorama(tmp_path) == dia
+
+
+def test_o_primeiro_panorama_diz_que_falta_o_de_fora(abertura: Abertura, tmp_path: Path) -> None:
+    # Visto em 11/11/2026: abrir o programa sobe o Zé, e a página leu o panorama gravado antes
+    # da primeira busca de fora (sem clima, Instagram nem manchetes): só três cards.
+    solta = threading.Event()
+    buscar = abertura.externas._noticias
+    abertura.externas._noticias = lambda: (solta.wait(5), buscar())[1]
+    abertura.retratar(time.time())
+    primeiro = rotas.panorama(tmp_path)
+    assert primeiro["completo"] is False
+    assert "noticias" not in [b["tipo"] for b in primeiro["blocos"]]
+    solta.set()
+    abertura.externas.esperar()
+    abertura.retratar(time.time())
+    dia = rotas.panorama(tmp_path)
+    assert dia["completo"] is True
+    assert {"clima", "noticias"} <= {b["tipo"] for b in dia["blocos"]}
 
 
 def test_a_pagina_escolhe_o_passo_e_o_ze_fala_o_texto_dele(
