@@ -600,3 +600,7 @@ body.manutencao .marca strong::after { content: "Manutenção"; display: block; 
 .fonte-pesquisa .titulo-fonte { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
 blockquote.trecho { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid var(--borda-forte);
   background: rgb(70 217 222 / .05); border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+
+/* Projetos 3D (ADR 0082): as três medidas da mesa numa linha. */
+.mesa-3d { display:flex; gap:6px; align-items:center; }
+.mesa-3d input { width:6.5em; }

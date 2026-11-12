@@ -23,7 +23,8 @@
     "atendimento",
     "atualizacoes",
     "pesquisas",
-    "abertura"
+    "abertura",
+    "projetos3d"
   ],
   "escritas": [
     "cerebro",
@@ -150,10 +151,15 @@
     "atualizacoes/aplicar",
     "ze/propor",
     "abertura",
-    "abertura/musica/remover"
+    "abertura/musica/remover",
+    "projetos3d/criar",
+    "projetos3d/comecar",
+    "projetos3d/mostrar",
+    "projetos3d/ajustes"
   ],
   "envios": [
     "sessao/anexo",
-    "abertura/musica"
+    "abertura/musica",
+    "projetos3d/imagem"
   ]
 }

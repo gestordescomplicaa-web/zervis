@@ -8,7 +8,7 @@ import { compartilhado, carregadas } from "./estado.js";
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
 /** @type {Record<string, string>} */
-const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/melhorias.js","conectores":"/paginas/conectores.js","conversa":"/paginas/conversa.js","skills":"/paginas/skills.js","memoria":"/paginas/memoria.js","atendimento":"/paginas/atendimento.js","sessoes":"/paginas/sessoes.js","inicio":"/paginas/inicio.js","foco":"/paginas/foco.js","automacoes":"/paginas/automacoes.js","modelos":"/paginas/modelos.js","perfil":"/paginas/perfil.js","configurar":"/paginas/configurar.js","voz":"/paginas/voz.js","atualizacoes":"/paginas/atualizacoes.js","pesquisas":"/paginas/pesquisas.js"};
+const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/melhorias.js","conectores":"/paginas/conectores.js","conversa":"/paginas/conversa.js","skills":"/paginas/skills.js","memoria":"/paginas/memoria.js","atendimento":"/paginas/atendimento.js","sessoes":"/paginas/sessoes.js","inicio":"/paginas/inicio.js","foco":"/paginas/foco.js","automacoes":"/paginas/automacoes.js","modelos":"/paginas/modelos.js","perfil":"/paginas/perfil.js","configurar":"/paginas/configurar.js","voz":"/paginas/voz.js","atualizacoes":"/paginas/atualizacoes.js","pesquisas":"/paginas/pesquisas.js","projetos3d":"/paginas/projetos3d.js"};
 const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que ocupam a tela
 /** @type {Record<string, string[]>} */
 const DEPENDENCIAS = {
@@ -48,7 +48,7 @@ export async function carregarPagina(nome) {
 }
 
 // Sem cópia guardada: páginas com terminal ou relógio próprio, e a configuração inicial.
-const SEM_GUARDA = [...CHEIAS, "atendimento", "configurar", "pesquisas"];
+const SEM_GUARDA = [...CHEIAS, "atendimento", "configurar", "pesquisas", "projetos3d"];
 
 /** Desenha uma página no conteúdo e liga o que depende dela.
  * @param {string} secao @param {string} html */

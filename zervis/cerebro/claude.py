@@ -76,6 +76,9 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
         return f"Vou criar a sessão {entrada.get('nome', '')} em {onde}" + (
             f", com a tarefa: {tarefa}" if tarefa else "."
         )
+    if nome == "mcp__jarvis__projeto3d_criar":
+        tipo = "a peça" if entrada.get("tipo") == "peca" else "a arte"
+        return f"Vou criar o projeto 3D {entrada.get('nome', '')} e uma sessão para modelar {tipo}."
     if nome == "mcp__jarvis__sessao_enviar":
         return f"Vou mandar para a sessão: {entrada.get('texto', '')}"
     if nome == "mcp__jarvis__sessao_trocar":

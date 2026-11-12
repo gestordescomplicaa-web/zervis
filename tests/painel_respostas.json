@@ -913,6 +913,68 @@
    "cidade": "",
    "cidade_do_fuso": "Sao Paulo",
    "musica": false
+  },
+  "projetos3d": {
+   "projetos": [
+    {
+     "id": "suporte-de-celular",
+     "nome": "Suporte de celular",
+     "tipo": "peca",
+     "tipo_nome": "Peça funcional",
+     "pedido": "8 cm de altura, para celular de até 9 mm, inclinado a 60 graus",
+     "criado": 1794480000,
+     "sessao": "a1b2c3d4",
+     "pasta": "~/projetos/projetos-3d/suporte-de-celular",
+     "arquivos": [
+      {
+       "nome": "modelo.stl",
+       "tamanho": 184284,
+       "modificado": 1794481000,
+       "medidas": {
+        "tamanho_mm": [
+         70.0,
+         62.5,
+         80.0
+        ],
+        "volume_cm3": 24.6,
+        "triangulos": 3684,
+        "fechada": true
+       }
+      },
+      {
+       "nome": "gerar.py",
+       "tamanho": 2310,
+       "modificado": 1794481000
+      }
+     ]
+    },
+    {
+     "id": "arte-do-galo",
+     "nome": "Arte do galo",
+     "tipo": "arte",
+     "tipo_nome": "Arte a partir de imagem",
+     "pedido": "Relevo de 100 mm com base de apoio",
+     "criado": 1794470000,
+     "sessao": "",
+     "pasta": "~/projetos/projetos-3d/arte-do-galo",
+     "arquivos": [
+      {
+       "nome": "entrada/referencia.png",
+       "tamanho": 412000,
+       "modificado": 1794470000
+      }
+     ]
+    }
+   ],
+   "ajustes": {
+    "impressora": "Impressora da oficina",
+    "mesa_mm": [
+     256.0,
+     256.0,
+     256.0
+    ],
+    "pipeline_arte": ""
+   }
   }
  },
  "escritas": {

@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from zervis import atividade, versoes
+from zervis import atividade, lugares, projetos3d, versoes
 from zervis.abertura.servico import Abertura, Externas
 from zervis.atendimento import agente, cliente, projeto
 from zervis.atendimento import ferramentas as atendente_ferramentas
@@ -125,6 +125,7 @@ from zervis.presenca import hyprland
 from zervis.presenca import modo as modo_escuta
 from zervis.presenca.hyprland import MonitorPresenca
 from zervis.presenca.rostos import Rostos
+from zervis.projetos3d import Projetos3D
 from zervis.redes import instagram
 from zervis.rosto import andamento, hud, manifesto, pasta, tela
 from zervis.rosto.anel import Anel
@@ -428,6 +429,12 @@ class Nucleo(
             cfg.caminho("barehands", "pasta_estado").parent / "barehands.json"
         )
         self.maquina.orbes = manifesto.falados(self.orbes)
+        # Os projetos 3D (ADR 0082): ao lado dos outros projetos; as prévias, no Acervo.
+        self.projetos3d = Projetos3D(
+            cfg.caminho("oficina", "raiz_projetos") / projetos3d.PASTA,
+            self.imersivo.acervo,
+            lugares.CONFIG / "projetos3d.json",
+        )
         self.ferramentas_por_grupo = ferramentas.por_grupo(
             self.sessoes,
             self.memoria,
@@ -453,6 +460,7 @@ class Nucleo(
             buscador=self.buscador,
             vigia=self.fontes_de_fora,
             pesquisas=self.pesquisas,
+            projetos=self.projetos3d,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
