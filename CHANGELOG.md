@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Câmera: girar a lente invertida:** no cadastro da câmera, "Girar imagem 180°" por lente.
+  A foto dessa lente sai de pé, com a hora legível no alto.
 - **Câmera de vigia:** quando a câmera iCSee detecta movimento ou uma pessoa, o Zé guarda uma
   foto com a data e a hora, da lente que viu. Ele não fala nem manda nada ao celular sem pedido.
   Na seção Câmera do painel ficam o cadastro, a galeria e o botão "Tirar foto agora". Por voz,
