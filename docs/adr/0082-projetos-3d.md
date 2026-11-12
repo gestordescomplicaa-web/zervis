@@ -42,4 +42,4 @@ imagem, que quem usa já faz com uma pipeline própria (imagem, contornos, relev
 - O trabalho de modelar gasta a conta do agente da sessão, como qualquer sessão.
 - Sem o Blender ou sem a pipeline de arte, a sessão segue com as bibliotecas de Python.
 - Imprimir (fatiar com o Bambu Studio por linha de comando, mandar pela rede local e acompanhar)
-  é a próxima etapa, sempre com o sim falado; depende do modo de desenvolvedor da impressora.
+  ficou no ADR 0083.

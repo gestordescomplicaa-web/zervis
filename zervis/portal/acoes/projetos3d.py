@@ -1,9 +1,10 @@
-"""Ações da página Projetos 3D (ADR 0082): os projetos com os arquivos e as medidas, criar um
-(a pasta e a sessão de código que modela), mostrar um modelo na Imersão e os ajustes."""
+"""Ações da página Projetos 3D (ADR 0082 e 0083): os projetos com os arquivos e as medidas, criar
+um (a pasta e a sessão de código que modela), mostrar um modelo na Imersão, os ajustes, e a
+impressora: achar na rede, guardar a conexão, ver o status, fatiar e imprimir."""
 
 from typing import Any
 
-from zervis import projetos3d
+from zervis import impressora3d, projetos3d
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
@@ -12,10 +13,15 @@ from zervis.rosto.tela import TelaErro
 
 
 class AcoesProjetos3D(Pagina):
-    dependencias = ("projetos3d", "sessoes", "tela")
+    dependencias = ("projetos3d", "sessoes", "tela", "impressora3d")
 
     def projetos_3d(self) -> dict[str, Any]:
-        return {"projetos": self.n.projetos3d.listar(), "ajustes": self.n.projetos3d.ajustes()}
+        return {
+            "projetos": self.n.projetos3d.listar(),
+            "ajustes": self.n.projetos3d.ajustes(),
+            "raiz": str(self.n.projetos3d.raiz),
+            "impressora": self.n.impressora3d.para_tela(),
+        }
 
     def criar_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Uma peça funcional (sem imagem), pelo formulário da página."""
@@ -48,9 +54,12 @@ class AcoesProjetos3D(Pagina):
         """A sessão de um projeto que ficou sem (a primeira não começou, ou foi excluída)."""
         try:
             projetos3d.comecar(
-                self.n.projetos3d, self.n.sessoes, str(dados.get("id", "")), motor_conectado(),
+                self.n.projetos3d,
+                self.n.sessoes,
+                str(dados.get("id", "")),
+                motor_conectado(),
                 "painel",
-            )  # fmt: skip
+            )
         except (projetos3d.Projeto3DErro, SessaoErro) as erro:
             raise PedidoInvalido(str(erro)) from None
         return {**self.projetos_3d(), "aviso": "A sessão começou a modelar."}
@@ -79,3 +88,57 @@ class AcoesProjetos3D(Pagina):
         except projetos3d.Projeto3DErro as erro:
             raise PedidoInvalido(str(erro)) from None
         return {**self.projetos_3d(), "aviso": "Salvo."}
+
+    # ---- a impressora (ADR 0083) ----
+
+    def guardar_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            self.n.impressora3d.guardar(
+                str(dados.get("ip", "")), str(dados.get("serie", "")), str(dados.get("codigo", ""))
+            )
+        except impressora3d.ImpressoraErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {**self.projetos_3d(), "aviso": "Salvo."}
+
+    def procurar_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
+        achadas = impressora3d.descobrir()
+        return {"achadas": achadas, "aviso": "" if achadas else "Nenhuma impressora na rede."}
+
+    def status_da_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return {"status": self.n.impressora3d.status()}
+        except impressora3d.ImpressoraErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+
+    def comando_da_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            self.n.impressora3d.comando(str(dados.get("comando", "")))
+        except impressora3d.ImpressoraErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {"aviso": "Enviado."}
+
+    def fatiar_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            fatia = projetos3d.fatiar(
+                self.n.projetos3d,
+                self.n.impressora3d,
+                str(dados.get("id", "")),
+                str(dados.get("arquivo") or ""),
+            )
+        except projetos3d.Projeto3DErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {**self.projetos_3d(), "aviso": fatia["fala"]}
+
+    def imprimir_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if dados.get("confirmado") is not True:
+            raise PedidoInvalido("Confirme a impressão.")
+        try:
+            feito = projetos3d.imprimir(
+                self.n.projetos3d,
+                self.n.impressora3d,
+                str(dados.get("id", "")),
+                str(dados.get("arquivo") or ""),
+            )
+        except projetos3d.Projeto3DErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return {**self.projetos_3d(), "aviso": "Enviado para a impressora."} | {"feito": feito}

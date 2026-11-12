@@ -1,6 +1,7 @@
-"""Projetos 3D (ADR 0082): criar um projeto (uma pasta e a sessão de código que modela a peça),
-listar os projetos e mostrar um modelo como sólido na Imersão. Criar pede o sim falado, como
-criar uma sessão; listar e mostrar só leem e mexem na própria tela."""
+"""Projetos 3D (ADR 0082 e 0083): criar um projeto (uma pasta e a sessão de código que modela a
+peça), listar, mostrar como sólido na Imersão, fatiar e imprimir. Criar, imprimir e mandar um
+comando à impressora pedem o sim falado; listar, mostrar, fatiar e ver a impressora não mexem em
+nada fora do Zé."""
 
 import asyncio
 from pathlib import Path
@@ -11,6 +12,7 @@ from claude_agent_sdk import SdkMcpTool, tool
 from zervis import projetos3d
 from zervis.cerebro.ferramentas.comum import _erro, _texto
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
+from zervis.impressora3d import COMANDOS, Impressora3D, ImpressoraErro
 from zervis.oficina.sessoes import SessaoErro, Sessoes
 from zervis.rosto.tela import Tela, TelaErro
 
@@ -36,6 +38,7 @@ def ferramentas(
     sessoes: Sessoes | None,
     tela: Tela | None,
     acervo: Path | None = None,
+    impressora: Impressora3D | None = None,
 ) -> list[SdkMcpTool[Any]]:
     if projetos is None:
         return []
@@ -64,7 +67,9 @@ def ferramentas(
         "(suporte, caixa, encaixe); o pedido precisa das medidas e do uso. tipo arte: relevo a "
         "partir de uma imagem, pela pipeline de arte de quem usa; imagem é o caminho dela no "
         "Acervo (imagens/...) ou na pasta pessoal. Não imprime nada. O Zé avisa quando a sessão "
-        "terminar; depois, projeto3d_mostrar põe a peça na Imersão.",
+        "terminar; depois, projeto3d_mostrar põe a peça na Imersão. Para mudar uma peça que já "
+        "existe, não crie outro projeto: mande o pedido à sessão dele (sessao_enviar, com o id de "
+        "sessão de projetos3d_listar).",
         {
             "type": "object",
             "properties": {
@@ -126,4 +131,92 @@ def ferramentas(
         feito = (r.get("resultados") or [{}])[0]
         return _texto({"previa": previa, "mostrado": bool(feito.get("ok"))})
 
-    return [listar, criar, mostrar]
+    ferramentas_impressao = _impressao(projetos, impressora)
+    return [listar, criar, mostrar, *ferramentas_impressao]
+
+
+def _impressao(
+    projetos: projetos3d.Projetos3D, impressora: Impressora3D | None
+) -> list[SdkMcpTool[Any]]:
+    if impressora is None:
+        return []
+
+    @tool(
+        "projeto3d_fatiar",
+        "Fatia o STL de um projeto para a impressora, com o filamento que está nela: devolve o "
+        "tempo, os gramas, o filamento e a bandeja, e a frase pronta (fala). Faça antes de "
+        "imprimir e diga a fala a quem usa. Sem arquivo, o principal.",
+        {
+            "type": "object",
+            "properties": {"projeto": {"type": "string"}, "arquivo": {"type": "string"}},
+            "required": ["projeto"],
+        },
+    )
+    async def fatiar(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return _texto(
+                await asyncio.to_thread(
+                    projetos3d.fatiar,
+                    projetos,
+                    impressora,
+                    str(args.get("projeto", "")),
+                    str(args.get("arquivo") or ""),
+                )
+            )
+        except projetos3d.Projeto3DErro as erro:
+            return _erro(erro)
+
+    @tool(
+        "projeto3d_imprimir",
+        "Manda a peça fatiada para a impressora e começa a imprimir. Antes: projeto3d_fatiar e a "
+        "fala dele para quem usa, que aprova pela voz. Só com a impressora parada; o Zé avisa "
+        "quando a impressão termina.",
+        {
+            "type": "object",
+            "properties": {"projeto": {"type": "string"}, "arquivo": {"type": "string"}},
+            "required": ["projeto"],
+        },
+    )
+    async def imprimir(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return _texto(
+                await asyncio.to_thread(
+                    projetos3d.imprimir,
+                    projetos,
+                    impressora,
+                    str(args.get("projeto", "")),
+                    str(args.get("arquivo") or ""),
+                )
+            )
+        except projetos3d.Projeto3DErro as erro:
+            return _erro(erro)
+
+    @tool(
+        "impressora_status",
+        "Como está a impressora 3D: parada, imprimindo (com a porcentagem e o tempo que falta), "
+        "pausada, concluída ou com falha; as temperaturas e o filamento de cada bandeja.",
+        {"type": "object", "properties": {}},
+    )
+    async def status(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return _texto(await asyncio.to_thread(impressora.status))
+        except ImpressoraErro as erro:
+            return _erro(erro)
+
+    @tool(
+        "impressora_comando",
+        "Pausa, retoma ou para a impressão em andamento. Parar cancela a impressão.",
+        {
+            "type": "object",
+            "properties": {"comando": {"type": "string", "enum": list(COMANDOS)}},
+            "required": ["comando"],
+        },
+    )
+    async def comando(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            await asyncio.to_thread(impressora.comando, str(args.get("comando", "")))
+        except ImpressoraErro as erro:
+            return _erro(erro)
+        return _texto({"feito": args.get("comando")})
+
+    return [fatiar, imprimir, status, comando]

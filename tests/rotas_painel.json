@@ -155,7 +155,13 @@
     "projetos3d/criar",
     "projetos3d/comecar",
     "projetos3d/mostrar",
-    "projetos3d/ajustes"
+    "projetos3d/ajustes",
+    "projetos3d/impressora",
+    "projetos3d/impressora/procurar",
+    "projetos3d/impressora/status",
+    "projetos3d/impressora/comando",
+    "projetos3d/fatiar",
+    "projetos3d/imprimir"
   ],
   "envios": [
     "sessao/anexo",
