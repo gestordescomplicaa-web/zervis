@@ -1,5 +1,5 @@
 """The opening (ADR 0078): opening the program lands on the stage with ?abertura=1; the music
-plays, the name lights up and the Zé presents the day, one panel per block, each spoken in his
+plays, the name lights up and the Zé presents the day, one scene per block, each spoken in his
 voice (POST /abertura/falar with the step; GET /orb tells when he stops speaking). The address
 forgets the request, Esc skips it, and the "apresentar dia" action replays it.
 
@@ -25,25 +25,35 @@ sys.path[:0] = [str(Path(__file__).resolve().parents[2]), str(Path(__file__).res
 import test_brain_navigation as tb  # noqa: E402
 
 MONTADO = '2026-11-11T09:00:00-03:00'
+HORAS = [24, 24, 23, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31, 31, 30, 29, 28, 27, 26, 26, 25, 25, 24, 24]
+CHUVA = [0, 0, 0, 0, 0, 0, 10, 10, 20, 20, 30, 40, 60, 70, 80, 70, 50, 40, 30, 20, 10, 0, 0, 0]
+# The day by the Zé's menu: now, today, social networks, activity, what is pending, headlines.
 DIA = {'montado': MONTADO, 'ligada': True, 'blocos': [
-    {'tipo': 'relogio', 'saudacao': 'Bom dia, Ana', 'data': 'quarta-feira, 11 de novembro', 'fala': 'Bom dia, Ana.'},
-    {'tipo': 'clima', 'cidade': 'Fortaleza', 'temperatura': 30, 'ceu': 'garoa fraca', 'maxima': 31, 'minima': 24, 'chuva': 40,
-     'horas': [24, 24, 23, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31, 31, 30, 29, 28, 27, 26, 26, 25, 25, 24, 24], 'fala': 'Faz 30 graus.'},
-    {'tipo': 'hoje', 'itens': [{'hora': '14:00', 'titulo': 'Reunião', 'tipo': 'compromisso'}, {'hora': '18:00', 'titulo': 'Relatório', 'tipo': 'automacao'}], 'total': 2, 'fala': 'Dois itens.'},
-    {'tipo': 'foco', 'atual': 'Lançar a loja', 'proximo_passo': 'subir as fotos', 'ativas': 2, 'travadas': 1, 'pausadas': 0,
-     'feitas_semana': 3, 'fala': 'No foco, a loja.'},
-    {'tipo': 'sessoes', 'itens': [{'nome': 'Loja', 'situacao': 'Interrompida', 'chave': 'interrompida'}], 'total': 1, 'fala': 'A Loja parou.'},
-    {'tipo': 'whatsapp', 'itens': [{'nome': '<b>Ana</b>', 'ha': 'há 1 h'}], 'total': 1, 'fala': 'Uma conversa.'},
-    {'tipo': 'instagram', 'usuario': 'ana.loja', 'seguidores': 15300, 'semana': 2,
-     'grafico': [{'rotulo': '01/11', 'valor': 30000}, {'rotulo': '08/11', 'valor': 4000}, {'rotulo': '10/11', 'valor': 12000}],
-     'destaque': {'legenda': 'Promoção', 'valor': '12 mil'}, 'fala': 'No Instagram, 15 mil.'},
+    {'tipo': 'agora', 'saudacao': 'Bom dia, Ana', 'data': 'quarta-feira, 11 de novembro', 'fala': 'Bom dia, Ana.',
+     'clima': {'cidade': 'Fortaleza', 'temperatura': 30, 'ceu': 'garoa fraca', 'maxima': 31, 'minima': 24, 'chuva': 40,
+               'horas': HORAS, 'chuva_horas': CHUVA, 'icone': 'chuva'}},
+    {'tipo': 'hoje', 'total': 2, 'fala': 'Dois itens.',
+     'itens': [{'hora': '14:00', 'titulo': 'Reunião', 'tipo': 'compromisso', 'chuva': True},
+               {'hora': '18:00', 'titulo': 'Relatório', 'tipo': 'automacao', 'chuva': False}],
+     'foco': {'atual': 'Lançar a loja', 'proximo_passo': 'subir as fotos', 'ativas': 2, 'travadas': 1, 'pausadas': 0, 'feitas_semana': 3}},
+    {'tipo': 'redes', 'fala': 'Uma conversa.',
+     'whatsapp': {'itens': [{'nome': '<b>Ana</b>', 'ha': 'há 1 h', 'min': 60}], 'total': 1},
+     'instagram': {'usuario': 'ana.loja', 'seguidores': 15300, 'semana': 2, 'destaque': {'legenda': 'Promoção', 'valor': '12 mil'},
+                   'grafico': [{'rotulo': '01/11', 'valor': 30000}, {'rotulo': '08/11', 'valor': 4000}, {'rotulo': '10/11', 'valor': 12000}]}},
+    {'tipo': 'atividade', 'dias': 7, 'pedidos': 120, 'acoes': 340, 'falhas': 12, 'automacoes': 2, 'sessoes': ['Site'], 'fala': 'Atendi 120 pedidos.',
+     'por_dia': [{'dia': '2026-11-09', 'registros': 50, 'falhas': 2}, {'dia': '2026-11-10', 'registros': 80, 'falhas': 4},
+                 {'dia': '2026-11-11', 'registros': 30, 'falhas': 1}]},
+    {'tipo': 'pendencias', 'total': 2, 'fala': 'Dois itens pedem você.',
+     'itens': [{'area': 'Sessões', 'titulo': 'Loja', 'detalhe': 'Interrompida', 'nivel': 'alerta'},
+               {'area': 'Atualizações', 'titulo': 'Nova versão', 'detalhe': 'Disponível', 'nivel': 'info'}],
+     'areas': [{'area': 'Sessões', 'n': 1}, {'area': 'Atualizações', 'n': 1}]},
     {'tipo': 'noticias', 'itens': [{'titulo': 'Manchete', 'fonte': 'G1'}], 'fala': 'Manchete.'},
     {'tipo': 'fim', 'fala': 'Esse é o seu dia.'},
 ]}
 # The Zé has just started (opening the program starts him): his first panoramas come before the
 # weather, the Instagram and the headlines. The page waits for the complete one.
 INCOMPLETO = {'montado': '2026-11-11T08:59:58-03:00', 'ligada': True, 'completo': False,
-              'blocos': [DIA['blocos'][0], DIA['blocos'][3], DIA['blocos'][-1]]}
+              'blocos': [{**DIA['blocos'][0], 'clima': None}, DIA['blocos'][1], DIA['blocos'][-1]]}
 DIA['completo'] = True
 CANAL: dict = {'falas': [], 'sinais': [], 'fala_ate': 0.0, 'musica': 0, 'panoramas': 0}
 SAIDA = Path(tempfile.gettempdir()) / 'jarvis-abertura.png'
@@ -134,7 +144,9 @@ async def main():
                     while time.monotonic() < fim:
                         if await ev(js):
                             return True
-                        await asyncio.sleep(.1)
+                        # a headless Chromium only draws (and runs the board's animations) on demand
+                        await call('Page.captureScreenshot', {'format': 'jpeg', 'quality': 20})
+                        await asyncio.sleep(.05)
                     return False
 
                 await call('Runtime.enable')
@@ -144,44 +156,61 @@ async def main():
                 passed.append('the address forgets the request (a reload does not repeat it)')
                 assert CANAL['musica'] == 1
                 passed.append('the music of whoever uses the Zé is fetched')
-                # One subject at a time: a panel only comes with its own line, never ahead of it.
-                adiantados = []
+                assert await esperar('document.querySelectorAll("#jv-abertura-vinheta .cenas span").length === 6')
+                passed.append('under the name, the scenes of the day light up once the Zé has the full day')
+                # One subject at a time: a scene only comes with its own line, never ahead of it,
+                # and it is the only one large at the centre.
+                adiantados, herois = [], []
                 fim = time.monotonic() + 40
                 while time.monotonic() < fim:
-                    paineis = await ev('document.querySelectorAll(".card.jv-holo.jv-ab").length')
+                    paineis, grandes = await ev('[document.querySelectorAll(".card.jv-holo.jv-ab").length,'
+                                                ' document.querySelectorAll(".card.jv-holo.jv-ab.heroi").length]')
+                    herois.append(grandes)
                     if paineis > len(CANAL['falas']):
                         adiantados.append((paineis, len(CANAL['falas'])))
-                    if paineis == 8:
+                    if paineis == 6:
                         break
                     await asyncio.sleep(.05)
-                assert paineis == 8, paineis
+                assert paineis == 6, paineis
                 assert await ev('!document.getElementById("jv-legenda-ze").textContent')
                 assert not adiantados, adiantados
-                passed.append('one panel per block, each one only with its own line, in order, no caption')
+                assert max(herois) == 1, herois
+                passed.append('one scene per block, each one only with its own line, large at the centre, no caption')
                 assert await esperar('!jarvisAbertura.rodando', 30), CANAL['falas']
-                assert [f['passo'] for f in CANAL['falas']] == list(range(9)), CANAL['falas']
+                assert [f['passo'] for f in CANAL['falas']] == list(range(7)), CANAL['falas']
                 assert CANAL['sinais'] == [-1], CANAL['sinais']
                 passed.append('the opening tells the Zé it began, so his notices wait until it is over')
                 assert all(f['montado'] == MONTADO and set(f) == {'montado', 'passo'} for f in CANAL['falas'])
                 passed.append('each step asks the Zé for its own line, only by number, then the closing one')
                 passed.append('the page waits for the complete panorama, not the one from before the first fetch')
                 assert await ev('''(() => { const t = [...document.querySelectorAll(".jv-ab h2")].map(h => h.textContent);
-                    return t.join("|") === "Hoje|Fortaleza|Hoje|Foco|Sessões de código|Sem resposta|@ana.loja|Manchetes"
+                    return t.join("|") === "Agora|Hoje|Redes sociais|Atividade|Pendências|Manchetes"
                       && /^\\d\\d:\\d\\d$/.test(document.querySelector("[data-relogio]").textContent)
-                      && document.querySelector(".jv-ab-clima b").textContent === "30°"
-                      && !document.querySelector(".jv-ab b b")
+                      && /^\\d\\d$/.test(document.querySelector("[data-segundo]").textContent)
+                      && document.querySelector(".jv-ab-clima > b").textContent === "30°"
+                      && document.querySelector(".jv-ab-whats .txt").textContent === "<b>Ana</b>"
                       && !document.querySelector("#jv-feixes"); })()''')
-                passed.append('the panels show the Zé\'s data, escaped, with a live clock, and no beams across them')
-                assert await esperar('''document.querySelector(".jv-ab-curva polyline")?.getAttribute("points").split(" ").length === 24
-                    && document.querySelectorAll(".jv-ab-dia i").length === 2 && !!document.querySelector(".jv-ab-dia b")
-                    && document.querySelectorAll(".jv-ab-barras .jv-barra").length === 3
-                    && document.querySelectorAll(".jv-ab .jv-grafico svg .jv-coluna").length === 3
-                    && document.querySelector('.jv-ab[data-titulo="@ana.loja"] .jv-heroi b').textContent.replace(/\\s/g, " ") === "15,3 mil"''', 5)
-                passed.append('small charts: the day\'s temperature, the agenda on the day, the fronts, the Instagram views')
-                assert await ev('''(() => { const r = [...document.querySelectorAll(".card.jv-holo.jv-ab")].map(e => e.getBoundingClientRect());
-                    return r.every((a, i) => r.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1
-                      || a.bottom <= b.top + 1 || b.bottom <= a.top + 1)) && r.every(a => a.right <= innerWidth + 1); })()''')
-                passed.append('eight panels in four columns, none over another, all on the screen')
+                passed.append('the scenes follow the menu and show the Zé\'s data, escaped, with a live clock')
+                assert await esperar('''document.querySelector(".jv-ab-tempo path.linha")?.getAttribute("d").split("C").length === 24
+                    && document.querySelectorAll(".jv-ab-tempo .chuva rect").length === 15
+                    && !!document.querySelector(".jv-ab-ceu .gotas")
+                    && document.querySelectorAll(".jv-ab-mostrador .marca").length === 2
+                    && document.querySelectorAll(".jv-ab-frentes i").length === 3
+                    && document.querySelectorAll(".jv-ab-chuva").length === 1
+                    && document.querySelectorAll(".jv-ab-insta .jv-grafico svg .jv-coluna").length === 3
+                    && document.querySelectorAll(".jv-ab-atividade .jv-grafico svg .jv-coluna").length === 3
+                    && document.querySelectorAll(".jv-ab-anel .arco").length === 2
+                    && document.querySelector(".jv-ab-insta .jv-heroi b").textContent.replace(/\\s/g, " ") === "15,3 mil"
+                    && document.querySelector(".jv-ab-anel b").textContent === "2"
+                    && document.querySelector(".jv-ab-atividade [data-n]").textContent === "120"
+                    && document.querySelectorAll(".jv-ab-fita span").length === 2''', 8)
+                passed.append('charts: the day\'s temperature and rain, the day\'s dial, the fronts, the views, the activity, the pending ring')
+                assert await esperar('''(() => { const r = [...document.querySelectorAll(".card.jv-holo.jv-ab")].map(e => e.getBoundingClientRect());
+                    return !document.querySelector(".jv-ab.heroi")
+                      && r.every((a, i) => r.every((b, j) => i === j || a.right <= b.left + 1 || b.right <= a.left + 1
+                      || a.bottom <= b.top + 1 || b.bottom <= a.top + 1))
+                      && r.every(a => a.left >= innerWidth * .2 && a.right <= innerWidth + 1 && a.top >= 0 && a.bottom <= innerHeight); })()''', 8)
+                passed.append('the scenes dock into a mosaic with the headlines under it: none over another, all on the screen')
                 assert await ev('!document.getElementById("jv-abertura-vinheta")')
                 passed.append('the panels stay on the board when it is over; the title is gone')
                 import base64

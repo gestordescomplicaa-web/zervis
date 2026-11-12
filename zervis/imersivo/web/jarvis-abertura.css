@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later
-   The opening (jarvis-abertura.js, ADR 0078): the name over the music, then the day's panels,
-   built on the presentation's holographic panels (jarvis-apresentacao.css). */
+   The opening (jarvis-abertura.js, ADR 0078): the name over the music, then the day's scenes,
+   built on the presentation's holographic panels (jarvis-apresentacao.css). The panels are drawn
+   for a 1600x900 screen and scaled as a whole by the board, so the sizes here are fixed. */
 
 #jv-abertura-vinheta { position: fixed; left: 0; right: 0; top: 64%; z-index: 6; pointer-events: none;
   display: grid; justify-items: center; gap: 10px; text-align: center; animation: jv-ab-acender 1.6s cubic-bezier(.2,.8,.2,1) both; }
@@ -12,79 +13,214 @@
 #jv-abertura-vinheta .anel { width: min(520px, 60vw); height: 1px;
   background: linear-gradient(90deg, transparent, var(--jv-acento, #8ff0e4), transparent);
   box-shadow: 0 0 14px var(--jv-acento, #8ff0e4); animation: jv-ab-varrer 1.4s cubic-bezier(.2,.8,.2,1) both; }
+#jv-abertura-vinheta .cenas { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 20px; min-height: 14px; margin-top: 8px;
+  font: 500 10px "JetBrains Mono", monospace; letter-spacing: .3em; color: var(--jv-claro, #bffff2); }
+#jv-abertura-vinheta .cenas span { animation: jv-ab-cena .5s both; }
+#jv-abertura-vinheta .cenas span + span::before { content: "·"; margin-right: 20px; color: var(--jv-acento, #8ff0e4); }
+@keyframes jv-ab-cena { from { opacity: 0; filter: brightness(4) blur(3px); transform: translateY(4px); } }
 @keyframes jv-ab-acender { 0% { opacity: 0; filter: blur(8px) brightness(3); letter-spacing: .8em; } 60% { opacity: 1; } 100% { filter: none; } }
 @keyframes jv-ab-apagar { to { opacity: 0; transform: translateY(-12px); filter: blur(6px); } }
 @keyframes jv-ab-varrer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-.jv-holo.jv-ab .jv-ab-hora { display: block; font: 600 54px/1 "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums;
-  color: var(--jv-claro, #bffff2); text-shadow: 0 0 18px rgb(var(--jv-acento-rgb, 143 240 228) / .55); }
-.jv-holo.jv-ab .jv-ab-data { margin: 0; font: 500 14px "Chakra Petch", system-ui, sans-serif; letter-spacing: .04em; }
-.jv-holo.jv-ab .jv-ab-data::first-letter { text-transform: uppercase; }
-.jv-holo.jv-ab .jv-ab-oi { margin: auto 0 0; font: 500 11px "JetBrains Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--jv-suave, #a8d8cf); }
-.jv-holo.jv-ab .jv-ab-clima { display: flex; align-items: baseline; gap: 12px; }
-.jv-holo.jv-ab .jv-ab-clima b { font: 600 48px/1 "Chakra Petch", system-ui, sans-serif; color: var(--jv-claro, #bffff2);
-  text-shadow: 0 0 18px rgb(var(--jv-acento-rgb, 143 240 228) / .55); }
-.jv-holo.jv-ab .jv-ab-clima span { font: 500 14px "Chakra Petch", system-ui, sans-serif; }
-.jv-holo.jv-ab .jv-ab-clima span::first-letter { text-transform: uppercase; }
-.jv-holo.jv-ab .jv-ab-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; overflow: hidden;
+/* ---- a scene: large at the centre while the Zé speaks of it, then docked in the mosaic ---- */
+.card.jv-holo.jv-ab { --a: var(--jv-acento-rgb, 143 240 228); --acento: var(--jv-acento, #8ff0e4); --claro: var(--jv-claro, #bffff2);
+  --suave: var(--jv-suave, #a8d8cf); --chuva: #8cc8ff; transition: background .5s, border-color .5s, box-shadow .5s; }
+.card.jv-holo.jv-ab.heroi { background: linear-gradient(160deg, rgb(10 46 43), rgb(2 14 13)); border-color: rgb(var(--a) / .75);
+  box-shadow: inset 0 0 50px rgb(var(--a) / .12), 0 0 90px rgb(var(--a) / .26), 0 30px 80px rgb(0 0 0 / .55); }
+.card.jv-holo.jv-ab.encaixado { animation: jv-ab-encaixe .8s ease-out; }
+@keyframes jv-ab-encaixe { 0% { border-color: var(--claro); box-shadow: 0 0 0 1px rgb(var(--a) / .9), 0 0 60px rgb(var(--a) / .55); } }
+.jv-holo.jv-ab .jv-h-conteudo { padding: 14px 18px 16px; }
+.jv-holo.jv-ab h2 { font-size: 18px; }
+.jv-holo.jv-ab .jv-h-corpo { gap: 11px; justify-content: center; }
+.jv-holo.jv-ab .jv-h-legenda { display: block; font: 500 9px "JetBrains Mono", monospace; letter-spacing: .2em; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; overflow: hidden;
   font: 500 12px "Chakra Petch", system-ui, sans-serif; }
-.jv-holo.jv-ab .jv-ab-lista li { display: flex; align-items: baseline; gap: 10px; animation: jv-chegar .5s both; min-width: 0; }
-.jv-holo.jv-ab .jv-ab-lista time { flex: none; font: 400 10px "JetBrains Mono", monospace; color: var(--jv-suave, #a8d8cf); }
+.jv-holo.jv-ab .jv-ab-lista li { display: flex; align-items: baseline; gap: 9px; animation: jv-chegar .5s both; min-width: 0; }
+.jv-holo.jv-ab .jv-ab-lista time { flex: none; font: 400 10px "JetBrains Mono", monospace; color: var(--suave); }
 .jv-holo.jv-ab .jv-ab-lista .jv-st { flex: none; }
 .jv-holo.jv-ab .jv-ab-lista .txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.jv-holo.jv-ab .jv-ab-noticia { display: grid !important; gap: 1px; }
-.jv-holo.jv-ab .jv-ab-noticia .txt { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
-.jv-holo.jv-ab .jv-ab-noticia small { font: 400 9px "JetBrains Mono", monospace; letter-spacing: .12em; color: var(--jv-suave, #a8d8cf); text-transform: uppercase; }
-.jv-holo.jv-ab .jv-ab-mais { margin: 0; font: 500 10px "JetBrains Mono", monospace; color: var(--jv-suave, #a8d8cf); letter-spacing: .14em; }
+.jv-holo.jv-ab .jv-ab-mais { margin: 0; font: 500 10px "JetBrains Mono", monospace; color: var(--suave); letter-spacing: .14em; }
+.jv-holo.jv-ab .jv-ab-chuva { flex: none; padding: 1px 5px; font: 500 8px "JetBrains Mono", monospace; letter-spacing: .16em;
+  color: var(--chuva); border: 1px solid rgb(140 200 255 / .45); }
+@keyframes jv-ab-girar { to { transform: rotate(360deg); } }
+@keyframes jv-ab-pulso { 50% { opacity: .45; transform: scale(1.5); } }
+@keyframes jv-ab-surgir { from { opacity: 0; filter: brightness(4); } }
+@keyframes jv-ab-revelar { to { clip-path: inset(-20% -2% -20% -2%); } }
+@keyframes jv-ab-crescer { from { transform: scaleX(0); } }
 
-/* The small charts: the day's temperature, the day's agenda, the focus and the Instagram. */
-/* the weather's numbers in one row (each label over its value), so the day's curve fits under them */
-.jv-holo.jv-ab .jv-ab-clima + .jv-linhas { grid-template-columns: none; grid-template-rows: auto auto; grid-auto-flow: column;
-  justify-content: start; gap: 4px 22px; }
-.jv-holo.jv-ab .jv-herois { grid-template-columns: repeat(2, auto); justify-content: start; gap: 22px; }
-.jv-holo.jv-ab .jv-heroi b { font-size: 26px; }
-.jv-holo.jv-ab .jv-heroi small { margin-top: 3px; }
-.jv-holo.jv-ab .jv-ab-curva { position: relative; flex: none; height: 48px; margin-top: auto; padding-bottom: 12px; }
-.jv-holo.jv-ab .jv-ab-curva .traco { position: relative; height: 36px; }
-.jv-holo.jv-ab .jv-ab-curva svg { width: 100%; height: 100%; overflow: visible; display: block; }
-.jv-holo.jv-ab .jv-ab-curva polyline { fill: none; stroke: var(--jv-acento, #8ff0e4); stroke-width: 1.6; vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 4px rgb(var(--jv-acento-rgb, 143 240 228) / .6)); stroke-dasharray: 400; stroke-dashoffset: 400;
-  animation: jv-ab-tracar 1.4s .3s cubic-bezier(.2,.8,.2,1) forwards; }
-.jv-holo.jv-ab .jv-ab-curva i { position: absolute; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%;
-  background: var(--jv-claro, #bffff2); box-shadow: 0 0 10px var(--jv-acento, #8ff0e4); }
-.jv-holo.jv-ab .jv-ab-curva span, .jv-holo.jv-ab .jv-ab-dia span { position: absolute; bottom: 0; font: 400 9px "JetBrains Mono", monospace;
-  color: var(--jv-suave, #a8d8cf); }
-.jv-holo.jv-ab .jv-ab-curva span:nth-of-type(1) { left: 0; }
-.jv-holo.jv-ab .jv-ab-curva span:nth-of-type(2) { left: 50%; transform: translateX(-50%); }
-.jv-holo.jv-ab .jv-ab-curva span:nth-of-type(3) { right: 0; }
-.jv-holo.jv-ab .jv-ab-dia { position: relative; height: 30px; margin-bottom: 10px; flex: none; }
-.jv-holo.jv-ab .jv-ab-dia::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 1px;
-  background: linear-gradient(90deg, rgb(var(--jv-acento-rgb, 143 240 228) / .15), rgb(var(--jv-acento-rgb, 143 240 228) / .5), rgb(var(--jv-acento-rgb, 143 240 228) / .15)); }
-.jv-holo.jv-ab .jv-ab-dia i { position: absolute; top: 4px; width: 9px; height: 9px; margin-left: -4.5px; transform: rotate(45deg);
-  background: var(--jv-acento, #8ff0e4); box-shadow: 0 0 8px var(--jv-acento, #8ff0e4); animation: jv-chegar .5s both; }
-.jv-holo.jv-ab .jv-ab-dia i.auto { background: transparent; border: 1px solid var(--jv-acento, #8ff0e4); }
-.jv-holo.jv-ab .jv-ab-dia b { position: absolute; top: 0; width: 2px; height: 17px; margin-left: -1px; background: var(--jv-claro, #bffff2);
-  box-shadow: 0 0 8px var(--jv-claro, #bffff2); }
-.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(1) { left: 0; }
-.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(2) { left: 33.3%; transform: translateX(-50%); }
-.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(3) { left: 66.6%; transform: translateX(-50%); }
-.jv-holo.jv-ab .jv-ab-dia span:nth-of-type(4) { right: 0; }
-.jv-holo.jv-ab .jv-ab-frente { margin: 0; font: 600 16px/1.25 "Chakra Petch", system-ui, sans-serif; color: var(--jv-claro, #bffff2);
+/* ---- Agora: the hour with its seconds, the greeting, the weather and the day's curve ---- */
+.jv-holo.jv-ab .jv-ab-relogio { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.jv-holo.jv-ab .jv-ab-hora { display: block; font: 600 78px/.95 "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em; color: var(--claro); text-shadow: 0 0 26px rgb(var(--a) / .6), 0 0 3px rgb(var(--a) / .8); }
+.jv-holo.jv-ab .jv-ab-data { margin: 7px 0 0; font: 500 15px "Chakra Petch", system-ui, sans-serif; letter-spacing: .04em; }
+.jv-holo.jv-ab .jv-ab-data::first-letter { text-transform: uppercase; }
+.jv-holo.jv-ab .jv-ab-oi { margin: 4px 0 0; font: 500 10px "JetBrains Mono", monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-segundos { flex: none; width: 98px; height: 98px; overflow: visible; }
+.jv-holo.jv-ab .jv-ab-segundos circle { fill: none; }
+.jv-holo.jv-ab .jv-ab-segundos .marcas { stroke: rgb(var(--a) / .45); stroke-width: 4; }
+.jv-holo.jv-ab .jv-ab-segundos .trilho { stroke: rgb(var(--a) / .12); stroke-width: 2; }
+.jv-holo.jv-ab .jv-ab-segundos .volta { stroke: var(--acento); stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 5px var(--acento));
+  transition: stroke-dashoffset .95s linear; }
+.jv-holo.jv-ab .jv-ab-segundos text { font: 600 24px "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums; fill: var(--claro); text-anchor: middle; }
+.jv-holo.jv-ab.sem-clima .jv-ab-relogio { flex: 1; }
+.jv-holo.jv-ab.sem-clima .jv-ab-hora { font-size: 104px; }
+.jv-holo.jv-ab .jv-ab-clima { display: flex; align-items: center; gap: 12px; padding-top: 11px; border-top: 1px solid rgb(var(--a) / .14); }
+.jv-holo.jv-ab .jv-ab-clima > b { font: 600 44px/1 "Chakra Petch", system-ui, sans-serif; color: var(--claro); text-shadow: 0 0 18px rgb(var(--a) / .55); }
+.jv-holo.jv-ab .jv-ab-clima p { flex: 1; min-width: 0; margin: 0; display: grid; gap: 3px; }
+.jv-holo.jv-ab .jv-ab-clima p span { font: 500 14px "Chakra Petch", system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jv-holo.jv-ab .jv-ab-clima p span::first-letter { text-transform: uppercase; }
+.jv-holo.jv-ab .jv-ab-clima p small { font: 400 9px "JetBrains Mono", monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-clima dl { flex: none; margin: 0; display: grid; grid-template-rows: auto auto; grid-auto-flow: column; gap: 3px 14px; }
+.jv-holo.jv-ab .jv-ab-clima dt { font: 500 9px "JetBrains Mono", monospace; letter-spacing: .18em; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-clima dd { margin: 0; font: 600 14px "Chakra Petch", system-ui, sans-serif; }
+.jv-holo.jv-ab .jv-ab-ceu { flex: none; width: 48px; height: 48px; overflow: visible; fill: none; stroke: var(--acento); stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 5px rgb(var(--a) / .7)); }
+.jv-holo.jv-ab .jv-ab-ceu .raios { transform-origin: 24px 24px; animation: jv-ab-girar 16s linear infinite; }
+.jv-holo.jv-ab .jv-ab-ceu .raios.pequeno { transform-origin: 33px 15px; }
+.jv-holo.jv-ab .jv-ab-ceu .nuvem, .jv-holo.jv-ab .jv-ab-ceu .nevoa { animation: jv-ab-flutuar 4.5s ease-in-out infinite alternate; }
+.jv-holo.jv-ab .jv-ab-ceu .nuvem.longe { opacity: .5; animation-duration: 6.5s; animation-direction: alternate-reverse; }
+.jv-holo.jv-ab .jv-ab-ceu .gotas { stroke: var(--chuva); stroke-dasharray: 3 3; animation: jv-ab-chover .6s linear infinite; }
+.jv-holo.jv-ab .jv-ab-ceu .gotas.neve { stroke-width: 2.6; stroke-dasharray: none; animation: jv-ab-nevar 2.2s linear infinite; }
+.jv-holo.jv-ab .jv-ab-ceu .raio { stroke: var(--claro); animation: jv-ab-relampago 2.6s steps(1) infinite; }
+.jv-holo.jv-ab .jv-ab-ceu .pisca { animation: jv-pulsar 2.2s ease-in-out infinite; }
+@keyframes jv-ab-flutuar { from { transform: translateX(-1.6px); } to { transform: translateX(1.6px); } }
+@keyframes jv-ab-chover { to { stroke-dashoffset: -6; } }
+@keyframes jv-ab-nevar { from { transform: translateY(-3px); opacity: 0; } 30% { opacity: 1; } to { transform: translateY(4px); opacity: 0; } }
+@keyframes jv-ab-relampago { 0%, 12%, 20% { opacity: 1; } 8%, 16%, 60% { opacity: .15; } }
+.jv-holo.jv-ab .jv-ab-tempo { flex: 1; min-height: 86px; display: flex; flex-direction: column; gap: 4px; }
+.jv-holo.jv-ab .jv-ab-tempo .traco { position: relative; flex: 1; min-height: 66px; }
+.jv-holo.jv-ab .jv-ab-tempo svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; clip-path: inset(-20% 100% -20% -2%);
+  animation: jv-ab-revelar 1.6s .35s cubic-bezier(.2,.8,.2,1) forwards; }
+.jv-holo.jv-ab .jv-ab-tempo .area { fill: url(#jv-ab-g-tempo); }
+.jv-holo.jv-ab .jv-ab-tempo .linha { fill: none; stroke: var(--acento); stroke-width: 1.8; vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgb(var(--a) / .7)); }
+.jv-holo.jv-ab .jv-ab-tempo .chuva rect { fill: rgb(140 200 255 / .34); }
+.jv-holo.jv-ab .jv-ab-tempo .agora { position: absolute; top: -4%; bottom: 0; width: 1px; animation: jv-ab-surgir .6s 1.2s both;
+  background: linear-gradient(180deg, transparent, rgb(var(--a) / .55) 30%, rgb(var(--a) / .15)); }
+.jv-holo.jv-ab .jv-ab-tempo .agora b { position: absolute; left: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%;
+  background: var(--claro); box-shadow: 0 0 12px var(--acento), 0 0 3px #fff; animation: jv-ab-pulso 1.8s ease-in-out infinite; }
+.jv-holo.jv-ab .jv-ab-tempo em { position: absolute; transform: translate(-50%, -165%); font: 600 10px "Chakra Petch", system-ui, sans-serif;
+  font-style: normal; color: var(--claro); animation: jv-ab-surgir .6s 1.4s both; }
+.jv-holo.jv-ab .jv-ab-tempo .eixo { display: flex; justify-content: space-between; font: 400 9px "JetBrains Mono", monospace; color: var(--suave); }
+
+/* ---- Hoje: the agenda on the day's dial, and the Focus ---- */
+.jv-holo.jv-ab .jv-ab-dia { flex: none; display: flex; align-items: center; gap: 16px; }
+.jv-holo.jv-ab.jv-ab-hoje .jv-ab-lista { flex: 0 1 auto; min-height: 0; }
+.jv-holo.jv-ab.jv-ab-hoje .jv-ab-mais { margin-top: -5px; }
+.jv-holo.jv-ab .jv-ab-mostrador { flex: none; width: 116px; height: 116px; overflow: visible; }
+.jv-holo.jv-ab .jv-ab-mostrador circle { fill: none; }
+.jv-holo.jv-ab .jv-ab-mostrador .horas { stroke: rgb(var(--a) / .4); stroke-width: 3; }
+.jv-holo.jv-ab .jv-ab-mostrador .quartos { stroke: var(--claro); stroke-width: 5; }
+.jv-holo.jv-ab .jv-ab-mostrador .trilho { stroke: rgb(var(--a) / .12); stroke-width: 3; }
+.jv-holo.jv-ab .jv-ab-mostrador .feito { stroke: var(--acento); stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 4px var(--acento));
+  transition: stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1); }
+.jv-holo.jv-ab .jv-ab-mostrador .varre { transform-origin: 60px 60px; animation: jv-ab-girar 7s linear infinite; }
+.jv-holo.jv-ab .jv-ab-mostrador .varre path { fill: rgb(var(--a) / .09); }
+.jv-holo.jv-ab .jv-ab-mostrador text { font: 500 8px "JetBrains Mono", monospace; fill: var(--suave); text-anchor: middle; }
+.jv-holo.jv-ab .jv-ab-mostrador .marca { fill: var(--claro); filter: drop-shadow(0 0 3px var(--acento)); animation: jv-ab-surgir .5s both; }
+.jv-holo.jv-ab .jv-ab-mostrador circle.marca.auto { fill: #02100f; stroke: var(--acento); stroke-width: 1.5; }
+.jv-holo.jv-ab .jv-ab-mostrador .marca.passou { opacity: .35; }
+.jv-holo.jv-ab .jv-ab-mostrador .ponteiro { stroke: var(--claro); stroke-width: 1.4; }
+.jv-holo.jv-ab .jv-ab-mostrador .ponta { fill: var(--claro); filter: drop-shadow(0 0 4px var(--acento)); }
+.jv-holo.jv-ab .jv-ab-proximo { flex: 1; min-width: 0; display: grid; gap: 3px; align-content: center; }
+.jv-holo.jv-ab .jv-ab-proximo span { font: 500 9px "JetBrains Mono", monospace; letter-spacing: .2em; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-proximo b { font: 600 36px/1 "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums; color: var(--claro);
+  text-shadow: 0 0 16px rgb(var(--a) / .5); }
+.jv-holo.jv-ab .jv-ab-proximo p { margin: 0; font: 600 14px/1.25 "Chakra Petch", system-ui, sans-serif;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.jv-holo.jv-ab .jv-ab-passo { margin: 8px 0 0; font: 500 12px/1.3 "Chakra Petch", system-ui, sans-serif;
+.jv-holo.jv-ab .jv-ab-proximo small { font: 500 10px "JetBrains Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--acento); }
+.jv-holo.jv-ab .jv-ab-foco { flex: none; margin-top: auto; padding-top: 10px; border-top: 1px solid rgb(var(--a) / .14); display: grid; gap: 6px; }
+.jv-holo.jv-ab .jv-ab-frente { margin: 0; font: 600 15px/1.25 "Chakra Petch", system-ui, sans-serif; color: var(--claro);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.jv-holo.jv-ab .jv-ab-passo span, .jv-holo.jv-ab .jv-h-legenda { display: block; margin-bottom: 3px; font: 400 9px "JetBrains Mono", monospace;
-  letter-spacing: .16em; color: var(--jv-suave, #a8d8cf); }
-.jv-holo.jv-ab .jv-ab-barras { margin-top: auto; }
-.jv-holo.jv-ab .jv-ab-barras .jv-barra { grid-template-columns: minmax(0, 46%) 1fr 22px; gap: 8px; }
-.jv-holo.jv-ab .jv-grafico { flex: 1; min-height: 64px; margin-top: -4px; }
-@media (max-height: 820px) { .jv-holo.jv-ab .jv-ab-destaque { display: none; } }  /* the chart first on a short screen */
-.jv-holo.jv-ab .jv-ab-destaque { display: flex; gap: 8px; align-items: baseline; margin: 8px 0 0; font: 500 11px "Chakra Petch", system-ui, sans-serif; }
-.jv-holo.jv-ab .jv-ab-destaque .txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--jv-suave, #a8d8cf); }
-.jv-holo.jv-ab .jv-ab-destaque b { color: var(--jv-claro, #bffff2); }
-@keyframes jv-ab-tracar { to { stroke-dashoffset: 0; } }
+.jv-holo.jv-ab .jv-ab-passo { margin: 0; font: 500 12px/1.3 "Chakra Petch", system-ui, sans-serif;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jv-holo.jv-ab .jv-ab-passo span { display: block; margin-bottom: 2px; font: 400 9px "JetBrains Mono", monospace; letter-spacing: .16em; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-frentes { display: flex; gap: 3px; height: 6px; margin-top: 2px; }
+.jv-holo.jv-ab .jv-ab-frentes i { flex: 1 0 0; background: var(--acento); box-shadow: 0 0 8px rgb(var(--a) / .5); transform-origin: left;
+  animation: jv-ab-crescer .9s .5s cubic-bezier(.2,.8,.2,1) both; }
+.jv-holo.jv-ab .jv-ab-frentes i.alerta { background: var(--alerta); box-shadow: none; }
+.jv-holo.jv-ab .jv-ab-frentes i.pausa { background: rgb(var(--a) / .3); box-shadow: none; }
+.jv-holo.jv-ab .jv-ab-frentes i.bom { background: var(--bom); box-shadow: none; }
+.jv-holo.jv-ab .jv-ab-legenda { display: flex; flex-wrap: wrap; gap: 3px 13px; font: 400 9px "JetBrains Mono", monospace; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-legenda b { margin-right: 5px; font: 600 11px "Chakra Petch", system-ui, sans-serif; color: var(--claro); }
+.jv-holo.jv-ab .jv-ab-legenda .alerta b { color: var(--alerta); }
+.jv-holo.jv-ab .jv-ab-legenda .bom b { color: var(--bom); }
+
+/* ---- Redes sociais: WhatsApp waiting for an answer, and the Instagram ---- */
+.jv-holo.jv-ab .jv-ab-whats, .jv-holo.jv-ab .jv-ab-insta { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.jv-holo.jv-ab .jv-ab-insta:has(.jv-grafico) { flex: 1; }
+.jv-holo.jv-ab .jv-ab-whats + .jv-ab-insta { padding-top: 11px; border-top: 1px solid rgb(var(--a) / .14); }
+.jv-holo.jv-ab .jv-ab-whats .linha { display: flex; align-items: center; gap: 18px; }
+.jv-holo.jv-ab .jv-ab-whats .num { flex: none; min-width: 1ch; font: 600 50px/1 "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums;
+  color: var(--claro); text-shadow: 0 0 18px rgb(var(--a) / .55); }
+.jv-holo.jv-ab .jv-ab-whats ul { flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.jv-holo.jv-ab .jv-ab-whats li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; align-items: baseline;
+  font: 500 12px "Chakra Petch", system-ui, sans-serif; animation: jv-chegar .5s both; }
+.jv-holo.jv-ab .jv-ab-whats .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jv-holo.jv-ab .jv-ab-whats time { font: 400 9px "JetBrains Mono", monospace; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-whats .trilho { grid-column: 1 / -1; height: 3px; background: rgb(var(--a) / .08); }
+.jv-holo.jv-ab .jv-ab-whats .trilho i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, rgb(var(--a) / .35), var(--alerta));
+  transition: width 1.1s cubic-bezier(.2,.8,.2,1); }
+.jv-holo.jv-ab .jv-ab-insta .jv-herois { grid-template-columns: repeat(3, auto); justify-content: start; gap: 20px; }
+.jv-holo.jv-ab .jv-ab-insta .jv-heroi b { font-size: 24px; }
+.jv-holo.jv-ab .jv-ab-insta .jv-heroi small { margin-top: 3px; }
+.jv-holo.jv-ab .jv-ab-insta .jv-grafico { flex: 1; min-height: 72px; }
+
+/* ---- Atividade: what the Zé did, day by day, and what is running ---- */
+.jv-holo.jv-ab.jv-ab-atividade .jv-heroi b { font-size: 30px; }
+.jv-holo.jv-ab.jv-ab-atividade .jv-grafico { flex: 1; min-height: 70px; }
+.jv-holo.jv-ab .jv-ab-rodando { display: flex; flex-wrap: wrap; gap: 6px 8px; font: 500 9px "JetBrains Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.jv-holo.jv-ab .jv-ab-rodando span { max-width: 100%; padding: 3px 8px; border: 1px solid rgb(var(--a) / .25); color: var(--suave);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jv-holo.jv-ab .jv-ab-rodando .viva { color: var(--claro); border-color: rgb(126 226 168 / .5); }
+.jv-holo.jv-ab .jv-ab-rodando .viva::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%;
+  background: var(--bom); box-shadow: 0 0 8px var(--bom); animation: jv-pulsar 1.2s ease-in-out infinite; }
+
+/* ---- Pendências: how many, by section of the menu, and each one ---- */
+.jv-holo.jv-ab .jv-ab-pendencias { flex: 1; min-height: 0; display: flex; align-items: center; gap: 28px; }
+.jv-holo.jv-ab .jv-ab-anel { position: relative; flex: none; width: 150px; height: 150px; }
+.jv-holo.jv-ab .jv-ab-anel svg { width: 100%; height: 100%; overflow: visible; }
+.jv-holo.jv-ab .jv-ab-anel circle { fill: none; }
+.jv-holo.jv-ab .jv-ab-anel .trilho { stroke: rgb(var(--a) / .1); stroke-width: 8; }
+.jv-holo.jv-ab .jv-ab-anel .arco { stroke: var(--acento); stroke-width: 8; filter: drop-shadow(0 0 5px rgb(var(--a) / .6));
+  transition: stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1); }
+.jv-holo.jv-ab .jv-ab-anel .arco.a1 { stroke: var(--alerta); }
+.jv-holo.jv-ab .jv-ab-anel .arco.a2 { stroke: var(--bom); }
+.jv-holo.jv-ab .jv-ab-anel .arco.a3 { stroke: var(--chuva); }
+.jv-holo.jv-ab .jv-ab-anel .arco.a4 { stroke: var(--claro); }
+.jv-holo.jv-ab .jv-ab-anel .giro { stroke: rgb(var(--a) / .55); stroke-width: 1; transform-origin: 60px 60px; animation: jv-ab-girar 9s linear infinite; }
+.jv-holo.jv-ab .jv-ab-anel div { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 5px; }
+.jv-holo.jv-ab .jv-ab-anel b { font: 600 50px/1 "Chakra Petch", system-ui, sans-serif; font-variant-numeric: tabular-nums; color: var(--claro);
+  text-shadow: 0 0 20px rgb(var(--a) / .6); }
+.jv-holo.jv-ab .jv-ab-anel span { font: 500 9px "JetBrains Mono", monospace; letter-spacing: .26em; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-pendencias ul { flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 24px; align-content: center; }
+.jv-holo.jv-ab .jv-ab-pendencias li { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline;
+  padding-bottom: 8px; border-bottom: 1px solid rgb(var(--a) / .12); animation: jv-chegar .5s both; }
+.jv-holo.jv-ab .jv-ab-pendencias li .jv-st { grid-row: 1 / 3; align-self: center; font-size: 12px; }
+.jv-holo.jv-ab .jv-ab-pendencias li .jv-st::before { font-size: 13px; }
+.jv-holo.jv-ab .jv-ab-pendencias li small { grid-column: 2 / 4; font: 500 9px "JetBrains Mono", monospace; letter-spacing: .2em; color: var(--suave); }
+.jv-holo.jv-ab .jv-ab-pendencias li .txt { font: 600 13px "Chakra Petch", system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jv-holo.jv-ab .jv-ab-pendencias li em { font: 400 10px "JetBrains Mono", monospace; font-style: normal; color: var(--suave); white-space: nowrap; }
+.jv-holo.jv-ab .jv-ab-pendencias li.jv-ab-mais { display: block; border: 0; }
+
+/* ---- the headlines, passing on a strip under the mosaic ---- */
+.jv-holo.jv-ab-faixa header, .jv-holo.jv-ab-faixa .jv-h-regua, .jv-holo.jv-ab-faixa .jv-h-varre { display: none; }
+.jv-holo.jv-ab.jv-ab-faixa .jv-h-conteudo { padding: 0 18px; }
+.jv-holo.jv-ab.jv-ab-faixa .jv-h-corpo { flex-direction: row; align-items: center; gap: 18px; }
+.jv-holo.jv-ab.jv-ab-faixa .jv-h-corpo > b { flex: none; padding-right: 18px; border-right: 1px solid rgb(var(--a) / .3);
+  font: 500 10px "JetBrains Mono", monospace; letter-spacing: .3em; color: var(--acento); }
+.jv-holo.jv-ab .jv-ab-fita { flex: 1; min-width: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.jv-holo.jv-ab .jv-ab-fita > div { display: inline-flex; white-space: nowrap; animation: jv-ab-passar 60s linear infinite; }
+.jv-holo.jv-ab .jv-ab-fita span { font: 500 14px "Chakra Petch", system-ui, sans-serif; }
+.jv-holo.jv-ab .jv-ab-fita span::after { content: "◆"; margin: 0 26px; font-size: 8px; vertical-align: middle; color: var(--acento); }
+.jv-holo.jv-ab .jv-ab-fita small { margin-left: 10px; font: 400 9px "JetBrains Mono", monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--suave); }
+@keyframes jv-ab-passar { to { transform: translateX(-50%); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .jv-holo.jv-ab .jv-ab-curva polyline { animation: none; stroke-dashoffset: 0; }
-  #jv-abertura-vinheta, #jv-abertura-vinheta .anel { animation-duration: .01s; } }
+  .jv-holo.jv-ab .jv-ab-tempo svg { animation: none; clip-path: none; }
+  .jv-holo.jv-ab .jv-ab-fita > div, .jv-holo.jv-ab .jv-ab-ceu *, .jv-holo.jv-ab .jv-ab-mostrador .varre, .jv-holo.jv-ab .jv-ab-anel .giro { animation: none; }
+  .card.jv-holo.jv-ab.encaixado { animation: none; }
+  #jv-abertura-vinheta, #jv-abertura-vinheta .anel, #jv-abertura-vinheta .cenas span { animation-duration: .01s; } }

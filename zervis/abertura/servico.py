@@ -48,6 +48,12 @@ class FontesDoDia(Protocol):
     caixa: Any
     prioridade: Any
     foco: Any
+    pendencias: Any  # as sugestões de memória esperando decisão
+    versoes: Any
+
+    def historico(self, dias: int = 7) -> Any:
+        """O que o Zé fez nos últimos dias (a Atividade): a contagem por tipo e por dia."""
+        ...
 
 
 def _sessoes(fontes: FontesDoDia) -> list[panorama.SessaoParada]:
@@ -113,7 +119,48 @@ def _foco(fontes: FontesDoDia, agora: datetime) -> panorama.Foco | None:
     )
 
 
-def coletar(fontes: FontesDoDia, agora: datetime) -> dict[str, Any]:
+def _atividade(fontes: FontesDoDia, agora: datetime) -> panorama.Atividade | None:
+    """A Atividade dos últimos dias e as automações que rodaram hoje."""
+    historico = getattr(fontes, "historico", None)
+    if historico is None:
+        return None
+    h = historico(panorama.Atividade._field_defaults["dias"])
+    hoje = agora.date().isoformat()
+    rodaram = sum(1 for j in fontes.jobs.listar() if str(getattr(j, "ultima", ""))[:10] == hoje)
+    return panorama.Atividade(
+        int(h.contagem.get("pedido", 0)),
+        int(h.contagem.get("execucao", 0)),
+        int(h.contagem.get("falha", 0)),
+        [(d.dia, d.registros, d.falhas) for d in h.por_dia],
+        rodaram,
+        h.dias,
+    )
+
+
+def _pedem(fontes: FontesDoDia, melhorias: int) -> list[panorama.Pendencia]:
+    """O que espera quem usa fora das sessões (essas, o panorama tira de `sessoes`)."""
+
+    def contar(fazer: Callable[[], Any], padrao: Any) -> Any:
+        try:
+            return fazer()
+        except Exception:
+            log.debug("abertura: uma pendência não foi lida", exc_info=True)
+            return padrao
+
+    com_erro = contar(
+        lambda: [
+            j.nome
+            for j in fontes.jobs.listar()
+            if j.ativo and getattr(j, "ultimo_status", "") == "erro"
+        ],
+        [],
+    )
+    sugestoes = contar(lambda: len(fontes.pendencias.listar()), 0)
+    atualizacao = contar(lambda: bool(fontes.versoes.foto().get("disponivel")), False)
+    return panorama.pendencias((), com_erro, melhorias, sugestoes, atualizacao)
+
+
+def coletar(fontes: FontesDoDia, agora: datetime, melhorias: int = 0) -> dict[str, Any]:
     """As partes do Zé; cada uma que falhar fica vazia (a abertura nunca cai por uma delas)."""
 
     def tentar(fazer: Callable[[], list[Any]]) -> list[Any]:
@@ -128,6 +175,8 @@ def coletar(fontes: FontesDoDia, agora: datetime) -> dict[str, Any]:
         "sessoes": tentar(lambda: _sessoes(fontes)),
         "conversas": tentar(lambda: _conversas(fontes, agora.timestamp())),
         "foco": (tentar(lambda: [_foco(fontes, agora)]) or [None])[0],
+        "atividade": (tentar(lambda: [_atividade(fontes, agora)]) or [None])[0],
+        "pedem": tentar(lambda: _pedem(fontes, melhorias)),
     }
 
 
@@ -151,8 +200,8 @@ def ler_instagram(leitor: Any) -> panorama.Instagram | None:
 
 
 class Externas:
-    """O clima, as manchetes e o Instagram, buscados fora do laço do Zé e guardados por 20
-    minutos."""
+    """O clima, as manchetes, o Instagram e as melhorias prontas do autodesenvolvimento (lidas
+    pelo git), buscados fora do laço do Zé e guardados por 20 minutos."""
 
     def __init__(
         self,
@@ -160,9 +209,12 @@ class Externas:
         buscar_clima: Callable[[clima.Lugar], clima.Clima | None] = clima.buscar,
         buscar_noticias: Callable[[], list[noticias.Noticia]] = noticias.buscar,
         instagram: Callable[[], Any] | None = None,
+        melhorias: Callable[[], int] | None = None,
     ) -> None:
         self._localizar, self._clima, self._noticias = localizar, buscar_clima, buscar_noticias
         self._leitor_instagram = instagram  # devolve o leitor do Zé (ou None)
+        self._contar_melhorias = melhorias  # quantas o autodesenvolvimento tem para aprovar
+        self.melhorias = 0
         self.clima: clima.Clima | None = None
         self.noticias: list[noticias.Noticia] = []
         self.instagram: panorama.Instagram | None = None
@@ -196,6 +248,11 @@ class Externas:
                 self.instagram = ler_instagram(self._leitor_instagram())
             except Exception as erro:  # sem rede, token vencido: fica o último lido
                 log.info("abertura: o Instagram não foi lido (%s)", type(erro).__name__)
+        if self._contar_melhorias is not None:
+            try:
+                self.melhorias = int(self._contar_melhorias())
+            except Exception as erro:
+                log.info("abertura: as melhorias não foram contadas (%s)", type(erro).__name__)
         self.versao += 1
 
     def esperar(self, prazo: float = 10.0) -> None:
@@ -231,7 +288,7 @@ class Abertura:
         return self.ler_ajustes().cidade or ajustes.cidade_do_fuso(str(fuso.local()))
 
     def montar(self, agora: datetime) -> dict[str, Any]:
-        partes = coletar(self.fontes, agora)
+        partes = coletar(self.fontes, agora, self.externas.melhorias)
         dia = panorama.montar(
             agora,
             usuario.ler().nome,
@@ -242,6 +299,8 @@ class Abertura:
             self.externas.noticias,
             self.externas.instagram,
             partes["foco"],
+            partes["atividade"],
+            partes["pedem"],
         )
         dia["ligada"] = self.ler_ajustes().ligada
         # Abrir o programa sobe o Zé: o primeiro panorama sai antes da primeira busca de fora

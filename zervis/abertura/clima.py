@@ -49,6 +49,24 @@ CEU = {
     99: "trovoadas com granizo",
 }
 
+
+def icone(codigo: int, de_dia: bool = True) -> str:
+    """O desenho do céu para o painel, pelo código WMO."""
+    if codigo in (0, 1):
+        return "sol" if de_dia else "lua"
+    if codigo == 2:
+        return "nuvens"
+    if codigo == 3:
+        return "nublado"
+    if codigo in (45, 48):
+        return "neblina"
+    if codigo in (71, 73, 75, 77, 85, 86):
+        return "neve"
+    if codigo >= 95:
+        return "trovoada"
+    return "chuva" if codigo >= 51 else ""
+
+
 Obter = Callable[[str], Any]  # a URL -> o JSON (os testes trocam pela resposta pronta)
 
 
@@ -67,6 +85,8 @@ class Clima(NamedTuple):
     minima: int
     chuva: int  # a chance de chuva no dia, em %
     horas: tuple[int, ...] = ()  # a temperatura de cada hora do dia (0h a 23h), para o gráfico
+    chuva_horas: tuple[int, ...] = ()  # a chance de chuva de cada hora, em %
+    icone: str = ""  # "sol", "lua", "nuvens", "nublado", "neblina", "chuva", "neve", "trovoada"
 
 
 def obter_json(url: str) -> Any:
@@ -92,14 +112,18 @@ def localizar(cidade: str, obter: Obter = obter_json) -> Lugar | None:
         return None
 
 
+def _horas(dados: Any, serie: str) -> list[Any]:
+    return [t for t in ((dados.get("hourly") or {}).get(serie) or [])[:24] if t is not None]
+
+
 def buscar(lugar: Lugar, obter: Obter = obter_json) -> Clima | None:
     consulta = urllib.parse.urlencode(
         {
             "latitude": lugar.latitude,
             "longitude": lugar.longitude,
-            "current": "temperature_2m,weather_code",
+            "current": "temperature_2m,weather_code,is_day",
             "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
-            "hourly": "temperature_2m",
+            "hourly": "temperature_2m,precipitation_probability",
             "timezone": "auto",
             "forecast_days": 1,
         }
@@ -114,11 +138,9 @@ def buscar(lugar: Lugar, obter: Obter = obter_json) -> Clima | None:
             round(float(dia["temperature_2m_max"][0])),
             round(float(dia["temperature_2m_min"][0])),
             int(dia.get("precipitation_probability_max", [0])[0] or 0),
-            tuple(
-                round(float(t))
-                for t in (dados.get("hourly") or {}).get("temperature_2m", [])[:24]
-                if t is not None
-            ),
+            tuple(round(float(t)) for t in _horas(dados, "temperature_2m")),
+            tuple(round(float(t)) for t in _horas(dados, "precipitation_probability")),
+            icone(int(agora.get("weather_code", -1)), bool(agora.get("is_day", 1))),
         )
     except Exception:
         log.info("abertura: o clima não veio", exc_info=True)

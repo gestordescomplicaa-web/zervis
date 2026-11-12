@@ -75,6 +75,23 @@ ADR próprio.
    com a hora, o Foco e o WhatsApp. O panorama agora diz se está `completo` (a primeira busca do
    clima, das manchetes e do Instagram terminou); a página mantém o nome na tela, com a música,
    até ele chegar, por até 12 segundos (sem rede, abre sem esses blocos).
+10. **As cenas pelo menu do Zé** (11/11/2026, terceira versão). Oito cards iguais numa grade
+    liam como um painel de controle. A abertura passa a ter cinco cenas, agrupadas como o menu:
+    **Agora** (a hora com os segundos, a saudação e o clima, com a curva da temperatura e a chance
+    de chuva hora a hora), **Hoje** (a agenda e as automações num mostrador de 24 horas, o próximo
+    compromisso e o Foco), **Redes sociais** (o WhatsApp sem resposta e o Instagram, num painel
+    só), **Atividade** (os pedidos, as ações e as falhas de sete dias, as automações que rodaram
+    hoje e as sessões trabalhando) e **Pendências** (o que espera quem usa, cada item com a seção
+    do menu onde se resolve: sessões paradas, automações que falharam, melhorias prontas do
+    autodesenvolvimento, sugestões de memória e atualização disponível). As manchetes passam numa
+    faixa sob o mosaico. Cada cena entra grande, no centro, enquanto o Zé fala dela, e depois
+    encaixa no lugar dela; no fim fica o mosaico inteiro. Os painéis são desenhados para uma tela
+    de 1600 por 900 e escalados inteiros, para ficarem iguais em qualquer tela. Sob o nome, na
+    entrada, as cenas do dia acendem quando o Zé tem o dia completo.
+    O clima cruza com a agenda sem gastar tokens: o Zé diz a partir de que hora chove e avisa do
+    compromisso que cai numa hora de chuva. No WhatsApp ele fala nomes, nunca números de telefone
+    (lia dígito por dígito), e o resto vira "e mais duas". As melhorias prontas são contadas pelo
+    git fora do laço, junto com as outras fontes de 20 minutos.
 
 ## Consequências
 
@@ -83,5 +100,6 @@ ADR próprio.
 - O nome dos contatos do WhatsApp e os títulos da agenda são falados em voz alta ao abrir.
 - O Zé consulta o Open-Meteo e o Google Notícias a cada 20 minutos enquanto roda, com a cidade
   configurada. Nenhum outro dado sai da máquina.
+- A abertura lê a Atividade do Zé uma vez por minuto, como o autoconhecimento já fazia.
 - Com o Instagram conectado, o Zé lê o perfil e as publicações mais novas a cada 20 minutos (uns
   dez pedidos por hora à Meta, só leitura).
