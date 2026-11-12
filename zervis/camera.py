@@ -45,6 +45,7 @@ class Conexao:
     intervalo_s: int = 30
     ligado: bool = True
     girar: tuple[int, ...] = ()  # as lentes (1, 2…) montadas de cabeça para baixo
+    enviar: bool = True  # a foto de movimento vai ao celular (o app Zé Voz)
 
 
 def hash_sofia(senha: str) -> str:
@@ -463,6 +464,7 @@ class Camera:
                 int(dados.get("intervalo_s", 30)),
                 bool(dados.get("ligado", True)),
                 _lentes(dados.get("girar")),
+                bool(dados.get("enviar", True)),
             )
         except (OSError, ValueError, KeyError, TypeError):
             return None
@@ -475,8 +477,9 @@ class Camera:
         intervalo_s: int = 30,
         ligado: bool = True,
         girar: list[int] | None = None,
+        enviar: bool | None = None,
     ) -> None:
-        """`girar` None mantém as lentes giradas que já estavam no cadastro."""
+        """`girar` e `enviar` None mantêm o que já estava no cadastro."""
         try:
             endereco = ipaddress.ip_address(ip.strip())
         except ValueError:
@@ -489,6 +492,8 @@ class Camera:
         atual = self.conexao()
         senha = senha or (atual.senha if atual else "")
         lentes = _lentes(girar) if girar is not None else (atual.girar if atual else ())
+        if enviar is None:
+            enviar = atual.enviar if atual else True
         if not senha or len(senha) > 128 or any(ord(c) < 32 for c in senha):
             raise CameraErro("Senha do dispositivo inválida.")
         if not 1 <= intervalo_s <= 86400:
@@ -504,6 +509,7 @@ class Camera:
                     "intervalo_s": intervalo_s,
                     "ligado": bool(ligado),
                     "girar": list(lentes),
+                    "enviar": bool(enviar),
                 },
                 ensure_ascii=False,
             )
@@ -523,6 +529,7 @@ class Camera:
                 "intervalo_s": 30,
                 "ligado": False,
                 "girar": [],
+                "enviar": True,
             }
         return {
             "configurada": True,
@@ -531,6 +538,7 @@ class Camera:
             "intervalo_s": conexao.intervalo_s,
             "ligado": conexao.ligado,
             "girar": list(conexao.girar),
+            "enviar": conexao.enviar,
         }
 
     def procurar(self) -> list[dict[str, str]]:

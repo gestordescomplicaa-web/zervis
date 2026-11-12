@@ -229,6 +229,7 @@ def test_config_salva_senha_local_sem_devolve_la_para_tela(tmp_path: Path) -> No
         "intervalo_s": 30,
         "ligado": True,
         "girar": [],
+        "enviar": True,
     }
     assert "senha" not in estado
     assert (tmp_path / "config" / "camera.json").stat().st_mode & 0o777 == 0o600
@@ -251,8 +252,7 @@ def test_movimento_start_guarda_uma_foto_e_stop_nao_guarda(tmp_path: Path) -> No
     assert len(fotos) == 1
     assert fotos[0].read_bytes() == JPEG
     assert len(fotos[0].stem.split("-")[0]) == 8
-    assert not hasattr(vigia, "avisar")
-    assert not hasattr(vigia, "mostrar")
+    assert not hasattr(vigia, "avisar")  # nunca fala
 
 
 def test_guarda_limite_de_fotos(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -387,3 +387,45 @@ def test_salvar_sem_lentes_mantem_o_giro_e_lista_vazia_desliga(tmp_path: Path) -
     assert dispositivo.conexao().girar == ()  # type: ignore[union-attr]
     vigia = Vigia(dispositivo, tmp_path / "fotos")
     assert _cima_claro(vigia.guardar_foto(_jpeg_meio_claro()).read_bytes())
+
+
+def test_foto_de_movimento_vai_ao_celular_e_a_tirada_na_hora_nao(tmp_path: Path) -> None:
+    dispositivo = camera.Camera(tmp_path / "camera.json")
+    dispositivo.guardar("127.0.0.1", "admin", "segredo")
+    dispositivo.foto = lambda canal=0: JPEG  # type: ignore[method-assign]
+    enviadas: list[tuple[str, str]] = []
+
+    def mostrar(caminho: Path, titulo: str) -> str:
+        enviadas.append((caminho.name, titulo))
+        return "celular"
+
+    vigia = Vigia(dispositivo, tmp_path / "fotos", mostrar)
+    vigia.lentes = 3
+    vigia._ao_alarme({"Event": "appEventHumanDetectAlarm", "Status": "Start", "Channel": 1})
+    limite = time.monotonic() + 2
+    while not enviadas and time.monotonic() < limite:
+        time.sleep(0.01)
+    assert len(enviadas) == 1
+    assert enviadas[0][0].endswith("-lente2.jpg")
+    assert enviadas[0][1] == "Movimento · Lente 2"
+    vigia.fotos_agora()  # quem pede pelo painel ou pela voz decide se quer ver
+    assert len(enviadas) == 1
+
+
+def test_enviar_desligado_guarda_sem_mandar_ao_celular(tmp_path: Path) -> None:
+    dispositivo = camera.Camera(tmp_path / "camera.json")
+    dispositivo.guardar("127.0.0.1", "admin", "segredo", enviar=False)
+    dispositivo.guardar("127.0.0.1", "admin", "")  # salvar de novo mantém a escolha
+    dispositivo.foto = lambda canal=0: JPEG  # type: ignore[method-assign]
+    enviadas: list[str] = []
+
+    def mostrar(_caminho: Path, titulo: str) -> str:
+        enviadas.append(titulo)
+        return "celular"
+
+    vigia = Vigia(dispositivo, tmp_path / "fotos", mostrar)
+    vigia._ao_alarme({"Event": "MotionDetect", "Status": "Start"})
+    assert len(_esperar_fotos(tmp_path / "fotos")) == 1
+    time.sleep(0.1)
+    assert enviadas == []
+    assert dispositivo.para_tela()["enviar"] is False

@@ -6,6 +6,7 @@ import os
 import queue
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -22,9 +23,16 @@ ESPERA_RECONEXAO_MAX = 60
 
 
 class Vigia:
-    def __init__(self, dispositivo: camera.Camera, pasta: Path) -> None:
+    def __init__(
+        self,
+        dispositivo: camera.Camera,
+        pasta: Path,
+        mostrar: Callable[[Path, str], str] | None = None,
+    ) -> None:
+        """`mostrar` leva a foto do movimento ao celular (ADR 0086), se o cadastro pedir."""
         self.dispositivo = dispositivo
         self.pasta = pasta
+        self._mostrar = mostrar
         self._parar = threading.Event()
         self._trava = threading.Lock()
         self._thread: threading.Thread | None = None
@@ -152,9 +160,16 @@ class Vigia:
     def _fotografar(self, canal: int) -> None:
         try:
             imagem = self.foto(canal)
-            self.guardar_foto(imagem, canal if self.lentes > 1 else None)
+            caminho = self.guardar_foto(imagem, canal if self.lentes > 1 else None)
         except (OSError, camera.CameraErro):
             log.info("vigia da câmera: não conseguiu guardar a foto do movimento")
+            return
+        conexao = self.dispositivo.conexao()
+        if self._mostrar is None or conexao is None or not conexao.enviar:
+            return
+        titulo = f"Movimento · Lente {canal + 1}" if self.lentes > 1 else "Movimento na câmera"
+        if not self._mostrar(caminho, titulo):
+            log.info("vigia da câmera: celular desconectado; a foto ficou só na galeria")
 
     def foto(self, canal: int = 0, espera_s: float = 20.0) -> bytes:
         """Pede a foto na sessão já aberta para evitar um segundo login no aparelho."""
