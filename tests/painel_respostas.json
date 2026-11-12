@@ -986,7 +986,14 @@
     "ip": "192.168.0.20",
     "serie": "03900A000000001",
     "modelo": "A1"
-   }
+   },
+   "tv": true
+  },
+  "tv": {
+   "ip_tv": "192.168.0.30",
+   "ligado": true,
+   "endereco": "http://192.168.0.10:8798/tv?chave=exemplo",
+   "aberta": false
   }
  },
  "escritas": {

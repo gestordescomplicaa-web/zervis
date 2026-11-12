@@ -25,6 +25,7 @@ from zervis.portal.acoes.pagina import Servicos
 from zervis.portal.acoes.pesquisas import AcoesPesquisas
 from zervis.portal.acoes.projetos3d import AcoesProjetos3D
 from zervis.portal.acoes.sessoes import AcoesSessoes
+from zervis.portal.acoes.tela_tv import AcoesTelaTV
 from zervis.portal.acoes.voz import AcoesVoz
 from zervis.portal.servidor import Escrita, Leitura, PedidoInvalido
 
@@ -53,6 +54,7 @@ class Acoes:
             AcoesAtualizacoes,
             AcoesPesquisas,
             AcoesProjetos3D,
+            AcoesTelaTV,
             AcoesAbertura,
         ):
             pagina = tipo(
@@ -99,6 +101,7 @@ class Acoes:
             "atualizacoes": self.atualizacoes,
             "pesquisas": self.lista_de_pesquisas,
             "projetos3d": self.projetos_3d,
+            "tv": self.modo_tv,
         }
 
     def escritas(self) -> dict[str, Escrita]:
@@ -156,6 +159,11 @@ class Acoes:
             "projetos3d/impressora/comando": self.comando_da_impressora,
             "projetos3d/fatiar": self.fatiar_projeto_3d,
             "projetos3d/imprimir": self.imprimir_projeto_3d,
+            "projetos3d/mostrar-tv": self.mostrar_projeto_na_tv,
+            "tv": self.salvar_modo_tv,
+            "tv/procurar": self.procurar_tv,
+            "tv/abrir": self.abrir_tv,
+            "tv/fechar": self.fechar_tv,
             "whatsapp/desconectar": self.desconectar_whatsapp,
             "atendente/salvar": self.salvar_atendente,
             "atendente/testar": self.testar_atendente,

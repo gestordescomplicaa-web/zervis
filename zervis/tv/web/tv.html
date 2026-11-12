@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- O Modo TV do Zérvis (ADR 0084). SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Zérvis</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&display=swap">
+<link rel="stylesheet" href="/tv.css">
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas id="palco"></canvas>
+<header>ZÉRVIS</header>
+<section id="relogio"><b id="hora">--:--</b><span id="data"></span></section>
+<footer><div id="legenda"><h1 id="titulo"></h1><p id="detalhe"></p></div>
+  <svg id="anel" viewBox="0 0 120 120" aria-hidden="true"><circle class="fundo" cx="60" cy="60" r="44"/><circle class="onda" cx="60" cy="60" r="44"/><circle class="linha" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="18 82"/></svg>
+</footer>
+<script type="module" src="/tv.js"></script>
+</body>
+</html>

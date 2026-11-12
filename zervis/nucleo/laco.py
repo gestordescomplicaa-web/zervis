@@ -143,6 +143,7 @@ from zervis.transporte import servidor_livekit
 from zervis.transporte.entrada import Entrada
 from zervis.transporte.local import Captura
 from zervis.transporte.remoto import SalaRemota
+from zervis.tv import TelaTV, TVErro
 from zervis.versoes import Versoes
 from zervis.voz import chamado, espera, nuvem, piper
 from zervis.voz.ativacao import (
@@ -439,6 +440,16 @@ class Nucleo(
         # A impressora 3D na rede local (ADR 0083): o fim de uma impressão vira aviso falado.
         self.impressora3d = Impressora3D(lugares.CONFIG / "impressora3d.json")
         self.impressora3d.ao_avisar = lambda texto: self.eventos.put(e.Aviso(texto))
+        # O Modo TV (ADR 0084): a página leve na TV da casa, com o anel que pulsa quando o Zé fala.
+        self.tela_tv = TelaTV(
+            lugares.CONFIG / "tv.json",
+            self.imersivo.acervo,
+            falando=lambda: self.maquina.estado is e.Estado.FALANDO,
+        )
+        try:
+            self.tela_tv.ligar()
+        except TVErro as erro:
+            log.warning("Modo TV: %s", erro)
         self.ferramentas_por_grupo = ferramentas.por_grupo(
             self.sessoes,
             self.memoria,
@@ -466,6 +477,7 @@ class Nucleo(
             pesquisas=self.pesquisas,
             projetos=self.projetos3d,
             impressora=self.impressora3d,
+            tela_tv=self.tela_tv,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)

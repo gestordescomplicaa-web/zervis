@@ -91,3 +91,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0081](0081-cena-no-ritmo-da-voz.md) | A cena no ritmo da voz: cada passo do "explicar" aparece quando o Zé chega à fala dele | Aceita |
 | [0082](0082-projetos-3d.md) | Projetos 3D: a peça modelada por uma sessão de código e mostrada como sólido na Imersão | Aceita |
 | [0083](0083-imprimir-pela-rede-local.md) | Fatiar e imprimir pela rede local, com o sim de quem usa | Aceita |
+| [0084](0084-modo-tv.md) | O Modo TV: uma página leve na TV da casa, aberta pelo navegador dela | Aceita |

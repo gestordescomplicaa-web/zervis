@@ -237,7 +237,13 @@ def test_a_pagina_so_imprime_confirmado_e_a_voz_pede_o_sim(
     i.acompanhar = lambda nome, intervalo_s=0: None  # type: ignore[method-assign]
     pagina = AcoesProjetos3D(
         SimpleNamespace(),
-        Servicos({"projetos3d": lambda: projeto, "impressora3d": lambda: i}),
+        Servicos(
+            {
+                "projetos3d": lambda: projeto,
+                "impressora3d": lambda: i,
+                "tela_tv": lambda: SimpleNamespace(ajustes=lambda: {"ligado": False}),
+            }
+        ),
     )
     assert pagina.projetos_3d()["impressora"]["modelo"] == "A1"
     assert "codigo" not in json.dumps(pagina.projetos_3d()["impressora"])

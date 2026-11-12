@@ -9,6 +9,7 @@ import { PAGINAS, TOKEN, $, api, botao, cabeca, cartao, confirmar, esc, ocupado,
 // com a confirmação.
 
 let formularioAberto = false;
+let tvLigada = false;
 
 const TIPOS = { peca: "Peça funcional", arte: "Arte a partir de imagem" };
 const numero = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
@@ -36,6 +37,7 @@ function projeto(p) {
     const fatia = a.fatiado ? `Fatiado: ${duracao(a.fatiado.minutos)} · ${numero.format(a.fatiado.gramas)} g de ${esc(filamento(a.fatiado.filamento))}` : "";
     const botoes = [
       MODELO.test(a.nome) ? botao("Mostrar na Imersão", "projeto3d-mostrar", dados) : "",
+      MODELO.test(a.nome) && tvLigada ? botao("Mostrar na TV", "projeto3d-mostrar-tv", dados) : "",
       stl ? botao(a.fatiado ? "Fatiar de novo" : "Fatiar", "projeto3d-fatiar", dados, "discreta") : "",
       stl && a.fatiado ? botao("Imprimir", "projeto3d-imprimir", `${dados} data-resumo="${esc(`${duracao(a.fatiado.minutos)} e ${Math.round(a.fatiado.gramas)} g de ${filamento(a.fatiado.filamento)}`)}"`, "principal") : "",
     ].join("");
@@ -80,6 +82,7 @@ const formulario = () => cartao("Novo projeto", `<div class="campos">
 PAGINAS.projetos3d = async () => {
   const r = await api("projetos3d");
   impressoraConfigurada = r.impressora.configurada;
+  tvLigada = !!r.tv;
   const lista = r.projetos.map(projeto).join("");
   const vazia = vazio('Nenhum projeto ainda. Crie um aqui ou peça ao Zé: "cria um suporte de celular em 3D".');
   return `${cabeca("Projetos 3D", formularioAberto ? "" : botao("Novo projeto", "projeto3d-formulario", "", "principal"))}
@@ -131,6 +134,9 @@ Object.assign(ACOES, {
       await new Promise((r) => setTimeout(r, 4000));
       try { await api("projetos3d/mostrar", pedido); } catch (erro) { toast(erro.message); }
     }
+  },
+  "projeto3d-mostrar-tv": async (/** @type {HTMLButtonElement} */ b) => {
+    try { toast((await ocupado(b, () => api("projetos3d/mostrar-tv", { id: b.dataset.id, arquivo: b.dataset.arquivo }))).aviso); } catch (erro) { toast(erro.message); }
   },
   "projeto3d-sessao": async (/** @type {HTMLButtonElement} */ b) => {
     location.hash = "#sessoes";

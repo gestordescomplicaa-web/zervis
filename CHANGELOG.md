@@ -5,6 +5,9 @@
 - **Imprimir pelo Zé:** a aba Projetos 3D acha a impressora Bambu Lab na rede, mostra o status e
   o filamento de cada bandeja, fatia a peça dizendo o tempo e os gramas, e imprime com o seu sim
   (pela voz ou confirmando no painel). Quando a impressão termina, o Zé avisa.
+- **Modo TV:** peça pelo celular "mostra na TV o suporte de celular" e a peça aparece na TV da
+  sala, sólida e girando, com o nome e as medidas; o anel pulsa enquanto o Zé fala. Liga em
+  Perfil → Modo TV, com a página do Zé como página inicial do navegador da TV.
 
 - **Projetos 3D:** uma aba nova (em Trabalho) para peças e artes de impressão 3D. Peça "cria um
   suporte de celular em 3D" ou crie pelo painel, com uma imagem para as artes: o Zé abre uma

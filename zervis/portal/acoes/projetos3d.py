@@ -13,7 +13,7 @@ from zervis.rosto.tela import TelaErro
 
 
 class AcoesProjetos3D(Pagina):
-    dependencias = ("projetos3d", "sessoes", "tela", "impressora3d")
+    dependencias = ("projetos3d", "sessoes", "tela", "impressora3d", "tela_tv")
 
     def projetos_3d(self) -> dict[str, Any]:
         return {
@@ -21,6 +21,7 @@ class AcoesProjetos3D(Pagina):
             "ajustes": self.n.projetos3d.ajustes(),
             "raiz": str(self.n.projetos3d.raiz),
             "impressora": self.n.impressora3d.para_tela(),
+            "tv": bool(self.n.tela_tv.ajustes()["ligado"]),
         }
 
     def criar_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
