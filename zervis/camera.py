@@ -44,12 +44,49 @@ class Conexao:
     senha: str
     intervalo_s: int = 30
     ligado: bool = True
+    girar: tuple[int, ...] = ()  # as lentes (1, 2…) montadas de cabeça para baixo
 
 
 def hash_sofia(senha: str) -> str:
     """Senha equivalente do DVRIP: MD5 e soma de cada par de bytes em base 62."""
     digest = hashlib.md5(senha.encode("utf-8"), usedforsecurity=False).digest()
     return "".join(ALFABETO[(digest[i] + digest[i + 1]) % 62] for i in range(0, 16, 2))
+
+
+def girar_180(jpeg: bytes, hora: str = "") -> bytes:
+    """A foto da lente montada invertida, de pé. As lentes extras de algumas câmeras ignoram o
+    `PictureFlip` do aparelho (ADR 0087), então o giro fica no Zé. O relógio que a câmera grava
+    na imagem gira junto e fica de ponta-cabeça; `hora` volta a ficar legível no alto, à direita,
+    onde a câmera o põe."""
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    with Image.open(BytesIO(jpeg)) as original:
+        imagem = original.convert("RGB").rotate(180)
+    if hora:
+        tamanho = max(12, imagem.height // 18)
+        fonte = ImageFont.load_default(tamanho)
+        desenho = ImageDraw.Draw(imagem)
+        margem = tamanho
+        largura = desenho.textlength(hora, font=fonte)
+        desenho.text(
+            (imagem.width - largura - margem, margem // 2),
+            hora,
+            font=fonte,
+            fill="white",
+            stroke_width=2,
+            stroke_fill="black",
+        )
+    saida = BytesIO()
+    imagem.save(saida, "JPEG", quality=90)
+    return saida.getvalue()
+
+
+def _lentes(valor: Any) -> tuple[int, ...]:
+    if not isinstance(valor, list):
+        return ()
+    return tuple(sorted({int(v) for v in valor if isinstance(v, int) and 1 <= v <= 16}))
 
 
 def _json(carga: bytes) -> dict[str, Any]:
@@ -425,13 +462,21 @@ class Camera:
                 str(dados["senha"]),
                 int(dados.get("intervalo_s", 30)),
                 bool(dados.get("ligado", True)),
+                _lentes(dados.get("girar")),
             )
         except (OSError, ValueError, KeyError, TypeError):
             return None
 
     def guardar(
-        self, ip: str, usuario: str, senha: str, intervalo_s: int = 30, ligado: bool = True
+        self,
+        ip: str,
+        usuario: str,
+        senha: str,
+        intervalo_s: int = 30,
+        ligado: bool = True,
+        girar: list[int] | None = None,
     ) -> None:
+        """`girar` None mantém as lentes giradas que já estavam no cadastro."""
         try:
             endereco = ipaddress.ip_address(ip.strip())
         except ValueError:
@@ -441,7 +486,9 @@ class Camera:
         usuario = usuario.strip()
         if not usuario or len(usuario) > 64 or any(ord(c) < 32 for c in usuario):
             raise CameraErro("Usuário inválido.")
-        senha = senha or (atual.senha if (atual := self.conexao()) else "")
+        atual = self.conexao()
+        senha = senha or (atual.senha if atual else "")
+        lentes = _lentes(girar) if girar is not None else (atual.girar if atual else ())
         if not senha or len(senha) > 128 or any(ord(c) < 32 for c in senha):
             raise CameraErro("Senha do dispositivo inválida.")
         if not 1 <= intervalo_s <= 86400:
@@ -456,6 +503,7 @@ class Camera:
                     "senha": senha,
                     "intervalo_s": intervalo_s,
                     "ligado": bool(ligado),
+                    "girar": list(lentes),
                 },
                 ensure_ascii=False,
             )
@@ -474,6 +522,7 @@ class Camera:
                 "usuario": "admin",
                 "intervalo_s": 30,
                 "ligado": False,
+                "girar": [],
             }
         return {
             "configurada": True,
@@ -481,6 +530,7 @@ class Camera:
             "usuario": conexao.usuario,
             "intervalo_s": conexao.intervalo_s,
             "ligado": conexao.ligado,
+            "girar": list(conexao.girar),
         }
 
     def procurar(self) -> list[dict[str, str]]:

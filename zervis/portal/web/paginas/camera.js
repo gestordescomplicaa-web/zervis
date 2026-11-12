@@ -15,8 +15,20 @@ function formulario(c) {
       <label>Intervalo entre fotos (s)<input id="camera-intervalo" type="number" min="1" max="86400" value="${c.intervalo_s}" step="1"></label>
     </div>
     <label class="interruptor"><input id="camera-ligada" type="checkbox" ${c.ligado ? "checked" : ""}> Fotos por movimento</label>
+    ${girar(c)}
     <p class="resultado" id="camera-resultado"></p>
     <div class="botoes">${botao("Procurar na rede", "camera-procurar", "", "discreta")}${c.configurada ? botao("Testar conexão", "camera-testar", "", "discreta") : ""}${botao("Salvar", "camera-salvar", "", "principal")}</div>`);
+}
+
+/** "Girar 180°" por lente: a imagem da lente montada de cabeça para baixo sai de pé. */
+function girar(c) {
+  const lentes = Array.from({ length: Math.max(1, c.lentes || 1) }, (_, i) => i + 1);
+  const marcada = (n) => ((c.girar || []).includes(n) ? "checked" : "");
+  if (lentes.length === 1) {
+    return `<label class="interruptor"><input class="camera-girar" data-lente="1" type="checkbox" ${marcada(1)}> Girar imagem 180°</label>`;
+  }
+  return `<p class="rotulo">Girar imagem 180°</p>${lentes.map((n) =>
+    `<label class="interruptor"><input class="camera-girar" data-lente="${n}" type="checkbox" ${marcada(n)}> Lente ${n}</label>`).join("")}`;
 }
 
 function galeria(fotos) {
@@ -50,6 +62,9 @@ Object.assign(ACOES, {
       senha: campo("camera-senha")?.value || "",
       intervalo_s: Number(campo("camera-intervalo")?.value || 30),
       ligado: !!campo("camera-ligada")?.checked,
+      girar: [...document.querySelectorAll(".camera-girar")]
+        .filter((e) => /** @type {HTMLInputElement} */ (e).checked)
+        .map((e) => Number(/** @type {HTMLElement} */ (e).dataset.lente)),
     };
     try {
       await ocupado(b, () => api("camera/salvar", dados));

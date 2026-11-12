@@ -228,6 +228,7 @@ def test_config_salva_senha_local_sem_devolve_la_para_tela(tmp_path: Path) -> No
         "usuario": "admin",
         "intervalo_s": 30,
         "ligado": True,
+        "girar": [],
     }
     assert "senha" not in estado
     assert (tmp_path / "config" / "camera.json").stat().st_mode & 0o777 == 0o600
@@ -341,3 +342,48 @@ def test_foto_agora_tira_uma_de_cada_lente(tmp_path: Path) -> None:
     assert [c.stem.split("-")[-1] for c in vigia.fotos_agora()] == ["lente1", "lente2", "lente3"]
     vigia.lentes = 1
     assert "lente" not in vigia.fotos_agora()[0].name
+
+
+def _jpeg_meio_claro() -> bytes:
+    """Metade de cima branca e a de baixo preta: o giro de 180° troca as duas."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    imagem = Image.new("L", (32, 32), 0)
+    imagem.paste(255, (0, 0, 32, 16))
+    saida = BytesIO()
+    imagem.save(saida, "JPEG", quality=95)
+    return saida.getvalue()
+
+
+def _cima_claro(jpeg: bytes) -> bool:
+    from io import BytesIO
+
+    from PIL import Image
+
+    with Image.open(BytesIO(jpeg)) as imagem:
+        cinza = imagem.convert("L")
+        return int(cinza.getpixel((16, 4)) or 0) > int(cinza.getpixel((16, 28)) or 0)
+
+
+def test_lente_marcada_para_girar_sai_de_pe_e_as_outras_como_vieram(tmp_path: Path) -> None:
+    dispositivo = camera.Camera(tmp_path / "camera.json")
+    dispositivo.guardar("127.0.0.1", "admin", "segredo", girar=[2, 3])
+    vigia = Vigia(dispositivo, tmp_path / "fotos")
+    foto = _jpeg_meio_claro()
+    assert not _cima_claro(vigia.guardar_foto(foto, 1).read_bytes())  # lente 2: girada
+    assert _cima_claro(vigia.guardar_foto(foto, 0).read_bytes())  # lente 1: como veio
+    assert dispositivo.para_tela()["girar"] == [2, 3]
+
+
+def test_salvar_sem_lentes_mantem_o_giro_e_lista_vazia_desliga(tmp_path: Path) -> None:
+    dispositivo = camera.Camera(tmp_path / "camera.json")
+    dispositivo.guardar("127.0.0.1", "admin", "segredo", girar=[1])
+    dispositivo.guardar("127.0.0.1", "admin", "")
+    assert dispositivo.conexao() is not None
+    assert dispositivo.conexao().girar == (1,)  # type: ignore[union-attr]
+    dispositivo.guardar("127.0.0.1", "admin", "", girar=[])
+    assert dispositivo.conexao().girar == ()  # type: ignore[union-attr]
+    vigia = Vigia(dispositivo, tmp_path / "fotos")
+    assert _cima_claro(vigia.guardar_foto(_jpeg_meio_claro()).read_bytes())

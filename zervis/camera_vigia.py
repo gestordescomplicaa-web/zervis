@@ -207,9 +207,16 @@ class Vigia:
     def guardar_foto(self, jpeg: bytes, lente: int | None = None) -> Path:
         if not jpeg.startswith(b"\xff\xd8") or not jpeg.endswith(b"\xff\xd9"):
             raise camera.CameraErro("A câmera respondeu sem uma foto JPEG válida.")
+        agora = datetime.now(fuso.local())
+        conexao = self.dispositivo.conexao()
+        if conexao is not None and (lente or 0) + 1 in conexao.girar:
+            try:
+                jpeg = camera.girar_180(jpeg, agora.strftime("%Y-%m-%d %H:%M:%S"))
+            except (OSError, ValueError):
+                log.info("vigia da câmera: não conseguiu girar a foto; guardada como veio")
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(self.pasta, 0o700)
-        nome = datetime.now(fuso.local()).strftime("%Y%m%d-%H%M%S")
+        nome = agora.strftime("%Y%m%d-%H%M%S")
         if lente is not None:
             nome += f"-lente{lente + 1}"
         destino = self.pasta / f"{nome}.jpg"

@@ -53,5 +53,9 @@ Na câmera real, três coisas não estavam no plano:
   a captura RTSP depende de `ffmpeg` instalado.
 - Fora o `MsgtoNetEnable`, a câmera não recebe comandos de movimento, PTZ, áudio ou
   configuração. O Zé só lê alarmes e imagens.
-- Com a lente montada de cabeça para baixo, a foto sai assim também. O Zé não gira a imagem,
-  porque o projeto não tem uma biblioteca de imagem. A posição se corrige no app da câmera.
+- Com a lente montada de cabeça para baixo, a foto sai assim também. Na câmera testada, as
+  lentes extras aceitam o `PictureFlip`/`PictureMirror` do aparelho, mas ignoram (mesmo depois de
+  reiniciar). Por isso o giro fica no Zé: o cadastro marca as lentes a girar ("Girar imagem
+  180°"), e a foto dessas lentes é girada com o Pillow antes de ser guardada. O relógio que a
+  câmera grava na imagem gira junto. Então o Zé escreve a hora de novo, legível, no alto à
+  direita, e o relógio da câmera fica de ponta-cabeça embaixo.

@@ -17,6 +17,7 @@ class AcoesCamera(Pagina):
         return {
             **self.n.camera.para_tela(),
             "estado": self.n.vigia_camera.estado(),
+            "lentes": self.n.vigia_camera.lentes,
             "fotos": [
                 {"nome": foto["nome"], "quando": foto["quando"], "lente": foto["lente"]}
                 for foto in self.n.vigia_camera.fotos()[:GALERIA]
@@ -35,6 +36,7 @@ class AcoesCamera(Pagina):
                 str(dados.get("senha", "")),
                 int(dados.get("intervalo_s", 30)),
                 bool(dados.get("ligado", False)),
+                _girar(dados.get("girar")),
             )
         except (camera.CameraErro, ValueError) as erro:
             raise PedidoInvalido(str(erro)) from None
@@ -65,3 +67,11 @@ class AcoesCamera(Pagina):
             "nome": caminho.name,
             "foto": "data:image/jpeg;base64," + base64.b64encode(imagem).decode("ascii"),
         }
+
+
+def _girar(valor: Any) -> list[int] | None:
+    if valor is None:
+        return None
+    if not isinstance(valor, list):
+        raise PedidoInvalido("Lentes inválidas.")
+    return [int(v) for v in valor if isinstance(v, int) and not isinstance(v, bool)]

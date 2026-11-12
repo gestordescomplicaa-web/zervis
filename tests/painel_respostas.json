@@ -1009,7 +1009,9 @@
    "usuario": "admin",
    "intervalo_s": 30,
    "ligado": false,
+   "girar": [],
    "estado": "Não configurada",
+   "lentes": 1,
    "fotos": []
   }
  },
