@@ -69,9 +69,10 @@
       if (v === "dia" && window.jarvisAbertura) return window.jarvisAbertura.iniciar({ musica: false });
       return v === "encerrar" || v === "fechar" ? window.jarvisApresentacao.encerrar() : window.jarvisApresentacao.apresentar(v || "quem");
     },
-    // A ready-made model from the Acervo (ADR 0049): alvo = its path there, valor = a title.
+    // A ready-made model from the Acervo (ADR 0049): alvo = its path there, valor = a title;
+    // estilo "solido" shows a real solid (a 3D project's part, ADR 0082) instead of the hologram.
     mostrar_modelo: a => {
-      const it = S().mostrarModelo(a.alvo ?? a.arquivo, a.valor ?? a.titulo ?? "");
+      const it = S().mostrarModelo(a.alvo ?? a.arquivo, a.valor ?? a.titulo ?? "", a.estilo === "solido" ? { estilo: "solido" } : {});
       return { mostrou: it.def.title, arquivo: String(a.alvo ?? a.arquivo) };
     },
     // A scene the Zé wrote to explain something (ADR 0047): cena = {titulo, passos}; or valor =

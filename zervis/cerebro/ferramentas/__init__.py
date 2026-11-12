@@ -30,6 +30,7 @@ from zervis.cerebro.ferramentas import modelos as g_modelos
 from zervis.cerebro.ferramentas import navegador as g_navegador
 from zervis.cerebro.ferramentas import pesquisa as g_pesquisa
 from zervis.cerebro.ferramentas import profunda as g_profunda
+from zervis.cerebro.ferramentas import projetos3d as g_projetos3d
 from zervis.cerebro.ferramentas import sessoes as g_sessoes
 from zervis.cerebro.ferramentas import sistema as g_sistema
 from zervis.cerebro.ferramentas import sobre as g_sobre
@@ -45,6 +46,7 @@ from zervis.oficina.sessoes import Sessoes
 from zervis.pesquisa.buscador import Buscador
 from zervis.pesquisa.guardadas import Guardadas
 from zervis.pesquisa.saude import Vigia
+from zervis.projetos3d import Projetos3D
 from zervis.redes.instagram import Instagram
 from zervis.rosto import andamento
 from zervis.rosto.tela import Tela
@@ -95,6 +97,8 @@ LEITURA = [
     "pesquisas_guardadas",  # só lê as pesquisas já feitas (ADR 0060)
     "pesquisa_guardada",
     "fontes_saude",  # só testa as fontes com pedidos pequenos
+    "projetos3d_listar",  # só lê a pasta dos projetos 3D (ADR 0082)
+    "projeto3d_mostrar",  # só a prévia no próprio Acervo e a própria tela; criar pede o sim
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -130,6 +134,7 @@ COM_EFEITO = frozenset(
         "conector_testar",
         "modelo3d_baixar",
         "imagem_baixar",
+        "projeto3d_mostrar",
         "whatsapp_ja_vi",
         "whatsapp_prioridade",
     )
@@ -222,12 +227,13 @@ def montar(
     buscador: Buscador | None = None,
     vigia: Vigia | None = None,
     pesquisas: Guardadas | None = None,
+    projetos: Projetos3D | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
-        pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas,
+        pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas, projetos,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -250,6 +256,7 @@ def por_grupo(
     buscador: Buscador | None = None,
     vigia: Vigia | None = None,
     pesquisas: Guardadas | None = None,
+    projetos: Projetos3D | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -270,6 +277,7 @@ def por_grupo(
         "imagens": g_imagens.ferramentas(acervo),
         "whatsapp": g_whatsapp.ferramentas(leads),
         "instagram": g_instagram.ferramentas(instagram),
+        "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

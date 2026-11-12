@@ -89,3 +89,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0079](0079-ze-como-programa.md) | No PC, o Zé é um programa: abrir liga, fechar a última janela desliga | Aceita |
 | [0080](0080-macaco-holografico.md) | O Zé como macaco holográfico: o busto livre preparado no Blender, boca, dentes e expressões | Aceita |
 | [0081](0081-cena-no-ritmo-da-voz.md) | A cena no ritmo da voz: cada passo do "explicar" aparece quando o Zé chega à fala dele | Aceita |
+| [0082](0082-projetos-3d.md) | Projetos 3D: a peça modelada por uma sessão de código e mostrada como sólido na Imersão | Aceita |

@@ -23,6 +23,7 @@ from zervis.portal.acoes.melhorias import AcoesMelhorias
 from zervis.portal.acoes.memoria import AcoesMemoria
 from zervis.portal.acoes.pagina import Servicos
 from zervis.portal.acoes.pesquisas import AcoesPesquisas
+from zervis.portal.acoes.projetos3d import AcoesProjetos3D
 from zervis.portal.acoes.sessoes import AcoesSessoes
 from zervis.portal.acoes.voz import AcoesVoz
 from zervis.portal.servidor import Escrita, Leitura, PedidoInvalido
@@ -51,6 +52,7 @@ class Acoes:
             AcoesInicio,
             AcoesAtualizacoes,
             AcoesPesquisas,
+            AcoesProjetos3D,
             AcoesAbertura,
         ):
             pagina = tipo(
@@ -96,6 +98,7 @@ class Acoes:
             "atendimento": self.atendimento,
             "atualizacoes": self.atualizacoes,
             "pesquisas": self.lista_de_pesquisas,
+            "projetos3d": self.projetos_3d,
         }
 
     def escritas(self) -> dict[str, Escrita]:
@@ -143,6 +146,10 @@ class Acoes:
             "pesquisas/buscar": self.buscar_pesquisas,
             "pesquisas/ler": self.ler_pesquisa,
             "pesquisas/apagar": self.apagar_pesquisa,
+            "projetos3d/criar": self.criar_projeto_3d,
+            "projetos3d/comecar": self.comecar_projeto_3d,
+            "projetos3d/mostrar": self.mostrar_projeto_3d,
+            "projetos3d/ajustes": self.ajustes_projetos_3d,
             "whatsapp/desconectar": self.desconectar_whatsapp,
             "atendente/salvar": self.salvar_atendente,
             "atendente/testar": self.testar_atendente,
@@ -230,7 +237,11 @@ class Acoes:
         }
 
     def envios(self) -> dict[str, Any]:
-        return {"sessao/anexo": self.anexar, "abertura/musica": self.enviar_musica}
+        return {
+            "sessao/anexo": self.anexar,
+            "abertura/musica": self.enviar_musica,
+            "projetos3d/imagem": self.criar_projeto_3d_com_imagem,
+        }
 
     def _chamar(self, fazer: Any) -> Any:
         try:

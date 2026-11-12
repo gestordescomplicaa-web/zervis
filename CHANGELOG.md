@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Projetos 3D:** uma aba nova (em Trabalho) para peças e artes de impressão 3D. Peça "cria um
+  suporte de celular em 3D" ou crie pelo painel, com uma imagem para as artes: o Zé abre uma
+  sessão que modela a peça e entrega os STLs na pasta do projeto, com as medidas na aba. A peça
+  aparece como sólido na Imersão, de frente ou de pé.
+
 - **Os formulários das sessões pela voz:** quando uma sessão do Claude pergunta algo com opções, o
   Zé lê a pergunta e as opções e você responde falando ("a segunda", o nome da opção ou "outra
   resposta: ..."); no painel, um botão por opção. A aprovação do plano também segue pela voz.

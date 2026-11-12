@@ -52,7 +52,8 @@ ACOES = {
     "visual": "valor: avatar (o busto holográfico que fala, no lugar do anel) ou anel",
     "girar": "valor: voltas (1 a 3, padrão 1). O Zé dá uma volta completa na tela",
     "mostrar_modelo": "alvo: o arquivo no Acervo que modelo3d_baixar devolveu "
-    "(3d/baixados/...glb); valor: o título. Mostra o modelo 3D em holograma, que a pinça gira",
+    "(3d/baixados/...glb); valor: o título. Mostra o modelo 3D em holograma, que a pinça gira; "
+    "estilo solido mostra como sólido (a peça de um projeto 3D: projeto3d_mostrar)",
     "apresentar": "valor: quem (o Zé vai para o canto e mostra, em painéis holográficos, os "
     "próprios dados: identidade, atividade, conexões, o que mais executa e o registro recente), "
     "dia (o resumo do dia da abertura, falado: saudação, clima, agenda, sessões, WhatsApp e "
