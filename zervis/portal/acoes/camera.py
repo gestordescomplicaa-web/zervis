@@ -37,6 +37,7 @@ class AcoesCamera(Pagina):
                 int(dados.get("intervalo_s", 30)),
                 bool(dados.get("ligado", False)),
                 _girar(dados.get("girar")),
+                bool(dados["enviar"]) if "enviar" in dados else None,
             )
         except (camera.CameraErro, ValueError) as erro:
             raise PedidoInvalido(str(erro)) from None

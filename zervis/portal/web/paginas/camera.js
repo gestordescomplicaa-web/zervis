@@ -15,6 +15,7 @@ function formulario(c) {
       <label>Intervalo entre fotos (s)<input id="camera-intervalo" type="number" min="1" max="86400" value="${c.intervalo_s}" step="1"></label>
     </div>
     <label class="interruptor"><input id="camera-ligada" type="checkbox" ${c.ligado ? "checked" : ""}> Fotos por movimento</label>
+    <label class="interruptor"><input id="camera-enviar" type="checkbox" ${c.enviar !== false ? "checked" : ""}> Enviar ao celular</label>
     ${girar(c)}
     <p class="resultado" id="camera-resultado"></p>
     <div class="botoes">${botao("Procurar na rede", "camera-procurar", "", "discreta")}${c.configurada ? botao("Testar conexão", "camera-testar", "", "discreta") : ""}${botao("Salvar", "camera-salvar", "", "principal")}</div>`);
@@ -62,6 +63,7 @@ Object.assign(ACOES, {
       senha: campo("camera-senha")?.value || "",
       intervalo_s: Number(campo("camera-intervalo")?.value || 30),
       ligado: !!campo("camera-ligada")?.checked,
+      enviar: !!campo("camera-enviar")?.checked,
       girar: [...document.querySelectorAll(".camera-girar")]
         .filter((e) => /** @type {HTMLInputElement} */ (e).checked)
         .map((e) => Number(/** @type {HTMLElement} */ (e).dataset.lente)),

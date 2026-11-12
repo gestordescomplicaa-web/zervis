@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Câmera: a foto do movimento no celular:** cada pessoa que passa chega no app Zé Voz como
+  notificação com a foto e a lente, sem o Zé falar nada. Desliga em "Enviar ao celular".
 - **Câmera: girar a lente invertida:** no cadastro da câmera, "Girar imagem 180°" por lente.
   A foto dessa lente sai de pé, com a hora legível no alto.
 - **Câmera de vigia:** quando a câmera iCSee detecta movimento ou uma pessoa, o Zé guarda uma

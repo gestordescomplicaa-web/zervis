@@ -39,8 +39,13 @@ Na câmera real, três coisas não estavam no plano:
    leva a data e hora do fuso de quem usa e, em câmera com mais de uma lente, a lente
    (`AAAAMMDD-HHMMSS-lente2.jpg`). A própria câmera grava a hora na imagem. Ficam as 500 mais
    recentes, e o painel mostra as 100 mais novas.
-6. A ferramenta de voz lista fotos e pode tirar uma agora, uma por lente. Uma imagem só chega ao celular ou ao
-   navegador quando o pedido da pessoa pede para vê-la; o painel permite consultar as fotos.
+6. A foto de movimento vai ao celular, como notificação do app Zé Voz com a foto e o título
+   "Movimento · Lente N" (ADR 0086). O Zé não fala nada. Quem não quiser desliga "Enviar ao
+   celular" no cadastro. A foto só chega se o app estiver conectado (ou o painel, com a voz pelo
+   navegador). Sem ninguém conectado, ela fica só na galeria. Primeiro tinha ficado "sem avisos",
+   mas o usuário corrigiu (12/11/2026): ele quer receber a foto e só não quer que o Zé fale.
+   A ferramenta de voz lista as fotos e pode tirar uma agora, uma por lente. Essa foto pedida só
+   aparece no celular quando o pedido é para vê-la.
 7. Não se tenta descobrir a senha por listas ou repetição de logins. Se a senha do aparelho foi
    esquecida, a ajuda da iCSee orienta restaurar pelo botão físico, reconfigurar o Wi-Fi e definir
    uma nova senha do dispositivo.

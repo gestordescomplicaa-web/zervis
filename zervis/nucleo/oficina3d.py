@@ -35,7 +35,7 @@ def montar(
     impressora.ao_mudar = vigia.iniciar
     vigia.iniciar()
     camera_ = camera.Camera(lugares.CONFIG / "camera.json")
-    vigia_camera = VigiaCamera(camera_, dados / "camera" / "fotos")
+    vigia_camera = VigiaCamera(camera_, dados / "camera" / "fotos", mostrar)
     vigia_camera.iniciar()
     tela_tv = TelaTV(lugares.CONFIG / "tv.json", acervo, falando=falando)
     try:
