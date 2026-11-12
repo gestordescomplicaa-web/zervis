@@ -604,3 +604,10 @@ blockquote.trecho { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid v
 /* Projetos 3D (ADR 0082): as três medidas da mesa numa linha. */
 .mesa-3d { display:flex; gap:6px; align-items:center; }
 .mesa-3d input { width:6.5em; }
+
+/* A prévia do fatiamento e a câmera da impressora (ADR 0085). */
+.previa-fatia { margin: 4px 0 12px; }
+.previa-fatia canvas { display:block; width:100%; max-width:720px; height:auto; background:#020807; border-radius:8px; }
+.camada-fatia { display:flex; gap:10px; align-items:center; margin-top:8px; }
+.camada-fatia input { flex:1; max-width:520px; }
+.foto-impressora { display:block; width:100%; max-width:720px; margin:10px 0; border-radius:8px; }

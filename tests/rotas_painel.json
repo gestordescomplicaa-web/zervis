@@ -167,7 +167,9 @@
     "tv",
     "tv/procurar",
     "tv/abrir",
-    "tv/fechar"
+    "tv/fechar",
+    "projetos3d/impressora/foto",
+    "projetos3d/trajetos"
   ],
   "envios": [
     "sessao/anexo",

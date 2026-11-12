@@ -2,6 +2,7 @@
 um (a pasta e a sessão de código que modela), mostrar um modelo na Imersão, os ajustes, e a
 impressora: achar na rede, guardar a conexão, ver o status, fatiar e imprimir."""
 
+import base64
 from typing import Any
 
 from zervis import impressora3d, projetos3d
@@ -20,7 +21,13 @@ class AcoesProjetos3D(Pagina):
             "projetos": self.n.projetos3d.listar(),
             "ajustes": self.n.projetos3d.ajustes(),
             "raiz": str(self.n.projetos3d.raiz),
-            "impressora": self.n.impressora3d.para_tela(),
+            "impressora": {
+                **self.n.impressora3d.para_tela(),
+                "avisos": [
+                    {k: a[k] for k in ("quando", "fala", "texto")}
+                    for a in self.n.impressora3d.avisos()[:5]
+                ],
+            },
             "tv": bool(self.n.tela_tv.ajustes()["ligado"]),
         }
 
@@ -104,6 +111,26 @@ class AcoesProjetos3D(Pagina):
     def procurar_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
         achadas = impressora3d.descobrir()
         return {"achadas": achadas, "aviso": "" if achadas else "Nenhuma impressora na rede."}
+
+    def foto_da_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Uma foto agora da câmera da impressora (ADR 0085)."""
+        if self.n.impressora3d.fotografar is None:
+            raise PedidoInvalido("Câmera indisponível.")
+        try:
+            caminho = self.n.impressora3d.fotografar()
+        except (impressora3d.ImpressoraErro, OSError):
+            raise PedidoInvalido("A câmera não respondeu.") from None
+        foto = base64.b64encode(caminho.read_bytes()).decode()
+        return {"foto": f"data:image/jpeg;base64,{foto}"}
+
+    def trajetos_do_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A prévia do fatiamento: o caminho do bico, camada por camada."""
+        try:
+            return projetos3d.trajetos(
+                self.n.projetos3d, str(dados.get("id", "")), str(dados.get("arquivo") or "")
+            )
+        except projetos3d.Projeto3DErro as erro:
+            raise PedidoInvalido(str(erro)) from None
 
     def status_da_impressora(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:

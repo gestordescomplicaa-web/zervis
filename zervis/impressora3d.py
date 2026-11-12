@@ -19,7 +19,6 @@ import re
 import socket
 import ssl
 import threading
-import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -36,9 +35,10 @@ ESTADOS = {
     "IDLE": "ociosa", "PREPARE": "preparando", "RUNNING": "imprimindo", "PAUSE": "pausada",
     "FINISH": "concluída", "FAILED": "falhou", "SLICING": "preparando",
 }  # fmt: skip
-LIVRE_PARA_IMPRIMIR = {"ociosa", "concluída", "falhou"}
+LIVRE_PARA_IMPRIMIR = {"ociosa", "concluída", "falhou", "cancelada"}
+# "A tarefa foi cancelada" (tabela da Bambu): a impressora diz FAILED, mas não houve falha.
+CANCELADA = {"0300400C", "0500400E"}
 COMANDOS = {"pausar": "pause", "retomar": "resume", "parar": "stop"}
-ACOMPANHAR_S = 60.0
 
 
 class ImpressoraErro(RuntimeError):
@@ -228,8 +228,12 @@ class Impressora3D:
         self.arquivo = arquivo
         self._mqtt = mqtt or conversar
         self._enviar = enviar
-        self.ao_avisar: Callable[[str], None] | None = None  # o fim de uma impressão, falado
-        self._acompanhando: threading.Thread | None = None
+        # O vigia (ADR 0085), quando está de pé: o retrato que chega na hora e a conexão aberta.
+        self.retrato_vivo: Callable[[], dict[str, Any] | None] | None = None
+        self.publicar: Callable[[dict[str, Any]], bool] | None = None
+        self.ao_mudar: Callable[[], None] | None = None  # a conexão mudou: o vigia reconecta
+        self.fotografar: Callable[[], Path] | None = None  # a câmera, pelo vigia
+        self.avisos: Callable[[], list[dict[str, Any]]] = lambda: []  # os últimos, do vigia
 
     # ---- a conexão de quem usa ----
 
@@ -259,6 +263,8 @@ class Impressora3D:
         temporario.write_text(json.dumps({"ip": str(endereco), "serie": serie, "codigo": codigo}))
         os.chmod(temporario, 0o600)
         temporario.replace(self.arquivo)
+        if self.ao_mudar is not None:
+            self.ao_mudar()
 
     def para_tela(self) -> dict[str, Any]:
         c = self.conexao()
@@ -275,14 +281,16 @@ class Impressora3D:
 
     def status(self) -> dict[str, Any]:
         """O que a impressora diz agora, em português e só com o que importa."""
-        bruto = self._mqtt(self._exigir(), [], ESPERA_S)
+        conexao = self._exigir()
+        vivo = self.retrato_vivo() if self.retrato_vivo is not None else None
+        bruto = vivo or self._mqtt(conexao, [], ESPERA_S)
         return resumir(bruto)
 
     def comando(self, qual: str) -> None:
         if qual not in COMANDOS:
             raise ImpressoraErro("Comando desconhecido.")
         pedido = {"print": {"sequence_id": "0", "command": COMANDOS[qual]}}
-        self._mqtt(self._exigir(), [pedido], 3.0)
+        self._mandar(self._exigir(), pedido)
 
     def imprimir(self, fatiado: Path, nome: str, bandeja: int | None) -> dict[str, Any]:
         """Manda o 3MF fatiado e começa: só com a impressora parada. `bandeja`: a do AMS (0 a 3,
@@ -312,36 +320,13 @@ class Impressora3D:
                 "ams_mapping": [bandeja] if bandeja is not None else [],
             }
         }
-        self._mqtt(conexao, [pedido], 3.0)
-        self.acompanhar(nome)
+        self._mandar(conexao, pedido)  # o vigia avisa a primeira camada, o fim e os erros
         return {"enviado": arquivo}
 
-    def acompanhar(self, nome: str, intervalo_s: float = ACOMPANHAR_S) -> None:
-        """Olha a impressora de tempos em tempos e avisa quando a impressão termina ou falha."""
-        if self._acompanhando is not None and self._acompanhando.is_alive():
-            return
-
-        def olhar() -> None:
-            comecou = False
-            for _ in range(int(48 * 3600 / max(intervalo_s, 0.01))):
-                time.sleep(intervalo_s)
-                try:
-                    estado = self.status()["estado"]
-                except ImpressoraErro:
-                    continue
-                if estado in ("imprimindo", "preparando", "pausada"):
-                    comecou = True
-                elif comecou and estado in ("concluída", "falhou", "ociosa"):
-                    if self.ao_avisar is not None:
-                        self.ao_avisar(
-                            f"A impressão de {nome} terminou."
-                            if estado == "concluída"
-                            else f"A impressão de {nome} parou antes do fim."
-                        )
-                    return
-
-        self._acompanhando = threading.Thread(target=olhar, name="impressora3d", daemon=True)
-        self._acompanhando.start()
+    def _mandar(self, conexao: Conexao, pedido: dict[str, Any]) -> None:
+        """Pela conexão do vigia, se ela está de pé; senão, por uma conexão só para isso."""
+        if self.publicar is None or not self.publicar(pedido):
+            self._mqtt(conexao, [pedido], 3.0)
 
 
 def resumir(bruto: dict[str, Any]) -> dict[str, Any]:
@@ -359,8 +344,10 @@ def resumir(bruto: dict[str, Any]) -> dict[str, Any]:
                     }
                 )
     externo = p.get("vt_tray") or {}
+    erro = f"{int(p.get('print_error') or 0):08X}" if p.get("print_error") else ""
+    estado = ESTADOS.get(str(p.get("gcode_state") or ""), "desconhecido")
     return {
-        "estado": ESTADOS.get(str(p.get("gcode_state") or ""), "desconhecido"),
+        "estado": "cancelada" if estado == "falhou" and erro in CANCELADA else estado,
         "percentual": int(p.get("mc_percent") or 0),
         "restante_min": int(p.get("mc_remaining_time") or 0),
         "camada": int(p.get("layer_num") or 0),
@@ -370,6 +357,13 @@ def resumir(bruto: dict[str, Any]) -> dict[str, Any]:
         "mesa_c": round(float(p.get("bed_temper") or 0)),
         "bandejas": bandejas,
         "externo": str(externo.get("tray_type") or ""),
+        # o erro da impressão (o código da tabela da Bambu, em hexadecimal) e os avisos (HMS)
+        "erro": erro,
+        "hms": [
+            f"{int(h.get('attr') or 0):08X}{int(h.get('code') or 0):08X}"
+            for h in p.get("hms") or []
+            if isinstance(h, dict)
+        ],
     }
 
 

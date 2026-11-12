@@ -242,7 +242,9 @@ def test_a_pagina_cria_lista_e_mostra(projetos: projetos3d.Projetos3D) -> None:
                 "projetos3d": lambda: projetos,
                 "sessoes": lambda: sessoes,
                 "tela": lambda: tela,
-                "impressora3d": lambda: SimpleNamespace(para_tela=lambda: {"configurada": False}),
+                "impressora3d": lambda: SimpleNamespace(
+                    para_tela=lambda: {"configurada": False}, avisos=lambda: []
+                ),
                 "tela_tv": lambda: SimpleNamespace(ajustes=lambda: {"ligado": False}),
             }
         ),

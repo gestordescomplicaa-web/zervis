@@ -4,6 +4,7 @@ comando à impressora pedem o sim falado; listar, mostrar, fatiar e ver a impres
 nada fora do Zé."""
 
 import asyncio
+import base64
 from pathlib import Path
 from typing import Any
 
@@ -194,14 +195,39 @@ def _impressao(
     @tool(
         "impressora_status",
         "Como está a impressora 3D: parada, imprimindo (com a porcentagem e o tempo que falta), "
-        "pausada, concluída ou com falha; as temperaturas e o filamento de cada bandeja.",
+        "pausada, concluída, cancelada ou com falha (com o código do erro); as temperaturas, o "
+        "filamento de cada bandeja e os últimos avisos do vigia (o Zé já avisa sozinho dos erros, "
+        "da primeira camada e do fim).",
         {"type": "object", "properties": {}},
     )
     async def status(args: dict[str, Any]) -> dict[str, Any]:
         try:
-            return _texto(await asyncio.to_thread(impressora.status))
+            agora = await asyncio.to_thread(impressora.status)
         except ImpressoraErro as erro:
             return _erro(erro)
+        recentes = [{k: a[k] for k in ("quando", "fala", "texto")} for a in impressora.avisos()[:3]]
+        return _texto({**agora, "avisos_recentes": recentes})
+
+    @tool(
+        "impressora_foto",
+        "Uma foto agora da câmera da impressora 3D: para ver a peça na mesa, conferir a primeira "
+        "camada ou entender um erro. A foto fica guardada no Zé.",
+        {"type": "object", "properties": {}},
+    )
+    async def foto(args: dict[str, Any]) -> dict[str, Any]:
+        if impressora.fotografar is None:
+            return _erro(ImpressoraErro("Câmera indisponível."))
+        try:
+            caminho = await asyncio.to_thread(impressora.fotografar)
+        except (ImpressoraErro, OSError) as erro:
+            return _erro(ImpressoraErro(f"Sem foto da câmera ({erro})."))
+        imagem = base64.b64encode(caminho.read_bytes()).decode()
+        return {
+            "content": [
+                {"type": "text", "text": f"Foto da câmera da impressora ({caminho.name})."},
+                {"type": "image", "data": imagem, "mimeType": "image/jpeg"},
+            ]
+        }
 
     @tool(
         "impressora_comando",
@@ -219,4 +245,4 @@ def _impressao(
             return _erro(erro)
         return _texto({"feito": args.get("comando")})
 
-    return [fatiar, imprimir, status, comando]
+    return [fatiar, imprimir, status, foto, comando]

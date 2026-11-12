@@ -39,6 +39,13 @@ MOSTRADOS = (".stl", ".3mf", ".glb", ".obj", ".step", ".stp", ".blend", ".svg", 
 OCULTOS = {"projeto.json", "AGENTS.md", "CLAUDE.md"}
 MARMORE = [0.93, 0.92, 0.89, 1.0]  # a cor da prévia sólida
 MESA_PADRAO = [220, 220, 250]
+# Uma face virada para baixo, mais inclinada que 45° (o limite de uma impressora FDM sem apoio),
+# fora da mesa: somadas acima disto, a peça vai com suporte (ADR 0085). O teto reto não conta: a
+# impressora faz ponte (visto em 12/11/2026: 75 dos 92 mm² do suporte de garrafinha eram ponte, e
+# ele imprimiu bem sem apoio).
+BALANCO_COS = -0.7071
+TETO_COS = -0.99
+SUPORTE_MM2 = 25.0
 
 
 class Projeto3DErro(ValueError):
@@ -108,6 +115,17 @@ def medir(triangulos: np.ndarray) -> Medidas:
         len(triangulos),
         bool(len(contagem)) and bool((contagem == 2).all()),
     )
+
+
+def balanco_mm2(triangulos: np.ndarray) -> float:
+    """A área, em mm², das faces inclinadas que ficariam no ar sem suporte (sem os tetos retos)."""
+    if not len(triangulos):
+        return 0.0
+    normais = np.cross(triangulos[:, 1] - triangulos[:, 0], triangulos[:, 2] - triangulos[:, 0])
+    area = np.linalg.norm(normais, axis=1)
+    nz = np.divide(normais[:, 2], area, out=np.zeros_like(area), where=area > 0)
+    fora_da_mesa = triangulos[:, :, 2].min(axis=1) > triangulos[:, :, 2].min() + 0.3
+    return float(area[(nz < BALANCO_COS) & (nz >= TETO_COS) & fora_da_mesa].sum() / 2)
 
 
 def para_glb(triangulos: np.ndarray, cor: list[float] = MARMORE) -> bytes:
@@ -372,7 +390,9 @@ class Projetos3D:
             if f.suffix.lower() == ".stl":
                 item["medidas"] = self._medidas(f)
                 if fatia := self.fatia(id_, str(relativo)):
-                    item["fatiado"] = {k: fatia[k] for k in ("minutos", "gramas", "filamento")}
+                    item["fatiado"] = {
+                        k: fatia.get(k) for k in ("minutos", "gramas", "filamento", "suporte")
+                    }
             arquivos.append(item)
         tipo = str(dados.get("tipo") or "peca")
         return {
@@ -516,8 +536,11 @@ def fatiar(
     except ImpressoraErro:
         status = None  # desligada: fatia com PLA e escolhe a bandeja na hora de imprimir
     bandeja, tipo, marca = _bandeja(status)
+    suporte = balanco_mm2(ler_stl(stl)) > SUPORTE_MM2
     try:
-        f = fatiador.fatiar(stl, _trabalho(pasta, arquivo), conexao.modelo, tipo, marca)
+        f = fatiador.fatiar(
+            stl, _trabalho(pasta, arquivo), conexao.modelo, tipo, marca, suporte=suporte
+        )
     except fatiador.FatiadorErro as erro:
         raise Projeto3DErro(str(erro)) from None
     dados = {**f.para_json(), "stl": arquivo, "bandeja": bandeja, "tipo": tipo}
@@ -534,7 +557,8 @@ def fala_da_fatia(dados: dict[str, Any]) -> str:
     onde = (
         f"da bandeja {dados['bandeja'] + 1}" if dados.get("bandeja") is not None else "do carretel"
     )
-    return f"Leva {tempo} e {round(float(dados['gramas']))} g de {filamento} {onde}."
+    apoio = ", com suporte nas partes no ar" if dados.get("suporte") else ""
+    return f"Leva {tempo} e {round(float(dados['gramas']))} g de {filamento} {onde}{apoio}."
 
 
 def imprimir(
@@ -549,3 +573,16 @@ def imprimir(
     except ImpressoraErro as erro:
         raise Projeto3DErro(str(erro)) from None
     return {"imprimindo": nome, "fala": f"Mandei {nome} para a impressora. {fala_da_fatia(fatia)}"}
+
+
+def trajetos(projetos: Projetos3D, id_: str, arquivo: str) -> dict[str, Any]:
+    """A prévia do último fatiamento desse STL (o caminho do bico, camada por camada)."""
+    if not projetos.fatia(id_, arquivo):
+        raise Projeto3DErro("Fatie a peça antes.")
+    try:
+        dados: dict[str, Any] = json.loads(
+            (_trabalho(projetos.pasta(id_), arquivo) / "trajetos.json").read_text()
+        )
+    except (OSError, ValueError):
+        raise Projeto3DErro("Prévia do fatiamento indisponível. Fatie de novo.") from None
+    return dados
