@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from zervis import atividade, lugares, projetos3d, versoes
+from zervis import atividade, versoes
 from zervis.abertura.servico import Abertura, Externas
 from zervis.atendimento import agente, cliente, projeto
 from zervis.atendimento import ferramentas as atendente_ferramentas
@@ -51,14 +51,13 @@ from zervis.habilidades import evidencias, revisao
 from zervis.habilidades.diario import Diario
 from zervis.habilidades.skills import Skills
 from zervis.imersivo import Imersivo
-from zervis.impressora3d import Impressora3D
 from zervis.memoria import tempo
 from zervis.memoria.aimemory import AiMemory
 from zervis.memoria.conversas import Conversas
 from zervis.memoria.curta import Memoria
 from zervis.memoria.dias import Dias
 from zervis.memoria.linha import LinhaDoTempo
-from zervis.nucleo import autoconhecimento, ciclo, efeitos, ouvir, retrato
+from zervis.nucleo import autoconhecimento, ciclo, efeitos, oficina3d, ouvir, retrato
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import AJUSTES_DA_TELA as AJUSTES_DA_TELA
 from zervis.nucleo.apoio import AVISO_RECENTE_S as AVISO_RECENTE_S
@@ -126,7 +125,6 @@ from zervis.presenca import hyprland
 from zervis.presenca import modo as modo_escuta
 from zervis.presenca.hyprland import MonitorPresenca
 from zervis.presenca.rostos import Rostos
-from zervis.projetos3d import Projetos3D
 from zervis.redes import instagram
 from zervis.rosto import andamento, hud, manifesto, pasta, tela
 from zervis.rosto.anel import Anel
@@ -143,7 +141,6 @@ from zervis.transporte import servidor_livekit
 from zervis.transporte.entrada import Entrada
 from zervis.transporte.local import Captura
 from zervis.transporte.remoto import SalaRemota
-from zervis.tv import TelaTV, TVErro
 from zervis.versoes import Versoes
 from zervis.voz import chamado, espera, nuvem, piper
 from zervis.voz.ativacao import (
@@ -431,25 +428,14 @@ class Nucleo(
             cfg.caminho("barehands", "pasta_estado").parent / "barehands.json"
         )
         self.maquina.orbes = manifesto.falados(self.orbes)
-        # Os projetos 3D (ADR 0082): ao lado dos outros projetos; as prévias, no Acervo.
-        self.projetos3d = Projetos3D(
-            cfg.caminho("oficina", "raiz_projetos") / projetos3d.PASTA,
+        # A oficina 3D: os projetos, a impressora com o vigia e o Modo TV (ADR 0082 a 0085).
+        self.projetos3d, self.impressora3d, self.vigia_impressora, self.tela_tv = oficina3d.montar(
+            cfg.caminho("oficina", "raiz_projetos"),
             self.imersivo.acervo,
-            lugares.CONFIG / "projetos3d.json",
+            DADOS,
+            lambda texto: self.eventos.put(e.Aviso(texto, pedido=True)),
+            lambda: self.maquina.estado is e.Estado.FALANDO,
         )
-        # A impressora 3D na rede local (ADR 0083): o fim de uma impressão vira aviso falado.
-        self.impressora3d = Impressora3D(lugares.CONFIG / "impressora3d.json")
-        self.impressora3d.ao_avisar = lambda texto: self.eventos.put(e.Aviso(texto))
-        # O Modo TV (ADR 0084): a página leve na TV da casa, com o anel que pulsa quando o Zé fala.
-        self.tela_tv = TelaTV(
-            lugares.CONFIG / "tv.json",
-            self.imersivo.acervo,
-            falando=lambda: self.maquina.estado is e.Estado.FALANDO,
-        )
-        try:
-            self.tela_tv.ligar()
-        except TVErro as erro:
-            log.warning("Modo TV: %s", erro)
         self.ferramentas_por_grupo = ferramentas.por_grupo(
             self.sessoes,
             self.memoria,

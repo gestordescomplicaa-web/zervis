@@ -943,7 +943,8 @@
        "fatiado": {
         "minutos": 41,
         "gramas": 25.4,
-        "filamento": "Bambu PLA Lite @BBL A1"
+        "filamento": "Bambu PLA Lite @BBL A1",
+        "suporte": false
        }
       },
       {
@@ -985,7 +986,14 @@
     "configurada": true,
     "ip": "192.168.0.20",
     "serie": "03900A000000001",
-    "modelo": "A1"
+    "modelo": "A1",
+    "avisos": [
+     {
+      "quando": 1794500000,
+      "fala": "A primeira camada de Suporte celular está pronta.",
+      "texto": "A primeira camada de Suporte celular está pronta."
+     }
+    ]
    },
    "tv": true
   },

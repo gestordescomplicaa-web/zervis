@@ -104,6 +104,7 @@ LEITURA = [
     "projeto3d_mostrar",  # só a prévia no próprio Acervo e a própria tela; criar pede o sim
     "projeto3d_fatiar",  # só prepara o arquivo na pasta do projeto (ADR 0083); imprimir pede o sim
     "impressora_status",  # só lê a impressora; os comandos e imprimir pedem o sim
+    "impressora_foto",  # só a câmera da impressora (ADR 0085)
     "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
     "tela_tv_fechar",
 ]

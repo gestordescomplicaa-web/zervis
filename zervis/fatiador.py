@@ -8,8 +8,11 @@ também a pasta corrente: o Bambu Studio grava um `result.json` onde estiver.
 """
 
 import json
+import math
+import re
 import shutil
 import subprocess
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +29,14 @@ MAQUINAS = {
     "X1 Carbon": ("Bambu Lab X1 Carbon 0.4 nozzle", "X1C"),
 }
 PROCESSO = "0.20mm Standard @BBL {sufixo}"
+PONTOS = 120_000  # a prévia do fatiamento: acima disto, algumas camadas ficam de fora
+# Os trechos do G-code, pelo comentário "; FEATURE:", em quatro grupos para a prévia.
+GRUPOS = {
+    "parede": ("wall", "shell", "perimeter"),
+    "suporte": ("support",),
+    "ponte": ("bridge",),
+    "preenchimento": ("infill", "surface", "solid"),
+}
 
 Rodar = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -104,6 +115,7 @@ class Fatiado:
     minutos: int
     gramas: float
     filamento: str
+    suporte: bool = False
 
     def para_json(self) -> dict[str, Any]:
         return {
@@ -111,6 +123,7 @@ class Fatiado:
             "minutos": self.minutos,
             "gramas": round(self.gramas, 1),
             "filamento": self.filamento,
+            "suporte": self.suporte,
         }
 
 
@@ -122,8 +135,10 @@ def fatiar(
     marca: str = "",
     estudio: BambuStudio | None = None,
     rodar: Rodar = subprocess.run,
+    suporte: bool = False,
 ) -> Fatiado:
-    """Fatia `stl` para o `modelo` da impressora, com o filamento da bandeja, em `trabalho`."""
+    """Fatia `stl` para o `modelo` da impressora, com o filamento da bandeja, em `trabalho`. Com
+    `suporte`, liga o suporte em árvore automático (o Bambu Studio põe só onde precisa)."""
     estudio = estudio or encontrar(rodar)
     if estudio is None:
         raise FatiadorErro("Bambu Studio não encontrado.")
@@ -142,6 +157,10 @@ def fatiar(
         ),
         "filamento.json": completo(nome_filamento, filamentos),
     }
+    if suporte:
+        partes["processo.json"].update(
+            {"enable_support": "1", "support_type": "tree(auto)", "bridge_no_support": "1"}
+        )  # as pontes continuam sem suporte: a impressora as faz no ar
     for nome, dados in partes.items():
         if nome != "maquina.json":
             dados["from"] = (
@@ -171,9 +190,58 @@ def fatiar(
         raise FatiadorErro(f"O Bambu Studio recusou: {resultado.get('error_string', '')}".strip())
     placa = placas[0]
     gramas = sum(float(f.get("total_used_g") or 0) for f in placa.get("filaments") or [])
+    fatiado = trabalho / "fatiado.3mf"
+    try:
+        (trabalho / "trajetos.json").write_text(json.dumps(trajetos(fatiado)))
+    except (OSError, KeyError, zipfile.BadZipFile):
+        (trabalho / "trajetos.json").unlink(missing_ok=True)  # sem prévia, mas fatiado
     return Fatiado(
-        trabalho / "fatiado.3mf",
+        fatiado,
         round(float(placa.get("total_predication") or 0) / 60),
         gramas,
         nome_filamento,
+        suporte,
     )
+
+
+def _grupo(trecho: str) -> str:
+    trecho = trecho.lower()
+    return next((g for g, chaves in GRUPOS.items() if any(c in trecho for c in chaves)), "")
+
+
+def trajetos(fatiado: Path, maximo: int = PONTOS) -> dict[str, Any]:
+    """O caminho do bico, camada por camada, para a prévia do fatiamento: só onde há plástico,
+    em linhas por grupo, com as coordenadas em décimos de mm. Com pontos demais, uma camada a
+    cada `passo` (a forma continua clara)."""
+    with zipfile.ZipFile(fatiado) as z:
+        nome = next(n for n in z.namelist() if re.fullmatch(r"Metadata/plate_\d+\.gcode", n))
+        gcode = z.read(nome).decode("utf-8", "ignore")
+    camadas: list[dict[str, Any]] = []
+    x = y = 0.0
+    grupo, linha = "", None
+    for texto in gcode.splitlines():
+        if texto.startswith("; Z_HEIGHT:"):
+            camadas.append({"z": round(float(texto.split(":")[1]), 2), "linhas": []})
+            linha = None
+        elif texto.startswith("; FEATURE:"):
+            grupo, linha = _grupo(texto.split(":", 1)[1]), None
+        elif texto[:3] in ("G0 ", "G1 ", "G2 ", "G3 ") and camadas:
+            campos = dict(re.findall(r"([XYE])(-?[\d.]+)", texto))
+            nx, ny = float(campos.get("X", x)), float(campos.get("Y", y))
+            extrudando = float(campos.get("E", 0)) > 0 and (nx, ny) != (x, y) and grupo
+            if extrudando:
+                if linha is None or linha[0] != grupo:
+                    linha = [grupo, round(x * 10), round(y * 10)]
+                    camadas[-1]["linhas"].append(linha)
+                linha += [round(nx * 10), round(ny * 10)]
+            elif (nx, ny) != (x, y):
+                linha = None
+            x, y = nx, ny
+    total = sum((len(ln) - 1) // 2 for c in camadas for ln in c["linhas"])
+    passo = max(1, math.ceil(total / maximo))
+    escolhidas = [
+        c
+        for i, c in enumerate(camadas)
+        if c["linhas"] and (i % passo == 0 or i == len(camadas) - 1)
+    ]
+    return {"camadas": escolhidas, "total_camadas": len(camadas), "passo": passo}

@@ -32,8 +32,8 @@ acesso. O Bambu Studio da máquina fatia por linha de comando.
    lembra de deixar a mesa livre. A impressora só recebe trabalho parada. O 3MF sobe para o cartão
    (FTPS implícito, com a sessão TLS reaproveitada no canal de dados) e o `project_file` começa,
    com o nivelamento da mesa e a bandeja escolhida. Pausar, retomar e parar também pedem o sim.
-5. **O fim vira aviso:** depois de mandar, o Zé olha a impressora a cada minuto e avisa quando a
-   impressão termina ou para antes do fim.
+5. **O fim vira aviso:** depois de mandar, o Zé olhava a impressora a cada minuto e avisava quando
+   a impressão terminava ou parava antes do fim. Substituído pelo vigia (ADR 0085).
 
 6. **O envio não espera o fechamento do TLS** (12/11/2026, na primeira impressão de verdade). A
    Bambu não responde ao fechamento do TLS no canal de dados, e o `storbinary` do `ftplib` ficava

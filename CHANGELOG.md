@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- **O Zé de olho na impressora:** ele fica ligado à impressora o tempo todo e avisa na hora, com o
+  motivo: pausou porque o filamento acabou, falhou, terminou, a primeira camada ficou pronta. Vale
+  até para impressões que não foram mandadas por ele. Num erro, tira uma foto pela câmera da
+  impressora; "Ver câmera" no painel e "me mostra a impressora" pela voz.
+- **Imprimir mais seguro:** o Zé liga o suporte sozinho quando a peça tem partes no ar, e o
+  painel mostra o fatiamento camada por camada antes de imprimir.
+
 - **Imprimir de verdade:** o envio para a impressora travava no fim e o Zé desistia sem começar a
   impressão, com o arquivo já no cartão. Agora o envio termina em segundos e a impressão começa.
 

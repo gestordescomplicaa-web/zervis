@@ -156,6 +156,8 @@ class Acoes:
             "projetos3d/impressora": self.guardar_impressora,
             "projetos3d/impressora/procurar": self.procurar_impressora,
             "projetos3d/impressora/status": self.status_da_impressora,
+            "projetos3d/impressora/foto": self.foto_da_impressora,
+            "projetos3d/trajetos": self.trajetos_do_projeto_3d,
             "projetos3d/impressora/comando": self.comando_da_impressora,
             "projetos3d/fatiar": self.fatiar_projeto_3d,
             "projetos3d/imprimir": self.imprimir_projeto_3d,

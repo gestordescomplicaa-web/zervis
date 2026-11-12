@@ -34,16 +34,18 @@ function projeto(p) {
   const arquivos = p.arquivos.map((/** @type {any} */ a) => {
     const dados = `data-id="${esc(p.id)}" data-arquivo="${esc(a.nome)}"`;
     const stl = /\.stl$/i.test(a.nome) && impressoraConfigurada;
-    const fatia = a.fatiado ? `Fatiado: ${duracao(a.fatiado.minutos)} · ${numero.format(a.fatiado.gramas)} g de ${esc(filamento(a.fatiado.filamento))}` : "";
+    const fatia = a.fatiado ? `Fatiado: ${duracao(a.fatiado.minutos)} · ${numero.format(a.fatiado.gramas)} g de ${esc(filamento(a.fatiado.filamento))}${a.fatiado.suporte ? " · com suporte" : ""}` : "";
     const botoes = [
       MODELO.test(a.nome) ? botao("Mostrar na Imersão", "projeto3d-mostrar", dados) : "",
       MODELO.test(a.nome) && tvLigada ? botao("Mostrar na TV", "projeto3d-mostrar-tv", dados) : "",
       stl ? botao(a.fatiado ? "Fatiar de novo" : "Fatiar", "projeto3d-fatiar", dados, "discreta") : "",
+      stl && a.fatiado ? botao("Ver fatiamento", "projeto3d-trajetos", dados, "discreta") : "",
       stl && a.fatiado ? botao("Imprimir", "projeto3d-imprimir", `${dados} data-resumo="${esc(`${duracao(a.fatiado.minutos)} e ${Math.round(a.fatiado.gramas)} g de ${filamento(a.fatiado.filamento)}`)}"`, "principal") : "",
     ].join("");
     return `<div class="linha-item"><div class="texto"><strong class="mono">${esc(a.nome)}</strong>
       <small>${[bytes(a.tamanho), medidas(a.medidas)].filter(Boolean).join(" · ")}</small>${fatia ? `<small>${fatia}</small>` : ""}</div>
-      ${botoes ? `<div class="botoes">${botoes}</div>` : ""}</div>`;
+      ${botoes ? `<div class="botoes">${botoes}</div>` : ""}</div>
+      <div class="previa-fatia" data-previa="${esc(p.id)}|${esc(a.nome)}" hidden></div>`;
   }).join("");
   const sessao = p.sessao
     ? botao("Abrir sessão", "projeto3d-sessao", `data-sessao="${esc(p.sessao)}"`, "discreta")
@@ -70,7 +72,39 @@ const impressora = (i) => cartao(`Impressora <span class="etiqueta ${i.configura
     <label>Número de série<input id="p3d-serie" class="mono" value="${esc(i.serie)}" spellcheck="false"></label>
     <label>Código de acesso<input id="p3d-codigo" type="password" autocomplete="off" placeholder="${i.configurada ? "Configurado" : "Na tela da impressora"}"></label>
   </div><p class="nota" id="p3d-status">${i.modelo ? esc(`Bambu Lab ${i.modelo}`) : ""}</p>
-  <div class="botoes">${botao("Procurar na rede", "impressora3d-procurar", "", "discreta")}${i.configurada ? botao("Testar conexão", "impressora3d-status", "", "discreta") : ""}${botao("Salvar", "impressora3d-salvar", "", "principal")}</div>`);
+  ${(i.avisos || []).length ? `<div class="itens">${i.avisos.map((/** @type {any} */ v) => `<div class="linha-item"><div class="texto"><small>${esc(new Date(v.quando * 1000).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}</small><span title="${esc(v.texto)}">${esc(v.fala)}</span></div></div>`).join("")}</div>` : ""}
+  <img id="p3d-foto" class="foto-impressora" alt="Câmera da impressora" hidden>
+  <div class="botoes">${botao("Procurar na rede", "impressora3d-procurar", "", "discreta")}${i.configurada ? botao("Testar conexão", "impressora3d-status", "", "discreta") + botao("Ver câmera", "impressora3d-foto", "", "discreta") : ""}${botao("Salvar", "impressora3d-salvar", "", "principal")}</div>`);
+
+const CORES = { parede: "#8ff0e4", preenchimento: "rgba(143,240,228,.28)", ponte: "#b9a8ff", suporte: "#ffb36b" };
+/** A prévia do fatiamento em perspectiva isométrica, até a camada escolhida.
+ * @param {HTMLCanvasElement} tela @param {any} t @param {number} ate */
+function desenharTrajetos(tela, t, ate) {
+  const ctx = /** @type {CanvasRenderingContext2D} */ (tela.getContext("2d"));
+  const cos = Math.cos(Math.PI / 6), sen = Math.sin(Math.PI / 6), alto = 2.2;
+  const proj = (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ z) => [(x - y) * cos, (x + y) * sen - z * alto];
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+  for (const c of t.camadas) for (const l of c.linhas) for (let i = 1; i < l.length; i += 2) {
+    const [px, py] = proj(l[i] / 10, l[i + 1] / 10, c.z);
+    x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+  }
+  const escala = Math.min((tela.width - 20) / (x1 - x0 || 1), (tela.height - 20) / (y1 - y0 || 1));
+  ctx.clearRect(0, 0, tela.width, tela.height);
+  ctx.lineWidth = 1;
+  t.camadas.slice(0, ate).forEach((/** @type {any} */ c, /** @type {number} */ n) => {
+    const ultima = n === ate - 1;
+    for (const l of c.linhas) {
+      ctx.strokeStyle = ultima && l[0] !== "preenchimento" ? "#ffffff" : CORES[l[0]] || CORES.parede;
+      ctx.beginPath();
+      for (let i = 1; i < l.length; i += 2) {
+        const [px, py] = proj(l[i] / 10, l[i + 1] / 10, c.z);
+        const sx = 10 + (px - x0) * escala, sy = 10 + (py - y0) * escala;
+        i === 1 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+  });
+}
 
 const formulario = () => cartao("Novo projeto", `<div class="campos">
     <label>Nome<input id="p3d-nome" maxlength="60" placeholder="Suporte de celular" autocomplete="off"></label>
@@ -160,6 +194,33 @@ Object.assign(ACOES, {
   "impressora3d-salvar": async (/** @type {HTMLButtonElement} */ b) => {
     const dados = { ip: valor("p3d-ip"), serie: valor("p3d-serie"), codigo: valor("p3d-codigo") };
     try { toast((await ocupado(b, () => api("projetos3d/impressora", dados))).aviso); await abrir(); } catch (erro) { toast(erro.message); }
+  },
+  "projeto3d-trajetos": async (/** @type {HTMLButtonElement} */ b) => {
+    const area = /** @type {HTMLElement | null} */ (document.querySelector(`[data-previa="${CSS.escape(`${b.dataset.id}|${b.dataset.arquivo}`)}"]`));
+    if (!area) return;
+    if (!area.hidden) { area.hidden = true; area.innerHTML = ""; return; }
+    try {
+      const t = await ocupado(b, () => api("projetos3d/trajetos", { id: b.dataset.id, arquivo: b.dataset.arquivo }));
+      const total = t.camadas.length;
+      area.innerHTML = `<canvas width="720" height="420" aria-label="Prévia do fatiamento"></canvas>
+        <label class="camada-fatia">Camada <input type="range" min="1" max="${total}" value="${total}"><span>${t.total_camadas} de ${t.total_camadas}</span></label>
+        <p class="nota"><span style="color:${CORES.parede}">■</span> paredes <span style="color:${CORES.suporte}">■</span> suporte <span style="color:${CORES.ponte}">■</span> pontes</p>`;
+      area.hidden = false;
+      const tela = /** @type {HTMLCanvasElement} */ (area.querySelector("canvas"));
+      const faixa = /** @type {HTMLInputElement} */ (area.querySelector("input"));
+      const rotulo = /** @type {HTMLElement} */ (area.querySelector(".camada-fatia span"));
+      const redesenhar = () => {
+        const ate = Number(faixa.value);
+        rotulo.textContent = `${Math.min(t.total_camadas, ate * t.passo)} de ${t.total_camadas}`;
+        desenharTrajetos(tela, t, ate);
+      };
+      faixa.addEventListener("input", redesenhar);
+      redesenhar();
+    } catch (erro) { toast(erro.message); }
+  },
+  "impressora3d-foto": async (/** @type {HTMLButtonElement} */ b) => {
+    const foto = /** @type {HTMLImageElement | null} */ ($("p3d-foto"));
+    try { const r = await ocupado(b, () => api("projetos3d/impressora/foto", {})); if (foto) { foto.src = r.foto; foto.hidden = false; } } catch (erro) { toast(erro.message); }
   },
   "impressora3d-status": async (/** @type {HTMLButtonElement} */ b) => {
     const estado = $("p3d-status");

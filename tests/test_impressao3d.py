@@ -6,7 +6,6 @@ impressora nem roda o Bambu Studio de verdade."""
 import json
 import stat
 import subprocess
-import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -94,7 +93,6 @@ def test_imprime_so_parada_e_com_o_arquivo_certo(tmp_path: Path) -> None:
     enviados: list[Any] = []
     mqtt = Mqtt(PARADA)
     i = impressora(tmp_path, mqtt, enviados)
-    i.acompanhar = lambda nome, intervalo_s=0: None  # type: ignore[method-assign]
     fatiado = tmp_path / "fatiado.3mf"
     fatiado.write_bytes(b"3mf")
     assert i.imprimir(fatiado, "Suporte celular", 1) == {"enviado": "Suporte-celular.3mf"}
@@ -110,24 +108,25 @@ def test_imprime_so_parada_e_com_o_arquivo_certo(tmp_path: Path) -> None:
         ocupada.imprimir(fatiado, "Outra", 1)
 
 
-def test_comandos_e_o_aviso_do_fim(tmp_path: Path) -> None:
-    mqtt = Mqtt(
-        {"print": {"gcode_state": "RUNNING"}},
-        {"print": {"gcode_state": "RUNNING"}},
-        {"print": {"gcode_state": "FINISH"}},
-    )
+def test_os_comandos(tmp_path: Path) -> None:
+    mqtt = Mqtt(PARADA)
     i = impressora(tmp_path, mqtt)
     i.comando("pausar")
     assert mqtt.pedidos[-1] == {"print": {"sequence_id": "0", "command": "pause"}}
     with pytest.raises(ImpressoraErro):
         i.comando("explodir")
-    avisos: list[str] = []
-    i.ao_avisar = avisos.append
-    i.acompanhar("Suporte", intervalo_s=0.01)
-    fim = time.monotonic() + 3
-    while not avisos and time.monotonic() < fim:
-        time.sleep(0.01)
-    assert avisos == ["A impressão de Suporte terminou."]
+    # com o vigia de pé, os comandos e o status vão pela conexão dele
+    publicados: list[Any] = []
+
+    def publicar(pedido: dict[str, Any]) -> bool:
+        publicados.append(pedido)
+        return True
+
+    i.publicar = publicar
+    i.retrato_vivo = lambda: {"print": {**PARADA["print"], "gcode_state": "RUNNING"}}
+    i.comando("retomar")
+    assert publicados == [{"print": {"sequence_id": "0", "command": "resume"}}]
+    assert len(mqtt.pedidos) == 1 and i.status()["estado"] == "imprimindo"
 
 
 # ---- o fatiador ----
@@ -206,8 +205,8 @@ def projeto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> projetos3d.Proje
     real = fatiador.fatiar
     monkeypatch.setattr(
         fatiador, "fatiar",
-        lambda stl, trabalho, modelo, tipo, marca: real(
-            stl, trabalho, modelo, tipo, marca, estudio(tmp_path), bambu()
+        lambda stl, trabalho, modelo, tipo, marca, suporte=False: real(
+            stl, trabalho, modelo, tipo, marca, estudio(tmp_path), bambu(), suporte
         ),
     )  # fmt: skip
     return projetos
@@ -216,12 +215,13 @@ def projeto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> projetos3d.Proje
 def test_do_projeto_a_impressora(projeto: projetos3d.Projetos3D, tmp_path: Path) -> None:
     enviados: list[Any] = []
     i = impressora(tmp_path, Mqtt(PARADA), enviados)
-    i.acompanhar = lambda nome, intervalo_s=0: None  # type: ignore[method-assign]
     fatia = projetos3d.fatiar(projeto, i, "suporte-celular")
     assert fatia["bandeja"] == 1 and fatia["filamento"] == "Bambu PLA Lite @BBL A1"
     assert fatia["fala"] == "Leva 41 min e 25 g de PLA Lite da bandeja 2."
     lido = projeto.ler("suporte-celular")["arquivos"][0]
-    assert lido["fatiado"] == {"minutos": 41, "gramas": 25.4, "filamento": "Bambu PLA Lite @BBL A1"}
+    assert lido["fatiado"] == {
+        "minutos": 41, "gramas": 25.4, "filamento": "Bambu PLA Lite @BBL A1", "suporte": False,
+    }  # fmt: skip
     feito = projetos3d.imprimir(projeto, i, "suporte-celular")
     assert feito["fala"].startswith("Mandei Suporte celular para a impressora. Leva 41 min")
     assert enviados[0][1] == "Suporte-celular.3mf"
@@ -234,7 +234,6 @@ def test_a_pagina_so_imprime_confirmado_e_a_voz_pede_o_sim(
     projeto: projetos3d.Projetos3D, tmp_path: Path
 ) -> None:
     i = impressora(tmp_path, Mqtt(PARADA))
-    i.acompanhar = lambda nome, intervalo_s=0: None  # type: ignore[method-assign]
     pagina = AcoesProjetos3D(
         SimpleNamespace(),
         Servicos(
