@@ -12,10 +12,14 @@ from zervis.rosto.tela import TelaErro
 
 
 class AcoesProjetos3D(Pagina):
-    dependencias = ("projetos3d", "sessoes", "tela")
+    dependencias = ("projetos3d", "sessoes", "tela", "tela_tv")
 
     def projetos_3d(self) -> dict[str, Any]:
-        return {"projetos": self.n.projetos3d.listar(), "ajustes": self.n.projetos3d.ajustes()}
+        return {
+            "projetos": self.n.projetos3d.listar(),
+            "ajustes": self.n.projetos3d.ajustes(),
+            "tv": bool(self.n.tela_tv.ajustes()["ligado"]),
+        }
 
     def criar_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Uma peça funcional (sem imagem), pelo formulário da página."""

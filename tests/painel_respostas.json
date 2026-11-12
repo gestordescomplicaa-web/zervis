@@ -974,7 +974,14 @@
      256.0
     ],
     "pipeline_arte": ""
-   }
+   },
+   "tv": true
+  },
+  "tv": {
+   "ip_tv": "192.168.0.30",
+   "ligado": true,
+   "endereco": "http://192.168.0.10:8798/tv?chave=exemplo",
+   "aberta": false
   }
  },
  "escritas": {
