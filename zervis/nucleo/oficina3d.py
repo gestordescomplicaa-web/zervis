@@ -5,7 +5,8 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from zervis import lugares, projetos3d
+from zervis import camera, lugares, projetos3d
+from zervis.camera_vigia import Vigia as VigiaCamera
 from zervis.impressora3d import Impressora3D
 from zervis.impressora_vigia import Vigia
 from zervis.projetos3d import Projetos3D
@@ -21,7 +22,7 @@ def montar(
     avisar: Callable[[str], None],
     falando: Callable[[], bool],
     mostrar: Callable[[Path, str], str] | None = None,
-) -> tuple[Projetos3D, Impressora3D, Vigia, TelaTV]:
+) -> tuple[Projetos3D, Impressora3D, Vigia, camera.Camera, VigiaCamera, TelaTV]:
     """Os projetos ao lado dos outros (as prévias no Acervo); a impressora com o vigia conectado
     (o erro, a primeira camada e o fim falados, com foto); e a TV, se o Modo TV estiver ligado.
     `mostrar` leva a foto da câmera à tela de quem fala de outro aparelho (ADR 0086)."""
@@ -33,9 +34,12 @@ def montar(
     vigia = Vigia(impressora, avisar, dados / "impressora" / "fotos")
     impressora.ao_mudar = vigia.iniciar
     vigia.iniciar()
+    camera_ = camera.Camera(lugares.CONFIG / "camera.json")
+    vigia_camera = VigiaCamera(camera_, dados / "camera" / "fotos")
+    vigia_camera.iniciar()
     tela_tv = TelaTV(lugares.CONFIG / "tv.json", acervo, falando=falando)
     try:
         tela_tv.ligar()
     except TVErro as erro:
         log.warning("Modo TV: %s", erro)
-    return projetos, impressora, vigia, tela_tv
+    return projetos, impressora, vigia, camera_, vigia_camera, tela_tv

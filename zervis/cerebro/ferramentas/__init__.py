@@ -22,6 +22,7 @@ from zervis.automacoes.jobs import Jobs
 from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
 from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
 from zervis.cerebro.ferramentas import automacoes as g_automacoes
+from zervis.cerebro.ferramentas import camera as g_camera
 from zervis.cerebro.ferramentas import conectores as g_conectores
 from zervis.cerebro.ferramentas import imagens as g_imagens
 from zervis.cerebro.ferramentas import instagram as g_instagram
@@ -105,6 +106,8 @@ LEITURA = [
     "projeto3d_fatiar",  # só prepara o arquivo na pasta do projeto (ADR 0083); imprimir pede o sim
     "impressora_status",  # só lê a impressora; os comandos e imprimir pedem o sim
     "impressora_foto",  # só a câmera da impressora (ADR 0085)
+    "camera_foto",  # foto sob pedido; não é enviada automaticamente
+    "camera_movimentos",  # consulta as fotos locais da câmera (plano-camera)
     "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
     "tela_tv_fechar",
 ]
@@ -240,13 +243,16 @@ def montar(
     projetos: Projetos3D | None = None,
     impressora: Impressora3D | None = None,
     tela_tv: TelaTV | None = None,
+    camera_dispositivo: Any = None,
+    vigia_camera: Any = None,
+    mostrar_camera: Callable[[Path, str], str] | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
         pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas, projetos, impressora,
-        tela_tv,
+        tela_tv, camera_dispositivo, vigia_camera, mostrar_camera,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -272,6 +278,9 @@ def por_grupo(
     projetos: Projetos3D | None = None,
     impressora: Impressora3D | None = None,
     tela_tv: TelaTV | None = None,
+    camera_dispositivo: Any = None,
+    vigia_camera: Any = None,
+    mostrar_camera: Callable[[Path, str], str] | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -294,6 +303,7 @@ def por_grupo(
         "instagram": g_instagram.ferramentas(instagram),
         "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo, impressora),
         "tela_tv": g_tela_tv.ferramentas(tela_tv, projetos),
+        "camera": g_camera.ferramentas(camera_dispositivo, vigia_camera, mostrar_camera),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

@@ -15,6 +15,7 @@ from zervis.portal.acoes.abertura import AcoesAbertura
 from zervis.portal.acoes.acesso import AcoesAcesso
 from zervis.portal.acoes.atendimento import AcoesAtendimento
 from zervis.portal.acoes.atualizacoes import AcoesAtualizacoes
+from zervis.portal.acoes.camera import AcoesCamera
 from zervis.portal.acoes.cerebro import AcoesCerebro
 from zervis.portal.acoes.conectores import AcoesConectores
 from zervis.portal.acoes.configuracao import AcoesConfiguracao
@@ -52,6 +53,7 @@ class Acoes:
             AcoesConectores,
             AcoesInicio,
             AcoesAtualizacoes,
+            AcoesCamera,
             AcoesPesquisas,
             AcoesProjetos3D,
             AcoesTelaTV,
@@ -102,6 +104,7 @@ class Acoes:
             "pesquisas": self.lista_de_pesquisas,
             "projetos3d": self.projetos_3d,
             "tv": self.modo_tv,
+            "camera": self.camera,
         }
 
     def escritas(self) -> dict[str, Escrita]:
@@ -162,6 +165,10 @@ class Acoes:
             "projetos3d/fatiar": self.fatiar_projeto_3d,
             "projetos3d/imprimir": self.imprimir_projeto_3d,
             "projetos3d/mostrar-tv": self.mostrar_projeto_na_tv,
+            "camera/salvar": self.salvar_camera,
+            "camera/procurar": self.procurar_camera,
+            "camera/testar": self.testar_camera,
+            "camera/foto": self.foto_camera,
             "tv": self.salvar_modo_tv,
             "tv/procurar": self.procurar_tv,
             "tv/abrir": self.abrir_tv,
