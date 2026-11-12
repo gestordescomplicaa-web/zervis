@@ -1002,6 +1002,15 @@
    "ligado": true,
    "endereco": "http://192.168.0.10:8798/tv?chave=exemplo",
    "aberta": false
+  },
+  "camera": {
+   "configurada": false,
+   "ip": "",
+   "usuario": "admin",
+   "intervalo_s": 30,
+   "ligado": false,
+   "estado": "Não configurada",
+   "fotos": []
   }
  },
  "escritas": {

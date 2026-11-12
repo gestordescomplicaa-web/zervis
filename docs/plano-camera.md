@@ -14,15 +14,9 @@ no painel.
   local, a câmera abre a porta 80 (página "Web Viewer"), a 554 (RTSP) e a 34567 (protocolo
   próprio da Xiongmai, chamado "DVRIP" ou "Sofia"). Não abre ONVIF (as portas 8899 e 2020
   estão fechadas).
-- A conta de acesso **ainda não foi confirmada**:
-  - Pela porta 34567, o login com usuário `admin` e a senha que o usuário passou devolveu
-    `Ret 205`. Ou seja, foi recusado.
-  - Pelo RTSP, `rtsp://<ip>:554/user=admin&password=<senha>&channel=1&stream=0.sdp` devolveu
-    `401`.
-  - O mais provável é que essa senha seja a da conta do app, e não a do aparelho. No iCSee, a
-    senha do aparelho fica nas configurações da câmera, em "Senha do dispositivo".
-  - Confirme com o usuário antes de testar de novo. Não fique tentando várias senhas, porque a
-    câmera pode bloquear o usuário.
+- Feito: ver a [ADR 0087](adr/0087-camera-de-vigia.md). Na câmera real, o alarme aos clientes
+  da rede vinha desligado de fábrica, o evento de pessoa se chama `appEventHumanDetectAlarm` e a
+  câmera tem três lentes. As credenciais e o IP continuam fora do repositório.
 
 ## Como funciona
 
@@ -43,8 +37,8 @@ no painel.
    - A referência é o projeto `python-dvr` (MIT). Escreva código próprio. Se copiar algum trecho,
      registre a autoria em `THIRD_PARTY.md`.
 2. **A foto.** Só no `Status: Start`, peça a foto pela mensagem 1560 (snapshot), que devolve um
-   JPEG. Se a câmera não responder a ela, o plano B é pegar um quadro do RTSP. Mas o projeto não
-   tem ffmpeg nem OpenCV hoje, então prefira não colocar dependência nova.
+   JPEG. Se a câmera não responder a ela, o plano B é pegar um quadro do RTSP com o `ffmpeg` do
+   sistema, se estiver disponível, sem adicionar dependência ao projeto.
 3. **O horário.** O nome do arquivo leva a data e a hora local (`AAAAMMDD-HHMMSS.jpg`, pelo
    `zervis/fuso.py`), e o painel mostra a hora junto da foto. Essas câmeras já gravam a hora
    na imagem (o OSD). Confira se ela está ligada e certa. Não é preciso desenhar a hora com

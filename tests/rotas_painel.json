@@ -25,7 +25,8 @@
     "pesquisas",
     "abertura",
     "projetos3d",
-    "tv"
+    "tv",
+    "camera"
   ],
   "escritas": [
     "cerebro",
@@ -169,7 +170,11 @@
     "tv/abrir",
     "tv/fechar",
     "projetos3d/impressora/foto",
-    "projetos3d/trajetos"
+    "projetos3d/trajetos",
+    "camera/salvar",
+    "camera/procurar",
+    "camera/testar",
+    "camera/foto"
   ],
   "envios": [
     "sessao/anexo",

@@ -429,7 +429,14 @@ class Nucleo(
         )
         self.maquina.orbes = manifesto.falados(self.orbes)
         # A oficina 3D: os projetos, a impressora com o vigia e o Modo TV (ADR 0082 a 0085).
-        self.projetos3d, self.impressora3d, self.vigia_impressora, self.tela_tv = oficina3d.montar(
+        (
+            self.projetos3d,
+            self.impressora3d,
+            self.vigia_impressora,
+            self.camera,
+            self.vigia_camera,
+            self.tela_tv,
+        ) = oficina3d.montar(
             cfg.caminho("oficina", "raiz_projetos"),
             self.imersivo.acervo,
             DADOS,
@@ -465,6 +472,9 @@ class Nucleo(
             projetos=self.projetos3d,
             impressora=self.impressora3d,
             tela_tv=self.tela_tv,
+            camera_dispositivo=self.camera,
+            vigia_camera=self.vigia_camera,
+            mostrar_camera=lambda caminho, titulo: self.imagem_ao_aparelho(caminho, titulo),
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)
@@ -763,6 +773,7 @@ class Nucleo(
         self.latencias.fechar()
         self._fechar_escuta()
         self.voz.parar()
+        self.vigia_camera.parar()
         self.captura.fechar()
         self.imersivo.parar()
         if self.remota is not None:

@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Câmera de vigia:** quando a câmera iCSee detecta movimento ou uma pessoa, o Zé guarda uma
+  foto com a data e a hora, da lente que viu. Ele não fala nem manda nada ao celular sem pedido.
+  Na seção Câmera do painel ficam o cadastro, a galeria e o botão "Tirar foto agora". Por voz,
+  "me mostra a câmera".
 - **Zé Voz ouve só você:** a escuta de perto (ligada por padrão) só aceita quem fala junto do
   microfone do celular, como numa ligação; conversa da sala, TV e rua ficam de fora. Com fone,
   passa tudo. Na tela do app, o nível do microfone ao vivo e o mínimo para ouvir, e a opção de
