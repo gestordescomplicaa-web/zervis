@@ -24,7 +24,8 @@
     "atualizacoes",
     "pesquisas",
     "abertura",
-    "projetos3d"
+    "projetos3d",
+    "tv"
   ],
   "escritas": [
     "cerebro",
@@ -155,7 +156,12 @@
     "projetos3d/criar",
     "projetos3d/comecar",
     "projetos3d/mostrar",
-    "projetos3d/ajustes"
+    "projetos3d/ajustes",
+    "projetos3d/mostrar-tv",
+    "tv",
+    "tv/procurar",
+    "tv/abrir",
+    "tv/fechar"
   ],
   "envios": [
     "sessao/anexo",

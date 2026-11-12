@@ -35,6 +35,7 @@ from zervis.cerebro.ferramentas import sessoes as g_sessoes
 from zervis.cerebro.ferramentas import sistema as g_sistema
 from zervis.cerebro.ferramentas import sobre as g_sobre
 from zervis.cerebro.ferramentas import tela as g_tela
+from zervis.cerebro.ferramentas import tela_tv as g_tela_tv
 from zervis.cerebro.ferramentas import whatsapp as g_whatsapp
 from zervis.cerebro.ferramentas.comum import _mudanca, _skill_nova
 from zervis.habilidades import revisao
@@ -51,6 +52,7 @@ from zervis.redes.instagram import Instagram
 from zervis.rosto import andamento
 from zervis.rosto.tela import Tela
 from zervis.sistema.politica import Sistema
+from zervis.tv import TelaTV
 
 SERVIDOR = "jarvis"
 LEITURA = [
@@ -99,6 +101,8 @@ LEITURA = [
     "fontes_saude",  # só testa as fontes com pedidos pequenos
     "projetos3d_listar",  # só lê a pasta dos projetos 3D (ADR 0082)
     "projeto3d_mostrar",  # só a prévia no próprio Acervo e a própria tela; criar pede o sim
+    "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
+    "tela_tv_fechar",
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -135,6 +139,7 @@ COM_EFEITO = frozenset(
         "modelo3d_baixar",
         "imagem_baixar",
         "projeto3d_mostrar",
+        "tela_tv_mostrar",
         "whatsapp_ja_vi",
         "whatsapp_prioridade",
     )
@@ -228,12 +233,13 @@ def montar(
     vigia: Vigia | None = None,
     pesquisas: Guardadas | None = None,
     projetos: Projetos3D | None = None,
+    tela_tv: TelaTV | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
-        pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas, projetos,
+        pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas, projetos, tela_tv,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -257,6 +263,7 @@ def por_grupo(
     vigia: Vigia | None = None,
     pesquisas: Guardadas | None = None,
     projetos: Projetos3D | None = None,
+    tela_tv: TelaTV | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -278,6 +285,7 @@ def por_grupo(
         "whatsapp": g_whatsapp.ferramentas(leads),
         "instagram": g_instagram.ferramentas(instagram),
         "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo),
+        "tela_tv": g_tela_tv.ferramentas(tela_tv, projetos),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

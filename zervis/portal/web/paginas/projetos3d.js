@@ -8,6 +8,7 @@ import { PAGINAS, TOKEN, $, api, botao, cabeca, cartao, esc, ocupado, sub, toast
 // como sólido na Imersão.
 
 let formularioAberto = false;
+let tvLigada = false;
 
 const TIPOS = { peca: "Peça funcional", arte: "Arte a partir de imagem" };
 const numero = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
@@ -26,7 +27,7 @@ function medidas(m) {
 function projeto(p) {
   const arquivos = p.arquivos.map((/** @type {any} */ a) => `<div class="linha-item"><div class="texto"><strong class="mono">${esc(a.nome)}</strong>
     <small>${[bytes(a.tamanho), medidas(a.medidas)].filter(Boolean).join(" · ")}</small></div>
-    ${MODELO.test(a.nome) ? `<div class="botoes">${botao("Mostrar na Imersão", "projeto3d-mostrar", `data-id="${esc(p.id)}" data-arquivo="${esc(a.nome)}"`)}</div>` : ""}</div>`).join("");
+    ${MODELO.test(a.nome) ? `<div class="botoes">${botao("Mostrar na Imersão", "projeto3d-mostrar", `data-id="${esc(p.id)}" data-arquivo="${esc(a.nome)}"`)}${tvLigada ? botao("Mostrar na TV", "projeto3d-mostrar-tv", `data-id="${esc(p.id)}" data-arquivo="${esc(a.nome)}"`) : ""}</div>` : ""}</div>`).join("");
   const sessao = p.sessao
     ? botao("Abrir sessão", "projeto3d-sessao", `data-sessao="${esc(p.sessao)}"`, "discreta")
     : botao("Começar sessão", "projeto3d-comecar", `data-id="${esc(p.id)}"`, "principal");
@@ -53,6 +54,7 @@ const formulario = () => cartao("Novo projeto", `<div class="campos">
 
 PAGINAS.projetos3d = async () => {
   const r = await api("projetos3d");
+  tvLigada = !!r.tv;
   const lista = r.projetos.map(projeto).join("");
   const vazia = vazio('Nenhum projeto ainda. Crie um aqui ou peça ao Zé: "cria um suporte de celular em 3D".');
   return `${cabeca("Projetos 3D", formularioAberto ? "" : botao("Novo projeto", "projeto3d-formulario", "", "principal"))}
@@ -104,6 +106,9 @@ Object.assign(ACOES, {
       await new Promise((r) => setTimeout(r, 4000));
       try { await api("projetos3d/mostrar", pedido); } catch (erro) { toast(erro.message); }
     }
+  },
+  "projeto3d-mostrar-tv": async (/** @type {HTMLButtonElement} */ b) => {
+    try { toast((await ocupado(b, () => api("projetos3d/mostrar-tv", { id: b.dataset.id, arquivo: b.dataset.arquivo }))).aviso); } catch (erro) { toast(erro.message); }
   },
   "projeto3d-sessao": async (/** @type {HTMLButtonElement} */ b) => {
     location.hash = "#sessoes";

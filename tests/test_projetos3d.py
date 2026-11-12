@@ -238,7 +238,12 @@ def test_a_pagina_cria_lista_e_mostra(projetos: projetos3d.Projetos3D) -> None:
     pagina = AcoesProjetos3D(
         SimpleNamespace(),
         Servicos(
-            {"projetos3d": lambda: projetos, "sessoes": lambda: sessoes, "tela": lambda: tela}
+            {
+                "projetos3d": lambda: projetos,
+                "sessoes": lambda: sessoes,
+                "tela": lambda: tela,
+                "tela_tv": lambda: SimpleNamespace(ajustes=lambda: {"ligado": False}),
+            }
         ),
     )
     r = pagina.criar_projeto_3d({"nome": "Caixa", "tipo": "peca", "pedido": "Caixa de 20 mm"})

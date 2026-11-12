@@ -1,0 +1,27 @@
+/* O Modo TV (ADR 0084): feito para ver do sofá, numa TV de 1920 × 1080. SPDX-License-Identifier: AGPL-3.0-or-later */
+:root { --acento: #8ff0e4; --claro: #e9fffb; --suave: #8fb8b1; --fundo: #020807; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 40%, #0b2522 0%, var(--fundo) 62%); color: var(--claro);
+  font-family: "Chakra Petch", "Segoe UI", system-ui, sans-serif; }
+#palco { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: opacity .8s; }
+header, footer { z-index: 2; }
+body.modelo #palco { opacity: 1; }
+header { position: fixed; left: 56px; top: 40px; font-size: 22px; letter-spacing: .5em; color: var(--acento); text-shadow: 0 0 18px rgb(143 240 228 / .5); }
+#relogio { position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; transition: opacity .8s; }
+#relogio b { font-size: 220px; font-weight: 600; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; text-shadow: 0 0 40px rgb(143 240 228 / .35); }
+#relogio span { font-size: 34px; color: var(--suave); letter-spacing: .06em; }
+#relogio span::first-letter { text-transform: uppercase; }
+body.modelo #relogio { opacity: 0; visibility: hidden; transition: opacity .8s, visibility 0s .8s; }
+footer { position: fixed; left: 56px; right: 56px; bottom: 48px; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
+#legenda { opacity: 0; transform: translateY(12px); transition: opacity .7s, transform .7s; }
+body.modelo #legenda { opacity: 1; transform: none; }
+#titulo { margin: 0; font-size: 64px; font-weight: 600; letter-spacing: .01em; }
+#detalhe { margin: 8px 0 0; font-size: 28px; color: var(--suave); letter-spacing: .04em; }
+#anel { flex: none; width: 120px; height: 120px; overflow: visible; }
+#anel circle { fill: none; }
+#anel .fundo { stroke: rgb(143 240 228 / .25); stroke-width: 2; }
+#anel .linha { stroke: var(--acento); stroke-width: 2; transform-origin: 60px 60px; animation: girar 6s linear infinite; }
+#anel .onda { stroke: var(--acento); stroke-width: 3; opacity: 0; transform-origin: 60px 60px; }
+body.falando #anel .onda { animation: falar 1.1s ease-out infinite; }
+body.falando #anel .fundo { stroke: var(--acento); filter: drop-shadow(0 0 10px var(--acento)); }
+@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes falar { 0% { opacity: .9; transform: scale(.85); } 100% { opacity: 0; transform: scale(1.35); } }

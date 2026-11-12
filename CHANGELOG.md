@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Modo TV:** peça pelo celular "mostra na TV o suporte de celular" e a peça aparece na TV da
+  sala, sólida e girando, com o nome e as medidas; o anel pulsa enquanto o Zé fala. Liga em
+  Perfil → Modo TV, com a página do Zé como página inicial do navegador da TV.
+
 - **Projetos 3D:** uma aba nova (em Trabalho) para peças e artes de impressão 3D. Peça "cria um
   suporte de celular em 3D" ou crie pelo painel, com uma imagem para as artes: o Zé abre uma
   sessão que modela a peça e entrega os STLs na pasta do projeto, com as medidas na aba. A peça
