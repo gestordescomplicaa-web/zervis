@@ -939,6 +939,11 @@
         "volume_cm3": 24.6,
         "triangulos": 3684,
         "fechada": true
+       },
+       "fatiado": {
+        "minutos": 41,
+        "gramas": 25.4,
+        "filamento": "Bambu PLA Lite @BBL A1"
        }
       },
       {
@@ -974,6 +979,13 @@
      256.0
     ],
     "pipeline_arte": ""
+   },
+   "raiz": "~/projetos/projetos-3d",
+   "impressora": {
+    "configurada": true,
+    "ip": "192.168.0.20",
+    "serie": "03900A000000001",
+    "modelo": "A1"
    },
    "tv": true
   },

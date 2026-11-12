@@ -51,6 +51,7 @@ from zervis.habilidades import evidencias, revisao
 from zervis.habilidades.diario import Diario
 from zervis.habilidades.skills import Skills
 from zervis.imersivo import Imersivo
+from zervis.impressora3d import Impressora3D
 from zervis.memoria import tempo
 from zervis.memoria.aimemory import AiMemory
 from zervis.memoria.conversas import Conversas
@@ -436,6 +437,9 @@ class Nucleo(
             self.imersivo.acervo,
             lugares.CONFIG / "projetos3d.json",
         )
+        # A impressora 3D na rede local (ADR 0083): o fim de uma impressão vira aviso falado.
+        self.impressora3d = Impressora3D(lugares.CONFIG / "impressora3d.json")
+        self.impressora3d.ao_avisar = lambda texto: self.eventos.put(e.Aviso(texto))
         # O Modo TV (ADR 0084): a página leve na TV da casa, com o anel que pulsa quando o Zé fala.
         self.tela_tv = TelaTV(
             lugares.CONFIG / "tv.json",
@@ -472,6 +476,7 @@ class Nucleo(
             vigia=self.fontes_de_fora,
             pesquisas=self.pesquisas,
             projetos=self.projetos3d,
+            impressora=self.impressora3d,
             tela_tv=self.tela_tv,
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]

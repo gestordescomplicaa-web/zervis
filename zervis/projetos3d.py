@@ -9,7 +9,8 @@ Os arquivos ficam na pasta do projeto (`<raiz dos projetos>/projetos-3d/<id>/`);
 o Zé converte o STL numa prévia sólida (`.glb`, cor de mármore) dentro do Acervo, que é o que ela
 serve. As medidas (tamanho, volume, se a malha é fechada) são lidas do próprio STL.
 
-Imprimir não é daqui: a sessão nunca manda nada para a impressora.
+Fatiar e imprimir (ADR 0083) ficam com o Zé, nunca com a sessão: `fatiar` prepara o 3MF com o
+filamento que está na impressora e diz o tempo e o peso; `imprimir` manda, só com o sim de quem usa.
 """
 
 import json
@@ -23,6 +24,9 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from zervis import fatiador
+from zervis.impressora3d import Impressora3D, ImpressoraErro
 
 PASTA = "projetos-3d"  # dentro da raiz dos projetos
 PREVIAS = Path("3d") / "projetos"  # dentro do Acervo
@@ -243,6 +247,12 @@ def instrucoes(nome: str, tipo: str, pedido: str, ajustes: dict[str, Any], image
     return "\n".join(partes) + "\n"
 
 
+def _trabalho(pasta: Path, arquivo: str) -> Path:
+    return (
+        pasta / ".ze" / "impressao" / re.sub(r"[^\w.-]+", "-", str(Path(arquivo).with_suffix("")))
+    )
+
+
 class Projetos3D:
     def __init__(self, raiz: Path, acervo: Path, ajustes: Path) -> None:
         self.raiz = raiz.expanduser()
@@ -361,6 +371,8 @@ class Projetos3D:
             }
             if f.suffix.lower() == ".stl":
                 item["medidas"] = self._medidas(f)
+                if fatia := self.fatia(id_, str(relativo)):
+                    item["fatiado"] = {k: fatia[k] for k in ("minutos", "gramas", "filamento")}
             arquivos.append(item)
         tipo = str(dados.get("tipo") or "peca")
         return {
@@ -404,6 +416,20 @@ class Projetos3D:
         guardado.parent.mkdir(exist_ok=True)
         guardado.write_text(json.dumps({"marca": marca, "medidas": medidas}))
         return medidas
+
+    def fatia(self, id_: str, arquivo: str) -> dict[str, Any] | None:
+        """O último fatiamento desse STL, se ainda vale (o STL não mudou depois)."""
+        pasta = self.pasta(id_)
+        guardado = _trabalho(pasta, arquivo) / "fatia.json"
+        try:
+            dados: dict[str, Any] = json.loads(guardado.read_text())
+            if (pasta / arquivo).stat().st_mtime > guardado.stat().st_mtime:
+                return None
+            if not Path(dados["arquivo"]).is_file():
+                return None
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        return dados
 
     def principal(self, id_: str) -> str:
         """O modelo que se mostra quando ninguém diz qual: `modelo.stl`, senão o STL maior,
@@ -456,3 +482,70 @@ def comecar(projetos: Projetos3D, sessoes: Any, id_: str, motor: str, origem: st
     projetos.vincular(id_, s.id)
     sessoes.enviar(s.id, tarefa(p))
     return str(s.id)
+
+
+# ---- fatiar e imprimir (ADR 0083) ------------------------------------------------------------
+
+
+def _bandeja(status: dict[str, Any] | None) -> tuple[int | None, str, str]:
+    """A bandeja do AMS a usar (a primeira com filamento; PLA antes), ou o carretel de fora."""
+    if status:
+        bandejas = sorted(status["bandejas"], key=lambda b: (b["tipo"] != "PLA", b["indice"]))
+        if bandejas:
+            b = bandejas[0]
+            return int(b["indice"]), str(b["tipo"]), str(b["marca"])
+        if status.get("externo"):
+            return None, str(status["externo"]), ""
+    return None, "PLA", ""
+
+
+def fatiar(
+    projetos: Projetos3D, impressora: Impressora3D, id_: str, arquivo: str = ""
+) -> dict[str, Any]:
+    """Fatia o STL com o perfil da impressora e o filamento que está nela agora."""
+    pasta = projetos.pasta(id_)
+    arquivo = arquivo or projetos.principal(id_)
+    stl = (pasta / arquivo).resolve()
+    if not stl.is_relative_to(pasta.resolve()) or not stl.is_file() or stl.suffix.lower() != ".stl":
+        raise Projeto3DErro("Escolha um STL do projeto.")
+    conexao = impressora.conexao()
+    if conexao is None or not conexao.modelo:
+        raise Projeto3DErro("Configure a impressora na aba Projetos 3D.")
+    try:
+        status: dict[str, Any] | None = impressora.status()
+    except ImpressoraErro:
+        status = None  # desligada: fatia com PLA e escolhe a bandeja na hora de imprimir
+    bandeja, tipo, marca = _bandeja(status)
+    try:
+        f = fatiador.fatiar(stl, _trabalho(pasta, arquivo), conexao.modelo, tipo, marca)
+    except fatiador.FatiadorErro as erro:
+        raise Projeto3DErro(str(erro)) from None
+    dados = {**f.para_json(), "stl": arquivo, "bandeja": bandeja, "tipo": tipo}
+    (_trabalho(pasta, arquivo) / "fatia.json").write_text(json.dumps(dados, ensure_ascii=False))
+    return {**dados, "fala": fala_da_fatia(dados)}
+
+
+def fala_da_fatia(dados: dict[str, Any]) -> str:
+    horas, minutos = divmod(int(dados["minutos"]), 60)
+    tempo = f"{horas} h {minutos:02d}" if horas else f"{minutos} min"
+    filamento = (
+        str(dados["filamento"]).split(" @")[0].removeprefix("Bambu ").removeprefix("Generic ")
+    )
+    onde = (
+        f"da bandeja {dados['bandeja'] + 1}" if dados.get("bandeja") is not None else "do carretel"
+    )
+    return f"Leva {tempo} e {round(float(dados['gramas']))} g de {filamento} {onde}."
+
+
+def imprimir(
+    projetos: Projetos3D, impressora: Impressora3D, id_: str, arquivo: str = ""
+) -> dict[str, Any]:
+    """Manda o fatiado para a impressora (fatia antes, se preciso). Quem chama já pediu o sim."""
+    arquivo = arquivo or projetos.principal(id_)
+    fatia = projetos.fatia(id_, arquivo) or fatiar(projetos, impressora, id_, arquivo)
+    nome = projetos.ler(id_)["nome"]
+    try:
+        impressora.imprimir(Path(fatia["arquivo"]), nome, fatia.get("bandeja"))
+    except ImpressoraErro as erro:
+        raise Projeto3DErro(str(erro)) from None
+    return {"imprimindo": nome, "fala": f"Mandei {nome} para a impressora. {fala_da_fatia(fatia)}"}
