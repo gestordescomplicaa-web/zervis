@@ -261,3 +261,51 @@ def test_a_pagina_so_imprime_confirmado_e_a_voz_pede_o_sim(
     assert claude.descrever("mcp__jarvis__impressora_comando", {"comando": "parar"}) == (
         "Vou cancelar a impressão."
     )
+
+
+def test_o_envio_nao_espera_o_fechamento_do_tls(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Visto em 12/11/2026: a Bambu não responde ao fechamento do TLS no canal de dados; o
+    # `storbinary` do ftplib esperava até o prazo, com o arquivo já no cartão.
+    class Canal:
+        def __init__(self) -> None:
+            self.recebido, self.fechado = b"", False
+
+        def sendall(self, dados: bytes) -> None:
+            self.recebido += dados
+
+        def unwrap(self) -> None:
+            raise AssertionError("não pode esperar o fechamento do TLS")
+
+        def close(self) -> None:
+            self.fechado = True
+
+    canal = Canal()
+    ftp = impressora3d._FTPImplicito(impressora3d._contexto_tls())
+    monkeypatch.setattr(ftp, "voidcmd", lambda cmd: "200")
+    monkeypatch.setattr(ftp, "transfercmd", lambda cmd, rest=None: canal)
+    monkeypatch.setattr(ftp, "voidresp", lambda: "226")
+    arquivo = tmp_path / "peca.3mf"
+    arquivo.write_bytes(b"x" * 70000)
+    with arquivo.open("rb") as f:
+        assert ftp.storbinary("STOR /peca.3mf", f) == "226"
+    assert canal.recebido == b"x" * 70000 and canal.fechado
+
+
+def test_sem_confirmacao_vale_o_arquivo_inteiro_no_cartao(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    arquivo = tmp_path / "peca.3mf"
+    arquivo.write_bytes(b"x" * 1000)
+    conexao = Conexao("192.168.0.20", "03900A000000001", "12345678")
+
+    def travou(self: Any, host: str = "", port: int = 0, timeout: float = 0, **_: Any) -> str:
+        raise TimeoutError("The read operation timed out")
+
+    monkeypatch.setattr(impressora3d._FTPImplicito, "connect", travou)
+    monkeypatch.setattr(impressora3d, "_tamanho_no_cartao", lambda c, nome: 1000)
+    impressora3d.enviar_arquivo(conexao, arquivo, "peca.3mf")  # chegou inteiro: vale
+    monkeypatch.setattr(impressora3d, "_tamanho_no_cartao", lambda c, nome: 400)
+    with pytest.raises(ImpressoraErro, match="não chegou"):
+        impressora3d.enviar_arquivo(conexao, arquivo, "peca.3mf")
