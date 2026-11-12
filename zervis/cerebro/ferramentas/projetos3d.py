@@ -17,6 +17,14 @@ from zervis.impressora3d import COMANDOS, Impressora3D, ImpressoraErro
 from zervis.oficina.sessoes import SessaoErro, Sessoes
 from zervis.rosto.tela import Tela, TelaErro
 
+# Onde a foto da câmera apareceu para quem pediu (ADR 0086), dito ao cérebro no resultado.
+ENTREGA_DA_FOTO = {
+    "celular": "A foto foi enviada ao celular de quem pediu, numa notificação.",
+    "navegador": "A foto abriu na tela de quem pediu, no painel.",
+    "": "Ninguém fala de outro aparelho agora: a foto não foi enviada; no painel, Projetos 3D, "
+    "Ver câmera mostra a imagem.",
+}
+
 
 def _imagem(caminho: str, acervo: Path | None) -> tuple[bytes, str] | None:
     """A imagem de referência: um caminho no Acervo ("imagens/galo.png") ou na pasta pessoal."""
@@ -211,7 +219,9 @@ def _impressao(
     @tool(
         "impressora_foto",
         "Uma foto agora da câmera da impressora 3D: para ver a peça na mesa, conferir a primeira "
-        "camada ou entender um erro. A foto fica guardada no Zé.",
+        "camada ou entender um erro, e para mandar a foto a quem pede ('me manda uma foto da "
+        "impressão'): quem fala pelo celular ou pelo navegador recebe a foto na tela na hora. O "
+        "resultado diz onde ela apareceu. A foto fica guardada no Zé.",
         {"type": "object", "properties": {}},
     )
     async def foto(args: dict[str, Any]) -> dict[str, Any]:
@@ -222,9 +232,16 @@ def _impressao(
         except (ImpressoraErro, OSError) as erro:
             return _erro(ImpressoraErro(f"Sem foto da câmera ({erro})."))
         imagem = base64.b64encode(caminho.read_bytes()).decode()
+        onde = ""
+        if impressora.mostrar is not None:
+            onde = await asyncio.to_thread(impressora.mostrar, caminho, "Câmera da impressora")
+        entrega = ENTREGA_DA_FOTO.get(onde, ENTREGA_DA_FOTO[""])
         return {
             "content": [
-                {"type": "text", "text": f"Foto da câmera da impressora ({caminho.name})."},
+                {
+                    "type": "text",
+                    "text": f"Foto da câmera da impressora ({caminho.name}). {entrega}",
+                },
                 {"type": "image", "data": imagem, "mimeType": "image/jpeg"},
             ]
         }

@@ -6,6 +6,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
@@ -18,7 +19,7 @@ from zervis.nucleo import estados as e
 from zervis.portal import remoto, tunel
 from zervis.preparar import PrepararErro
 from zervis.transporte import servidor_livekit
-from zervis.transporte.navegador import VozNavegador
+from zervis.transporte.navegador import ASSUMIDA, VozNavegador
 from zervis.transporte.remoto import SalaRemota
 from zervis.transporte.websocket import Conexao
 
@@ -95,7 +96,7 @@ class ServicoRemoto:
         if conectada:
             self.n._fonte = fonte
             if isinstance(anterior, VozNavegador) and anterior is not fonte:
-                anterior.conexao.fechar()
+                anterior.conexao.fechar(ASSUMIDA)
         elif anterior is fonte:
             self.n._fonte = None
         else:
@@ -214,6 +215,21 @@ class ServicoRemoto:
         finally:
             self.n._fonte_remota(voz, False)
             log.info("app de voz: desconectado")
+
+    def imagem_ao_aparelho(self, caminho: Path, titulo: str, texto: str = "") -> str:
+        """Mostra uma imagem a quem fala de outro aparelho (ADR 0086): "celular" (o app de voz,
+        numa notificação), "navegador" (sobre o painel) ou "" (ninguém conectado: quem fala
+        está no PC, ou a imagem não foi)."""
+        fonte = getattr(self.n, "_fonte", None)
+        if not isinstance(fonte, VozNavegador):
+            return ""
+        try:
+            jpeg = caminho.read_bytes()
+        except OSError:
+            return ""
+        if not fonte.imagem(jpeg, titulo, texto):
+            return ""
+        return "celular" if fonte.do_app else "navegador"
 
     def estado_remoto(self) -> dict[str, Any]:
         rede = remoto.rede(self.n.portal.porta if self.n.portal else 0).para_tela()

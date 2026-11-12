@@ -2,6 +2,16 @@
 
 ## Não lançado
 
+- **Zé Voz ouve só você:** a escuta de perto (ligada por padrão) só aceita quem fala junto do
+  microfone do celular, como numa ligação; conversa da sala, TV e rua ficam de fora. Com fone,
+  passa tudo. Na tela do app, o nível do microfone ao vivo e o mínimo para ouvir, e a opção de
+  ouvir o Zé pelo fone da orelha.
+- **A foto da impressora no celular:** "me manda uma foto da impressão" e a foto chega como
+  notificação no Zé Voz (tocar abre inteira) ou abre no painel, no navegador. Os avisos da
+  impressora com foto (erro, primeira camada, fim) também chegam com ela.
+- **Dois aparelhos sem briga:** quando outro aparelho assume a voz, o primeiro não reconecta mais
+  sozinho; mostra "Voz em uso em outro aparelho" e "Retomar".
+
 - **O Zé de olho na impressora:** ele fica ligado à impressora o tempo todo e avisa na hora, com o
   motivo: pausou porque o filamento acabou, falhou, terminou, a primeira camada ficou pronta. Vale
   até para impressões que não foram mandadas por ele. Num erro, tira uma foto pela câmera da

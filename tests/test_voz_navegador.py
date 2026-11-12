@@ -1,5 +1,6 @@
 """A voz pelo navegador dentro do HTTPS do painel (roteiro, passo 4.2): WebSocket e áudio."""
 
+import base64
 import json
 import threading
 import time
@@ -7,12 +8,18 @@ from typing import Any
 
 import numpy as np
 import pytest
-from websockets.exceptions import InvalidHandshake
+from websockets.exceptions import ConnectionClosed, InvalidHandshake
 from websockets.sync.client import connect
 from websockets.typing import Origin
 
 from zervis.portal.servidor import Portal
-from zervis.transporte.navegador import BYTES_QUADRO, TocadorNavegador, VozNavegador, reamostrar
+from zervis.transporte.navegador import (
+    ASSUMIDA,
+    BYTES_QUADRO,
+    TocadorNavegador,
+    VozNavegador,
+    reamostrar,
+)
 from zervis.transporte.websocket import Conexao
 
 
@@ -60,6 +67,30 @@ def test_audio_vai_em_quadros_de_80_ms_e_volta(portal: Any) -> None:
             break
         time.sleep(0.02)
     assert eco.taxas == [16000] and all(len(q) == BYTES_QUADRO for q in eco.quadros)
+
+
+def test_a_imagem_chega_inteira_e_o_fechamento_leva_o_motivo() -> None:
+    """A foto da câmera (ADR 0086) passa de 64 KB, o quadro longo do WebSocket; e o aparelho
+    que perdeu a voz para outro recebe o motivo (4001), para não reconectar sozinho."""
+    foto = b"\xff\xd8" + bytes(range(256)) * 1200  # ~300 KB
+
+    def ze(conexao: Conexao, taxa: int) -> None:
+        assert VozNavegador(conexao, taxa).imagem(foto, "Câmera da impressora")
+        conexao.fechar(ASSUMIDA)
+
+    p = Portal({}, {}, porta=0, voz=ze)
+    p.iniciar()
+    try:
+        with connect(_url(p), origin=Origin(f"http://127.0.0.1:{p.porta}")) as ws:
+            ws.send(json.dumps({"token": p.token, "taxa": 16000}))
+            m = json.loads(ws.recv(timeout=5))
+            assert m["tipo"] == "imagem" and m["titulo"] == "Câmera da impressora"
+            assert base64.b64decode(m["dados"]) == foto
+            with pytest.raises(ConnectionClosed) as fechou:
+                ws.recv(timeout=5)
+        assert fechou.value.rcvd is not None and fechou.value.rcvd.code == ASSUMIDA
+    finally:
+        p.parar()
 
 
 def test_outra_origem_e_codigo_errado_nao_abrem_a_voz(portal: Any) -> None:

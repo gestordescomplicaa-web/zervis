@@ -20,13 +20,16 @@ def montar(
     dados: Path,
     avisar: Callable[[str], None],
     falando: Callable[[], bool],
+    mostrar: Callable[[Path, str], str] | None = None,
 ) -> tuple[Projetos3D, Impressora3D, Vigia, TelaTV]:
     """Os projetos ao lado dos outros (as prévias no Acervo); a impressora com o vigia conectado
-    (o erro, a primeira camada e o fim falados, com foto); e a TV, se o Modo TV estiver ligado."""
+    (o erro, a primeira camada e o fim falados, com foto); e a TV, se o Modo TV estiver ligado.
+    `mostrar` leva a foto da câmera à tela de quem fala de outro aparelho (ADR 0086)."""
     projetos = Projetos3D(
         raiz_projetos / projetos3d.PASTA, acervo, lugares.CONFIG / "projetos3d.json"
     )
     impressora = Impressora3D(lugares.CONFIG / "impressora3d.json")
+    impressora.mostrar = mostrar
     vigia = Vigia(impressora, avisar, dados / "impressora" / "fotos")
     impressora.ao_mudar = vigia.iniciar
     vigia.iniciar()

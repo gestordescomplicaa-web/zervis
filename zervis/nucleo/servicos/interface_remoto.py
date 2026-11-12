@@ -1,5 +1,6 @@
 """Interface compatível do serviço de remoto."""
 
+from pathlib import Path
 from typing import Any
 
 from zervis.nucleo.servicos.interface import InterfaceServico, servico
@@ -30,6 +31,9 @@ class InterfaceRemoto(InterfaceServico):
         self, conexao: Conexao, taxa: int, modo: str, aparelho: dict[str, Any]
     ) -> None:
         servico(self, ServicoRemoto).voz_pelo_app(conexao, taxa, modo, aparelho)
+
+    def imagem_ao_aparelho(self, caminho: Path, titulo: str, texto: str = "") -> str:
+        return servico(self, ServicoRemoto).imagem_ao_aparelho(caminho, titulo, texto)
 
     def estado_remoto(self) -> dict[str, Any]:
         return servico(self, ServicoRemoto).estado_remoto()

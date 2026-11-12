@@ -9,9 +9,11 @@ Funciona por onde o painel funcionar (Wi-Fi, 4G, túnel, domínio da VPS), sem U
 caminho que o Chrome do Android não fazia pela VPN (teste de 12/10/2026).
 """
 
+import base64
 import contextlib
 import json
 import logging
+import secrets
 import threading
 import time
 import wave
@@ -28,6 +30,10 @@ TAXA = 16000
 BYTES_QUADRO = 2560  # 80 ms a 16 kHz, 16 bits
 LACUNA_S = 0.5  # sem quadro de áudio por mais que isto: vai para o registro
 FOLGA_S = 0.5  # quanto a voz pode ir à frente do que já tocou (interromper corta isto)
+# O Zé fechou esta voz porque outro aparelho conectou a dele (uma por vez): o app e o navegador
+# não reconectam sozinhos, senão dois aparelhos se derrubariam sem parar (ADR 0086).
+ASSUMIDA = 4001
+MAX_IMAGEM = 4 * 1024 * 1024  # uma foto; a da câmera da impressora tem umas centenas de KB
 
 
 def reamostrar(pcm: bytes, taxa: int) -> bytes:
@@ -106,6 +112,25 @@ class VozNavegador:
     def controle(self, **dados: object) -> None:
         with contextlib.suppress(FechouErro):
             self.conexao.texto(json.dumps(dados))
+
+    def imagem(self, jpeg: bytes, titulo: str, texto: str = "") -> bool:
+        """Uma imagem para a tela de quem fala (a foto da impressora, ADR 0086): no app vira
+        uma notificação com a foto; no navegador, abre sobre o painel. Vai inteira numa mensagem
+        de texto, em base64: o canal binário é só da fala."""
+        if not jpeg or len(jpeg) > MAX_IMAGEM:
+            return False
+        mensagem = {
+            "tipo": "imagem",
+            "id": secrets.token_hex(4),
+            "titulo": titulo[:120],
+            "texto": texto[:300],
+            "dados": base64.b64encode(jpeg).decode(),
+        }
+        try:
+            self.conexao.texto(json.dumps(mensagem))
+        except FechouErro:
+            return False
+        return True
 
     def tocador(self, taxa: int) -> "TocadorNavegador":
         return TocadorNavegador(self, taxa)
