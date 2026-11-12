@@ -40,7 +40,12 @@ DIA = {'montado': MONTADO, 'ligada': True, 'blocos': [
     {'tipo': 'noticias', 'itens': [{'titulo': 'Manchete', 'fonte': 'G1'}], 'fala': 'Manchete.'},
     {'tipo': 'fim', 'fala': 'Esse é o seu dia.'},
 ]}
-CANAL: dict = {'falas': [], 'sinais': [], 'fala_ate': 0.0, 'musica': 0}
+# The Zé has just started (opening the program starts him): his first panoramas come before the
+# weather, the Instagram and the headlines. The page waits for the complete one.
+INCOMPLETO = {'montado': '2026-11-11T08:59:58-03:00', 'ligada': True, 'completo': False,
+              'blocos': [DIA['blocos'][0], DIA['blocos'][3], DIA['blocos'][-1]]}
+DIA['completo'] = True
+CANAL: dict = {'falas': [], 'sinais': [], 'fala_ate': 0.0, 'musica': 0, 'panoramas': 0}
 SAIDA = Path(tempfile.gettempdir()) / 'jarvis-abertura.png'
 
 
@@ -62,7 +67,8 @@ class Handler(tb.Handler):
 
     def do_GET(self):
         if self.path == '/abertura':
-            self._enviar(json.dumps(DIA).encode())
+            CANAL['panoramas'] += 1
+            self._enviar(json.dumps(INCOMPLETO if CANAL['panoramas'] <= 12 else DIA).encode())
         elif self.path == '/abertura/musica':
             CANAL['musica'] += 1
             self._enviar(_wav(), 'audio/wav')
@@ -158,6 +164,7 @@ async def main():
                 passed.append('the opening tells the Zé it began, so his notices wait until it is over')
                 assert all(f['montado'] == MONTADO and set(f) == {'montado', 'passo'} for f in CANAL['falas'])
                 passed.append('each step asks the Zé for its own line, only by number, then the closing one')
+                passed.append('the page waits for the complete panorama, not the one from before the first fetch')
                 assert await ev('''(() => { const t = [...document.querySelectorAll(".jv-ab h2")].map(h => h.textContent);
                     return t.join("|") === "Hoje|Fortaleza|Hoje|Foco|Sessões de código|Sem resposta|@ana.loja|Manchetes"
                       && /^\\d\\d:\\d\\d$/.test(document.querySelector("[data-relogio]").textContent)

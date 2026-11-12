@@ -1,7 +1,8 @@
 """O lado do Zé na abertura (ADR 0078), pelo mesmo contrato de arquivos da Imersão (ADR 0045):
 
 - `abertura.json`: o Zé grava o panorama do dia uma vez por minuto (a Imersão o serve em
-  `GET /abertura`). O clima e as notícias vêm de um cache renovado em segundo plano;
+  `GET /abertura`). O clima e as notícias vêm de um cache renovado em segundo plano; até a
+  primeira busca terminar, o panorama sai com `completo: false`;
 - `abertura-falar.json`: a página grava `{montado, passo, ts}` (POST /abertura/falar) quando um
   painel aparece, e o Zé fala a fala daquele bloco. A página só escolhe o passo: o texto é
   sempre o do panorama que o próprio Zé montou. O passo -1 diz que a abertura começou e o -2,
@@ -243,6 +244,10 @@ class Abertura:
             partes["foco"],
         )
         dia["ligada"] = self.ler_ajustes().ligada
+        # Abrir o programa sobe o Zé: o primeiro panorama sai antes da primeira busca de fora
+        # terminar. A página espera o completo para não abrir sem o clima, o Instagram e as
+        # manchetes (visto em 11/11/2026: só três cards).
+        dia["completo"] = self.externas.versao > 0
         dia["musica"] = ajustes.musica() is not None
         return dia
 

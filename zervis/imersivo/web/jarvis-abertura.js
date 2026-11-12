@@ -200,21 +200,37 @@
       data: agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }), fala: "" }] };
   }
 
+  // Opening the program starts the Zé: his first panorama comes before the weather, the
+  // Instagram and the headlines (completo: false). The name stays up over the music until the
+  // full one arrives, or a while passes (no network: the day goes without them).
+  async function completar(dia, id) {
+    for (const t0 = performance.now(); dia.completo === false && id === rodada && performance.now() - t0 < 12000 * ritmo;) {
+      await espera(300);
+      try {
+        const r = await fetch("/abertura", { cache: "no-store" });
+        const d = r.ok ? await r.json() : {};
+        if (Array.isArray(d.blocos) && d.blocos.length) dia = d;
+      } catch (_) { /* keep the one in hand */ }
+    }
+    return dia;
+  }
+
   async function iniciar({ musica: comMusica = true, automatica = false } = {}) {
     for (let n = 0; n < 100 && !(window.jarvisStage && window.jarvisApresentacao); n++) await new Promise(r => setTimeout(r, 100));
     if (!window.jarvisApresentacao) return { abertura: false, erro: "apresentação indisponível" };
     encerrar();
     const id = ++rodada; rodando = true; falados.length = 0; feitos = 0;
-    const dia = await panorama();
+    let dia = await panorama();
     if (id !== rodada) return { abertura: false };
     if (automatica && dia.ligada === false) { rodando = false; return { abertura: false, desligada: true }; }
     montado = dia.montado || "";
     sinal(-1);  // the Zé holds his notices until the opening is over
     const som = comMusica ? await tocar() : "sem";
     const v = vinheta(dia);
-    await espera(2600);
+    const [, completo] = await Promise.all([espera(2600), completar(dia, id)]);
+    if (id !== rodada) return { abertura: false };  // skipped: encerrar() took the title away
+    dia = completo; montado = dia.montado || montado;
     v.classList.add("saindo"); setTimeout(() => v.remove(), 900 * ritmo);
-    if (id !== rodada) return { abertura: false };
     clearInterval(relogio); marcarHora(); relogio = setInterval(marcarHora, 1000);
     P().comecar();
     const pronto = P().roteiro(P().rodada, passos(dia, id));
