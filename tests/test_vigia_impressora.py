@@ -100,6 +100,13 @@ def test_o_vigia_junta_o_que_chega_avisa_e_guarda_a_foto(tmp_path: Path) -> None
     )  # fmt: skip
     vigia._conexao = impressora.conexao()
     vigia._tabela = (TEXTOS, "en")
+    mostradas: list[tuple[bytes, str]] = []  # a foto na tela de quem fala (ADR 0086)
+
+    def mostrar(foto: Path, titulo: str) -> str:
+        mostradas.append((foto.read_bytes(), titulo))
+        return ""
+
+    impressora.mostrar = mostrar
     pedaco = {"print": {"gcode_state": "RUNNING", "layer_num": 1, "total_layer_num": 80,
                         "subtask_name": "Suporte-celular.3mf", "nozzle_temper": 210}}  # fmt: skip
     vigia.receber(json.dumps(pedaco).encode())
@@ -110,7 +117,7 @@ def test_o_vigia_junta_o_que_chega_avisa_e_guarda_a_foto(tmp_path: Path) -> None
     )
     vigia.receber(b"lixo")
     for _ in range(100):
-        if len(avisos) == 2 and len(vigia.avisos) == 2:
+        if len(avisos) == 2 and len(vigia.avisos) == 2 and len(mostradas) == 2:
             break
         asyncio.run(asyncio.sleep(0.01))
     assert sorted(avisos) == [
@@ -120,6 +127,8 @@ def test_o_vigia_junta_o_que_chega_avisa_e_guarda_a_foto(tmp_path: Path) -> None
     fotos = list((tmp_path / "fotos").glob("*.jpg"))
     assert fotos and fotos[0].read_bytes() == b"\xff\xd8 foto"
     assert all(a["foto"] for a in vigia.avisos)
+    assert sorted(titulo for _, titulo in mostradas) == sorted(avisos)  # cada aviso, com a foto
+    assert {foto for foto, _ in mostradas} == {b"\xff\xd8 foto"}
     assert [a["fala"] for a in impressora.avisos()] == [a["fala"] for a in vigia.avisos]
 
 
@@ -133,6 +142,18 @@ def test_a_foto_pela_voz(tmp_path: Path) -> None:
     }
     r = asyncio.run(fs["impressora_foto"]({}))
     assert r["content"][1]["type"] == "image" and r["content"][1]["mimeType"] == "image/jpeg"
+    assert "não foi enviada" in r["content"][0]["text"]  # ninguém fala de outro aparelho
+    # "Me manda uma foto da impressão", pelo celular (ADR 0086): a foto vai à tela de quem pediu.
+    enviadas: list[tuple[bytes, str]] = []
+
+    def mostrar(foto: Path, titulo: str) -> str:
+        enviadas.append((foto.read_bytes(), titulo))
+        return "celular"
+
+    impressora.mostrar = mostrar
+    r = asyncio.run(fs["impressora_foto"]({}))
+    assert enviadas == [(b"\xff\xd8 foto", "Câmera da impressora")]
+    assert "enviada ao celular" in r["content"][0]["text"]
     assert "mcp__jarvis__impressora_foto" in LIVRES
 
 

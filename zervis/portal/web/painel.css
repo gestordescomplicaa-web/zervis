@@ -611,3 +611,7 @@ blockquote.trecho { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid v
 .camada-fatia { display:flex; gap:10px; align-items:center; margin-top:8px; }
 .camada-fatia input { flex:1; max-width:520px; }
 .foto-impressora { display:block; width:100%; max-width:720px; margin:10px 0; border-radius:8px; }
+/* A imagem que o Zé manda a quem fala pelo navegador (a foto da câmera): sobre o painel. */
+.imagem-da-voz { position:fixed; inset:0; z-index:70; margin:0; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgb(0 0 0 / .85); cursor:zoom-out; }
+.imagem-da-voz img { max-width:100%; max-height:calc(100dvh - 80px); border-radius:8px; }
+.imagem-da-voz figcaption { color:#fff; font-size:14px; }

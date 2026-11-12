@@ -9,12 +9,17 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,9 +28,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A única tela. Aberta pelo QR do painel (zervis-voz://parear), pareia sozinha; sem pareamento,
- * pede o endereço e o código. Pareado, liga a voz e mostra os ajustes: o modo de ouvir, o
- * microfone de cada aparelho Bluetooth e a atualização do app. Fechar a tela não desliga a voz.
+ * A tela do app. Aberta pelo QR do painel (zervis-voz://parear), pareia sozinha; sem pareamento,
+ * pede o endereço e o código. Pareado, liga a voz e mostra o estado e os ajustes: o modo de ouvir,
+ * a escuta de perto (com o nível do microfone ao vivo, para acertar o mínimo), a saída sem fone,
+ * o microfone de cada aparelho Bluetooth e a atualização do app. Fechar a tela não desliga a voz.
  */
 public final class MainActivity extends Activity {
     static final String ATUALIZAR = "com.zervis.voz.ATUALIZAR"; // a notificação de versão nova
@@ -33,6 +39,37 @@ public final class MainActivity extends Activity {
     private Ajustes ajustes;
     private TextView mensagem;
     private long nova; // a versão publicada mais nova que a instalada (0: nenhuma conhecida)
+    private final Handler relogio = new Handler(Looper.getMainLooper());
+    private TextView estado;
+    private ProgressBar medidor;
+    private TextView leitura;
+    // O estado da voz e o nível do microfone, 6 vezes por segundo, com a tela aberta.
+    private final Runnable atualizarAoVivo = new Runnable() {
+        @Override
+        public void run() {
+            if (estado != null) estado.setText(VozService.estadoAgora.isEmpty() ? "Desconectado" : VozService.estadoAgora);
+            if (medidor != null) medidor.setProgress(VozService.pertoAgora ? VozService.nivelAgora : 0);
+            if (leitura != null) {
+                leitura.setText(VozService.pertoAgora
+                        ? "Nível agora: " + VozService.nivelAgora + " · mínimo: " + ajustes.nivelPerto()
+                        : "Com fone, o microfone já fica perto da boca: passa tudo.");
+            }
+            relogio.postDelayed(this, 160);
+        }
+    };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        relogio.removeCallbacks(atualizarAoVivo);
+        relogio.post(atualizarAoVivo);
+    }
+
+    @Override
+    protected void onPause() {
+        relogio.removeCallbacks(atualizarAoVivo);
+        super.onPause();
+    }
 
     @Override
     protected void onCreate(Bundle salvo) {
@@ -169,9 +206,16 @@ public final class MainActivity extends Activity {
         startService(new Intent(this, VozService.class).setAction(VozService.AJUSTAR));
     }
 
+    private void titulo(LinearLayout tela, String conteudo) {
+        TextView t = texto(tela, conteudo);
+        t.setTextSize(16);
+        t.setPadding(0, (int) (14 * getResources().getDisplayMetrics().density), 0, 0);
+    }
+
     private void painel() {
         LinearLayout tela = coluna();
         texto(tela, "Zé Voz " + Atualizacao.nome(this) + "\n" + Uri.parse(ajustes.endereco()).getHost());
+        estado = texto(tela, VozService.estadoAgora);
 
         boolean aoVivo = Ajustes.AO_VIVO.equals(ajustes.modo());
         botao(tela, aoVivo ? "Ouvir: ao vivo" : "Ouvir: “Ei Zé”", () -> {
@@ -180,8 +224,56 @@ public final class MainActivity extends Activity {
             painel();
         });
 
+        // A escuta de perto (ADR 0086): pelo microfone do celular, só quem fala junto dele.
+        titulo(tela, "Escuta de perto");
+        texto(tela, "Ouve só quem fala junto do microfone, como numa ligação. Ignora conversas e ruídos ao redor.");
+        boolean perto = ajustes.perto();
+        botao(tela, perto ? "Ligada" : "Desligada", () -> {
+            ajustes.perto(!perto);
+            avisarServico();
+            painel();
+        });
+        if (perto) {
+            medidor = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+            medidor.setMax(Proximidade.TETO);
+            tela.addView(medidor);
+            leitura = texto(tela, "");
+            texto(tela, "Mínimo para ouvir (mais alto: mais perto da boca)");
+            SeekBar minimo = new SeekBar(this);
+            minimo.setMax(Proximidade.MAIOR - Proximidade.MENOR);
+            minimo.setProgress(ajustes.nivelPerto() - Proximidade.MENOR);
+            minimo.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar barra, int valor, boolean daPessoa) {
+                    if (daPessoa) ajustes.nivelPerto(valor + Proximidade.MENOR);
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar barra) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar barra) {
+                    avisarServico(); // o mínimo novo vale na hora
+                }
+            });
+            tela.addView(minimo);
+        } else {
+            medidor = null;
+            leitura = null;
+        }
+
         AudioManager audio = getSystemService(AudioManager.class);
         String aparelho = Rota.aparelho(audio);
+        if (aparelho == null && !Rota.temFio(audio)) {
+            titulo(tela, "Saída da voz");
+            boolean orelha = ajustes.orelha();
+            botao(tela, orelha ? "Fone da orelha" : "Alto-falante", () -> {
+                ajustes.orelha(!orelha);
+                avisarServico();
+                painel();
+            });
+        }
         if (aparelho != null) {
             if (Rota.temMicrofone(audio)) {
                 boolean celular = ajustes.microfoneDoCelular(aparelho);
@@ -196,6 +288,7 @@ public final class MainActivity extends Activity {
             }
         }
 
+        titulo(tela, "Atualização");
         botao(tela, nova > Atualizacao.instalada(this) ? "Atualizar para a 0.1." + nova : "Procurar atualização",
                 () -> { if (nova > Atualizacao.instalada(this)) atualizar(); else procurar(); });
         mensagem = texto(tela, "");
@@ -206,7 +299,9 @@ public final class MainActivity extends Activity {
             finish();
         });
         botao(tela, "Fechar", this::finish);
-        setContentView(tela);
+        ScrollView rolagem = new ScrollView(this); // a tela cresceu: no celular pequeno, rola
+        rolagem.addView(tela);
+        setContentView(rolagem);
     }
 
     // --- atualização -------------------------------------------------------------------------

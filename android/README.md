@@ -18,8 +18,9 @@ Feito para uso pessoal, fora da Play Store: instala-se o `.apk` direto no celula
 4. Permita o microfone e as notificações. Pronto: bloqueie a tela.
 
 Depois, para ligar de novo, toque no ícone do Zé Voz. A tela que abre (também ao tocar na
-notificação) tem os ajustes: o modo de ouvir, o microfone do aparelho Bluetooth conectado e a
-atualização do app. Fechá-la não desliga a voz; "Desconectar" desliga.
+notificação) mostra o estado da voz e os ajustes: o modo de ouvir, a escuta de perto, a saída sem
+fone, o microfone do aparelho Bluetooth conectado e a atualização do app. Fechá-la não desliga a
+voz; "Desconectar" desliga.
 
 ## Atualizar
 Uma vez por dia, ao conectar, o app procura versão nova (o `versao.json` publicado junto do APK) e
@@ -48,6 +49,18 @@ apps; depois, só a confirmação. Para isso, as versões precisam da mesma assi
   tela, "Microfone: de <aparelho>" troca para "Microfone: do celular". A fala continua saindo pelo
   aparelho, como mídia, e a escolha fica guardada para ele (pelo nome); os outros seguem a sua.
   Com vários aparelhos Bluetooth conectados, vale o que o Android usa para o som naquele momento.
+- **Escuta de perto** (ADR 0086, ligada por padrão): pelo microfone do celular, só passa quem fala
+  junto dele, como numa ligação fora do viva-voz; a conversa da sala, a TV e a rua vão como
+  silêncio. Com fone (Bluetooth ou com fio), passa tudo. Na tela, a barra mostra o nível do
+  microfone ao vivo e o "Mínimo para ouvir" acerta o corte: fale a um palmo e deixe o mínimo
+  abaixo do seu nível; quem está longe deve ficar abaixo dele.
+- **Saída da voz** sem fone: "Alto-falante" (padrão) ou "Fone da orelha", com o celular no ouvido.
+- **Imagens** (ADR 0086): "me manda uma foto da impressão" e a foto da câmera da impressora chega
+  numa notificação; tocar abre inteira. Os avisos da impressora com foto também. As fotos ficam no
+  cache do app (as 10 mais novas).
+- **Uma voz por vez:** se outro aparelho (o navegador, outro celular) conectar a voz, este mostra
+  "Voz em uso em outro aparelho" e não reconecta sozinho; "Retomar" na notificação traz a voz de
+  volta para ele.
 - O app liga o cancelamento de eco e o de ruído do Android (quando o celular tem). E o Zé descarta
   a transcrição que for um trecho do que ele acabou de dizer (5 palavras ou mais seguidas): o eco
   que escapar não vira pedido. Ao vivo, numa caixa Bluetooth alta, o fone ainda é melhor.
@@ -75,4 +88,4 @@ assina sempre com a mesma chave, criada uma vez por quem mantém:
 Sem a chave, sai (e é publicado) um APK de depuração: funciona, mas cada versão nova pede
 desinstalar a anterior. Ao criar a chave, reinstale uma vez; daí em diante as versões entram por cima.
 
-Localmente, com o JDK 21 e o Android SDK: `cd android && gradle assembleDebug`.
+Localmente, com o JDK 21 e o Android SDK: `cd android && gradle testDebugUnitTest assembleDebug`.

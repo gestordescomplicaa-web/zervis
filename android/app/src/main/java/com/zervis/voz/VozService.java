@@ -54,10 +54,17 @@ import okio.ByteString;
  * volume (ADR 0062). Só a caixa de som Bluetooth sem microfone (ou o aparelho marcado "microfone
  * do celular" na tela) não entra em ligação: a fala sai como mídia e o eco sai no servidor
  * (ADR 0051).
- * Uma vez por dia, ao conectar, procura versão nova do app e avisa numa notificação. No modo chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou
- * "Falar" na notificação) abre o pedido e, de novo, envia. Cai a rede: tenta de novo, com espera
- * crescente, até a pessoa desconectar. Os leads do WhatsApp esperando resposta chegam pelo mesmo
- * canal ({"tipo":"whatsapp"}) e viram notificações próprias ({@link Leads}).
+ * Uma vez por dia, ao conectar, procura versão nova do app e avisa numa notificação. No modo
+ * chamado, o Zé ouve o "Ei Zé" como no microfone do PC; o botão do fone (ou "Falar" na
+ * notificação) abre o pedido e, de novo, envia. Cai a rede: tenta de novo, com espera crescente,
+ * até a pessoa desconectar; se outro aparelho assumiu a voz (4001), não: "Falar" retoma. Os leads
+ * do WhatsApp esperando resposta chegam pelo mesmo canal ({"tipo":"whatsapp"}) e viram
+ * notificações próprias ({@link Leads}); as imagens que o Zé manda (a foto da câmera da impressora,
+ * {"tipo":"imagem"}) também ({@link Imagem}).
+ *
+ * Escuta de perto (ADR 0086): pelo microfone do próprio celular, só passa a voz de quem fala junto
+ * dele ({@link Proximidade}); o resto vai como silêncio. Com um fone (Bluetooth ou com fio), o
+ * microfone já está na boca: passa tudo.
  */
 public final class VozService extends Service {
     static final String LIGAR = "ligar";
@@ -78,6 +85,13 @@ public final class VozService extends Service {
     // como mídia (a caixa de som), e uma folga nos outros (o fone em ligação, o alto-falante).
     private static final long CAUDA_BLUETOOTH_MS = 800;
     private static final long CAUDA_MS = 300;
+    /** O Zé fechou a voz porque outro aparelho conectou a dele (zervis/transporte/navegador.py). */
+    static final int ASSUMIDA = 4001;
+
+    // Para a tela (MainActivity): o estado da conexão e o nível do microfone agora (0 a 60).
+    static volatile String estadoAgora = "";
+    static volatile int nivelAgora;
+    static volatile boolean pertoAgora; // a escuta de perto vale neste momento (o microfone do celular)
 
     private final Handler principal = new Handler(Looper.getMainLooper());
     private final ExecutorService tocar = Executors.newSingleThreadExecutor();
@@ -99,7 +113,9 @@ public final class VozService extends Service {
     private volatile boolean ligado;
     private volatile boolean falando; // o pedido aberto pelo botão (apertar) ainda não foi enviado
     private int quedas;
+    private volatile boolean conectando;
     private volatile boolean chamada; // a fala vai como numa ligação (tudo menos a caixa Bluetooth)
+    private volatile Proximidade perto; // a escuta de perto, se vale agora (null: passa tudo)
     private final AudioDeviceCallback aparelhos = new AudioDeviceCallback() {
         @Override
         public void onAudioDevicesAdded(AudioDeviceInfo[] novos) { escolherSaida(); }
@@ -131,6 +147,7 @@ public final class VozService extends Service {
         avisos.createNotificationChannel(canal);
         Leads.criarCanal(this);
         Ligacao.criarCanal(this);
+        Imagem.criarCanal(this);
     }
 
     @Override
@@ -141,7 +158,13 @@ public final class VozService extends Service {
                 desligar();
                 return START_NOT_STICKY;
             case FALAR:
-                if (ligado) falar();
+                if (ligado && ws == null && !conectando) {
+                    quedas = 0; // retomar a voz que outro aparelho assumiu (ou que caiu)
+                    principal.removeCallbacksAndMessages(null);
+                    conectar();
+                } else if (ligado) {
+                    falar();
+                }
                 return START_STICKY;
             case MODO:
                 ajustes.trocarModo();
@@ -232,6 +255,10 @@ public final class VozService extends Service {
             audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
             if (fone) usarFoneBluetooth(true); else usarOProprioCelular();
         }
+        // A escuta de perto vale no microfone do próprio celular; o do fone já está na boca.
+        boolean microfoneDoCelular = !fone && !Rota.temFio(audio);
+        perto = ajustes.perto() && microfoneDoCelular ? new Proximidade(ajustes.nivelPerto()) : null;
+        pertoAgora = perto != null;
         boolean ligacao = !caixa;
         if (ligacao == chamada) return;
         chamada = ligacao;
@@ -261,24 +288,25 @@ public final class VozService extends Service {
         }
     }
 
-    /** Sem Bluetooth: a ligação no viva-voz (ou no fone com fio, se estiver plugado). No modo de
-     * ligação, sem isto, a fala iria ao fone da orelha do celular. */
+    /** Sem Bluetooth: a ligação no viva-voz (ou no fone com fio, se estiver plugado), ou no fone
+     * da orelha, se a pessoa escolheu ouvir com o celular no ouvido, como numa ligação. */
     @SuppressWarnings("deprecation")
     private void usarOProprioCelular() {
         if (Build.VERSION.SDK_INT >= 31) {
-            AudioDeviceInfo altoFalante = null;
+            AudioDeviceInfo saida = null;
+            int querido = ajustes.orelha() ? AudioDeviceInfo.TYPE_BUILTIN_EARPIECE : AudioDeviceInfo.TYPE_BUILTIN_SPEAKER;
             for (AudioDeviceInfo d : audio.getAvailableCommunicationDevices()) {
                 int tipo = d.getType();
                 if (tipo == AudioDeviceInfo.TYPE_WIRED_HEADSET || tipo == AudioDeviceInfo.TYPE_USB_HEADSET) {
                     audio.setCommunicationDevice(d);
                     return;
                 }
-                if (tipo == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) altoFalante = d;
+                if (tipo == querido) saida = d;
             }
-            if (altoFalante != null) audio.setCommunicationDevice(altoFalante);
+            if (saida != null) audio.setCommunicationDevice(saida);
         } else {
             legadoBluetooth(false);
-            audio.setSpeakerphoneOn(!Rota.temFio(audio));
+            audio.setSpeakerphoneOn(!Rota.temFio(audio) && !ajustes.orelha());
         }
     }
 
@@ -296,6 +324,7 @@ public final class VozService extends Service {
 
     private void conectar() {
         if (!ligado) return;
+        conectando = true;
         mostrar("Conectando…");
         String endereco = ajustes.endereco().replaceFirst("^http", "ws");
         Request pedido = new Request.Builder()
@@ -314,6 +343,7 @@ public final class VozService extends Service {
                 }
                 quedas = 0;
                 falando = false;
+                conectando = false;
                 principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(modoDaConexao) ? "Ao vivo" : "Diga “Ei Zé” ou toque em Falar"));
                 gravar(s);
                 procurarVersao();
@@ -334,6 +364,8 @@ public final class VozService extends Service {
                     } else if ("whatsapp".equals(tipo)) {
                         JSONArray leads = m.optJSONArray("leads");
                         if (leads != null) principal.post(() -> Leads.mostrar(VozService.this, leads));
+                    } else if ("imagem".equals(tipo)) {
+                        Imagem.receber(VozService.this, m); // decodifica e grava aqui, fora da tela
                     } else if ("parar".equals(tipo)) {
                         tocar.execute(() -> {
                             if (falante != null) { falante.pause(); falante.flush(); falante.play(); }
@@ -363,13 +395,13 @@ public final class VozService extends Service {
 
             @Override
             public void onClosed(WebSocket s, int codigo, String motivo) {
-                caiu(s, false);
+                caiu(s, false, codigo == ASSUMIDA);
             }
 
             @Override
             public void onFailure(WebSocket s, Throwable erro, Response resposta) {
                 boolean recusado = resposta != null && resposta.code() == 403;
-                caiu(s, recusado);
+                caiu(s, recusado, false);
             }
         });
     }
@@ -401,7 +433,10 @@ public final class VozService extends Service {
             while (ligado && s == ws && !Thread.currentThread().isInterrupted()) {
                 int lidos = este.read(quadro, 0, QUADRO);
                 if (lidos <= 0) continue;
-                if (SystemClock.elapsedRealtime() < surdoAte) Arrays.fill(quadro, 0, lidos, (byte) 0);
+                Proximidade p = perto;
+                boolean passa = p == null || p.passa(quadro, lidos);
+                nivelAgora = p != null ? p.nivel() : 0;
+                if (!passa || SystemClock.elapsedRealtime() < surdoAte) Arrays.fill(quadro, 0, lidos, (byte) 0);
                 s.send(ByteString.of(quadro, 0, lidos));
             }
         }, "ze-voz-microfone");
@@ -456,11 +491,18 @@ public final class VozService extends Service {
         surdoAte = Math.max(tocandoAte, SystemClock.elapsedRealtime()) + cauda;
     }
 
-    private void caiu(WebSocket s, boolean recusado) {
+    private void caiu(WebSocket s, boolean recusado, boolean assumida) {
         if (s != ws) return; // uma conexão antiga
         ws = null;
+        conectando = false;
         pararCaptura();
         if (!ligado) return;
+        if (assumida) {
+            // Outro aparelho conectou a voz (o Zé ouve um por vez): reconectar sozinho derrubaria o
+            // outro, e os dois ficariam se derrubando. "Falar" retoma.
+            principal.post(() -> mostrar("Voz em uso em outro aparelho"));
+            return;
+        }
         if (recusado) {
             ajustes.esquecer();
             principal.post(() -> { mostrar("Pareie de novo no painel do Zé"); desligar(); });
@@ -517,6 +559,8 @@ public final class VozService extends Service {
 
     private void desligar() {
         ligado = false;
+        estadoAgora = "";
+        pertoAgora = false;
         principal.removeCallbacksAndMessages(null);
         WebSocket s = ws;
         ws = null;
@@ -534,6 +578,7 @@ public final class VozService extends Service {
 
     private void mostrar(String texto) {
         estado = texto;
+        estadoAgora = texto;
         if (ligado) getSystemService(NotificationManager.class).notify(AVISO, aviso());
     }
 
@@ -546,7 +591,7 @@ public final class VozService extends Service {
                 .setOngoing(true)
                 .setCategory(Notification.CATEGORY_CALL)
                 .setContentIntent(PendingIntent.getActivity(this, 5, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE))
-                .addAction(new Notification.Action.Builder(null, falando ? "Enviar" : "Falar", acao(FALAR, 1)).build())
+                .addAction(new Notification.Action.Builder(null, ws == null && !conectando ? "Retomar" : falando ? "Enviar" : "Falar", acao(FALAR, 1)).build())
                 .addAction(new Notification.Action.Builder(null, aoVivo ? "Usar “Ei Zé”" : "Ao vivo", acao(MODO, 2)).build())
                 .addAction(new Notification.Action.Builder(null, "Desconectar", acao(DESLIGAR, 3)).build())
                 .build();

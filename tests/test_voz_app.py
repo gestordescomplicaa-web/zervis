@@ -1,5 +1,6 @@
 """O app de voz do Android (`zervis/portal/voz_app.py`): pareamento e o canal de voz dele."""
 
+import base64
 import json
 import queue
 import stat
@@ -19,7 +20,7 @@ from zervis.nucleo.servicos.remoto import ServicoRemoto
 from zervis.portal import voz_app
 from zervis.portal.servidor import Portal
 from zervis.transporte.entrada import Entrada
-from zervis.transporte.navegador import BYTES_QUADRO, VozNavegador
+from zervis.transporte.navegador import ASSUMIDA, BYTES_QUADRO, MAX_IMAGEM, VozNavegador
 from zervis.transporte.websocket import Conexao
 
 
@@ -176,6 +177,8 @@ class ConexaoQueFecha:
     def __init__(self, mensagens: list[str]) -> None:
         self.aberta = True
         self.mensagens = mensagens
+        self.codigo = 0
+        self.enviadas: list[dict[str, Any]] = []
 
     def receber(self) -> tuple[int, bytes]:
         from zervis.transporte.websocket import TEXTO, FechouErro
@@ -184,11 +187,12 @@ class ConexaoQueFecha:
             raise FechouErro
         return TEXTO, self.mensagens.pop(0).encode()
 
-    def fechar(self) -> None:
+    def fechar(self, codigo: int = 0) -> None:
         self.aberta = False
+        self.codigo = codigo
 
-    def texto(self, _m: str) -> None:
-        pass
+    def texto(self, m: str) -> None:
+        self.enviadas.append(json.loads(m))
 
 
 def _eventos(n: Any) -> list[Any]:
@@ -261,3 +265,24 @@ def test_trocar_o_navegador_ao_vivo_pelo_app_no_chamado_desliga_o_ao_vivo() -> N
     servico._fonte_remota(app, True)
     assert n._fonte is app and _eventos(n) == [e.AoVivo(False)]
     assert not navegador.conexao.aberta  # a anterior foi fechada
+    # ...com o motivo: sem ele, o app reconectava em 2 s e os dois aparelhos se derrubavam.
+    assert navegador.conexao.codigo == ASSUMIDA  # type: ignore[attr-defined]
+
+
+def test_a_imagem_vai_a_tela_de_quem_fala_de_outro_aparelho(tmp_path: Path) -> None:
+    servico, n = _remoto()
+    foto = tmp_path / "foto.jpg"
+    foto.write_bytes(b"\xff\xd8 a mesa da impressora")
+    assert servico.imagem_ao_aparelho(foto, "Câmera da impressora") == ""  # quem fala está no PC
+    conexao = ConexaoQueFecha([])
+    n._fonte = VozNavegador(conexao, do_app=True)  # type: ignore[arg-type]
+    assert servico.imagem_ao_aparelho(foto, "Câmera da impressora") == "celular"
+    (m,) = conexao.enviadas
+    assert m["tipo"] == "imagem" and m["titulo"] == "Câmera da impressora" and m["id"]
+    assert base64.b64decode(m["dados"]) == foto.read_bytes()
+    n._fonte = VozNavegador(ConexaoQueFecha([]))  # type: ignore[arg-type]
+    assert servico.imagem_ao_aparelho(foto, "Câmera da impressora") == "navegador"
+    assert servico.imagem_ao_aparelho(tmp_path / "sumiu.jpg", "Câmera") == ""
+    grande = tmp_path / "grande.jpg"
+    grande.write_bytes(b"\0" * (MAX_IMAGEM + 1))
+    assert servico.imagem_ao_aparelho(grande, "Câmera") == ""

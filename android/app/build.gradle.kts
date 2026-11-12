@@ -59,4 +59,5 @@ android {
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
+    testImplementation("junit:junit:4.13.2") // a lógica sem Android (Proximidade), na CI
 }

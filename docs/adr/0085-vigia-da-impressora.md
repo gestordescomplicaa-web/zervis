@@ -30,7 +30,8 @@ conferir antes do sim.
    cancelada, não como falha.
 4. **A câmera:** nos avisos de erro, de fim e da primeira camada, uma foto da câmera da impressora
    (porta 6000, o protocolo da Bambu) fica em `<dados>/impressora/fotos` (as 20 mais novas). Pela
-   voz, `impressora_foto` mostra a mesa ao cérebro; no painel, "Ver câmera".
+   voz, `impressora_foto` mostra a mesa ao cérebro (e, desde a ADR 0086, a manda à tela de quem
+   fala pelo celular ou pelo navegador); no painel, "Ver câmera".
 5. **Imprimir mais seguro:** o Zé mede no STL a área das faces inclinadas além de 45° que ficariam
    no ar (fora da mesa); acima de 25 mm², liga o suporte em árvore automático, com as pontes sem
    suporte. O teto reto não conta: a impressora faz ponte (o suporte de garrafinha de quem usa

@@ -233,6 +233,9 @@ class Impressora3D:
         self.publicar: Callable[[dict[str, Any]], bool] | None = None
         self.ao_mudar: Callable[[], None] | None = None  # a conexão mudou: o vigia reconecta
         self.fotografar: Callable[[], Path] | None = None  # a câmera, pelo vigia
+        # A foto na tela de quem fala de outro aparelho (o núcleo, ADR 0086): devolve onde ela
+        # apareceu ("celular", "navegador") ou "" se ninguém está conectado.
+        self.mostrar: Callable[[Path, str], str] | None = None
         self.avisos: Callable[[], list[dict[str, Any]]] = lambda: []  # os últimos, do vigia
 
     # ---- a conexão de quem usa ----

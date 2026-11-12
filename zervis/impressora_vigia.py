@@ -290,6 +290,8 @@ class Vigia:
         with self._trava:
             self.avisos = [aviso, *self.avisos][:AVISOS]
         self._avisar(evento["fala"])
+        if caminho and self.impressora.mostrar is not None:
+            self.impressora.mostrar(Path(caminho), evento["fala"])  # no celular, com a foto
 
     def guardar_foto(self, jpeg: bytes) -> Path:
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)

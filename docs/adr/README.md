@@ -93,3 +93,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0083](0083-imprimir-pela-rede-local.md) | Fatiar e imprimir pela rede local, com o sim de quem usa | Aceita |
 | [0084](0084-modo-tv.md) | O Modo TV: uma página leve na TV da casa, aberta pelo navegador dela | Aceita |
 | [0085](0085-vigia-da-impressora.md) | O vigia da impressora: erros na hora, impressão mais segura e a câmera | Aceita |
+| [0086](0086-app-de-voz-escuta-de-perto-e-imagens.md) | O app de voz: escuta de perto, imagens no celular e uma voz por vez sem briga | Em validação |

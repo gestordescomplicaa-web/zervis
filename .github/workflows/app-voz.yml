@@ -49,6 +49,10 @@ jobs:
             echo "ZE_VOZ_KEYSTORE=$RUNNER_TEMP/ze-voz.p12" >> "$GITHUB_ENV"
           fi
 
+      - name: Testes de unidade
+        working-directory: android
+        run: gradle --no-daemon testDebugUnitTest
+
       - name: Compilar
         working-directory: android
         env:

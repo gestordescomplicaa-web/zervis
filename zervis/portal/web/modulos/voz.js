@@ -68,6 +68,26 @@ let medidores = { voz: null, mic: null };
   requestAnimationFrame(animarHolograma);
 })();
 
+// Uma imagem que o Zé manda a quem fala por aqui (a foto da câmera da impressora, ADR 0086):
+// abre sobre o painel; um toque (ou Esc) fecha.
+function mostrarImagem(m) {
+  if (typeof m.dados !== "string" || !m.dados) return;
+  document.querySelector(".imagem-da-voz")?.remove();
+  const quadro = document.createElement("figure"), img = document.createElement("img"), legenda = document.createElement("figcaption");
+  quadro.className = "imagem-da-voz";
+  quadro.tabIndex = 0;
+  quadro.setAttribute("role", "dialog");
+  quadro.setAttribute("aria-label", m.titulo || "Imagem");
+  img.src = `data:image/jpeg;base64,${m.dados}`;
+  img.alt = m.titulo || "Imagem";
+  legenda.textContent = m.titulo || "";
+  quadro.append(img, legenda);
+  quadro.addEventListener("click", () => quadro.remove());
+  quadro.addEventListener("keydown", (ev) => { if (ev.key === "Escape") quadro.remove(); });
+  document.body.append(quadro);
+  quadro.focus();
+}
+
 function tocadorVoz() {
   const ctx = new AudioContext(), tocando = new Set(), m = medidor(ctx);
   m.no.connect(ctx.destination); medidores.voz = m;
@@ -77,6 +97,7 @@ function tocadorVoz() {
     controle(m) {
       if (m.tipo === "voz") taxa = m.taxa;
       if (m.tipo === "parar") { tocando.forEach((f) => f.stop()); tocando.clear(); proximo = 0; }
+      if (m.tipo === "imagem") mostrarImagem(m);
     },
     pedaco(dados) {
       const pcm = new Int16Array(dados), buf = ctx.createBuffer(1, pcm.length, taxa), canal = buf.getChannelData(0);
@@ -162,6 +183,7 @@ async function conectarVoz(religando) {
       const queda = !conexao.pedido && ev.code === 1006;
       avisarVoz(conexao.pedido ? "desligou" : queda ? "caiu" : "encerrada", ev.code);
       fim();
+      if (ev.code === 4001) toast("Voz em uso em outro aparelho."); // o Zé ouve um por vez
       if (queda) {
         if (Date.now() - inicio > 30000) religarVoz.tentativas = 0;
         agendarReligar();

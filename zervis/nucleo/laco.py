@@ -435,6 +435,7 @@ class Nucleo(
             DADOS,
             lambda texto: self.eventos.put(e.Aviso(texto, pedido=True)),
             lambda: self.maquina.estado is e.Estado.FALANDO,
+            lambda caminho, titulo: self.imagem_ao_aparelho(caminho, titulo),
         )
         self.ferramentas_por_grupo = ferramentas.por_grupo(
             self.sessoes,

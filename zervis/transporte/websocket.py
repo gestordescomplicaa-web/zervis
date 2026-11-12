@@ -117,8 +117,10 @@ class Conexao:
     def binario(self, dados: bytes) -> None:
         self._enviar(BINARIO, dados)
 
-    def fechar(self) -> None:
+    def fechar(self, codigo: int = 0) -> None:
+        """Fecha a conexão; o `codigo` (4000 a 4999, os da aplicação) diz o motivo a quem está
+        do outro lado."""
         if self.aberta:
             with contextlib.suppress(FechouErro):
-                self._enviar(FECHAR, b"")
+                self._enviar(FECHAR, struct.pack("!H", codigo) if codigo else b"")
         self.aberta = False

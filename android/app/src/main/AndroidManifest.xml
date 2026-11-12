@@ -38,6 +38,12 @@
             </intent-filter>
         </activity>
 
+        <!-- A foto que o Zé mandou (a câmera da impressora), aberta pela notificação. -->
+        <activity
+            android:name=".ImagemActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
+
         <service
             android:name=".VozService"
             android:exported="false"
