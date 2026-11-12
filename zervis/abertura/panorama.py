@@ -23,7 +23,8 @@ MESES = ("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "a
          "setembro", "outubro", "novembro", "dezembro")  # fmt: skip
 NUMEROS = ("zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove", "dez")
 FALADOS = 3  # quantos itens de cada bloco o Zé fala (o painel mostra mais)
-MANCHETES_FALADAS = 2
+NOMES_FALADOS = 2  # compromissos e contatos ditos pelo nome; o resto vira "mais dois"
+MANCHETES_FALADAS = 1
 MOSTRADOS = 5
 PENDENCIAS_MOSTRADAS = 6
 CHUVA_PROVAVEL = 50  # % de chance numa hora para ela contar como hora de chuva
@@ -164,12 +165,13 @@ def _hora_de_chuva(c: Clima | None, hora: int) -> bool:
 
 
 def _fala_do_clima(c: Clima, agora: datetime) -> str:
+    """Curta: a máxima e a mínima ficam no painel."""
     fala = f"Em {c.cidade}, faz {c.temperatura} graus"
-    fala += f", com {c.ceu}." if c.ceu else "."
-    fala += f" Máxima de {c.maxima} e mínima de {c.minima}"
+    if c.ceu:
+        fala += f", com {c.ceu}"
     if c.chuva < 20:
         return fala + "."
-    fala += f", com {c.chuva} por cento de chance de chuva"
+    fala += f", e {c.chuva} por cento de chance de chuva"
     # a primeira hora de chuva que ainda vem (se já chove agora, não precisa dizer)
     if not _hora_de_chuva(c, agora.hour):
         vem = next((h for h in range(agora.hour + 1, 24) if _hora_de_chuva(c, h)), None)
@@ -195,15 +197,12 @@ def _agora(agora: datetime, nome: str, c: Clima | None) -> dict[str, Any]:
 
 
 def _fala_do_foco(f: Foco) -> str:
+    """Curta: o próximo passo, que é o que se faz agora; o resto das frentes fica no painel."""
+    if f.proximo_passo:
+        return f"No foco, o próximo passo é {f.proximo_passo.rstrip('.')}."
     if f.atual:
-        fala = f"No foco, você estava em {f.atual.rstrip('.')}"
-        fala += f"; o próximo passo é {f.proximo_passo.rstrip('.')}." if f.proximo_passo else "."
-    else:
-        fala = "No foco, nenhuma frente ativa agora."
-    if f.travadas:
-        travadas = quantos(f.travadas, "frente está travada", "frentes estão travadas", True)
-        fala += f" {_maiuscula(travadas)}."
-    return fala  # as feitas na semana ficam só no painel: a fala é curta
+        return f"No foco, você estava em {f.atual.rstrip('.')}."
+    return "No foco, nenhuma frente ativa agora."
 
 
 def _hoje(itens: Sequence[Item], foco: Foco | None, c: Clima | None) -> dict[str, Any]:
@@ -213,7 +212,7 @@ def _hoje(itens: Sequence[Item], foco: Foco | None, c: Clima | None) -> dict[str
     automacoes = [i for i in itens if i.tipo == "automacao"]
     frases = []
     if compromissos:
-        partes = [f"às {hora_falada(i.quando)}, {i.titulo}" for i in compromissos[:FALADOS]]
+        partes = [f"às {hora_falada(i.quando)}, {i.titulo}" for i in compromissos[:NOMES_FALADOS]]
         frases.append(
             f"Hoje você tem {quantos(len(compromissos), 'compromisso', 'compromissos')}: "
             f"{enumerar(partes)}."
@@ -223,11 +222,10 @@ def _hoje(itens: Sequence[Item], foco: Foco | None, c: Clima | None) -> dict[str
         if molhado is not None:
             frases.append(f"Há chuva prevista para a hora de {molhado.titulo.rstrip('.')}.")
     if automacoes:
-        partes = [f"{i.titulo}, às {hora_falada(i.quando)}" for i in automacoes[:FALADOS]]
         comeco = "E" if compromissos else "Hoje"
-        frases.append(
+        frases.append(  # só quantas: os nomes e as horas estão no painel
             f"{comeco} {'roda' if len(automacoes) == 1 else 'rodam'} "
-            f"{quantos(len(automacoes), 'automação', 'automações', True)}: {enumerar(partes)}."
+            f"{quantos(len(automacoes), 'automação', 'automações', True)}."
         )
     if foco is not None:
         frases.append(_fala_do_foco(foco))
@@ -253,7 +251,7 @@ def _fala_do_whatsapp(conversas: Sequence[Conversa]) -> str:
     verbo = "espera" if len(conversas) == 1 else "esperam"
     # só nomes: um número de telefone lido dígito por dígito não diz nada (visto em 11/11/2026)
     nomes = [c.nome for c in conversas if not c.nome.lstrip("+").replace(" ", "").isdigit()]
-    falados = nomes[:FALADOS]
+    falados = nomes[:NOMES_FALADOS]
     resto = len(conversas) - len(falados)
     if not falados:
         return f"No WhatsApp, {total} {verbo} resposta."
@@ -280,16 +278,11 @@ def _whatsapp(conversas: Sequence[Conversa], agora: float) -> dict[str, Any]:
 
 def _instagram(ig: Instagram, agora: datetime) -> tuple[dict[str, Any], str]:
     semana = [p for p in ig.publicacoes if agora.timestamp() - p.quando <= SEMANA_S]
-    fala = f"No Instagram, você tem {curto(ig.seguidores)} seguidores."
-    if semana:
-        melhor = max(semana, key=lambda p: p.visualizacoes)
-        saiu = "saiu" if len(semana) == 1 else "saíram"
-        fala += (
-            f" Nesta semana {saiu} {quantos(len(semana), 'publicação', 'publicações', True)}; "
-            f"a que mais rendeu teve {curto(melhor.visualizacoes)} visualizações."
-        )
+    fala = f"No Instagram, você tem {curto(ig.seguidores)} seguidores"
+    if semana:  # curta: a publicação que mais rendeu fica no painel
+        fala += f" e {quantos(len(semana), 'publicação', 'publicações', True)} nesta semana."
     else:
-        fala += " Nesta semana não saiu publicação nova."
+        fala += ", sem publicação nova nesta semana."
     grafico = list(reversed(ig.publicacoes[:NO_GRAFICO]))  # a mais antiga à esquerda
     destaque = max(semana or ig.publicacoes, key=lambda p: p.visualizacoes, default=None)
     return {

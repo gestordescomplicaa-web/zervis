@@ -70,13 +70,12 @@ def test_o_dia_completo_em_cenas_pelo_menu_e_falado() -> None:
     assert list(blocos) == ["agora", "hoje", "redes", "atividade", "pendencias", "noticias", "fim"]
     assert blocos["agora"]["fala"] == (
         "Bom dia, Ana. Hoje é quarta-feira, 11 de novembro. "
-        "Em Fortaleza, faz 30 graus, com garoa fraca. Máxima de 31 e mínima de 24, "
-        "com 40 por cento de chance de chuva."
+        "Em Fortaleza, faz 30 graus, com garoa fraca, e 40 por cento de chance de chuva."
     )
     assert blocos["agora"]["clima"]["cidade"] == "Fortaleza"
     assert blocos["hoje"]["fala"] == (
         "Hoje você tem dois compromissos: às 14 horas, Reunião da equipe e às 16 horas e 30, "
-        "Dentista. E roda uma automação: Relatório, às 18 horas."
+        "Dentista. E roda uma automação."
     )
     assert [i["hora"] for i in blocos["hoje"]["itens"]] == ["14:00", "16:30", "18:00"]
     assert blocos["hoje"]["foco"] is None
@@ -94,7 +93,7 @@ def test_o_dia_completo_em_cenas_pelo_menu_e_falado() -> None:
     ]
     assert blocos["pendencias"]["fala"] == "Um item pede você: a sessão Loja parou no meio."
     assert len(blocos["noticias"]["itens"]) == panorama.MOSTRADOS
-    assert blocos["noticias"]["fala"] == "Nas manchetes de hoje: Manchete 0. Manchete 1."
+    assert blocos["noticias"]["fala"] == "Nas manchetes de hoje: Manchete 0."
     assert blocos["fim"]["fala"] == panorama.FECHAMENTO
     # toda fala da abertura é reconhecida pelo jeito (nunca volta como aviso)
     assert all(panorama.JEITO_DE_FALA.match(b["fala"]) for b in dia["blocos"])
@@ -115,16 +114,14 @@ def test_o_foco_e_o_instagram_entram_com_os_numeros_para_os_graficos() -> None:
     dia = panorama.montar(MANHA, "Ana", CLIMA, instagram=ig, foco=foco)
     blocos = {b["tipo"]: b for b in dia["blocos"]}
     assert list(blocos) == ["agora", "hoje", "redes", "fim"]
-    assert blocos["hoje"]["fala"] == (
-        "No foco, você estava em Lançar a loja; o próximo passo é subir as fotos. "
-        "Uma frente está travada."
-    )
+    assert blocos["hoje"]["fala"] == "No foco, o próximo passo é subir as fotos."
+    sem_passo = panorama.montar(MANHA, foco=foco._replace(proximo_passo=""))["blocos"][1]
+    assert sem_passo["fala"] == "No foco, você estava em Lançar a loja."
     assert (blocos["hoje"]["foco"]["ativas"], blocos["hoje"]["foco"]["feitas_semana"]) == (2, 3)
     assert blocos["hoje"]["itens"] == []
     instagram = blocos["redes"]["instagram"]
     assert blocos["redes"]["fala"] == (
-        "No Instagram, você tem 15,3 mil seguidores. Nesta semana saíram duas publicações; "
-        "a que mais rendeu teve 12 mil visualizações."
+        "No Instagram, você tem 15,3 mil seguidores e duas publicações nesta semana."
     )
     # o gráfico: da mais antiga para a mais nova; o destaque é o melhor da semana
     assert [g["valor"] for g in instagram["grafico"]] == [30000, 4000, 12000]
@@ -132,7 +129,7 @@ def test_o_foco_e_o_instagram_entram_com_os_numeros_para_os_graficos() -> None:
     assert instagram["semana"] == 2
     parado = panorama.Instagram("ana.loja", 980, [])
     assert panorama.montar(MANHA, instagram=parado)["blocos"][1]["fala"] == (
-        "No Instagram, você tem 980 seguidores. Nesta semana não saiu publicação nova."
+        "No Instagram, você tem 980 seguidores, sem publicação nova nesta semana."
     )
     # sem frente nenhuma e sem agenda, não há a cena de hoje
     vazio = panorama.Foco("", "", 0, 0, 0, 0)
@@ -150,7 +147,7 @@ def test_no_whatsapp_o_ze_fala_nomes_nunca_numeros() -> None:
         panorama.Conversa("Duda", agora - 300),
     ]
     fala = panorama.montar(MANHA, conversas=conversas)["blocos"][1]["fala"]
-    assert fala == "No WhatsApp, cinco conversas esperam resposta: Ana, Bia, Caio e mais duas."
+    assert fala == "No WhatsApp, cinco conversas esperam resposta: Ana, Bia e mais três."
     so_numeros = [panorama.Conversa("+55 11 99999-0000".replace("-", ""), agora - 60)]
     assert panorama.montar(MANHA, conversas=so_numeros)["blocos"][1]["fala"] == (
         "No WhatsApp, uma conversa espera resposta."
@@ -206,7 +203,7 @@ def test_o_clima_cruza_com_a_agenda() -> None:
         panorama.Item(MANHA.replace(hour=15, minute=0), "Reunião", "compromisso"),
     ]
     blocos = panorama.montar(MANHA, clima=molhado, hoje=hoje)["blocos"]
-    assert blocos[0]["fala"].endswith("com 80 por cento de chance de chuva, a partir das 14 horas.")
+    assert blocos[0]["fala"].endswith("e 80 por cento de chance de chuva, a partir das 14 horas.")
     assert blocos[1]["fala"] == (
         "Hoje você tem dois compromissos: às 10 horas, Café e às 15 horas, Reunião. "
         "Há chuva prevista para a hora de Reunião."
@@ -214,7 +211,7 @@ def test_o_clima_cruza_com_a_agenda() -> None:
     assert [i["chuva"] for i in blocos[1]["itens"]] == [False, True]
     # já chovendo agora, a hora não precisa ser dita
     agora = panorama.montar(MANHA.replace(hour=15), clima=molhado)["blocos"][0]["fala"]
-    assert agora.endswith("com 80 por cento de chance de chuva.")
+    assert agora.endswith("e 80 por cento de chance de chuva.")
 
 
 def test_o_instagram_da_abertura_le_so_as_publicacoes_novas() -> None:
@@ -267,8 +264,7 @@ def test_sem_rede_o_instagram_fica_o_ultimo_lido() -> None:
 def test_pouca_chance_de_chuva_nao_entra_na_fala() -> None:
     seco = CLIMA._replace(chuva=10, ceu="")
     assert panorama.montar(MANHA, clima=seco)["blocos"][0]["fala"] == (
-        "Bom dia. Hoje é quarta-feira, 11 de novembro. "
-        "Em Fortaleza, faz 30 graus. Máxima de 31 e mínima de 24."
+        "Bom dia. Hoje é quarta-feira, 11 de novembro. Em Fortaleza, faz 30 graus."
     )
 
 
@@ -622,6 +618,31 @@ def test_enquanto_a_abertura_roda_os_avisos_esperam(abertura: Abertura, tmp_path
     desligada = Abertura(tmp_path, _fontes(tmp_path, MANHA), _externas(),
                          lambda: ajustes.Ajustes(False, "Recife"))  # fmt: skip
     assert not desligada.rodando()
+
+
+def test_a_fala_de_uma_cena_sai_inteira_nunca_como_manchete(
+    abertura: Abertura, tmp_path: Path
+) -> None:
+    from zervis.avisos import modo
+    from zervis.nucleo import voz_tipos
+    from zervis.nucleo.servicos.avisos import ServicoAvisos
+
+    # Visto em 11/11/2026: com as cenas, as falas passaram de 30 palavras, e a regra dos avisos
+    # longos cortava cada uma e dizia "O resto está na tela".
+    longa = "Bom dia, Ana. Hoje é quarta-feira, 11 de novembro. " + "E mais uma coisa do dia. " * 8
+    assert modo.manchete(longa).endswith("O resto está na tela.")
+    abertura._faladas.add(longa.strip())
+    na_tela: list[str] = []
+    n: Any = SimpleNamespace(
+        abertura=abertura, avisos_lidos={}, _avisos_dados={}, _comecados={}, _cortados=set(),
+        _na_tela=set(), _meta={}, _na_linha=lambda tipo, texto: na_tela.append(texto),
+    )  # fmt: skip
+    pedido = voz_tipos.Aviso(longa.strip(), pedido=True)
+    assert ServicoAvisos(n)._regras_de_fala(pedido) is pedido  # inteira, e segue "pedida"
+    assert na_tela == []  # o painel da cena já está na tela: o texto não vira linha de aviso
+    # um aviso comum do mesmo tamanho continua virando manchete
+    comum = ServicoAvisos(n)._regras_de_fala(voz_tipos.Aviso("O relatório ficou pronto. " * 12))
+    assert comum is not None and comum.texto.endswith("O resto está na tela.")
 
 
 def test_os_avisos_nao_atropelam_a_abertura(tmp_path: Path) -> None:
