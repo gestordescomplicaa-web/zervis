@@ -102,6 +102,28 @@ terminal (teste 5).
    gancho), bloqueadas em `disabled_tools`. Sem terminal (`codex exec`), só as livres, como
    antes.
 
+10. **O formulário de perguntas e o plano** (12/11/2026). Visto em 09 e 10/11/2026: o Claude Code
+    mandava o formulário de perguntas (`AskUserQuestion`) ao gancho, o Zé dizia "usar a ferramenta
+    AskUserQuestion" e aprovava com um "sim" sozinho, e o Claude Code descartava a aprovação: o
+    formulário ficava no terminal. Essas duas ferramentas só seguem com os argumentos de volta
+    (`updatedInput`): o formulário com as respostas (`answers`, pela pergunta, com o rótulo da
+    opção; várias opções separadas por vírgula), e o plano (`ExitPlanMode`) com o próprio plano.
+    - **Formulário:** o Zé lê uma pergunta por vez, com as opções, e termina em "Qual delas?". A
+      fala seguinte é a escolha: o nome da opção, a posição ("a segunda"), "outra resposta: ..."
+      para texto livre, ou "cancela"/"no terminal" para deixar o formulário no terminal. Uma
+      fala que não bate com uma opção não responde nada: ele pergunta de novo. "Aprova" não
+      responde um formulário. No painel, um botão por opção (caixas quando vale mais de uma),
+      outra resposta escrita e "Responder no terminal".
+    - **Plano:** "A sessão terminou o plano e quer começar. O plano está na tela. Aprovo?", e o
+      "sim" de sempre.
+    - Respondidos no terminal, os dois saem do painel e da voz pelo nome da ferramenta (o que
+      roda já traz as respostas).
+
+    Prova (12/11/2026, Claude Code 2.1.322, terminal real): o gancho respondeu o formulário
+    ("Which color do you prefer?" → "Blue") e a sessão seguiu com a resposta; e aprovou o plano
+    (`updatedInput` com `plan` e `planFilePath`), e a sessão saiu do modo plano e criou o
+    arquivo. No `claude -p` o formulário não existe.
+
 ## Consequências
 
 - A sessão não trava longe do PC, e no PC nada muda: a janela do terminal continua.
@@ -123,5 +145,6 @@ terminal (teste 5).
 | E1 | Rota, fila e chave por sessão; o gancho nas sessões; Aprovar e Negar no painel; retirar a pergunta quando o terminal responde; Atividade; comandos de teste liberados. | PR #49. Provada com o Claude Code real: aprovado pelo painel, rodou sem tocar no terminal; aprovado no terminal, saiu do painel. |
 | E2 | A pergunta falada (item 3), "sim" e "não", a fila, o Silencioso pelo app. | PR #50. Provada com o Claude Code real (só o áudio simulado): "Sim, pode." aprovou e a ferramenta rodou. |
 | Codex | O mesmo no Codex do terminal (item 9). | Provada com o Codex 0.159 real em 27/10/2026: a livre rodou direto, a que pede aprovação esperou o Zé e rodou com o "sim", o Esc retirou o pedido, a bloqueada nem apareceu. |
+| Formulário e plano | O item 10: as respostas pela voz e pelo painel, e o plano. | Provada com o Claude Code 2.1.322 real em 12/11/2026. |
 | E3 | Extras, a pedido: "sim, sempre" (libera no conector, depois de o Zé dizer qual); Aprovar e Negar na notificação do Zé Voz. | Cada um com a sua prova. |
 

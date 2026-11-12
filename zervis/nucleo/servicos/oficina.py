@@ -19,7 +19,7 @@ from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import ESTADO, Status
 from zervis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from zervis.oficina.manutencao import Manutencao
-from zervis.oficina.permissoes import Pedido
+from zervis.oficina.permissoes import Pedido, escolher
 from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import (
     GANCHOS_DO_CODEX,
@@ -42,6 +42,7 @@ class ContextoOficina(Protocol):
     _perguntas_permissao: dict[str, tuple[str, str]]
     _permissao_falada: tuple[str, str] | None
     _permissao_ate: float
+    _permissao_escolha: bool
     chamado: Any
     fila: Any
     atualizacao: Progresso
@@ -342,13 +343,80 @@ class ServicoOficina:
         except SessaoErro:
             return id_
 
+    def _fala_da_pergunta(self, nome: str, pedido: Pedido) -> str:
+        """A próxima pergunta do formulário, com as opções, terminando em "Qual delas?" (a fala
+        seguinte é a escolha). Opções compridas demais para ouvir ficam na tela."""
+        from zervis.nucleo.efeitos import QUAL_DELAS
+
+        q = pedido.a_responder() or pedido.perguntas[0]
+        ordem = [x["pergunta"] for x in pedido.perguntas].index(q["pergunta"])
+        total = len(pedido.perguntas)
+        if ordem:
+            abre = f"Pergunta {ordem + 1} de {total} da sessão {nome}:"
+        elif total > 1:
+            abre = f"A sessão {nome} tem {total} perguntas. A primeira:"
+        else:
+            abre = f"A sessão {nome} pergunta:"
+        pergunta = q["pergunta"].rstrip(" ?.") + "?"
+        opcoes = q["opcoes"]
+        if opcoes and all(len(o) <= 50 for o in opcoes):
+            lista = ", ".join(opcoes[:-1]) + f" ou {opcoes[-1]}" if len(opcoes) > 1 else opcoes[0]
+            o_que = f"As opções são {lista}."
+        else:
+            o_que = "As opções estão na tela."
+        if q["multipla"]:
+            o_que += " Pode escolher mais de uma."
+        return f"{abre} {pergunta} {o_que} {QUAL_DELAS}"
+
+    def _perguntar_de_novo(self, sessao: str, pedido: Pedido, texto: str) -> None:
+        """A próxima pergunta (ou a mesma, sem resposta clara): de novo como pergunta da sessão,
+        que abre a escuta da escolha quando é falada."""
+        self.n._perguntas_permissao[texto] = (sessao, pedido.id)
+        self.n._na_linha("aviso", texto)
+        self.n.eventos.put(e.Aviso(texto, escutar=self.n.chamado == "voz", pedido=True))
+
+    def _responder_escolha(self, texto: str) -> str:
+        """A opção dita para a pergunta do formulário que o Zé acabou de fazer. Sem opção clara,
+        ele pergunta de novo; "cancela" ou "no terminal" deixam o formulário no terminal."""
+        permissoes = self.n.sessoes.permissoes
+        self.n._permissao_ate, self.n._permissao_escolha = 0.0, False
+        falada = self.n._permissao_falada
+        pedido = permissoes.ver(falada[1]) if falada else None
+        if falada is None or pedido is None or pedido.tipo != "pergunta":
+            return "Essa pergunta já foi respondida."
+        sessao, nome = falada[0], self._nome_da_sessao(falada[0])
+        q = pedido.a_responder()
+        if q is None:
+            return "Essa pergunta já foi respondida."
+        tipo, valor = escolher(q["opcoes"], q["multipla"], texto)
+        try:
+            if tipo == "terminal":
+                permissoes.decidir(sessao, pedido.id, False, "voz")
+                return f"Certo. A pergunta da sessão {nome} fica no terminal."
+            if tipo == "nenhuma":
+                self._perguntar_de_novo(sessao, pedido, self._fala_da_pergunta(nome, pedido))
+                return "Não achei essa opção."
+            feito = permissoes.responder(sessao, pedido.id, q["pergunta"], valor, "voz")
+        except KeyError:
+            return "Essa pergunta já foi respondida."
+        if feito.decisao == "aprovado":
+            return f"Respondido: {valor}. A sessão {nome} segue."
+        self._perguntar_de_novo(sessao, feito, self._fala_da_pergunta(nome, feito))
+        return "Anotado."
+
     def _permissao_pedida(self, pedido: Pedido) -> None:
         """A sessão pediu permissão (ADR 0039, E2): o Zé pergunta em voz alta, com o que acontece
         se aprovar, e o "sim" ou o "não" logo depois respondem sem passar pelo cérebro. O que não
         cabe numa frase (um comando com caminhos, uma edição) só avisa: está na tela. No
         Silencioso, a pergunta vai pelo app de voz; sem ele, só a tela e o terminal."""
         nome = self._nome_da_sessao(pedido.sessao)
-        if pedido.falavel:
+        if pedido.tipo == "pergunta":
+            texto = self._fala_da_pergunta(nome, pedido)
+        elif pedido.tipo == "plano":
+            texto = (
+                f"A sessão {nome} terminou o plano e quer começar. O plano está na tela. Aprovo?"
+            )
+        elif pedido.falavel:
             texto = f"A sessão {nome} quer {pedido.frase}. Aprovo?"
         else:
             o_que = pedido.frase.replace(" (veja na tela)", "")
@@ -374,7 +442,7 @@ class ServicoOficina:
         ela, para o único pedido esperando. Com pedidos de várias sessões, pede o painel.
         "Aprova tudo" vale para todos os que esperam na mesma sessão e cabem na voz."""
         permissoes = self.n.sessoes.permissoes
-        self.n._permissao_ate = 0.0
+        self.n._permissao_ate, self.n._permissao_escolha = 0.0, False
         falada = self.n._permissao_falada
         if falada is not None and permissoes.pendente(falada[1]):
             alvo = falada
@@ -388,10 +456,14 @@ class ServicoOficina:
         if tudo:
             return self._aprovar_todos(alvo[0])
         try:
-            permissoes.decidir(alvo[0], alvo[1], aprovar, "voz")
+            feito = permissoes.decidir(alvo[0], alvo[1], aprovar, "voz")
         except KeyError:
             return "Esse pedido já foi respondido."
+        except ValueError:  # um formulário: responde-se com a opção, não com "aprova"
+            return "A sessão fez uma pergunta. Diga a opção, ou responda no painel."
         nome = self._nome_da_sessao(alvo[0])
+        if feito.decisao == "devolvido":
+            return f"Certo. A pergunta da sessão {nome} fica no terminal."
         return (
             f"Aprovado. A sessão {nome} segue." if aprovar else f"Negado. Avisei a sessão {nome}."
         )
@@ -400,7 +472,8 @@ class ServicoOficina:
         permissoes = self.n.sessoes.permissoes
         aprovados = na_tela = 0
         for p in permissoes.pendentes(sessao):
-            if not p["falavel"]:  # o que não cabe numa frase não se aprova pela voz
+            # o que não cabe numa frase não se aprova pela voz; um formulário pede a opção
+            if not p["falavel"] or p["tipo"] == "pergunta":
                 na_tela += 1
                 continue
             with contextlib.suppress(KeyError):  # respondido no terminal enquanto isso
@@ -440,9 +513,12 @@ class ServicoOficina:
             "aprovado": ("execucao", "aprovado"),
             "negado": ("negada", "negado"),
             "retirado": ("pedido", "respondido no terminal"),
+            "devolvido": ("pedido", "deixado para o terminal"),
             "expirou": ("pedido", "sem resposta fora do terminal; ficou no terminal"),
         }
         tipo, como = decisoes.get(pedido.decisao, ("falha", pedido.decisao))
+        if pedido.tipo == "pergunta" and pedido.decisao == "aprovado":
+            como = "respondido: " + "; ".join(pedido.respostas.values())
         por = f" pelo {pedido.por}" if pedido.por in ("painel", "voz") else ""
         atividade.PADRAO.registrar(
             tipo,

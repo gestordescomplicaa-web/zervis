@@ -689,6 +689,19 @@ def comando(
     )
 
 
+ESCOLHA_LONGA = 25  # palavras: uma resposta de texto livre ao formulário cabe nisto
+
+
+def resposta_a_escolha(texto: str) -> str | None:
+    """Logo depois de uma pergunta de sessão com opções ("Qual delas?"), a fala inteira vai para
+    a sessão escolher (`permissoes.escolher`), sem o cérebro. Pergunta, "repete" e fala longa
+    demais seguem como pedido."""
+    p = sem_nome(palavras(texto))
+    if "?" in texto or p in COMANDOS["repetir"] or not 0 < len(p) <= ESCOLHA_LONGA:
+        return None
+    return "permissao_escolha:" + " ".join(texto.split())
+
+
 def resposta_a_permissao(texto: str) -> str | None:
     """Logo depois da pergunta de uma sessão ("Aprovo?"), uma resposta curta: o não ganha de
     tudo (uma negação ou correção em qualquer lugar); o sim precisa vir no começo ("sim",

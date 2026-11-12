@@ -11,6 +11,12 @@ ferramenta que rodou se reconhece pela assinatura (o nome e o resumo dos argumen
 
 A frase é do Zé, montada da ferramenta e dos argumentos de verdade: a `description` que o modelo
 escreve num comando pode dizer uma coisa e o comando fazer outra.
+
+Duas ferramentas não se aprovam com um "sim" sozinho (visto em 09 e 10/11/2026: o Zé aprovava, o
+Claude Code descartava e o formulário ficava no terminal): o formulário de perguntas
+(`AskUserQuestion`) precisa das respostas, e a aprovação do plano (`ExitPlanMode`), do plano de
+volta, os dois no `updatedInput`. A pergunta (`tipo` "pergunta") se responde por opção, uma
+pergunta por vez; o plano (`tipo` "plano") se aprova como os outros pedidos.
 """
 
 import hashlib
@@ -19,9 +25,10 @@ import re
 import secrets
 import threading
 import time
+import unicodedata
 import uuid
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -65,6 +72,11 @@ NOMES = ("workflowName", "name", "nome", "title", "dataTableName", "folderName")
 # símbolos, e "cat > /etc/hosts" seria ouvido como "cat".
 COMANDO_FALAVEL = re.compile(r"[\w .,:=@+-]+")
 
+PERGUNTA = "AskUserQuestion"  # o formulário de perguntas do Claude Code
+PLANO = "ExitPlanMode"  # a aprovação do plano, no fim do modo plano
+# As duas se reconhecem pelo nome, sem os argumentos: o que roda leva as respostas junto.
+SO_PELO_NOME = (PERGUNTA, PLANO)
+
 
 @dataclass
 class Pedido:
@@ -77,8 +89,16 @@ class Pedido:
     assinatura: str  # a ferramenta e o resumo dos argumentos: acha o PostToolUse dela
     turno: str  # o `prompt_id` do pedido da conversa em que a permissão foi pedida
     criado: float
-    decisao: str = ""  # aprovado, negado, retirado, expirou
+    decisao: str = ""  # aprovado, negado, retirado, devolvido (ao terminal), expirou
     por: str = ""  # painel, voz, terminal
+    tipo: str = "permissao"  # permissao | pergunta (AskUserQuestion) | plano (ExitPlanMode)
+    # Do formulário: {"pergunta", "titulo", "opcoes": [rótulos], "multipla"}, na ordem dele.
+    perguntas: list[dict[str, Any]] = field(default_factory=list)
+    respostas: dict[str, str] = field(default_factory=dict)  # pergunta -> rótulo(s) ou texto
+
+    def a_responder(self) -> dict[str, Any] | None:
+        """A próxima pergunta do formulário sem resposta (None: todas respondidas)."""
+        return next((q for q in self.perguntas if q["pergunta"] not in self.respostas), None)
 
 
 class ChaveInvalida(PermissionError):
@@ -93,8 +113,97 @@ def _objeto(tipo: str, entrada: dict[str, Any], conector: str) -> str:
     return f"{indefinido} {tipo} no {conector}"
 
 
+def perguntas_do_formulario(entrada: dict[str, Any]) -> list[dict[str, Any]]:
+    """As perguntas do `AskUserQuestion`, só com o que o Zé fala e mostra."""
+    saida = []
+    for q in entrada.get("questions") or []:
+        if not isinstance(q, dict) or not str(q.get("question", "")).strip():
+            continue
+        opcoes = [
+            str(o.get("label", "")).strip()
+            for o in q.get("options") or []
+            if isinstance(o, dict) and str(o.get("label", "")).strip()
+        ]
+        saida.append(
+            {
+                "pergunta": str(q["question"]).strip(),
+                "titulo": str(q.get("header", "")).strip(),
+                "opcoes": opcoes,
+                "multipla": bool(q.get("multiSelect")),
+            }
+        )
+    return saida
+
+
+def _normal(texto: str) -> list[str]:
+    sem_acento = unicodedata.normalize("NFKD", texto.lower()).encode("ascii", "ignore").decode()
+    return re.findall(r"[a-z0-9]+", sem_acento)
+
+
+ORDINAIS = {
+    "primeira": 0, "primeiro": 0, "segunda": 1, "segundo": 1, "terceira": 2, "terceiro": 2,
+    "quarta": 3, "quarto": 3, "ultima": -1, "ultimo": -1,
+}  # fmt: skip
+NUMEROS = {"um": 0, "uma": 0, "1": 0, "dois": 1, "duas": 1, "2": 1, "tres": 2, "3": 2,
+           "quatro": 3, "4": 3}  # fmt: skip
+# "Outra resposta: ..." ou "responde ...": o resto da fala vai como texto livre.
+LIVRE = ("outra", "outro", "resposta", "responde", "responda")
+# Deixar a pergunta para o terminal, sem responder pelo Zé.
+NO_TERMINAL = {
+    ("cancela",), ("deixa",), ("deixa", "pra", "la"), ("deixa", "para", "la"), ("no", "terminal"),
+    ("responde", "no", "terminal"), ("eu", "respondo", "no", "terminal"), ("nenhuma",),
+    ("respondo", "no", "terminal"), ("deixa", "no", "terminal"),
+}  # fmt: skip
+
+
+def escolher(opcoes: list[str], multipla: bool, texto: str) -> tuple[str, str]:
+    """A resposta falada a uma pergunta do formulário: ("opcao", rótulos), ("livre", texto),
+    ("terminal", "") ou ("nenhuma", "") quando não dá para saber qual (o Zé pergunta de novo).
+    Nada se adivinha: uma fala que não bate com uma opção, uma posição ("a segunda") ou o texto
+    livre anunciado ("outra resposta: ...") não vira resposta."""
+    p = _normal(texto)
+    if not p:
+        return "nenhuma", ""
+    if tuple(p) in NO_TERMINAL:
+        return "terminal", ""
+    contidas = [o for o in opcoes if (r := _normal(o)) and _contem(p, r)]
+    if multipla and contidas:
+        return "opcao", ", ".join(contidas)
+    if len(contidas) == 1:
+        return "opcao", contidas[0]
+    if len(contidas) > 1:  # "a de cima" dentro de "a de cima e a de baixo": a mais comprida
+        maior = max(contidas, key=lambda o: len(_normal(o)))
+        if all(_contem(_normal(maior), _normal(o)) for o in contidas):
+            return "opcao", maior
+        return "nenhuma", ""  # duas opções ditas para uma pergunta de uma só
+    if len(p) <= 4 and opcoes:
+        posicao = next((ORDINAIS[w] for w in p if w in ORDINAIS), None)
+        if posicao is None and (p[0] in ("opcao", "numero", "a", "o") or len(p) == 1):
+            posicao = next((NUMEROS[w] for w in p if w in NUMEROS), None)
+        if posicao is not None and -len(opcoes) <= posicao < len(opcoes):
+            return "opcao", opcoes[posicao]
+    if p[0] in LIVRE and len(p) > 1:
+        bruto = texto.strip()
+        resto = re.sub(r"^\W*\w+(\s+resposta)?[\s,:.-]*", "", bruto, flags=re.IGNORECASE)
+        if resto.strip():
+            return "livre", resto.strip()
+    return "nenhuma", ""
+
+
+def _contem(fala: list[str], rotulo: list[str]) -> bool:
+    n = len(rotulo)
+    return any(fala[i : i + n] == rotulo for i in range(len(fala) - n + 1))
+
+
 def frase(ferramenta: str, entrada: dict[str, Any]) -> tuple[str, bool]:
     """O que a sessão quer fazer, dito pelo Zé, e se cabe ser aprovado de ouvido."""
+    if ferramenta == PERGUNTA:
+        perguntas = perguntas_do_formulario(entrada)
+        primeira = perguntas[0]["pergunta"] if perguntas else "uma pergunta"
+        mais = f" (e mais {len(perguntas) - 1})" if len(perguntas) > 1 else ""
+        return f"perguntar: {primeira}{mais}", True
+    if ferramenta == PLANO:
+        return "começar a executar o plano que preparou (veja na tela)", True
     if ferramenta == "Bash":
         bruto = str(entrada.get("command", ""))
         comando = " ".join(bruto.split())
@@ -124,15 +233,22 @@ def frase(ferramenta: str, entrada: dict[str, Any]) -> tuple[str, bool]:
 
 
 def assinatura(ferramenta: str, entrada: Any) -> str:
-    """A ferramenta e os argumentos, resumidos: o mesmo cálculo do gancho enxuto das sessões."""
+    """A ferramenta e os argumentos, resumidos: o mesmo cálculo do gancho enxuto das sessões.
+    O formulário e o plano, só pelo nome: quando rodam, os argumentos já trazem as respostas."""
+    if ferramenta in SO_PELO_NOME:
+        entrada = {}
     texto = json.dumps(entrada if isinstance(entrada, dict) else {}, sort_keys=True)
     return f"{ferramenta}:{hashlib.sha256(texto.encode()).hexdigest()[:16]}"
 
 
-def resposta(decisao: str, por: str) -> dict[str, Any]:
-    """O que o gancho devolve ao Claude: permitir, negar ou nada (a janela do terminal segue)."""
+def resposta(decisao: str, por: str, entrada: dict[str, Any] | None = None) -> dict[str, Any]:
+    """O que o gancho devolve ao Claude: permitir, negar ou nada (a janela do terminal segue).
+    `entrada`: os argumentos com que a ferramenta roda (o formulário com as respostas, o plano);
+    sem eles, o Claude Code descarta o "permitir" dessas duas."""
     if decisao == "aprovado":
         comportamento: dict[str, Any] = {"behavior": "allow"}
+        if entrada is not None:
+            comportamento["updatedInput"] = entrada
     elif decisao == "negado":
         comportamento = {"behavior": "deny", "message": f"A pessoa negou pelo {por or 'Zé'}."}
     else:
@@ -206,16 +322,28 @@ class Permissoes:
         bruto = entrada.get("tool_input")
         argumentos: dict[str, Any] = bruto if isinstance(bruto, dict) else {}
         texto, falavel = frase(ferramenta, argumentos)
+        tipo = {PERGUNTA: "pergunta", PLANO: "plano"}.get(ferramenta, "permissao")
+        perguntas = perguntas_do_formulario(argumentos) if tipo == "pergunta" else []
+        if tipo == "pergunta" and not perguntas:
+            return resposta("", "")  # um formulário sem pergunta: fica com o terminal
+        if tipo == "pergunta":
+            detalhe = " · ".join(q["pergunta"] for q in perguntas)
+        elif tipo == "plano":
+            detalhe = str(argumentos.get("plan", ""))
+        else:
+            detalhe = json.dumps(argumentos, ensure_ascii=False)
         p = Pedido(
             id=uuid.uuid4().hex[:12],
             sessao=sessao,
             ferramenta=ferramenta,
             frase=texto,
-            detalhe=json.dumps(argumentos, ensure_ascii=False)[:DETALHE],
+            detalhe=detalhe[:DETALHE],
             falavel=falavel,
             assinatura=assinatura(ferramenta, argumentos),
             turno=str(entrada.get("prompt_id") or entrada.get("turn_id") or ""),  # Claude, Codex
             criado=self._relogio(),
+            tipo=tipo,
+            perguntas=perguntas,
         )
         with self._mudou:
             self._pedidos[p.id] = p
@@ -230,16 +358,54 @@ class Permissoes:
                 p.decisao = "expirou"
             self._pedidos.pop(p.id, None)
         self._avisar(p)
-        return resposta(p.decisao, p.por)
+        final: dict[str, Any] | None = None
+        if p.decisao == "aprovado" and p.tipo == "pergunta":
+            final = {**argumentos, "answers": dict(p.respostas)}
+        elif p.decisao == "aprovado" and p.tipo == "plano":
+            final = dict(argumentos)
+        return resposta(p.decisao, p.por, final)
 
     def decidir(self, sessao: str, pedido: str, aprovado: bool, por: str) -> Pedido:
+        """Aprovar ou negar. Uma pergunta não se aprova (responde-se com `responder`): negar a
+        devolve ao terminal, onde o formulário segue aberto."""
         with self._mudou:
             p = self._pedidos.get(pedido)
             if p is None or p.sessao != sessao or p.decisao:
                 raise KeyError("esse pedido já foi respondido")
-            p.decisao, p.por = ("aprovado" if aprovado else "negado"), por
+            if p.tipo == "pergunta" and aprovado:
+                raise ValueError("a sessão fez uma pergunta: responda com uma das opções")
+            if p.tipo == "pergunta":
+                p.decisao, p.por = "devolvido", por
+            else:
+                p.decisao, p.por = ("aprovado" if aprovado else "negado"), por
             self._mudou.notify_all()
             return p
+
+    def responder(self, sessao: str, pedido: str, pergunta: str, valor: str, por: str) -> Pedido:
+        """A resposta a uma pergunta do formulário. Com todas respondidas, o pedido sai
+        aprovado com as respostas (o gancho as devolve ao Claude)."""
+        valor = " ".join(str(valor).split())[:500]
+        with self._mudou:
+            p = self._pedidos.get(pedido)
+            if p is None or p.sessao != sessao or p.decisao:
+                raise KeyError("esse pedido já foi respondido")
+            if p.tipo != "pergunta" or pergunta not in {q["pergunta"] for q in p.perguntas}:
+                raise KeyError("essa pergunta não é deste pedido")
+            if not valor:
+                raise ValueError("resposta vazia")
+            p.respostas[pergunta] = valor
+            if p.a_responder() is None:
+                p.decisao, p.por = "aprovado", por
+                self._mudou.notify_all()
+            return Pedido(**{**asdict(p), "respostas": dict(p.respostas)})
+
+    def ver(self, pedido: str) -> Pedido | None:
+        """Uma cópia do pedido que ainda espera (None se já foi respondido)."""
+        with self._mudou:
+            p = self._pedidos.get(pedido)
+            if p is None or p.decisao:
+                return None
+            return Pedido(**{**asdict(p), "respostas": dict(p.respostas)})
 
     def retirar(
         self, sessao: str, *, rodou: str = "", do_turno: str = "", fora_do_turno: str = ""

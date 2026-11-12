@@ -280,6 +280,9 @@ class ServicoAvisos:
             return None
         if texto in getattr(self.n, "avisos_lidos", {}):
             return aviso  # a mensagem de um lead: inteira, e o texto não vai para a tela
+        if texto in getattr(self.n, "_perguntas_permissao", {}):
+            # A pergunta de uma sessão sai inteira: cortada, a escuta da resposta não abre.
+            return aviso
         abertura = getattr(self.n, "abertura", None)
         if abertura is not None and abertura.pedida(texto):
             # A fala de uma cena da abertura: o Zé a escreveu para ser dita, e o painel já está

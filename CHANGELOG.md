@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Os formulários das sessões pela voz:** quando uma sessão do Claude pergunta algo com opções, o
+  Zé lê a pergunta e as opções e você responde falando ("a segunda", o nome da opção ou "outra
+  resposta: ..."); no painel, um botão por opção. A aprovação do plano também segue pela voz.
+  Antes, o Zé dizia que aprovou e o formulário ficava parado no terminal.
+
 - **A abertura completa:** ao abrir o programa, o Zé apresenta e lê sozinho a hora, o clima com a
   curva do dia, a agenda numa linha do dia, o Foco, as sessões, o WhatsApp, o Instagram (com as
   visualizações das últimas publicações) e as manchetes, em cards com gráficos pequenos.
