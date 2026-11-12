@@ -1,6 +1,7 @@
 """Vigia de movimento da câmera (plano-camera): só guarda fotos, sem avisos."""
 
 import contextlib
+import json
 import logging
 import os
 import queue
@@ -19,6 +20,7 @@ FOTOS = camera.FOTOS
 # "PIRAlarm"…): vale o evento que fala de movimento, pessoa ou sensor PIR.
 MOVIMENTO = ("motion", "human", "person", "pir")
 ESPERA_RECONEXAO = 5
+CONVERSAS = 30
 ESPERA_RECONEXAO_MAX = 60
 
 
@@ -248,6 +250,41 @@ class Vigia:
             with contextlib.suppress(OSError):
                 velha.unlink()
         return destino
+
+    # --- as conversas pela câmera (ADR 0088) ---
+
+    @property
+    def _arquivo_conversas(self) -> Path:
+        return self.pasta.parent / "conversas.json"
+
+    def guardar_conversa(self, evento: dict[str, Any]) -> None:
+        """As últimas `CONVERSAS`, da mais nova para a mais velha (0600)."""
+        registro = {
+            "quando": time.time(),
+            "desfecho": str(evento.get("desfecho", "")),
+            "motivo": str(evento.get("motivo", ""))[:160],
+            "duracao": int(evento.get("duracao", 0) or 0),
+            "resumo": str(evento.get("resumo", ""))[:600],
+            "conversa": [
+                {"quem": str(f.get("quem", "")), "texto": str(f.get("texto", ""))[:1000]}
+                for f in evento.get("conversa", [])
+                if isinstance(f, dict)
+            ][-80:],
+        }
+        with self._trava:
+            todas = [registro, *self.conversas()][:CONVERSAS]
+            self._arquivo_conversas.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            temporario = self._arquivo_conversas.with_suffix(".tmp")
+            temporario.write_text(json.dumps(todas, ensure_ascii=False))
+            os.chmod(temporario, 0o600)
+            temporario.replace(self._arquivo_conversas)
+
+    def conversas(self) -> list[dict[str, Any]]:
+        try:
+            dados = json.loads(self._arquivo_conversas.read_text())
+        except (OSError, ValueError):
+            return []
+        return [c for c in dados if isinstance(c, dict)] if isinstance(dados, list) else []
 
     def fotos(self) -> list[dict[str, Any]]:
         self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)

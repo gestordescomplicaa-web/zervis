@@ -251,6 +251,8 @@ class ServicoAtendimento:
             self._ligacao_chamando(evento)
         elif evento.get("tipo") == "ligacao_feita":
             self._ligacao_feita(evento)
+        elif evento.get("tipo") == "camera_conversa":
+            self._camera_conversa(evento)
 
     def _ligacao_terminou(self, evento: dict[str, Any]) -> None:
         """O agente atendeu uma ligação: o Zé guarda o que foi dito e avisa quem ligou, quanto
@@ -295,6 +297,51 @@ class ServicoAtendimento:
             raise RuntimeError(f"Não liguei: {erro}") from erro
         atividade.PADRAO.registrar("execucao", f"WhatsApp: ligando para {nome}", recado=recado)
         return f"Ligando para {nome}. Te aviso como foi."
+
+    # --- a conversa pela câmera (ADR 0088) ------------------------------------------------------
+
+    def atender_camera(self) -> str:
+        """Abre a conversa pela câmera na Central (sobe a Central se o WhatsApp não a subiu).
+        Quem estiver lá fala com o Zé da rua: sem ferramentas, sem memória, prompt próprio."""
+        dispositivo = getattr(self.n, "camera", None)
+        if dispositivo is None or dispositivo.conexao() is None:
+            raise RuntimeError("Câmera não configurada.")
+        try:
+            self.n.central.garantir()
+            self.n.central.iniciar_eventos()
+            self.n.central.atender_camera()
+        except cliente.CentralErro as erro:
+            raise RuntimeError(str(erro)) from erro
+        atividade.PADRAO.registrar("execucao", "Câmera: conversa aberta")
+        return "Conversa aberta na câmera."
+
+    def encerrar_camera(self) -> str:
+        if not self.n.central.camera_em_conversa():
+            return "Nenhuma conversa na câmera."
+        with contextlib.suppress(cliente.CentralErro):
+            self.n.central.encerrar_camera()
+        return "Conversa da câmera encerrada."
+
+    def camera_em_conversa(self) -> bool:
+        return bool(self.n.central.camera_em_conversa())
+
+    def _camera_conversa(self, evento: dict[str, Any]) -> None:
+        """Fim da conversa pela câmera: fica no histórico da câmera e numa linha de aviso, sem
+        fala (o pedido: o Zé não fica avisando)."""
+        if (vigia := getattr(self.n, "vigia_camera", None)) is not None:
+            vigia.guardar_conversa(evento)
+        resumo = str(evento.get("resumo", "")).strip()
+        if evento.get("desfecho") == "falha":
+            motivo = str(evento.get("motivo", "")).strip()
+            self.n._na_linha(
+                "aviso", "A conversa pela câmera não abriu" + (f": {motivo}" if motivo else ".")
+            )
+        else:
+            self.n._na_linha("aviso", f"Conversa na câmera: {resumo or 'sem resumo'}")
+        atividade.PADRAO.registrar(
+            "execucao", "Câmera: conversa encerrada", desfecho=str(evento.get("desfecho", "")),
+            duracao=evento.get("duracao", 0),
+        )  # fmt: skip
 
     def _ligacao_feita(self, evento: dict[str, Any]) -> None:
         guardadas = getattr(self.n, "ligacoes", None)

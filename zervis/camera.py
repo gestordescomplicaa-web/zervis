@@ -27,6 +27,9 @@ ESPERA_S = 8.0
 MAX_CARGA = 16 * 1024 * 1024
 FOTOS = 500
 ALFABETO = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+# A conversa pelo alto-falante e pelo microfone (ADR 0088): G.711 A-law, 8 kHz, mono.
+FALA = {"BitRate": 128, "EncodeType": "G711_ALAW", "SampleBit": 16, "SampleRate": 8000}
+AUDIO = b"\x00\x00\x01\xfa\x0e\x02"  # quadro de áudio: marca, A-law (0x0E), 8 kHz (0x02)
 
 
 class CameraErro(RuntimeError):
@@ -161,20 +164,50 @@ class Cliente:
     def _enviar(self, codigo: int, carga: bytes) -> None:
         if self.socket is None:
             raise CameraErro("A conexão com a câmera foi fechada.")
-        cabecalho = struct.pack(
-            "<BBHIIBBHI",
-            0xFF,
-            0,
-            0,
-            self.sessao,
-            self.sequencia,
-            0,
-            0,
-            codigo,
-            len(carga),
-        )
+        self.socket.sendall(quadro(self.sessao, self.sequencia, codigo, carga))
         self.sequencia += 1
-        self.socket.sendall(cabecalho + carga)
+
+    def conversa(self) -> socket.socket:
+        """Abre a conversa nos dois sentidos e devolve o canal do áudio: uma segunda conexão,
+        reservada (`Claim`) com a sessão desta. A ordem importa: reservar e só então mandar o
+        `Start`. Ao contrário, a câmera aceita os dois, mas a conversa não abre (ADR 0088)."""
+        sessao = f"0x{self.sessao:08X}"
+        canal = socket.create_connection((self.conexao.ip, PORTA), timeout=self.espera_s)
+        try:
+            reserva = {"Name": "OPTalk", "SessionID": sessao,
+                       "OPTalk": {"Action": "Claim", "AudioFormat": FALA}}  # fmt: skip
+            canal.sendall(quadro(self.sessao, 0, 1434, _corpo(reserva)))
+            cabecalho = _ler_de(canal, 20)
+            resposta = _json(_ler_de(canal, struct.unpack_from("<I", cabecalho, 16)[0]))
+            if resposta.get("Ret") != 100:
+                raise CameraErro("A câmera não abriu o alto-falante.")
+            inicio = self.pedido(
+                1430,
+                {
+                    "Name": "OPTalk",
+                    "SessionID": sessao,
+                    "OPTalk": {"Action": "Start", "AudioFormat": FALA},
+                },
+                resposta=1431,
+            )
+            if inicio.get("Ret") not in (100, 503):  # 503: já estava aberta
+                raise CameraErro("A câmera não abriu o alto-falante.")
+        except (OSError, CameraErro):
+            canal.close()
+            raise
+        return canal
+
+    def encerrar_conversa(self) -> None:
+        with contextlib.suppress(OSError, CameraErro):
+            self.pedido(
+                1430,
+                {
+                    "Name": "OPTalk",
+                    "SessionID": f"0x{self.sessao:08X}",
+                    "OPTalk": {"Action": "Stop", "AudioFormat": FALA},
+                },
+                resposta=1431,
+            )
 
     def receber(self) -> tuple[int, bytes, int]:
         cabecalho = self._ler(20)
@@ -321,6 +354,32 @@ class Cliente:
             if jpeg is None:
                 raise CameraErro("A câmera respondeu sem uma foto JPEG.")
             return jpeg
+
+
+def quadro(sessao: int, sequencia: int, codigo: int, carga: bytes) -> bytes:
+    """Cabeçalho DVRIP de 20 bytes, little-endian, e a carga."""
+    cabecalho = struct.pack(
+        "<BBHIIBBHI", 0xFF, 0, 0, sessao, sequencia & 0xFFFFFFFF, 0, 0, codigo, len(carga)
+    )
+    return cabecalho + carga
+
+
+def quadro_de_audio(alaw: bytes) -> bytes:
+    return AUDIO + struct.pack("<H", len(alaw)) + alaw
+
+
+def _corpo(dados: dict[str, Any]) -> bytes:
+    return json.dumps(dados, separators=(",", ":"), ensure_ascii=False).encode() + b"\n\0"
+
+
+def _ler_de(sock: socket.socket, tamanho: int) -> bytes:
+    partes = bytearray()
+    while len(partes) < tamanho:
+        bloco = sock.recv(tamanho - len(partes))
+        if not bloco:
+            raise CameraErro("A câmera encerrou a conexão.")
+        partes.extend(bloco)
+    return bytes(partes)
 
 
 def _sessao(valor: Any, atual: int) -> int:

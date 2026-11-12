@@ -32,7 +32,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from zervis import lugares, usuario
-from zervis.atendimento import agente, ligacao, projeto, whatsapp
+from zervis.atendimento import agente, camera_fala, ligacao, projeto, whatsapp
 
 log = logging.getLogger(__name__)
 
@@ -126,6 +126,8 @@ class Central:
         self.chave_deepgram = chave_deepgram or _chave_deepgram
         self.ligacoes: set[str] = set()  # as chamadas em andamento
         self.atendidas: dict[str, ligacao.Chamada] = {}  # as que o agente atende, pelo id
+        self.na_camera: ligacao.Chamada | None = None  # a conversa pela câmera (ADR 0088)
+        self.ler_camera: Callable[[], Any] = _camera
         self.token = ""  # o da API, que também abre a ponte de áudio (ADR 0066)
         self._ponte: Any = None  # o servidor da ponte, aberto na primeira transferência
         self.porta_da_ponte = 0
@@ -294,6 +296,67 @@ class Central:
                 resumo=resumo, conversa=conversa[-ligacao.CONVERSA_MAXIMA :],
             )  # fmt: skip
             log.info("central: ligação de recado (%s %s)", resultado, motivo)
+
+    # --- a conversa pela câmera (ADR 0088) ------------------------------------------------------
+
+    async def conversar_na_camera(self) -> None:
+        """Abre a conversa pela câmera e conduz até o fim, com o prompt da rua e o mesmo cérebro
+        e a mesma voz do agente. O resultado (o que foi dito e o resumo) vai ao Zé pelo evento
+        "camera_conversa"."""
+        from zervis import camera
+
+        inicio = time.monotonic()
+        desfecho, motivo = "falha", ""
+        conversa: list[dict[str, str]] = []
+        canal: camera_fala.CanalDaCamera | None = None
+        try:
+            conexao = self.ler_camera()
+            if conexao is None:
+                raise camera.CameraErro("Câmera não configurada.")
+            chave = self.chave_deepgram()
+            if not chave:
+                raise camera.CameraErro("Falta a chave do Deepgram.")
+            canal = camera_fala.CanalDaCamera(conexao)
+            await canal.abrir()
+            ouvido = ligacao.Ouvido(str(chave))
+            await ouvido.abrir()
+            chamada = ligacao.Chamada(
+                canal, ouvido, self.motor_de_voz(), camera_fala.perfil(), "", "Câmera",
+                self.atendente.registros, lambda *_: None,
+                falar=ligacao.falador(self.atendente.perfil.voz),
+                instrucoes=camera_fala.SISTEMA, abertura=camera_fala.ABERTURA,
+            )  # fmt: skip
+            canal.falando = lambda: chamada.tocador.falando
+            self.na_camera = chamada
+            termino = asyncio.ensure_future(chamada.atender())
+            await asyncio.wait({termino}, timeout=camera_fala.CONVERSA_MAXIMA_S)
+            if not termino.done():
+                chamada.encerrar.set()
+                await asyncio.wait({termino}, timeout=5)
+            desfecho = "limite"
+            if termino.done() and not termino.cancelled() and termino.exception() is None:
+                desfecho = termino.result()
+            conversa = chamada.conversa
+        except Exception as erro:
+            motivo = str(erro)[:160] if isinstance(erro, camera.CameraErro) else ""
+            log.warning("central: a conversa pela câmera falhou (%s)", type(erro).__name__)
+        finally:
+            self.na_camera = None
+            if canal is not None:
+                with contextlib.suppress(Exception):
+                    await canal.fechar()
+            self.ligacoes.discard("camera")
+            resumo = ""
+            with contextlib.suppress(Exception):
+                resumo = await asyncio.wait_for(
+                    camera_fala.resumir(self.motor_de_voz(), conversa), RESUMIR_S
+                )
+            self.eventos.publicar(
+                "camera_conversa", desfecho=desfecho, motivo=motivo,
+                duracao=round(time.monotonic() - inicio), resumo=resumo,
+                conversa=conversa[-ligacao.CONVERSA_MAXIMA :],
+            )  # fmt: skip
+            log.info("central: conversa pela câmera (%s %s)", desfecho, motivo)
 
     # --- a ponte de áudio com o seu celular (ADR 0066) ------------------------------------------
 
@@ -572,6 +635,19 @@ class Central:
         if rota == ("POST", "/ligacao/encerrar"):
             self.encerrar(str(corpo.get("chamada", "")))
             return 200, {}
+        if rota == ("GET", "/camera"):
+            return 200, {"em_conversa": "camera" in self.ligacoes}
+        if rota == ("POST", "/camera/atender"):
+            # Quem usa abriu a conversa pela câmera (painel, app ou voz): ADR 0088.
+            if "camera" in self.ligacoes:
+                return 409, {"erro": "A câmera já está em conversa."}
+            self.ligacoes.add("camera")
+            self.atendente.agendar(self.conversar_na_camera())
+            return 200, {}
+        if rota == ("POST", "/camera/encerrar"):
+            if (chamada := self.na_camera) is not None:
+                self.atendente.agendar(_encerrar_camera(chamada))
+            return 200, {}
         if rota == ("GET", "/pausados"):
             return 200, {"pausados": self.atendente.registros.pausados()}
         if rota == ("POST", "/devolver"):
@@ -660,6 +736,18 @@ async def _decidir(atendida: ligacao.Chamada, decisao: str) -> bool:
 
 async def _fechar_ponte(atendida: ligacao.Chamada) -> None:
     atendida.ponte_fim.set()
+
+
+async def _encerrar_camera(chamada: ligacao.Chamada) -> None:
+    """Quem usa encerrou: a despedida e o fim (o que estava sendo dito para)."""
+    chamada.tocador.calar()
+    await chamada._despedir("Vou encerrar por aqui. Até logo!")
+
+
+def _camera() -> Any:
+    from zervis import camera
+
+    return camera.Camera(lugares.CONFIG / "camera.json").conexao()
 
 
 def _motor_de_voz() -> Any:

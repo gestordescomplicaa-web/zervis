@@ -8,6 +8,7 @@ from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
 
 GALERIA = 100  # as mais novas na tela; as outras seguem guardadas
+CONVERSAS = 10
 
 
 class AcoesCamera(Pagina):
@@ -18,6 +19,8 @@ class AcoesCamera(Pagina):
             **self.n.camera.para_tela(),
             "estado": self.n.vigia_camera.estado(),
             "lentes": self.n.vigia_camera.lentes,
+            "em_conversa": self.n.camera_em_conversa(),
+            "conversas": self.n.vigia_camera.conversas()[:CONVERSAS],
             "fotos": [
                 {"nome": foto["nome"], "quando": foto["quando"], "lente": foto["lente"]}
                 for foto in self.n.vigia_camera.fotos()[:GALERIA]
@@ -51,6 +54,15 @@ class AcoesCamera(Pagina):
         except camera.CameraErro as erro:
             raise PedidoInvalido(str(erro)) from None
         return {"aviso": "Conectada."}
+
+    def atender_camera(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            return {"aviso": self.n.atender_camera()}
+        except RuntimeError as erro:
+            raise PedidoInvalido(str(erro)) from None
+
+    def encerrar_camera(self, dados: dict[str, Any]) -> dict[str, Any]:
+        return {"aviso": self.n.encerrar_camera()}
 
     def foto_camera(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:

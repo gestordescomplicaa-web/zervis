@@ -56,6 +56,7 @@ Na câmera real, três coisas não estavam no plano:
 - Depois de um login recusado, o vigia aguarda novo cadastro em vez de repetir tentativas.
 - Algumas versões podem não aceitar OPSNAP ou alarmes de terceiros. O painel mostra o estado, e
   a captura RTSP depende de `ffmpeg` instalado.
+- A conversa pela câmera (microfone e alto-falante) está na [ADR 0088](0088-conversa-pela-camera.md).
 - Fora o `MsgtoNetEnable`, a câmera não recebe comandos de movimento, PTZ, áudio ou
   configuração. O Zé só lê alarmes e imagens.
 - Com a lente montada de cabeça para baixo, a foto sai assim também. Na câmera testada, as

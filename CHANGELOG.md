@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Conversa pela câmera:** "Atender pela câmera" (painel, ou "Zé, atende a porta") abre uma
+  conversa ao vivo com quem está na entrada. Fala pelo alto-falante da câmera e ouve pelo
+  microfone dela. O Zé de lá roda isolado na Central, sem ferramentas nem memória, com um prompt
+  que não conta nada da casa e só anota recados. O resumo e as falas ficam no painel.
 - **Câmera: a foto do movimento no celular:** cada pessoa que passa chega no app Zé Voz como
   notificação com a foto e a lente, sem o Zé falar nada. Desliga em "Enviar ao celular".
 - **Câmera: girar a lente invertida:** no cadastro da câmera, "Girar imagem 180°" por lente.

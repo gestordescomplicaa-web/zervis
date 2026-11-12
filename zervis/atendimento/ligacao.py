@@ -109,7 +109,9 @@ RESUMO_MAXIMO = 400
 CONVERSA_MAXIMA = 80  # falas de uma ligação que vão para o Zé (as últimas)
 
 
-async def resumir(motor: agente.Motor, conversa: list[dict[str, str]]) -> str:
+async def resumir(
+    motor: agente.Motor, conversa: list[dict[str, str]], instrucoes: str = RESUMO
+) -> str:
     """O resumo falado da ligação, pelo modelo do agente; vazio se não houve conversa."""
     falas = [f for f in conversa if f.get("quem") == "cliente" and f.get("texto")]
     if not falas:
@@ -118,9 +120,9 @@ async def resumir(motor: agente.Motor, conversa: list[dict[str, str]]) -> str:
         f"{'Cliente' if f['quem'] == 'cliente' else 'Agente'}: {f['texto']}" for f in conversa
     )
     pedido = f"A ligação:\n<<<\n{texto.replace('<<<', ' ').replace('>>>', ' ')[-12000:]}\n>>>"
-    await motor.iniciar(RESUMO)
+    await motor.iniciar(instrucoes)
     try:
-        partes = [p async for p in motor.gerar(RESUMO, [{"role": "user", "content": pedido}])]
+        partes = [p async for p in motor.gerar(instrucoes, [{"role": "user", "content": pedido}])]
     finally:
         with contextlib.suppress(Exception):
             await motor.fechar()
@@ -639,7 +641,10 @@ class Chamada:
     ) -> None:
         if self._preparo is not None:
             await self._preparo
-        historico = self.registros.historico(self.telefone) if self.telefone else []
+        # Sem telefone (o recado, a câmera), a conversa desta ligação é o histórico.
+        historico = (
+            self.registros.historico(self.telefone) if self.telefone else list(self.conversa)
+        )
         if liberar is None and not nota:
             self.sem_resposta = fala
         if nota:  # uma nota do sistema (você não pode atender agora): não é fala do cliente
