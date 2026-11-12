@@ -50,8 +50,16 @@ class AcoesSessoes(Pagina):
             "resumo": s.resumo,
             "atualizada": s.atualizada,
             # O que a sessão espera aprovar agora (ADR 0039): a frase do Zé e os argumentos.
+            # Um formulário (tipo "pergunta") leva as perguntas e o que já foi respondido.
             "permissoes": [
-                {"id": p["id"], "frase": p["frase"], "detalhe": p["detalhe"]}
+                {
+                    "id": p["id"],
+                    "frase": p["frase"],
+                    "detalhe": p["detalhe"],
+                    "tipo": p["tipo"],
+                    "perguntas": p["perguntas"],
+                    "respostas": p["respostas"],
+                }
                 for p in self.n.sessoes.permissoes.pendentes(s.id)
             ],
         }
@@ -184,15 +192,29 @@ class AcoesSessoes(Pagina):
         return {**self.painel._sessao(s), "aviso": "Dispensada."}
 
     def permissao_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
-        """Aprovar ou negar pelo painel (também do celular) o que a sessão pediu no terminal."""
+        """Aprovar ou negar pelo painel (também do celular) o que a sessão pediu no terminal. Um
+        formulário se responde por pergunta (`pergunta` e `valor`) ou fica no terminal
+        (`aprovar` falso)."""
         id_, pedido = str(dados.get("id", "")), str(dados.get("pedido", ""))
         aprovar = dados.get("aprovar") is True
+        permissoes = self.n.sessoes.permissoes
         try:
-            self.n.sessoes.permissoes.decidir(id_, pedido, aprovar, "painel")
+            if "valor" in dados:
+                feito = permissoes.responder(
+                    id_, pedido, str(dados.get("pergunta", "")), str(dados["valor"]), "painel"
+                )
+                aviso = "Respondido." if feito.decisao == "aprovado" else "Anotado."
+            else:
+                feito = permissoes.decidir(id_, pedido, aprovar, "painel")
+                aviso = {"devolvido": "Fica no terminal.", "aprovado": "Aprovado."}.get(
+                    feito.decisao, "Negado."
+                )
         except KeyError as erro:
             raise PedidoInvalido("Esse pedido já foi respondido.") from erro
+        except ValueError as erro:
+            raise PedidoInvalido("Escolha uma das opções.") from erro
         s = self.painel._chamar(lambda: self.n.sessoes.ler(id_))
-        return {**self.painel._sessao(s), "aviso": "Aprovado." if aprovar else "Negado."}
+        return {**self.painel._sessao(s), "aviso": aviso}
 
     def modelo_da_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """O modelo dos próximos pedidos da sessão; o agente reabre nele e a conversa continua."""

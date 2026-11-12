@@ -187,14 +187,16 @@ HOOKS_DO_ZE = ("SessionStart", "UserPromptSubmit", "Stop", "Notification", "Post
 ACOES_DO_CLAUDE = "Bash|Edit|MultiEdit|Write|NotebookEdit"
 
 
-# As outras ferramentas que podem pedir permissão: delas, o Zé só precisa saber que rodaram.
-OUTRAS_COM_PERMISSAO = "mcp__.*"
+# As outras ferramentas que podem pedir permissão: delas, o Zé só precisa saber que rodaram. O
+# formulário de perguntas e o plano também: respondidos no terminal, saem do painel e da voz.
+OUTRAS_COM_PERMISSAO = "mcp__.*|AskUserQuestion|ExitPlanMode"
 
 
 # O mesmo cálculo de `permissoes.assinatura`, sem a resposta da ferramenta.
 RESUMO_DO_EVENTO = (
     "import hashlib,json,sys;e=json.load(sys.stdin);n=str(e.get('tool_name',''));"
     "a=e.get('tool_input');a=a if isinstance(a,dict) else {};"
+    "a={} if n in ('AskUserQuestion','ExitPlanMode') else a;"
     "h=hashlib.sha256(json.dumps(a,sort_keys=True).encode()).hexdigest()[:16];"
     "print(json.dumps({'hook_event_name':e.get('hook_event_name'),'assinatura':n+':'+h}))"
 )

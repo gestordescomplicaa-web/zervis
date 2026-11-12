@@ -321,6 +321,7 @@ class Nucleo(
         self._perguntas_permissao: dict[str, tuple[str, str]] = {}
         self._permissao_falada: tuple[str, str] | None = None
         self._permissao_ate = 0.0
+        self._permissao_escolha = False  # a pergunta aberta é de um formulário (as opções)
         self.eventos_sistema = Eventos(ESTADO / "eventos-sistema.jsonl")
         self.vigia = Vigia()
         self._vigia_em = 0.0
@@ -416,6 +417,7 @@ class Nucleo(
         self.evidencias = evidencias.Evidencias(ESTADO / "evidencias.jsonl")
         self.maquina.oferta = lambda: time.monotonic() < self._oferta_ate
         self.maquina.permissao = lambda: time.monotonic() < self._permissao_ate
+        self.maquina.escolha = lambda: self._permissao_escolha and self.maquina.permissao()
         self.maquina.ze_perguntou = lambda: (
             str(getattr(self, "_ultimo_dito", "")).rstrip().endswith("?")
         )

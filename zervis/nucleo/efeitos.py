@@ -50,6 +50,7 @@ log = logging.getLogger("zervis.nucleo.laco")
 # Depois da pergunta de permissão de uma sessão, quanto tempo o "sim" e o "não" valem para ela:
 # a fala da pergunta e a escuta que vem depois (mãos livres), ou um "Ei Zé, sim" logo em seguida.
 JANELA_PERMISSAO_S = 45.0
+QUAL_DELAS = "Qual delas?"  # o fim da pergunta de um formulário: a fala seguinte é a escolha
 
 if TYPE_CHECKING:
     from zervis.nucleo.laco import Nucleo
@@ -120,11 +121,13 @@ def _executar(n: "Nucleo", efeito: e.Efeito) -> None:
                 n._avisos_dados[texto] = time.monotonic()  # falado: conta como dado
                 n._antes_de_avisar(texto)
             perguntas = getattr(n, "_perguntas_permissao", {})
-            if (alvo := perguntas.get(texto)) and texto.endswith("Aprovo?"):
+            if (alvo := perguntas.get(texto)) and texto.endswith(("Aprovo?", QUAL_DELAS)):
                 # A pergunta de uma sessão (ou ela repetida, "não entendi"): o "sim" e o
-                # "não" logo depois a respondem, sem passar pelo cérebro (ADR 0039).
+                # "não" logo depois a respondem, sem passar pelo cérebro (ADR 0039); a de um
+                # formulário, a opção dita.
                 n._permissao_falada = alvo
                 n._permissao_ate = time.monotonic() + JANELA_PERMISSAO_S
+                n._permissao_escolha = texto.endswith(QUAL_DELAS)
             n.teclado.falou(texto)
             if texto == e.NAO_ENTENDI:
                 n.evidencias.registrar("nao_entendi", n._ouvido)

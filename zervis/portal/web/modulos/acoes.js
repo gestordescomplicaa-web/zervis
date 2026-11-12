@@ -198,6 +198,11 @@ export const ACOES = {
   "interrompida-continuar": async (b) => { const r = await ocupado(b, () => api("sessao/interrompida", { id: compartilhado.sessaoAberta, continuar: true })); toast(r.aviso); await carregadas.abrirSessao(compartilhado.sessaoAberta); },
   "permissao-aprovar": (b) => carregadas.decidirPermissao(b, true),
   "permissao-negar": (b) => carregadas.decidirPermissao(b, false),
+  // O formulário de perguntas de uma sessão: a opção, as marcadas ou a resposta escrita.
+  "pergunta-opcao": (b) => carregadas.responderPergunta(b, b.dataset.valor || ""),
+  "pergunta-enviar-marcadas": (b) => carregadas.responderPergunta(b, [...(b.closest(".pergunta-sessao")?.querySelectorAll("input[type=checkbox]:checked") || [])]
+    .map((c) => /** @type {HTMLInputElement} */ (c).value).join(", ")),
+  "pergunta-outra": (b) => carregadas.responderPergunta(b, /** @type {HTMLInputElement | null} */ (b.closest(".outra-resposta")?.querySelector("input"))?.value || ""),
   "interrompida-dispensar": async () => { const r = await api("sessao/interrompida", { id: compartilhado.sessaoAberta }); toast(r.aviso); $("interrompida-sessao")?.remove(); },
   "sessao-excluir-nao": () => { $("excluir-sessao").innerHTML = ""; },
   "sessao-interromper": () => {

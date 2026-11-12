@@ -37,6 +37,7 @@ from zervis.nucleo.comandos import (
     comando,
     manutencao,
     orbe,
+    resposta_a_escolha,
     resposta_a_permissao,
     troca,
     whatsapp_local,
@@ -182,6 +183,7 @@ __all__ = [
     "orbe",
     "palavras",
     "pedido_valido",
+    "resposta_a_escolha",
     "resposta_a_oferta",
     "resposta_a_permissao",
     "sem_chamado",
@@ -225,6 +227,8 @@ class Maquina:
     # A pergunta de permissão de uma sessão acabou de ser feita (ADR 0039): "sim" e "não" a
     # respondem, sem passar pelo cérebro.
     permissao: Callable[[], bool] = field(default=lambda: False)
+    # A pergunta foi do formulário de uma sessão ("Qual delas?"): a fala é a escolha.
+    escolha: Callable[[], bool] = field(default=lambda: False)
     # A última fala do Zé foi uma pergunta ("Quer que eu ligue?"): ao vivo, o "beleza" responde.
     ze_perguntou: Callable[[], bool] = field(default=lambda: False)
 
@@ -423,6 +427,10 @@ class Maquina:
             return []
         self.autorizado = False  # invariante 2: um pedido por autorização
         texto = sem_chamado(texto) or texto
+        if self.escolha() and (nome := resposta_a_escolha(texto)):
+            self._ir(Estado.PENSANDO)  # a opção que a pessoa disse vai para a sessão
+            self.cerebro_terminou = False
+            return [Comando(nome)]
         if self.permissao() and (nome := resposta_a_permissao(texto)):
             # Antes do "ok" que encerra a conversa: "ok, pode" responde à sessão (ADR 0039).
             self._ir(Estado.PENSANDO)
@@ -484,6 +492,8 @@ class Maquina:
     def _pedido(self, texto: str) -> Efeito:
         """Comando local ou o cérebro. O modo manutenção não captura a fala (ADR 0072): um
         pedido ao autodesenvolvimento é explícito e vai pelo cérebro."""
+        if self.escolha() and (nome := resposta_a_escolha(texto)):  # o Teclado também
+            return Comando(nome)
         if self.permissao() and (nome := resposta_a_permissao(texto)):  # o Teclado também
             return Comando(nome)
         if self.oferta() and (nome := resposta_a_oferta(texto)):
