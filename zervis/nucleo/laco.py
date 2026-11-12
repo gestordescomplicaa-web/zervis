@@ -475,6 +475,7 @@ class Nucleo(
             camera_dispositivo=self.camera,
             vigia_camera=self.vigia_camera,
             mostrar_camera=lambda caminho, titulo: self.imagem_ao_aparelho(caminho, titulo),
+            conversa_camera=(self.atender_camera, self.encerrar_camera),
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]
         servidor = ferramentas.servidor(self.proprias)

@@ -108,6 +108,11 @@ LEITURA = [
     "impressora_foto",  # só a câmera da impressora (ADR 0085)
     "camera_foto",  # foto sob pedido; não é enviada automaticamente
     "camera_movimentos",  # consulta as fotos locais da câmera (plano-camera)
+    "camera_conversas",  # só lê o histórico das conversas pela câmera (ADR 0088)
+    # Abrir e encerrar a conversa pela câmera é pedido de quem usa; o Zé de lá só conversa,
+    # isolado na Central (sem ferramentas nem memória): ADR 0088.
+    "camera_atender",
+    "camera_encerrar",
     "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
     "tela_tv_fechar",
 ]
@@ -246,13 +251,14 @@ def montar(
     camera_dispositivo: Any = None,
     vigia_camera: Any = None,
     mostrar_camera: Callable[[Path, str], str] | None = None,
+    conversa_camera: tuple[Callable[[], str], Callable[[], str]] | None = None,
 ) -> list[SdkMcpTool[Any]]:
     """As ferramentas do servidor `jarvis` (a pasta do Zé lista os nomes como conexões),
     cada uma registrada na atividade ao rodar (ADR 0025)."""
     grupos = por_grupo(
         sessoes, memoria, skills, pendencias, jobs, sistema, diario, tela, manutencao, sobre,
         pesquisar, acervo, leads, instagram, buscador, vigia, pesquisas, projetos, impressora,
-        tela_tv, camera_dispositivo, vigia_camera, mostrar_camera,
+        tela_tv, camera_dispositivo, vigia_camera, mostrar_camera, conversa_camera,
     )  # fmt: skip
     return [f for fs in grupos.values() for f in fs]
 
@@ -281,6 +287,7 @@ def por_grupo(
     camera_dispositivo: Any = None,
     vigia_camera: Any = None,
     mostrar_camera: Callable[[Path, str], str] | None = None,
+    conversa_camera: tuple[Callable[[], str], Callable[[], str]] | None = None,
 ) -> dict[str, list[SdkMcpTool[Any]]]:
     """As mesmas ferramentas, por grupo (o módulo de cada uma): o Zé diz o que sabe fazer por
     área (ADR 0045). Grupo sem ferramenta (o serviço não existe aqui) fica de fora."""
@@ -303,7 +310,9 @@ def por_grupo(
         "instagram": g_instagram.ferramentas(instagram),
         "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo, impressora),
         "tela_tv": g_tela_tv.ferramentas(tela_tv, projetos),
-        "camera": g_camera.ferramentas(camera_dispositivo, vigia_camera, mostrar_camera),
+        "camera": g_camera.ferramentas(
+            camera_dispositivo, vigia_camera, mostrar_camera, *(conversa_camera or (None, None))
+        ),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

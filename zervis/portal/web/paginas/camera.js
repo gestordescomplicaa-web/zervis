@@ -32,6 +32,25 @@ function girar(c) {
     `<label class="interruptor"><input class="camera-girar" data-lente="${n}" type="checkbox" ${marcada(n)}> Lente ${n}</label>`).join("")}`;
 }
 
+const minutos = (s) => (s >= 60 ? `${Math.round(s / 60)} min` : `${s} s`);
+
+/** A conversa ao vivo pela câmera (ADR 0088) e o histórico, com o resumo e as falas. */
+function conversa(c) {
+  if (!c.configurada) return "";
+  const acao = c.em_conversa
+    ? botao("Encerrar conversa", "camera-encerrar", "", "discreta")
+    : botao("Atender pela câmera", "camera-atender", "", "principal");
+  const itens = (c.conversas || []).map((v, i) => `<div class="linha-item">
+    <div class="texto"><strong>${esc(hora(v.quando))} · ${esc(minutos(v.duracao || 0))}</strong><small>${esc(v.resumo || v.motivo || "Sem resumo.")}</small></div>
+    ${(v.conversa || []).length ? botao("Ver conversa", "camera-ver-conversa", `data-i="${i}"`, "discreta") : ""}
+    <div class="falas" data-conversa="${i}" hidden>${(v.conversa || []).map((f) =>
+      `<p><b>${f.quem === "cliente" ? "Pessoa" : "Zé"}:</b> ${esc(f.texto)}</p>`).join("")}</div>
+  </div>`).join("");
+  return cartao(`Conversa <span class="etiqueta ${c.em_conversa ? "bom" : ""}">${c.em_conversa ? "Em conversa" : "Livre"}</span>`,
+    `${sub("Fala ao vivo pela câmera. O Zé de lá só conversa e anota recados.")}
+    <div class="botoes">${acao}</div>${itens ? `<div class="itens">${itens}</div>` : ""}`);
+}
+
 function galeria(fotos) {
   const tirar = `<div class="botoes">${botao("Tirar foto agora", "camera-tirar", "", "discreta")}</div>`;
   if (!fotos.length) return cartao("Fotos", vazio("Nenhuma foto guardada.") + tirar);
@@ -44,7 +63,7 @@ function galeria(fotos) {
 
 PAGINAS.camera = async () => {
   const c = await api("camera");
-  return `${cabeca("Câmera", "")}${formulario(c)}${galeria(c.fotos || [])}`;
+  return `${cabeca("Câmera", "")}${formulario(c)}${conversa(c)}${galeria(c.fotos || [])}`;
 };
 
 Object.assign(ACOES, {
@@ -79,6 +98,22 @@ Object.assign(ACOES, {
   "camera-testar": async (/** @type {HTMLButtonElement} */ b) => {
     try { toast((await ocupado(b, () => api("camera/testar", {}))).aviso); }
     catch (erro) { toast(erro.message); }
+  },
+  "camera-atender": async (/** @type {HTMLButtonElement} */ b) => {
+    try {
+      toast((await ocupado(b, () => api("camera/atender", {}))).aviso);
+      await abrir();
+    } catch (erro) { toast(erro.message); }
+  },
+  "camera-encerrar": async (/** @type {HTMLButtonElement} */ b) => {
+    try {
+      toast((await ocupado(b, () => api("camera/encerrar", {}))).aviso);
+      await abrir();
+    } catch (erro) { toast(erro.message); }
+  },
+  "camera-ver-conversa": async (/** @type {HTMLButtonElement} */ b) => {
+    const falas = /** @type {HTMLElement | null} */ (document.querySelector(`[data-conversa="${CSS.escape(b.dataset.i || "")}"]`));
+    if (falas) falas.hidden = !falas.hidden;
   },
   "camera-tirar": async (/** @type {HTMLButtonElement} */ b) => {
     try {

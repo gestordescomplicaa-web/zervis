@@ -1013,6 +1013,8 @@
    "enviar": true,
    "estado": "Não configurada",
    "lentes": 1,
+   "em_conversa": false,
+   "conversas": [],
    "fotos": []
   }
  },

@@ -95,3 +95,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0085](0085-vigia-da-impressora.md) | O vigia da impressora: erros na hora, impressão mais segura e a câmera | Aceita |
 | [0086](0086-app-de-voz-escuta-de-perto-e-imagens.md) | O app de voz: escuta de perto, imagens no celular e uma voz por vez sem briga | Em validação |
 | [0087](0087-camera-de-vigia.md) | Câmera de vigia: uma foto local por movimento | Aceita |
+| [0088](0088-conversa-pela-camera.md) | Conversa pela câmera: o Zé da rua, ao vivo e isolado | Aceita |

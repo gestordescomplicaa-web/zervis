@@ -205,6 +205,21 @@ class Cliente:
     def encerrar_ligacao(self, chamada: str) -> None:
         self._api("POST", "/ligacao/encerrar", {"chamada": chamada})
 
+    # --- a conversa pela câmera (ADR 0088) ------------------------------------------------------
+
+    def atender_camera(self) -> None:
+        """Abre a conversa; o resultado chega pelo evento "camera_conversa"."""
+        self._api("POST", "/camera/atender", {})
+
+    def encerrar_camera(self) -> None:
+        self._api("POST", "/camera/encerrar", {})
+
+    def camera_em_conversa(self) -> bool:
+        try:
+            return bool(self._api("GET", "/camera", espera=2.0).get("em_conversa"))
+        except CentralErro:
+            return False
+
     @property
     def token(self) -> str:
         return central.garantir_token(self.arquivo_token)

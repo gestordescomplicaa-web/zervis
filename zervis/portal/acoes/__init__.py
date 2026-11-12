@@ -169,6 +169,8 @@ class Acoes:
             "camera/procurar": self.procurar_camera,
             "camera/testar": self.testar_camera,
             "camera/foto": self.foto_camera,
+            "camera/atender": self.atender_camera,
+            "camera/encerrar": self.encerrar_camera,
             "tv": self.salvar_modo_tv,
             "tv/procurar": self.procurar_tv,
             "tv/abrir": self.abrir_tv,

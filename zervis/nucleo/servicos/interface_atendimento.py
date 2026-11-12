@@ -47,6 +47,15 @@ class InterfaceAtendimento(InterfaceServico):
     def encerrar_ligacao(self) -> str:
         return servico(self, ServicoAtendimento).encerrar_ligacao()
 
+    def atender_camera(self) -> str:
+        return servico(self, ServicoAtendimento).atender_camera()
+
+    def encerrar_camera(self) -> str:
+        return servico(self, ServicoAtendimento).encerrar_camera()
+
+    def camera_em_conversa(self) -> bool:
+        return servico(self, ServicoAtendimento).camera_em_conversa()
+
     def estado_whatsapp(self) -> dict[str, Any]:
         return servico(self, ServicoAtendimento).estado_whatsapp()
 
