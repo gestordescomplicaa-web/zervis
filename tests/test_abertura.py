@@ -464,7 +464,8 @@ def test_os_avisos_nao_atropelam_a_abertura(tmp_path: Path) -> None:
     for texto in ("O n8n voltou.", "A memória passou de 80%."):
         fila.guardar(texto)
     n: Any = SimpleNamespace(
-        abertura=SimpleNamespace(rodando=lambda: rodando[0]), fila=fila, eventos=queue.Queue(),
+        abertura=SimpleNamespace(rodando=lambda: rodando[0], e_fala=lambda t: False), fila=fila,
+        eventos=queue.Queue(),
         _meta={}, _oferta_ate=0.0,
     )  # fmt: skip
     ServicoAvisos(n)._sair_da_fila()
@@ -485,6 +486,60 @@ def test_aviso_que_chega_no_meio_da_abertura_espera_na_fila() -> None:
     )  # fmt: skip
     ouvir.tratar(n, e.Aviso("A sessão Loja terminou."))
     assert guardados == ["A sessão Loja terminou."]  # não foi falado: esperou na fila
+
+
+def test_a_musica_da_abertura_nao_vale_como_chamado() -> None:
+    # Visto em 11/11/2026: a música no microfone soou como "Ei Zé" 4 s depois de subir; o Zé
+    # abriu uma conversa no meio da abertura.
+    from zervis.nucleo import estados as e
+    from zervis.nucleo import ouvir
+
+    rodando = [True]
+    tratados: list[Any] = []
+    n: Any = SimpleNamespace(
+        modo_fala="normal", _fonte=None, abertura=SimpleNamespace(rodando=lambda: rodando[0]),
+        _guardar=tratados.append, _pessoa_falando=lambda: True,
+    )  # fmt: skip
+    ouvir.tratar(n, e.Ativacao())  # ignorado: nada mais é chamado no núcleo
+    rodando[0] = False
+    with pytest.raises(AttributeError):  # fora da abertura, o chamado segue para a máquina
+        ouvir.tratar(n, e.Ativacao())
+
+
+def test_fala_da_abertura_nao_dita_na_hora_nao_vira_aviso(
+    abertura: Abertura, tmp_path: Path
+) -> None:
+    from zervis.avisos.fila import Fila
+    from zervis.nucleo import efeitos
+    from zervis.nucleo import estados as e
+
+    abertura.retratar(time.time())
+    dia = rotas.panorama(tmp_path)
+    rotas.pedir_fala(tmp_path, {"montado": dia["montado"], "passo": 0})
+    fala = abertura.fala()
+    assert fala is not None and abertura.e_fala(fala)
+    guardados: list[str] = []
+    n: Any = SimpleNamespace(abertura=abertura, _guardar=guardados.append, _comecados={})
+    efeitos._executar(n, e.ReterAviso(fala))  # o Zé não estava livre quando ela chegou
+    assert guardados == []  # descartada, não guardada para "depois"
+    efeitos._executar(n, e.ReterAviso("A sessão Loja terminou."))
+    assert guardados == ["A sessão Loja terminou."]  # um aviso de verdade espera, como antes
+    # As que ficaram na fila antes desta correção (o caso real) saem antes de qualquer oferta.
+    import queue
+
+    from zervis.nucleo.servicos.avisos import ServicoAvisos
+
+    fila = Fila(tmp_path / "avisos.json")
+    for texto in ("Boa tarde, Ana. Hoje é quarta-feira, 11 de novembro.",
+                  "No WhatsApp, três conversas esperam resposta: Bia, Caio e Davi.",
+                  "Boa noite, Ana. Hoje é quarta-feira, 11 de novembro.",
+                  "A sessão Loja terminou."):  # fmt: skip
+        fila.guardar(texto)
+    abertura._rodando_ate = 0.0
+    m: Any = SimpleNamespace(abertura=abertura, fila=fila, eventos=queue.Queue(), _meta={})
+    ServicoAvisos(m)._sair_da_fila()
+    assert m.eventos.get_nowait().texto == "A sessão Loja terminou."
+    assert not fila.validos()
 
 
 @pytest.mark.parametrize(

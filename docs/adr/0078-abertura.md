@@ -63,6 +63,13 @@ ADR próprio.
    oferecido; a oferta vem depois do fechamento. O "bom dia" separado não repete o dia. Avisos sem
    manchete viram uma conta só ("Três novidades esperando"), nunca "um aviso, um aviso e um aviso"
    (visto em 11/11/2026).
+8. **A abertura não vira aviso nem conversa** (11/11/2026, à noite). Os "avisos sem manchete" eram
+   as próprias falas da abertura: uma que chegava com o Zé ocupado ia para a fila durável e voltava
+   depois, fora de hora ("Boa tarde, Gabriel" à noite). E a música, no microfone, soava como o
+   "Ei Zé": ele abria uma conversa no meio da entrada e passava a ouvir depois de cada fala. Agora,
+   durante a abertura, o chamado por voz não vale (o botão vale, e o Esc a pula); uma fala dela
+   que não couber na hora é descartada; e as que já estavam na fila saem dela antes de qualquer
+   oferta (reconhecidas pelo jeito: `panorama.JEITO_DE_FALA`).
 
 ## Consequências
 

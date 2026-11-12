@@ -62,6 +62,12 @@ def tratar(n: "Nucleo", evento: e.Evento) -> None:
     if isinstance(evento, e.Aviso) and not evento.pedido and abertura and abertura.rodando():
         n._guardar(evento.texto)  # a entrada do programa não é atropelada: sai depois dela
         return
+    if isinstance(evento, e.Ativacao) and abertura and abertura.rodando():
+        # A música da abertura no microfone soa como "Ei Zé" (11/11/2026): o Zé abria uma
+        # conversa, a fala seguinte da abertura ia para a fila e ele saía lendo aviso velho.
+        # Durante a abertura o chamado não vale; o botão sim, e o Esc a pula.
+        log.info("chamado ignorado: a abertura está tocando")
+        return
     # Pedido para ouvir (a abertura, o "Ouvir" do celular): sai mesmo com a voz muda.
     pedidas = getattr(n, "ouvir_mesmo_muda", None)
     if isinstance(evento, e.Aviso) and evento.pedido and pedidas is not None:

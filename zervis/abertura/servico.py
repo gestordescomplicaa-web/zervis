@@ -221,6 +221,7 @@ class Abertura:
         self._pedido = self.pasta / "abertura-falar.json"
         self._mtime = self._modificado()
         self._rodando_ate = 0.0  # epoch: até quando a abertura conta como em andamento
+        self._faladas: set[str] = set()  # as falas que a página pediu (nunca viram aviso)
         with contextlib.suppress(Exception):
             if self.ler_ajustes().ligada:  # abrir o programa sobe o Zé e abre a abertura
                 self._rodando_ate = time.time() + SUBINDO_S
@@ -272,6 +273,13 @@ class Abertura:
         except OSError:
             return 0.0
 
+    def e_fala(self, texto: str) -> bool:
+        """`texto` é uma fala da abertura: pedida pela página, de um panorama guardado ou com o
+        jeito de uma (as que ficaram na fila de avisos antes desta correção, 11/11/2026)."""
+        if texto in self._faladas or any(texto in f for f in self.guardados.values()):
+            return True
+        return bool(panorama.JEITO_DE_FALA.match(texto))
+
     def rodando(self, agora: float | None = None) -> bool:
         """A abertura está na tela: os avisos esperam (nada de oferta no meio da entrada)."""
         return (time.time() if agora is None else agora) < self._rodando_ate
@@ -297,4 +305,6 @@ class Abertura:
             return None
         # o último passo é o fechamento: depois dele, os avisos voltam a sair
         self._rodando_ate = agora + PASSO_S if passo < len(falas) - 1 else 0.0
+        if falas[passo]:
+            self._faladas.add(falas[passo])
         return falas[passo] or None
