@@ -38,6 +38,7 @@ class SessoesFalsas:
         motor: str = "claude",
         origem: str = "",
         isolada: bool = False,
+        escrita: tuple[str, ...] = (),
     ) -> Sessao:
         s = Sessao(
             id=f"{len(self.criadas):08x}",
@@ -46,6 +47,7 @@ class SessoesFalsas:
             motor=motor,
             origem=origem,
             isolada=isolada,
+            escrita=list(escrita),
         )
         if isolada:  # a cópia isolada de verdade, como as sessões fazem
             s.branch, s.worktree = f"ze/{s.id}", str(Path(pasta).parent / f"copia-{s.id}")
@@ -441,6 +443,8 @@ def test_melhorias_numa_copia_isolada_aplicar_e_descartar(
     m.encaminhar("melhora o guia", "", 1.0)
     copia = Path(m.copia().worktree)  # type: ignore[union-attr]
     assert m.copia().nome == "Zé · autodesenvolvimento"  # type: ignore[union-attr]
+    # Protegida, a sessão ainda grava a resposta falada na pasta da manutenção (ADR 0074).
+    assert m.copia().escrita == [str(m.pasta)]  # type: ignore[union-attr]
     m.copia().nome = "Zé · melhorias"  # type: ignore[union-attr]  # criada com o nome antigo
     assert m.copia().nome == "Zé · autodesenvolvimento"  # type: ignore[union-attr]
     assert m.mudancas()["commits"] == [] and m.aplicar() == (

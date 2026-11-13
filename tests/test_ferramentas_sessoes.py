@@ -12,6 +12,7 @@ import pytest
 from zervis.cerebro import contas
 from zervis.cerebro.ferramentas import LIVRES, SERVIDOR
 from zervis.cerebro.ferramentas import sessoes as g
+from zervis.oficina import isolamento
 from zervis.oficina.sessoes import Sessao, Sessoes
 
 
@@ -127,3 +128,19 @@ def test_a_sessao_pelo_nome_ou_a_em_foco(tmp_path: Path) -> None:
     sessoes.em_foco = (loja.id, time.time() - 3600)  # foco velho não vale
     texto, erro = chamar(f, "sessao_ler", {})
     assert erro and "qual sessão" in texto
+
+
+def test_pela_voz_a_sessao_nasce_protegida_e_sai_dela_so_a_pedido(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    raiz = tmp_path / "casa"
+    for nome in ("loja", "site"):
+        (raiz / nome).mkdir(parents=True)
+    monkeypatch.setattr(isolamento, "disponivel", lambda: True)
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), protegida_padrao=True)
+    f = {t.name: t.handler for t in g.ferramentas(sessoes)}
+    loja, _ = chamar(f, "sessao_criar", {"nome": "Loja", "pasta": str(raiz / "loja")})
+    site, _ = chamar(
+        f, "sessao_criar", {"nome": "Site", "pasta": str(raiz / "site"), "protegida": False}
+    )
+    assert loja["protegida"] and not site["protegida"]

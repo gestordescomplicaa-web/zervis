@@ -129,3 +129,38 @@ def test_os_outros_processos_da_maquina_ficam_fora(tmp_path: Path) -> None:
     linhas = feito.stdout.splitlines()
     assert int(linhas[0]) < 10  # o próprio shell e o bwrap, não as centenas da máquina
     assert "systemd" not in feito.stdout and "init" not in feito.stdout
+
+
+def test_sessao_nova_nasce_protegida_quando_a_maquina_permite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fecho da Fase B (13/11/2026): sem escolha, protegida; desligar é por sessão. Sem o
+    bubblewrap, o padrão não impede o trabalho: a sessão nasce sem proteção e diz isso."""
+    raiz = tmp_path / "casa"
+    for nome in ("loja", "site", "blog"):
+        (raiz / nome).mkdir(parents=True)
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,), protegida_padrao=True)
+    monkeypatch.setattr(isolamento, "disponivel", lambda: True)
+    assert sessoes.protegida_disponivel()
+    assert sessoes.criar("Loja", str(raiz / "loja")).protegida
+    assert not sessoes.criar("Site", str(raiz / "site"), protegida=False).protegida
+    monkeypatch.setattr(isolamento, "disponivel", lambda: False)
+    blog = sessoes.criar("Blog", str(raiz / "blog"))
+    assert not blog.protegida and "protegida" not in sessoes.mensagens(blog.id)[0]["texto"]
+
+
+def test_sem_o_padrao_ligado_nada_muda(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    raiz = tmp_path / "casa"
+    (raiz / "loja").mkdir(parents=True)
+    monkeypatch.setattr(isolamento, "disponivel", lambda: True)
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,))
+    assert not sessoes.criar("Loja", str(raiz / "loja")).protegida
+
+
+def test_a_pasta_extra_de_escrita_entra_no_isolamento(tmp_path: Path) -> None:
+    respostas = tmp_path / "manutencao"
+    respostas.mkdir()
+    s = Sessao("a1b2c3d4", "Zé", str(tmp_path), protegida=True, escrita=[str(respostas)])
+    comando = isolar(s, ["claude"], tmp_path / "sessao")
+    i = comando.index(str(respostas.resolve()))
+    assert comando[i - 1] == "--bind" and comando[i + 1] == str(respostas.resolve())

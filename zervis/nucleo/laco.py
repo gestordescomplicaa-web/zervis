@@ -404,6 +404,7 @@ class Nucleo(
             skills=self.skills,
             # Os terminais num serviço à parte: reiniciar o Zé não derruba as sessões (ADR 0068).
             oficina=Oficina(caminho_padrao()),
+            protegida_padrao=True,  # o agente só vê o projeto, salvo escolha (ADR 0074)
         )
         self.sessoes.ao_avisar = self._sessao_pede
         # A pasta do agente de atendimento: um projeto do usuário, ao lado dos outros (ADR 0031).

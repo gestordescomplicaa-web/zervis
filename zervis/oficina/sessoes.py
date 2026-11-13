@@ -32,6 +32,7 @@ from zervis.memoria import aimemory
 from zervis.oficina import (
     continuidade,
     fallback,
+    isolamento,
     sessoes_copia,
     sessoes_envio,
     sessoes_eventos,
@@ -157,6 +158,8 @@ class Sessao:
     isolada: bool = False
     # Protegida (ADR 0074): o agente roda no isolamento e só enxerga a pasta do projeto.
     protegida: bool = False
+    # Fora do projeto, onde a sessão protegida também escreve (a manutenção grava ali a resposta).
+    escrita: list[str] = field(default_factory=list)
     worktree: str = ""
     branch: str = ""
     base: str = ""  # o commit de onde a cópia isolada saiu
@@ -250,7 +253,9 @@ class Sessoes:
         projetos_novos: Path | None = None,
         skills: Any = None,
         oficina: Oficina | None = None,
+        protegida_padrao: bool = False,
     ) -> None:
+        self.protegida_padrao = protegida_padrao  # sem escolha, nasce protegida (ADR 0074)
         self.skills = (
             skills  # as skills do usuário (habilidades.skills.Skills): sessões também leem
         )
@@ -417,10 +422,12 @@ class Sessoes:
         modelo: str = "",
         isolada: bool = False,
         origem: str = "painel",
-        protegida: bool = False,
+        protegida: bool | None = None,
+        escrita: tuple[str, ...] = (),
     ) -> Sessao:
+        """`protegida`: None é o padrão (protegida quando dá); True ou False, a escolha feita."""
         with self._operacoes:
-            return self._criar(nome, pasta, motor, modelo, isolada, origem, protegida)
+            return self._criar(nome, pasta, motor, modelo, isolada, origem, protegida, escrita)
 
     def _criar(
         self,
@@ -430,9 +437,15 @@ class Sessoes:
         modelo: str,
         isolada: bool,
         origem: str,
-        protegida: bool = False,
+        protegida: bool | None = None,
+        escrita: tuple[str, ...] = (),
     ) -> Sessao:
-        return sessoes_envio._criar(self, nome, pasta, motor, modelo, isolada, origem, protegida)
+        criar = sessoes_envio._criar
+        return criar(self, nome, pasta, motor, modelo, isolada, origem, protegida, escrita)
+
+    def protegida_disponivel(self) -> bool:
+        """Dá para criar sessão protegida aqui: o bubblewrap funciona e há terminal."""
+        return not self.legado and isolamento.disponivel()
 
     def criar_projeto(self, nome: str) -> Path:
         return sessoes_envio.criar_projeto(self, nome)

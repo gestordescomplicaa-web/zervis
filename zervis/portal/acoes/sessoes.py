@@ -68,6 +68,10 @@ class AcoesSessoes(Pagina):
         # A sessão do Zé (melhorias) mora na página Melhorias, não junto dos projetos.
         return [self.painel._sessao(s) for s in self.n.sessoes.listar() if s.origem != "manutencao"]
 
+    def protecao(self) -> dict[str, bool]:
+        """Se a sessão nova pode nascer protegida nesta máquina (ADR 0074)."""
+        return {"disponivel": self.n.sessoes.protegida_disponivel()}
+
     def pastas(self) -> list[str]:
         """Sugestões para uma sessão nova: as pastas de projetos que existem nesta máquina."""
         raizes = [self.n.cfg.caminho("oficina", "raiz_projetos"), Path.home() / "Work"]
@@ -112,7 +116,7 @@ class AcoesSessoes(Pagina):
                 str(dados.get("motor", "claude")),
                 str(dados.get("modelo", "")),
                 bool(dados.get("isolada", False)),
-                protegida=bool(dados.get("protegida", False)),
+                protegida=None if dados.get("protegida") is None else bool(dados["protegida"]),
             )
         )
         # Os conectores escolhidos valem antes do agente abrir pela primeira vez.

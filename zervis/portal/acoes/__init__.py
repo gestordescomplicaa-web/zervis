@@ -100,6 +100,7 @@ class Acoes:
             "foco": self.foco,
             "sessoes": self.sessoes,
             "pastas": self.pastas,
+            "sessoes/protecao": self.protecao,
             "conectores": self.conectores,
             "atendimento": self.atendimento,
             "atualizacoes": self.atualizacoes,

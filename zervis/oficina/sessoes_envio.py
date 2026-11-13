@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from zervis.cerebro import contas, modelos
 from zervis.memoria import aimemory
-from zervis.oficina import continuidade, isolamento
+from zervis.oficina import continuidade
 from zervis.oficina import sessoes as ses
 
 if TYPE_CHECKING:
@@ -74,7 +74,8 @@ def _criar(
     modelo: str,
     isolada: bool,
     origem: str,
-    protegida: bool = False,
+    protegida: bool | None = None,
+    escrita: tuple[str, ...] = (),
 ) -> ses.Sessao:
     nome = " ".join(nome.split())[:60]
     caminho = n._pasta_permitida(pasta)
@@ -85,7 +86,9 @@ def _criar(
         raise ses.SessaoErro("Já existe autodesenvolvimento neste projeto. Abra a sessão central.")
     if motor not in ses.MOTORES:
         raise ses.SessaoErro(f"motor desconhecido: {motor}")
-    if protegida and (n.legado or not isolamento.disponivel()):
+    if protegida is None:  # sem escolha: protegida quando a máquina permite (ADR 0074)
+        protegida = n.protegida_padrao and n.protegida_disponivel()
+    elif protegida and not n.protegida_disponivel():
         raise ses.SessaoErro("Isolamento indisponível nesta máquina: instale o bubblewrap.")
     s = ses.Sessao(
         id=uuid.uuid4().hex[:8],
@@ -97,6 +100,7 @@ def _criar(
         isolada=isolada,
         origem=origem,
         protegida=protegida,
+        escrita=[str(Path(p).resolve()) for p in escrita],
     )
     if isolada:
         if ses._git(caminho, "rev-parse", "--is-inside-work-tree").stdout.strip() != "true":

@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Sessões protegidas por padrão:** toda sessão nova (painel, voz, Projetos 3D, atendimento e
+  autodesenvolvimento) nasce protegida, com o agente enxergando só a pasta do projeto. Para uma
+  sessão sem proteção, desmarque "Protegida" no painel ou peça pela voz. Sem o bubblewrap, a
+  sessão nasce sem proteção e o painel mostra "Indisponível". As sessões que já existem não
+  mudam (ADR 0074).
+
 ## 0.5.1 (13/11/2026)
 
 A sexta versão publicada: os aparelhos da casa numa seção só (câmera, impressora 3D e Modo TV),
