@@ -379,3 +379,24 @@ def test_pela_voz_atende_recusa_e_encerra() -> None:
 def test_o_prompt_ensina_a_chamar_pelo_nome_do_dono() -> None:
     assert "falar com Fulano" in lg.sistema(ag.Perfil(nome="Bia"), "Fulano")
     assert "[[CHAMAR:" in lg.sistema(ag.Perfil(nome="Bia"))
+
+
+def test_alguem_na_camera_pede_para_falar_com_voce() -> None:
+    """ADR 0088: a mesma pergunta pelo app, sem "na linha" e sem nome (ninguém se identificou)."""
+    app = App()
+    n = _ze(app)
+    ServicoAtendimento(n)._evento_da_central(
+        {
+            "tipo": "chamando",
+            "chamada": "camera",
+            "nome": "",
+            "telefone": "",
+            "assunto": "o Carlos, entrega de um pacote",
+            "origem": "camera",
+        }
+    )
+    fala = n.eventos.get_nowait().texto
+    assert "Alguém na câmera da entrada quer falar com você sobre o Carlos" in fala
+    assert "na linha" not in fala
+    assert app.controles[-1]["id"] == "camera"
+    assert n.ligacao_pendente["id"] == "camera"

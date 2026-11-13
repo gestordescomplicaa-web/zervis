@@ -1011,6 +1011,7 @@
    "ligado": false,
    "girar": [],
    "enviar": true,
+   "sem_fotos": [],
    "estado": "Não configurada",
    "lentes": 1,
    "em_conversa": false,

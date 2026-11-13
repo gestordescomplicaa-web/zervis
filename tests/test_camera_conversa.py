@@ -296,3 +296,32 @@ def test_sem_telefone_o_motor_sem_estado_recebe_a_conversa_da_ligacao(tmp_path: 
         await asyncio.wait_for(tarefa, 3)
 
     asyncio.run(cena())
+
+
+def test_na_ponte_so_cala_quando_sai_voz_de_verdade(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Na ponte com o celular a sua voz chega o tempo todo, com silêncio: a câmera só fica
+    surda enquanto sai voz de fato, para a pessoa poder responder."""
+    assert not cf.tem_voz(cf.SILENCIO) and cf.tem_voz(cf.para_alaw(_tom()))
+    falsa = CameraQueFala(cf.para_alaw(_tom()))
+    monkeypatch.setattr(camera, "PORTA", falsa.porta)
+
+    async def cena() -> None:
+        canal = cf.CanalDaCamera(camera.Conexao("127.0.0.1", "admin", "segredo"))
+        await canal.abrir()
+        microfone = canal.__aiter__()
+        await canal.send(b"\0\0" * 960 * 5)  # 300 ms de silêncio da ponte
+        await asyncio.sleep(0.1)
+        assert any(await asyncio.wait_for(microfone.__anext__(), 2))  # a pessoa é ouvida
+        await canal.fechar()
+
+    try:
+        asyncio.run(cena())
+    finally:
+        falsa.fechar()
+
+
+def test_a_conversa_da_camera_pode_chamar_quem_usa(tmp_path: Path) -> None:
+    assert "[[CHAMAR:" in cf.SISTEMA
+    central = _central(tmp_path)
+    assert c.CAMERA not in central.atendidas
+    assert central.decidir(c.CAMERA, True) is False  # sem conversa, nada a decidir

@@ -56,6 +56,11 @@ Na câmera real, três coisas não estavam no plano:
 - Depois de um login recusado, o vigia aguarda novo cadastro em vez de repetir tentativas.
 - Algumas versões podem não aceitar OPSNAP ou alarmes de terceiros. O painel mostra o estado, e
   a captura RTSP depende de `ffmpeg` instalado.
+- **Precisão por lente (12/11/2026).** A foto é da lente que o alarme indica, e isso foi
+  conferido com as três lentes fotografadas a cada alarme. No alarme do canal 1, as pessoas
+  aparecem na lente 2. Mas a própria câmera dispara "pessoa" na lente 3 (a frente da casa, com a
+  porta de vidro iluminada) sem ninguém na imagem. O Zé não analisa os quadros. Por isso o
+  cadastro tem "Lentes com fotos por movimento" (`sem_fotos`): a lente desmarcada não gera foto.
 - A conversa pela câmera (microfone e alto-falante) está na [ADR 0088](0088-conversa-pela-camera.md).
 - Fora o `MsgtoNetEnable`, a câmera não recebe comandos de movimento, PTZ, áudio ou
   configuração. O Zé só lê alarmes e imagens.

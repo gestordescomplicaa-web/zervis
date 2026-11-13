@@ -29,6 +29,7 @@ FOTOS = 500
 ALFABETO = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 # A conversa pelo alto-falante e pelo microfone (ADR 0088): G.711 A-law, 8 kHz, mono.
 FALA = {"BitRate": 128, "EncodeType": "G711_ALAW", "SampleBit": 16, "SampleRate": 8000}
+VIVA = 1007  # a resposta do KeepAlive (1006): chega a qualquer hora e não responde a nada
 AUDIO = b"\x00\x00\x01\xfa\x0e\x02"  # quadro de áudio: marca, A-law (0x0E), 8 kHz (0x02)
 
 
@@ -49,6 +50,9 @@ class Conexao:
     ligado: bool = True
     girar: tuple[int, ...] = ()  # as lentes (1, 2…) montadas de cabeça para baixo
     enviar: bool = True  # a foto de movimento vai ao celular (o app Zé Voz)
+    # As lentes (1, 2…) cujo alarme não vira foto: a detecção da câmera dispara nelas sem
+    # ninguém na imagem (a luz atrás de uma porta de vidro, por exemplo).
+    sem_fotos: tuple[int, ...] = ()
 
 
 def hash_sofia(senha: str) -> str:
@@ -245,6 +249,8 @@ class Cliente:
             if recebido == 1504:
                 self._guardar_alarme(carga)  # chegou entre o pedido e a resposta
                 continue
+            if recebido == VIVA and codigo != 1006:
+                continue  # a resposta de um KeepAlive anterior, atrasada
             if resposta is not None and recebido != resposta:
                 raise CameraErro("A câmera respondeu com uma operação inesperada.")
             return _json(carga)
@@ -348,6 +354,8 @@ class Cliente:
             if codigo == 1504:
                 self._guardar_alarme(carga)
                 continue
+            if codigo == VIVA:
+                continue  # o KeepAlive mandado logo antes respondeu primeiro
             if codigo != 1561:
                 raise CameraErro("A câmera não respondeu ao pedido de foto.")
             jpeg = _jpeg(carga)
@@ -524,6 +532,7 @@ class Camera:
                 bool(dados.get("ligado", True)),
                 _lentes(dados.get("girar")),
                 bool(dados.get("enviar", True)),
+                _lentes(dados.get("sem_fotos")),
             )
         except (OSError, ValueError, KeyError, TypeError):
             return None
@@ -537,8 +546,9 @@ class Camera:
         ligado: bool = True,
         girar: list[int] | None = None,
         enviar: bool | None = None,
+        sem_fotos: list[int] | None = None,
     ) -> None:
-        """`girar` e `enviar` None mantêm o que já estava no cadastro."""
+        """`girar`, `enviar` e `sem_fotos` None mantêm o que já estava no cadastro."""
         try:
             endereco = ipaddress.ip_address(ip.strip())
         except ValueError:
@@ -553,6 +563,9 @@ class Camera:
         lentes = _lentes(girar) if girar is not None else (atual.girar if atual else ())
         if enviar is None:
             enviar = atual.enviar if atual else True
+        caladas = (
+            _lentes(sem_fotos) if sem_fotos is not None else (atual.sem_fotos if atual else ())
+        )
         if not senha or len(senha) > 128 or any(ord(c) < 32 for c in senha):
             raise CameraErro("Senha do dispositivo inválida.")
         if not 1 <= intervalo_s <= 86400:
@@ -569,6 +582,7 @@ class Camera:
                     "ligado": bool(ligado),
                     "girar": list(lentes),
                     "enviar": bool(enviar),
+                    "sem_fotos": list(caladas),
                 },
                 ensure_ascii=False,
             )
@@ -589,6 +603,7 @@ class Camera:
                 "ligado": False,
                 "girar": [],
                 "enviar": True,
+                "sem_fotos": [],
             }
         return {
             "configurada": True,
@@ -598,6 +613,7 @@ class Camera:
             "ligado": conexao.ligado,
             "girar": list(conexao.girar),
             "enviar": conexao.enviar,
+            "sem_fotos": list(conexao.sem_fotos),
         }
 
     def procurar(self) -> list[dict[str, str]]:

@@ -149,6 +149,8 @@ class Vigia:
         if conexao is None:
             return
         canal = _canal(dados.get("Channel"), self.lentes)
+        if canal + 1 in conexao.sem_fotos:
+            return  # quem usa desligou a foto por movimento desta lente
         agora = time.monotonic()
         with self._trava:
             ultima = self._ultima_foto.get(canal)

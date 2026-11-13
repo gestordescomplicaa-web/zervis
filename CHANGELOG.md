@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Câmera: fotos só das lentes que você escolher:** em "Lentes com fotos por movimento", a lente
+  em que a câmera detecta "pessoa" sem ninguém na imagem deixa de mandar foto.
+- **Câmera: falar com você:** se quem está na câmera pedir para falar com você, o Zé pergunta pelo
+  app ("Pode atender?") e, com o seu "sim", a câmera vira uma ligação com o celular. Sem
+  resposta, ele anota o recado.
 - **Conversa pela câmera:** "Atender pela câmera" (painel, ou "Zé, atende a porta") abre uma
   conversa ao vivo com quem está na entrada. Fala pelo alto-falante da câmera e ouve pelo
   microfone dela. O Zé de lá roda isolado na Central, sem ferramentas nem memória, com um prompt

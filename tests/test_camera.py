@@ -38,6 +38,7 @@ class DVRFalso:
             for _ in range(lentes)
         ]
         self.gravacoes = 0
+        self.viva_atrasada = False
         self.fotos_pedidas: list[int] = []
         self.derrubar_primeira_sessao = derrubar_primeira_sessao
         self.servidor = socket.socket()
@@ -95,6 +96,8 @@ class DVRFalso:
                                 break
                         elif comando == 1560:
                             self.fotos_pedidas.append(int(dados["OPSNAP"]["Channel"]))
+                            if self.viva_atrasada:  # a resposta de um KeepAlive chega antes
+                                self._responder(sock, 1007, b'{"Ret":100}\n\0')
                             self._responder(sock, 1561, JPEG)
                         elif comando == 1042:
                             nome = dados["Name"]
@@ -230,6 +233,7 @@ def test_config_salva_senha_local_sem_devolve_la_para_tela(tmp_path: Path) -> No
         "ligado": True,
         "girar": [],
         "enviar": True,
+        "sem_fotos": [],
     }
     assert "senha" not in estado
     assert (tmp_path / "config" / "camera.json").stat().st_mode & 0o777 == 0o600
@@ -429,3 +433,36 @@ def test_enviar_desligado_guarda_sem_mandar_ao_celular(tmp_path: Path) -> None:
     time.sleep(0.1)
     assert enviadas == []
     assert dispositivo.para_tela()["enviar"] is False
+
+
+def test_lente_sem_fotos_ignora_o_alarme_e_as_outras_seguem(tmp_path: Path) -> None:
+    dispositivo = camera.Camera(tmp_path / "camera.json")
+    dispositivo.guardar("127.0.0.1", "admin", "segredo", sem_fotos=[3])
+    dispositivo.guardar("127.0.0.1", "admin", "")  # salvar de novo mantém a escolha
+    pedidas: list[int] = []
+
+    def foto(canal: int = 0) -> bytes:
+        pedidas.append(canal)
+        return JPEG
+
+    dispositivo.foto = foto  # type: ignore[method-assign]
+    vigia = Vigia(dispositivo, tmp_path / "fotos")
+    vigia.lentes = 3
+    vigia._ao_alarme({"Event": "appEventHumanDetectAlarm", "Status": "Start", "Channel": 2})
+    vigia._ao_alarme({"Event": "appEventHumanDetectAlarm", "Status": "Start", "Channel": 1})
+    assert len(_esperar_fotos(tmp_path / "fotos")) == 1
+    time.sleep(0.1)
+    assert pedidas == [1]  # só a lente 2; a 3 ficou de fora
+    assert dispositivo.para_tela()["sem_fotos"] == [3]
+
+
+def test_resposta_atrasada_do_keepalive_nao_derruba_a_foto(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Visto na câmera real: o KeepAlive sai, a foto é pedida, e o 1007 chega antes do JPEG."""
+    dvr = DVRFalso()
+    dvr.viva_atrasada = True
+    monkeypatch.setattr(camera, "PORTA", dvr.porta)
+    try:
+        with camera.Cliente(camera.Conexao("127.0.0.1", "admin", "segredo")) as cliente:
+            assert cliente.foto() == JPEG
+    finally:
+        dvr.fechar()

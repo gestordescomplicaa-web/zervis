@@ -377,11 +377,19 @@ class ServicoAtendimento:
         atender: o agente diz que você não pode agora e anota o recado."""
         chamada = str(evento.get("chamada", ""))
         nome, telefone = str(evento.get("nome", "")), str(evento.get("telefone", ""))
-        quem = agente.nome_falado(nome) if nome else _numero_dito(telefone)
+        camera = evento.get("origem") == "camera"  # alguém na câmera da entrada (ADR 0088)
+        quem = (
+            "Alguém na câmera da entrada"
+            if camera
+            else agente.nome_falado(nome)
+            if nome
+            else _numero_dito(telefone)
+        )
         assunto = " ".join(str(evento.get("assunto", "")).split())[:120] or "um assunto"
         fonte = getattr(self.n, "_fonte", None)
         if fonte is None or not getattr(fonte, "do_app", False):
-            self.n._na_linha("aviso", f"{quem} ligou e queria falar com você: {assunto}.")
+            texto = "queria falar com você" if camera else "ligou e queria falar com você"
+            self.n._na_linha("aviso", f"{quem} {texto}: {assunto}.")
             with contextlib.suppress(cliente.CentralErro):
                 self.n.central.decidir_ligacao(chamada, False)
             return
@@ -390,11 +398,11 @@ class ServicoAtendimento:
             "execucao", f"Atendimento: {quem} quer falar com você", origem="atendente"
         )
         fonte.controle(tipo="ligacao", estado="chamando", id=chamada, nome=quem, assunto=assunto)
+        onde = "" if camera else " está na linha e"
         fala = pendentes.chamando(
-            usuario.PERFIL.nome,
-            f"{quem} está na linha e quer falar com você sobre {assunto}. Pode atender?",
+            usuario.PERFIL.nome, f"{quem}{onde} quer falar com você sobre {assunto}. Pode atender?"
         )
-        self.n._na_linha("aviso", f"{quem} está na linha e quer falar com você: {assunto}.")
+        self.n._na_linha("aviso", f"{quem}{onde} quer falar com você: {assunto}.")
         self._falar_lead(
             fala,
             f"Você perguntou se o usuário atende a ligação de {quem}, que espera na linha. "
