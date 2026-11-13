@@ -31,6 +31,10 @@ class AcoesProjetos3D(Pagina):
             "tv": bool(self.n.tela_tv.ajustes()["ligado"]),
         }
 
+    def impressora_3d(self) -> dict[str, Any]:
+        """A página da impressora, em Dispositivos (ADR 0089)."""
+        return dict(self.projetos_3d()["impressora"])
+
     def criar_projeto_3d(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Uma peça funcional (sem imagem), pelo formulário da página."""
         return self._criar(dados, None)
