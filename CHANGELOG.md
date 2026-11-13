@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+## 0.5.1 (13/11/2026)
+
+A sexta versão publicada: os aparelhos da casa numa seção só (câmera, impressora 3D e Modo TV),
+e quem instala do zero recebe a versão publicada, não a `master`.
+
 - **Câmera: a foto fica no celular.** A foto de quem passa é salva sozinha na galeria do celular
   (Imagens/Zervis), com a hora em que foi tirada e "Compartilhar". Se o app estava desconectado,
   ela espera e chega assim que ele conectar.
