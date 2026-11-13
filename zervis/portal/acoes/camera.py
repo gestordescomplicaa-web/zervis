@@ -12,7 +12,13 @@ CONVERSAS = 10
 
 
 class AcoesCamera(Pagina):
-    dependencias = ("camera", "vigia_camera")
+    dependencias = (
+        "camera",
+        "vigia_camera",
+        "camera_em_conversa",
+        "atender_camera",
+        "encerrar_camera",
+    )
 
     def camera(self) -> dict[str, Any]:
         return {

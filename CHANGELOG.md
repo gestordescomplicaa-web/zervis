@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Correção: a página da câmera abre de novo.** Ela usava a conversa pela câmera sem declarar o
+  serviço, e o painel recusava. Um teste novo confere, em todas as páginas, que cada serviço
+  usado está declarado.
 - **Dispositivos:** a câmera, a impressora 3D e o Modo TV saíram das abas próprias, de Projetos
   3D e de Perfil, e foram para uma seção só. Ela mostra os aparelhos adicionados, com o estado de
   cada um, e "Adicionar dispositivo". Quem não tem nenhum não vê aba de aparelho. Por voz:
