@@ -70,6 +70,10 @@ GRUPOS = {
     "modelos": ("Modelos 3D", "busca e baixa modelos 3D livres e os mostra em holograma"),
     "imagens": ("Imagens reais", "mostra fotos e vídeos de verdade e prints de páginas na tela"),
     "instagram": ("Instagram", "lê o perfil e as métricas das publicações, sem publicar nada"),
+    "marketing": (
+        "Marketing",
+        "pede artigos do blog e mudanças no site a uma sessão e abre o PR para você revisar",
+    ),
     "whatsapp": (
         "WhatsApp",
         "guarda e busca tudo do WhatsApp, acha os contatos da agenda, vigia a lista de "

@@ -61,6 +61,9 @@ ROTULOS = {
     "automacao_lembrete": "Agendando o lembrete",
     "ze_sobre": "Olhando a minha configuração",
     "memoria": "Guardando na memória",
+    "marketing_situacao": "Olhando o site e o blog",
+    "marketing_pedir": "Abrindo o pedido de marketing",
+    "marketing_abrir_pr": "Abrindo o PR no site",
 }
 
 

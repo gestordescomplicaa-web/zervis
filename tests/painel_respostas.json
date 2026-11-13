@@ -1,5 +1,12 @@
 {
  "leituras": {
+  "marketing": {
+   "site": {"estado": "Configurado", "configurado": true, "blog": true, "pasta": "/home/exemplo/site", "base": "main"},
+   "artigos": [{"slug": "exemplo", "titulo": "Exemplo", "categoria": "ia-aplicada", "data": "2026-11-20", "estado": "Rascunho"}],
+   "categorias": {"ia-aplicada": 1},
+   "pedidos": [{"id": "a1b2c3d4", "nome": "Blog · Exemplo", "estado": "parada"}],
+   "prs": [{"numero": 3, "titulo": "blog: Exemplo", "endereco": "https://github.com/exemplo/site/pull/3"}]
+  },
   "pesquisas": {
    "pesquisas": [
     {

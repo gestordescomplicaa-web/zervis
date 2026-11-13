@@ -28,6 +28,7 @@ from zervis.cerebro.ferramentas import dispositivos as g_dispositivos
 from zervis.cerebro.ferramentas import imagens as g_imagens
 from zervis.cerebro.ferramentas import instagram as g_instagram
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
+from zervis.cerebro.ferramentas import marketing as g_marketing
 from zervis.cerebro.ferramentas import modelos as g_modelos
 from zervis.cerebro.ferramentas import navegador as g_navegador
 from zervis.cerebro.ferramentas import pesquisa as g_pesquisa
@@ -110,6 +111,7 @@ LEITURA = [
     "camera_foto",  # foto sob pedido; não é enviada automaticamente
     "camera_movimentos",  # consulta as fotos locais da câmera (plano-camera)
     "dispositivos_listar",  # só lê o estado dos aparelhos da casa (ADR 0089)
+    "marketing_situacao",  # só lê o site, o blog e os PRs (ADR 0091); pedir e o PR pedem o sim
     "camera_conversas",  # só lê o histórico das conversas pela câmera (ADR 0088)
     # Abrir e encerrar a conversa pela câmera é pedido de quem usa; o Zé de lá só conversa,
     # isolado na Central (sem ferramentas nem memória): ADR 0088.
@@ -311,6 +313,7 @@ def por_grupo(
         "whatsapp": g_whatsapp.ferramentas(leads),
         "instagram": g_instagram.ferramentas(instagram),
         "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo, impressora),
+        "marketing": g_marketing.ferramentas(sessoes),
         "tela_tv": g_tela_tv.ferramentas(tela_tv, projetos),
         "dispositivos": g_dispositivos.ferramentas(
             camera_dispositivo, vigia_camera, impressora, tela_tv
