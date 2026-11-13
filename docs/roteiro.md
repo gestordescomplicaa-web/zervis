@@ -11,6 +11,11 @@ O trabalho em andamento segue o [plano de maturidade](plano-maturidade.md): trê
 0.5.0, 0.6.0) para levar o Zérvis de 6,4 a 7,8, com funções novas congeladas nas Fases A e B.
 Comece pelo primeiro item sem marcar da fase atual.
 
+Em seguida, os [Dispositivos](plano-dispositivos.md) (ADR 0089): a impressora, a câmera e a TV
+saem do núcleo e viram integrações, com "Procurar dispositivos" e "Criar integração". As fases 0
+(quem baixa recebe a versão publicada, sem abas de aparelho que não tem) e 1 (a seção
+Dispositivos) cabem no congelamento. O resto vem depois da 0.5.0.
+
 ## Onde estamos (passagem de 16/10/2026)
 
 Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro é o histórico.
