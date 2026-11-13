@@ -365,7 +365,7 @@ def test_falar_por_cima_corta_o_ze_e_interrompe_o_cerebro(conversa: Any) -> None
 
 def test_o_que_a_pessoa_emenda_enquanto_o_ze_pensa_vai_junto(conversa: Any) -> None:
     laco, aparelho, roteiro = conversa
-    laco.pensa_s = 1.5
+    laco.pensa_s = 3.0  # a emenda fecha depois da espera mínima (0,8 s na Espera normal)
     _vez(laco, aparelho, roteiro, "Qual é a capital da França?")
     assert laco.esperar(lambda: laco.maquina.estado is e.Estado.PENSANDO)
     _vez(laco, aparelho, roteiro, "E da Itália também.")

@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- **Pelo app, o Zé espera você terminar:** a espera depois de uma pausa segue a opção "Espera" da
+  página Voz (Rápida 0,4 s, Normal 0,8 s, Longa 1,2 s). Antes eram 0,4 s em todas, e em
+  novembro 343 de 969 falas ao vivo foram fechadas no meio.
+- **No PC, o vídeo no fone não chama o Zé:** o volume mínimo do "Ei Zé" se ajusta à sua voz no
+  microfone do computador, depois de dez chamados. De 09 a 13/11, 46 das 108 ativações no PC não
+  viraram pedido; abaixo de -30 dBFS, foram 30 de 40.
+
 - **O Zé aprende sem esperar aprovação:** o fato novo que ele aprende numa conversa, sobre você
   ou sobre o ambiente, entra na memória sozinho e aparece na página Memória com "Aprendido",
   para remover se não servir. Trocar ou tirar algo da memória e criar ou corrigir skill continuam

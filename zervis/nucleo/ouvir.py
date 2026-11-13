@@ -39,6 +39,7 @@ from zervis.nucleo.apoio import ler_json as ler_json
 from zervis.nucleo.apoio import nivel_de_pico as nivel_de_pico
 from zervis.nucleo.apoio import primeiro_de as primeiro_de
 from zervis.nucleo.apoio import versoes_das_skills as versoes_das_skills
+from zervis.voz import nivel_chamado
 from zervis.voz.live import live_ativo
 
 # O mesmo nome de antes: o registro do serviço continua igual.
@@ -216,6 +217,9 @@ def _quadro(n: "Nucleo", dados: bytes) -> None:
         if n.maquina.detector_ligado and n.detector.processar(np.frombuffer(dados, dtype="<i2")):
             nivel = nivel_de_pico(b"".join(n._antes_do_chamado))
             minimo = float(n.cfg["ativacao"].get("nivel_minimo_dbfs", -45.0))
+            local = n._fonte is None or not n._fonte.conectada  # o microfone deste computador
+            if local:
+                minimo = nivel_chamado.PADRAO.minimo(minimo)
             n._guardar_chamado(nivel < minimo)
             if nivel < minimo:
                 log.info(
@@ -224,5 +228,12 @@ def _quadro(n: "Nucleo", dados: bytes) -> None:
                     nivel,
                 )
                 return
-            log.info("ativação (nota %.3f, %.0f dBFS)", n.detector.nota_disparo, nivel)
+            log.info(
+                "ativação (nota %.3f, %.0f dBFS, mínimo %.0f)",
+                n.detector.nota_disparo,
+                nivel,
+                minimo,
+            )
+            if local:
+                nivel_chamado.PADRAO.ativou(nivel)
             n.tratar(e.Ativacao())
