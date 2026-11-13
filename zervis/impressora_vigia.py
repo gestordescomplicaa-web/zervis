@@ -188,6 +188,7 @@ class Vigia:
         self._textos = textos
         self._fotografar = fotografar
         self._trava = threading.Lock()
+        self._trava_fotos = threading.Lock()
         self._retrato: dict[str, Any] = {}
         self._resumo: dict[str, Any] | None = None
         self._recebido = 0.0
@@ -294,12 +295,21 @@ class Vigia:
             self.impressora.mostrar(Path(caminho), evento["fala"])  # no celular, com a foto
 
     def guardar_foto(self, jpeg: bytes) -> Path:
-        self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
-        destino = self.pasta / f"{time.strftime('%Y%m%d-%H%M%S')}.jpg"
-        destino.write_bytes(jpeg)
-        for velha in sorted(self.pasta.glob("*.jpg"))[:-FOTOS]:
-            velha.unlink(missing_ok=True)
-        return destino
+        """Um nome por foto e a gravação inteira de uma vez: dois avisos no mesmo segundo (o erro
+        e a pausa, por exemplo) davam o mesmo nome, e uma foto sobrescrevia a outra enquanto ela
+        era lida (13/11/2026: a CI viu uma foto vazia)."""
+        with self._trava_fotos:
+            self.pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
+            nome = time.strftime("%Y%m%d-%H%M%S")
+            destino, n = self.pasta / f"{nome}.jpg", 1
+            while destino.exists():
+                destino, n = self.pasta / f"{nome}-{n:03d}.jpg", n + 1
+            temporario = destino.with_suffix(".tmp")
+            temporario.write_bytes(jpeg)
+            temporario.replace(destino)
+            for velha in sorted(self.pasta.glob("*.jpg"))[:-FOTOS]:
+                velha.unlink(missing_ok=True)
+            return destino
 
     def tirar_foto(self) -> Path:
         conexao = self.impressora.conexao()

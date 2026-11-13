@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Câmera: a foto fica no celular.** A foto de quem passa é salva sozinha na galeria do celular
+  (Imagens/Zervis), com a hora em que foi tirada e "Compartilhar". Se o app estava desconectado,
+  ela espera e chega assim que ele conectar.
 - **Correção: a página da câmera abre de novo.** Ela usava a conversa pela câmera sem declarar o
   serviço, e o painel recusava. Um teste novo confere, em todas as páginas, que cada serviço
   usado está declarado.

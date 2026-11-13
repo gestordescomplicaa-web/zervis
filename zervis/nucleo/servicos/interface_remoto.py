@@ -32,8 +32,20 @@ class InterfaceRemoto(InterfaceServico):
     ) -> None:
         servico(self, ServicoRemoto).voz_pelo_app(conexao, taxa, modo, aparelho)
 
-    def imagem_ao_aparelho(self, caminho: Path, titulo: str, texto: str = "") -> str:
-        return servico(self, ServicoRemoto).imagem_ao_aparelho(caminho, titulo, texto)
+    def imagem_ao_aparelho(
+        self,
+        caminho: Path,
+        titulo: str,
+        texto: str = "",
+        salvar: bool = False,
+        guardar: bool = False,
+    ) -> str:
+        return servico(self, ServicoRemoto).imagem_ao_aparelho(
+            caminho, titulo, texto, salvar, guardar
+        )
+
+    def entregar_pendentes(self) -> int:
+        return servico(self, ServicoRemoto).entregar_pendentes()
 
     def estado_remoto(self) -> dict[str, Any]:
         return servico(self, ServicoRemoto).estado_remoto()

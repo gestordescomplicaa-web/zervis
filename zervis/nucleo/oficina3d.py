@@ -22,10 +22,13 @@ def montar(
     avisar: Callable[[str], None],
     falando: Callable[[], bool],
     mostrar: Callable[[Path, str], str] | None = None,
+    mostrar_camera: Callable[[Path, str], str] | None = None,
 ) -> tuple[Projetos3D, Impressora3D, Vigia, camera.Camera, VigiaCamera, TelaTV]:
     """Os projetos ao lado dos outros (as prévias no Acervo); a impressora com o vigia conectado
     (o erro, a primeira camada e o fim falados, com foto); e a TV, se o Modo TV estiver ligado.
-    `mostrar` leva a foto da câmera à tela de quem fala de outro aparelho (ADR 0086)."""
+    `mostrar` leva a foto da câmera à tela de quem fala de outro aparelho (ADR 0086);
+    `mostrar_camera`, a foto de movimento ao celular, salva na galeria dele e, com o app
+    desconectado, guardada para ir depois (ADR 0087)."""
     projetos = Projetos3D(
         raiz_projetos / projetos3d.PASTA, acervo, lugares.CONFIG / "projetos3d.json"
     )
@@ -35,7 +38,7 @@ def montar(
     impressora.ao_mudar = vigia.iniciar
     vigia.iniciar()
     camera_ = camera.Camera(lugares.CONFIG / "camera.json")
-    vigia_camera = VigiaCamera(camera_, dados / "camera" / "fotos", mostrar)
+    vigia_camera = VigiaCamera(camera_, dados / "camera" / "fotos", mostrar_camera or mostrar)
     vigia_camera.iniciar()
     tela_tv = TelaTV(lugares.CONFIG / "tv.json", acervo, falando=falando)
     try:

@@ -61,6 +61,15 @@ Na câmera real, três coisas não estavam no plano:
   aparecem na lente 2. Mas a própria câmera dispara "pessoa" na lente 3 (a frente da casa, com a
   porta de vidro iluminada) sem ninguém na imagem. O Zé não analisa os quadros. Por isso o
   cadastro tem "Lentes com fotos por movimento" (`sem_fotos`): a lente desmarcada não gera foto.
+- **A foto sai de casa (13/11/2026).** O celular é a cópia que fica mesmo que o PC seja levado:
+  - a foto de movimento chega ao app com `salvar` e a hora em que foi tirada, e o app grava
+    sozinho na galeria (Imagens/Zervis), com "Compartilhar" na notificação e na tela cheia;
+  - com o app desconectado, a foto entra na fila do celular (`<dados>/celular/imagens.json`,
+    0600, as 50 mais recentes) e vai, em ordem, assim que o app conectar;
+  - a mesma foto leva o mesmo id, e o app ignora a que já recebeu.
+
+  Sem o app conectado, nada sai de casa até ele conectar. Se o PC for levado antes disso, as
+  fotos da fila vão junto.
 - A conversa pela câmera (microfone e alto-falante) está na [ADR 0088](0088-conversa-pela-camera.md).
 - Fora o `MsgtoNetEnable`, a câmera não recebe comandos de movimento, PTZ, áudio ou
   configuração. O Zé só lê alarmes e imagens.
