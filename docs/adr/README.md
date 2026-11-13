@@ -99,3 +99,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0089](0089-dispositivos-locais.md) | Dispositivos locais: o núcleo genérico e as integrações por pacote | Proposta |
 | [0090](0090-fatos-novos-sem-aprovacao.md) | Fato novo na memória entra sem pedir; trocar, tirar e skill continuam pedindo | Em validação |
 | [0091](0091-marketing-site-e-blog.md) | Marketing: o site e o blog de quem usa, sempre por Pull Request | Em validação |
+| [0092](0092-blog-automatico.md) | O blog no piloto automático: o Zé escreve, abre o PR e publica com o "aprovado" | Em validação |

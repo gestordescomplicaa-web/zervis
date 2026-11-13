@@ -9,7 +9,7 @@ import threading
 import time
 from typing import Any, Protocol
 
-from zervis import atividade, diagnostico
+from zervis import atividade, diagnostico, marketing
 from zervis.avisos import central
 from zervis.avisos import modo as modo_fala
 from zervis.avisos.fila import PRIORIDADES
@@ -74,6 +74,10 @@ class ContextoOficina(Protocol):
 class ServicoOficina:
     def __init__(self, contexto: ContextoOficina) -> None:
         self.n = contexto
+        # O marketing avisa depois (o PR, o deploy) pelo mesmo caminho das sessões.
+        marketing.PADRAO.avisar = lambda texto: self.n._aviso_da_oficina(
+            texto, "notificacao", "", "o marketing"
+        )
 
     def _contexto_da_manutencao(self) -> str:
         partes = [self.n.tela.resumo()]
@@ -285,6 +289,12 @@ class ServicoOficina:
             return
         if sessao.origem == ORIGEM_MANUTENCAO and sessao.estado != "erro":
             return
+        if sessao.origem == marketing.ORIGEM and sessao.estado == "parada":
+            # O pedido de marketing terminou: o PR abre sozinho, ou a publicação aprovada sai.
+            threading.Thread(
+                target=self._marketing_terminou, args=(sessao,), name="marketing", daemon=True
+            ).start()
+            return
         nome = sessao.nome
         if sessao.estado == "erro" and "bateu o limite" in resumo:
             texto = f"Créditos esgotados na sessão {nome}. Troque de conta para continuar."
@@ -306,6 +316,16 @@ class ServicoOficina:
             self.n._narrar_fim(sessao.id, nome, resposta, titulo, detalhe, sessao.ultimo_pedido),
             ponte.laco,
         )
+
+    def _marketing_terminou(self, sessao: Sessao) -> None:
+        try:
+            texto = marketing.PADRAO.ao_terminar(self.n.sessoes, sessao.id)
+        except Exception:
+            log.exception("marketing: depois da sessão %s", sessao.id)
+            texto = f"O pedido {sessao.nome} terminou, mas não consegui abrir o PR."
+        if texto:
+            titulo = f"o pedido {sessao.nome}"
+            self.n._aviso_da_oficina(f"{sessao.nome}: {texto}", "notificacao", sessao.id, titulo)
 
     def _sessao_pede(self, sessao: Sessao, mensagem: str) -> None:
         """O agente parou esperando a aprovação da pessoa. Com o pedido na fila de permissões, a

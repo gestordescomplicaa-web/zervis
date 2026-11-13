@@ -250,6 +250,20 @@ PRAZO_PERMISSAO_S = PRAZO_S
 # Pesquisar e ler páginas só leem a internet: uma sessão de pesquisa pedia aprovação a cada
 # busca e a cada site, nove pedidos numa só (caso real de 27/10/2026).
 INTERNET_LIVRE = ["WebSearch", "WebFetch"]
+# Comandos a mais de uma sessão, que quem a criou liberou (o marketing libera os que o site
+# declara, para a automação não parar esperando ninguém). Só `Bash(comando)` ou
+# `Bash(prefixo:*)`, sem caractere de shell: um `;` ou `&&` liberaria qualquer coisa.
+LIVRES_DA_SESSAO = "livres.json"
+LIVRE_VALIDO = re.compile(r"Bash\([\w@./=, -]+(:\*)?\)")
+
+
+def livres_da_sessao(pasta: Path) -> list[str]:
+    try:
+        dados = json.loads((pasta / LIVRES_DA_SESSAO).read_text())
+    except (OSError, ValueError):
+        return []
+    lista = dados if isinstance(dados, list) else []
+    return [str(r) for r in lista if isinstance(r, str) and LIVRE_VALIDO.fullmatch(r)]
 
 
 COMANDOS_LIVRES = [
@@ -641,7 +655,12 @@ def comando_terminal(
     # Livres sem pergunta (as do conector e os comandos de teste, para a sessão iterar sozinha
     # até o resultado); bloqueadas nunca; o resto o Claude pergunta.
     ajustes["permissions"] = {
-        "allow": [*INTERNET_LIVRE, *COMANDOS_LIVRES, *externos.livres],
+        "allow": [
+            *INTERNET_LIVRE,
+            *COMANDOS_LIVRES,
+            *externos.livres,
+            *livres_da_sessao(eventos.parent),
+        ],
         "deny": externos.bloqueadas,
     }
     cmd = [caminhos.claude()]

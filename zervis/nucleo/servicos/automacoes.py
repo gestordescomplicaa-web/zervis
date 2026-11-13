@@ -8,7 +8,7 @@ import threading
 from datetime import datetime
 from typing import Any, Protocol
 
-from zervis import atividade
+from zervis import atividade, marketing
 from zervis.automacoes import executor
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.calendario import Calendario
@@ -18,9 +18,11 @@ from zervis.avisos.fila import PRIORIDADES, Fila
 from zervis.cerebro.base import Ponte
 from zervis.cerebro.claude import carimbo
 from zervis.cerebro.consumo import Consumo
+from zervis.cerebro.ferramentas.sessoes import motor_conectado
 from zervis.config import Config
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import DADOS
+from zervis.oficina.sessoes import SessaoErro, Sessoes
 from zervis.sistema.vigia import Eventos, Vigia
 from zervis.sistema.vigia_n8n import VigiaN8n
 from zervis.versoes import DIA_S, Versoes
@@ -40,6 +42,7 @@ class ContextoAutomacoes(Protocol):
     eventos_sistema: Eventos
     fila: Fila
     jobs: Jobs
+    sessoes: Sessoes
     maquina: e.Maquina
     modo_fala: Any
     ponte: Ponte
@@ -112,6 +115,12 @@ class ServicoAutomacoes:
             }
             self.n.eventos.put(e.Aviso(lembrete))
             self.n.jobs.concluir(x.id, "ok", momento)
+        elif x.tipo == "artigo":
+            log.info("automação %s: artigo do blog", x.job)
+            self.n._rodando.add(x.id)
+            threading.Thread(
+                target=self._pedir_artigo, args=(x,), name="artigo-agendado", daemon=True
+            ).start()
         elif x.tipo == "ligacao":
             log.info("automação %s: ligação agendada", x.job)
             self.n._rodando.add(x.id)
@@ -150,6 +159,23 @@ class ServicoAutomacoes:
             status, erro = "erro", "pedido ilegível"
         except RuntimeError:
             status, erro = "erro", "não ligou"  # o aviso de que não ligou já saiu
+        finally:
+            self.n.jobs.concluir(x.id, status, datetime.now(FUSO), erro)
+            self.n._rodando.discard(x.id)
+
+    def _pedir_artigo(self, x: Execucao) -> None:
+        """O artigo agendado (ADR 0092): a sessão escreve, o PR abre sozinho quando ela termina
+        e publicar espera o "aprovado" de quem usa."""
+        status, erro = "ok", ""
+        try:
+            tema = str(json.loads(x.texto).get("tema", ""))
+            s = marketing.PADRAO.pedir(self.n.sessoes, "artigo", tema, motor_conectado())
+            self.n._na_linha("aviso", f"Comecei o artigo do blog: {s.nome}.")
+        except (ValueError, AttributeError, marketing.MarketingErro, SessaoErro) as falha:
+            status, erro = "erro", str(falha)[:200]
+            texto = f"Não comecei o artigo do blog: {erro}"
+            self.n._na_linha("aviso", texto)
+            self.n.fila.guardar(texto, "automacao")
         finally:
             self.n.jobs.concluir(x.id, status, datetime.now(FUSO), erro)
             self.n._rodando.discard(x.id)

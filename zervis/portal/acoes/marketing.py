@@ -1,9 +1,13 @@
 """Ações da página Marketing (ADR 0091): o site, os artigos do blog, os pedidos em andamento e
 os PRs abertos. Pedir e abrir PR passam pelo mesmo caminho da voz."""
 
+import json
+from datetime import datetime
 from typing import Any
 
 from zervis import marketing
+from zervis.automacoes.agenda import FUSO
+from zervis.automacoes.jobs import JobErro
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
@@ -11,7 +15,7 @@ from zervis.portal.servidor import PedidoInvalido
 
 
 class AcoesMarketing(Pagina):
-    dependencias = ("sessoes",)
+    dependencias = ("sessoes", "jobs")
 
     def marketing(self) -> dict[str, Any]:
         m = marketing.PADRAO
@@ -22,6 +26,11 @@ class AcoesMarketing(Pagina):
             "categorias": m.por_categoria(artigos),
             "pedidos": m.pedidos(self.n.sessoes),
             "prs": m.prs(),
+            "automaticos": [
+                {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
+                for j in self.n.jobs.listar()
+                if j.tipo == "artigo"
+            ],
         }
 
     def guardar_site(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -47,3 +56,22 @@ class AcoesMarketing(Pagina):
         if not r.ok:
             raise PedidoInvalido(r.texto)
         return {**self.marketing(), "aviso": r.texto, "endereco": r.endereco}
+
+    def publicar_marketing(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            r = marketing.PADRAO.publicar(self.n.sessoes, str(dados.get("sessao", "")))
+        except (marketing.MarketingErro, SessaoErro) as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        if not r.ok:
+            raise PedidoInvalido(r.texto)
+        return {**self.marketing(), "aviso": r.texto}
+
+    def agendar_marketing(self, dados: dict[str, Any]) -> dict[str, Any]:
+        texto = json.dumps({"tema": ""})
+        try:
+            self.n.jobs.criar(
+                "Artigo do blog", str(dados.get("quando", "")), "artigo", texto, datetime.now(FUSO)
+            )
+        except JobErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.marketing(), "aviso": "Agendado."}

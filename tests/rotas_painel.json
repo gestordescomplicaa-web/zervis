@@ -173,6 +173,8 @@
     "marketing/site",
     "marketing/pedir",
     "marketing/pr",
+    "marketing/publicar",
+    "marketing/agendar",
     "tv/procurar",
     "tv/abrir",
     "tv/fechar",

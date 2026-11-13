@@ -72,7 +72,7 @@ GRUPOS = {
     "instagram": ("Instagram", "lê o perfil e as métricas das publicações, sem publicar nada"),
     "marketing": (
         "Marketing",
-        "pede artigos do blog e mudanças no site a uma sessão e abre o PR para você revisar",
+        "pede artigos do blog e mudanças no site, abre o PR, publica com o seu sim e agenda",
     ),
     "whatsapp": (
         "WhatsApp",

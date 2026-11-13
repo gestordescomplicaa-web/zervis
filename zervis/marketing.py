@@ -13,7 +13,10 @@ de escrita ficam no manual do próprio site. Sem o `zervis.json`, só "Mudar o s
 
 import json
 import re
+import threading
+import time
 import unicodedata
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
@@ -21,6 +24,7 @@ from typing import Any
 
 from zervis import lugares
 from zervis.oficina import proposta
+from zervis.oficina.agentes import LIVRES_DA_SESSAO
 
 ARQUIVO = lugares.CONFIG / "marketing.json"
 MANIFESTO = "zervis.json"  # o contrato do site com o Zé, na raiz do repositório
@@ -30,6 +34,11 @@ CORPO_PR = ".ze-pr.md"  # o corpo do PR que a sessão escreve na raiz da cópia,
 PREFIXOS = ("blog/", "site/")  # as branches que o Zé abre no repositório do site
 ORIGEM = "marketing"
 NOMES = {"artigo": "Blog", "site": "Site"}
+PENDENTES = lugares.ESTADO / "marketing.json"  # as sessões que esperam publicar e os PRs delas
+COMANDO = re.compile(r"[\w@./=:{}, -]+")  # um comando do zervis.json: sem caractere de shell
+# Numa cópia isolada e protegida, sem como enviar nada: a sessão segue sem esperar ninguém.
+GIT_LIVRES = [f"Bash(git {c}:*)" for c in ("status", "diff", "log", "add", "commit", "show")]
+PRAZO_DEPLOY_S = 600.0
 
 TAREFA_ARTIGO = """Escreva um artigo para o blog deste site seguindo à risca o manual {manual} \
 (o contrato do blog) e o modelo {modelo}. Leia os dois antes de começar.
@@ -44,6 +53,14 @@ invente casos, clientes, números nem resultados.
 - Não envie a branch nem abra PR: quem publica é o Zé, depois de você terminar.
 - Grave o corpo do PR, no modelo do manual, no arquivo {corpo} na raiz do projeto, sem commit. \
 Deixe o link do preview como está no modelo: a Vercel cria o preview depois do PR."""
+
+TAREFA_PUBLICAR = """O usuário aprovou o artigo {arquivo}. Prepare a publicação, sem enviar nada:
+
+- {respostas}
+- Mude `{rascunho}` para false e ponha a data de hoje ({hoje}) em `{data}`.
+- Confira que não sobrou nenhum marcador de experiência real{marcador}.
+- {validar}, e faça um commit: "blog: publica <título>".
+- Não envie a branch: quem publica é o Zé, depois de você terminar."""
 
 TAREFA_SITE = """Faça esta mudança no site: {pedido}
 
@@ -74,6 +91,7 @@ class Blog:
     artigos: str
     modelo: str = ""
     validar: str = ""  # o comando que valida um artigo; {slug} vira o nome do arquivo
+    instalar: str = ""  # o comando que instala as dependências (npm ci, por exemplo)
     marcador: str = ""  # o começo do marcador que o site exige preencher antes de publicar
     campos: tuple[tuple[str, str], ...] = tuple(CAMPOS.items())
 
@@ -107,10 +125,30 @@ def ler_manifesto(texto: str) -> Blog | None:
         manual=_caminho(blog.get("manual")),
         artigos=_caminho(blog.get("artigos")),
         modelo=_caminho(blog["modelo"]) if blog.get("modelo") else "",
-        validar=str(blog.get("validar", "")).strip(),
+        validar=_comando(blog.get("validar")),
+        instalar=_comando(blog.get("instalar") or dados.get("instalar")),
         marcador=str(blog.get("marcador", "")).strip(),
         campos=tuple(campos.items()),
     )
+
+
+def _comando(valor: Any) -> str:
+    texto = " ".join(str(valor or "").split())
+    if texto and not COMANDO.fullmatch(texto):
+        raise MarketingErro("O zervis.json do site tem um comando inválido.")
+    return texto
+
+
+def livres(blog: Blog | None) -> list[str]:
+    """O que a sessão de marketing roda sem pedir: o git da cópia e os comandos do site."""
+    regras = list(GIT_LIVRES)
+    if blog is not None and blog.instalar:
+        regras.append(f"Bash({blog.instalar})")
+    if blog is not None and blog.validar:
+        prefixo = re.sub(r"\s*--\s*$", "", blog.validar.split("{slug}")[0].strip())
+        if prefixo:
+            regras += [f"Bash({prefixo})", f"Bash({prefixo}:*)"]
+    return regras
 
 
 def _slug(texto: str, limite: int = 40) -> str:
@@ -143,9 +181,15 @@ def frente(texto: str) -> dict[str, Any]:
 
 
 class Marketing:
-    def __init__(self, arquivo: Path = ARQUIVO, gh: str | None = None) -> None:
+    def __init__(
+        self, arquivo: Path = ARQUIVO, gh: str | None = None, pendentes: Path = PENDENTES
+    ) -> None:
         self.arquivo = arquivo
         self._gh = gh
+        self.pendentes = pendentes
+        self._trava = threading.Lock()
+        # Como o Zé avisa o que acontece depois (o PR, o deploy): o núcleo liga ao subir.
+        self.avisar: Callable[[str], None] | None = None
 
     @property
     def gh(self) -> str:
@@ -320,6 +364,7 @@ class Marketing:
         ponta = proposta._git(copia, "rev-parse", f"origin/{site.base}").stdout.strip()
         proposta._git(copia, "reset", "--hard", "--quiet", ponta)
         s = sessoes._mudar(s.id, base=ponta)
+        (sessoes.pasta / s.id / LIVRES_DA_SESSAO).write_text(json.dumps(livres(blog)))
         if tipo == "artigo" and blog is not None:
             tema = texto or "escolha você, pelo foco editorial e pela distribuição do manual"
             validar = (
@@ -337,49 +382,91 @@ class Marketing:
         return sessoes.enviar(s.id, tarefa)
 
     def pedidos(self, sessoes: Any) -> list[dict[str, Any]]:
+        estado = self._estado()
         return [
-            {"id": s.id, "nome": s.nome, "estado": s.estado}
+            {
+                "id": s.id,
+                "nome": s.nome,
+                "estado": s.estado,
+                "pr": estado["prs"].get(s.id, ""),
+                "publicando": s.id in estado["publicar"],
+            }
             for s in sessoes.listar()
             if s.origem == ORIGEM
         ]
 
-    def abrir_pr(self, sessoes: Any, ref: str) -> proposta.Resultado:
-        """Envia a branch da sessão e abre o PR na base. Artigo sai como rascunho, sempre."""
-        site = self._exigir_site()
+    # --- o estado: as sessões que esperam publicar e o PR de cada uma ---------------------
+
+    def _estado(self) -> dict[str, Any]:
+        try:
+            dados = json.loads(self.pendentes.read_text())
+        except (OSError, ValueError):
+            dados = {}
+        dados = dados if isinstance(dados, dict) else {}
+        return {"publicar": list(dados.get("publicar") or []), "prs": dict(dados.get("prs") or {})}
+
+    def _mudar_estado(self, mudar: Callable[[dict[str, Any]], None]) -> None:
+        with self._trava:
+            dados = self._estado()
+            mudar(dados)
+            self.pendentes.parent.mkdir(parents=True, exist_ok=True)
+            temporario = self.pendentes.with_suffix(".next")
+            temporario.write_text(json.dumps(dados, ensure_ascii=False))
+            temporario.replace(self.pendentes)
+
+    # --- o PR -------------------------------------------------------------------------------
+
+    def _sessao(self, sessoes: Any, ref: str) -> Any:
         s = sessoes.achar(ref)
         if s.origem != ORIGEM or not s.worktree:
-            return proposta.Resultado(False, "Esta sessão não é um pedido de marketing.")
+            raise MarketingErro("Esta sessão não é um pedido de marketing.")
         if s.estado == "trabalhando":
-            return proposta.Resultado(False, "A sessão ainda está trabalhando.")
-        copia = Path(s.worktree)
-        if proposta._git(copia, "status", "--porcelain", "--untracked-files=no").stdout.strip():
-            return proposta.Resultado(False, "A cópia tem alterações sem commit.")
+            raise MarketingErro("A sessão ainda está trabalhando.")
+        if proposta._git(
+            Path(s.worktree), "status", "--porcelain", "--untracked-files=no"
+        ).stdout.strip():
+            raise MarketingErro("A cópia tem alterações sem commit.")
+        return s
+
+    def _artigo(self, copia: Path, base: str, branch: str, blog: Blog | None) -> str:
+        """O artigo novo da sessão (o caminho no repositório), ou vazio numa mudança no site."""
+        if blog is None:
+            return ""
+        novos = proposta._git(
+            copia, "diff", "--name-only", "--diff-filter=A", f"{base}...{branch}", "--",
+            f"{blog.artigos}/*.md",
+        ).stdout.split()  # fmt: skip
+        return next((a for a in novos if not Path(a).name.startswith("_") and a != blog.modelo), "")
+
+    @staticmethod
+    def _destino(s: Any, artigo: str) -> str:
+        if artigo:
+            return f"blog/{Path(artigo).stem}"
+        return f"site/{_slug(s.nome.split('·')[-1])}-{s.id}"
+
+    def abrir_pr(self, sessoes: Any, ref: str) -> proposta.Resultado:
+        """Envia a branch da sessão e abre o PR na base. Artigo sai como rascunho, sempre."""
+        try:
+            site = self._exigir_site()
+            s = self._sessao(sessoes, ref)
+            copia = Path(s.worktree)
+            self._buscar(copia, site.base)
+            blog = self.blog(site)
+        except MarketingErro as erro:
+            return proposta.Resultado(False, str(erro))
         gh = self.gh
         if not gh:
             return proposta.Resultado(False, "O GitHub não está conectado nesta máquina.")
-        try:
-            self._buscar(copia, site.base)
-        except MarketingErro as erro:
-            return proposta.Resultado(False, str(erro))
         base = f"origin/{site.base}"
         commits = proposta._git(copia, "log", "--reverse", "--format=%s", f"{base}..{s.branch}")
         lista = [c for c in commits.stdout.splitlines() if c.strip()]
         if not lista:
             return proposta.Resultado(False, "Não há nada novo para enviar.")
-        try:
-            blog = self.blog(site)
-        except MarketingErro as erro:
-            return proposta.Resultado(False, str(erro))
-        artigos: list[str] = []
-        if blog is not None:
-            novos = proposta._git(
-                copia, "diff", "--name-only", "--diff-filter=A", f"{base}...{s.branch}", "--",
-                f"{blog.artigos}/*.md",
-            ).stdout.split()  # fmt: skip
-            artigos = [a for a in novos if not Path(a).name.startswith("_") and a != blog.modelo]
+        artigo = self._artigo(copia, base, s.branch, blog)
         marcadores = False
-        if blog is not None and artigos:
-            texto = proposta._git(copia, "show", f"{s.branch}:{artigos[0]}").stdout
+        titulo = lista[0]
+        if blog is not None and artigo:
+            texto = proposta._git(copia, "show", f"{s.branch}:{artigo}").stdout
             dados = frente(texto)
             rascunho = blog.campo("rascunho")
             if dados.get(rascunho) is not True:
@@ -388,11 +475,8 @@ class Marketing:
                     f"O artigo precisa ir como rascunho ({rascunho}: true). Peça para corrigir.",
                 )
             marcadores = bool(blog.marcador) and blog.marcador in texto
-            slug = Path(artigos[0]).stem
-            destino = f"blog/{slug}"
-            titulo = f"blog: {dados.get(blog.campo('titulo'), slug)}"
-        else:
-            destino, titulo = f"site/{_slug(s.nome.split('·')[-1])}-{s.id}", lista[0]
+            titulo = f"blog: {dados.get(blog.campo('titulo'), Path(artigo).stem)}"
+        destino = self._destino(s, artigo)
         arquivo = copia / CORPO_PR
         corpo = arquivo.read_text() if arquivo.is_file() else "\n".join(f"- {c}" for c in lista)
         aberto = proposta._rodar(
@@ -403,9 +487,10 @@ class Marketing:
         except ValueError:
             ja = []
         if ja:
-            envio = proposta.enviar(copia, gh, "--force-with-lease", f"{s.branch}:{destino}")
+            envio = proposta.enviar(copia, gh, f"+{s.branch}:refs/heads/{destino}")
             if envio.returncode != 0:
                 return proposta.Resultado(False, "Não consegui atualizar a branch no GitHub.")
+            self._mudar_estado(lambda d: d["prs"].__setitem__(s.id, ja[0]["url"]))
             return proposta.Resultado(True, "Atualizei o PR que já estava aberto.", ja[0]["url"])
         if proposta.enviar(copia, gh, f"{s.branch}:refs/heads/{destino}").returncode != 0:
             return proposta.Resultado(False, "Não consegui enviar a branch ao GitHub.")
@@ -418,9 +503,166 @@ class Marketing:
         if pr.returncode != 0 or not endereco:
             proposta.enviar(copia, gh, "--delete", destino)
             return proposta.Resultado(False, "Enviei a branch, mas o GitHub não abriu o PR.")
+        self._mudar_estado(lambda d: d["prs"].__setitem__(s.id, endereco))
         numero = endereco.rsplit("/", 1)[-1]
-        aviso = " Tem marcadores para você preencher." if marcadores else ""
+        aviso = " Tem marcadores para você responder." if marcadores else ""
         return proposta.Resultado(True, f"Abri o PR {numero}.{aviso}", endereco)
+
+    # --- publicar ---------------------------------------------------------------------------
+
+    def publicar(self, sessoes: Any, ref: str, respostas: str = "") -> proposta.Resultado:
+        """O "aprovado" de quem usa. Num artigo, a sessão tira o rascunho (e encaixa as
+        respostas aos marcadores, se vierem) e, quando ela terminar, o Zé envia à base. Numa
+        mudança no site, envia à base agora."""
+        try:
+            site = self._exigir_site()
+            s = self._sessao(sessoes, ref)
+            copia = Path(s.worktree)
+            self._buscar(copia, site.base)
+            blog = self.blog(site)
+        except MarketingErro as erro:
+            return proposta.Resultado(False, str(erro))
+        artigo = self._artigo(copia, f"origin/{site.base}", s.branch, blog)
+        if blog is None or not artigo:
+            return self.finalizar(sessoes, s.id)
+        respostas = " ".join(respostas.split())
+        tarefa = TAREFA_PUBLICAR.format(
+            arquivo=artigo,
+            respostas=(
+                f"Encaixe estas respostas do usuário nos marcadores, cada uma no lugar do seu, "
+                f"com as palavras dele e sem acrescentar fatos: {respostas}"
+                if respostas
+                else "Tire os marcadores de experiência real sem resposta (o parágrafo inteiro "
+                "de cada um); o texto em volta continua."
+            ),
+            rascunho=blog.campo("rascunho"),
+            data=blog.campo("data"),
+            hoje=date.today().isoformat(),
+            marcador=f" (`{blog.marcador}`)" if blog.marcador else "",
+            validar=(
+                f"Valide com `{blog.validar}`" if blog.validar else "Rode a validação do manual"
+            ),
+        )
+        self._mudar_estado(lambda d: d["publicar"].append(s.id))
+        sessoes.enviar(s.id, tarefa)
+        return proposta.Resultado(True, "Preparando a publicação. Aviso quando estiver no ar.")
+
+    def finalizar(self, sessoes: Any, ref: str) -> proposta.Resultado:
+        """Envia a branch da sessão direto à base (sem commit de merge: o autor dos commits é o
+        de quem usa, que o deploy aceita) e acompanha o deploy."""
+        try:
+            site = self._exigir_site()
+            s = self._sessao(sessoes, ref)
+            copia = Path(s.worktree)
+            self._buscar(copia, site.base)
+            blog = self.blog(site)
+        except MarketingErro as erro:
+            return proposta.Resultado(False, str(erro))
+        gh = self.gh
+        if not gh:
+            return proposta.Resultado(False, "O GitHub não está conectado nesta máquina.")
+        base = f"origin/{site.base}"
+        artigo = self._artigo(copia, base, s.branch, blog)
+        if blog is not None and artigo:
+            texto = proposta._git(copia, "show", f"{s.branch}:{artigo}").stdout
+            if frente(texto).get(blog.campo("rascunho")) is not False:
+                return proposta.Resultado(False, "O artigo ainda está como rascunho.")
+            if blog.marcador and blog.marcador in texto:
+                return proposta.Resultado(False, "O artigo ainda tem marcador para responder.")
+        if not proposta._git(copia, "log", "--format=%h", f"{base}..{s.branch}").stdout.strip():
+            return proposta.Resultado(False, "Não há nada novo para publicar.")
+        atras = proposta._git(copia, "merge-base", "--is-ancestor", base, s.branch).returncode
+        sem_hooks = ("-c", "core.hooksPath=/dev/null")  # fora do isolamento, nada do site roda
+        if atras != 0 and proposta._git(copia, *sem_hooks, "rebase", "--quiet", base).returncode:
+            proposta._git(copia, "rebase", "--abort")
+            return proposta.Resultado(
+                False, "O site mudou e não consegui juntar. Peça à sessão para atualizar."
+            )
+        destino = self._destino(s, artigo)
+        proposta.enviar(copia, gh, f"+{s.branch}:refs/heads/{destino}")  # o PR fica igual
+        if proposta.enviar(copia, gh, f"{s.branch}:refs/heads/{site.base}").returncode != 0:
+            return proposta.Resultado(
+                False,
+                f"A branch {site.base} não aceitou o envio direto. Publique pelo GitHub, com "
+                "Rebase and merge.",
+            )
+        sha = proposta._git(copia, "rev-parse", s.branch).stdout.strip()
+        self._mudar_estado(lambda d: d["prs"].pop(s.id, None))
+        if self.avisar is not None:
+            threading.Thread(
+                target=self._vigiar_deploy, args=(sha, s.nome), name="deploy", daemon=True
+            ).start()
+        return proposta.Resultado(True, f"Enviei à {site.base}. Aviso quando o deploy terminar.")
+
+    def ao_terminar(self, sessoes: Any, ref: str) -> str:
+        """A sessão de marketing terminou: publica, se a pessoa já aprovou, ou abre o PR. Devolve
+        o que avisar."""
+        estado = self._estado()
+        if ref in estado["publicar"]:
+            self._mudar_estado(lambda d: d["publicar"].remove(ref))
+            r = self.finalizar(sessoes, ref)
+            return r.texto if r.ok else f"Não publiquei: {r.texto}"
+        if ref in estado["prs"]:
+            return ""  # já tem PR: a sessão respondeu a outra coisa
+        r = self.abrir_pr(sessoes, ref)
+        if not r.ok:
+            return f"O pedido de marketing terminou, mas não abri o PR: {r.texto}"
+        return f"{r.texto} Para publicar, aprove em Marketing ou diga aprovado."
+
+    # --- o deploy ---------------------------------------------------------------------------
+
+    def implantacao(self, sha: str) -> tuple[str, str]:
+        """O deploy de produção deste commit, pelo GitHub: ("ok", endereço), ("falhou", motivo)
+        ou ("esperando", "")."""
+        site, gh = self.site(), self.gh
+        if not site.pasta or not gh:
+            return "esperando", ""
+        pasta = Path(site.pasta)
+        repo = proposta._rodar([gh, "repo", "view", "--json", "nameWithOwner", "-q",
+                                ".nameWithOwner"], pasta).stdout.strip()  # fmt: skip
+        if not repo:
+            return "esperando", ""
+        consulta = proposta._rodar(
+            [gh, "api", f"repos/{repo}/deployments?sha={sha}", "--jq",
+             '[.[] | select(.environment | ascii_downcase == "production") | .id]'],
+            pasta,
+        )  # fmt: skip
+        try:
+            ids = json.loads(consulta.stdout or "[]")
+        except ValueError:
+            return "esperando", ""
+        for id_ in ids:
+            estado = proposta._rodar(
+                [gh, "api", f"repos/{repo}/deployments/{id_}/statuses", "--jq",
+                 ".[0] | [.state, (.description // \"\"), (.environment_url // \"\")]"],
+                pasta,
+            )  # fmt: skip
+            try:
+                st, descricao, endereco = json.loads(estado.stdout or '["", "", ""]')
+            except ValueError:
+                continue
+            if st == "success":
+                return "ok", str(endereco)
+            if st in ("failure", "error"):
+                return "falhou", str(descricao)
+        return "esperando", ""
+
+    def _vigiar_deploy(self, sha: str, nome: str, intervalo: float = 15.0) -> None:
+        fim = time.monotonic() + PRAZO_DEPLOY_S
+        while time.monotonic() < fim:
+            estado, detalhe = self.implantacao(sha)
+            if estado == "ok":
+                self._avisar(f"{nome}: está no ar.")
+                return
+            if estado == "falhou":
+                self._avisar(f"{nome}: o deploy falhou ({detalhe}).")
+                return
+            time.sleep(intervalo)
+        self._avisar(f"{nome}: o deploy não respondeu em 10 minutos. Confira no provedor.")
+
+    def _avisar(self, texto: str) -> None:
+        if self.avisar is not None:
+            self.avisar(texto)
 
 
 PADRAO = Marketing()
