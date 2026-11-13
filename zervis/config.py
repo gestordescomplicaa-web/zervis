@@ -74,6 +74,8 @@ PADRAO: dict[str, dict[str, Any]] = {
         "ligada": True,
         "modelo": "claude-haiku-4-5-20251001",
         "max_por_dia": 8,
+        # Fato novo na memória entra sem pedir (ADR 0090); trocar, tirar e skill pedem.
+        "gravar_fatos_novos": True,
         "pensamento_tokens": 1500,  # 0 desliga (mais barato, aprende pior; ADR 0011)
         "pendencias": str(lugares.DADOS / "pendencias.json"),
     },

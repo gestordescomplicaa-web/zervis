@@ -2,9 +2,11 @@
 
 No fim de uma conversa que valha a pena (correção do usuário ou pelo menos `MINIMO_TURNOS`), um
 modelo menor relê só aquela conversa, com a memória e as skills atuais, e propõe o que guardar.
-Cada proposta passa pelas mesmas checagens da escrita normal e vira **pendência**: nada é gravado
-sem o usuário aprovar por voz. Economia e eficácia: ADR 0011 (se aprender menos que o Hermes, a
-regra volta a ser a dele).
+Cada proposta passa pelas mesmas checagens da escrita normal. Fato **novo** na memória é gravado
+sozinho, como no Hermes, e o painel mostra com "Remover" (ADR 0090); trocar ou tirar uma
+entrada e criar ou corrigir skill viram **pendência**, que o usuário aprova por voz ou no
+painel. Economia e eficácia: ADR 0011 (se aprender menos que o Hermes, a regra volta a ser a
+dele).
 
 Os critérios do prompt são adaptados de `agent/background_review.py` do Hermes Agent (Nous
 Research, MIT; ver THIRD_PARTY.md): skill é como fazer bem uma classe de tarefa do jeito do
@@ -61,8 +63,9 @@ Correção de estilo ou do jeito de responder vale para tudo: além de ajustar a
 tarefa, se houver, ponha a regra geral na memória "usuario" em uma frase.
 
 Prefira, nesta ordem: corrigir uma skill existente; trocar uma entrada de memória; criar memória \
-nova; criar skill nova. Memória: uma frase curta e duradoura. Se nada vale, devolva listas \
-vazias.
+nova; criar skill nova. Memória: uma frase curta e duradoura, escrita como fato ("prefere \
+respostas curtas"), nunca como ordem ("responda curto"): uma ordem relida noutra conversa \
+passa por cima do que o usuário pedir na hora. Se nada vale, devolva listas vazias.
 
 Responda SÓ com JSON, sem texto em volta:
 {{"memoria": [{{"acao": "adicionar|trocar|remover", "alvo": "usuario|jarvis", "texto": "...", \
@@ -223,6 +226,31 @@ def aplicar(proposta: Proposta, memoria: Memoria, skills: Skills) -> None:
         novo=d.get("trecho_novo", ""),
     )
     skills.gravar(d["nome"], conteudo)
+
+
+def gravar_sozinho(p: Proposta) -> bool:
+    """Só fato novo na memória dispensa a aprovação (ADR 0090); trocar e tirar mexem no que
+    já estava, e skill muda o jeito de fazer uma classe de tarefa."""
+    return p.tipo == "memoria" and p.dados.get("acao") == "adicionar"
+
+
+def aprender(
+    propostas: list[Proposta], memoria: Memoria, skills: Skills, anotar: Any, sozinho: bool
+) -> list[Proposta]:
+    """Grava os fatos novos (com `sozinho`) e devolve o que ainda espera o usuário. Um fato que
+    deixou de caber (a memória encheu desde a revisão) volta a ser pendência."""
+    pendentes = []
+    for p in propostas:
+        if not (sozinho and gravar_sozinho(p)):
+            pendentes.append(p)
+            continue
+        try:
+            aplicar(p, memoria, skills)
+        except MemoriaErro:
+            pendentes.append(p)
+            continue
+        anotar("aprendida", p.resumo, origem=p.origem, **alvo_da_proposta(p))
+    return pendentes
 
 
 def alvo_da_proposta(p: Proposta) -> dict[str, str]:

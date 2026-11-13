@@ -97,3 +97,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0087](0087-camera-de-vigia.md) | Câmera de vigia: uma foto local por movimento | Aceita |
 | [0088](0088-conversa-pela-camera.md) | Conversa pela câmera: o Zé da rua, ao vivo e isolado | Aceita |
 | [0089](0089-dispositivos-locais.md) | Dispositivos locais: o núcleo genérico e as integrações por pacote | Proposta |
+| [0090](0090-fatos-novos-sem-aprovacao.md) | Fato novo na memória entra sem pedir; trocar, tirar e skill continuam pedindo | Em validação |

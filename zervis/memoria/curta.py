@@ -7,7 +7,8 @@ Entradas separadas por `§`, com limite rígido: memória cheia não compacta so
 as entradas para o cérebro consolidar (curadoria em vez de acúmulo).
 
 Entra no prompt como **foto congelada** no começo de cada sessão do cérebro: o que muda durante a
-conversa vale na próxima. Toda escrita passa pela aprovação falada do usuário e, antes dela, pela
+conversa vale na próxima. Toda escrita passa pela aprovação falada do usuário, menos o fato novo
+que a revisão grava sozinha (ADR 0090); antes de qualquer uma, vêm a
 varredura de segurança (o conteúdo vai parar no prompt de sistema) e pela checagem de duplicata
 (o `USER.md` do Hermes acumulou entradas quase iguais sem revisão).
 """
