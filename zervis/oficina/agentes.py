@@ -698,6 +698,7 @@ def isolar(s: "Sessao", comando: list[str], pasta_da_sessao: Path) -> list[str]:
         return comando
     onde = Path(s.worktree or s.pasta)
     escrita = [onde, pasta_da_sessao, *pastas_da_conta(s), *git_comum(onde)]
+    escrita += [Path(p) for p in s.escrita]
     leitura = [b.parent for b in (aimemory.binario(),) if b is not None]
     # Onde o agente está instalado de verdade (o executável costuma ser um link para lá).
     if executavel := shutil.which(comando[0]):

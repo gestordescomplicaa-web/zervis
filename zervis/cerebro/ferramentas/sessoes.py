@@ -81,6 +81,7 @@ def _resumo(s: Sessao) -> dict[str, Any]:
         "estado": s.estado,
         "ultimo_recado": s.resumo,
         "copia_isolada": bool(s.branch),
+        "protegida": s.protegida,
         "conectores": _conectores(s.pasta),
     }
 
@@ -152,6 +153,11 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
                     "type": "boolean",
                     "description": "Cópia isolada: mexe no projeto só com aprovação",
                 },
+                "protegida": {
+                    "type": "boolean",
+                    "description": "O agente só vê a pasta do projeto. Já é o padrão; false só "
+                    "quando o usuário pedir a sessão sem proteção",
+                },
             },
             "required": ["nome"],
         },
@@ -167,6 +173,7 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
                 motor=str(args.get("motor") or motor_conectado()),
                 isolada=bool(args.get("isolada")),
                 origem="voz",
+                protegida=None if args.get("protegida") is None else bool(args["protegida"]),
             )
             if tarefa := str(args.get("tarefa", "")).strip():
                 s = sessoes.enviar(s.id, tarefa)

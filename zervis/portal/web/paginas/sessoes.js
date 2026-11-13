@@ -39,7 +39,10 @@ export async function listaSessoes() {
 
 export async function formSessao() {
   mostrarLado(true);
-  const [pastas, ct] = await Promise.all([api("pastas"), api("contas").catch(() => ({ agentes: [] }))]);
+  const [pastas, ct, protecao] = await Promise.all([
+    api("pastas"), api("contas").catch(() => ({ agentes: [] })), api("sessoes/protecao").catch(() => ({ disponivel: false })),
+  ]);
+  const protegida = protecao.disponivel ? "checked" : "disabled";
   // O agente de partida é o que tem conta conectada: o Claude, a menos que só o Codex tenha.
   const logado = (/** @type {string} */ id) => !!ct.agentes?.find((a) => a.id === id)?.contas.some((c) => c.logado && !c.provedor);
   const padrao = !logado("claude") && logado("codex") ? "codex" : "claude";
@@ -51,7 +54,7 @@ export async function formSessao() {
     <datalist id="ns-pastas">${pastas.map((p) => `<option value="${esc(p)}">`).join("")}</datalist>
     <label id="ns-campo-projeto" hidden>Nome da pasta<input id="ns-projeto" class="mono" placeholder="minha-loja" autocomplete="off" spellcheck="false"></label>
     <label class="interruptor" id="ns-campo-isolada"><input type="checkbox" id="ns-isolada"> Cópia isolada (só mexe no projeto quando você aprovar)</label>
-    <label class="interruptor"><input type="checkbox" id="ns-protegida"> Protegida (o agente só vê a pasta do projeto)</label>
+    <label class="interruptor"><input type="checkbox" id="ns-protegida" ${protegida}> Protegida (o agente só vê a pasta do projeto)${protecao.disponivel ? "" : " · Indisponível"}</label>
     <div class="linha">${botao("Criar", "ns-criar", "", "principal")}<span class="resultado" id="ns-resultado"></span></div>`)}</div>`;
   conectoresDaNovaSessao();
 }

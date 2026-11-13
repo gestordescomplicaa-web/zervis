@@ -72,7 +72,8 @@ com o README.
 O que as Fases A e B deixaram aberto e o que a revisão achou no código. Fecha antes da Fase C;
 cada item está na frente dele, com o detalhe.
 
-- [ ] **Sessão protegida como padrão** (Frente 2): hoje `protegida` nasce desligada.
+- [x] **Sessão protegida como padrão** (Frente 2): desde 13/11/2026, sessão nova nasce
+  protegida quando a máquina permite; desligar é por sessão (ADR 0074).
 - [ ] **Placar a cada versão** (Frente 3): o publicado diz "Versão 0.3.0" na 0.5.0.
 - [ ] **Rodada por versão, não por noite** (Frente 3): decidir e agendar.
 - [ ] **Latência da voz** (Frente 3): os 216 turnos sem primeiro token e a via rápida fora da meta.
@@ -164,10 +165,10 @@ ligações, web) chegam a um cérebro com ferramentas.
   [ADR 0074](adr/0074-sessoes-protegidas.md): ligada por sessão no painel ("Protegida"), com o
   aceite no `make check` (`tests/test_isolamento.py`) e a primeira sessão de verdade em
   10/11/2026; falta virar o padrão e o contêiner na VPS.
-  Revisão de 11/11/2026: no código, `protegida` nasce `False` em `oficina/sessoes.py`. Enquanto
-  for assim, o aceite desta frente ("uma sessão não lê `~/.ssh`") só vale para quem marca a
-  opção. O padrão vira no fecho da Fase B, com a saída por sessão para o projeto que precisar;
-  o contêiner da VPS vai com a imagem Docker da Frente 4.
+  Revisão de 11/11/2026: no código, `protegida` nascia `False` em `oficina/sessoes.py`. Desde
+  13/11/2026 é o padrão (fecho da Fase B), com a saída por sessão para o projeto que precisar;
+  o aceite ("uma sessão não lê `~/.ssh`") vale para toda sessão nova numa máquina com o
+  bubblewrap. Falta o contêiner da VPS, que vai com a imagem Docker da Frente 4.
 - [x] **Cofre de segredos fora do agente:** credencial por chamada, com escopo e prazo; o segredo
   inteiro nunca vai ao modelo.
   [ADR 0075](adr/0075-segredos-fora-do-agente.md): o agente não herda os segredos do Zé (só o

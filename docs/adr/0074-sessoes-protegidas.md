@@ -30,6 +30,16 @@ Zé".
 4. **Ligada sessão a sessão**, como o plano pede: vira o padrão depois de umas semanas sem
    quebrar nada. Sem o bubblewrap, a sessão protegida não é criada (a mensagem diz o que
    instalar); o modo antigo pelo SDK também não a aceita, porque não passaria pelo isolamento.
+5. **O padrão desde 13/11/2026** (fecho da Fase B): sessão nova sem escolha nasce protegida
+   quando a máquina permite, venha do painel, da voz, de Projetos 3D, do atendimento ou do
+   autodesenvolvimento. A saída é por sessão: desmarcar "Protegida" no painel, ou pedir pela voz
+   (`sessao_criar` com `protegida: false`). Sem o bubblewrap, o padrão não impede o trabalho: a
+   sessão nasce sem proteção e o painel mostra "Indisponível"; pedir a protegida
+   explicitamente continua dando erro. As sessões que já existiam guardam a escolha delas.
+   O autodesenvolvimento grava a resposta falada fora do projeto: a sessão leva a pasta da
+   manutenção como escrita extra (`Sessao.escrita`), e só ela. Conferido nesta máquina dentro
+   do isolamento: `uv sync` do zero, `make lint`, o build do WaCalls e `git commit` funcionam;
+   as dependências baixam de novo a cada início do agente, porque o cache da casa fica fora.
 
 ## Consequências
 
@@ -37,6 +47,6 @@ Zé".
   É de propósito: publicar segue pelo usuário, como as regras das sessões já pediam.
 - Não é um contêiner: o processo é do mesmo usuário e a rede é a mesma. Na VPS, o plano prevê um
   contêiner (fica para a Fase C).
-- Falta: criar a sessão protegida pela voz, e o cofre de segredos (o ambiente sem os segredos do
+- Falta: o cofre de segredos (o ambiente sem os segredos do
   Zé e o `/run/user` escondido entraram no [ADR 0075](0075-segredos-fora-do-agente.md); os
   segredos dos conectores ainda vão ao processo do agente).

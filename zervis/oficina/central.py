@@ -133,6 +133,8 @@ class Central:
                     motor=agente,
                     origem="manutencao",
                     isolada=True,
+                    # A resposta e a pergunta de cada pedido ficam na pasta da manutenção.
+                    escrita=(str(self.pasta.parent),),
                 )
             self._gravar(sessao=atual.id)
             return atual.id

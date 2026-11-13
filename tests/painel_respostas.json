@@ -596,6 +596,9 @@
     "paginas": 104
    }
   },
+  "sessoes/protecao": {
+    "disponivel": true
+  },
   "pastas": [
    "/home/exemplo/projeto",
    "/home/exemplo/projeto"
