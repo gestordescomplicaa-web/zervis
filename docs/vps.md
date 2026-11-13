@@ -37,8 +37,9 @@ cd zervis
 deploy/instalar-servidor.sh
 ```
 
-O repositório é público: o `git clone` não pede usuário nem token. Para atualizar depois, entre
-na pasta, rode `git pull` e o instalador de novo.
+O repositório é público: o `git clone` não pede usuário nem token. O instalador usa a última
+versão publicada; com `--desenvolvimento`, fica na `master`. Para atualizar depois, use
+`zervis update` (ou "Atualizar" no painel), que vai para a versão publicada mais nova.
 
 O instalador confere o que precisa, instala o uv e o Go se faltarem, baixa os modelos de som,
 instala o serviço `zervis` do usuário, liga o *linger* (o Zé continua depois de sair do SSH e sobe

@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Quem instala recebe a versão publicada:** o `git clone` traz a `master`, que é
+  desenvolvimento. Agora, numa instalação nova, o instalador volta para a última versão publicada
+  antes de instalar. `--desenvolvimento` fica na `master`, e reinstalar um Zé que já existe não
+  mexe na versão (ADR 0089).
 - **Câmera: fotos só das lentes que você escolher:** em "Lentes com fotos por movimento", a lente
   em que a câmera detecta "pessoa" sem ninguém na imagem deixa de mandar foto.
 - **Câmera: falar com você:** se quem está na câmera pedir para falar com você, o Zé pergunta pelo

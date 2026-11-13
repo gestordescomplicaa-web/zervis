@@ -110,7 +110,8 @@ jobs:
             sleep 1
           done
           xdpyinfo -display :99 > /dev/null
-          timeout 600 deploy/instalar-pc.sh 2>&1 | tee "$RUNNER_TEMP/instalador.log"
+          # --desenvolvimento: a CI prova o código deste commit, não a versão publicada.
+          timeout 600 deploy/instalar-pc.sh --desenvolvimento 2>&1 | tee "$RUNNER_TEMP/instalador.log"
           # No PC, o Zé é um programa (ADR 0079): ligado agora, sem ligar sozinho no login.
           ! systemctl --user is-enabled --quiet zervis
           systemctl --user is-active zervis

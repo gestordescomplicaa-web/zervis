@@ -427,8 +427,9 @@ git clone https://github.com/gestordescomplicaa-web/zervis.git
 cd zervis && deploy/instalar-pc.sh
 ```
 
-O instalador prepara Python e dependências, os modelos de voz, os agentes de código e o Go
-verificado para o WhatsApp. Instala o serviço do usuário, o atalho Zérvis no menu e o comando
+O instalador usa a última versão publicada (a `master` é desenvolvimento; para ficar nela,
+`deploy/instalar-pc.sh --desenvolvimento`). Ele prepara Python e dependências, os modelos de voz,
+os agentes de código e o Go verificado para o WhatsApp. Instala o serviço do usuário, o atalho Zérvis no menu e o comando
 `zervis`, e abre o painel na configuração inicial (`http://127.0.0.1:8795/`, só no próprio PC;
 acesso por outros aparelhos se liga depois, no painel).
 
@@ -445,7 +446,8 @@ git clone https://github.com/gestordescomplicaa-web/zervis.git
 cd zervis && deploy/instalar-servidor.sh
 ```
 
-O instalador prepara tudo, deixa o Zé rodando como serviço e termina com um endereço HTTPS e um
+O instalador usa a última versão publicada (com `--desenvolvimento`, a `master`), prepara tudo,
+deixa o Zé rodando como serviço e termina com um endereço HTTPS e um
 código de primeiro acesso: abra o endereço, crie a senha e ligue o código do autenticador, sem
 túnel SSH. O passo a passo e o login do Claude e do Codex estão em [docs/vps.md](docs/vps.md).
 
