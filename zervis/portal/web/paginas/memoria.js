@@ -6,11 +6,12 @@ import { PAGINAS, api, botao, cabeca, cartao, confirmar, esc, item, ocupado, sub
 
 PAGINAS.memoria = async () => {
     const m = await api("memoria");
+    const aprendidas = m.aprendidas || { usuario: [], jarvis: [] };
     const bloco = (titulo, alvo, entradas) => {
       const cheio = Math.min(100, Math.round((100 * entradas.join(" § ").length) / m.limites[alvo]));
       const barra = `<span class="cheio" title="Quanto do espaço desta memória já foi usado"><span class="barra"><span data-cheio="${cheio}"></span></span>${cheio}% cheio</span>`;
       return cartao(`${titulo} ${barra}`,
-        `<div class="itens">${entradas.map((t) => item("", esc(t), xis("memoria-remover", `data-alvo="${alvo}" data-texto="${esc(t)}"`, "Remover"))).join("") || vazio("Vazia.")}</div>
+        `<div class="itens">${entradas.map((t) => item("", esc(t) + (aprendidas[alvo]?.includes(t) ? ' <span class="etiqueta">Aprendido</span>' : ""), xis("memoria-remover", `data-alvo="${alvo}" data-texto="${esc(t)}"`, "Remover"))).join("") || vazio("Vazia.")}</div>
          <div class="add"><input data-nova="${alvo}" placeholder="Algo para o Zé lembrar sempre" autocomplete="off">${botao("Adicionar", "memoria-adicionar", `data-alvo="${alvo}"`)}</div>`);
     };
     const sugestoes = m.sugestoes.length ? cartao("Sugestões", `${sub("O que o Zé aprendeu numa conversa e espera a sua aprovação.")}

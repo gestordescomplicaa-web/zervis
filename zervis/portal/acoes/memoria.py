@@ -54,7 +54,21 @@ class AcoesMemoria(Pagina):
             "limites": dict(m.limites),
             # O que o Zé aprendeu sozinho numa conversa e espera a pessoa (memória e skill).
             "sugestoes": [revisao.resumo_dict(p) for p in self.n.pendencias.listar()],
+            # O que a revisão gravou sozinha e continua na memória: o painel marca "Aprendido".
+            "aprendidas": self._aprendidas(),
             "projetos": aimemory.situacao(),  # a memória das sessões, por projeto (ai-memory)
+        }
+
+    def _aprendidas(self) -> dict[str, list[str]]:
+        m = self.n.memoria
+        gravadas = {
+            (str(ev.get("alvo", "")), str(ev.get("texto", "")))
+            for ev in self.n.diario.ultimos(500)
+            if ev.get("evento") == "aprendida"
+        }
+        return {
+            alvo: [t for t in m.entradas(alvo) if (alvo, t) in gravadas]
+            for alvo in ("usuario", "jarvis")
         }
 
     def decidir_sugestao(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -109,7 +123,10 @@ class AcoesMemoria(Pagina):
             if acao == "adicionar"
             else Mudanca(acao, alvo, antigo=texto)
         )
+        aprendida = acao == "remover" and texto in self._aprendidas().get(alvo, [])
         self.painel._chamar(lambda: self.n.memoria.aplicar(mudanca))
+        if aprendida:  # quantos fatos gravados sozinhos a pessoa tira mede a revisão (ADR 0090)
+            self.n.diario.registrar("desfeita", texto, alvo=alvo, texto=texto)
         return self.painel.memoria()
 
     def ligar_skill(self, dados: dict[str, Any]) -> list[dict[str, Any]]:

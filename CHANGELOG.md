@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **O Zé aprende sem esperar aprovação:** o fato novo que ele aprende numa conversa, sobre você
+  ou sobre o ambiente, entra na memória sozinho e aparece na página Memória com "Aprendido",
+  para remover se não servir. Trocar ou tirar algo da memória e criar ou corrigir skill continuam
+  pedindo o seu sim (ADR 0090).
 - **Sessões protegidas por padrão:** toda sessão nova (painel, voz, Projetos 3D, atendimento e
   autodesenvolvimento) nasce protegida, com o agente enxergando só a pasta do projeto. Para uma
   sessão sem proteção, desmarque "Protegida" no painel ou peça pela voz. Sem o bubblewrap, a

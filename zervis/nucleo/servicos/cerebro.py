@@ -20,6 +20,7 @@ from zervis.cerebro.eco import Eco
 from zervis.cerebro.local import LocalBrain
 from zervis.config import Config
 from zervis.habilidades import evidencias, revisao
+from zervis.habilidades.diario import Diario
 from zervis.habilidades.skills import Skills
 from zervis.memoria.curta import Memoria
 from zervis.nucleo import autoconhecimento
@@ -54,6 +55,7 @@ class ContextoCerebro(Protocol):
     extras: catalogo.Extras
     latencias: Latencias
     limite_claude: Any
+    diario: Diario
     marca: Any
     memoria: Memoria
     modelo_auto: str | None
@@ -519,7 +521,11 @@ class ServicoCerebro:
         except Exception:
             log.exception("revisão falhou")
             return
-        log.info("revisão: %d sugestões", len(propostas))
+        sozinho = bool(self.n.cfg["revisao"].get("gravar_fatos_novos", True))
+        propostas = revisao.aprender(
+            propostas, self.n.memoria, self.n.skills, self.n.diario.registrar, sozinho
+        )
+        log.info("revisão: %d sugestões para aprovar", len(propostas))
         if propostas:
             self.n.pendencias.adicionar(propostas)
             n = len(propostas)

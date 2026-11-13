@@ -107,7 +107,7 @@ def mapa(
     # O diário diz de onde veio cada coisa aprendida: memória pelo texto, skill pelo nome.
     origens: dict[tuple[str, str], dict[str, Any]] = {}
     for ev in reversed(diario.ultimos(500)):  # do mais velho ao mais novo: o último vence
-        if ev.get("evento") not in ("aprovada", "memoria", "skill"):
+        if ev.get("evento") not in ("aprovada", "aprendida", "memoria", "skill"):
             continue
         chave = ("skill", ev["nome"]) if ev.get("nome") else (ev.get("alvo", ""), ev.get("texto"))
         origens[chave] = {"origem": ev.get("origem", ""), "em": ev.get("em")}
@@ -176,7 +176,7 @@ def mapa(
             "recentes": sum(
                 1
                 for ev in eventos
-                if ev.get("evento") in ("aprovada", "memoria", "skill")
+                if ev.get("evento") in ("aprovada", "aprendida", "memoria", "skill")
                 and agora - (ev.get("em") or 0) < NOVO_S
             ),
         },
@@ -206,7 +206,7 @@ def _por_dia(eventos: list[dict[str, Any]], agora: float) -> list[dict[str, Any]
     """Aprendizados por dia (aprovados e gravados a pedido): o cérebro crescendo."""
     contagem: dict[str, int] = {}
     for ev in eventos:
-        if ev.get("evento") in ("aprovada", "memoria", "skill") and ev.get("em"):
+        if ev.get("evento") in ("aprovada", "aprendida", "memoria", "skill") and ev.get("em"):
             dia = datetime.fromtimestamp(ev["em"]).date().isoformat()
             contagem[dia] = contagem.get(dia, 0) + 1
     hoje = datetime.fromtimestamp(agora).date()

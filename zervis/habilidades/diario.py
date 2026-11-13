@@ -3,7 +3,8 @@
 
 Antes, uma sugestão aprovada sumia da lista e só restava a frase na memória, sem data nem a
 conversa de origem. Aqui cada mudança aprovada (sugestão, memória, skill) e cada skill arquivada
-pela curadoria vira uma linha. Só cresce; a pasta do Zé no Barehands mostra as últimas.
+pela curadoria vira uma linha, e também cada fato que a revisão gravou sozinha (ADR 0090).
+Só cresce; a pasta do Zé no Barehands mostra as últimas.
 """
 
 import json
@@ -16,6 +17,8 @@ LIMITE_RESUMO = 300
 
 # Rótulo legível de cada tipo de evento (a pasta do Zé mostra isso).
 EVENTOS = {
+    "aprendida": "Aprendido sozinho",
+    "desfeita": "Aprendizado removido",
     "aprovada": "Sugestão aprovada",
     "descartada": "Sugestão descartada",
     "memoria": "Memória mudada a pedido",
