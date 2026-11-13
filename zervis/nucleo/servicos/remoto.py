@@ -1,5 +1,6 @@
 """Serviço de remoto; pode ser exercitado com dependências próprias, sem subir o núcleo."""
 
+import hashlib
 import logging
 import secrets
 import threading
@@ -24,6 +25,7 @@ from zervis.transporte.remoto import SalaRemota
 from zervis.transporte.websocket import Conexao
 
 log = logging.getLogger(__name__)
+ENTREGA_S = 2.0  # o app acabou de conectar: as fotos que esperavam vão depois disto
 
 
 class ContextoRemoto(Protocol):
@@ -126,6 +128,9 @@ class ServicoRemoto:
         self._ligar_live(desejado and not travado)
         if desejado != self.n.maquina.ao_vivo or (anterior is None) != (self.n._fonte is None):
             self.n.eventos.put(e.AoVivo(desejado))
+        if conectada and getattr(fonte, "do_app", False):
+            # As fotos que esperavam o celular vão agora (um instante: o app termina de abrir).
+            threading.Timer(ENTREGA_S, self.entregar_pendentes).start()
 
     def _ligar_live(self, ao_vivo: bool) -> None:
         """Ao vivo pelo navegador ou pelo app (o WebSocket da voz), o Live assume a conversa;
@@ -216,20 +221,55 @@ class ServicoRemoto:
             self.n._fonte_remota(voz, False)
             log.info("app de voz: desconectado")
 
-    def imagem_ao_aparelho(self, caminho: Path, titulo: str, texto: str = "") -> str:
+    def imagem_ao_aparelho(
+        self,
+        caminho: Path,
+        titulo: str,
+        texto: str = "",
+        salvar: bool = False,
+        guardar: bool = False,
+    ) -> str:
         """Mostra uma imagem a quem fala de outro aparelho (ADR 0086): "celular" (o app de voz,
         numa notificação), "navegador" (sobre o painel) ou "" (ninguém conectado: quem fala
         está no PC, ou a imagem não foi)."""
         fonte = getattr(self.n, "_fonte", None)
-        if not isinstance(fonte, VozNavegador):
-            return ""
+        entregue = ""
+        if isinstance(fonte, VozNavegador):
+            entregue = self._enviar_imagem(fonte, caminho, titulo, texto, salvar)
+        if entregue != "celular" and guardar and (fila := getattr(self.n, "fila_celular", None)):
+            # O app não estava: a foto espera e vai quando ele conectar (ADR 0087).
+            fila.guardar(caminho, titulo, texto)
+        return entregue
+
+    @staticmethod
+    def _enviar_imagem(fonte: Any, caminho: Path, titulo: str, texto: str, salvar: bool) -> str:
         try:
             jpeg = caminho.read_bytes()
+            quando = caminho.stat().st_mtime
         except OSError:
             return ""
-        if not fonte.imagem(jpeg, titulo, texto):
+        ident = hashlib.sha256(str(caminho).encode()).hexdigest()[:12]
+        if not fonte.imagem(jpeg, titulo, texto, salvar=salvar, quando=quando, ident=ident):
             return ""
         return "celular" if fonte.do_app else "navegador"
+
+    def entregar_pendentes(self) -> int:
+        """As fotos que esperavam o app, agora que ele conectou, na ordem em que foram tiradas."""
+        fila = getattr(self.n, "fila_celular", None)
+        fonte = getattr(self.n, "_fonte", None)
+        if fila is None or not isinstance(fonte, VozNavegador) or not fonte.do_app:
+            return 0
+        entregues: int = fila.entregar(
+            lambda f: (
+                self._enviar_imagem(
+                    fonte, Path(f["caminho"]), f["titulo"], f.get("texto", ""), True
+                )
+                == "celular"
+            )
+        )
+        if entregues:
+            log.info("celular: %d foto(s) que esperavam o app foram entregues", entregues)
+        return entregues
 
     def estado_remoto(self) -> dict[str, Any]:
         rede = remoto.rede(self.n.portal.porta if self.n.portal else 0).para_tela()

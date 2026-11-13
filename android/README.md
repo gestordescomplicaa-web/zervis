@@ -58,6 +58,10 @@ apps; depois, só a confirmação. Para isso, as versões precisam da mesma assi
 - **Imagens** (ADR 0086): "me manda uma foto da impressão" e a foto da câmera da impressora chega
   numa notificação; tocar abre inteira. Os avisos da impressora com foto também. As fotos ficam no
   cache do app (as 10 mais novas).
+- **Fotos da câmera da casa** (ADR 0087): a foto de quem passa é salva sozinha na galeria, em
+  Imagens/Zervis, com a hora em que foi tirada, e tem "Compartilhar" na notificação e na tela
+  cheia. Se o app estava desconectado, as fotos esperam no Zé e chegam assim que ele conectar. No
+  Android 11+, salvar na galeria não pede permissão.
 - **Uma voz por vez:** se outro aparelho (o navegador, outro celular) conectar a voz, este mostra
   "Voz em uso em outro aparelho" e não reconecta sozinho; "Retomar" na notificação traz a voz de
   volta para ele.

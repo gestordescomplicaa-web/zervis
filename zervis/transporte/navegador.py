@@ -113,17 +113,29 @@ class VozNavegador:
         with contextlib.suppress(FechouErro):
             self.conexao.texto(json.dumps(dados))
 
-    def imagem(self, jpeg: bytes, titulo: str, texto: str = "") -> bool:
+    def imagem(
+        self,
+        jpeg: bytes,
+        titulo: str,
+        texto: str = "",
+        salvar: bool = False,
+        quando: float = 0.0,
+        ident: str = "",
+    ) -> bool:
         """Uma imagem para a tela de quem fala (a foto da impressora, ADR 0086): no app vira
         uma notificação com a foto; no navegador, abre sobre o painel. Vai inteira numa mensagem
-        de texto, em base64: o canal binário é só da fala."""
+        de texto, em base64: o canal binário é só da fala. `salvar`: o app grava na galeria do
+        celular (a foto da câmera, ADR 0087); `quando`: a hora em que foi tirada; `ident`: o
+        mesmo para a mesma foto, para o app não repetir uma que já recebeu."""
         if not jpeg or len(jpeg) > MAX_IMAGEM:
             return False
         mensagem = {
             "tipo": "imagem",
-            "id": secrets.token_hex(4),
+            "id": ident or secrets.token_hex(4),
             "titulo": titulo[:120],
             "texto": texto[:300],
+            "salvar": salvar,
+            "quando": round(quando),
             "dados": base64.b64encode(jpeg).decode(),
         }
         try:

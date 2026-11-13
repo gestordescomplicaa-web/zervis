@@ -139,6 +139,7 @@ from zervis.sistema.vigia import Eventos, Vigia
 from zervis.sistema.vigia_n8n import VigiaN8n
 from zervis.transporte import servidor_livekit
 from zervis.transporte.entrada import Entrada
+from zervis.transporte.fila_imagens import FilaDoCelular
 from zervis.transporte.local import Captura
 from zervis.transporte.remoto import SalaRemota
 from zervis.versoes import Versoes
@@ -428,6 +429,7 @@ class Nucleo(
             cfg.caminho("barehands", "pasta_estado").parent / "barehands.json"
         )
         self.maquina.orbes = manifesto.falados(self.orbes)
+        self.fila_celular = FilaDoCelular(DADOS / "celular" / "imagens.json")  # ADR 0087
         # A oficina 3D: os projetos, a impressora com o vigia e o Modo TV (ADR 0082 a 0085).
         (
             self.projetos3d,
@@ -443,6 +445,7 @@ class Nucleo(
             lambda texto: self.eventos.put(e.Aviso(texto, pedido=True)),
             lambda: self.maquina.estado is e.Estado.FALANDO,
             lambda caminho, titulo: self.imagem_ao_aparelho(caminho, titulo),
+            functools.partial(self.imagem_ao_aparelho, salvar=True, guardar=True),
         )
         self.ferramentas_por_grupo = ferramentas.por_grupo(
             self.sessoes,
@@ -474,7 +477,7 @@ class Nucleo(
             tela_tv=self.tela_tv,
             camera_dispositivo=self.camera,
             vigia_camera=self.vigia_camera,
-            mostrar_camera=lambda caminho, titulo: self.imagem_ao_aparelho(caminho, titulo),
+            mostrar_camera=functools.partial(self.imagem_ao_aparelho, salvar=True),
             conversa_camera=(self.atender_camera, self.encerrar_camera),
         )
         self.proprias = [f for fs in self.ferramentas_por_grupo.values() for f in fs]

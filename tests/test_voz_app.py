@@ -286,3 +286,57 @@ def test_a_imagem_vai_a_tela_de_quem_fala_de_outro_aparelho(tmp_path: Path) -> N
     grande = tmp_path / "grande.jpg"
     grande.write_bytes(b"\0" * (MAX_IMAGEM + 1))
     assert servico.imagem_ao_aparelho(grande, "Câmera") == ""
+
+
+def test_foto_da_camera_com_o_app_fora_espera_e_vai_ao_conectar(tmp_path: Path) -> None:
+    """ADR 0087: o celular é a cópia que sai de casa. A foto de movimento tirada com o app
+    desconectado espera na fila e vai quando ele conecta, para a galeria, com a hora dela."""
+    from zervis.transporte.fila_imagens import FilaDoCelular
+
+    servico, n = _remoto()
+    n.fila_celular = FilaDoCelular(tmp_path / "celular" / "imagens.json")
+    primeira, segunda = tmp_path / "20261113-101500-lente2.jpg", tmp_path / "b.jpg"
+    primeira.write_bytes(b"\xff\xd8 alguem passou")
+    segunda.write_bytes(b"\xff\xd8 de novo")
+    titulo = "Movimento · Lente 2"
+    assert servico.imagem_ao_aparelho(primeira, titulo, salvar=True, guardar=True) == ""
+    assert servico.imagem_ao_aparelho(segunda, titulo, salvar=True, guardar=True) == ""
+    assert servico.imagem_ao_aparelho(segunda, titulo, salvar=True) == ""  # sem guardar: não
+    assert [p["caminho"] for p in n.fila_celular.pendentes()] == [str(primeira), str(segunda)]
+    assert stat.S_IMODE((tmp_path / "celular" / "imagens.json").stat().st_mode) == 0o600
+    n._fonte = VozNavegador(ConexaoQueFecha([]))  # type: ignore[arg-type]
+    assert servico.entregar_pendentes() == 0  # o navegador do PC não é a cópia que sai de casa
+    conexao = ConexaoQueFecha([])
+    n._fonte = VozNavegador(conexao, do_app=True)  # type: ignore[arg-type]
+    assert servico.entregar_pendentes() == 2
+    assert n.fila_celular.pendentes() == []
+    m1, m2 = conexao.enviadas
+    assert base64.b64decode(m1["dados"]) == primeira.read_bytes()  # na ordem em que foram tiradas
+    assert m1["salvar"] is True and m1["quando"] == round(primeira.stat().st_mtime)
+    assert m1["titulo"] == titulo and m1["id"] != m2["id"]
+    # A mesma foto leva o mesmo id: se chegar duas vezes, o app reconhece.
+    servico.imagem_ao_aparelho(primeira, titulo, salvar=True)
+    assert conexao.enviadas[-1]["id"] == m1["id"]
+
+
+def test_fila_do_celular_para_na_primeira_falha_e_esquece_a_foto_que_sumiu(
+    tmp_path: Path,
+) -> None:
+    from zervis.transporte.fila_imagens import FilaDoCelular
+
+    fila = FilaDoCelular(tmp_path / "imagens.json", maximo=3)
+    fotos = [tmp_path / f"{i}.jpg" for i in range(5)]
+    for f in fotos:
+        f.write_bytes(b"\xff\xd8")
+        fila.guardar(f, "Movimento")
+    assert [p["caminho"] for p in fila.pendentes()] == [str(f) for f in fotos[2:]]  # as 3 últimas
+    fotos[2].unlink()  # apagada da pasta da câmera: sai da fila sem tentar
+    enviadas: list[str] = []
+
+    def enviar(p: dict[str, Any]) -> bool:
+        enviadas.append(p["caminho"])
+        return len(enviadas) < 2  # a segunda falha: o app caiu de novo
+
+    assert fila.entregar(enviar) == 1
+    assert enviadas == [str(fotos[3]), str(fotos[4])]
+    assert [p["caminho"] for p in fila.pendentes()] == [str(fotos[4])]  # a que falhou espera

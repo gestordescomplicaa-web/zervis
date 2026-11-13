@@ -173,7 +173,7 @@ class Vigia:
             return
         titulo = f"Movimento · Lente {canal + 1}" if self.lentes > 1 else "Movimento na câmera"
         if not self._mostrar(caminho, titulo):
-            log.info("vigia da câmera: celular desconectado; a foto ficou só na galeria")
+            log.info("vigia da câmera: celular desconectado; a foto espera o app conectar")
 
     def foto(self, canal: int = 0, espera_s: float = 20.0) -> bytes:
         """Pede a foto na sessão já aberta para evitar um segundo login no aparelho."""
