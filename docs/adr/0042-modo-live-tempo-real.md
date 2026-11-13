@@ -78,8 +78,11 @@ cérebro foi simulado com tempo fixo.
    (um pedido escrito, o Silencioso), isso não volta como interrupção.
 3. **Emendar:** se a resposta não chegou a tocar quando a pessoa voltou a falar, o pedido anterior
    vai junto com o novo.
-4. **Fim da fala:** a espera mínima é de 0,4 s, como no LIGATIA. A espera máxima, para uma frase
-   pela metade, vem da "Espera" da página Voz: Rápida 1,5 s, Normal 2,0 s, Longa 3,0 s.
+4. **Fim da fala:** a espera mínima era de 0,4 s, como no LIGATIA. A espera máxima, para uma
+   frase pela metade, vem da "Espera" da página Voz: Rápida 1,5 s, Normal 2,0 s, Longa 3,0 s.
+   Desde 13/11/2026 a mínima também vem dela: Rápida 0,4 s, Normal 0,8 s, Longa 1,2 s. Em
+   novembro, com 0,4 s, 343 de 969 falas ao vivo (quase todas pelo app) fecharam antes da hora
+   e vieram seguidas de outra fala em menos de 8 s: a pessoa pensando no meio da frase.
 5. **Interrupção:** a fala por cima precisa durar 0,5 s. O LiveKit não deixa cortar o agente nos
    primeiros segundos de fala de cada conexão, enquanto o cancelamento de eco se ajusta. O padrão
    dele é 3 s; aqui são 1,5 s, porque o celular e o navegador já chegam com o cancelamento ligado.

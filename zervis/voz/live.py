@@ -38,9 +38,21 @@ log = logging.getLogger(__name__)
 PASTA_HF = lugares.DADOS / "modelos" / "hf"
 TAXA_ENTRADA = 16000  # o WebSocket da voz: int16 a 16 kHz, quadros de 80 ms
 TAXA_VOZ = 24000
-FIM_MIN_S = 0.4  # os do LIGATIA: menor espera depois do fim provável da frase
-# A escolha "Espera" da página Voz vira o teto: quanto o Zé aguarda numa frase pela metade.
+# Quanto o Zé aguarda depois do fim provável da frase (mínimo) e numa frase pela metade (máximo),
+# pela escolha "Espera" da página Voz. O mínimo era 0,4 s em todas (os do LIGATIA); em novembro
+# de 2026, 343 de 969 falas ao vivo fecharam antes da hora e vieram seguidas de outra fala em
+# menos de 8 s: a pessoa pensando no meio da frase.
+FIM_MIN_S = {"rapida": 0.4, "normal": 0.8, "longa": 1.2}
 FIM_MAX_S = {"rapida": 1.5, "normal": 2.0, "longa": 3.0}
+
+
+def tempos_de_fim(espera: str) -> tuple[float, float]:
+    """(mínimo, máximo) do `endpointing` do LiveKit para a escolha "Espera" (desconhecida: a
+    normal)."""
+    modo = espera if espera in FIM_MIN_S else "normal"
+    return FIM_MIN_S[modo], FIM_MAX_S[modo]
+
+
 INTERRUPCAO_MIN_S = 0.5  # fala por cima mais curta que isto (tosse, "hum") não corta
 # Fala por cima com menos palavras que isto não corta (06/11/2026: "Amor", "Ah", uma voz ao fundo
 # cancelavam o pedido em andamento, e o que o Zé fazia se perdia).
@@ -271,6 +283,7 @@ class Live:
                 http_session=self._http,
             )
             deteccao = _detector(self._executor, self._modulos["detector"])
+        fim_min, fim_max = tempos_de_fim(self.espera())
         sessao: Any = AgentSession(
             vad=self._vad,
             stt=stt,
@@ -281,10 +294,7 @@ class Live:
             ),
             turn_handling={
                 "turn_detection": deteccao,
-                "endpointing": {
-                    "min_delay": FIM_MIN_S,
-                    "max_delay": FIM_MAX_S.get(self.espera(), 2.0),
-                },
+                "endpointing": {"min_delay": fim_min, "max_delay": fim_max},
                 "interruption": {
                     "min_duration": INTERRUPCAO_MIN_S,
                     "min_words": INTERRUPCAO_MIN_PALAVRAS,

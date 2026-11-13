@@ -23,7 +23,7 @@ from zervis.presenca.rostos import Rostos
 from zervis.sistema.midia import Midia
 from zervis.transporte.entrada import Entrada
 from zervis.transporte.local import SERVIDOR
-from zervis.voz import chamado, espera, piper
+from zervis.voz import chamado, espera, nivel_chamado, piper
 from zervis.voz.ativacao import VAD, Detector, SemAtivacao
 from zervis.voz.deepgram import Deepgram, EscutaDeepgram, EscutaErro
 from zervis.voz.escuta import DURACAO_QUADRO_S, Segmentador
@@ -115,6 +115,7 @@ class ServicoVoz:
         if not texto.strip():
             self.n.evidencias.registrar("transcricao_vazia")
         self.n._ouvido = texto  # para o "não entendi" dizer o que foi ouvido
+        nivel_chamado.PADRAO.ouviu(texto)  # o chamado virou pedido: calibra o volume mínimo
         self.n.eventos.put(e.FimDeFala(texto))
 
     def _abrir_latencia(self, rota: str) -> None:

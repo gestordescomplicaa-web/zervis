@@ -28,7 +28,8 @@ PADRAO: dict[str, dict[str, Any]] = {
         "modelos_onnx": str(lugares.DADOS / "modelos"),
         "paciencia": 3,
         # Volume mínimo do chamado (pico de 100 ms, dBFS): abaixo disso é silêncio, um vídeo
-        # vazando no fone ou alguém longe, não a pessoa falando ao microfone (13/10/2026).
+        # vazando no fone ou alguém longe, não a pessoa falando ao microfone (13/10/2026). É o
+        # piso: no microfone do computador, o mínimo sobe com a voz de quem usa (voz/nivel_chamado).
         "nivel_minimo_dbfs": -45.0,
     },
     # conversa_s: quanto tempo a conversa espera a próxima pergunta antes de encerrar sozinha.
