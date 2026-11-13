@@ -48,7 +48,7 @@ const cartaoBlog = (r) => {
     `${categorias.length ? `<p class="sub">${categorias.map(([c, n]) => `${esc(c)}: ${n}`).join(" · ")}</p>` : ""}
     ${r.artigos.length
       ? `<div class="itens">${r.artigos.map((a) => item(esc(a.titulo), `${esc(a.data)} · ${esc(a.categoria)}`, `<span class="etiqueta ${a.estado === "Publicado" ? "bom" : ""}">${esc(a.estado)}</span>`)).join("")}</div>`
-      : vazio(r.site.blog ? "Nenhum artigo ainda." : "A branch base não tem o manual do blog.")}`);
+      : vazio(r.site.blog ? "Nenhum artigo ainda." : "O site não declara um blog no zervis.json.")}`);
 };
 
 PAGINAS.marketing = async () => {

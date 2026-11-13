@@ -2,12 +2,13 @@
 
 A pessoa aponta a pasta do site (um repositório git com o GitHub) e a branch base. Cada pedido,
 um artigo ou uma mudança no site, vira uma sessão de código numa cópia isolada a partir da base.
-O artigo segue o manual do próprio site (`docs/blog-agente.md`, o contrato do blog): a sessão
-escreve, valida e faz o commit, sem publicar nada. O Zé envia a branch e abre o PR pelo `gh`
-desta máquina; a pessoa revisa no preview e mescla. Nada vai ao ar sem ela.
+O Zé envia a branch e abre o PR pelo `gh` desta máquina; a pessoa revisa no preview e mescla.
+Nada vai ao ar sem ela.
 
-Nada do site fica no código: a pasta, a base, as categorias e as regras de escrita vêm da
-configuração e do manual do próprio site.
+O site se integra ao Zé, e não o contrário (como os dispositivos, ADR 0089): ele se declara num
+`zervis.json` na raiz (`docs/integrar-site.md`), com o manual do blog, a pasta dos artigos, o
+modelo, o comando que valida e os campos do cabeçalho. O foco editorial, as categorias e as regras
+de escrita ficam no manual do próprio site. Sem o `zervis.json`, só "Mudar o site" funciona.
 """
 
 import json
@@ -22,14 +23,13 @@ from zervis import lugares
 from zervis.oficina import proposta
 
 ARQUIVO = lugares.CONFIG / "marketing.json"
-MANUAL = "docs/blog-agente.md"
-MODELO = "content/blog/_modelo.md"
-PASTA_BLOG = "content/blog"
+MANIFESTO = "zervis.json"  # o contrato do site com o Zé, na raiz do repositório
+VERSAO = 1
+CAMPOS = {"titulo": "title", "categoria": "category", "data": "date", "rascunho": "draft"}
 CORPO_PR = ".ze-pr.md"  # o corpo do PR que a sessão escreve na raiz da cópia, sem commit
 PREFIXOS = ("blog/", "site/")  # as branches que o Zé abre no repositório do site
 ORIGEM = "marketing"
 NOMES = {"artigo": "Blog", "site": "Site"}
-MARCADOR = re.compile(r"\[\[[A-ZÀ-Ú]+:")
 
 TAREFA_ARTIGO = """Escreva um artigo para o blog deste site seguindo à risca o manual {manual} \
 (o contrato do blog) e o modelo {modelo}. Leia os dois antes de começar.
@@ -37,9 +37,8 @@ TAREFA_ARTIGO = """Escreva um artigo para o blog deste site seguindo à risca o 
 Tema: {tema}
 
 - Liste {pasta} para não repetir tema nem palavra-chave.
-- Instale as dependências se faltarem (npm ci) e rode a validação do blog que o manual indica \
-até não sobrar erro.
-- Entregue com `draft: true` e com os marcadores de experiência real que o manual pede. Não \
+- Instale as dependências se faltarem e {validar}, até não sobrar erro.
+- Entregue com `{rascunho}: true` e com os marcadores de experiência real que o manual pede. Não \
 invente casos, clientes, números nem resultados.
 - Faça um commit só, com a mensagem que o manual indica.
 - Não envie a branch nem abra PR: quem publica é o Zé, depois de você terminar.
@@ -65,6 +64,53 @@ class MarketingErro(ValueError):
 class Site:
     pasta: str = ""
     base: str = ""
+
+
+@dataclass(frozen=True)
+class Blog:
+    """O que o `zervis.json` do site declara do blog (`docs/integrar-site.md`)."""
+
+    manual: str
+    artigos: str
+    modelo: str = ""
+    validar: str = ""  # o comando que valida um artigo; {slug} vira o nome do arquivo
+    marcador: str = ""  # o começo do marcador que o site exige preencher antes de publicar
+    campos: tuple[tuple[str, str], ...] = tuple(CAMPOS.items())
+
+    def campo(self, nome: str) -> str:
+        return dict(self.campos)[nome]
+
+
+def _caminho(valor: Any) -> str:
+    """Um caminho dentro do repositório: relativo, sem subir de pasta."""
+    texto = str(valor or "").strip().strip("/")
+    if not texto or ".." in Path(texto).parts or str(valor).startswith("/"):
+        raise MarketingErro("O zervis.json do site tem um caminho inválido.")
+    return texto
+
+
+def ler_manifesto(texto: str) -> Blog | None:
+    """O blog declarado no `zervis.json` (None se ele não declarar blog)."""
+    try:
+        dados = json.loads(texto)
+    except ValueError as erro:
+        raise MarketingErro("O zervis.json do site não é um JSON válido.") from erro
+    if not isinstance(dados, dict) or dados.get("zervis") != VERSAO:
+        raise MarketingErro(f'O zervis.json do site precisa de "zervis": {VERSAO}.')
+    blog = dados.get("blog")
+    if blog is None:
+        return None
+    if not isinstance(blog, dict):
+        raise MarketingErro("O blog do zervis.json precisa ser um objeto.")
+    campos = {**CAMPOS, **{k: str(v) for k, v in (blog.get("campos") or {}).items() if k in CAMPOS}}
+    return Blog(
+        manual=_caminho(blog.get("manual")),
+        artigos=_caminho(blog.get("artigos")),
+        modelo=_caminho(blog["modelo"]) if blog.get("modelo") else "",
+        validar=str(blog.get("validar", "")).strip(),
+        marcador=str(blog.get("marcador", "")).strip(),
+        campos=tuple(campos.items()),
+    )
 
 
 def _slug(texto: str, limite: int = 40) -> str:
@@ -163,6 +209,14 @@ class Marketing:
         feito = proposta._git(Path(site.pasta), "show", f"origin/{site.base}:{caminho}")
         return feito.stdout if feito.returncode == 0 else ""
 
+    def blog(self, site: Site | None = None) -> Blog | None:
+        """O blog que o site declara na base (None sem o `zervis.json` ou sem blog nele)."""
+        site = site or self.site()
+        if not site.pasta or not site.base:
+            return None
+        texto = self._mostrar(site, MANIFESTO)
+        return ler_manifesto(texto) if texto else None
+
     def situacao(self) -> dict[str, Any]:
         site = self.site()
         dados = asdict(site)
@@ -170,30 +224,40 @@ class Marketing:
             return {"estado": "Não configurado", "configurado": False, "blog": False, **dados}
         if not Path(site.pasta, ".git").exists():
             return {"estado": "Pasta não encontrada", "configurado": False, "blog": False, **dados}
-        blog = bool(self._mostrar(site, MANUAL))
-        estado = "Configurado" if blog else "Sem o manual do blog"
-        return {"estado": estado, "configurado": True, "blog": blog, **dados}
+        try:
+            blog = self.blog(site)
+        except MarketingErro as erro:
+            return {"estado": "Integração inválida", "configurado": True, "blog": False,
+                    "erro": str(erro), **dados}  # fmt: skip
+        if blog is None:
+            estado = "Sem integração" if not self._mostrar(site, MANIFESTO) else "Sem blog"
+            return {"estado": estado, "configurado": True, "blog": False, **dados}
+        return {"estado": "Configurado", "configurado": True, "blog": True, **dados}
 
     # --- o blog ---------------------------------------------------------------------------
 
     def artigos(self, hoje: date | None = None) -> list[dict[str, Any]]:
         """Os artigos da base (o que já foi mesclado), do mais novo ao mais velho."""
         site = self.site()
-        if not site.pasta or not site.base:
+        try:
+            blog = self.blog(site)
+        except MarketingErro:
+            return []
+        if blog is None:
             return []
         lista = proposta._git(
-            Path(site.pasta), "ls-tree", "--name-only", f"origin/{site.base}", f"{PASTA_BLOG}/"
+            Path(site.pasta), "ls-tree", "--name-only", f"origin/{site.base}", f"{blog.artigos}/"
         )
         hoje = hoje or date.today()
         artigos = []
         for caminho in lista.stdout.split():
             nome = Path(caminho).name
-            if not nome.endswith(".md") or nome.startswith("_"):
+            if not nome.endswith(".md") or nome.startswith("_") or caminho == blog.modelo:
                 continue
             texto = self._mostrar(site, caminho)
             dados = frente(texto)
-            data = str(dados.get("publishedAt", ""))
-            if dados.get("draft", True) is not False:
+            data = str(dados.get(blog.campo("data"), ""))
+            if dados.get(blog.campo("rascunho"), True) is not False:
                 estado = "Rascunho"
             elif data > hoje.isoformat():
                 estado = "Agendado"
@@ -201,8 +265,8 @@ class Marketing:
                 estado = "Publicado"
             artigos.append({
                 "slug": nome.removesuffix(".md"),
-                "titulo": str(dados.get("title", nome)),
-                "categoria": str(dados.get("category", "")),
+                "titulo": str(dados.get(blog.campo("titulo"), nome)),
+                "categoria": str(dados.get(blog.campo("categoria"), "")),
                 "data": data,
                 "estado": estado,
             })  # fmt: skip
@@ -245,9 +309,10 @@ class Marketing:
         if tipo == "site" and not texto:
             raise MarketingErro("Diga o que mudar no site.")
         site = self._exigir_site()
-        if tipo == "artigo" and not self._mostrar(site, MANUAL):
-            raise MarketingErro(f"A branch {site.base} não tem o manual do blog ({MANUAL}).")
         self._buscar(Path(site.pasta), site.base)
+        blog = self.blog(site)
+        if tipo == "artigo" and blog is None:
+            raise MarketingErro(f"O site não declara um blog no {MANIFESTO} da branch {site.base}.")
         nome = f"{NOMES[tipo]} · {texto[:40] or 'próximo artigo'}"
         s = sessoes.criar(nome, site.pasta, motor=motor, isolada=True, origem=ORIGEM)
         # A cópia nasce da pasta como ela está; o pedido parte da base do GitHub.
@@ -255,11 +320,18 @@ class Marketing:
         ponta = proposta._git(copia, "rev-parse", f"origin/{site.base}").stdout.strip()
         proposta._git(copia, "reset", "--hard", "--quiet", ponta)
         s = sessoes._mudar(s.id, base=ponta)
-        if tipo == "artigo":
-            tema = texto or "escolha você, pelo manual e pela distribuição editorial dele"
-            tarefa = TAREFA_ARTIGO.format(
-                manual=MANUAL, modelo=MODELO, tema=tema, pasta=PASTA_BLOG, corpo=CORPO_PR
+        if tipo == "artigo" and blog is not None:
+            tema = texto or "escolha você, pelo foco editorial e pela distribuição do manual"
+            validar = (
+                f"valide com `{blog.validar}` (troque {{slug}} pelo nome do arquivo)"
+                if blog.validar
+                else "rode a validação que o manual indica"
             )
+            tarefa = TAREFA_ARTIGO.format(
+                manual=blog.manual, modelo=blog.modelo or "o modelo que o manual indica", tema=tema,
+                pasta=blog.artigos, validar=validar, rascunho=blog.campo("rascunho"),
+                corpo=CORPO_PR,
+            )  # fmt: skip
         else:
             tarefa = TAREFA_SITE.format(pedido=texto, corpo=CORPO_PR)
         return sessoes.enviar(s.id, tarefa)
@@ -294,22 +366,31 @@ class Marketing:
         lista = [c for c in commits.stdout.splitlines() if c.strip()]
         if not lista:
             return proposta.Resultado(False, "Não há nada novo para enviar.")
-        novos = proposta._git(
-            copia, "diff", "--name-only", "--diff-filter=A", f"{base}...{s.branch}", "--",
-            f"{PASTA_BLOG}/*.md",
-        ).stdout.split()  # fmt: skip
-        artigos = [a for a in novos if not Path(a).name.startswith("_")]
+        try:
+            blog = self.blog(site)
+        except MarketingErro as erro:
+            return proposta.Resultado(False, str(erro))
+        artigos: list[str] = []
+        if blog is not None:
+            novos = proposta._git(
+                copia, "diff", "--name-only", "--diff-filter=A", f"{base}...{s.branch}", "--",
+                f"{blog.artigos}/*.md",
+            ).stdout.split()  # fmt: skip
+            artigos = [a for a in novos if not Path(a).name.startswith("_") and a != blog.modelo]
         marcadores = False
-        if artigos:
+        if blog is not None and artigos:
             texto = proposta._git(copia, "show", f"{s.branch}:{artigos[0]}").stdout
             dados = frente(texto)
-            if dados.get("draft") is not True:
+            rascunho = blog.campo("rascunho")
+            if dados.get(rascunho) is not True:
                 return proposta.Resultado(
-                    False, "O artigo precisa ir como rascunho (draft: true). Peça para corrigir."
+                    False,
+                    f"O artigo precisa ir como rascunho ({rascunho}: true). Peça para corrigir.",
                 )
-            marcadores = bool(MARCADOR.search(texto))
+            marcadores = bool(blog.marcador) and blog.marcador in texto
             slug = Path(artigos[0]).stem
-            destino, titulo = f"blog/{slug}", f"blog: {dados.get('title', slug)}"
+            destino = f"blog/{slug}"
+            titulo = f"blog: {dados.get(blog.campo('titulo'), slug)}"
         else:
             destino, titulo = f"site/{_slug(s.nome.split('·')[-1])}-{s.id}", lista[0]
         arquivo = copia / CORPO_PR

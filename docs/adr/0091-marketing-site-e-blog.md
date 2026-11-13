@@ -25,13 +25,16 @@ marcador de experiência real por preencher.
 3. **O Zé abre o PR**, com o `gh` desta máquina (o repositório pode ser privado): a branch vai
    como `blog/<slug>` ou `site/<pedido>-<id>`, e o artigo só sai com `draft: true`. Publicar é o
    merge, feito por quem usa.
-4. **Nada do site no código:** a pasta, a base, as categorias e as regras de escrita vêm da
-   configuração (`<config>/marketing.json`) e do manual do próprio site.
+4. **O site se integra ao Zé, e não o contrário** (como os dispositivos, ADR 0089). A pasta e a
+   base ficam na configuração (`<config>/marketing.json`). O resto o site declara num
+   `zervis.json` na raiz: o manual do blog, a pasta dos artigos, o modelo, o comando que valida,
+   os campos do cabeçalho e o marcador de experiência real (`docs/integrar-site.md`). O foco
+   editorial, as categorias e as regras de escrita ficam no manual do próprio site.
 
 ## Consequências
 
-- Enquanto a base não tiver o manual do blog, a aba mostra "Sem o manual do blog" e só aceita
-  mudanças no site.
+- Sem o `zervis.json`, a aba mostra "Sem integração" e só aceita mudanças no site; com ele
+  malformado, "Integração inválida".
 - O link do preview fica no PR, pela Vercel; o Zé ainda não o lê nem avisa quando aparece.
 - Entrou durante o fecho da Fase B (o plano congela funções novas até lá), a pedido de quem usa,
   com os testes na porta de qualidade.

@@ -1,5 +1,5 @@
 """Marketing (ADR 0091): o site e o blog por Pull Request. O GitHub aqui é um repositório local e
-um `gh` de mentira; o site, um repositório com o manual do blog e alguns artigos inventados."""
+um `gh` de mentira; o site, um repositório inventado que se declara no `zervis.json`."""
 
 import json
 import stat
@@ -25,10 +25,23 @@ def _git(pasta: Path, *args: str) -> str:
     ).stdout
 
 
+MANIFESTO = {
+    "zervis": 1,
+    "blog": {
+        "manual": "docs/manual-do-blog.md",
+        "artigos": "posts",
+        "modelo": "posts/_modelo.md",
+        "validar": "npm run checar -- {slug}",
+        "campos": {"data": "publicado", "rascunho": "rascunho"},
+        "marcador": "[[AUTOR:",
+    },
+}
+
+
 def _artigo(titulo: str, categoria: str, data: str, rascunho: bool) -> str:
     return (
         f'---\ntitle: "{titulo}"   # comentário\ncategory: "{categoria}"\n'
-        f'publishedAt: "{data}"\ntags: ["a", "b"]\ndraft: {str(rascunho).lower()}\n---\n\n'
+        f'publicado: "{data}"\ntags: ["a", "b"]\nrascunho: {str(rascunho).lower()}\n---\n\n'
         "## Seção\n\nTexto.\n"
     )
 
@@ -51,11 +64,12 @@ def mundo(tmp_path: Path) -> dict[str, Any]:
     _commit(
         site,
         {
-            "docs/blog-agente.md": "# Manual\n",
-            "content/blog/_modelo.md": _artigo("Modelo do blog", "x", "2026-01-01", True),
-            "content/blog/antigo.md": _artigo("Artigo publicado", "dores", "2026-10-01", False),
-            "content/blog/futuro.md": _artigo("Artigo agendado", "dores", "2026-12-24", False),
-            "content/blog/rascunho.md": _artigo("Artigo rascunho", "ia", "2026-11-01", True),
+            "zervis.json": json.dumps(MANIFESTO),
+            "docs/manual-do-blog.md": "# Manual\n",
+            "posts/_modelo.md": _artigo("Modelo do blog", "x", "2026-01-01", True),
+            "posts/antigo.md": _artigo("Artigo publicado", "dores", "2026-10-01", False),
+            "posts/futuro.md": _artigo("Artigo agendado", "dores", "2026-12-24", False),
+            "posts/rascunho.md": _artigo("Artigo rascunho", "ia", "2026-11-01", True),
         },
         "início",
     )
@@ -125,19 +139,20 @@ def test_pedido_de_artigo_parte_da_base_e_segue_o_manual(mundo: dict[str, Any]) 
     assert not (copia / "local.txt").exists()  # partiu da base do GitHub, não da pasta
     assert s.base == _git(mundo["site"], "rev-parse", "origin/main").strip()
     tarefa = next(x["texto"] for x in mundo["sessoes"].mensagens(s.id) if x["quem"] == "usuario")
-    assert marketing.MANUAL in tarefa and "draft: true" in tarefa and marketing.CORPO_PR in tarefa
+    assert "docs/manual-do-blog.md" in tarefa and "posts/_modelo.md" in tarefa
+    assert "`rascunho: true`" in tarefa and "npm run checar -- {slug}" in tarefa
+    assert marketing.CORPO_PR in tarefa
     assert [p["nome"] for p in m.pedidos(mundo["sessoes"])] == ["Blog · quando automatizar"]
 
 
-def test_sem_o_manual_nao_pede_artigo(mundo: dict[str, Any]) -> None:
+def test_site_sem_integracao_so_aceita_mudanca(mundo: dict[str, Any]) -> None:
     m: Marketing = mundo["m"]
+    _git(mundo["site"], "rm", "-q", "zervis.json")
+    _git(mundo["site"], "commit", "-qm", "sem integração")
     _git(mundo["site"], "push", "-q", "origin", "trabalho:sem-blog")
-    _git(mundo["site"], "rm", "-q", "docs/blog-agente.md")
-    _git(mundo["site"], "commit", "-qm", "sem manual")
-    _git(mundo["site"], "push", "-q", "-f", "origin", "trabalho:sem-blog")
     m.guardar(str(mundo["site"]), "sem-blog")
-    assert m.situacao()["estado"] == "Sem o manual do blog"
-    with pytest.raises(MarketingErro, match="manual"):
+    assert m.situacao()["estado"] == "Sem integração" and m.artigos() == []
+    with pytest.raises(MarketingErro, match=r"zervis\.json"):
         m.pedir(mundo["sessoes"], "artigo", "", "claude")
     with pytest.raises(MarketingErro, match="Diga"):
         m.pedir(mundo["sessoes"], "site", " ", "claude")
@@ -151,14 +166,14 @@ def test_o_pr_do_artigo_vai_como_rascunho(mundo: dict[str, Any]) -> None:
     assert not m.abrir_pr(mundo["sessoes"], s.id).ok  # nada novo ainda
     _commit(
         copia,
-        {"content/blog/novo.md": _artigo("Um artigo novo", "ia", "2026-11-20", False)},
+        {"posts/novo.md": _artigo("Um artigo novo", "ia", "2026-11-20", False)},
         "blog: Um artigo novo",
     )
     r = m.abrir_pr(mundo["sessoes"], s.id)
     assert not r.ok and "rascunho" in r.texto  # draft: false não sai da sessão
     _commit(
         copia,
-        {"content/blog/novo.md": _artigo("Um artigo novo", "ia", "2026-11-20", True)
+        {"posts/novo.md": _artigo("Um artigo novo", "ia", "2026-11-20", True)
          + "\n[[AUTOR: conte um caso]]\n"},
         "blog: rascunho",
     )  # fmt: skip
@@ -196,3 +211,32 @@ def test_configuracao_sobrevive(mundo: dict[str, Any], tmp_path: Path) -> None:
     dados = json.loads((tmp_path / "config" / "marketing.json").read_text())
     assert dados["site"]["base"] == "main"
     assert Marketing(tmp_path / "config" / "marketing.json").site().base == "main"
+
+
+@pytest.mark.parametrize(
+    ("texto", "erro"),
+    [
+        ("{nao é json", "JSON"),
+        ('{"zervis": 2}', "zervis"),
+        ('{"zervis": 1, "blog": {"manual": "../fora.md", "artigos": "posts"}}', "caminho"),
+        ('{"zervis": 1, "blog": {"manual": "/etc/x", "artigos": "posts"}}', "caminho"),
+        ('{"zervis": 1, "blog": {"manual": "m.md"}}', "caminho"),
+    ],
+)
+def test_manifesto_invalido_e_recusado(texto: str, erro: str) -> None:
+    with pytest.raises(MarketingErro, match=erro):
+        marketing.ler_manifesto(texto)
+
+
+def test_manifesto_sem_blog_e_campos_padrao() -> None:
+    assert marketing.ler_manifesto('{"zervis": 1}') is None
+    blog = marketing.ler_manifesto('{"zervis": 1, "blog": {"manual": "m.md", "artigos": "a"}}')
+    assert blog is not None and blog.campo("rascunho") == "draft" and blog.campo("data") == "date"
+
+
+def test_manifesto_invalido_aparece_na_situacao(mundo: dict[str, Any]) -> None:
+    m: Marketing = mundo["m"]
+    _commit(mundo["site"], {"zervis.json": '{"zervis": 7}'}, "manifesto errado")
+    _git(mundo["site"], "push", "-q", "origin", "trabalho:errado")
+    m.guardar(str(mundo["site"]), "errado")
+    assert m.situacao()["estado"] == "Integração inválida" and m.artigos() == []

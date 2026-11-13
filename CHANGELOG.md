@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Marketing: o site se declara ao Zé.** O blog passa a vir do `zervis.json` na raiz do site: o
+  manual, a pasta dos artigos, o modelo, o comando que valida e os campos do cabeçalho. Nada de
+  um site em particular fica no Zé (`docs/integrar-site.md`).
+
 - **Marketing:** a aba nova cuida do site e do blog. Aponte a pasta do site e a branch base; em
   "Escrever artigo" ou "Mudar o site", uma sessão faz o trabalho numa cópia isolada, seguindo o
   manual do blog do próprio site, e "Abrir PR" leva ao GitHub como rascunho. Você revisa no
