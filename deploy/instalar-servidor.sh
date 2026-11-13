@@ -7,11 +7,14 @@
 # endereço, crie a senha e ligue o código do autenticador, sem túnel SSH. Guia: docs/vps.md.
 set -eu
 MODO=servidor
-case "${1:-}" in
-  --pc) MODO=pc ;;
-  "") ;;
-  *) echo "Uso: $0 [--pc]" >&2; exit 1 ;;
-esac
+DESENVOLVIMENTO=
+for argumento in "$@"; do
+  case "$argumento" in
+    --pc) MODO=pc ;;
+    --desenvolvimento) DESENVOLVIMENTO=1 ;;
+    *) echo "Uso: $0 [--pc] [--desenvolvimento]" >&2; exit 1 ;;
+  esac
+done
 UV_VERSAO=0.11.32
 # Sem a variável, fica a porta que o serviço já usa (reinstalar não troca o endereço do painel).
 EM_USO=$(systemctl --user show zervis -p Environment --value 2>/dev/null | tr ' ' '\n' \
@@ -19,6 +22,29 @@ EM_USO=$(systemctl --user show zervis -p Environment --value 2>/dev/null | tr ' 
 PORTA=${ZERVIS_PAINEL_PORTA:-${JARVIS_PAINEL_PORTA:-${EM_USO:-8795}}}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 USUARIO=$(id -un)
+
+# --- a versão publicada (ADR 0089) -------------------------------------------------------------
+# O `git clone` do README traz a master, que é desenvolvimento. Numa instalação nova (sem
+# configuração do Zé), o instalador volta para a última versão publicada e recomeça já nela, como
+# o `zervis update` faz depois. Reinstalar um Zé que já existe não mexe na versão;
+# --desenvolvimento fica na master.
+fixar_versao() {
+  [ -z "$DESENVOLVIMENTO" ] && [ -z "${ZERVIS_VERSAO_FIXADA:-}" ] || return 0
+  [ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/zervis" ] || return 0
+  [ "$(git -C "$REPO" symbolic-ref --quiet --short HEAD 2>/dev/null)" = master ] || return 0
+  [ -z "$(git -C "$REPO" status --porcelain 2>/dev/null)" ] || return 0
+  topo=$(git -C "$REPO" rev-parse HEAD 2>/dev/null) || return 0
+  [ "$topo" = "$(git -C "$REPO" rev-parse '@{u}' 2>/dev/null)" ] || return 0
+  versao=$(git -C "$REPO" tag --list 'v[0-9]*' --sort=-v:refname | head -n1)
+  [ -n "$versao" ] || return 0
+  alvo=$(git -C "$REPO" rev-parse "$versao^{commit}")
+  [ "$alvo" != "$topo" ] || return 0
+  git -C "$REPO" merge-base --is-ancestor "$alvo" HEAD || return 0
+  echo "Instalando a versão publicada $versao (para a master: --desenvolvimento)."
+  git -C "$REPO" reset --hard --quiet "$alvo"
+  ZERVIS_VERSAO_FIXADA=1 exec "$REPO/deploy/instalar-servidor.sh" "$@"
+}
+fixar_versao "$@"
 
 falta() {
   echo "Falta: $*" >&2

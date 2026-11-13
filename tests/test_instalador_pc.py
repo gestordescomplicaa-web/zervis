@@ -273,3 +273,72 @@ def test_com_a_partida_automatica_fechar_nao_desliga(
     assert resultado.returncode == 0, resultado.stderr
     assert "<--app=" in resultado.stdout
     assert "--user stop zervis" not in systemctl
+
+
+def _clone_publicado(instalacao: tuple[Path, Path], tmp_path: Path) -> tuple[Path, str, str]:
+    """Um repositório com a versão v0.1.0 publicada e um commit de desenvolvimento por cima,
+    clonado como o README manda (o git de verdade; os outros efeitos continuam falsos)."""
+    repo, _ = instalacao
+    git = shutil.which("git", path=os.defpath + ":/usr/local/bin")
+    assert git is not None
+    (tmp_path / "bin" / "git").unlink()  # o falso sai: aqui a prova é o próprio git
+
+    def g(*args: str, cwd: Path = repo) -> str:
+        return subprocess.run(  # noqa: S603 (git local, numa pasta de teste)
+            [git, "-c", "user.name=Teste", "-c", "user.email=teste@exemplo", *args],
+            cwd=cwd, capture_output=True, text=True, check=True,
+        ).stdout.strip()  # fmt: skip
+
+    g("init", "--quiet", "-b", "master")
+    g("add", "-A")
+    g("commit", "--quiet", "-m", "versão publicada")
+    g("tag", "v0.1.0")
+    publicada = g("rev-parse", "HEAD")
+    (repo / "NOVIDADE").write_text("em desenvolvimento\n")
+    g("add", "-A")
+    g("commit", "--quiet", "-m", "desenvolvimento")
+    origem = tmp_path / "origem.git"
+    g("clone", "--quiet", "--bare", str(repo), str(origem))
+    clone = tmp_path / "clone"
+    g("clone", "--quiet", str(origem), str(clone), cwd=tmp_path)
+    return clone, publicada, g("rev-parse", "HEAD", cwd=clone)
+
+
+def _cabeca(clone: Path) -> str:
+    git = shutil.which("git", path=os.defpath + ":/usr/local/bin")
+    assert git is not None
+    return subprocess.run(  # noqa: S603 (git local, numa pasta de teste)
+        [git, "rev-parse", "HEAD"], cwd=clone, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def test_instalacao_nova_usa_a_versao_publicada(
+    instalacao: tuple[Path, Path], tmp_path: Path
+) -> None:
+    clone, publicada, _ = _clone_publicado(instalacao, tmp_path)
+    resultado = _rodar(clone, "instalar-pc.sh")
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    assert "Instalando a versão publicada v0.1.0" in resultado.stdout
+    cabeca = _cabeca(clone)
+    assert cabeca == publicada
+    assert not (clone / "NOVIDADE").exists()
+
+
+@pytest.mark.parametrize("como", ["desenvolvimento", "ja_instalado"])
+def test_desenvolvimento_ou_reinstalar_fica_onde_esta(
+    instalacao: tuple[Path, Path], tmp_path: Path, como: str
+) -> None:
+    clone, _, topo = _clone_publicado(instalacao, tmp_path)
+    argumentos = []
+    if como == "desenvolvimento":
+        argumentos = ["--desenvolvimento"]
+    else:  # um Zé que já existe: reinstalar nunca volta a versão
+        (Path(os.environ["XDG_CONFIG_HOME"]) / "zervis").mkdir(parents=True)
+    resultado = subprocess.run(  # noqa: S603 (script do projeto, efeitos externos falsos)
+        [str(clone / "deploy" / "instalar-pc.sh"), *argumentos],
+        cwd=clone, capture_output=True, text=True, timeout=30,
+    )  # fmt: skip
+    assert resultado.returncode == 0, resultado.stdout + resultado.stderr
+    assert "versão publicada" not in resultado.stdout
+    cabeca = _cabeca(clone)
+    assert cabeca == topo and (clone / "NOVIDADE").exists()
