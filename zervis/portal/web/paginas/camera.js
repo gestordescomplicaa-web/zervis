@@ -16,9 +16,19 @@ function formulario(c) {
     </div>
     <label class="interruptor"><input id="camera-ligada" type="checkbox" ${c.ligado ? "checked" : ""}> Fotos por movimento</label>
     <label class="interruptor"><input id="camera-enviar" type="checkbox" ${c.enviar !== false ? "checked" : ""}> Enviar ao celular</label>
+    ${movimento(c)}
     ${girar(c)}
     <p class="resultado" id="camera-resultado"></p>
     <div class="botoes">${botao("Procurar na rede", "camera-procurar", "", "discreta")}${c.configurada ? botao("Testar conexão", "camera-testar", "", "discreta") : ""}${botao("Salvar", "camera-salvar", "", "principal")}</div>`);
+}
+
+/** Fotos por movimento por lente: a lente cuja detecção dispara sem ninguém fica de fora. */
+function movimento(c) {
+  if ((c.lentes || 1) < 2) return "";
+  const lentes = Array.from({ length: c.lentes }, (_, i) => i + 1);
+  const marcada = (n) => ((c.sem_fotos || []).includes(n) ? "" : "checked");
+  return `<p class="rotulo">Lentes com fotos por movimento</p>${lentes.map((n) =>
+    `<label class="interruptor"><input class="camera-movimento" data-lente="${n}" type="checkbox" ${marcada(n)}> Lente ${n}</label>`).join("")}`;
 }
 
 /** "Girar 180°" por lente: a imagem da lente montada de cabeça para baixo sai de pé. */
@@ -83,6 +93,11 @@ Object.assign(ACOES, {
       intervalo_s: Number(campo("camera-intervalo")?.value || 30),
       ligado: !!campo("camera-ligada")?.checked,
       enviar: !!campo("camera-enviar")?.checked,
+      ...(document.querySelector(".camera-movimento") ? {
+        sem_fotos: [...document.querySelectorAll(".camera-movimento")]
+          .filter((e) => !(/** @type {HTMLInputElement} */ (e).checked))
+          .map((e) => Number(/** @type {HTMLElement} */ (e).dataset.lente)),
+      } : {}),
       girar: [...document.querySelectorAll(".camera-girar")]
         .filter((e) => /** @type {HTMLInputElement} */ (e).checked)
         .map((e) => Number(/** @type {HTMLElement} */ (e).dataset.lente)),

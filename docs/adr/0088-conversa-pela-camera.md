@@ -57,7 +57,17 @@ O que a câmera real mostrou:
      falas;
    - por voz, `camera_atender`, `camera_encerrar` e `camera_conversas`. As duas primeiras não
      pedem confirmação, porque são pedido de quem usa e o Zé da câmera não tem com o que agir.
-8. Na `Chamada`, sem telefone (a câmera, o recado da ADR 0067), o histórico de um cérebro sem
+8. **Falar com quem usa (12/11/2026).** Se a pessoa pedir para falar com o morador, o Zé da rua
+   pergunta o nome e o assunto e diz que vai ver se ele pode atender, sem dizer se ele está em
+   casa (`[[CHAMAR: ...]]`). O Zé pergunta pelo app de voz: "Alguém na câmera da entrada quer
+   falar com você sobre ... Pode atender?". Com o "sim", a câmera vira uma ponte de áudio com o
+   celular, como nas ligações do WhatsApp (ADR 0066). A conversa fica registrada na Central como
+   `camera` (`atendidas`), então a decisão, a ponte e o encerramento são os mesmos. Sem o app
+   conectado, ou sem resposta, o Zé da rua diz que "o morador" não pode atender agora e anota o
+   recado. Nunca usa o nome de quem usa. Na ponte, a câmera fica surda só enquanto sai voz de
+   fato (energia acima de `LIMIAR`), e não o tempo todo, porque a sua voz chega sem parar, com
+   silêncio.
+9. Na `Chamada`, sem telefone (a câmera, o recado da ADR 0067), o histórico de um cérebro sem
    estado (chave de API) passa a ser a conversa da própria ligação. Antes, cada resposta saía
    sem memória do que já tinha sido dito.
 
@@ -70,6 +80,4 @@ O que a câmera real mostrou:
   a conversa não abre ("Falta a chave do Deepgram.").
 - Uma conversa por vez ("A câmera já está em conversa."). A ligação do WhatsApp continua
   independente.
-- Fica para depois:
-  - o "Ei Zé" na câmera, com a escuta local e um filtro de ruído da rua;
-  - passar a conversa para o celular de quem usa, como a ponte da ADR 0066.
+- Fica para depois o "Ei Zé" na câmera, com a escuta local e um filtro de ruído da rua.
