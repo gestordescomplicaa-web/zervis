@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Marketing:** a aba nova cuida do site e do blog. Aponte a pasta do site e a branch base; em
+  "Escrever artigo" ou "Mudar o site", uma sessão faz o trabalho numa cópia isolada, seguindo o
+  manual do blog do próprio site, e "Abrir PR" leva ao GitHub como rascunho. Você revisa no
+  preview e publica no merge. Também pela voz: "escreve um artigo para o blog" (ADR 0091).
+
 - **Pelo app, o Zé espera você terminar:** a espera depois de uma pausa segue a opção "Espera" da
   página Voz (Rápida 0,4 s, Normal 0,8 s, Longa 1,2 s). Antes eram 0,4 s em todas, e em
   novembro 343 de 969 falas ao vivo foram fechadas no meio.

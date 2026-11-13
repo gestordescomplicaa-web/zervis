@@ -123,6 +123,18 @@ def propor(
         _PROPONDO.release()
 
 
+def enviar(copia: Path, gh: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """`git push origin` com o login do GitHub pelo `gh` desta máquina, mesmo que a
+    configuração do git aponte outro."""
+    ajudante = f"!{gh} auth git-credential"
+    return _git(
+        copia,
+        "-c", "credential.https://github.com.helper=",
+        "-c", f"credential.https://github.com.helper={ajudante}",
+        "push", "--quiet", "origin", *args,
+    )  # fmt: skip
+
+
 def _pr_aberto(copia: Path, gh: str, branch: str) -> str:
     """O endereço de um PR aberto que já leva exatamente estes commits, ou vazio."""
     ponta = _git(copia, "rev-parse", branch).stdout.strip()
@@ -175,18 +187,7 @@ def _propor(
             "trocar por dados de exemplo.",
         )
     nome = f"ze/melhoria-{time.strftime('%Y%m%d-%H%M%S', time.localtime(agora()))}"
-
-    def enviar(*args: str) -> subprocess.CompletedProcess[str]:
-        # O login do GitHub pelo gh desta máquina, mesmo que a configuração do git aponte outro.
-        ajudante = f"!{gh} auth git-credential"
-        return _git(
-            copia,
-            "-c", "credential.https://github.com.helper=",
-            "-c", f"credential.https://github.com.helper={ajudante}",
-            "push", "--quiet", "origin", *args,
-        )  # fmt: skip
-
-    envio = enviar(f"{branch}:refs/heads/{nome}")
+    envio = enviar(copia, gh, f"{branch}:refs/heads/{nome}")
     if envio.returncode != 0:
         return Resultado(
             False, "Não consegui enviar a branch ao GitHub. Confira o login do GitHub."
@@ -207,7 +208,7 @@ def _propor(
     endereco = next(iter(re.findall(r"https://\S+/pull/\d+", pr.stdout)), "")
     if pr.returncode != 0 or not endereco:
         with contextlib.suppress(Exception):  # a branch sem PR não fica para trás
-            enviar("--delete", nome)
+            enviar(copia, gh, "--delete", nome)
         return Resultado(False, "Enviei a branch, mas o GitHub não abriu o PR. Tente de novo.")
     numero = endereco.rsplit("/", 1)[-1]
     return Resultado(True, f"Abri o PR {numero} no GitHub, com {len(lista)} melhoria(s).", endereco)

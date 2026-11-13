@@ -21,6 +21,7 @@ from zervis.portal.acoes.conectores import AcoesConectores
 from zervis.portal.acoes.configuracao import AcoesConfiguracao
 from zervis.portal.acoes.dispositivos import AcoesDispositivos
 from zervis.portal.acoes.inicio import AcoesInicio
+from zervis.portal.acoes.marketing import AcoesMarketing
 from zervis.portal.acoes.melhorias import AcoesMelhorias
 from zervis.portal.acoes.memoria import AcoesMemoria
 from zervis.portal.acoes.pagina import Servicos
@@ -56,6 +57,7 @@ class Acoes:
             AcoesAtualizacoes,
             AcoesCamera,
             AcoesDispositivos,
+            AcoesMarketing,
             AcoesPesquisas,
             AcoesProjetos3D,
             AcoesTelaTV,
@@ -109,6 +111,7 @@ class Acoes:
             "tv": self.modo_tv,
             "camera": self.camera,
             "dispositivos": self.dispositivos,
+            "marketing": self.marketing,
             "impressora": self.impressora_3d,
         }
 
@@ -177,6 +180,9 @@ class Acoes:
             "camera/atender": self.atender_camera,
             "camera/encerrar": self.encerrar_camera,
             "tv": self.salvar_modo_tv,
+            "marketing/site": self.guardar_site,
+            "marketing/pedir": self.pedir_marketing,
+            "marketing/pr": self.pr_marketing,
             "tv/procurar": self.procurar_tv,
             "tv/abrir": self.abrir_tv,
             "tv/fechar": self.fechar_tv,

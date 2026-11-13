@@ -69,6 +69,9 @@ com o README.
 
 ## Fecho da Fase B (revisão de 11/11/2026)
 
+Exceção registrada em 13/11/2026: a aba Marketing (ADR 0091) entrou antes do fecho, a pedido de
+quem usa, com os testes na porta de qualidade.
+
 O que as Fases A e B deixaram aberto e o que a revisão achou no código. Fecha antes da Fase C;
 cada item está na frente dele, com o detalhe.
 

@@ -29,6 +29,7 @@
     "tv",
     "camera",
     "dispositivos",
+    "marketing",
     "impressora"
   ],
   "escritas": [
@@ -169,6 +170,9 @@
     "projetos3d/imprimir",
     "projetos3d/mostrar-tv",
     "tv",
+    "marketing/site",
+    "marketing/pedir",
+    "marketing/pr",
     "tv/procurar",
     "tv/abrir",
     "tv/fechar",
