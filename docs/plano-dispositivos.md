@@ -110,22 +110,25 @@ com a Frente 4 (alcance).
 
 ### Fase 0: proteger quem baixa (antes da próxima versão)
 
-- [ ] O instalador (`deploy/instalar-pc.sh`, `deploy/instalar-servidor.sh`) faz checkout da
-      última versão publicada logo depois do `git clone`. O README diz isso, e o modo de
+- [x] O instalador (`deploy/instalar-pc.sh`, `deploy/instalar-servidor.sh`) faz checkout da
+      última versão publicada logo depois do `git clone` (PR #181). O README diz isso, e o modo de
       desenvolvimento continua existindo para quem quer a `master`.
-- [ ] As seções de aparelho só aparecem com o aparelho cadastrado: "Câmera" fica escondida sem
-      câmera, a impressora dentro de Projetos 3D sem impressora, o Modo TV sem TV.
+- [x] As seções de aparelho só aparecem com o aparelho cadastrado. Isso foi feito junto com a
+      Fase 1: o menu tem só "Dispositivos", que lista o que está cadastrado e oferece "Adicionar
+      dispositivo". Sem esse "Adicionar", esconder as abas tiraria o único lugar de cadastrar.
 
 ### Fase 1: a seção Dispositivos, sem mudar comportamento
 
-- [ ] A seção **Dispositivos** junta a câmera (que sai da aba própria), a impressora (o cadastro
+- [x] A seção **Dispositivos** junta a câmera (que sai da aba própria), a impressora (o cadastro
       e o estado saem de Projetos 3D, que continua sendo a criação dos modelos) e o Modo TV (que
-      sai de Perfil).
-- [ ] O registro único de dispositivos, migrando os cadastros atuais (`camera.json`,
-      `impressora3d.json`, `tv.json`) sem perder nada. No PC de quem já usa, tudo continua
-      funcionando depois da atualização.
-- [ ] A voz encontra os aparelhos pelo registro ("Zé, foto da câmera", "como está a
-      impressora").
+      sai de Perfil). Cada aparelho tem a sua página (`#camera`, `#impressora`, `#tv`), com o
+      menu marcando Dispositivos.
+- [x] A lista única de dispositivos (`zervis/dispositivos.py`) é lida dos cadastros atuais
+      (`camera.json`, `impressora3d.json`, `tv.json`), sem mover nem migrar nada. No PC de quem
+      já usa, nada muda de lugar. O registro em SQLite vem com as integrações (fase 3), que é
+      quando os cadastros mudam de formato.
+- [x] A voz lista os aparelhos e o estado deles (`dispositivos_listar`). Para agir, continuam as
+      ferramentas de cada um.
 
 ### Fase 2: procurar dispositivos
 

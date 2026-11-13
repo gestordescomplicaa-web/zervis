@@ -73,7 +73,7 @@ function galeria(fotos) {
 
 PAGINAS.camera = async () => {
   const c = await api("camera");
-  return `${cabeca("Câmera", "")}${formulario(c)}${conversa(c)}${galeria(c.fotos || [])}`;
+  return `${cabeca("Câmera", '<a class="acao discreta" href="#dispositivos">Dispositivos</a>')}${formulario(c)}${conversa(c)}${galeria(c.fotos || [])}`;
 };
 
 Object.assign(ACOES, {

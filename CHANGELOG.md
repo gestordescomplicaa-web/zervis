@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Dispositivos:** a câmera, a impressora 3D e o Modo TV saíram das abas próprias, de Projetos
+  3D e de Perfil, e foram para uma seção só. Ela mostra os aparelhos adicionados, com o estado de
+  cada um, e "Adicionar dispositivo". Quem não tem nenhum não vê aba de aparelho. Por voz:
+  "quais dispositivos você tem?" (ADR 0089).
 - **Quem instala recebe a versão publicada:** o `git clone` traz a `master`, que é
   desenvolvimento. Agora, numa instalação nova, o instalador volta para a última versão publicada
   antes de instalar. `--desenvolvimento` fica na `master`, e reinstalar um Zé que já existe não

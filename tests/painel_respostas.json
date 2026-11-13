@@ -1003,6 +1003,31 @@
    "endereco": "http://192.168.0.10:8798/tv?chave=exemplo",
    "aberta": false
   },
+  "dispositivos": {
+   "dispositivos": [
+    {
+     "id": "camera",
+     "nome": "Câmera",
+     "estado": "Conectada",
+     "bom": true,
+     "detalhe": "192.168.0.20 · 3 lentes"
+    }
+   ],
+   "tipos": [
+    {
+     "id": "impressora",
+     "nome": "Impressora 3D",
+     "descricao": "Bambu Lab na rede local: estado, câmera, avisos e impressão."
+    }
+   ]
+  },
+  "impressora": {
+   "configurada": false,
+   "ip": "",
+   "serie": "",
+   "modelo": "",
+   "avisos": []
+  },
   "camera": {
    "configurada": false,
    "ip": "",
