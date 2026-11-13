@@ -3122,7 +3122,7 @@ wheels = [
 
 [[package]]
 name = "zervis"
-version = "0.5.0"
+version = "0.5.1"
 source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },
