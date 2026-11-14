@@ -64,7 +64,10 @@ PADRAO: dict[str, dict[str, Any]] = {
     # travaria; vai para proibido (faz-se pelo menu do Omarchy).
     "sistema": {"proibidos": ["update"], "confirmar": [], "livres": []},
     # raiz_projetos: onde nasce um projeto novo criado por voz (só criar, nunca apagar).
-    "oficina": {"raiz_projetos": "~/projetos"},
+    # aprovar_sozinho: numa sessão protegida, o Zé aprova sem perguntar os comandos e as edições
+    # que não são perigosos (ficam presos na cópia do projeto); conectores, perguntas, planos e o
+    # perigoso continuam pedindo. Tudo vai para a Atividade.
+    "oficina": {"raiz_projetos": "~/projetos", "aprovar_sozinho": True},
     # Limites rígidos da memória curta (caracteres): cheia, o cérebro consolida antes de gravar.
     # Skills: uma pasta por skill com SKILL.md (padrão agentskills.io); pôr a pasta ali já basta.
     # arquivar_apos_dias: curadoria; skill sem uso há tanto tempo sai do catálogo para
