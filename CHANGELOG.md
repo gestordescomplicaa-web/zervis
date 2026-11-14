@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Correção: o menu "Fala" com sessão trabalhando.** Enquanto uma sessão trabalhava, o painel
+  fechava todos os menus abertos a cada segundo, e não dava para trocar de Silencioso para
+  Normal ou Live. Agora só os ajustes da própria sessão ficam travados.
+
 - **Aprovação falada curta:** quando uma sessão pede aprovação para um comando ou uma edição, o
   Zé diz só "Tem uma aprovação do pedido X. Aprovo?", sem ler o comando. O detalhe fica no
   painel (ADR 0039).

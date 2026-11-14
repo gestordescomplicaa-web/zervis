@@ -241,7 +241,8 @@ export function travarAjustes(trabalhando) {
   /** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll("#ajustes-sessao .escolha-botao")).forEach((el) => { el.disabled = bloqueado; });
   const parar = /** @type {HTMLButtonElement | null} */ ($("interromper-trabalho"));
   if (parar) { parar.hidden = !trabalhando; parar.disabled = atualizando() || (!!sessaoAtual?.melhorias && !!window.unificandoSessoes); }
-  if (bloqueado) fecharEscolhas();
+  // Só os menus da sessão: fechar todos derrubava o "Fala" do topo a cada batimento (13/11/2026).
+  if (bloqueado) fecharEscolhas(undefined, $("ajustes-sessao"));
 }
 
 // Para o núcleo do painel (as ações, a navegação), que chama este módulo depois que ele carrega.

@@ -202,7 +202,7 @@ export async function acompanharSessao() {
   const { sessao } = await api("sessao/ler", { id, desde: 1e9 });
   if (compartilhado.sessaoAberta !== id || !$("estado-sessao")) return;
   if (compartilhado.sessaoAtual?.conta_id !== sessao.conta_id || compartilhado.sessaoAtual?.motor !== sessao.motor || compartilhado.sessaoAtual?.modelo !== sessao.modelo) {
-    fecharEscolhas();
+    fecharEscolhas(undefined, $("ajustes-sessao"));
     $("ajustes-sessao").innerHTML = seletorConta(sessao) + seletorModeloSessao(sessao);
   }
   compartilhado.sessaoAtual = sessao;

@@ -1853,3 +1853,47 @@ def test_abrir_pelo_programa_leva_a_abertura_uma_vez(tmp_path: Path) -> None:
     assert r["imersao"].endswith("&abertura=1"), r
     assert "abertura" not in r["recarregada"], r
     assert not r["erros"], r
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_com_sessao_trabalhando_o_menu_de_fala_continua_aberto(tmp_path: Path) -> None:
+    """13/11/2026: com uma sessão trabalhando, o batimento travava os ajustes dela e fechava todos
+    os menus da tela, e o "Fala" do topo fechava antes de dar para escolher Normal ou Live."""
+    respostas = json.loads(RESPOSTAS.read_text())
+    sessao = respostas["escritas"]["sessao/ler"]
+    sessao["sessao"].update(estado="trabalhando", limite=False, motor="claude")
+    estado = respostas["leituras"]["estado"]
+    estado["manutencao"]["ligada"] = False
+    estado["modo_fala"] = "silencioso"
+    pedidos: list[dict[str, Any]] = []
+
+    def mudar_modo(dados: dict[str, Any]) -> dict[str, str]:
+        pedidos.append(dados)
+        estado["modo_fala"] = dados["modo"]
+        return {"modo": dados["modo"], "aviso": "Fala: Live."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            await _esperar(nav, "!!document.querySelector('#interromper-trabalho')")
+            await nav.avaliar("document.querySelector('[data-escolha=modo-fala] button').click()")
+            menu = "document.querySelector('[data-escolha=modo-fala] .escolha-menu')"
+            assert not await nav.avaliar(f"{menu}.hidden")
+            await asyncio.sleep(3)  # três batimentos com a sessão trabalhando
+            assert not await nav.avaliar(f"{menu}.hidden"), "o menu de fala fechou sozinho"
+            assert await nav.avaliar("document.querySelector('#ajustes-sessao button').disabled")
+            await nav.avaliar(
+                "document.querySelector('[data-escolha=modo-fala] [data-valor=live]').click()"
+            )
+            await _esperar(nav, "document.querySelector('#modo-fala').dataset.modo === 'live'")
+            assert pedidos == [{"modo": "live"}]
+            assert not nav.erros, nav.erros
+
+    extras: dict[str, Escrita] = {
+        "sessao/ler": lambda _: copy.deepcopy(sessao),
+        "ze/melhorias": lambda _: copy.deepcopy(respostas["escritas"]["ze/melhorias"]),
+        "fala/modo": mudar_modo,
+    }
+    with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
+        asyncio.run(conferir(depuracao, url))

@@ -126,8 +126,11 @@ export function escolha(nome, rotulo, grupos, atual, titulo) {
     <div class="escolha-menu" role="listbox" aria-label="${esc(titulo)}" hidden>${itens}</div></div>`;
 }
 
-export function fecharEscolhas(exceto) {
-  /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".escolha-menu:not([hidden])")).forEach((m) => {
+/** Fecha os menus de escolha abertos; com `raiz`, só os de dentro dela (o resto da tela segue).
+ * @param {HTMLElement} [exceto] @param {ParentNode | null} [raiz] */
+export function fecharEscolhas(exceto, raiz = document) {
+  if (!raiz) return;
+  /** @type {NodeListOf<HTMLElement>} */ (raiz.querySelectorAll(".escolha-menu:not([hidden])")).forEach((m) => {
     if (m === exceto) return;
     m.hidden = true;
     m.previousElementSibling.setAttribute("aria-expanded", "false");
