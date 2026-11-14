@@ -79,6 +79,11 @@ terminal (teste 5).
    Continuam com a pessoa: o perigoso, as ferramentas de conector (que agem fora: publicar um
    fluxo, cobrar um cliente), as perguntas e os planos. A essência segue: ação perigosa pede
    confirmação, e tudo fica registrado.
+   **A fala é curta (13/11/2026, a pedido).** Ouvir o comando, mesmo resumido, cansava. Num
+   comando, numa edição ou numa página, o Zé diz só "Tem uma aprovação do pedido X. Aprovo?", e
+   no perigoso "Tem uma aprovação com risco no pedido X. Veja no painel.". O que é exatamente
+   fica no painel e na Atividade. No conector, a consequência continua sendo dita ("publicar o
+   fluxo X: ele passa a rodar de verdade"), porque ela é curta e decide a resposta.
 4. **Onde pergunta.** No painel, no cartão da sessão: Aprovar e Negar (também pelo celular, com
    a senha e o código do autenticador). Pela voz quando o Zé pode falar (ADR 0029); no
    Silencioso, pelo app de voz; sem nenhum dos dois, só no painel e no terminal. Uma pergunta
