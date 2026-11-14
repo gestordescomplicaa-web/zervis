@@ -254,6 +254,13 @@ INTERNET_LIVRE = ["WebSearch", "WebFetch"]
 # declara, para a automação não parar esperando ninguém). Só `Bash(comando)` ou
 # `Bash(prefixo:*)`, sem caractere de shell: um `;` ou `&&` liberaria qualquer coisa.
 LIVRES_DA_SESSAO = "livres.json"
+# Só leem, e a sessão protegida só enxerga a cópia do projeto: rodam sem pergunta. O Claude
+# confere cada parte de um comando composto, então `cat a; ls b` também passa.
+LEITURA_LIVRE = [
+    f"Bash({c}:*)"
+    for c in ("cat", "ls", "head", "tail", "grep", "rg", "wc", "pwd", "stat", "tree", "diff",
+              "sed -n", "jq", "file")
+]  # fmt: skip
 LIVRE_VALIDO = re.compile(r"Bash\([\w@./=, -]+(:\*)?\)")
 
 
@@ -660,6 +667,7 @@ def comando_terminal(
             *COMANDOS_LIVRES,
             *externos.livres,
             *livres_da_sessao(eventos.parent),
+            *(LEITURA_LIVRE if s.protegida else []),
         ],
         "deny": externos.bloqueadas,
     }

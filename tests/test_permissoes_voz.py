@@ -284,3 +284,21 @@ def test_a_pergunta_de_retomar_vira_aviso_urgente(tmp_path: Path) -> None:
     ServicoOficina(n)._sessao_pede(Sessao(id="s1", nome="Loja", pasta="/x"), RETOMAR_CONVERSA)
     assert len(avisos_genericos) == 1
     assert "retoma a conversa anterior ou começa outra" in str(avisos_genericos[0])
+
+
+def test_o_comando_composto_da_sessao_se_aprova_pela_voz(tmp_path: Path) -> None:
+    """13/11/2026: a sessão do blog rodou `cat ...; ls ...` e a instalação com `||`; o "aprova
+    tudo" pulava os dois, e a sessão por voz parava. Agora o Zé diz o que o comando faz."""
+    n = contexto(tmp_path)
+    oficina = ServicoOficina(n)
+    lido = "cat docs/blog-agente.md; echo ======; ls -la content/blog"
+    _, a = pedir(n, "s1", {"tool_name": "Bash", "tool_input": {"command": lido}})
+    aviso = n.eventos.get_nowait()
+    assert aviso.texto == "A sessão Loja quer rodar um comando que lê arquivos. Aprovo?"
+    assert aviso.escutar
+    instala = "(test -f pnpm-lock.yaml && pnpm install) || npm install"
+    _, b = pedir(n, "s1", {"tool_name": "Bash", "tool_input": {"command": instala}})
+    assert oficina._responder_permissao(True, tudo=True) == "Aprovei os 2 pedidos da sessão Loja."
+    for saida in (a, b):
+        esperar(lambda saida=saida: "volta" in saida)
+        assert saida["volta"]["hookSpecificOutput"]["decision"]["behavior"] == "allow"

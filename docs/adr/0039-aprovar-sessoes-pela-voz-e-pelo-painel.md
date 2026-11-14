@@ -62,6 +62,16 @@ terminal (teste 5).
    passa a rodar com clientes reais"; "rodar de verdade: envia, cria, cobra"; um comando, o
    comando inteiro. O que não cabe numa frase curta (um comando longo, uma edição grande) não é
    aprovado pela voz: "está na tela".
+   **Revisto em 13/11/2026.** Na prática, quase todo comando real tem um `/`, um `;` ou um `|`,
+   e a sessão por voz parava a cada passo: o "aprova tudo" pulava justamente esses pedidos.
+   - O comando que não cabe numa frase é dito pelo que faz ("rodar um comando que lê arquivos
+     e roda o npm", `permissoes.resumo_do_comando`) e se aprova pela voz. O comando inteiro fica
+     no painel.
+   - Só fica na tela o perigoso (`permissoes.PERIGOSO`): apagar em massa, `sudo`, rodar o que vem
+     da internet, `push --force`, `reset --hard`, escrever em pastas do sistema.
+   - As edições do Codex ("mudar 2 arquivos do projeto") vão pela voz.
+   - Numa sessão protegida (ADR 0074), mudar um arquivo também vai pela voz, e ler (`cat`, `ls`,
+     `grep`, `sed -n`...) roda sem pergunta, porque o agente só enxerga a cópia do projeto.
 4. **Onde pergunta.** No painel, no cartão da sessão: Aprovar e Negar (também pelo celular, com
    a senha e o código do autenticador). Pela voz quando o Zé pode falar (ADR 0029); no
    Silencioso, pelo app de voz; sem nenhum dos dois, só no painel e no terminal. Uma pergunta

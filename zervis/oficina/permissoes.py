@@ -29,6 +29,7 @@ import unicodedata
 import uuid
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -36,7 +37,49 @@ PRAZO_S = 300.0  # quanto o gancho espera; depois, a janela do terminal segue so
 # O Codex só mostra a pergunta dele depois que o gancho volta (prova de 27/10/2026): no
 # terminal, nada aparece enquanto o Zé espera, então a pergunta volta para lá mais cedo.
 PRAZO_CODEX_S = 120.0
-FALAVEL = 160  # um comando maior que isto não se aprova de ouvido: "está na tela"
+FALAVEL = 160  # um comando maior que isto é dito pelo resumo, não por extenso
+# O que só se aprova na tela, olhando o comando inteiro (ADR 0039, revisto em 13/11/2026): apagar
+# em massa, virar administrador, rodar o que vem da internet, reescrever o GitHub, formatar disco.
+PERIGOSO = re.compile(
+    r"\brm\s+-\w*[rf]|\bsudo\b|\b(curl|wget)\b[^\n]*\|\s*(ba|z)?sh\b"
+    r"|\bgit\s+push\b[^\n]*(--force|\s-f\b)|\bgit\s+reset\s+--hard|\bmkfs|\bdd\s+if="
+    r"|\bchmod\s+-R|\bchown\s+-R|>\s*/(etc|dev|usr|boot)/"
+)
+# O que cada programa faz, para a voz resumir um comando que não cabe numa frase.
+ACOES = {
+    "lê arquivos": {
+        "cat",
+        "ls",
+        "head",
+        "tail",
+        "grep",
+        "rg",
+        "find",
+        "wc",
+        "sed",
+        "awk",
+        "echo",
+        "pwd",
+        "test",
+        "stat",
+        "file",
+        "tree",
+        "diff",
+        "sort",
+        "uniq",
+        "cut",
+        "jq",
+        "less",
+        "printf",
+        "basename",
+        "dirname",
+        "realpath",
+    },
+    "usa o git": {"git", "gh"},
+    "cria ou move arquivos": {"mkdir", "cp", "mv", "touch", "ln", "tee"},
+    "apaga arquivos": {"rm", "rmdir"},
+    "roda um script": {"python", "python3", "node", "bash", "sh", "deno", "bun", "ruby"},
+}
 DETALHE = 400
 
 # O que acontece se a pessoa aprovar, por ferramenta do MCP do n8n (as que pedem aprovação).
@@ -195,8 +238,37 @@ def _contem(fala: list[str], rotulo: list[str]) -> bool:
     return any(fala[i : i + n] == rotulo for i in range(len(fala) - n + 1))
 
 
-def frase(ferramenta: str, entrada: dict[str, Any]) -> tuple[str, bool]:
-    """O que a sessão quer fazer, dito pelo Zé, e se cabe ser aprovado de ouvido."""
+def _programas(comando: str) -> list[str]:
+    """Os programas de um comando composto, na ordem, sem repetir."""
+    vistos: list[str] = []
+    for parte in re.split(r"&&|\|\||[;|\n()]", comando):
+        palavras = [p for p in parte.split() if "=" not in p.split("/")[0]]  # tira VAR=valor
+        if palavras and palavras[0] not in ("then", "do", "else", "fi", "done", "!"):
+            nome = palavras[0].rsplit("/", 1)[-1]
+            if nome and nome not in vistos:
+                vistos.append(nome)
+    return vistos
+
+
+def resumo_do_comando(comando: str) -> str:
+    """'rodar um comando que lê arquivos e roda o npm': o que a voz consegue dizer e a pessoa
+    consegue julgar de ouvido."""
+    acoes: list[str] = []
+    for nome in _programas(comando):
+        acao = next((a for a, nomes in ACOES.items() if nome in nomes), f"roda o {nome}")
+        if acao not in acoes:
+            acoes.append(acao)
+    if not acoes:
+        return "rodar um comando"
+    lista = acoes[0] if len(acoes) == 1 else ", ".join(acoes[:-1]) + " e " + acoes[-1]
+    return f"rodar um comando que {lista}"
+
+
+def frase(ferramenta: str, entrada: dict[str, Any], protegida: bool = False) -> tuple[str, bool]:
+    """O que a sessão quer fazer, dito pelo Zé, e se cabe ser aprovado de ouvido. A voz aprova
+    quase tudo: o comando curto por extenso, o longo pelo resumo do que ele faz. Só o perigoso
+    fica para a tela. Numa sessão protegida (ADR 0074), mudar arquivos também vai pela voz: o
+    agente só enxerga a cópia do projeto."""
     if ferramenta == PERGUNTA:
         perguntas = perguntas_do_formulario(entrada)
         primeira = perguntas[0]["pergunta"] if perguntas else "uma pergunta"
@@ -207,15 +279,23 @@ def frase(ferramenta: str, entrada: dict[str, Any]) -> tuple[str, bool]:
     if ferramenta == "Bash":
         bruto = str(entrada.get("command", ""))
         comando = " ".join(bruto.split())
-        if len(comando) > FALAVEL or "\n" in bruto.strip():
-            return "rodar um comando longo (veja na tela)", False
-        if not COMANDO_FALAVEL.fullmatch(comando):
-            return f"rodar o comando {comando.split()[0] if comando else ''} (veja na tela)", False
-        return f"rodar o comando: {comando}", True
-    if ferramenta == "apply_patch":  # o Codex mudando arquivos
-        return "mudar arquivos do projeto (veja na tela)", False
+        if PERIGOSO.search(bruto):
+            return f"{resumo_do_comando(bruto)}, com risco (veja na tela)", False
+        if (
+            len(comando) <= FALAVEL
+            and "\n" not in bruto.strip()
+            and COMANDO_FALAVEL.fullmatch(comando)
+        ):
+            return f"rodar o comando: {comando}", True
+        return resumo_do_comando(bruto), True
+    if ferramenta == "apply_patch":  # o Codex mudando arquivos do projeto
+        patch = str(entrada.get("patch") or entrada.get("input") or "")
+        n = len(re.findall(r"^\*\*\* (?:Update|Add|Delete) File:", patch, re.M))
+        return (f"mudar {n} arquivos do projeto" if n > 1 else "mudar um arquivo do projeto"), True
     if ferramenta in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
         caminho = str(entrada.get("file_path") or entrada.get("notebook_path") or "")
+        if protegida:
+            return f"mudar o arquivo {Path(caminho).name or caminho}", True
         return f"mudar o arquivo {caminho} (veja na tela)", False
     if ferramenta == "WebFetch":
         site = urlsplit(str(entrada.get("url", ""))).hostname or "um endereço"
@@ -266,6 +346,8 @@ class Permissoes:
         self.prazo_s = prazo_s
         self.ao_decidir = ao_decidir  # a Atividade, e a voz retira a pergunta
         self.ao_pedir: Callable[[Pedido], None] | None = None  # a voz pergunta (E2)
+        # Se a sessão é protegida (ADR 0074): lá dentro, mudar arquivos também vai pela voz.
+        self.protegida: Callable[[str], bool] | None = None
         self.endereco = ""  # a rota do painel; vazio = sem painel, sem gancho
         self._relogio = relogio
         self._chaves: dict[str, str] = {}  # resumo da chave → sessão
@@ -321,7 +403,8 @@ class Permissoes:
         ferramenta = str(entrada.get("tool_name", ""))
         bruto = entrada.get("tool_input")
         argumentos: dict[str, Any] = bruto if isinstance(bruto, dict) else {}
-        texto, falavel = frase(ferramenta, argumentos)
+        protegida = self.protegida is not None and self.protegida(sessao)
+        texto, falavel = frase(ferramenta, argumentos, protegida)
         tipo = {PERGUNTA: "pergunta", PLANO: "plano"}.get(ferramenta, "permissao")
         perguntas = perguntas_do_formulario(argumentos) if tipo == "pergunta" else []
         if tipo == "pergunta" and not perguntas:
