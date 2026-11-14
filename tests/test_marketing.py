@@ -64,6 +64,9 @@ def mundo(tmp_path: Path) -> dict[str, Any]:
     site = tmp_path / "casa" / "site"
     site.parent.mkdir()
     subprocess.run([GIT, "clone", "-q", str(origem), str(site)], check=True, capture_output=True)  # noqa: S603
+    # A identidade fica no repositório, como num site de verdade (a CI não tem uma global).
+    _git(site, "config", "user.name", "Autora do Site")
+    _git(site, "config", "user.email", "autora@exemplo.com")
     _commit(
         site,
         {
@@ -342,6 +345,8 @@ def test_mudanca_no_site_publica_na_hora_e_junta_a_base_que_andou(
     assert r.ok, r.texto
     arquivos = _git(mundo["origem"], "ls-tree", "--name-only", "-r", "main").split()
     assert {"app/page.tsx", "README.md"} <= set(arquivos)
+    # Depois do rebase, o commit continua com o autor de quem fez: é o que o deploy confere.
+    assert _git(mundo["origem"], "log", "-1", "--format=%an", "main").strip() == "t"
 
 
 def test_a_automacao_de_artigo_pede_o_artigo_na_hora(
