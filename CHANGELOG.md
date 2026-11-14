@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Sessões protegidas sem interrupção:** o Zé aprova sozinho, em silêncio, os comandos e as
+  edições que ficam presos na cópia do projeto, e registra cada um na Atividade. O perigoso, os
+  conectores (que agem fora, como publicar um fluxo), as perguntas e os planos continuam pedindo
+  o seu sim. Desliga com `oficina.aprovar_sozinho = false` (ADR 0039).
+
 - **Sessões de código pela voz de verdade:** o comando longo ou composto que a sessão pede passa
   a ser dito pelo que faz ("quer rodar um comando que lê arquivos e roda o npm. Aprovo?") e se
   aprova com "sim" ou "aprova tudo". Só o perigoso (apagar em massa, `sudo`, `push --force`)

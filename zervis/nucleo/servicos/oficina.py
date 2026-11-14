@@ -43,6 +43,7 @@ class ContextoOficina(Protocol):
     _permissao_falada: tuple[str, str] | None
     _permissao_ate: float
     _permissao_escolha: bool
+    cfg: Any
     chamado: Any
     fila: Any
     atualizacao: Progresso
@@ -77,6 +78,7 @@ class ServicoOficina:
         # Numa sessão protegida, mudar arquivos também se aprova pela voz (ADR 0039 e 0074).
         with contextlib.suppress(AttributeError):  # um núcleo de teste pode não ter as sessões
             self.n.sessoes.permissoes.protegida = self._protegida
+            self.n.sessoes.permissoes.automatico = self._aprova_sozinho
         # O marketing avisa depois (o PR, o deploy) pelo mesmo caminho das sessões.
         marketing.PADRAO.avisar = lambda texto: self.n._aviso_da_oficina(
             texto, "notificacao", "", "o marketing"
@@ -326,6 +328,11 @@ class ServicoOficina:
         except SessaoErro:
             return False
 
+    def _aprova_sozinho(self, id_: str) -> bool:
+        cfg = getattr(self.n, "cfg", None)  # um núcleo de teste pode não ter a configuração
+        ligado = cfg is None or bool(cfg["oficina"].get("aprovar_sozinho", True))
+        return ligado and self._protegida(id_)
+
     def _marketing_terminou(self, sessao: Sessao) -> None:
         try:
             texto = marketing.PADRAO.ao_terminar(self.n.sessoes, sessao.id)
@@ -549,6 +556,8 @@ class ServicoOficina:
         if pedido.tipo == "pergunta" and pedido.decisao == "aprovado":
             como = "respondido: " + "; ".join(pedido.respostas.values())
         por = f" pelo {pedido.por}" if pedido.por in ("painel", "voz") else ""
+        if pedido.por == "automatico":
+            como, por = "aprovado sozinho (sessão protegida)", ""
         atividade.PADRAO.registrar(
             tipo,
             f"Sessão {nome}: {pedido.frase}",

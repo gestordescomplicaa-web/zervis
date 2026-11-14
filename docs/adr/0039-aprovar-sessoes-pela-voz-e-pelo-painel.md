@@ -72,6 +72,13 @@ terminal (teste 5).
    - As edições do Codex ("mudar 2 arquivos do projeto") vão pela voz.
    - Numa sessão protegida (ADR 0074), mudar um arquivo também vai pela voz, e ler (`cat`, `ls`,
      `grep`, `sed -n`...) roda sem pergunta, porque o agente só enxerga a cópia do projeto.
+   **Aprovar sozinho (13/11/2026, a pedido).** Mesmo pela voz, o Zé lia cada pedido em voz alta.
+   Numa sessão protegida, ele passa a aprovar sem perguntar os comandos, as edições e as páginas
+   lidas que não são perigosos (`Permissoes.automatico`, ajuste `oficina.aprovar_sozinho`,
+   ligado por padrão). Cada um vai para a Atividade como "aprovado sozinho (sessão protegida)".
+   Continuam com a pessoa: o perigoso, as ferramentas de conector (que agem fora: publicar um
+   fluxo, cobrar um cliente), as perguntas e os planos. A essência segue: ação perigosa pede
+   confirmação, e tudo fica registrado.
 4. **Onde pergunta.** No painel, no cartão da sessão: Aprovar e Negar (também pelo celular, com
    a senha e o código do autenticador). Pela voz quando o Zé pode falar (ADR 0029); no
    Silencioso, pelo app de voz; sem nenhum dos dois, só no painel e no terminal. Uma pergunta

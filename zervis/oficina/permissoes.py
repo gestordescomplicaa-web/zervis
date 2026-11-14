@@ -116,6 +116,10 @@ NOMES = ("workflowName", "name", "nome", "title", "dataTableName", "folderName")
 COMANDO_FALAVEL = re.compile(r"[\w .,:=@+-]+")
 
 PERGUNTA = "AskUserQuestion"  # o formulário de perguntas do Claude Code
+# O que o Zé aprova sozinho numa sessão protegida: o que só mexe na cópia do projeto (e ler a web).
+SOZINHO = frozenset(
+    {"Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "apply_patch", "WebFetch"}
+)
 PLANO = "ExitPlanMode"  # a aprovação do plano, no fim do modo plano
 # As duas se reconhecem pelo nome, sem os argumentos: o que roda leva as respostas junto.
 SO_PELO_NOME = (PERGUNTA, PLANO)
@@ -348,6 +352,8 @@ class Permissoes:
         self.ao_pedir: Callable[[Pedido], None] | None = None  # a voz pergunta (E2)
         # Se a sessão é protegida (ADR 0074): lá dentro, mudar arquivos também vai pela voz.
         self.protegida: Callable[[str], bool] | None = None
+        # Se o Zé aprova sozinho os pedidos desta sessão (as protegidas, salvo ajuste em contrário).
+        self.automatico: Callable[[str], bool] | None = None
         self.endereco = ""  # a rota do painel; vazio = sem painel, sem gancho
         self._relogio = relogio
         self._chaves: dict[str, str] = {}  # resumo da chave → sessão
@@ -428,6 +434,10 @@ class Permissoes:
             tipo=tipo,
             perguntas=perguntas,
         )
+        if self._sozinho(p):
+            p.decisao, p.por = "aprovado", "automatico"
+            self._avisar(p)  # na Atividade, sem perguntar
+            return resposta(p.decisao, p.por)
         with self._mudou:
             self._pedidos[p.id] = p
             self._mudou.notify_all()
@@ -523,6 +533,18 @@ class Permissoes:
                 for p in sorted(self._pedidos.values(), key=lambda p: p.criado)
                 if not p.decisao and (sessao is None or p.sessao == sessao)
             ]
+
+    def _sozinho(self, p: Pedido) -> bool:
+        """Aprovar sem perguntar: numa sessão protegida, só comando e edição (que ficam presos na
+        cópia do projeto) e só o que não é perigoso. Conector (age fora: publica um fluxo, cobra
+        um cliente), pergunta e plano continuam com a pessoa."""
+        return (
+            self.automatico is not None
+            and p.tipo == "permissao"
+            and p.falavel
+            and p.ferramenta in SOZINHO
+            and self.automatico(p.sessao)
+        )
 
     def _avisar(self, p: Pedido) -> None:
         if self.ao_decidir is not None:

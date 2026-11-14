@@ -302,3 +302,29 @@ def test_o_comando_composto_da_sessao_se_aprova_pela_voz(tmp_path: Path) -> None
     for saida in (a, b):
         esperar(lambda saida=saida: "volta" in saida)
         assert saida["volta"]["hookSpecificOutput"]["decision"]["behavior"] == "allow"
+
+
+def test_o_aprovado_sozinho_fica_na_atividade_e_o_ajuste_desliga(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from zervis import atividade
+
+    n = contexto(tmp_path)
+    n.cfg = {"oficina": {"aprovar_sozinho": True}}
+    oficina = ServicoOficina(n)
+    n.sessoes.ler = lambda _id: SimpleNamespace(protegida=True, nome="Loja")
+    assert oficina._aprova_sozinho("s1")
+    n.cfg["oficina"]["aprovar_sozinho"] = False
+    assert not oficina._aprova_sozinho("s1")
+    registros: list[tuple[str, str, dict[str, Any]]] = []
+
+    def registrar(tipo: str, texto: str, **extra: Any) -> dict[str, Any]:
+        registros.append((tipo, texto, extra))
+        return {}
+
+    monkeypatch.setattr(atividade.PADRAO, "registrar", registrar)
+    pedido = Pedido("p1", "s1", "Bash", "rodar o comando: npm ci", "{}", True, "a", "", 0.0)
+    pedido.decisao, pedido.por = "aprovado", "automatico"
+    oficina._permissao_decidida(pedido)
+    ((tipo, _texto, extra),) = registros
+    assert tipo == "execucao" and extra["autorizacao"] == "aprovado sozinho (sessão protegida)"

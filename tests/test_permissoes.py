@@ -289,3 +289,31 @@ def test_a_rota_so_aceita_o_proprio_pc_com_a_chave() -> None:
         assert status == 200 and corpo["hookSpecificOutput"]["decision"]["behavior"] == "allow"
     finally:
         portal.parar()
+
+
+def test_na_sessao_protegida_o_ze_aprova_sozinho_o_que_fica_na_copia() -> None:
+    """13/11/2026: a sessão do blog lia em voz alta cada comando. Na protegida, o que só mexe na
+    cópia do projeto passa sem perguntar e vai para a Atividade; o resto continua com a pessoa."""
+    decididos: list[Pedido] = []
+    perguntados: list[Pedido] = []
+    p = Permissoes(prazo_s=0.3, ao_decidir=decididos.append)
+    p.ao_pedir = perguntados.append
+    p.automatico = lambda sessao: sessao == "s1"
+    chave = p.chave("s1")
+    instala = {"tool_name": "Bash", "tool_input": {"command": "npm ci; npm run blog:check"}}
+    assert p.pedir(chave, instala) == resposta("aprovado", "automatico")
+    edita = {"tool_name": "Edit", "tool_input": {"file_path": "/x/app.tsx"}}
+    assert p.pedir(chave, {**edita, "tool_name": "apply_patch"}) == resposta(
+        "aprovado", "automatico"
+    )
+    assert [d.por for d in decididos] == ["automatico", "automatico"] and not perguntados
+    # O perigoso, o conector (age fora) e o formulário continuam perguntando.
+    for entrada in (
+        {"tool_name": "Bash", "tool_input": {"command": "rm -rf node_modules"}},
+        PUBLICAR,
+    ):
+        assert p.pedir(chave, entrada) == {}  # ninguém respondeu: fica com o terminal
+    assert len(perguntados) == 2 and not p.pendentes()
+    # Fora da protegida (ou com o ajuste desligado), pergunta como sempre.
+    outra = p.chave("s2")
+    assert p.pedir(outra, instala) == {} and len(perguntados) == 3
