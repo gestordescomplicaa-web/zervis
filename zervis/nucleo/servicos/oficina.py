@@ -19,7 +19,7 @@ from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import ESTADO, Status
 from zervis.oficina.manutencao import ORIGEM as ORIGEM_MANUTENCAO
 from zervis.oficina.manutencao import Manutencao
-from zervis.oficina.permissoes import Pedido, escolher
+from zervis.oficina.permissoes import SOZINHO, Pedido, escolher
 from zervis.oficina.progresso import Progresso
 from zervis.oficina.sessoes import (
     GANCHOS_DO_CODEX,
@@ -452,7 +452,14 @@ class ServicoOficina:
             texto = (
                 f"A sessão {nome} terminou o plano e quer começar. O plano está na tela. Aprovo?"
             )
-        elif pedido.falavel:
+        elif pedido.ferramenta in SOZINHO:
+            # Comando, edição, página: o que é fica no painel; de ouvido, só de qual pedido é.
+            texto = (
+                f"Tem uma aprovação do pedido {nome}. Aprovo?"
+                if pedido.falavel
+                else f"Tem uma aprovação com risco no pedido {nome}. Veja no painel."
+            )
+        elif pedido.falavel:  # um conector: a consequência é curta e decide a resposta
             texto = f"A sessão {nome} quer {pedido.frase}. Aprovo?"
         else:
             o_que = pedido.frase.replace(" (veja na tela)", "")

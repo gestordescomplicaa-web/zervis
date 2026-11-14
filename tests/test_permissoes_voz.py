@@ -175,7 +175,8 @@ def test_o_que_nao_cabe_numa_frase_nao_se_aprova_de_ouvido(tmp_path: Path) -> No
     n = contexto(tmp_path)
     pedir(n, "s1", {"tool_name": "Bash", "tool_input": {"command": "cat > /etc/hosts"}})
     aviso = n.eventos.get_nowait()
-    assert aviso.texto.endswith("Veja no painel ou no terminal.") and not aviso.escutar
+    assert aviso.texto == "Tem uma aprovação com risco no pedido Loja. Veja no painel."
+    assert not aviso.escutar
     n.sessoes.permissoes.retirar("s1")
 
 
@@ -294,7 +295,7 @@ def test_o_comando_composto_da_sessao_se_aprova_pela_voz(tmp_path: Path) -> None
     lido = "cat docs/blog-agente.md; echo ======; ls -la content/blog"
     _, a = pedir(n, "s1", {"tool_name": "Bash", "tool_input": {"command": lido}})
     aviso = n.eventos.get_nowait()
-    assert aviso.texto == "A sessão Loja quer rodar um comando que lê arquivos. Aprovo?"
+    assert aviso.texto == "Tem uma aprovação do pedido Loja. Aprovo?"  # sem ler o comando
     assert aviso.escutar
     instala = "(test -f pnpm-lock.yaml && pnpm install) || npm install"
     _, b = pedir(n, "s1", {"tool_name": "Bash", "tool_input": {"command": instala}})

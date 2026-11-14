@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Aprovação falada curta:** quando uma sessão pede aprovação para um comando ou uma edição, o
+  Zé diz só "Tem uma aprovação do pedido X. Aprovo?", sem ler o comando. O detalhe fica no
+  painel (ADR 0039).
+
 - **Sessões protegidas sem interrupção:** o Zé aprova sozinho, em silêncio, os comandos e as
   edições que ficam presos na cópia do projeto, e registra cada um na Atividade. O perigoso, os
   conectores (que agem fora, como publicar um fluxo), as perguntas e os planos continuam pedindo
