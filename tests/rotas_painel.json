@@ -149,6 +149,7 @@
     "skill/ligar",
     "skill/excluir",
     "sessao/excluir",
+    "sessao/renomear",
     "cerebro/escolher",
     "cerebro/modelo",
     "omniroute/salvar",

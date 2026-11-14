@@ -16,6 +16,7 @@ from claude_agent_sdk import SdkMcpTool, tool
 
 from zervis.cerebro import contas
 from zervis.cerebro.ferramentas.comum import _erro, _texto
+from zervis.oficina import sessoes_leitura
 from zervis.oficina.sessoes import MOTORES, Sessao, SessaoErro, Sessoes
 
 ULTIMAS = 12  # mensagens que sessao_ler devolve
@@ -290,4 +291,25 @@ def ferramentas(sessoes: Sessoes | None) -> list[SdkMcpTool[Any]]:
             return _erro(erro)
         return _texto({"continuando": True, **_resumo(s)})
 
-    return [listar, criar, enviar, ler, trocar, parar, continuar]
+    @tool(
+        "sessao_renomear",
+        "Dá um nome novo a uma sessão, quando o usuário pede ('chama a sessão X de Y'). Depois, "
+        "ela é achada pelo nome novo. Sessão: id ou nome; vazio é a em foco.",
+        {
+            "type": "object",
+            "properties": {"sessao": {"type": "string"}, "nome": {"type": "string"}},
+            "required": ["nome"],
+        },
+    )
+    async def renomear(args: dict[str, Any]) -> dict[str, Any]:
+        def fazer() -> Sessao:
+            alvo = sessoes.achar(str(args.get("sessao", "")))
+            return sessoes_leitura.renomear(sessoes, alvo.id, str(args["nome"]))
+
+        try:
+            s = await asyncio.to_thread(fazer)
+        except SessaoErro as erro:
+            return _erro(erro)
+        return _texto({"renomeada": True, **_resumo(s)})
+
+    return [listar, criar, enviar, ler, trocar, parar, continuar, renomear]

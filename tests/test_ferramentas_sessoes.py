@@ -144,3 +144,24 @@ def test_pela_voz_a_sessao_nasce_protegida_e_sai_dela_so_a_pedido(
         f, "sessao_criar", {"nome": "Site", "pasta": str(raiz / "site"), "protegida": False}
     )
     assert loja["protegida"] and not site["protegida"]
+
+
+def test_renomear_a_sessao_e_achar_pelo_nome_novo(tmp_path: Path) -> None:
+    """13/11/2026: o Zé dá o nome da sessão pelo pedido; quem usa quer trocar depois, e a voz
+    tem de achar a sessão pelo nome novo."""
+    from zervis.oficina import sessoes_leitura
+
+    raiz = tmp_path / "casa"
+    (raiz / "site").mkdir(parents=True)
+    sessoes = Sessoes(tmp_path / "sessoes", (raiz,))
+    s = sessoes.criar("Blog · " + "aviação " * 20, str(raiz / "site"))
+    assert len(s.nome) <= sessoes_leitura.LIMITE_NOME and s.nome.endswith("…")
+    assert not s.nome.removesuffix("…").endswith("avia")  # corta no fim de uma palavra
+    f = {t.name: t.handler for t in g.ferramentas(sessoes)}
+    assert "mcp__jarvis__sessao_renomear" in LIVRES  # só o nome: nada roda
+    feito, erro = chamar(f, "sessao_renomear", {"sessao": s.id, "nome": "  Blog   de aviação "})
+    assert not erro and feito["nome"] == "Blog de aviação"
+    assert sessoes.achar("blog de aviacao").id == s.id
+    assert sessoes.mensagens(s.id)[-1]["texto"].endswith("para Blog de aviação.")
+    _, erro = chamar(f, "sessao_renomear", {"sessao": s.id, "nome": "   "})
+    assert erro

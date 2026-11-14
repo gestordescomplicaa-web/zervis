@@ -1897,3 +1897,46 @@ def test_com_sessao_trabalhando_o_menu_de_fala_continua_aberto(tmp_path: Path) -
     }
     with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
         asyncio.run(conferir(depuracao, url))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_renomear_a_sessao_no_cabecalho(tmp_path: Path) -> None:
+    respostas = json.loads(RESPOSTAS.read_text())
+    sessao = respostas["escritas"]["sessao/ler"]
+    sessao["sessao"].update(estado="parada", limite=False, motor="claude")
+    estado = respostas["leituras"]["estado"]
+    estado["manutencao"]["ligada"] = False
+    pedidos: list[dict[str, Any]] = []
+
+    def renomear(dados: dict[str, Any]) -> dict[str, Any]:
+        pedidos.append(dados)
+        sessao["sessao"]["nome"] = dados["nome"]
+        return {**sessao["sessao"], "aviso": "Renomeada."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#melhorias")
+            await _esperar(nav, "!!document.querySelector('[data-acao=sessao-renomear]')")
+            await nav.avaliar("document.querySelector('[data-acao=sessao-renomear]').click()")
+            await _esperar(nav, "!!document.querySelector('#sessao-nome-novo')")
+            await nav.avaliar(
+                "document.querySelector('#sessao-nome-novo').value = 'Blog de aviação'"
+            )
+            await nav.avaliar(
+                "document.querySelector('[data-acao=sessao-renomear-salvar]').click()"
+            )
+            await _esperar(
+                nav, "document.querySelector('.nome-sessao h2').textContent === 'Blog de aviação'"
+            )
+            assert not await nav.avaliar("!!document.querySelector('#sessao-nome-novo')")
+            assert pedidos and pedidos[0]["nome"] == "Blog de aviação"
+            assert not nav.erros, nav.erros
+
+    extras: dict[str, Escrita] = {
+        "sessao/ler": lambda _: copy.deepcopy(sessao),
+        "ze/melhorias": lambda _: copy.deepcopy(respostas["escritas"]["ze/melhorias"]),
+        "sessao/renomear": renomear,
+    }
+    with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
+        asyncio.run(conferir(depuracao, url))
