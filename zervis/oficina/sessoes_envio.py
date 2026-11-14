@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from zervis.cerebro import contas, modelos
 from zervis.memoria import aimemory
-from zervis.oficina import continuidade
+from zervis.oficina import continuidade, sessoes_leitura
 from zervis.oficina import sessoes as ses
 
 if TYPE_CHECKING:
@@ -77,7 +77,7 @@ def _criar(
     protegida: bool | None = None,
     escrita: tuple[str, ...] = (),
 ) -> ses.Sessao:
-    nome = " ".join(nome.split())[:60]
+    nome = sessoes_leitura.nome_limpo(nome)
     caminho = n._pasta_permitida(pasta)
     if origem == "manutencao" and (
         n._dados.ler("autodesenvolvimento", str(caminho))

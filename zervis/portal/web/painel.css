@@ -173,7 +173,9 @@ main.cheio { padding: 0; overflow: hidden; }
 .item-sessao:hover { background: rgb(70 217 222 / .05); }
 .item-sessao[aria-current="true"] { background: rgb(70 217 222 / .10); border-left-color: var(--acento); }
 .item-sessao .avatar { grid-row: span 2; }
-.item-sessao strong, .item-sessao small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-sessao small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* O nome inteiro em até duas linhas: cortado numa linha, "Blog · Aviação nos Estados..." perdia o assunto. */
+.item-sessao strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .item-sessao small { grid-column: 2 / 4; color: var(--suave); font-size: 13px; }
 .item-sessao time { color: var(--suave); font-size: 12px; }
 .avatar { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
@@ -194,7 +196,10 @@ main.cheio { padding: 0; overflow: hidden; }
 .titulo-sessao { grid-area: titulo; display: grid; gap: 2px; min-width: 0; }
 .nome-sessao { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .nome-sessao .etiqueta { flex: none; }
-.titulo-sessao h2 { margin: 0; min-width: 0; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titulo-sessao h2 { margin: 0; min-width: 0; font-size: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.nome-sessao .icone { flex: none; }
+.renomear { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.renomear input { flex: 1; min-width: 0; }
 .titulo-sessao small { color: var(--suave); font: 12px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conversa-topo .botoes { grid-area: botoes; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; align-items: center; }
 .conversa-topo .botoes .acao { padding: 6px 12px; font-size: 13px; }

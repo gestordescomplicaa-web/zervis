@@ -92,3 +92,27 @@ def _pasta_permitida(n: "Sessoes", pasta: str) -> Path:
     if any(parte.startswith(".") for parte in caminho.relative_to(raiz).parts):
         raise ses.SessaoErro("pastas ocultas (configurações, chaves) não viram sessão")
     return caminho
+
+
+LIMITE_NOME = 80
+
+
+def nome_limpo(nome: str) -> str:
+    """O nome de uma sessão: sem espaços sobrando e, se longo, cortado no fim de uma palavra."""
+    limpo = " ".join(str(nome).split())
+    if len(limpo) <= LIMITE_NOME:
+        return limpo
+    corte = limpo[: LIMITE_NOME - 1]
+    return (corte.rsplit(" ", 1)[0] if " " in corte else corte).rstrip(" ·,;:-") + "…"
+
+
+def renomear(n: "Sessoes", id_: str, nome: str) -> ses.Sessao:
+    """Dá um nome novo à sessão: a voz e o painel passam a achá-la por ele."""
+    limpo = nome_limpo(nome)
+    if not limpo:
+        raise ses.SessaoErro("diga o nome novo da sessão")
+    antigo = n.ler(id_).nome
+    s = _mudar(n, id_, nome=limpo)
+    if limpo != antigo:
+        n.anotar(id_, "sistema", f"Sessão renomeada de {antigo} para {limpo}.")
+    return s

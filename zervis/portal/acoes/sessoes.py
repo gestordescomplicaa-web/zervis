@@ -7,7 +7,7 @@ from typing import Any
 
 from zervis import atividade
 from zervis.cerebro import conectores, contas
-from zervis.oficina import arquivos
+from zervis.oficina import arquivos, sessoes_leitura
 from zervis.oficina.manutencao import ORIGEM
 from zervis.oficina.sessoes import Sessao
 from zervis.portal.acoes.pagina import Pagina
@@ -317,3 +317,11 @@ class AcoesSessoes(Pagina):
     def excluir_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
         aviso = self.painel._chamar(lambda: self.n.sessoes.excluir(str(dados.get("id", ""))))
         return {"aviso": aviso, "sessoes": self.painel.sessoes()}
+
+    def renomear_sessao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        s = self.painel._chamar(
+            lambda: sessoes_leitura.renomear(
+                self.n.sessoes, str(dados.get("id", "")), str(dados.get("nome", ""))
+            )
+        )
+        return {**self.painel._sessao(s), "aviso": "Renomeada."}

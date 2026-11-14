@@ -435,7 +435,7 @@ class Marketing:
         blog = self.blog(site)
         if tipo == "artigo" and blog is None:
             raise MarketingErro(f"O site não declara um blog no {MANIFESTO} da branch {site.base}.")
-        nome = f"{NOMES[tipo]} · {texto[:40] or 'próximo artigo'}"
+        nome = f"{NOMES[tipo]} · {texto or 'próximo artigo'}"
         s = sessoes.criar(nome, site.pasta, motor=motor, isolada=True, origem=ORIGEM)
         # A cópia nasce da pasta como ela está; o pedido parte da base do GitHub.
         copia = Path(s.worktree)
@@ -486,7 +486,11 @@ class Marketing:
         except (OSError, ValueError):
             dados = {}
         dados = dados if isinstance(dados, dict) else {}
-        return {"publicar": list(dados.get("publicar") or []), "prs": dict(dados.get("prs") or {})}
+        return {
+            "publicar": list(dados.get("publicar") or []),
+            "prs": dict(dados.get("prs") or {}),
+            "ramos": dict(dados.get("ramos") or {}),
+        }
 
     def _mudar_estado(self, mudar: Callable[[dict[str, Any]], None]) -> None:
         with self._trava:
@@ -521,8 +525,11 @@ class Marketing:
         ).stdout.split()  # fmt: skip
         return next((a for a in novos if not Path(a).name.startswith("_") and a != blog.modelo), "")
 
-    @staticmethod
-    def _destino(s: Any, artigo: str) -> str:
+    def _destino(self, s: Any, artigo: str) -> str:
+        """A branch do pedido no GitHub. A do PR já aberto fica guardada: renomear a sessão
+        depois não muda para onde o pedido vai."""
+        if guardada := self._estado()["ramos"].get(s.id):
+            return str(guardada)
         if artigo:
             return f"blog/{Path(artigo).stem}"
         return f"site/{_slug(s.nome.split('·')[-1])}-{s.id}"
@@ -586,7 +593,12 @@ class Marketing:
         if pr.returncode != 0 or not endereco:
             proposta.enviar(copia, gh, "--delete", destino)
             return proposta.Resultado(False, "Enviei a branch, mas o GitHub não abriu o PR.")
-        self._mudar_estado(lambda d: d["prs"].__setitem__(s.id, endereco))
+
+        def guardar(d: dict[str, Any]) -> None:
+            d["prs"][s.id] = endereco
+            d["ramos"][s.id] = destino
+
+        self._mudar_estado(guardar)
         numero = endereco.rsplit("/", 1)[-1]
         aviso = " Tem marcadores para você responder." if marcadores else ""
         return proposta.Resultado(True, f"Abri o PR {numero}.{aviso}", endereco)
