@@ -380,3 +380,18 @@ def test_a_automacao_de_artigo_pede_o_artigo_na_hora(
         time.sleep(0.02)
     assert pedidos == [("artigo", "")] and jobs.listar()[0].ultimo_status == "ok"
     assert linha == ["Comecei o artigo do blog: Blog · próximo artigo."]
+
+
+def test_renomear_depois_do_pr_nao_muda_a_branch(mundo: dict[str, Any]) -> None:
+    from zervis.oficina import sessoes_leitura
+
+    m: Marketing = mundo["m"]
+    m.guardar(str(mundo["site"]), "main")
+    s = _parada(mundo["sessoes"], m.pedir(mundo["sessoes"], "site", "Botão maior", "claude").id)
+    _commit(Path(s.worktree), {"app/page.tsx": "botão\n"}, "Botão maior na home")
+    assert m.abrir_pr(mundo["sessoes"], s.id).ok
+    sessoes_leitura.renomear(mundo["sessoes"], s.id, "Site · Outro nome")
+    assert m.publicar(mundo["sessoes"], s.id).ok
+    assert _git(mundo["origem"], "branch", "--list", "site/*").split() == [
+        f"site/botao-maior-{s.id}"
+    ]

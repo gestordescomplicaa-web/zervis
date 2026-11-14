@@ -62,6 +62,7 @@ SERVIDOR = "jarvis"
 LEITURA = [
     "sessoes_listar",
     "sessao_ler",
+    "sessao_renomear",  # só o nome da sessão; nada roda
     "historico_buscar",
     "historico_ler",
     "skills_ver",

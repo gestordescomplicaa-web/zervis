@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Renomear sessões:** o ✎ ao lado do nome da sessão (ou "Zé, chama a sessão X de Y") troca o
+  nome, e o Zé passa a achar a sessão por ele. O nome aparece inteiro, em até duas linhas na
+  lista, e um nome longo é cortado no fim de uma palavra, com até 80 caracteres. O pedido de
+  marketing não corta mais o tema no meio.
+
 - **Correção: o menu "Fala" com sessão trabalhando.** Enquanto uma sessão trabalhava, o painel
   fechava todos os menus abertos a cada segundo, e não dava para trocar de Silencioso para
   Normal ou Live. Agora só os ajustes da própria sessão ficam travados.

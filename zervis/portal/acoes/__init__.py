@@ -266,6 +266,7 @@ class Acoes:
             "skill/instalar-sugerida": self.instalar_skill_sugerida,
             "skill/excluir": self.excluir_skill,
             "sessao/excluir": self.excluir_sessao,
+            "sessao/renomear": self.renomear_sessao,
             "cerebro/escolher": self.escolher_cerebro,
             "cerebro/modelo": self.modelo_do_cerebro,
             "omniroute/salvar": self.salvar_omniroute,

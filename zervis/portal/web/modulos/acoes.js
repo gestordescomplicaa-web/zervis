@@ -195,6 +195,33 @@ export const ACOES = {
       <span>O agente é encerrado e a conversa da sessão sai do Zé. A pasta do projeto fica.</span></div>
       <div class="botoes">${botao("Excluir", "sessao-excluir-sim", "", "perigo")}${botao("Cancelar", "sessao-excluir-nao", "", "discreta")}</div></div>`;
   },
+  // Renomear no próprio cabeçalho: o nome vira um campo; a voz passa a achar a sessão pelo novo.
+  "sessao-renomear": (b) => {
+    const titulo = /** @type {HTMLElement | null} */ (document.querySelector(".nome-sessao h2"));
+    if (!titulo || $("sessao-nome-novo")) return;
+    titulo.hidden = true; b.hidden = true;
+    titulo.insertAdjacentHTML("afterend", `<span class="renomear" id="renomear-sessao"><input id="sessao-nome-novo" value="${esc(compartilhado.sessaoAtual?.nome || "")}" maxlength="80" aria-label="Nome da sessão" autocomplete="off">${botao("Salvar", "sessao-renomear-salvar", "", "principal")}${botao("Cancelar", "sessao-renomear-cancelar", "", "discreta")}</span>`);
+    const campo = /** @type {HTMLInputElement} */ ($("sessao-nome-novo"));
+    campo.focus(); campo.select();
+    campo.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") /** @type {HTMLButtonElement} */ (document.querySelector('[data-acao="sessao-renomear-salvar"]')).click();
+      if (ev.key === "Escape") /** @type {HTMLButtonElement} */ (document.querySelector('[data-acao="sessao-renomear-cancelar"]')).click();
+    });
+  },
+  "sessao-renomear-salvar": async (b) => {
+    try {
+      const r = await ocupado(b, () => api("sessao/renomear", { id: compartilhado.sessaoAberta, nome: valorCampo("sessao-nome-novo").value }));
+      if (compartilhado.sessaoAtual) compartilhado.sessaoAtual.nome = r.nome;
+      const titulo = /** @type {HTMLElement} */ (document.querySelector(".nome-sessao h2"));
+      titulo.textContent = r.nome; titulo.title = r.nome;
+      ACOES["sessao-renomear-cancelar"](b);
+      toast(r.aviso); await carregadas.listaSessoes();
+    } catch (erro) { toast(erro.message); }
+  },
+  "sessao-renomear-cancelar": () => {
+    $("renomear-sessao")?.remove();
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.nome-sessao h2, [data-acao="sessao-renomear"]')).forEach((el) => { el.hidden = false; });
+  },
   "interrompida-continuar": async (b) => { const r = await ocupado(b, () => api("sessao/interrompida", { id: compartilhado.sessaoAberta, continuar: true })); toast(r.aviso); await carregadas.abrirSessao(compartilhado.sessaoAberta); },
   "permissao-aprovar": (b) => carregadas.decidirPermissao(b, true),
   "permissao-negar": (b) => carregadas.decidirPermissao(b, false),

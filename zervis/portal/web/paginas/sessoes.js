@@ -148,7 +148,7 @@ export async function abrirSessao(id) {
   const trabalhando = sessao.estado === "trabalhando";
   lado.innerHTML = `<div class="sessao-aberta ${compartilhado.explorador ? "" : "sem-explorador"}" style="${larguraSalva("explorador")}"><section class="conversa">
     <header class="conversa-topo"><span class="avatar" data-matiz="${matiz(sessao.nome)}">${inicial(sessao.nome)}</span>
-      <div class="titulo-sessao"><div class="nome-sessao"><h2 title="${esc(sessao.nome)}">${esc(sessao.nome)}</h2>
+      <div class="titulo-sessao"><div class="nome-sessao"><h2 title="${esc(sessao.nome)}">${esc(sessao.nome)}</h2><button type="button" class="icone" data-acao="sessao-renomear" title="Renomear" aria-label="Renomear">✎</button>
         <span class="etiqueta ${trabalhando ? "bom" : sessao.limite ? "alerta" : ""}" id="estado-sessao" data-estado="${esc(sessao.estado)}">${esc(estadoSessao(sessao))}</span></div>
         <small title="${esc(sessao.pasta)}">${esc(sessao.pasta)}${sessao.branch ? " · cópia isolada" : ""}${sessao.protegida ? " · protegida" : ""}</small></div>
       <div class="ajustes-sessao" id="ajustes-sessao">${seletorConta(sessao)}${seletorModeloSessao(sessao)}</div>

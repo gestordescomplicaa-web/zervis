@@ -56,6 +56,7 @@ ROTULOS = {
     "sessao_ler": "Lendo a sessão",
     "sessao_enviar": "Falando com a sessão",
     "sessao_criar": "Abrindo a sessão",
+    "sessao_renomear": "Renomeando a sessão",
     "historico_buscar": "Procurando no histórico",
     "sistema_executar": "Mexendo no computador",
     "automacao_lembrete": "Agendando o lembrete",
