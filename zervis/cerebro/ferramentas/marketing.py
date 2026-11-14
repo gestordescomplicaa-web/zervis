@@ -9,7 +9,7 @@ from typing import Any
 
 from claude_agent_sdk import SdkMcpTool, tool
 
-from zervis import marketing
+from zervis import marketing, marketing_posts
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.jobs import JobErro, Jobs
 from zervis.cerebro.ferramentas.comum import _erro, _texto
@@ -111,7 +111,73 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
             return _erro(ValueError(r.texto))
         return _texto({"resultado": r.texto})
 
-    ferramentas_ = [situacao, pedir, abrir_pr, publicar]
+    posts = marketing_posts.PADRAO
+
+    @tool(
+        "marketing_posts",
+        "Os posts do Instagram que o Zé criou: o tema, o estado (criando, para revisar, "
+        "publicado) e o link dos publicados.",
+        {"type": "object", "properties": {}},
+    )
+    async def listar_posts(_args: dict[str, Any]) -> dict[str, Any]:
+        lista = await asyncio.to_thread(posts.listar)
+        return _texto([posts.para_tela(p) for p in lista[:10]] or "Nenhum post ainda.")
+
+    @tool(
+        "marketing_post_criar",
+        "Cria um post em carrossel para o Instagram, com a marca do usuário, a partir de um tema "
+        "ou de um artigo do blog (o slug, de marketing_situacao). Leva um ou dois minutos; o Zé "
+        "avisa quando a prévia estiver em Marketing. Nada é publicado.",
+        {
+            "type": "object",
+            "properties": {"tema": {"type": "string"}, "artigo": {"type": "string"}},
+        },
+    )
+    async def criar_post(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            p = await asyncio.to_thread(
+                posts.criar, str(args.get("tema", "")), str(args.get("artigo", ""))
+            )
+        except marketing_posts.PostErro as erro:
+            return _erro(erro)
+        return _texto(
+            {"post": p.id, "aviso": "Criando. O Zé avisa quando a prévia estiver pronta."}
+        )
+
+    @tool(
+        "marketing_post_refazer",
+        "Refaz um post para revisar, com o ajuste que o usuário pediu ('deixa o slide 2 mais "
+        "curto'). Post: o id de marketing_posts.",
+        {
+            "type": "object",
+            "properties": {"post": {"type": "string"}, "ajuste": {"type": "string"}},
+            "required": ["post", "ajuste"],
+        },
+    )
+    async def refazer_post(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            p = await asyncio.to_thread(posts.refazer, str(args["post"]), str(args["ajuste"]))
+        except marketing_posts.PostErro as erro:
+            return _erro(erro)
+        return _texto({"post": p.id, "aviso": "Refazendo."})
+
+    @tool(
+        "marketing_post_publicar",
+        "Publica no Instagram um post que o usuário revisou e aprovou ('pode publicar'). Post: o "
+        "id de marketing_posts. O Zé avisa quando estiver no ar.",
+        {"type": "object", "properties": {"post": {"type": "string"}}, "required": ["post"]},
+    )
+    async def publicar_post(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            p = await asyncio.to_thread(posts.publicar, str(args["post"]))
+        except marketing_posts.PostErro as erro:
+            return _erro(erro)
+        return _texto({"post": p.id, "aviso": "Publicando no Instagram."})
+
+    ferramentas_ = [
+        situacao, pedir, abrir_pr, publicar,
+        listar_posts, criar_post, refazer_post, publicar_post,
+    ]  # fmt: skip
     if jobs is None:
         return ferramentas_
 

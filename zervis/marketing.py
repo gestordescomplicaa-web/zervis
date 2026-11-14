@@ -13,16 +13,18 @@ de escrita ficam no manual do próprio site. Sem o `zervis.json`, só "Mudar o s
 
 import json
 import re
+import subprocess
 import threading
 import time
 import unicodedata
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 from zervis import lugares
+from zervis.marca import Marca, cores_validas, ler_marca
 from zervis.oficina import proposta
 from zervis.oficina.agentes import LIVRES_DA_SESSAO
 
@@ -39,6 +41,7 @@ COMANDO = re.compile(r"[\w@./=:{}, -]+")  # um comando do zervis.json: sem carac
 # Numa cópia isolada e protegida, sem como enviar nada: a sessão segue sem esperar ninguém.
 GIT_LIVRES = [f"Bash(git {c}:*)" for c in ("status", "diff", "log", "add", "commit", "show")]
 PRAZO_DEPLOY_S = 600.0
+LIMITE_MANUAL = 6000
 
 TAREFA_ARTIGO = """Escreva um artigo para o blog deste site seguindo à risca o manual {manual} \
 (o contrato do blog) e o modelo {modelo}. Leia os dois antes de começar.
@@ -221,11 +224,85 @@ class Marketing:
             raise MarketingErro(f"A branch {base} não existe no GitHub.")
         self._buscar(caminho, base)
         site = Site(str(caminho.resolve()), base)
+        self._gravar_config(site=asdict(site))
+        return site
+
+    def _config(self) -> dict[str, Any]:
+        try:
+            dados = json.loads(self.arquivo.read_text())
+        except (OSError, ValueError):
+            return {}
+        return dados if isinstance(dados, dict) else {}
+
+    def _gravar_config(self, **partes: Any) -> None:
+        dados = {**self._config(), **partes}
         self.arquivo.parent.mkdir(parents=True, exist_ok=True)
         temporario = self.arquivo.with_suffix(".next")
-        temporario.write_text(json.dumps({"site": asdict(site)}, ensure_ascii=False))
+        temporario.write_text(json.dumps(dados, ensure_ascii=False))
         temporario.replace(self.arquivo)
-        return site
+
+    # --- a marca --------------------------------------------------------------------------
+
+    def marca_do_site(self) -> Marca | None:
+        site = self.site()
+        if not site.pasta or not site.base:
+            return None
+        texto = self._mostrar(site, MANIFESTO)
+        return ler_marca(texto) if texto else None
+
+    def paleta(self) -> dict[str, Any]:
+        """A escolha de Marketing: "site" (a do `zervis.json`) ou "propria", com as cores."""
+        escolha = self._config().get("marca") or {}
+        escolha = escolha if isinstance(escolha, dict) else {}
+        modo = "propria" if escolha.get("paleta") == "propria" else "site"
+        return {"paleta": modo, "cores": cores_validas(escolha.get("cores"))}
+
+    def marca(self) -> Marca:
+        """A marca dos posts: a do site, com a paleta própria por cima, se foi escolhida."""
+        base = self.marca_do_site() or Marca()
+        escolha = self.paleta()
+        if escolha["paleta"] == "propria" and escolha["cores"]:
+            return replace(base, cores=tuple({**dict(base.cores), **escolha["cores"]}.items()))
+        return base
+
+    def guardar_paleta(self, paleta: str, cores: dict[str, Any]) -> Marca:
+        if paleta not in ("site", "propria"):
+            raise MarketingErro("Paleta desconhecida.")
+        validas = cores_validas(cores)
+        if paleta == "propria" and not validas:
+            raise MarketingErro("Escolha as cores da paleta.")
+        self._gravar_config(marca={"paleta": paleta, "cores": validas})
+        return self.marca()
+
+    def logo(self) -> bytes:
+        """O logo declarado pelo site, como está na base (vazio se não houver)."""
+        site, marca = self.site(), self.marca_do_site()
+        if not site.pasta or marca is None or not marca.logo:
+            return b""
+        feito = subprocess.run(  # noqa: S603 (git com argumentos montados aqui)
+            ["/usr/bin/git", "-C", site.pasta, "show", f"origin/{site.base}:{marca.logo}"],
+            capture_output=True, timeout=30, check=False,
+        )  # fmt: skip
+        return feito.stdout if feito.returncode == 0 else b""
+
+    def manual(self) -> str:
+        """O manual do blog do site, para os posts seguirem a mesma linha (cortado)."""
+        try:
+            blog = self.blog()
+        except MarketingErro:
+            return ""
+        return self._mostrar(self.site(), blog.manual)[:LIMITE_MANUAL] if blog else ""
+
+    def artigo(self, slug: str) -> str:
+        """O texto de um artigo da base, pelo slug."""
+        site = self.site()
+        try:
+            blog = self.blog(site)
+        except MarketingErro:
+            return ""
+        if blog is None or not re.fullmatch(r"[a-z0-9-]{1,120}", slug):
+            return ""
+        return self._mostrar(site, f"{blog.artigos}/{slug}.md")
 
     def _padrao(self, pasta: Path) -> str:
         cabeca = proposta._git(pasta, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")

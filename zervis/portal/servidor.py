@@ -38,7 +38,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from zervis import ambiente
 from zervis.oficina.permissoes import ChaveInvalida, Permissoes
-from zervis.portal import arquivos_web
+from zervis.portal import arquivos_web, publico
 from zervis.portal.senha import Acesso, SenhaErro
 from zervis.portal.voz_app import AparelhosDeVoz, PareamentoErro
 from zervis.transporte import websocket
@@ -588,6 +588,15 @@ class Portal:
                     return
                 if caminho == "/voz-app/ws":
                     self._voz_app()
+                    return
+                if caminho.startswith(publico.PREFIXO):
+                    # Um arquivo que alguém de fora busca (a Meta, num post): sem entrar, só
+                    # pelo segredo do link, dentro do prazo (ADR 0093).
+                    achado = publico.PADRAO.arquivo(caminho)
+                    if achado is None:
+                        self._json(404, {"erro": "não existe"})
+                    else:
+                        self._enviar(200, *achado)
                     return
                 if caminho == "/entrar":
                     if self._entrou():

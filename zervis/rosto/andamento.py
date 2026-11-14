@@ -66,6 +66,10 @@ ROTULOS = {
     "marketing_abrir_pr": "Abrindo o PR no site",
     "marketing_publicar": "Publicando no site",
     "marketing_agendar": "Agendando os artigos",
+    "marketing_posts": "Olhando os posts",
+    "marketing_post_criar": "Criando o post",
+    "marketing_post_refazer": "Refazendo o post",
+    "marketing_post_publicar": "Publicando no Instagram",
 }
 
 

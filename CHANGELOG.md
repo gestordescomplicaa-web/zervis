@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Posts do Instagram:** em Marketing, o Zé cria um carrossel (de 3 a 7 slides e a legenda) a
+  partir de um tema ou de um artigo do blog, com o logo, as cores e as fontes da sua marca. Você
+  vê a prévia, pede ajuste ("deixa o slide 2 mais curto") e aprova; só então ele publica no
+  Instagram e mostra o link. A paleta vem do site e pode ser trocada em "Marca". Pela voz: "cria
+  um post sobre X" (ADR 0093).
+
 - **Correção: o menu "Fala" com sessão trabalhando.** Enquanto uma sessão trabalhava, o painel
   fechava todos os menus abertos a cada segundo, e não dava para trocar de Silencioso para
   Normal ou Live. Agora só os ajustes da própria sessão ficam travados.
