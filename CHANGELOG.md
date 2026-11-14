@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- **Sessões de código pela voz de verdade:** o comando longo ou composto que a sessão pede passa
+  a ser dito pelo que faz ("quer rodar um comando que lê arquivos e roda o npm. Aprovo?") e se
+  aprova com "sim" ou "aprova tudo". Só o perigoso (apagar em massa, `sudo`, `push --force`)
+  continua na tela. Numa sessão protegida, ler arquivos não pede mais aprovação (ADR 0039).
+- **Marketing:** a sessão do artigo instala com o comando que o site declara, um comando por
+  vez, para rodar sem pedir aprovação.
+
 - **Blog no piloto automático:** em Marketing, "Artigos automáticos" (ou "Zé, escreve dois
   artigos por semana") agenda os artigos. O Zé escreve sem parar para pedir aprovação, abre o PR
   sozinho e avisa. Com o seu "aprovado" ("Publicar" no painel), ele tira o rascunho, encaixa as

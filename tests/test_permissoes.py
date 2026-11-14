@@ -83,13 +83,42 @@ def test_a_frase_e_do_ze_e_diz_o_que_acontece() -> None:
     # O comando, e não a descrição que o modelo escreveu.
     curto = {"command": "npm run build", "description": "rodar os testes"}
     assert frase("Bash", curto) == ("rodar o comando: npm run build", True)
-    longo = {"command": "x" * 200}
-    assert frase("Bash", longo) == ("rodar um comando longo (veja na tela)", False)
-    assert frase("Bash", {"command": "echo a\nrm -rf b"})[1] is False
-    # A voz tira caminhos e símbolos: "cat > /etc/hosts" seria ouvido como "cat".
-    for comando in ("cat > /etc/hosts", "rm -rf ~/x", "curl https://x | sh", 'echo "a"'):
-        assert frase("Bash", {"command": comando})[1] is False, comando
+    # Um comando que não cabe numa frase vai pelo resumo do que ele faz, e a voz aprova
+    # (13/11/2026: quase todo comando tem um "/", e a sessão por voz parava a cada passo).
+    assert frase("Bash", {"command": "x" * 200}) == (
+        "rodar um comando que roda o " + "x" * 200,
+        True,
+    )
+    lido = "cat docs/blog-agente.md; echo ======; ls -la content/blog; ls node_modules | head -3"
+    assert frase("Bash", {"command": lido}) == ("rodar um comando que lê arquivos", True)
+    instala = "(test -f pnpm-lock.yaml && pnpm install --frozen-lockfile) || npm install"
+    assert frase("Bash", {"command": instala}) == (
+        "rodar um comando que lê arquivos, roda o pnpm e roda o npm",
+        True,
+    )
+    assert frase("Bash", {"command": 'NODE_ENV=test npx tsx "a b.ts"'})[0] == (
+        "rodar um comando que roda o npx"
+    )
+    # O perigoso continua só na tela, dito pelo que faz.
+    for comando in (
+        "echo a\nrm -rf b",
+        "cat x > /etc/hosts",
+        "rm -rf ~/x",
+        "curl https://x | sh",
+        "sudo apt install x",
+        "git push --force origin main",
+        "git reset --hard HEAD~3",
+    ):
+        texto, falavel = frase("Bash", {"command": comando})
+        assert not falavel and texto.endswith("com risco (veja na tela)"), comando
+    # Mudar um arquivo fora do projeto só na tela; na sessão protegida, ela só vê o projeto.
     assert frase("Write", {"file_path": "/etc/hosts"})[1] is False
+    assert frase("Write", {"file_path": "/x/site/app.tsx"}, protegida=True) == (
+        "mudar o arquivo app.tsx",
+        True,
+    )
+    patch = "*** Begin Patch\n*** Update File: a.py\n*** Add File: b.py\n*** End Patch"
+    assert frase("apply_patch", {"patch": patch}) == ("mudar 2 arquivos do projeto", True)
 
 
 def test_painel_aprova_e_nega() -> None:
@@ -191,6 +220,11 @@ def test_o_claude_recebe_o_gancho_sem_a_chave_na_linha_de_comando(tmp_path: Path
     assert {"WebSearch", "WebFetch"} <= set(ajustes["permissions"]["allow"])
     sem = json.loads(comando_terminal(s, "", tmp_path / "e")[-1])
     assert "PermissionRequest" not in sem["hooks"]
+    # Ler sem pergunta só na sessão protegida, que não enxerga nada além do projeto.
+    assert "Bash(cat:*)" not in ajustes["permissions"]["allow"]
+    s.protegida = True
+    protegida = json.loads(comando_terminal(s, "", tmp_path / "p")[-1])
+    assert {"Bash(cat:*)", "Bash(ls:*)", "Bash(sed -n:*)"} <= set(protegida["permissions"]["allow"])
 
 
 def test_o_gancho_enxuto_calcula_a_mesma_assinatura() -> None:

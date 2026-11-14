@@ -74,6 +74,9 @@ class ContextoOficina(Protocol):
 class ServicoOficina:
     def __init__(self, contexto: ContextoOficina) -> None:
         self.n = contexto
+        # Numa sessão protegida, mudar arquivos também se aprova pela voz (ADR 0039 e 0074).
+        with contextlib.suppress(AttributeError):  # um núcleo de teste pode não ter as sessões
+            self.n.sessoes.permissoes.protegida = self._protegida
         # O marketing avisa depois (o PR, o deploy) pelo mesmo caminho das sessões.
         marketing.PADRAO.avisar = lambda texto: self.n._aviso_da_oficina(
             texto, "notificacao", "", "o marketing"
@@ -316,6 +319,12 @@ class ServicoOficina:
             self.n._narrar_fim(sessao.id, nome, resposta, titulo, detalhe, sessao.ultimo_pedido),
             ponte.laco,
         )
+
+    def _protegida(self, id_: str) -> bool:
+        try:
+            return bool(getattr(self.n.sessoes.ler(id_), "protegida", False))
+        except SessaoErro:
+            return False
 
     def _marketing_terminou(self, sessao: Sessao) -> None:
         try:

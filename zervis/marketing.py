@@ -46,7 +46,8 @@ TAREFA_ARTIGO = """Escreva um artigo para o blog deste site seguindo à risca o 
 Tema: {tema}
 
 - Liste {pasta} para não repetir tema nem palavra-chave.
-- Instale as dependências se faltarem e {validar}, até não sobrar erro.
+- {instalar} e {validar}, até não sobrar erro. Rode um comando por vez, sem juntar com `;`, \
+`&&` ou `|`: assim eles rodam sem esperar aprovação.
 - Entregue com `{rascunho}: true` e com os marcadores de experiência real que o manual pede. Não \
 invente casos, clientes, números nem resultados.
 - Faça um commit só, com a mensagem que o manual indica.
@@ -375,6 +376,11 @@ class Marketing:
             tarefa = TAREFA_ARTIGO.format(
                 manual=blog.manual, modelo=blog.modelo or "o modelo que o manual indica", tema=tema,
                 pasta=blog.artigos, validar=validar, rascunho=blog.campo("rascunho"),
+                instalar=(
+                    f"Se faltarem as dependências, instale com `{blog.instalar}`"
+                    if blog.instalar
+                    else "Instale as dependências se faltarem"
+                ),
                 corpo=CORPO_PR,
             )  # fmt: skip
         else:
