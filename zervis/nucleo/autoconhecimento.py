@@ -72,7 +72,8 @@ GRUPOS = {
     "instagram": ("Instagram", "lê o perfil e as métricas das publicações, sem publicar nada"),
     "marketing": (
         "Marketing",
-        "pede artigos do blog e mudanças no site, abre o PR, publica com o seu sim e agenda",
+        "pede artigos do blog e mudanças no site, cria posts do Instagram com a marca e publica "
+        "com o seu sim",
     ),
     "whatsapp": (
         "WhatsApp",

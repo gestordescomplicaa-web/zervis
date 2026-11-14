@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Posts do Instagram:** em Marketing, o Zé cria um carrossel (de 3 a 7 slides e a legenda) a
+  partir de um tema ou de um artigo do blog, com o logo, as cores e as fontes da sua marca. Você
+  vê a prévia, pede ajuste ("deixa o slide 2 mais curto") e aprova; só então ele publica no
+  Instagram e mostra o link. A paleta vem do site e pode ser trocada em "Marca". Pela voz: "cria
+  um post sobre X" (ADR 0093).
+
 - **Renomear sessões:** o ✎ ao lado do nome da sessão (ou "Zé, chama a sessão X de Y") troca o
   nome, e o Zé passa a achar a sessão por ele. O nome aparece inteiro, em até duas linhas na
   lista, e um nome longo é cortado no fim de uma palavra, com até 80 caracteres. O pedido de

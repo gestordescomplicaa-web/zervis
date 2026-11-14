@@ -620,3 +620,11 @@ blockquote.trecho { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid v
 .imagem-da-voz { position:fixed; inset:0; z-index:70; margin:0; padding:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:rgb(0 0 0 / .85); cursor:zoom-out; }
 .imagem-da-voz img { max-width:100%; max-height:calc(100dvh - 80px); border-radius:8px; }
 .imagem-da-voz figcaption { color:#fff; font-size:14px; }
+
+/* Marketing · Instagram: a prévia do carrossel e a legenda (ADR 0093). */
+.previa-post { display: grid; gap: 14px; margin-top: 14px; }
+.slides-post { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+.slides-post img { width: 216px; aspect-ratio: 4 / 5; border-radius: 10px; border: 1px solid var(--linha, rgb(255 255 255 / .08)); scroll-snap-align: start; flex: none; }
+.legenda-post { white-space: pre-wrap; font: 14px/1.5 var(--fonte, system-ui); margin: 0; max-height: 220px; overflow: auto; }
+.cores-marca { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.cores-marca input[type="color"] { width: 100%; height: 40px; padding: 2px; }

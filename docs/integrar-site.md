@@ -46,6 +46,27 @@ o contrário: o Zé não sabe nada de um site em particular. Ele lê o que o sit
 
 Os caminhos são relativos à raiz do repositório e não podem sair dela.
 
+## A marca (para os posts do Instagram, ADR 0093)
+
+```json
+{
+  "zervis": 1,
+  "marca": {
+    "nome": "Minha Empresa",
+    "instagram": "minhaempresa",
+    "logo": "public/logo.png",
+    "cores": {
+      "fundo": "#0A0A0F", "superficie": "#111118", "texto": "#F4F4F6",
+      "suave": "#A8A8B3", "destaque": "#5B8CFF", "destaque2": "#9B5CFF"
+    },
+    "fontes": { "titulo": "Space Grotesk", "texto": "Inter" }
+  }
+}
+```
+
+Tudo é opcional. As cores são `#rrggbb`; as fontes, nomes do Google Fonts; o logo, um PNG no
+repositório. A paleta pode ser trocada em Marketing, sem mexer no site.
+
 ## O que o Zé faz e o que fica com a pessoa
 
 1. Cada pedido vira uma sessão de código numa cópia isolada e protegida, a partir da branch base.

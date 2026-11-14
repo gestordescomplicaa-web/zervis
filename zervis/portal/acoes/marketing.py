@@ -5,10 +5,11 @@ import json
 from datetime import datetime
 from typing import Any
 
-from zervis import marketing
+from zervis import marketing, marketing_posts
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.jobs import JobErro
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
+from zervis.marca import CORES_PADRAO
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
@@ -26,6 +27,8 @@ class AcoesMarketing(Pagina):
             "categorias": m.por_categoria(artigos),
             "pedidos": m.pedidos(self.n.sessoes),
             "prs": m.prs(),
+            "posts": [marketing_posts.PADRAO.para_tela(p) for p in marketing_posts.PADRAO.listar()],
+            "marca": self._marca(),
             "automaticos": [
                 {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
                 for j in self.n.jobs.listar()
@@ -75,3 +78,58 @@ class AcoesMarketing(Pagina):
         except JobErro as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {**self.marketing(), "aviso": "Agendado."}
+
+    # --- o Instagram: a marca e os posts (ADR 0093) ---------------------------------------
+
+    def _marca(self) -> dict[str, Any]:
+        m = marketing.PADRAO
+        do_site = m.marca_do_site()
+        return {
+            **m.paleta(),
+            "atual": dict(m.marca().cores),
+            "site": dict(do_site.cores) if do_site else dict(CORES_PADRAO),
+            "declarada": do_site is not None,
+            "instagram": marketing_posts.PADRAO.instagram.conectado,
+            "publicavel": bool(marketing_posts.PADRAO.endereco()),
+        }
+
+    def _posts(self, fazer: Any) -> Any:
+        try:
+            return fazer()
+        except (marketing_posts.PostErro, marketing.MarketingErro) as erro:
+            raise PedidoInvalido(str(erro)) from erro
+
+    def guardar_paleta(self, dados: dict[str, Any]) -> dict[str, Any]:
+        cruas = dados.get("cores")
+        cores: dict[str, Any] = cruas if isinstance(cruas, dict) else {}
+        self._posts(lambda: marketing.PADRAO.guardar_paleta(str(dados.get("paleta", "")), cores))
+        return {**self.marketing(), "aviso": "Salvo."}
+
+    def criar_post(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self._posts(
+            lambda: marketing_posts.PADRAO.criar(
+                str(dados.get("tema", "")), str(dados.get("artigo", ""))
+            )
+        )
+        return {
+            **self.marketing(),
+            "aviso": "Criando o post. Aviso quando a prévia estiver pronta.",
+        }
+
+    def ver_post(self, dados: dict[str, Any]) -> dict[str, Any]:
+        posts = marketing_posts.PADRAO
+        post = self._posts(lambda: posts.ler(str(dados.get("id", ""))))
+        return posts.para_tela(post, com_imagens=True)
+
+    def refazer_post(self, dados: dict[str, Any]) -> dict[str, Any]:
+        id_, instrucao = str(dados.get("id", "")), str(dados.get("instrucao", ""))
+        self._posts(lambda: marketing_posts.PADRAO.refazer(id_, instrucao))
+        return {**self.marketing(), "aviso": "Refazendo o post."}
+
+    def publicar_post(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self._posts(lambda: marketing_posts.PADRAO.publicar(str(dados.get("id", ""))))
+        return {**self.marketing(), "aviso": "Publicando no Instagram."}
+
+    def descartar_post(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self._posts(lambda: marketing_posts.PADRAO.descartar(str(dados.get("id", ""))))
+        return {**self.marketing(), "aviso": "Descartado."}
