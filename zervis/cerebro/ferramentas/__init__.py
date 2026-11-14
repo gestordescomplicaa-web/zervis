@@ -313,7 +313,7 @@ def por_grupo(
         "whatsapp": g_whatsapp.ferramentas(leads),
         "instagram": g_instagram.ferramentas(instagram),
         "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo, impressora),
-        "marketing": g_marketing.ferramentas(sessoes),
+        "marketing": g_marketing.ferramentas(sessoes, jobs),
         "tela_tv": g_tela_tv.ferramentas(tela_tv, projetos),
         "dispositivos": g_dispositivos.ferramentas(
             camera_dispositivo, vigia_camera, impressora, tela_tv

@@ -125,10 +125,12 @@ def propor(
 
 def enviar(copia: Path, gh: str, *args: str) -> subprocess.CompletedProcess[str]:
     """`git push origin` com o login do GitHub pelo `gh` desta máquina, mesmo que a
-    configuração do git aponte outro."""
+    configuração do git aponte outro. Sem os hooks do repositório: eles rodariam aqui, fora do
+    isolamento da sessão."""
     ajudante = f"!{gh} auth git-credential"
     return _git(
         copia,
+        "-c", "core.hooksPath=/dev/null",
         "-c", "credential.https://github.com.helper=",
         "-c", f"credential.https://github.com.helper={ajudante}",
         "push", "--quiet", "origin", *args,

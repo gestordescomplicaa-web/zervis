@@ -64,6 +64,8 @@ ROTULOS = {
     "marketing_situacao": "Olhando o site e o blog",
     "marketing_pedir": "Abrindo o pedido de marketing",
     "marketing_abrir_pr": "Abrindo o PR no site",
+    "marketing_publicar": "Publicando no site",
+    "marketing_agendar": "Agendando os artigos",
 }
 
 

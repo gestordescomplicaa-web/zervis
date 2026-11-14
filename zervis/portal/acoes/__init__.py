@@ -183,6 +183,8 @@ class Acoes:
             "marketing/site": self.guardar_site,
             "marketing/pedir": self.pedir_marketing,
             "marketing/pr": self.pr_marketing,
+            "marketing/publicar": self.publicar_marketing,
+            "marketing/agendar": self.agendar_marketing,
             "tv/procurar": self.procurar_tv,
             "tv/abrir": self.abrir_tv,
             "tv/fechar": self.fechar_tv,

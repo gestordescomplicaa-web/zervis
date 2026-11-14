@@ -1,9 +1,11 @@
 """Automações do Zé (Fase 7; modelo de job do Hermes, enxuto).
 
-Três tipos:
+Quatro tipos:
 - `lembrete`: na hora, o texto vira aviso falado. Zero modelo (ADR 0011: modo script).
 - `ligacao`: na hora, o Zé liga para o número e dá o recado (ADR 0067); o texto é o JSON do
   pedido, aprovado pela voz quando foi agendado. O resultado vira aviso.
+- `artigo`: na hora, o Zé pede um artigo do blog do site (ADR 0092), aprovado quando foi
+  agendado; o texto é o JSON com o tema (vazio: a sessão escolhe pelo manual do site).
 - `pergunta`: na hora, o cérebro responde o texto numa consulta separada, só com ferramentas de
   leitura, e a resposta vira aviso. Uma execução não cria outra automação (não recebe o
 servidor
@@ -30,7 +32,8 @@ from pathlib import Path
 from zervis.automacoes.agenda import FUSO, interpretar
 from zervis.dados.documentos import Documentos, lista_json
 
-TIPOS = ("lembrete", "pergunta", "ligacao")  # ligacao: o Zé liga com um recado (ADR 0067)
+# ligacao: o Zé liga com um recado (ADR 0067); artigo: pede um artigo do blog (ADR 0092)
+TIPOS = ("lembrete", "pergunta", "ligacao", "artigo")
 STATUS = ("nunca", "ok", "erro", "bloqueado")
 LIMITE_TEXTO = 600
 ESTADOS = ("pendente", "rodando", "concluida", "falhou", "interrompida")

@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Blog no piloto automático:** em Marketing, "Artigos automáticos" (ou "Zé, escreve dois
+  artigos por semana") agenda os artigos. O Zé escreve sem parar para pedir aprovação, abre o PR
+  sozinho e avisa. Com o seu "aprovado" ("Publicar" no painel), ele tira o rascunho, encaixa as
+  suas respostas às perguntas de experiência, se houver, publica direto na branch do site e avisa
+  quando o deploy termina ou se ele falhar (ADR 0092).
+
 - **Marketing: o site se declara ao Zé.** O blog passa a vir do `zervis.json` na raiz do site: o
   manual, a pasta dos artigos, o modelo, o comando que valida e os campos do cabeçalho. Nada de
   um site em particular fica no Zé (`docs/integrar-site.md`).

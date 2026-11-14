@@ -6,8 +6,6 @@ import { PAGINAS, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, su
 // A página Marketing (ADR 0091): o site e o blog de quem usa. Cada pedido vira uma sessão numa
 // cópia isolada; o Zé abre o PR e a pessoa publica no merge.
 
-const ESTADOS_SESSAO = { trabalhando: "Trabalhando", parada: "Concluída", erro: "Erro" };
-
 /** @param {any} s */
 const cartaoSite = (s) => cartao(`Site <span class="etiqueta ${s.configurado && s.blog ? "bom" : s.configurado ? "alerta" : ""}">${esc(s.estado)}</span>`,
   `${sub("O repositório do site no GitHub. Os pedidos partem da branch base e voltam como PR.")}
@@ -27,13 +25,37 @@ const cartaoPedir = (r) => cartao("Novo pedido",
   <div class="linha">${botao("Escrever artigo", "mk-pedir", 'data-tipo="artigo"', r.site.blog ? "principal" : "")}${botao("Mudar o site", "mk-pedir", 'data-tipo="site"', "discreta")}</div>
   <p class="resultado" id="mk-resultado-pedido"></p>`);
 
+/** O estado de um pedido, em uma ou duas palavras. @param {any} p */
+const estadoPedido = (p) => p.publicando ? "Publicando" : p.estado === "trabalhando" ? "Trabalhando"
+  : p.estado === "erro" ? "Erro" : p.pr ? "PR aberto" : "Concluída";
+
+/** @param {any} p */
+const acoesPedido = (p) => {
+  const sessao = botao("Abrir sessão", "mk-sessao", `data-id="${esc(p.id)}"`, "discreta");
+  if (p.estado === "trabalhando" || p.publicando) return sessao;
+  if (p.pr) return `${sessao}<a class="acao discreta" href="${esc(p.pr)}" target="_blank" rel="noopener">Revisar</a>${botao("Publicar", "mk-publicar", `data-id="${esc(p.id)}"`, "principal")}`;
+  return sessao + botao("Abrir PR", "mk-pr", `data-id="${esc(p.id)}"`, "principal");
+};
+
 /** @param {any[]} pedidos */
 const cartaoPedidos = (pedidos) => cartao("Pedidos", pedidos.length
-  ? `<div class="itens">${pedidos.map((p) => item(esc(p.nome), ESTADOS_SESSAO[p.estado] || esc(p.estado),
-      botao("Abrir sessão", "mk-sessao", `data-id="${esc(p.id)}"`, "discreta")
-      + (p.estado === "trabalhando" ? "" : botao("Abrir PR", "mk-pr", `data-id="${esc(p.id)}"`, "principal")))).join("")}</div>
+  ? `<div class="itens">${pedidos.map((p) => item(esc(p.nome), estadoPedido(p), acoesPedido(p))).join("")}</div>
      <p class="resultado" id="mk-resultado-pr"></p>`
   : vazio("Nenhum pedido em andamento."));
+
+const AGENDAS = [
+  ["cron 0 9 * * 1,4", "Segunda e quinta, 9h"],
+  ["cron 0 9 * * 1", "Toda segunda, 9h"],
+  ["cron 0 9 * * 1-5", "Todo dia útil, 9h"],
+];
+
+/** @param {any} r */
+const cartaoAutomaticos = (r) => cartao(`Artigos automáticos <span class="etiqueta ${r.automaticos.some((/** @type {any} */ j) => j.ativo) ? "bom" : ""}">${r.automaticos.some((/** @type {any} */ j) => j.ativo) ? "Ativo" : "Desligado"}</span>`,
+  `${sub("O Zé escreve o artigo, abre o PR e publica com a sua aprovação.")}
+  ${r.automaticos.length ? `<div class="itens">${r.automaticos.map((/** @type {any} */ j) => item(esc(j.agenda), j.ativo ? `Próximo: ${esc(String(j.proxima).slice(0, 16).replace("T", " "))}` : "Pausado", "")).join("")}</div>` : ""}
+  <div class="campos"><label>Quando<select id="mk-agenda">${AGENDAS.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select></label></div>
+  <div class="linha">${botao("Agendar", "mk-agendar", "", r.automaticos.length ? "discreta" : "principal")}<a class="acao discreta" href="#automacoes">Automações</a></div>
+  <p class="resultado" id="mk-resultado-agenda"></p>`);
 
 /** @param {any[]} prs */
 const cartaoPRs = (prs) => cartao("PRs abertos", prs.length
@@ -54,7 +76,7 @@ const cartaoBlog = (r) => {
 PAGINAS.marketing = async () => {
   const r = await api("marketing");
   const corpo = r.site.configurado
-    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoSite(r.site)}`
+    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoSite(r.site)}`
     : cartaoSite(r.site);
   return `${cabeca("Marketing")}${sub("O site e o blog, sempre por Pull Request: nada vai ao ar sem você.")}${corpo}`;
 };
@@ -74,6 +96,17 @@ Object.assign(ACOES, {
       await abrir();
       mostrar("mk-resultado-pr", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-pr", false, erro.message); }
+  },
+  "mk-publicar": async (/** @type {HTMLButtonElement} */ b) => {
+    try {
+      const r = await ocupado(b, () => api("marketing/publicar", { sessao: b.dataset.id }));
+      await abrir();
+      mostrar("mk-resultado-pr", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-pr", false, erro.message); }
+  },
+  "mk-agendar": async (/** @type {HTMLButtonElement} */ b) => {
+    const quando = /** @type {HTMLSelectElement} */ ($("mk-agenda")).value;
+    try { await ocupado(b, () => api("marketing/agendar", { quando })); await abrir(); } catch (erro) { mostrar("mk-resultado-agenda", false, erro.message); }
   },
   "mk-sessao": async (/** @type {HTMLButtonElement} */ b) => {
     location.hash = "#sessoes";
