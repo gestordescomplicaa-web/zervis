@@ -224,7 +224,7 @@ def test_busca_acha_o_site_pelo_dominio_e_soma_o_periodo(tmp_path: Path) -> None
     assert b["linhas"] == [{"nome": "automação", "cliques": 12, "impressoes": 340, "posicao": 8.2}]
     consulta = next(d for h, c, d in g.chamadas if c.endswith("/query") and d.get("dimensions"))
     assert consulta["startDate"] == "2026-11-10" and consulta["endDate"] == "2026-11-16"
-    assert consulta["dimensions"] == ["query"] and consulta["rowLimit"] == 5
+    assert consulta["dimensions"] == ["query"] and consulta["rowLimit"] == ms.LINHAS_BUSCA
     assert "/sites/sc-domain%3Aexemplo.com.br/" in next(c for _, c, _ in g.chamadas if "query" in c)
     texto = ms.texto_busca(b)
     assert "42 cliques" in texto and "- automação: 12 cliques" in texto
@@ -383,3 +383,29 @@ def test_as_ferramentas_passam_sem_perguntar_e_contam_como_de_fora(tmp_path: Pat
     sem_chave: Any = ferramentas_metricas.ferramentas(vazio)[0]
     erro = asyncio.run(sem_chave.handler({}))
     assert erro.get("is_error") and "não estão configuradas" in erro["content"][0]["text"]
+
+
+def test_buscas_do_topo_por_cliques_e_depois_impressoes(tmp_path: Path) -> None:
+    """Caso real de 16/11/2026: com tudo em zero clique, o Google devolveu "gestor" (5
+    impressões) depois de buscas com 1, e o corte em 5 podia deixá-la de fora."""
+    g = GoogleFalso()
+    linhas = [
+        {"keys": ["automacoes"], "clicks": 0, "impressions": 1, "position": 12.0},
+        {"keys": ["automação de ia"], "clicks": 0, "impressions": 1, "position": 11.0},
+        {"keys": ["e gestor"], "clicks": 0, "impressions": 3, "position": 2.0},
+        {"keys": ["gestor"], "clicks": 0, "impressions": 5, "position": 7.2},
+        {"keys": ["gestor descomplica"], "clicks": 2, "impressions": 4, "position": 1.0},
+    ]
+    original = g.responder
+
+    def responder(caminho: str, d: dict[str, Any]) -> Any:
+        if caminho.endswith("/searchAnalytics/query") and d.get("dimensions"):
+            assert d["rowLimit"] == ms.LINHAS_BUSCA
+            return {"rows": linhas}
+        return original(caminho, d)
+
+    g.responder = responder  # type: ignore[method-assign]
+    m = _metricas(tmp_path, g, DECLARADA)
+    m.guardar(CHAVE)
+    nomes = [r["nome"] for r in m.busca(28, "buscas", 3)["linhas"]]
+    assert nomes == ["gestor descomplica", "gestor", "e gestor"]
