@@ -17,6 +17,9 @@ export async function abrirTerminal(id) {
   const ajuste = new FitAddon.FitAddon();
   compartilhado.term.loadAddon(ajuste);
   compartilhado.term.open(caixa);
+  // Ctrl+V (Cmd+V no Mac) é do navegador: colar texto ou imagem do computador de quem usa. O xterm
+  // mandava ^V ao agente, que procurava a área de transferência do servidor e não colava nada.
+  compartilhado.term.attachCustomKeyEventHandler((ev) => !((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && ev.code === "KeyV"));
   try { ajuste.fit(); } catch { /* fora da tela */ }
   compartilhado.termId = id;
   window.desenharTravaSessoes?.();

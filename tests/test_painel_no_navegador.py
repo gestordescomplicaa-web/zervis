@@ -435,6 +435,63 @@ def test_terminal_envia_teclas_pelo_websocket_e_fecha_ao_trocar_de_pagina(
     assert recebidas == ["co", "dex\r"]
 
 
+COLAR_NO_TERMINAL = """(async () => {
+  const caixa = document.querySelector('#terminal .xterm-helper-textarea');
+  caixa.focus();
+  const tecla = new KeyboardEvent('keydown', { key: 'v', code: 'KeyV', keyCode: 86, ctrlKey: true,
+    bubbles: true, cancelable: true });
+  caixa.dispatchEvent(tecla);
+  const enviados = [];
+  const buscar = window.fetch;
+  window.fetch = async (url, opcoes) => {
+    if (String(url).includes('/api/sessao/anexo')) {
+      enviados.push(String(url));
+      return new Response(JSON.stringify({ caminho: '/anexos/colado.png' }));
+    }
+    return buscar(url, opcoes);
+  };
+  const texto = new DataTransfer();
+  texto.setData('text/plain', 'ola');
+  const colar = (dados) => caixa.dispatchEvent(new ClipboardEvent('paste',
+    { clipboardData: dados, bubbles: true, cancelable: true }));
+  colar(texto);
+  const imagem = new DataTransfer();
+  const png = new Uint8Array([137, 80, 78, 71]);
+  imagem.items.add(new File([png], 'print.png', { type: 'image/png' }));
+  colar(imagem);
+  await new Promise((ok) => setTimeout(ok, 500));
+  window.fetch = buscar;
+  return { colaPeloNavegador: !tecla.defaultPrevented, enviados: enviados.length };
+})()"""
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_colar_no_terminal_cola_texto_e_imagem_do_computador_de_quem_usa(tmp_path: Path) -> None:
+    # Caso real de 16/11/2026: o Ctrl+V virava ^V para o agente, que olhava a área de transferência
+    # do servidor; e a imagem colada parava no xterm, sem subir como anexo.
+    recebidas: list[str] = []
+
+    async def conferir(depuracao: str, endereco: str) -> dict[str, Any]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!term && !!termWs && termWsPronto")
+            resultado: dict[str, Any] = await nav.avaliar(COLAR_NO_TERMINAL)
+            await asyncio.sleep(0.5)
+            assert not nav.erros, nav.erros
+            return resultado
+
+    with _painel(tmp_path, entrada_terminal=lambda d: recebidas.append(str(d["dados"]))) as (
+        depuracao,
+        endereco,
+    ):
+        resultado = asyncio.run(conferir(depuracao, endereco))
+    assert resultado == {"colaPeloNavegador": True, "enviados": 1}
+    assert "\x16" not in "".join(recebidas)
+    assert "".join(recebidas) == 'ola"/anexos/colado.png" '
+
+
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
 def test_a_saida_do_terminal_chega_pelo_websocket_e_o_medidor_aparece(tmp_path: Path) -> None:
     # Caso real de 27/10/2026: na VPS, digitar no terminal ficava lento. As teclas já iam pelo

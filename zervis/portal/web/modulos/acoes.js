@@ -398,10 +398,11 @@ conteudo.addEventListener("input", (ev) => {
   compartilhado.buscaPendente = setTimeout(() => carregadas.buscarArquivos().catch((e) => toast(e.message)), 250);
 });
 
+// Na captura: o xterm para o evento colado no terminal, e a imagem não chegava aqui.
 conteudo.addEventListener("paste", (ev) => {
   if (!$("terminal") || !ev.clipboardData?.files.length || /** @type {HTMLElement} */ (ev.target).id === "md-texto") return;
-  ev.preventDefault(); carregadas.anexar(ev.clipboardData.files);
-});
+  ev.preventDefault(); ev.stopPropagation(); carregadas.anexar(ev.clipboardData.files);
+}, true);
 for (const tipo of ["dragenter", "dragover"]) conteudo.addEventListener(tipo, (ev) => {
   if (!$("terminal") || !/** @type {DragEvent} */ (ev).dataTransfer?.types.includes("Files")) return;
   ev.preventDefault(); /** @type {HTMLElement} */ (document.querySelector(".conversa"))?.classList.add("soltando");
