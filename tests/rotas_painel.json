@@ -182,6 +182,8 @@
     "marketing/post/refazer",
     "marketing/post/publicar",
     "marketing/post/descartar",
+    "marketing/fotos",
+    "marketing/foto/remover",
     "tv/procurar",
     "tv/abrir",
     "tv/fechar",
@@ -197,6 +199,7 @@
   "envios": [
     "sessao/anexo",
     "abertura/musica",
-    "projetos3d/imagem"
+    "projetos3d/imagem",
+    "marketing/foto"
   ]
 }

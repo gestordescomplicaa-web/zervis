@@ -34,6 +34,20 @@ conta é Business e o Zé tem um endereço fixo na internet pelo túnel.
    o do carrossel com a legenda, a espera até ficar pronto e a publicação. `instagram.py` segue
    só leitura.
 
+8. **Visual em cada slide (16/11/2026).** Só texto, o carrossel ficava sem imagem. O modelo
+   escolhe, slide a slide, um visual que o Zé desenha com a paleta (`zervis/marketing_visual.py`):
+   - um ícone da Lucide (63 ícones em `zervis/marca_icones.json`, ISC);
+   - um fluxo de 2 a 4 passos;
+   - um "antes e depois";
+   - uma lista;
+   - uma conversa de mensagens, sempre com o selo "Ilustração".
+   
+   Sem IA de imagem, sem banco de fotos e sem logo de terceiros.
+9. **As fotos de quem usa** ficam em "Fotos da marca", em Marketing (`<dados>/marketing/fotos`,
+   em JPEG até 1600 px). O nome do arquivo descreve a foto, e o modelo escolhe uma para a capa
+   quando combina com o tema; a capa leva a foto embaixo, com um degradê na cor do fundo. As fotos
+   ficam nesta máquina e só saem na publicação aprovada.
+
 ## Consequências
 
 - Publicar exige o Instagram conectado com permissão de publicar e o acesso de qualquer lugar com
