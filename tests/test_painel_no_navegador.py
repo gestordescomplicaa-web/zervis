@@ -545,6 +545,39 @@ def test_ctrl_c_com_selecao_copia_e_sem_selecao_interrompe(tmp_path: Path) -> No
     assert recebidas == ["\x03"]
 
 
+COPIA_DO_AGENTE = """(async () => {
+  const copias = [];
+  const escrever = navigator.clipboard.writeText;
+  navigator.clipboard.writeText = async (texto) => { copias.push(texto); };
+  const osc = (conteudo) => new Promise((ok) => term.write('\\x1b]52;c;' + conteudo + '\\x07', ok));
+  const base64 = (texto) => btoa(String.fromCharCode(...new TextEncoder().encode(texto)));
+  await osc(base64('gh repo create ação'));
+  await osc('?');
+  await osc('');
+  await new Promise((ok) => setTimeout(ok, 100));
+  navigator.clipboard.writeText = escrever;
+  return copias;
+})()"""
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_a_copia_do_agente_em_tela_cheia_chega_a_area_de_transferencia(tmp_path: Path) -> None:
+    # Caso real de 16/11/2026: o Claude Code dizia "copied 125 chars to clipboard", mas o Ctrl+V
+    # fora do painel trazia o texto antigo: a cópia vinha pelo OSC 52, que o xterm ignorava.
+    async def conferir(depuracao: str, endereco: str) -> list[str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!term && !!termWs && termWsPronto")
+            copias: list[str] = await nav.avaliar(COPIA_DO_AGENTE)
+            assert not nav.erros, nav.erros
+            return copias
+
+    with _painel(tmp_path, entrada_terminal=lambda _d: None) as (depuracao, endereco):
+        assert asyncio.run(conferir(depuracao, endereco)) == ["gh repo create ação"]
+
+
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
 def test_a_saida_do_terminal_chega_pelo_websocket_e_o_medidor_aparece(tmp_path: Path) -> None:
     # Caso real de 27/10/2026: na VPS, digitar no terminal ficava lento. As teclas já iam pelo

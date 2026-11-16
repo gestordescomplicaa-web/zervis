@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Copiar do agente em tela cheia:** quando o Claude Code copia a seleção ("copied N chars to
+  clipboard"), o texto agora chega à área de transferência do seu computador. Antes, o Ctrl+V
+  fora do painel trazia o que estava copiado antes.
+
 - **Copiar do terminal das sessões:** com texto selecionado, Ctrl+C (Cmd+C no Mac) copia para
   usar fora do terminal; sem seleção, continua interrompendo o agente.
 
