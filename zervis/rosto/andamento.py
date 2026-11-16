@@ -63,6 +63,8 @@ ROTULOS = {
     "ze_sobre": "Olhando a minha configuração",
     "memoria": "Guardando na memória",
     "marketing_situacao": "Olhando o site e o blog",
+    "site_google": "Lendo o Search Console",
+    "site_visitas": "Lendo as visitas do site",
     "marketing_pedir": "Abrindo o pedido de marketing",
     "marketing_abrir_pr": "Abrindo o PR no site",
     "marketing_publicar": "Publicando no site",

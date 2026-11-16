@@ -75,6 +75,10 @@ GRUPOS = {
         "pede artigos do blog e mudanças no site, cria posts do Instagram com a marca e publica "
         "com o seu sim",
     ),
+    "metricas": (
+        "Métricas do site",
+        "lê como o site aparece no Google e quem o visita, sem mudar nada",
+    ),
     "whatsapp": (
         "WhatsApp",
         "guarda e busca tudo do WhatsApp, acha os contatos da agenda, vigia a lista de "

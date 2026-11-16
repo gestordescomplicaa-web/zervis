@@ -46,6 +46,19 @@ o contrário: o Zé não sabe nada de um site em particular. Ele lê o que o sit
 
 Os caminhos são relativos à raiz do repositório e não podem sair dela.
 
+## As métricas (ADR 0094)
+
+```json
+{
+  "zervis": 1,
+  "metricas": { "dominio": "minhaempresa.com.br", "blog": "/blog/", "ga4": "123456789" }
+}
+```
+
+Tudo é opcional. `dominio` escolhe a propriedade do Search Console; `blog`, o começo do endereço
+dos artigos (padrão `/blog/`); `ga4`, o número da propriedade do Google Analytics (não o ID de
+medição `G-`). O acesso e a etiqueta do GA4 estão em `docs/metricas-site.md`.
+
 ## A marca (para os posts do Instagram, ADR 0093)
 
 ```json

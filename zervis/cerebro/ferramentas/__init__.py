@@ -17,7 +17,7 @@ from typing import Any
 
 from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_server
 
-from zervis import atividade
+from zervis import atividade, metricas_site
 from zervis.automacoes.jobs import Jobs
 from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
 from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
@@ -29,6 +29,7 @@ from zervis.cerebro.ferramentas import imagens as g_imagens
 from zervis.cerebro.ferramentas import instagram as g_instagram
 from zervis.cerebro.ferramentas import manutencao as g_manutencao
 from zervis.cerebro.ferramentas import marketing as g_marketing
+from zervis.cerebro.ferramentas import metricas as g_metricas
 from zervis.cerebro.ferramentas import modelos as g_modelos
 from zervis.cerebro.ferramentas import navegador as g_navegador
 from zervis.cerebro.ferramentas import pesquisa as g_pesquisa
@@ -114,6 +115,8 @@ LEITURA = [
     "dispositivos_listar",  # só lê o estado dos aparelhos da casa (ADR 0089)
     "marketing_posts",  # só lista os posts do Instagram; criar, refazer e publicar pedem o sim
     "marketing_situacao",  # só lê o site, o blog e os PRs (ADR 0091); pedir e o PR pedem o sim
+    "site_google",  # as métricas do site são só leitura (ADR 0094)
+    "site_visitas",
     "camera_conversas",  # só lê o histórico das conversas pela câmera (ADR 0088)
     # Abrir e encerrar a conversa pela câmera é pedido de quem usa; o Zé de lá só conversa,
     # isolado na Central (sem ferramentas nem memória): ADR 0088.
@@ -142,6 +145,8 @@ DE_FORA = {
     "pesquisa_guardada": "uma pesquisa guardada",
     "instagram_perfil": "o Instagram",
     "instagram_posts": "o Instagram",
+    "site_google": "as buscas do Google",  # o que estranhos digitaram no Google
+    "site_visitas": "o Google Analytics",  # qualquer um manda página falsa ao GA4
     "historico_buscar": "o histórico",
     "historico_ler": "o histórico",
     "sessao_ler": "a resposta de uma sessão de código",
@@ -316,6 +321,7 @@ def por_grupo(
         "instagram": g_instagram.ferramentas(instagram),
         "projetos3d": g_projetos3d.ferramentas(projetos, sessoes, tela, acervo, impressora),
         "marketing": g_marketing.ferramentas(sessoes, jobs),
+        "metricas": g_metricas.ferramentas(metricas_site.PADRAO),
         "tela_tv": g_tela_tv.ferramentas(tela_tv, projetos),
         "dispositivos": g_dispositivos.ferramentas(
             camera_dispositivo, vigia_camera, impressora, tela_tv

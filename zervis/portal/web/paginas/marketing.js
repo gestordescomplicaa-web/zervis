@@ -2,6 +2,7 @@ import { ACOES } from "../modulos/acoes.js";
 import { abrir } from "../modulos/navegacao.js";
 import { carregadas } from "../modulos/estado.js";
 import { PAGINAS, TOKEN, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, sub, vazio, xis } from "../painel.js";
+import { cartaoMetricas, metricasSemTravar } from "./marketing-metricas.js";
 
 // A página Marketing (ADR 0091): o site e o blog de quem usa. Cada pedido vira uma sessão numa
 // cópia isolada; o Zé abre o PR e a pessoa publica no merge.
@@ -133,9 +134,9 @@ async function subirFoto(arquivo) {
 }
 
 PAGINAS.marketing = async () => {
-  const [r, fotos] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => [])]);
+  const [r, fotos, metricas] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => []), metricasSemTravar()]);
   const corpo = r.site.configurado
-    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoInstagram(r)}${cartaoMarca(r.marca)}${cartaoFotos(fotos)}${cartaoSite(r.site)}`
+    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoMetricas(metricas)}${cartaoInstagram(r)}${cartaoMarca(r.marca)}${cartaoFotos(fotos)}${cartaoSite(r.site)}`
     : cartaoSite(r.site);
   return `${cabeca("Marketing")}${sub("O site e o blog, sempre por Pull Request: nada vai ao ar sem você.")}${corpo}`;
 };

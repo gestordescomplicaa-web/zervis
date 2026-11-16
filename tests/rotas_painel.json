@@ -30,6 +30,7 @@
     "camera",
     "dispositivos",
     "marketing",
+    "marketing/metricas",
     "impressora"
   ],
   "escritas": [
@@ -182,6 +183,8 @@
     "marketing/post/refazer",
     "marketing/post/publicar",
     "marketing/post/descartar",
+    "marketing/metricas/chave",
+    "marketing/metricas/remover",
     "marketing/fotos",
     "marketing/foto/remover",
     "tv/procurar",

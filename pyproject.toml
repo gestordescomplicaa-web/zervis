@@ -9,6 +9,9 @@ requires-python = ">=3.12,<3.15"
 # Dependências de execução entram fase a fase, sempre com versão exata (docs/06-qualidade.md).
 dependencies = [
     "claude-agent-sdk==0.2.163",
+    # A assinatura da conta de serviço do Google, nas métricas do site (ADR 0094). Já vinha por
+    # dependência; declarada porque o Zé a importa.
+    "cryptography==50.0.2",
     "livekit==1.1.21",
     # O Live (ADR 0042): o revezamento do LIGATIA. O detector de fim de fala é da LiveKit Model
     # License (só dentro do LiveKit Agents; baixado na primeira subida, fora do repositório).

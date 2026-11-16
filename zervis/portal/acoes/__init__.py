@@ -112,6 +112,7 @@ class Acoes:
             "camera": self.camera,
             "dispositivos": self.dispositivos,
             "marketing": self.marketing,
+            "marketing/metricas": self.metricas,
             "impressora": self.impressora_3d,
         }
 
@@ -191,6 +192,8 @@ class Acoes:
             "marketing/post/refazer": self.refazer_post,
             "marketing/post/publicar": self.publicar_post,
             "marketing/post/descartar": self.descartar_post,
+            "marketing/metricas/chave": self.guardar_metricas,
+            "marketing/metricas/remover": self.remover_metricas,
             "marketing/fotos": self.fotos_da_marca,
             "marketing/foto/remover": self.remover_foto,
             "tv/procurar": self.procurar_tv,

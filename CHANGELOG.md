@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Métricas do site:** em Marketing, "Métricas do site" mostra os últimos 28 dias do Google
+  (cliques, impressões, as buscas que trazem gente) e das visitas (visitantes, páginas mais
+  vistas, tempo médio), pelo Search Console e pelo Google Analytics, só leitura. Pela voz: "o
+  blog está sendo lido?", "quantos clicaram no WhatsApp?". A configuração está em
+  `docs/metricas-site.md` (ADR 0094).
+
 - **Carrossel com visual:** cada slide pode ganhar um ícone, um fluxo de passos, um "antes e
   depois", uma lista ou uma conversa ilustrativa, desenhados com as cores da sua marca. Em
   Marketing, "Fotos da marca" guarda as suas fotos, e o Zé escolhe uma para a capa quando
