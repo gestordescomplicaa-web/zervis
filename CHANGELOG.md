@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Colar no terminal das sessões:** Ctrl+V (Cmd+V no Mac) cola o texto do seu computador no
+  terminal, e a imagem colada sobe para a pasta da sessão e entra no pedido, como ao arrastar.
+  Antes, o Ctrl+V ia ao agente, que procurava a área de transferência do servidor.
+
 - **Métricas do site:** em Marketing, "Métricas do site" mostra os últimos 28 dias do Google
   (cliques, impressões, as buscas que trazem gente) e das visitas (visitantes, páginas mais
   vistas, tempo médio), pelo Search Console e pelo Google Analytics, só leitura. Pela voz: "o
