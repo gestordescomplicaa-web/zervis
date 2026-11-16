@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Copiar do terminal das sessões:** com texto selecionado, Ctrl+C (Cmd+C no Mac) copia para
+  usar fora do terminal; sem seleção, continua interrompendo o agente.
+
 - **Colar no terminal das sessões:** Ctrl+V (Cmd+V no Mac) cola o texto do seu computador no
   terminal, e a imagem colada sobe para a pasta da sessão e entra no pedido, como ao arrastar.
   Antes, o Ctrl+V ia ao agente, que procurava a área de transferência do servidor.
