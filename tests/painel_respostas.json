@@ -1,5 +1,6 @@
 {
  "leituras": {
+  "marketing/metricas": {"configurado": true, "conta": "ze-metricas@exemplo.iam.gserviceaccount.com", "dias": 28, "busca": {"site": "sc-domain:exemplo.com.br", "dias": 28, "cliques": 42, "impressoes": 1830, "ctr": 2.3, "posicao": 14.6, "por": "buscas", "linhas": [{"nome": "automação de processos", "cliques": 12, "impressoes": 340, "posicao": 8.2}]}, "visitas": {"dias": 28, "blog": false, "visitantes": 310, "visitas": 402, "visualizacoes": 960, "tempo_medio_s": 74, "por": "paginas", "linhas": [{"nome": "/blog/exemplo", "titulo": "Exemplo", "visualizacoes": 120, "visitantes": 98, "tempo_medio_s": 95}]}},
   "marketing": {
    "site": {"estado": "Configurado", "configurado": true, "blog": true, "pasta": "/home/exemplo/site", "base": "main"},
    "artigos": [{"slug": "exemplo", "titulo": "Exemplo", "categoria": "ia-aplicada", "data": "2026-11-20", "estado": "Rascunho"}],

@@ -101,3 +101,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0091](0091-marketing-site-e-blog.md) | Marketing: o site e o blog de quem usa, sempre por Pull Request | Em validação |
 | [0092](0092-blog-automatico.md) | O blog no piloto automático: o Zé escreve, abre o PR e publica com o "aprovado" | Em validação |
 | [0093](0093-posts-do-instagram.md) | Posts do Instagram: o Zé cria o carrossel com a marca, e publicar é sempre com aprovação | Em validação |
+| [0094](0094-metricas-do-site.md) | As métricas do site, só leitura: o Search Console e o Google Analytics | Em validação |

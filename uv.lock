@@ -3126,6 +3126,7 @@ version = "0.5.1"
 source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },
+    { name = "cryptography" },
     { name = "livekit" },
     { name = "livekit-agents", extra = ["deepgram", "silero", "turn-detector"] },
     { name = "numpy" },
@@ -3149,6 +3150,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "claude-agent-sdk", specifier = "==0.2.163" },
+    { name = "cryptography", specifier = "==50.0.2" },
     { name = "livekit", specifier = "==1.1.21" },
     { name = "livekit-agents", extras = ["deepgram", "silero", "turn-detector"], specifier = "==1.8.9" },
     { name = "numpy", specifier = "==2.4.3" },

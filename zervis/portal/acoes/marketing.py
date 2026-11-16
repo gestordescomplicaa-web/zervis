@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from typing import Any
 
-from zervis import marketing, marketing_posts
+from zervis import atividade, marketing, marketing_posts, metricas_site
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.jobs import JobErro
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
@@ -161,3 +161,26 @@ class AcoesMarketing(Pagina):
     def remover_foto(self, dados: dict[str, Any]) -> list[dict[str, str]]:
         self._posts(lambda: marketing_posts.PADRAO.remover_foto(str(dados.get("nome", ""))))
         return self.fotos_da_marca({})
+
+    # --- as métricas do site (ADR 0094): só leitura do Google ------------------------------
+
+    def metricas(self) -> dict[str, Any]:
+        """Lida à parte do resto da página: o Google pode demorar, e o cache segura 30 minutos."""
+        return metricas_site.PADRAO.resumo()
+
+    def guardar_metricas(self, dados: dict[str, Any]) -> dict[str, Any]:
+        try:
+            conta = metricas_site.PADRAO.guardar(str(dados.get("chave", ""))[:20000])
+        except metricas_site.MetricasErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        atividade.PADRAO.registrar(
+            "execucao", f"Métricas do site ligadas ({conta})", origem="painel"
+        )
+        return {**self.metricas(), "aviso": "Chave válida."}
+
+    def remover_metricas(self, dados: dict[str, Any]) -> dict[str, Any]:
+        if dados.get("confirmado") is not True:
+            raise PedidoInvalido("confirmação necessária")
+        metricas_site.PADRAO.remover()
+        atividade.PADRAO.registrar("execucao", "Métricas do site desligadas", origem="painel")
+        return {**self.metricas(), "aviso": "Chave removida."}
