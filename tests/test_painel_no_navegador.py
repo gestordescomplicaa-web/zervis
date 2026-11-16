@@ -492,6 +492,59 @@ def test_colar_no_terminal_cola_texto_e_imagem_do_computador_de_quem_usa(tmp_pat
     assert "".join(recebidas) == 'ola"/anexos/colado.png" '
 
 
+COPIAR_DO_TERMINAL = """(async () => {
+  term.write('resposta do agente\\r\\n');
+  await new Promise((ok) => setTimeout(ok, 200));
+  const caixa = document.querySelector('#terminal .xterm-helper-textarea');
+  caixa.focus();
+  const ctrlC = () => {
+    const tecla = new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', keyCode: 67,
+      ctrlKey: true, bubbles: true, cancelable: true });
+    caixa.dispatchEvent(tecla);
+    return tecla.defaultPrevented;
+  };
+  term.select(0, 0, 8);
+  const copiaPeloNavegador = !ctrlC();
+  const copia = new DataTransfer();
+  caixa.dispatchEvent(new ClipboardEvent('copy',
+    { clipboardData: copia, bubbles: true, cancelable: true }));
+  await new Promise((ok) => setTimeout(ok, 100));
+  const interrompeSemSelecao = ctrlC();
+  return { copiaPeloNavegador, copiado: copia.getData('text/plain'),
+    selecao: term.hasSelection(), interrompeSemSelecao };
+})()"""
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_ctrl_c_com_selecao_copia_e_sem_selecao_interrompe(tmp_path: Path) -> None:
+    # Caso real de 16/11/2026: copiar do terminal não ia para fora dele; o Ctrl+C só mandava ^C.
+    recebidas: list[str] = []
+
+    async def conferir(depuracao: str, endereco: str) -> dict[str, Any]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(nav, "!!term && !!termWs && termWsPronto")
+            resultado: dict[str, Any] = await nav.avaliar(COPIAR_DO_TERMINAL)
+            await asyncio.sleep(0.5)
+            assert not nav.erros, nav.erros
+            return resultado
+
+    with _painel(tmp_path, entrada_terminal=lambda d: recebidas.append(str(d["dados"]))) as (
+        depuracao,
+        endereco,
+    ):
+        resultado = asyncio.run(conferir(depuracao, endereco))
+    assert resultado == {
+        "copiaPeloNavegador": True,
+        "copiado": "resposta",
+        "selecao": False,
+        "interrompeSemSelecao": True,
+    }
+    assert recebidas == ["\x03"]
+
+
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
 def test_a_saida_do_terminal_chega_pelo_websocket_e_o_medidor_aparece(tmp_path: Path) -> None:
     # Caso real de 27/10/2026: na VPS, digitar no terminal ficava lento. As teclas já iam pelo

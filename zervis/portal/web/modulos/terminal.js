@@ -19,7 +19,16 @@ export async function abrirTerminal(id) {
   compartilhado.term.open(caixa);
   // Ctrl+V (Cmd+V no Mac) é do navegador: colar texto ou imagem do computador de quem usa. O xterm
   // mandava ^V ao agente, que procurava a área de transferência do servidor e não colava nada.
-  compartilhado.term.attachCustomKeyEventHandler((ev) => !((ev.ctrlKey || ev.metaKey) && !ev.altKey && !ev.shiftKey && ev.code === "KeyV"));
+  // Ctrl+C com texto selecionado copia (o xterm preenche a cópia do navegador); sem seleção,
+  // segue como ^C, que interrompe o agente.
+  const termo = compartilhado.term;
+  termo.attachCustomKeyEventHandler((ev) => {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || ev.shiftKey) return true;
+    if (ev.code === "KeyV") return false;
+    return !(ev.code === "KeyC" && termo.hasSelection());
+  });
+  // Copiado, a seleção some: o próximo Ctrl+C volta a interromper.
+  caixa.addEventListener("copy", () => setTimeout(() => termo.clearSelection(), 0));
   try { ajuste.fit(); } catch { /* fora da tela */ }
   compartilhado.termId = id;
   window.desenharTravaSessoes?.();
