@@ -47,6 +47,10 @@ ESPERA_S = 20.0
 CACHE_S = 1800.0
 MAXIMO_DIAS_BUSCA = 480  # o Search Console guarda 16 meses
 MAXIMO_DIAS_VISITAS = 365
+# O Search Console ordena só por cliques: com tudo em zero, as linhas vêm em qualquer ordem e o
+# corte pega qualquer uma (16/11/2026, "gestor" com 5 impressões abaixo das de 1). O Zé pede mais
+# linhas e ordena por cliques e depois por impressões.
+LINHAS_BUSCA = 250
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.iam\.gserviceaccount\.com")
 PROPRIEDADE = re.compile(r"\d{4,20}")
 DOMINIO = re.compile(r"(?:[a-z0-9-]+\.)+[a-z]{2,}")
@@ -348,7 +352,10 @@ class Metricas:
         def ler() -> dict[str, Any]:
             site = self.site_na_busca()
             total = self._consulta_busca(site, dias, "", 1)
-            linhas = self._consulta_busca(site, dias, dimensao, quantos)
+            linhas = sorted(
+                self._consulta_busca(site, dias, dimensao, max(quantos, LINHAS_BUSCA)),
+                key=lambda r: (-_numero(r.get("clicks")), -_numero(r.get("impressions"))),
+            )[:quantos]
             t = total[0] if total else {}
             return {
                 "site": site,
