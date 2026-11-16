@@ -113,14 +113,15 @@ def test_a_marca_vem_do_site_e_a_paleta_pode_ser_propria(tmp_path: Path) -> None
 
 
 def test_o_texto_do_modelo_e_conferido() -> None:
-    slides, chamada, legenda = interpretar("Aqui está:\n" + RESPOSTA)
+    slides, chamada, legenda, foto = interpretar("Aqui está:\n" + RESPOSTA)
     assert (
         len(slides) == 4 and chamada == "Fale comigo no WhatsApp" and legenda.endswith("#automacao")
     )
+    assert foto == "" and slides[0]["visual"] == {}
     longo = json.dumps(
         {"slides": [{"titulo": "x " * 80, "texto": "y"}] * 9, "legenda": "z", "chamada": ""}
     )
-    slides, _, _ = interpretar(longo)
+    slides, _, _, _ = interpretar(longo)
     assert len(slides) == 7 and len(slides[0]["titulo"]) <= 70 and slides[0]["titulo"].endswith("…")
     with pytest.raises(PostErro):
         interpretar(json.dumps({"slides": [{"titulo": "a", "texto": "b"}], "legenda": "c"}))
@@ -145,9 +146,12 @@ def test_o_slide_escapa_o_texto_do_modelo() -> None:
 def test_os_slides_saem_em_jpeg_no_tamanho_do_feed(tmp_path: Path) -> None:
     from PIL import Image
 
-    slides, chamada, legenda = interpretar(RESPOSTA)
-    post = Post("a1b2c3d4", slides=slides[:3], chamada=chamada, legenda=legenda)
-    feitos = renderizar(post, Marca(), b"", tmp_path)
+    slides, chamada, legenda, _ = interpretar(RESPOSTA)
+    slides[1]["visual"] = {"tipo": "fluxo", "passos": ["Pedido", "Planilha", "Sistema"]}
+    post = Post("a1b2c3d4", slides=slides[:3], chamada=chamada, legenda=legenda, foto="eu.jpg")
+    foto = io.BytesIO()
+    Image.new("RGB", (800, 1000), "#336699").save(foto, "JPEG")
+    feitos = renderizar(post, Marca(), b"", tmp_path, foto.getvalue())
     assert [f.name for f in feitos] == ["slide-1.jpg", "slide-2.jpg", "slide-3.jpg"]
     with Image.open(feitos[0]) as imagem:
         assert imagem.format == "JPEG" and imagem.size == (1080, 1350)
@@ -183,7 +187,9 @@ def _posts(tmp_path: Path, **extra: Any) -> tuple[Posts, Site, list[str]]:
         prompts.append(prompt)
         return RESPOSTA
 
-    def desenhar(post: Post, _marca: Marca, _logo: bytes, pasta: Path) -> list[Path]:
+    def desenhar(
+        post: Post, _marca: Marca, _logo: bytes, pasta: Path, _foto: bytes = b""
+    ) -> list[Path]:
         pasta.mkdir(parents=True, exist_ok=True)
         feitos = []
         for n in range(len(post.slides)):
@@ -196,6 +202,7 @@ def _posts(tmp_path: Path, **extra: Any) -> tuple[Posts, Site, list[str]]:
         "site": site, "perguntar": perguntar, "desenhar": desenhar, "instagram": ig,
         "links": publico.Publicos(), "endereco": lambda: "https://ze.exemplo.com",
     }  # fmt: skip
+    opcoes["fotos"] = tmp_path / "fotos"
     return Posts(tmp_path / "posts", **{**opcoes, **extra}), site, prompts
 
 
@@ -334,3 +341,64 @@ def test_uma_imagem_so_e_foto_e_erro_da_meta_nao_publica() -> None:
     assert not any(c.endswith("/media_publish") for _m, c, _d in ruim.pedidos)
     with pytest.raises(InstagramErro, match="de 1 a 10"):
         instagram_publicar.publicar(_ig(Meta([])), [], "L")
+
+
+# --- os visuais e as fotos ----------------------------------------------------------------
+
+
+def test_o_visual_de_cada_slide_e_conferido() -> None:
+    from zervis.marketing_visual import conferir, icones
+
+    assert len(icones()) >= 60 and "workflow" in icones()
+    icone = {"tipo": "icone", "icone": "workflow"}
+    assert conferir(icone) == icone
+    assert conferir({"tipo": "icone", "icone": "nao-existe"}) == {}
+    passos = ["Pedido no WhatsApp " * 3, "Planilha", "", "Sistema", "a", "b"]
+    fluxo = conferir({"tipo": "fluxo", "passos": passos})
+    assert len(fluxo["passos"]) == 4 and len(fluxo["passos"][0]) <= 26
+    assert conferir({"tipo": "fluxo", "passos": ["só um"]}) == {}
+    assert conferir({"tipo": "comparacao", "antes": "a", "depois": ""}) == {}
+    mensagens = [{"de": "cliente", "texto": "oi"}, {"de": "x", "texto": "olá"}]
+    conversa = conferir({"tipo": "conversa", "mensagens": mensagens})
+    assert [m["de"] for m in conversa["mensagens"]] == ["cliente", "cliente"]
+    assert conferir({"tipo": "video"}) == {} and conferir("icone") == {}
+
+
+def test_o_visual_escapa_o_texto_e_a_conversa_leva_o_selo() -> None:
+    from zervis.marketing_visual import html_do_visual
+
+    marca = Marca()
+    lista = html_do_visual({"tipo": "lista", "itens": ["<b>a</b>", "c & d"]}, marca)
+    assert "&lt;b&gt;a&lt;/b&gt;" in lista and "c &amp; d" in lista
+    mensagens = [{"de": "cliente", "texto": "oi"}, {"de": "empresa", "texto": "olá"}]
+    assert "Ilustração" in html_do_visual({"tipo": "conversa", "mensagens": mensagens}, marca)
+    assert "<svg" in html_do_visual({"tipo": "icone", "icone": "zap"}, marca)
+
+
+def test_a_foto_da_capa_so_vale_se_existir() -> None:
+    resposta = json.loads(RESPOSTA)
+    resposta["foto"] = "eu-explicando.jpg"
+    assert interpretar(json.dumps(resposta), ("eu-explicando.jpg",))[3] == "eu-explicando.jpg"
+    assert interpretar(json.dumps(resposta), ("outra.jpg",))[3] == ""
+
+
+def test_as_fotos_da_marca(tmp_path: Path) -> None:
+    from PIL import Image
+
+    posts, _, prompts = _posts(tmp_path)
+    grande = io.BytesIO()
+    Image.new("RGB", (3000, 2000), "#884422").save(grande, "PNG")
+    nome = posts.adicionar_foto("Eu Explicando o Fluxo.PNG", grande.getvalue())
+    assert nome == "eu-explicando-o-fluxo.jpg"
+    segunda = posts.adicionar_foto("eu explicando o fluxo.jpg", grande.getvalue())
+    assert segunda == "eu-explicando-o-fluxo-2.jpg"
+    with Image.open(io.BytesIO(posts.foto(nome))) as salva:
+        assert salva.format == "JPEG" and max(salva.size) == 1600
+    with pytest.raises(PostErro, match="não é uma imagem"):
+        posts.adicionar_foto("texto.png", b"nada")
+    posts.criar(tema="x", esperar=True)
+    assert "eu-explicando-o-fluxo.jpg" in prompts[-1] and "workflow" in prompts[-1]
+    posts.remover_foto(segunda)
+    assert posts.fotos() == [nome]
+    with pytest.raises(PostErro):
+        posts.remover_foto("../post.json")

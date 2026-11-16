@@ -191,6 +191,8 @@ class Acoes:
             "marketing/post/refazer": self.refazer_post,
             "marketing/post/publicar": self.publicar_post,
             "marketing/post/descartar": self.descartar_post,
+            "marketing/fotos": self.fotos_da_marca,
+            "marketing/foto/remover": self.remover_foto,
             "tv/procurar": self.procurar_tv,
             "tv/abrir": self.abrir_tv,
             "tv/fechar": self.fechar_tv,
@@ -286,6 +288,7 @@ class Acoes:
             "sessao/anexo": self.anexar,
             "abertura/musica": self.enviar_musica,
             "projetos3d/imagem": self.criar_projeto_3d_com_imagem,
+            "marketing/foto": self.enviar_foto,
         }
 
     def _chamar(self, fazer: Any) -> Any:

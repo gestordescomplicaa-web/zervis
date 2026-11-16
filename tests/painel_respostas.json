@@ -1064,6 +1064,7 @@
   }
  },
  "escritas": {
+  "marketing/fotos": [{"nome": "exemplo.jpg", "miniatura": "data:image/gif;base64,R0lGODlhAQABAAAAACw="}],
   "ze/sessao": {
    "id": "sessao2"
   },

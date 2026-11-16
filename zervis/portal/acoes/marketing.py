@@ -1,6 +1,8 @@
 """Ações da página Marketing (ADR 0091): o site, os artigos do blog, os pedidos em andamento e
 os PRs abertos. Pedir e abrir PR passam pelo mesmo caminho da voz."""
 
+import base64
+import io
 import json
 from datetime import datetime
 from typing import Any
@@ -133,3 +135,29 @@ class AcoesMarketing(Pagina):
     def descartar_post(self, dados: dict[str, Any]) -> dict[str, Any]:
         self._posts(lambda: marketing_posts.PADRAO.descartar(str(dados.get("id", ""))))
         return {**self.marketing(), "aviso": "Descartado."}
+
+    # --- as fotos da marca (a capa dos posts) ---------------------------------------------
+
+    def enviar_foto(self, corpo: bytes, consulta: dict[str, str]) -> dict[str, Any]:
+        nome = self._posts(
+            lambda: marketing_posts.PADRAO.adicionar_foto(consulta.get("nome", ""), corpo)
+        )
+        return {"nome": nome, "aviso": "Foto salva."}
+
+    def fotos_da_marca(self, _dados: dict[str, Any]) -> list[dict[str, str]]:
+        """As fotos, com uma miniatura cada (o painel não lê a pasta)."""
+        from PIL import Image
+
+        posts, lista = marketing_posts.PADRAO, []
+        for nome in posts.fotos():
+            with Image.open(io.BytesIO(posts.foto(nome))) as imagem:
+                imagem.thumbnail((240, 240))
+                saida = io.BytesIO()
+                imagem.convert("RGB").save(saida, "JPEG", quality=80)
+            miniatura = "data:image/jpeg;base64," + base64.b64encode(saida.getvalue()).decode()
+            lista.append({"nome": nome, "miniatura": miniatura})
+        return lista
+
+    def remover_foto(self, dados: dict[str, Any]) -> list[dict[str, str]]:
+        self._posts(lambda: marketing_posts.PADRAO.remover_foto(str(dados.get("nome", ""))))
+        return self.fotos_da_marca({})

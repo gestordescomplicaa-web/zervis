@@ -12,6 +12,7 @@ usa, a prévia em Marketing e publicar só com a aprovação.
 import asyncio
 import base64
 import html
+import io
 import json
 import logging
 import re
@@ -26,7 +27,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from zervis import lugares, marketing
+from zervis import lugares, marketing, marketing_visual
 from zervis.marca import Marca
 from zervis.portal import publico
 from zervis.redes import instagram_publicar
@@ -35,6 +36,9 @@ from zervis.redes.instagram import Instagram, InstagramErro
 log = logging.getLogger(__name__)
 
 PASTA = lugares.DADOS / "marketing" / "posts"
+FOTOS = lugares.DADOS / "marketing" / "fotos"  # as fotos de quem usa, para a capa
+MAXIMO_FOTOS = 60
+LADO_FOTO = 1600  # a foto guardada cabe nisto (a capa usa 1080 de largura)
 TUNEL = lugares.CONFIG / "tunel.json"
 LARGURA, ALTURA = 1080, 1350
 MINIMO_SLIDES, MAXIMO_SLIDES = 3, 7
@@ -55,7 +59,8 @@ números (dado só com a fonte, na legenda).
 {pedido}
 
 Responda só com JSON, sem texto em volta:
-{{"slides": [{{"titulo": "...", "texto": "..."}}], "chamada": "...", "legenda": "..."}}
+{{"slides": [{{"titulo": "...", "texto": "...", "visual": {{"tipo": "..."}}}}], "foto": "...", \
+"chamada": "...", "legenda": "..."}}
 
 - De 5 a 7 slides. O primeiro é a capa: um gancho curto que faz parar de rolar. Cada slide do \
 meio traz uma ideia só. O último traz a oferta: o que é feito e o convite para conversar.
@@ -65,6 +70,21 @@ poucos segundos. Sem emojis nos slides.
 - legenda: de 400 a 1.200 caracteres; abre com o gancho, explica em parágrafos curtos e fecha \
 com a chamada; no máximo 3 emojis; no fim, até 5 hashtags.
 - Português do Brasil, sem jargão técnico.
+- visual: o que o Zé desenha no slide, com a marca. Escolha o que ajuda a entender e varie entre \
+os slides; a capa e a oferta podem ficar sem.
+  - {{"tipo": "icone", "icone": "<um da lista abaixo>"}}
+  - {{"tipo": "fluxo", "passos": ["...", "..."]}}: de 2 a 4 passos, até 24 caracteres cada
+  - {{"tipo": "comparacao", "antes": "...", "depois": "..."}}: até 70 caracteres cada
+  - {{"tipo": "lista", "itens": ["...", "..."]}}: de 2 a 4 itens, até 45 caracteres cada
+  - {{"tipo": "conversa", "mensagens": [{{"de": "cliente", "texto": "..."}}, {{"de": "empresa", \
+"texto": "..."}}]}}: de 2 a 4 mensagens de até 80 caracteres; sempre um exemplo, nunca uma \
+conversa real
+  - {{"tipo": "nenhum"}}
+  Com visual, o texto do slide fica mais curto: até 120 caracteres.
+- foto: o nome de uma das fotos de quem usa para a capa, se alguma combinar com o tema; senão "".
+
+Ícones: {icones}
+Fotos: {fotos}
 
 ## Manual do site
 {manual}
@@ -81,7 +101,8 @@ class Post:
     tema: str = ""
     artigo: str = ""  # o slug do artigo de origem, se veio de um
     instrucao: str = ""  # o ajuste pedido na última versão
-    slides: list[dict[str, str]] = field(default_factory=list)
+    slides: list[dict[str, Any]] = field(default_factory=list)
+    foto: str = ""  # a foto de quem usa na capa (o nome, na pasta das fotos da marca)
     chamada: str = ""
     legenda: str = ""
     estado: str = "criando"
@@ -96,8 +117,11 @@ def _corte(texto: Any, limite: int) -> str:
     return limpo if len(limpo) <= limite else limpo[: limite - 1].rsplit(" ", 1)[0] + "…"
 
 
-def interpretar(saida: str) -> tuple[list[dict[str, str]], str, str]:
-    """Os slides, a chamada e a legenda da resposta do modelo, já nos limites."""
+def interpretar(
+    saida: str, fotos: tuple[str, ...] = ()
+) -> tuple[list[dict[str, Any]], str, str, str]:
+    """Os slides (com o visual de cada um), a chamada, a legenda e a foto da capa da resposta do
+    modelo, já nos limites. Uma foto que não existe fica de fora."""
     achado = re.search(r"\{.*\}", saida, re.DOTALL)
     try:
         dados = json.loads(achado.group(0)) if achado else {}
@@ -107,6 +131,7 @@ def interpretar(saida: str) -> tuple[list[dict[str, str]], str, str]:
         {
             "titulo": _corte(s.get("titulo"), LIMITE_TITULO),
             "texto": _corte(s.get("texto"), LIMITE_TEXTO),
+            "visual": marketing_visual.conferir(s.get("visual")),
         }
         for s in dados.get("slides") or []
         if isinstance(s, dict) and str(s.get("titulo", "")).strip()
@@ -114,7 +139,13 @@ def interpretar(saida: str) -> tuple[list[dict[str, str]], str, str]:
     legenda = str(dados.get("legenda", "")).strip()[:LIMITE_LEGENDA]
     if len(slides) < MINIMO_SLIDES or not legenda:
         raise PostErro("O texto do post veio incompleto. Tente de novo.")
-    return slides, _corte(dados.get("chamada"), LIMITE_CHAMADA), legenda
+    foto = str(dados.get("foto", ""))
+    return (
+        slides,
+        _corte(dados.get("chamada"), LIMITE_CHAMADA),
+        legenda,
+        foto if foto in fotos else "",
+    )
 
 
 def _rgba(cor: str, alfa: float) -> str:
@@ -122,7 +153,7 @@ def _rgba(cor: str, alfa: float) -> str:
     return f"rgba({r},{g},{b},{alfa})"
 
 
-def html_do_slide(post: Post, n: int, marca: Marca, logo: bytes) -> str:
+def html_do_slide(post: Post, n: int, marca: Marca, logo: bytes, foto: bytes = b"") -> str:
     """O HTML de um slide (1080 x 1350). Todo texto vem escapado: é do modelo, não do Zé."""
     e = html.escape
     slide, total = post.slides[n], len(post.slides)
@@ -143,17 +174,33 @@ def html_do_slide(post: Post, n: int, marca: Marca, logo: bytes) -> str:
         else ""
     )
     arroba = f"@{e(marca.instagram)}" if marca.instagram else e(marca.nome)
+    visual = slide.get("visual") or {}
+    desenho = (
+        f'<div class="visual">{marketing_visual.html_do_visual(visual, marca)}</div>'
+        if visual
+        else ""
+    )
     corpo = {
-        "capa": f"<h1>{e(slide['titulo'])}</h1><p>{e(slide['texto'])}</p>",
+        "capa": f"<h1>{e(slide['titulo'])}</h1><p>{e(slide['texto'])}</p>{desenho}",
         "meio": f'<span class="num">{n:02d}</span><h2>{e(slide["titulo"])}</h2>'
-        f"<p>{e(slide['texto'])}</p>",
-        "oferta": f"<h2>{e(slide['titulo'])}</h2><p>{e(slide['texto'])}</p>"
+        f"<p>{e(slide['texto'])}</p>{desenho}",
+        "oferta": f"<h2>{e(slide['titulo'])}</h2><p>{e(slide['texto'])}</p>{desenho}"
         + (f'<span class="chamada">{e(post.chamada)}</span>' if post.chamada else ""),
     }[tipo]
     pontos = "".join(f'<i class="{"on" if i == n else ""}"></i>' for i in range(total))
     c = marca.cor
     titulo = f"'{marca.titulo}', " if marca.titulo else ""
     texto = f"'{marca.texto}', " if marca.texto else ""
+    com_foto = tipo == "capa" and bool(foto)
+    fundo_foto = (
+        f'<div class="foto" style="background-image:url(data:image/jpeg;base64,'
+        f'{base64.b64encode(foto).decode()})"></div>'
+        if com_foto
+        else ""
+    )
+    classes = " ".join(
+        x for x in (tipo, "com-visual" if visual else "", "com-foto" if com_foto else "") if x
+    )
     return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">{link}<style>
 *{{box-sizing:border-box}}
 html,body{{margin:0;width:{LARGURA}px;height:{ALTURA}px;overflow:hidden}}
@@ -182,16 +229,24 @@ p{{font-size:42px;line-height:1.36;margin:36px 0 0;color:{c("texto")}}}
 .pontos{{display:flex;gap:12px}}
 .pontos i{{width:14px;height:14px;border-radius:50%;background:{_rgba(c("texto"), 0.25)}}}
 .pontos i.on{{background:{c("destaque")};width:40px;border-radius:999px}}
-</style></head><body><div class="brilho"></div>
+.com-visual h2{{font-size:60px}} .com-visual p{{font-size:36px;margin-top:24px}}
+.foto{{position:absolute;left:0;right:0;bottom:0;height:58%;background-size:cover;
+ background-position:center top}}
+.foto::before{{content:"";position:absolute;inset:0;
+ background:linear-gradient({c("fundo")} 0%,{_rgba(c("fundo"), 0.35)} 45%,transparent 75%)}}
+.com-foto{{top:230px;transform:none}}
+.com-foto h1{{font-size:84px}}
+{marketing_visual.css(marca, titulo + "system-ui,sans-serif")}
+</style></head><body><div class="brilho"></div>{fundo_foto}
 <div class="topo"><span class="marca">{logo_img}<span>{arroba}</span></span>
 <span>{n + 1}/{total}</span></div>
-<div class="corpo {tipo}">{corpo}</div>
+<div class="corpo {classes}">{corpo}</div>
 <div class="rodape"><span class="pontos">{pontos}</span>
 <span>{"arraste para o lado" if tipo == "capa" else ""}</span></div>
 </body></html>"""
 
 
-def renderizar(post: Post, marca: Marca, logo: bytes, pasta: Path) -> list[Path]:
+def renderizar(post: Post, marca: Marca, logo: bytes, pasta: Path, foto: bytes = b"") -> list[Path]:
     """Os slides em JPEG (1080 x 1350), pelo Chromium sem tela."""
     from PIL import Image
 
@@ -205,7 +260,7 @@ def renderizar(post: Post, marca: Marca, logo: bytes, pasta: Path) -> list[Path]
     with tempfile.TemporaryDirectory(prefix="ze-post-") as tmp:
         for n in range(len(post.slides)):
             pagina = Path(tmp) / f"slide-{n + 1}.html"
-            pagina.write_text(html_do_slide(post, n, marca, logo))
+            pagina.write_text(html_do_slide(post, n, marca, logo, foto))
             png = Path(tmp) / f"slide-{n + 1}.png"
             subprocess.run(  # noqa: S603 (o Chromium, com o nosso próprio HTML)
                 [
@@ -250,13 +305,15 @@ class Posts:
         pasta: Path = PASTA,
         site: marketing.Marketing | None = None,
         perguntar: Callable[[str], str] = _perguntar_ao_modelo,
-        desenhar: Callable[[Post, Marca, bytes, Path], list[Path]] = renderizar,
+        desenhar: Callable[..., list[Path]] = renderizar,
+        fotos: Path = FOTOS,
         instagram: Instagram | None = None,
         links: publico.Publicos = publico.PADRAO,
         endereco: Callable[[], str] = endereco_publico,
         publicar: Callable[..., str] = instagram_publicar.publicar,
     ) -> None:
         self.pasta = pasta
+        self.pasta_fotos = fotos
         self.site = site or marketing.PADRAO
         self.perguntar = perguntar
         self.desenhar = desenhar
@@ -306,6 +363,45 @@ class Posts:
             raise PostErro("O post está sendo publicado.")
         shutil.rmtree(self._dir(id_), ignore_errors=True)
 
+    # --- as fotos da marca ----------------------------------------------------------------
+
+    def fotos(self) -> list[str]:
+        if not self.pasta_fotos.is_dir():
+            return []
+        return sorted(p.name for p in self.pasta_fotos.glob("*.jpg"))
+
+    def adicionar_foto(self, nome: str, dados: bytes) -> str:
+        """Guarda uma foto de quem usa (em JPEG, até 1600 px), pelo nome que descreve a foto:
+        é por ele que o modelo escolhe a capa."""
+        from PIL import Image, UnidentifiedImageError
+
+        if len(self.fotos()) >= MAXIMO_FOTOS:
+            raise PostErro(f"Limite de {MAXIMO_FOTOS} fotos. Remova alguma antes.")
+        base = re.sub(r"[^a-z0-9]+", "-", Path(nome).stem.lower()).strip("-")[:48] or "foto"
+        destino = self.pasta_fotos / f"{base}.jpg"
+        n = 2
+        while destino.exists():
+            destino, n = self.pasta_fotos / f"{base}-{n}.jpg", n + 1
+        try:
+            with Image.open(io.BytesIO(dados)) as imagem:
+                imagem = imagem.convert("RGB")
+                imagem.thumbnail((LADO_FOTO, LADO_FOTO))
+                self.pasta_fotos.mkdir(parents=True, exist_ok=True, mode=0o700)
+                imagem.save(destino, "JPEG", quality=90)
+        except (UnidentifiedImageError, OSError, ValueError):
+            raise PostErro("O arquivo não é uma imagem.") from None
+        return destino.name
+
+    def remover_foto(self, nome: str) -> None:
+        if nome not in self.fotos():
+            raise PostErro("Foto não encontrada.")
+        (self.pasta_fotos / nome).unlink()
+
+    def foto(self, nome: str) -> bytes:
+        if nome not in self.fotos():
+            raise PostErro("Foto não encontrada.")
+        return (self.pasta_fotos / nome).read_bytes()
+
     # --- criar ----------------------------------------------------------------------------
 
     def criar(
@@ -354,6 +450,7 @@ class Posts:
     def _fazer(self, post: Post) -> None:
         marca = self.site.marca()
         try:
+            fotos = tuple(self.fotos())
             prompt = PROMPT.format(
                 nome=f"{marca.nome} (@{marca.instagram})"
                 if marca.instagram
@@ -361,9 +458,14 @@ class Posts:
                 pedido=self._pedido(post),
                 manual=self.site.manual()
                 or "(o site não tem manual; use um tom profissional e direto)",
+                icones=", ".join(sorted(marketing_visual.icones())),
+                fotos=", ".join(fotos) or "(nenhuma)",
             )
-            post.slides, post.chamada, post.legenda = interpretar(self.perguntar(prompt))
-            self.desenhar(post, marca, self.site.logo(), self._dir(post.id))
+            post.slides, post.chamada, post.legenda, post.foto = interpretar(
+                self.perguntar(prompt), fotos
+            )
+            foto = (self.pasta_fotos / post.foto).read_bytes() if post.foto else b""
+            self.desenhar(post, marca, self.site.logo(), self._dir(post.id), foto)
             post.estado, post.erro = "rascunho", ""
             texto = f"O post {post.tema or post.artigo} está pronto para revisar em Marketing."
         except (PostErro, OSError, subprocess.SubprocessError, ValueError) as erro:

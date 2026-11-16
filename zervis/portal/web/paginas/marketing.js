@@ -1,7 +1,7 @@
 import { ACOES } from "../modulos/acoes.js";
 import { abrir } from "../modulos/navegacao.js";
 import { carregadas } from "../modulos/estado.js";
-import { PAGINAS, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, sub, vazio } from "../painel.js";
+import { PAGINAS, TOKEN, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, sub, vazio, xis } from "../painel.js";
 
 // A página Marketing (ADR 0091): o site e o blog de quem usa. Cada pedido vira uma sessão numa
 // cópia isolada; o Zé abre o PR e a pessoa publica no merge.
@@ -116,10 +116,26 @@ const cartaoMarca = (m) => cartao(`Marca <span class="etiqueta">${m.paleta === "
   <div class="linha">${botao("Salvar", "mk-paleta-salvar", "", "principal")}</div>
   <p class="resultado" id="mk-resultado-marca"></p>`);
 
+/** @param {any[]} fotos */
+const cartaoFotos = (fotos) => cartao(`Fotos da marca <span class="etiqueta">${fotos.length} ${fotos.length === 1 ? "foto" : "fotos"}</span>`,
+  `${sub("Fotos suas e do seu trabalho. O nome do arquivo descreve a foto: é por ele que o Zé escolhe a capa do post.")}
+  ${fotos.length ? `<div class="fotos-marca">${fotos.map((f) => `<figure><img src="${f.miniatura}" alt="${esc(f.nome)}"><figcaption>${esc(f.nome)}</figcaption>${xis("mk-foto-remover", `data-nome="${esc(f.nome)}"`, "Remover")}</figure>`).join("")}</div>` : ""}
+  <input type="file" id="mk-fotos" accept="image/*" multiple hidden>
+  <div class="linha">${botao("Enviar fotos", "mk-fotos-escolher", "", fotos.length ? "discreta" : "principal")}</div>
+  <p class="resultado" id="mk-resultado-fotos"></p>`);
+
+/** @param {File} arquivo */
+async function subirFoto(arquivo) {
+  const r = await fetch(`/api/marketing/foto?nome=${encodeURIComponent(arquivo.name)}`,
+    { method: "POST", headers: { "X-Ze-Token": TOKEN, "Content-Type": "application/octet-stream" }, body: arquivo });
+  const dados = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`${arquivo.name}: ${dados.erro || "falha"}`);
+}
+
 PAGINAS.marketing = async () => {
-  const r = await api("marketing");
+  const [r, fotos] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => [])]);
   const corpo = r.site.configurado
-    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoInstagram(r)}${cartaoMarca(r.marca)}${cartaoSite(r.site)}`
+    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoInstagram(r)}${cartaoMarca(r.marca)}${cartaoFotos(fotos)}${cartaoSite(r.site)}`
     : cartaoSite(r.site);
   return `${cabeca("Marketing")}${sub("O site e o blog, sempre por Pull Request: nada vai ao ar sem você.")}${corpo}`;
 };
@@ -180,6 +196,21 @@ Object.assign(ACOES, {
     /** @type {Record<string, string>} */ const cores = {};
     document.querySelectorAll(".cores-marca input").forEach((x) => { const c = /** @type {HTMLInputElement} */ (x); cores[c.dataset.cor || ""] = c.value; });
     try { await ocupado(b, () => api("marketing/paleta", { paleta, cores })); await abrir(); } catch (erro) { mostrar("mk-resultado-marca", false, erro.message); }
+  },
+  "mk-fotos-escolher": () => {
+    const campo = /** @type {HTMLInputElement} */ ($("mk-fotos"));
+    campo.onchange = async () => {
+      const lista = Array.from(campo.files || []);
+      for (const arquivo of lista) {
+        if (arquivo.size > 20 * 1024 * 1024) { mostrar("mk-resultado-fotos", false, `${arquivo.name}: maior que 20 MB.`); continue; }
+        try { await subirFoto(arquivo); } catch (erro) { mostrar("mk-resultado-fotos", false, erro.message); return; }
+      }
+      await abrir();
+    };
+    campo.click();
+  },
+  "mk-foto-remover": async (/** @type {HTMLButtonElement} */ b) => {
+    try { await api("marketing/foto/remover", { nome: b.dataset.nome }); await abrir(); } catch (erro) { mostrar("mk-resultado-fotos", false, erro.message); }
   },
   "mk-sessao": async (/** @type {HTMLButtonElement} */ b) => {
     location.hash = "#sessoes";

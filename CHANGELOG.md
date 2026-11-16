@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Carrossel com visual:** cada slide pode ganhar um ícone, um fluxo de passos, um "antes e
+  depois", uma lista ou uma conversa ilustrativa, desenhados com as cores da sua marca. Em
+  Marketing, "Fotos da marca" guarda as suas fotos, e o Zé escolhe uma para a capa quando
+  combina com o tema (ADR 0093).
+
 - **Posts do Instagram:** em Marketing, o Zé cria um carrossel (de 3 a 7 slides e a legenda) a
   partir de um tema ou de um artigo do blog, com o logo, as cores e as fontes da sua marca. Você
   vê a prévia, pede ajuste ("deixa o slide 2 mais curto") e aprova; só então ele publica no
