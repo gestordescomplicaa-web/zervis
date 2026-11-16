@@ -29,6 +29,9 @@ export async function abrirTerminal(id) {
   });
   // Copiado, a seleção some: o próximo Ctrl+C volta a interromper.
   caixa.addEventListener("copy", () => setTimeout(() => termo.clearSelection(), 0));
+  // O Claude Code em tela cheia seleciona com o próprio mouse e copia pelo OSC 52 ("copied N chars
+  // to clipboard"); o xterm ignorava, e a área de transferência ficava com o texto antigo.
+  termo.parser.registerOscHandler(52, (dados) => { copiarDoAgente(dados); return true; });
   try { ajuste.fit(); } catch { /* fora da tela */ }
   compartilhado.termId = id;
   window.desenharTravaSessoes?.();
@@ -59,6 +62,29 @@ export async function abrirTerminal(id) {
   compartilhado.termObservador = new ResizeObserver(() => { try { ajuste.fit(); } catch { /* fora da tela */ } });
   compartilhado.termObservador.observe(caixa);
   compartilhado.term.focus();
+}
+
+// OSC 52 ("<alvo>;<base64>"): só a escrita. O pedido de leitura ("?") fica sem resposta, para o
+// agente nunca ler a área de transferência de quem usa.
+const MAXIMO_COPIA = 1024 * 1024;
+
+function copiarDoAgente(dados) {
+  const conteudo = dados.slice(dados.indexOf(";") + 1);
+  if (!dados.includes(";") || !conteudo || conteudo === "?" || conteudo.length > MAXIMO_COPIA * 2) return;
+  let texto;
+  try { texto = new TextDecoder().decode(Uint8Array.from(atob(conteudo), (c) => c.charCodeAt(0))); } catch { return; }
+  const pelaPagina = () => {
+    const campo = document.createElement("textarea");
+    campo.value = texto;
+    campo.style.cssText = "position:fixed;opacity:0";
+    document.body.append(campo);
+    campo.select();
+    const ok = document.execCommand("copy");
+    campo.remove();
+    compartilhado.term?.focus();
+    if (!ok) toast("Não foi possível copiar.");
+  };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(texto).catch(pelaPagina); else pelaPagina();
 }
 
 // O medidor: da tecla enviada até a tela do agente mudar (mediana das últimas). Aparece embaixo do
