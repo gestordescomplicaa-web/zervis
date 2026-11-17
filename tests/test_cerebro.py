@@ -5,7 +5,7 @@ import threading
 import time
 from collections.abc import AsyncIterator
 
-from zervis.cerebro.base import EventoCerebro, Fim, Frases, Ponte, Texto
+from zervis.cerebro.base import Espera, EventoCerebro, Fim, Frases, Ponte, Texto
 from zervis.cerebro.eco import Eco
 
 
@@ -55,6 +55,30 @@ def test_primeiro_texto_chega_antes_da_frase_e_uma_vez_por_turno() -> None:
             ("frase", 2),
         ]
         assert len(marcas) == 2 and all(inicio <= m <= time.monotonic() for m in marcas)
+    finally:
+        p.fechar()
+
+
+class ComEspera(Eco):
+    async def ask(self, texto: str) -> AsyncIterator[EventoCerebro]:
+        yield Espera("Só um momento. ")
+        yield Texto("Pronto.")
+        yield Fim()
+
+
+def test_a_frase_de_espera_e_falada_mas_nao_e_o_primeiro_texto() -> None:
+    """O primeiro texto mede o modelo: a frase de espera sai aos 3 s, qualquer que seja ele."""
+    eventos: list[tuple[str, object]] = []
+    p = Ponte(
+        ComEspera(),
+        "",
+        lambda m, f: eventos.append(("frase", f)),
+        lambda m, e: None,
+        ao_primeiro_texto=lambda m, em: eventos.append(("texto", m)),
+    )
+    try:
+        p.perguntar("oi", 1).result(timeout=3)
+        assert eventos == [("frase", "Só um momento."), ("texto", 1), ("frase", "Pronto.")]
     finally:
         p.fechar()
 

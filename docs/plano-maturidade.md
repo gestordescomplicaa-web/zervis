@@ -155,6 +155,15 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
   rápida com p50 de 3,9 s e p95 de 27,9 s) e os 216 turnos do Ao vivo sem primeiro token seguem
   sem causa. Achar a causa dos 216, tirar do p95 o que for falha e não lentidão, e então
   confirmar ou corrigir a meta de 2,5 s com o número medido.
+  - 17/11/2026, as causas. (1) Os "sem som" do Ao vivo eram a pessoa falando de novo antes da
+    resposta (o pedido trocado pelo seguinte), 141 só em 12/11; com o fim da fala mais paciente
+    de 13/11 caíram para 5 em 16/11, e agora contam como interrupção. (2) No cérebro completo, o
+    "primeiro token" era o "Só um momento." dos 3 s: 3001 ms com qualquer modelo. Agora é a
+    primeira palavra da resposta (registro versão 2) e o placar mostra o tempo do modelo.
+  - Via rápida, 7 dias até 17/11 (p50): no recorte, 1,0 s esperando o fim da fala, 0,25 s de
+    transcrição, 1,2 s do modelo e 0,65 s da voz (3,4 s); no Ao vivo, 0,5 s, 1,2 s e 0,4 s
+    (2,6 s). O modelo é um terço a metade; o p95 vem do fim da fala (até 3 s numa frase pela
+    metade) e do modelo (2,4 s). Falta: uma semana com a medição nova para o cérebro completo.
 
 Aceite: 100+ cenários rodando a cada versão (revisto em 11/11/2026: era toda noite); placar da
 versão com sucesso por área, p50/p95 e custo.

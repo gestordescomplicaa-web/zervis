@@ -260,3 +260,41 @@ def test_fala_durante_o_pensamento_no_ao_vivo_e_contada_e_registrada(
     for _ in range(10):
         n._quadro(voz)
     assert n._fala_perdida_s == 0.0
+
+
+def test_a_frase_de_espera_e_o_primeiro_som_mas_nao_o_primeiro_token(
+    nucleo: NucleoCronometrado,
+) -> None:
+    """Sem resposta em 3 s, o Zé diz "Só um momento.": é o primeiro som, do tipo "aviso", e o
+    tempo do modelo conta até a primeira palavra da resposta (até 17/11/2026, eram sempre 3 s)."""
+    n = nucleo
+    n.tratar(e.Digitado("pesquise o tempo"))
+    n._frase_do_cerebro(n.marca, "Só um momento.")
+    n.tratar(n.eventos.get_nowait())
+    n.som()
+    n._primeiro_texto_do_cerebro(n.marca, time.monotonic())
+    n.concluir()
+    r = n.latencias.ultimo
+    assert r is not None and r["versao"] == 2
+    assert r["primeiro_som_tipo"] == "aviso"
+    assert r["marcos_ms"]["primeiro_token"] >= r["marcos_ms"]["primeiro_som"]
+
+
+def test_falar_por_cima_no_ao_vivo_antes_da_resposta_e_interrupcao_nao_falha(
+    nucleo: NucleoCronometrado,
+) -> None:
+    """Eram os "sem som" do Ao vivo (novembro de 2026): a pessoa seguiu falando, o pedido foi
+    trocado pelo seguinte e o turno ficava como falha."""
+    n = nucleo
+    n._pedidos_ao_vivo = 0
+    n.maquina.ao_vivo = True
+    n.maquina.estado = e.Estado.OUVINDO
+    n.maquina.autorizado = n.maquina.em_conversa = True
+    agora = time.monotonic()
+    n.tratar(e.FalaAoVivo("qual é a previsão do tempo", agora - 0.5, agora))
+    assert n.maquina.estado is e.Estado.PENSANDO
+    n.tratar(e.Interrompido())
+    r = n.latencias.ultimo
+    assert r is not None and r["fim_por"] == "live"
+    assert r["resultado"] == "interrompido"
+    assert n.maquina.estado.value == e.Estado.OUVINDO.value

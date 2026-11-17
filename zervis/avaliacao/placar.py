@@ -148,15 +148,25 @@ def markdown(
         linhas += ["Ainda sem turnos de voz medidos.", ""]
     else:
         linhas += [
-            "| Fala | Caminho | Turnos | p50 | p95 | Falhas |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Fala | Caminho | Turnos | p50 | p95 | Modelo p50 | Modelo p95 | Falhas |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
         for g in caminhos:
+            modelo = [
+                _s(v) if isinstance(v := g.get(k), (int, float)) else "sem dado"
+                for k in ("modelo_p50_ms", "modelo_p95_ms")
+            ]
             linhas.append(
                 f"| {latencia.MODOS[g['modo']]} | {latencia.CAMINHOS[g['caminho']]} | "
-                f"{g['turnos']} | {_s(g['p50_ms'])} | {_s(g['p95_ms'])} | {g['falhas']} |"
+                f"{g['turnos']} | {_s(g['p50_ms'])} | {_s(g['p95_ms'])} | {modelo[0]} | "
+                f"{modelo[1]} | {g['falhas']} |"
             )
-        linhas.append("")
+        linhas += [
+            "",
+            "Modelo: do pedido enviado à primeira palavra da resposta. No cérebro completo, sem",
+            'resposta em 3 s o Zé diz "Só um momento." e esse é o primeiro som.',
+            "",
+        ]
     return "\n".join(linhas)
 
 

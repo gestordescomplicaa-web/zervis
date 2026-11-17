@@ -36,7 +36,7 @@ from urllib.parse import urlsplit
 
 from zervis import lugares, usuario
 from zervis.cerebro import contas
-from zervis.cerebro.base import Aprovar, Brain, EventoCerebro, Fim, Texto
+from zervis.cerebro.base import AVISOS_DE_ESPERA, Aprovar, Brain, Espera, EventoCerebro, Fim, Texto
 from zervis.cerebro.consumo import gasto, somar_usos
 from zervis.cerebro.motores import ENDERECOS as ENDERECOS
 from zervis.cerebro.motores import Http as Http
@@ -54,8 +54,8 @@ from zervis.cerebro.motores import pela_assinatura as pela_assinatura
 log = logging.getLogger(__name__)
 PASSAR = "[completo]"
 # A frase de espera, só quando a resposta demora (03/11/2026: "vou ver aqui" a cada pedido, até
-# nos que saíam na hora, cansava). Duas, alternadas.
-AVISOS = ("Só um momento.", "Um instante.")
+# nos que saíam na hora, cansava).
+AVISOS = AVISOS_DE_ESPERA
 AVISO_APOS_S = 3.0  # sem nenhuma palavra da resposta até aqui (desde o pedido), o Zé avisa
 # O que claramente pede ferramenta vai direto ao completo, sem esperar a via rápida decidir:
 # o aviso sai na hora. Na dúvida fica na via rápida, que ainda pode passar a vez.
@@ -557,7 +557,7 @@ class Roteado:
                     if not pronto:
                         aviso = False
                         self._avisos += 1
-                        yield Texto(AVISOS[self._avisos % len(AVISOS)] + " ")
+                        yield Espera(AVISOS[self._avisos % len(AVISOS)] + " ")
                 try:
                     evento = await proximo
                 except StopAsyncIteration:

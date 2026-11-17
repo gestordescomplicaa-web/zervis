@@ -98,6 +98,10 @@ def tratar(n: "Nucleo", evento: e.Evento) -> None:
         n._fim_fala_em = None
     if isinstance(evento, e.Presenca) and not evento.ativo:
         n._fechar_latencia("janela_fechada")
+    if isinstance(evento, e.Interrompido) and antes is e.Estado.PENSANDO:
+        # Ao vivo, a pessoa falou por cima antes de o Zé dizer algo: o pedido foi trocado, não
+        # falhou (eram os "sem som" do Ao vivo em novembro de 2026).
+        n._fechar_latencia("interrompido")
     if isinstance(evento, e.RespostaFim) or (
         isinstance(evento, (e.Ativacao, e.FimDeFala)) and antes is not e.Estado.CONFIRMANDO
     ):
