@@ -40,7 +40,7 @@ async def main():
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     errors, passed = [], []
-    with tempfile.TemporaryDirectory(prefix='jarvis-andamento-') as profile:
+    with tempfile.TemporaryDirectory(prefix='jarvis-andamento-', ignore_cleanup_errors=True) as profile:
         process = subprocess.Popen([
             '/usr/bin/chromium', '--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + profile,
             '--no-first-run', '--window-size=1280,720', '--disable-background-networking',
@@ -118,7 +118,14 @@ async def main():
                 assert not errors, errors
                 print('\n'.join('PASS ' + p for p in passed))
         finally:
-            process.kill()
+            # Chromium has to be gone before the profile folder is removed (it may still be
+            # writing there: "Directory not empty" on the CI, 17/11/2026).
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
             server.shutdown()
             server.server_close()
 
