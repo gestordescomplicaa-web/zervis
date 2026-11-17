@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Copiar de uma sessão para outra:** abrir uma sessão não troca mais o que você copiou pela
+  última cópia antiga do histórico dela.
+
 - **Copiar do agente em tela cheia:** quando o Claude Code copia a seleção ("copied N chars to
   clipboard"), o texto agora chega à área de transferência do seu computador. Antes, o Ctrl+V
   fora do painel trazia o que estava copiado antes.

@@ -31,6 +31,7 @@ export const compartilhado = {
   // Cancela a leitura do terminal aberto. A leitura espera novidade por até 20 s; sem cancelar,
   // cada troca de aba deixava uma presa, e seis presas esgotam as conexões do navegador.
   /** @type {AbortController | null} */ termParar: null, // painel.js
+  /** @type {{ ate: number, ativo: boolean } | null} */ termHistorico: null, // modulos/terminal.js: até onde a saída é o histórico
   termPos: 0, // painel.js
   termWs: null, // painel.js
   termWsPronto: false, // painel.js
