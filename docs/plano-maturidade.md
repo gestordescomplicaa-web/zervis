@@ -77,7 +77,8 @@ cada item está na frente dele, com o detalhe.
 
 - [x] **Sessão protegida como padrão** (Frente 2): desde 13/11/2026, sessão nova nasce
   protegida quando a máquina permite; desligar é por sessão (ADR 0074).
-- [ ] **Placar a cada versão** (Frente 3): o publicado diz "Versão 0.3.0" na 0.5.0.
+- [x] **Placar a cada versão** (Frente 3): desde 17/11/2026, o `make check` confere a versão do
+  placar publicado, e gerá-lo está nos passos de publicar uma versão.
 - [ ] **Rodada por versão, não por noite** (Frente 3): decidir e agendar.
 - [ ] **Latência da voz** (Frente 3): os 216 turnos sem primeiro token e a via rápida fora da meta.
 - [x] **A Imersão na porta de qualidade** (Frente 5): desde 17/11/2026, os testes dela no
@@ -148,9 +149,10 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
   gastou no turno, lido da conversa dele (`zervis/oficina/custo.py`).
 - [x] **Placar público** em `docs/placar.md`, atualizado a cada versão: nota por área (93% na
   primeira rodada noturna), latência por caminho e tokens por cenário (`zervis placar`).
-- [ ] **O placar acompanha a versão** (fecho da Fase B). O publicado diz "Versão 0.3.0" e traz a
-  rodada de 09/11/2026: não acompanhou a 0.4.0 nem a 0.5.0. Um teste compara a versão do placar
-  com a do projeto, e gerar o placar entra nos passos de publicar uma versão.
+- [x] **O placar acompanha a versão** (fecho da Fase B): desde 17/11/2026, o `make check` falha
+  se `docs/placar.md` não for da versão do projeto, gerar o placar está nos passos de publicar
+  uma versão (`docs/06-qualidade.md`), e cada rodada guarda a versão em que rodou (o placar avisa
+  quando a rodada é de uma versão anterior, como a de 09/11/2026 hoje).
 - [ ] **Latência da voz dentro da meta** (fecho da Fase B). A primeira medição ficou fora (via
   rápida com p50 de 3,9 s e p95 de 27,9 s) e os 216 turnos do Ao vivo sem primeiro token seguem
   sem causa. Achar a causa dos 216, tirar do p95 o que for falha e não lentidão, e então

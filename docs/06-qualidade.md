@@ -60,6 +60,20 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
   os modelos de som, a prova some sem aviso. Lição de 16/10/2026: numa máquina sem Chromium, os
   testes do painel foram pulados e o `make check` passou assim mesmo.
 
+## Publicar uma versão
+
+Num branch `versao/X.Y.Z`, um PR só:
+
+1. A versão nova em `pyproject.toml` e `uv lock` (o `uv.lock` acompanha).
+2. O "Não lançado" do `CHANGELOG.md` vira a seção da versão, com a data.
+3. `zervis placar --saida docs/placar.md`: o placar da versão, com a latência dos últimos 7
+   dias. Se a última rodada da bateria é de outra versão, o placar diz; rodar
+   `zervis avaliar --noturna` antes gasta da conta e é decisão de quem publica.
+4. `make check` e `make check-instalacao`. O `make check` falha se o placar não for o da
+   versão (`tests/test_placar_da_versao.py`). Lição de 17/11/2026: o placar ficou na 0.3.0
+   enquanto o Zé chegava à 0.5.1.
+5. Mesclado o PR, a etiqueta `vX.Y.Z` no commit da mescla.
+
 ## Observabilidade
 
 - `status.json` a 1 Hz: estado, provedor, fila, último erro, tempos da última conversa.

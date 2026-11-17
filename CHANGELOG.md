@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Placar da versão:** o placar publicado mostra a versão atual e avisa quando a última rodada de
+  avaliação é de uma versão anterior; publicar uma versão sem regerá-lo não passa no `make check`.
+
 - **O Zé não se interrompe com a própria voz:** com headset ou caixa de som, a fala dele chegava
   ao microfone e disparava o "Ei Zé" no meio da resposta, com o bipe. Agora, quando o chamado é
   só a fala dele voltando, ele segue falando; o seu "Ei Zé" por cima continua interrompendo
