@@ -37,6 +37,18 @@ janela_aberta() {
     || pgrep -f -- "--user-data-dir=$HOME/.local/share/barehands/browser" >/dev/null
 }
 
+# Uma atualização pelo painel (a unidade `zervis-atualizar`, zervis/versoes.py) ou um reinício
+# do serviço ainda em curso. O teto é o da atualização mais longa (RODANDO_MAXIMO_S).
+ESPERA_MAXIMA_S=$((15 * 60))
+em_andamento() {
+  systemctl --user is-active --quiet zervis-atualizar && return 0
+  [[ -n "$(systemctl --user show -p Job --value "$SERVICO" 2>/dev/null)" ]] && return 0
+  case "$(systemctl --user show -p ActiveState --value "$SERVICO" 2>/dev/null)" in
+    activating | deactivating | reloading) return 0 ;;
+  esac
+  return 1
+}
+
 for navegador in chromium chromium-browser google-chrome google-chrome-stable; do
   if command -v "$navegador" >/dev/null; then
     comando=("$navegador" --user-data-dir="$PERFIL" --no-first-run --no-default-browser-check
@@ -46,8 +58,19 @@ for navegador in chromium chromium-browser google-chrome google-chrome-stable; d
     fi
     "${comando[@]}" || true
     # Com o perfil já aberto, o navegador entrega a janela à instância de pé e sai na hora:
-    # o que vale é a última janela do Zé fechar.
-    while janela_aberta; do sleep 2; done
+    # o que vale é a última janela do Zé fechar. Fechada no meio de uma atualização ou de um
+    # reinício, o Zé só desliga quando a troca termina: desligar antes fazia a atualização
+    # achar que a versão nova não subiu e voltar para a anterior (11/11/2026). Uma janela
+    # reaberta nesse meio-tempo mantém o Zé ligado.
+    desde=$SECONDS
+    while :; do
+      if janela_aberta; then
+        desde=$SECONDS
+      elif ! em_andamento || ((SECONDS - desde >= ESPERA_MAXIMA_S)); then
+        break
+      fi
+      sleep 2
+    done
     systemctl --user stop "$SERVICO"
     exit 0
   fi
