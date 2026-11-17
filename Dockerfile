@@ -16,7 +16,7 @@ COPY --from=uv /uv /uvx /usr/local/bin/
 
 ARG UID=1000
 RUN useradd --create-home --uid "${UID}" --shell /bin/bash ze \
-    && install -d -o ze -g ze /opt/zervis /opt/uv-python /opt/ferramentas/bin
+    && install -d -o ze -g ze /opt/zervis /opt/uv-python /opt/ferramentas /opt/ferramentas/bin
 
 # O Python e o ambiente ficam na imagem (/opt); a casa (/home/ze) é o volume, com a
 # configuração, os dados, os logins dos agentes e os projetos.
