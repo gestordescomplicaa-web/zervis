@@ -103,7 +103,7 @@
   }
   addEventListener("keydown", e => {
     if (e.key !== "f" && e.key !== "F") return;
-    if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.("input, textarea, [contenteditable], #jv-teclado")) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || /** @type {HTMLElement} */ (e.target).closest?.("input, textarea, [contenteditable], #jv-teclado")) return;
     usar(modo === "escuro" ? "camera" : "escuro");
   });
   usar(modo);

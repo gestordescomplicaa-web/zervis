@@ -1,7 +1,7 @@
 # Porta única de qualidade (docs/06-qualidade.md): formatação, lint, tipos e testes.
 .PHONY: check fmt lint tipos testes check-imersivo check-instalacao wacalls avaliar
 
-check: lint tipos testes wacalls
+check: lint tipos testes check-imersivo wacalls
 
 # A bateria de avaliação do cérebro (docs/avaliacao.md): gasta a conta do Claude, fora do check.
 avaliar:
@@ -38,9 +38,10 @@ wacalls:
 check-instalacao:
 	deploy/check-instalacao.sh
 
-# O modo imersivo num Chromium de verdade, sem tela (uns minutos): antes de mexer na página.
+# O modo imersivo num Chromium de verdade, sem tela (uns dois minutos), dentro do check desde o
+# fecho da Fase B: foi por fora dele que os erros da abertura entraram (11/11/2026).
 check-imersivo:
-	ZE_TESTES_IMERSIVO=1 uv run --with websockets --with pytest-xdist pytest -q -n 2 tests/imersivo
+	ZE_TESTES_IMERSIVO=1 uv run pytest -q -n 2 tests/imersivo
 
 # Instala o serviço (sem iniciar no login). Os modelos de som são baixados e conferidos pelo
 # próprio Zé na primeira subida (zervis/preparar.py).

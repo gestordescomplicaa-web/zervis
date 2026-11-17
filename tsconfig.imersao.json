@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "zervis/imersivo/web/jarvis-*.js",
+    "zervis/imersivo/web/avatar/*.js",
+    "zervis/imersivo/web/tipos.d.ts"
+  ]
+}

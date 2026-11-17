@@ -69,7 +69,7 @@
     card.querySelector(".h").textContent = exata
       ? `Responda por voz com a frase exata: ${exata[1] || exata[2]}`
       : "Responda por voz: sim ou não";
-    const bar = card.querySelector(".bar i");
+    const bar = /** @type {HTMLElement} */ (card.querySelector(".bar i"));
     if (p.expira) {
       const falta = Math.max(0, p.expira - Date.now() / 1000);
       if (!total || falta > total) total = falta;
@@ -88,7 +88,7 @@
       linha.className = "linha"; linha.id = "hud-jv";
       h.appendChild(linha);
       linha.addEventListener("click", ev => {
-        if (ev.target.closest(".jv.btn")) abrirMapa(false);
+        if (/** @type {HTMLElement} */ (ev.target).closest(".jv.btn")) abrirMapa(false);
       });
     }
     return linha;
@@ -148,7 +148,7 @@
     '<div class="ajuda">Aponte para ler · pinça para puxar · duas mãos ampliam</div><div class="previa" aria-hidden="true"></div>';
   document.body.appendChild(mapaEl);
   const svg = mapaEl.querySelector('.palco>svg'), mundo = svg.querySelector('.mundo');
-  const workEl = mapaEl.querySelector('.work'), focusEl = mapaEl.querySelector('.focus'), previa = mapaEl.querySelector('.previa');
+  const workEl = /** @type {HTMLElement} */ (mapaEl.querySelector('.work')), focusEl = /** @type {HTMLElement} */ (mapaEl.querySelector('.focus')), previa = /** @type {HTMLElement} */ (mapaEl.querySelector('.previa'));
   const graph = new window.JarvisGraph(mundo);
   const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
   const camera = {x:0,y:0,s:1}, pontos = new Map(), maos = new Map();
@@ -183,6 +183,7 @@
     return grupos[id].length+' '+({memoria:'registros',sessoes:'sessões',automacoes:'itens'}[id]||'itens');
   }
   function desenharGrafo(reset=false) {
+    /** @type {Array<{id: string, title: string, kind: string, radius: number, color: string, x: number, y: number, labelSide?: number, subtitle?: string, icon?: string}>} */
     const specs=[{id:'center',title:'Zé',kind:'root',radius:45,color:'root',x:770,y:440,subtitle:'Memória · relações · aprendizado',icon:'root'}],links=[];
     for(const [id,a] of Object.entries(areas)) {
       if(!a.x) continue;
@@ -224,7 +225,7 @@
   }
   function atualizarZoom(){
     mapaEl.querySelector('.zoom').textContent=Math.round((modo==='brain'?camera.s:leitura[modo])*100)+'%';
-    mapaEl.querySelector('[data-action="motion"]').hidden=modo!=='brain';
+    /** @type {HTMLElement} */ (mapaEl.querySelector('[data-action="motion"]')).hidden=modo!=='brain';
     mapaEl.querySelector('.ajuda').textContent=modo==='brain'
       ?'Pinça puxa · duas mãos ampliam · título move a janela'
       :'Pinça arrasta a leitura · duas mãos ampliam · título move a janela';
@@ -272,9 +273,9 @@
   function trocarModo(m) {
     pontos.clear();gesto=null;graph.releaseAll();
     limparHover();atividade();if(m==='focus'&&modo!=='focus')ultimaVista=modo;modo=m;mapaEl.dataset.mode=m;
-    mapaEl.querySelector('.palco').hidden=m!=='brain';workEl.hidden=m!=='work';focusEl.hidden=m!=='focus';
-    mapaEl.querySelectorAll('.modos button').forEach(b=>{const on=b.dataset.action==='mode:'+m;b.classList.toggle('ativo',on);b.setAttribute('aria-pressed',String(on));});
-    mapaEl.querySelectorAll('.navegacao button').forEach(b=>b.classList.toggle('ativo',b.dataset.action==='area:'+(m==='brain'?'brain':filtro)));
+    /** @type {HTMLElement} */ (mapaEl.querySelector('.palco')).hidden=m!=='brain';workEl.hidden=m!=='work';focusEl.hidden=m!=='focus';
+    mapaEl.querySelectorAll('.modos button').forEach((/** @type {HTMLElement} */ b)=>{const on=b.dataset.action==='mode:'+m;b.classList.toggle('ativo',on);b.setAttribute('aria-pressed',String(on));});
+    mapaEl.querySelectorAll('.navegacao button').forEach((/** @type {HTMLElement} */ b)=>b.classList.toggle('ativo',b.dataset.action==='area:'+(m==='brain'?'brain':filtro)));
     atualizarZoom();
     if(m==='brain') { graph.start();requestAnimationFrame(aplicarCamera); }
     else {graph.close();if(m==='work')listaWork();else focus();}
@@ -308,7 +309,7 @@
     mapaEl.style.display='grid';document.body.classList.add('jv-brain-open');
     montarDados();desenharGrafo();trocarModo('brain');fecharEm=porVoz?Date.now()+90000:0;
     requestAnimationFrame(()=>{mapaEl.classList.add('on');enquadrar();});
-    mapaEl.querySelector('[data-action="close"]').focus({preventScroll:true});
+    /** @type {HTMLElement} */ (mapaEl.querySelector('[data-action="close"]')).focus({preventScroll:true});
   }
   function fecharMapa() {
     aberto=false;peloJarvis=false;pontos.clear();gesto=null;graph.close();limparHover();
@@ -380,6 +381,7 @@
     }
   }
   const targets='#jv-mapa [data-action], #jv-mapa [data-node], #jv-mapa [data-object], #hud-jv .btn, #hud-maos .btn, #jv-config [data-config], #jv-config .cer, #jv-teclado-btn, #jv-teclado button, #jv-engrenagem, .panel [data-panel-action]';
+  /** @returns {HTMLElement | null} */
   function alvoEm(x,y){return document.elementFromPoint(x,y)?.closest(targets)||null;}
   function ativar(alvo){
     if(!alvo?.isConnected)return;
@@ -475,22 +477,22 @@
   mapaEl.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;ev.preventDefault();mapaEl.setPointerCapture(ev.pointerId);pressionar('p:'+ev.pointerId,ev.clientX,ev.clientY);});
   mapaEl.addEventListener('pointermove',ev=>mover('p:'+ev.pointerId,ev.clientX,ev.clientY));
   mapaEl.addEventListener('pointerup',ev=>{soltar('p:'+ev.pointerId);if(mapaEl.hasPointerCapture(ev.pointerId))mapaEl.releasePointerCapture(ev.pointerId);});
-  for(const type of ['pointercancel','lostpointercapture'])mapaEl.addEventListener(type,ev=>soltar('p:'+ev.pointerId,true));
+  for(const type of ['pointercancel','lostpointercapture'])mapaEl.addEventListener(type,ev=>soltar('p:'+/** @type {PointerEvent} */ (ev).pointerId,true));
   mapaEl.addEventListener('pointerleave',()=>{if(!pontos.size)limparHover();});
   mapaEl.addEventListener('focusin',ev=>{
-    if(ev.target.matches('[data-node]')){const r=ev.target.querySelector('.hit').getBoundingClientRect();apontar(r.x+r.width/2,r.y+r.height/2);}
+    if(/** @type {HTMLElement} */ (ev.target).matches('[data-node]')){const r=/** @type {HTMLElement} */ (ev.target).querySelector('.hit').getBoundingClientRect();apontar(r.x+r.width/2,r.y+r.height/2);}
   });
   mapaEl.addEventListener('focusout',()=>{if(!pontos.size)limparHover();});
-  mapaEl.addEventListener('click',ev=>{if(ev.detail===0)ativar(ev.target.closest(targets));});
+  mapaEl.addEventListener('click',ev=>{if(ev.detail===0)ativar(/** @type {HTMLElement} */ (ev.target).closest(targets));});
   mapaEl.addEventListener('wheel',ev=>{
-    if(ev.target.closest('.vista')&&!ev.ctrlKey)return;
+    if(/** @type {HTMLElement} */ (ev.target).closest('.vista')&&!ev.ctrlKey)return;
     ev.preventDefault();atividade();limparHover();
     zoomVista(Math.exp(-clamp(ev.deltaY*(ev.deltaMode===1?16:1),-300,300)*.002),ev.clientX,ev.clientY);
   },{passive:false});
   document.addEventListener('keydown',ev=>{
-    if(!aberto||ev.target.closest?.('input,textarea'))return;
+    if(!aberto||/** @type {HTMLElement} */ (ev.target).closest?.('input,textarea'))return;
     if(ev.key==='Escape'){ev.preventDefault();if(modo==='focus')trocarModo(ultimaVista);else fecharMapa();}
-    else if((ev.key==='Enter'||ev.key===' ')&&ev.target.matches('[data-node]')){ev.preventDefault();escolher(ev.target.dataset.node);}
+    else if((ev.key==='Enter'||ev.key===' ')&&/** @type {HTMLElement} */ (ev.target).matches('[data-node]')){ev.preventDefault();escolher(/** @type {HTMLElement} */ (ev.target).dataset.node);}
 
   });
   window.addEventListener('blur',()=>{pontos.clear();maos.clear();gesto=null;graph.releaseAll();limparHover();});

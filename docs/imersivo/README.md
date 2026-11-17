@@ -79,8 +79,9 @@ Copyright (c) 2026 Jared Rhodenizer — obra original sob a mesma licença.
 
 ## Testes
 
-`make check` roda a qualidade do Python e os testes de servidor. `make check-imersivo` roda
-os testes da interface no Chromium sem janela, com mãos e câmera simuladas.
+`make check` roda a qualidade do Python, os testes de servidor e os testes da interface no
+Chromium sem janela, com mãos e câmera simuladas (só estes: `make check-imersivo`). O
+`npm run check` confere os tipos dos `jarvis-*.js` (`tsconfig.imersao.json`).
 
 Otimizações e medições da interface: [DESEMPENHO.md](DESEMPENHO.md).
 

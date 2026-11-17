@@ -115,9 +115,9 @@
       r.setAttribute("d", forma(0)); s.appendChild(r);
       const t0 = performance.now() + i * 70;
       (function cresce() { const k = Math.max(0, Math.min(1, (performance.now() - t0) / 900)); r.setAttribute("d", forma(h * (1 - Math.pow(1 - k, 3)))); if (k < 1 && r.isConnected) requestAnimationFrame(cresce); })();
-      const lb = document.createElementNS(NS, "text"); lb.setAttribute("class", "jv-eixo"); lb.setAttribute("x", x + larg / 2); lb.setAttribute("y", H - 4);
+      const lb = document.createElementNS(NS, "text"); lb.setAttribute("class", "jv-eixo"); lb.setAttribute("x", String(x + larg / 2)); lb.setAttribute("y", String(H - 4));
       lb.setAttribute("text-anchor", "middle"); lb.textContent = d.rotulo; s.appendChild(lb);
-      if (i === iMax && d.valor > 0) { const v = document.createElementNS(NS, "text"); v.setAttribute("class", "jv-rotulo"); v.setAttribute("x", x + larg / 2); v.setAttribute("y", base - h - 5); v.setAttribute("text-anchor", "middle"); v.textContent = num.format(d.valor); s.appendChild(v); }
+      if (i === iMax && d.valor > 0) { const v = document.createElementNS(NS, "text"); v.setAttribute("class", "jv-rotulo"); v.setAttribute("x", String(x + larg / 2)); v.setAttribute("y", String(base - h - 5)); v.setAttribute("text-anchor", "middle"); v.textContent = num.format(d.valor); s.appendChild(v); }
       const alvoH = document.createElementNS(NS, "rect");
       for (const [k, v] of Object.entries({ x: passo * i, y: 0, width: passo, height: H, fill: "transparent" })) alvoH.setAttribute(k, v);
       alvoH.addEventListener("pointerenter", () => { r.classList.add("ativa"); const b = alvoH.getBoundingClientRect(); mostrarDica(b.left + b.width / 2, b.top + (base - h) * (b.height / H), d.dica); });
@@ -303,7 +303,7 @@
 
   addEventListener("keydown", e => {
     if ((e.key !== "a" && e.key !== "A") || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target.closest?.("input, textarea, [contenteditable], #jv-teclado")) return;
+    if (/** @type {HTMLElement} */ (e.target).closest?.("input, textarea, [contenteditable], #jv-teclado")) return;
     apresentando ? encerrar() : apresentar("quem").catch(() => {});
   });
   window.jarvisApresentacao = {

@@ -315,7 +315,7 @@ export function projetor(T, uniformes) {
   motes.frustumCulled = false; grupo.add(motes); materiais.push(motes.material); geometrias.push(gm);
   return {
     grupo,
-    atualizar() {},
+    atualizar(_dt, _reduzir) {},
     descartar() { geometrias.forEach(g => g.dispose()); materiais.forEach(m => m.dispose()); },
   };
 }
