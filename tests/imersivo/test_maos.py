@@ -213,7 +213,9 @@ window.maoFalsa = (() => {
     g.fillStyle = `rgb(${m},${m},${m})`; g.fillRect(120, 50, 80, 80); };
   pintar(); cam.srcObject = tela.captureStream(30); cam.play();
   setInterval(pintar, 33);
-  let t0 = performance.now(), parado = false;
+  // Counted in samples, not milliseconds: a busy runner slows the timers, and a
+  // wall-clock pinch then shrank to a single frame (the profile needs two).
+  let quadro = 0, parado = false;
   const aberta = {ratio:.9, ratio3:.9, f8v:1.9, backMean:1.9, aspect:2.5, tRel:.5};
   const pinca = {ratio:.34, ratio3:.12, f8v:1.25, backMean:1.55, aspect:2.5, tRel:.5};
   // Almost touching: overlapped in the picture (2D gap under the ceiling, OK
@@ -224,7 +226,8 @@ window.maoFalsa = (() => {
     if (parado) return;
     const now = performance.now(), m = window.jarvisMaos, fase = m.estado().fase;
     let f = aberta;
-    if (fase === 'toques') f = ((now - t0) % 900) < 240 ? pinca : aberta;
+    quadro += 1;
+    if (fase === 'toques') f = (quadro % 18) < 6 ? pinca : aberta;
     else if (fase === 'punho') f = punho;
     else if (fase === 'quase') f = quase;
     const tremor = Math.sin(now / 70) * 2;
