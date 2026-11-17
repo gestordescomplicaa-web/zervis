@@ -515,9 +515,10 @@ class ServicoCerebro:
                 prompt, r["modelo"], DADOS / "cerebro", r["pensamento_tokens"]
             )
             self.n.consumo.somar(uso, "revisão")
-            propostas = revisao.interpretar(saida, self.n.memoria, self.n.skills)
+            propostas = revisao.interpretar(saida, self.n.memoria, self.n.skills, turnos)
             for proposta in propostas:
-                proposta.origem = revisao.origem(turnos)
+                # A fala que sustenta o fato, quando há; senão, as falas com correção.
+                proposta.origem = proposta.dados.get("apoio") or revisao.origem(turnos)
         except Exception:
             log.exception("revisão falhou")
             return

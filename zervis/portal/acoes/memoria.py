@@ -56,6 +56,8 @@ class AcoesMemoria(Pagina):
             "sugestoes": [revisao.resumo_dict(p) for p in self.n.pendencias.listar()],
             # O que a revisão gravou sozinha e continua na memória: o painel marca "Aprendido".
             "aprendidas": self._aprendidas(),
+            # Passaram da validade: fora da foto, vão para o arquivo na próxima escrita.
+            "vencidas": {alvo: m.vencidas(alvo) for alvo in ("usuario", "jarvis")},
             "projetos": aimemory.situacao(),  # a memória das sessões, por projeto (ai-memory)
         }
 

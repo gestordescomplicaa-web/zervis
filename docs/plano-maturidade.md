@@ -73,6 +73,8 @@ cai de 5,5 para 5,0, e a da fase, de ≈ 7,8 para ≈ 7,7.
 
 Exceção registrada em 13/11/2026: a aba Marketing (ADR 0091) entrou antes do fecho, a pedido de
 quem usa, com os testes na porta de qualidade.
+Exceção registrada em 17/11/2026: a validade na memória e a frase de apoio (ADR 0098) entraram
+antes do fecho, a pedido de quem usa, para reforçar o ADR 0090 durante a medição dele.
 
 O que as Fases A e B deixaram aberto e o que a revisão achou no código. Fecha antes da Fase C;
 cada item está na frente dele, com o detalhe.
@@ -164,6 +166,25 @@ Aceite: 100+ cenários rodando a cada versão (revisto em 11/11/2026: era toda n
 versão com sucesso por área, p50/p95 e custo.
 Metas iniciais (confirmar após a primeira medição): 90% de sucesso, p95 de voz abaixo de 2,5 s na
 via rápida.
+
+## Memória e aprendizado (comparação com o OpenMausBot, 17/11/2026)
+
+O OpenMausBot (`milind-soni/OpenMausBot`, `docs/memory.md` e `evals/`) é o mais completo em
+memória dos comparados. O que vale trazer, em ordem:
+
+- [x] **Validade e arquivo:** a entrada com ` · até DD/MM/AAAA` sai da foto no dia seguinte e vai
+  para o `ARQUIVO.md` na próxima escrita (ADR 0098).
+- [x] **Fato sobre o usuário só com a frase dele:** a revisão cita a fala que sustenta o fato e o
+  Zé confere; sem ela, vira sugestão. Pergunta, tarefa e hipótese nunca são fato (ADR 0098).
+  Medir junto com o ADR 0090, até 27/11/2026.
+- [ ] **Lembrança automática a cada pedido:** buscar nas notas e conversas antigas antes do turno
+  e pôr o resultado no pedido, não no prompt de sistema. Hoje a busca só acontece quando o
+  cérebro chama a ferramenta.
+- [ ] **Avaliação sem gastar tokens** (Frente 3): um motor roteirizado repete turnos fixos e
+  testa o que o Zé faz com as ferramentas, no `make check`; conversas reais, com os dados
+  pessoais apagados, viram cenários fixos.
+- [ ] **Verificação numa cópia isolada:** um comando sobe o Zé com pasta de dados temporária e
+  cérebro falso; comandos que mudam algo não acham o serviço vivo sozinhos.
 
 ## Frente 2: Segurança e isolamento (6,5 → 8,0) · Fase B
 
@@ -273,5 +294,7 @@ painel e na persona, e os primeiros contribuidores.
   [CVEs](https://www.cvefind.com/en/blog/openclaw-compromise-ai-agents.html).
 - Grok Bot: [toolradar](https://toolradar.com/blog/what-is-grok-bot),
   [eesel](https://www.eesel.ai/blog/grok-bot-review).
+- OpenMausBot (17/11/2026): [repositório](https://github.com/milind-soni/OpenMausBot), lido
+  no commit `b832de7`, sem instalar.
 - Meta Muse: [TechCrunch](https://techcrunch.com/2026/09/08/meta-debuts-its-muse-ai-agent-will-consumers-trust-it/),
   [Wikipedia](https://en.wikipedia.org/wiki/Muse_(AI_agent)).

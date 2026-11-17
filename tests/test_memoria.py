@@ -1,12 +1,13 @@
 """Memória curta: limites, duplicata, varredura de segurança, foto e pré-checagem."""
 
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 from zervis.cerebro.claude import descrever
 from zervis.cerebro.ferramentas import prechecagem
-from zervis.memoria.curta import Memoria, MemoriaErro, Mudanca, varrer
+from zervis.memoria.curta import Memoria, MemoriaErro, Mudanca, validade, varrer
 
 
 def _memoria(tmp_path: Path, limite: int = 300) -> Memoria:
@@ -102,3 +103,66 @@ def test_frases_de_aprovacao_da_memoria() -> None:
         descrever("mcp__jarvis__memoria", entrada)
         == "Vou tirar da memória nas minhas notas: microfone"
     )
+
+
+class _Relogio:
+    def __init__(self, dia: date) -> None:
+        self.dia = dia
+
+    def __call__(self) -> date:
+        return self.dia
+
+
+def test_validade_le_so_o_fim_da_entrada() -> None:
+    assert validade("Está em Lisboa · até 28/11/2026") == date(2026, 11, 28)
+    assert validade("Está em Lisboa · ATÉ 3/1/2027 ") == date(2027, 1, 3)
+    assert validade("Vale até 28/11/2026, mas não no fim") is None
+    assert validade("Prefere respostas curtas.") is None
+    assert validade("Viaja · até 31/02/2026") is None
+
+
+def test_entrada_vencida_sai_da_foto_e_vai_para_o_arquivo(tmp_path: Path) -> None:
+    """ADR 0098: vence no dia seguinte à data; na escrita seguinte, o arquivo vem antes."""
+    relogio = _Relogio(date(2026, 11, 17))
+    m = Memoria(tmp_path / "memoria", {"usuario": 300, "jarvis": 300}, hoje=relogio)
+    m.aplicar(Mudanca("adicionar", "usuario", "Prefere respostas curtas."))
+    m.aplicar(Mudanca("adicionar", "usuario", "Está em Lisboa · até 18/11/2026"))
+    relogio.dia = date(2026, 11, 18)
+    assert "Lisboa" in m.foto() and m.vencidas("usuario") == []
+    relogio.dia = date(2026, 11, 19)
+    assert "Lisboa" not in m.foto()
+    assert m.vencidas("usuario") == ["Está em Lisboa · até 18/11/2026"]
+    assert m.entradas("usuario")[-1].startswith("Está em Lisboa")  # ainda no arquivo da memória
+    m.aplicar(Mudanca("adicionar", "usuario", "Mora em Recife."))
+    assert m.entradas("usuario") == ["Prefere respostas curtas.", "Mora em Recife."]
+    assert m.arquivadas() == ["[usuario] Está em Lisboa · até 18/11/2026 · arquivada em 19/11/2026"]
+    assert (tmp_path / "memoria" / "ARQUIVO.md").stat().st_mode & 0o777 == 0o600
+
+
+def test_vencida_libera_espaco_e_pode_ser_tirada(tmp_path: Path) -> None:
+    relogio = _Relogio(date(2026, 11, 17))
+    m = Memoria(tmp_path / "memoria", {"usuario": 60, "jarvis": 60}, hoje=relogio)
+    m.aplicar(Mudanca("adicionar", "usuario", "Está em Lisboa · até 17/11/2026"))
+    m.aplicar(Mudanca("adicionar", "jarvis", "Servidor em manutenção · até 17/11/2026"))
+    with pytest.raises(MemoriaErro, match="cheia"):
+        m.aplicar(Mudanca("adicionar", "usuario", "Prefere respostas curtas e diretas."))
+    relogio.dia = date(2026, 11, 18)
+    m.aplicar(Mudanca("adicionar", "usuario", "Prefere respostas curtas e diretas."))
+    assert m.entradas("usuario") == ["Prefere respostas curtas e diretas."]
+
+    relogio.dia = date(2026, 11, 19)
+    m.aplicar(Mudanca("remover", "jarvis", antigo="manutenção"))  # o Remover do painel
+    assert m.entradas("jarvis") == [] and len(m.arquivadas()) == 2
+    with pytest.raises(MemoriaErro, match="nenhuma"):
+        m.aplicar(Mudanca("remover", "jarvis", antigo="manutenção"))
+
+
+def test_validade_impossivel_ou_passada_e_recusada(tmp_path: Path) -> None:
+    m = Memoria(
+        tmp_path / "memoria", {"usuario": 300, "jarvis": 300}, hoje=lambda: date(2026, 11, 17)
+    )
+    with pytest.raises(MemoriaErro, match="impossível"):
+        m.aplicar(Mudanca("adicionar", "usuario", "Viaja · até 31/02/2027"))
+    with pytest.raises(MemoriaErro, match="já passou"):
+        m.aplicar(Mudanca("adicionar", "usuario", "Viaja · até 16/11/2026"))
+    m.aplicar(Mudanca("adicionar", "usuario", "Viaja · até 17/11/2026"))  # vale o dia todo

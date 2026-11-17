@@ -122,13 +122,19 @@ def test_fato_novo_entra_sozinho_e_o_resto_espera(tmp_path: Path) -> None:
     saida = json.dumps(
         {
             "memoria": [
-                {"acao": "adicionar", "alvo": "usuario", "texto": "Prefere respostas curtas."},
+                {
+                    "acao": "adicionar",
+                    "alvo": "usuario",
+                    "texto": "Prefere respostas curtas.",
+                    "apoio": "eu prefiro respostas curtas",
+                },
                 {"acao": "remover", "alvo": "usuario", "antigo": "Neovim"},
             ],
             "skills": [{"acao": "criar", "nome": "resumo-falado", "conteudo": SKILL}],
         }
     )
-    propostas = revisao.interpretar(saida, memoria, skills)
+    turnos = [{"pessoa": "Olha, eu prefiro respostas curtas.", "jarvis": "Certo."}]
+    propostas = revisao.interpretar(saida, memoria, skills, turnos)
     anotado: list[tuple[str, str, dict[str, str]]] = []
     pendentes = revisao.aprender(
         propostas, memoria, skills, lambda ev, r, **x: anotado.append((ev, r, x)), sozinho=True
@@ -185,3 +191,54 @@ def test_painel_marca_o_aprendido_e_conta_quando_sai(tmp_path: Path) -> None:
             {"acao": "remover", "alvo": "usuario", "texto": "Prefere respostas curtas."}
         )
     assert [ev["evento"] for ev in diario.ultimos()] == ["desfeita", "aprendida"]
+
+
+def _fato(apoio: str, alvo: str = "usuario") -> str:
+    item = {"acao": "adicionar", "alvo": alvo, "texto": "É vegetariano.", "apoio": apoio}
+    return json.dumps({"memoria": [item]})
+
+
+def test_fato_sobre_o_usuario_so_entra_sozinho_com_a_fala_dele(tmp_path: Path) -> None:
+    """ADR 0098: o apoio confere com uma fala do usuário, palavra por palavra (sem acento nem
+    pontuação); sem ele, a proposta espera a aprovação em vez de entrar sozinha."""
+    memoria, skills, _ = _base(tmp_path)
+    turnos = [
+        {"pessoa": "Pode ser, mas eu não como carne, sou vegetariano!", "jarvis": "Anotado."},
+        {"pessoa": "Qual restaurante vegano você sugere?", "jarvis": "O Verde, que é vegetariano."},
+    ]
+    casos = {
+        "nao como carne sou vegetariano": True,  # acento e pontuação não contam
+        "o Verde, que é vegetariano": False,  # fala do Zé, não do usuário
+        "sou vegetariano": False,  # curto demais
+        "eu sou vegetariano desde criança": False,  # não foi dito
+        "": False,
+    }
+    for apoio, entra in casos.items():
+        (proposta,) = revisao.interpretar(_fato(apoio), memoria, skills, turnos)
+        assert revisao.gravar_sozinho(proposta) is entra, apoio
+        assert proposta.dados.get("apoio", "") == (apoio if entra else "")
+
+
+def test_fato_do_ambiente_dispensa_o_apoio(tmp_path: Path) -> None:
+    memoria, skills, _ = _base(tmp_path)
+    (proposta,) = revisao.interpretar(_fato("", alvo="jarvis"), memoria, skills, [])
+    assert revisao.gravar_sozinho(proposta)
+
+
+def test_fato_sem_apoio_vira_sugestao(tmp_path: Path) -> None:
+    memoria, skills, _ = _base(tmp_path)
+    propostas = revisao.interpretar(_fato("sou vegano há anos"), memoria, skills, [])
+    pendentes = revisao.aprender(propostas, memoria, skills, lambda *a, **k: None, sozinho=True)
+    assert len(pendentes) == 1 and memoria.entradas("usuario") == []
+
+
+def test_o_prompt_pede_o_apoio_e_a_validade(tmp_path: Path) -> None:
+    from datetime import date
+
+    memoria = Memoria(
+        tmp_path / "m", {"usuario": 500, "jarvis": 500}, hoje=lambda: date(2026, 11, 17)
+    )
+    prompt = revisao.montar_prompt([], memoria, Skills(tmp_path / "s"))
+    assert "Hoje é 17/11/2026" in prompt
+    assert '"apoio"' in prompt and "nunca é fato sobre quem ele é" in prompt
+    assert "· até DD/MM/AAAA" in prompt and "Aniversário" in prompt
