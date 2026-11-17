@@ -18,6 +18,10 @@
   if (new URLSearchParams(location.search).get("role") === "render") return;
   const Q = new URLSearchParams(location.search);
 
+  /** @typedef {{versao: number, pincaFrontal: number, pincaPerfil: number, contraste: number,
+   *   arco: number, soltar: number, soltarRapido: number, tremor: number, fantasma: number,
+   *   toqueMs: number, toque3: number}} Perfil */
+  /** @type {Readonly<Perfil>} */
   const PADRAO = Object.freeze({ versao: 1, pincaFrontal: 0.32, pincaPerfil: 0.38, contraste: 0.18,
     arco: 1.30, soltar: 0.55, soltarRapido: 0.70, tremor: 16, fantasma: 900, toqueMs: 350, toque3: 0 });
   const LIMITES = { pincaFrontal: [0.22, 0.40], pincaPerfil: [0.30, 0.42], contraste: [0.08, 0.28],
@@ -43,7 +47,7 @@
     return r.json();
   }
   function aviso(msg, ms = 3500) {
-    const t = document.getElementById("toast");
+    const t = /** @type {HTMLElement & {_h?: number}} */ (document.getElementById("toast"));
     if (!t) return;
     t.textContent = msg; t.style.display = "block";
     clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", ms);
@@ -69,7 +73,7 @@
   }
 
   // ---------- camera: frames per second, inference, best mode -----------------
-  const cam = document.getElementById("cam");
+  const cam = /** @type {HTMLVideoElement} */ (document.getElementById("cam"));
   let qps = 0, quadros = 0, tQps = performance.now(), contando = false, inferencia = 0;
   function contar() {
     quadros++;
@@ -77,7 +81,7 @@
     if (t - tQps >= 1000) { qps = quadros * 1000 / (t - tQps); quadros = 0; tQps = t; }
     cam.requestVideoFrameCallback(contar);
   }
-  const trilha = () => cam?.srcObject?.getVideoTracks?.()[0] || null;
+  const trilha = () => /** @type {MediaStream | null} */ (cam?.srcObject)?.getVideoTracks?.()[0] || null;
   const auto = !Q.get("fps") || Q.get("fps") === "auto";
   let lento = 0, folga = 0, espera = 60, modoMedido = "";
   async function conferirCamera() {
@@ -148,6 +152,7 @@
     const t = trilha();
     if (!t || hw !== null) return;
     hw = "consultando";
+    /** @type {false | {nome: string, c: unknown}} */
     let achado = false;
     try {
       const info = await api("/camera/info?nome=" + encodeURIComponent(t.label));
@@ -329,12 +334,12 @@
   document.body.appendChild(ui);
   const $ = s => ui.querySelector(s);
   ui.addEventListener("click", ev => {
-    const a = ev.target.closest("button")?.dataset.a;
+    const a = /** @type {HTMLElement} */ (ev.target).closest("button")?.dataset.a;
     if (a === "fechar") encerrar(calib?.fase === "fim" ? null : "Calibração cancelada. Mantive a anterior.");
     else if (a === "padrao") padrao();
   });
   addEventListener("keydown", ev => {
-    if (ev.target.closest?.("input, textarea")) return;
+    if (/** @type {HTMLElement} */ (ev.target).closest?.("input, textarea")) return;
     if (ev.key === "Escape" && calib) { ev.preventDefault(); encerrar(calib.fase === "fim" ? null : "Calibração cancelada. Mantive a anterior."); }
     else if (ev.key === "k" && !ev.ctrlKey && !ev.metaKey) calibrar();
     else if (ev.key === "K" && !ev.ctrlKey && !ev.metaKey) padrao();
@@ -556,7 +561,7 @@
       linha = document.createElement("div"); linha.className = "linha"; linha.id = "hud-maos";
       const jv = document.getElementById("hud-jv");
       jv ? h.insertBefore(linha, jv) : h.appendChild(linha);
-      linha.addEventListener("click", ev => { const b = ev.target.closest(".btn"); if (b) acionar(b.dataset.acao); });
+      linha.addEventListener("click", ev => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest(".btn")); if (b) acionar(b.dataset.acao); });
     }
     if (!trilha()) { linha.innerHTML = ""; return; }
     const luz = estadoLuz(), quente = qps && qps < 45 || ["fraca", "baixa"].includes(luz);

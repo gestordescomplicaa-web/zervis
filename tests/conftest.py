@@ -23,7 +23,7 @@ for _variavel in ("CLAUDE_CONFIG_DIR", "CODEX_HOME"):
     os.environ[_variavel] = os.path.join(os.environ["ZERVIS_RAIZ"], "contas-vazias", _variavel)
 
 # Os testes do modo imersivo abrem a página num Chromium de verdade (sem tela) e levam minutos:
-# rodam à parte, em `make check-imersivo`.
+# rodam em dois processos, no alvo próprio `make check-imersivo` (que o `make check` inclui).
 collect_ignore = [] if os.environ.get("ZE_TESTES_IMERSIVO") else ["imersivo"]
 
 

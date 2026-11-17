@@ -319,7 +319,7 @@
   function marcarHora() {
     const d = new Date(), agora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }), s = d.getSeconds();
     document.querySelectorAll("[data-relogio]").forEach(el => { el.textContent = agora; });
-    document.querySelectorAll("[data-segundos]").forEach(el => { el.style.transition = s ? "" : "none"; el.style.strokeDashoffset = String(60 - s); });
+    document.querySelectorAll("[data-segundos]").forEach((/** @type {SVGElement} */ el) => { el.style.transition = s ? "" : "none"; el.style.strokeDashoffset = String(60 - s); });
     document.querySelectorAll("[data-segundo]").forEach(el => { el.textContent = String(s).padStart(2, "0"); });
   }
 

@@ -75,7 +75,7 @@ Data: 06/10/2026. Regras para evitar falhas. Valem para qualquer pessoa ou agent
 
 ## Linguagem por papel (ADR 0032)
 
-Python no núcleo e nos agentes, Go em mídia e conexões, JavaScript com JSDoc no painel.
+Python no núcleo e nos agentes, Go em mídia e conexões, JavaScript com JSDoc no painel e na Imersão.
 Reescrever uma peça em outra linguagem só depois de medir e comprovar que ela é o gargalo.
 
 O painel usa JSDoc e `tsc --noEmit` no `make check`, sem compilação para o navegador.

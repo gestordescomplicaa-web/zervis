@@ -68,7 +68,7 @@
       const cena=new T.Scene();
       const camera=new T.PerspectiveCamera(32,1,.1,30); camera.position.set(0,.12,8.15); camera.lookAt(0,-.12,0);
       cena.add(new T.HemisphereLight(0xc5f5ff,0x0d2534,2.2));
-      for(const [color,intensity,pos] of [[0xe0f8ff,4.5,[-3,5,4]],[0x3acadd,3,[4,2,-2]],[0x779bc8,.8,[2,-1,3]]]) {
+      for(const [color,intensity,pos] of /** @type {Array<[number, number, [number, number, number]]>} */ ([[0xe0f8ff,4.5,[-3,5,4]],[0x3acadd,3,[4,2,-2]],[0x779bc8,.8,[2,-1,3]]])) {
         const light=new T.DirectionalLight(color,intensity); light.position.set(...pos); cena.add(light);
       }
       robo=await criarMacaco(T,GLTFLoader); brilho=criarBrilho(T,renderer,{amostras:software?0:4});

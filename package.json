@@ -1,6 +1,6 @@
 {
   "name": "zervis-painel",
   "private": true,
-  "scripts": {"check": "tsc --project tsconfig.json"},
+  "scripts": {"check": "tsc --project tsconfig.json && tsc --project tsconfig.imersao.json"},
   "devDependencies": {"typescript": "7.0.2"}
 }

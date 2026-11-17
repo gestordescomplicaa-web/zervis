@@ -104,7 +104,7 @@
     try {
       const r = await fetch("/teclado", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texto }) });
-      if (!r.ok) throw new Error(r.status);
+      if (!r.ok) throw new Error(String(r.status));
       esperando = (await r.json()).id;
       return esperando;
     } catch (e) {
@@ -137,7 +137,7 @@
   painel.querySelector("form").addEventListener("submit", ev => {
     ev.preventDefault(); const t = campo.value; campo.value = ""; enviar(t);
   });
-  painel.addEventListener("click", ev => { if (ev.target.closest("[data-a=fechar]")) fechar(); });
+  painel.addEventListener("click", ev => { if (/** @type {HTMLElement} */ (ev.target).closest("[data-a=fechar]")) fechar(); });
   botao.addEventListener("click", alternar);
   botao.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); alternar(); } });
   campo.addEventListener("keydown", ev => {
@@ -146,7 +146,7 @@
     else if (ev.key === "ArrowDown") { ev.preventDefault(); pos = Math.min(historico.length, pos + 1); campo.value = historico[pos] || ""; }
   });
   addEventListener("keydown", ev => {
-    if (ev.key === "/" && !ev.ctrlKey && !ev.metaKey && !ev.target.closest?.("input, textarea")) { ev.preventDefault(); abrir(); }
+    if (ev.key === "/" && !ev.ctrlKey && !ev.metaKey && !/** @type {HTMLElement} */ (ev.target).closest?.("input, textarea")) { ev.preventDefault(); abrir(); }
   });
 
   const contem = (x, y) => {

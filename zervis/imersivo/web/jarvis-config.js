@@ -120,17 +120,17 @@
   function marcar() {
     const nivel = window.jarvisMaos?.nivelBrilho ?? 0, tema = window.jarvisTema?.nome || "original";
     menu.querySelectorAll("[data-grupo=brilho] button").forEach((b, i) => b.classList.toggle("ativo", i === nivel));
-    menu.querySelectorAll("[data-grupo=tema] button").forEach(b => b.classList.toggle("ativo", b.dataset.config === "tema:" + tema));
+    menu.querySelectorAll("[data-grupo=tema] button").forEach((/** @type {HTMLElement} */ b) => b.classList.toggle("ativo", b.dataset.config === "tema:" + tema));
     const visual = window.jarvisAvatar?.ativo === false ? "anel" : "avatar";
-    menu.querySelectorAll("[data-grupo=visual] button").forEach(b => b.classList.toggle("ativo", b.dataset.config === "visual:" + visual));
+    menu.querySelectorAll("[data-grupo=visual] button").forEach((/** @type {HTMLElement} */ b) => b.classList.toggle("ativo", b.dataset.config === "visual:" + visual));
     const fundo = window.jarvisFundo?.modo || "camera";
-    menu.querySelectorAll("[data-grupo=fundo] button").forEach(b => b.classList.toggle("ativo", b.dataset.config === "fundo:" + fundo));
+    menu.querySelectorAll("[data-grupo=fundo] button").forEach((/** @type {HTMLElement} */ b) => b.classList.toggle("ativo", b.dataset.config === "fundo:" + fundo));
   }
   let antes = null;
   function abrir() {
     recolher(); marcar(); antes = document.activeElement;
     menu.hidden = false; engrenagem.setAttribute("aria-expanded", "true");
-    menu.querySelector("button[data-config=fechar]")?.focus({ preventScroll: true });
+    /** @type {HTMLElement} */ (menu.querySelector("button[data-config=fechar]"))?.focus({ preventScroll: true });
   }
   function fechar() { menu.hidden = true; engrenagem.setAttribute("aria-expanded", "false"); antes?.focus?.({ preventScroll: true }); }
   engrenagem.addEventListener("click", () => (menu.hidden ? abrir() : fechar()));
@@ -147,8 +147,8 @@
     else if (acao === "apresentar:encerrar") window.jarvisApresentacao?.encerrar();
     marcar();
   }
-  menu.addEventListener("click", ev => { const b = ev.target.closest("[data-config]"); if (b) acionar(b.dataset.config); });
-  addEventListener("keydown", ev => { if (ev.key === "Escape" && !menu.hidden && !ev.target.closest?.("#jv-teclado")) { ev.preventDefault(); fechar(); } });
+  menu.addEventListener("click", ev => { const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest("[data-config]")); if (b) acionar(b.dataset.config); });
+  addEventListener("keydown", ev => { if (ev.key === "Escape" && !menu.hidden && !/** @type {HTMLElement} */ (ev.target).closest?.("#jv-teclado")) { ev.preventDefault(); fechar(); } });
   addEventListener("jv-tema", marcar);
   addEventListener("jv-visual", marcar); addEventListener("jv-fundo", marcar);
   window.jarvisConfig = {

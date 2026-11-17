@@ -45,7 +45,7 @@
   }
   let drag=null;
   document.addEventListener('pointerdown',ev=>{
-    const c=item(ev.target);if(!c||c.grabbedBy.length||ev.button!==0||!ev.target.closest('.bar')||ev.target.closest('button'))return;
+    const c=item(ev.target);if(!c||c.grabbedBy.length||ev.button!==0||!/** @type {HTMLElement} */ (ev.target).closest('.bar')||/** @type {HTMLElement} */ (ev.target).closest('button'))return;
     ev.preventDefault();c.flying=false;prepare(c);c.el.parentElement.append(c.el);
     drag={c,id:ev.pointerId,x:ev.clientX,y:ev.clientY};c.el.setPointerCapture(ev.pointerId);
   });
@@ -59,13 +59,13 @@
   for(const type of ['pointerup','pointercancel','lostpointercapture'])document.addEventListener(type,release);
   window.addEventListener('blur',()=>{drag=null;});
   document.addEventListener('click',ev=>{
-    const b=ev.target.closest('[data-panel-action]');if(b){action(b);return;}
-    const row=ev.target.closest('.brow'),c=item(row);
+    const b=/** @type {HTMLElement} */ (ev.target).closest('[data-panel-action]');if(b){action(b);return;}
+    const row=/** @type {HTMLElement} */ (ev.target).closest('.brow'),c=item(row);
     if(c){const r=row.getBoundingClientRect();window.jarvisPanelActions.row(c,{x:r.left+r.width/2,y:r.top+r.height/2});}
   });
   document.addEventListener('keydown',ev=>{
-    if(!ev.target.matches('.brow')||!['Enter',' '].includes(ev.key))return;
-    ev.preventDefault();ev.target.click();
+    if(!/** @type {HTMLElement} */ (ev.target).matches('.brow')||!['Enter',' '].includes(ev.key))return;
+    ev.preventDefault();/** @type {HTMLElement} */ (ev.target).click();
   });
   document.addEventListener('wheel',ev=>{
     const c=item(ev.target);if(!c||c.grabbedBy.length||c.anim?.k==='out')return;

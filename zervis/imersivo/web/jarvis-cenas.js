@@ -203,8 +203,8 @@
         + b.pontos.map((p, i) => i % passoRot ? "" : `<text class="jv-eixo" x="${X(i)}" y="${H - 4}" text-anchor="middle">${esc(p.rotulo)}</text>`).join("")
         + `<text class="jv-rotulo" x="${X(iMax)}" y="${Y(max) - 8}" text-anchor="middle">${esc(num.format(max) + (b.unidade ? " " + b.unidade : ""))}</text>`
         + `<circle class="jv-c-cabeca" r="3.5"/>`;
-      const traco = s.querySelector(".jv-c-traco"), area = s.querySelector(".jv-c-area"), cabeca = s.querySelector(".jv-c-cabeca"), L = traco.getTotalLength();
-      traco.style.strokeDasharray = L; traco.style.strokeDashoffset = L;
+      const traco = /** @type {SVGPathElement} */ (s.querySelector(".jv-c-traco")), area = /** @type {SVGElement} */ (s.querySelector(".jv-c-area")), cabeca = s.querySelector(".jv-c-cabeca"), L = traco.getTotalLength();
+      traco.style.strokeDasharray = String(L); traco.style.strokeDashoffset = String(L);
       const t0 = performance.now();
       b.pontos.forEach((p, i) => {   // hover: a target per point, wider than the mark
         const r = document.createElementNS(NS, "rect"), w = (W - esq * 2) / (b.pontos.length - 1);
@@ -215,9 +215,9 @@
       });
       reg.quadro = t => {
         const k = suave((performance.now() - t0) / 1600);
-        traco.style.strokeDashoffset = L * (1 - k); area.style.opacity = k;
+        traco.style.strokeDashoffset = String(L * (1 - k)); area.style.opacity = String(k);
         const q = traco.getPointAtLength(k < 1 ? L * k : ((t * .25) % 1) * L);
-        cabeca.setAttribute("cx", q.x); cabeca.setAttribute("cy", q.y);
+        cabeca.setAttribute("cx", String(q.x)); cabeca.setAttribute("cy", String(q.y));
       };
     },
     rosca(reg, caixa, b) {
@@ -533,7 +533,7 @@
     }));
     // each step waits for the Zé's voice to reach the next one (jarvis-ritmo.js)
     const ritmo = window.jarvisRitmo?.ritmar(passos, id);
-    if (ritmo) passos.forEach((p, i) => { p.aguardar = ritmo[i]; });
+    if (ritmo) passos.forEach((p, i) => { /** @type {any} */ (p).aguardar = ritmo[i]; });
     atual = c.titulo || "cena";
     palco.roteiro(id, passos);
     return { explicando: true, cena: atual, blocos: n, paginas, ...(c.ignorados.length ? { ignorados: c.ignorados } : {}) };
@@ -635,7 +635,7 @@
 
   addEventListener("keydown", e => {
     if ((e.key !== "e" && e.key !== "E") || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target.closest?.("input, textarea, [contenteditable], #jv-teclado")) return;
+    if (/** @type {HTMLElement} */ (e.target).closest?.("input, textarea, [contenteditable], #jv-teclado")) return;
     try { exemplo(); } catch (_) {}
   });
   const pedido = new URLSearchParams(location.search).get("cena");

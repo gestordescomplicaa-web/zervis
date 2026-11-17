@@ -80,7 +80,8 @@ cada item está na frente dele, com o detalhe.
 - [ ] **Placar a cada versão** (Frente 3): o publicado diz "Versão 0.3.0" na 0.5.0.
 - [ ] **Rodada por versão, não por noite** (Frente 3): decidir e agendar.
 - [ ] **Latência da voz** (Frente 3): os 216 turnos sem primeiro token e a via rápida fora da meta.
-- [ ] **A Imersão na porta de qualidade** (Frente 5): testes na CI e tipos no JavaScript do Zé.
+- [x] **A Imersão na porta de qualidade** (Frente 5): desde 17/11/2026, os testes dela no
+  `make check` (e na CI) e os `jarvis-*.js` no TypeScript.
 - [x] **Atualizar com o programa aberto** (Frente 1): desde 17/11/2026, fechar a janela no
   meio da troca não desfaz a atualização.
 
@@ -218,12 +219,16 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
 - [x] **Painel em módulos ES**, sem variáveis globais divididas entre arquivos, sem build.
   [ADR 0077](adr/0077-painel-em-modulos-es.md): uma entrada (`modulos/principal.js`), o estado
   que vários arquivos mudam em `modulos/estado.js`, as páginas sob demanda por `import()`.
-- [ ] **A Imersão na porta de qualidade** (fecho da Fase B). O painel tem tipos e testes na CI; a
-  Imersão, não: os testes dela (`make check-imersivo`, num Chromium de verdade) ficam fora do
-  `make check` e da CI, e os `jarvis-*.js` (4,7 mil linhas, o que é do Zé) não passam pelo
-  TypeScript. Foi por onde entraram os erros da abertura em 11/11/2026. Os testes da Imersão
-  entram na CI e os `jarvis-*.js`, no `npm run check`. O `stage.html` (3,7 mil linhas) é o
-  Barehands adaptado (`THIRD_PARTY.md`) e fica como veio: dividi-lo afasta do original.
+- [x] **A Imersão na porta de qualidade** (fecho da Fase B). Os testes dela (`make
+  check-imersivo`, num Chromium de verdade) ficavam fora do `make check` e da CI, e os
+  `jarvis-*.js` (4,7 mil linhas, o que é do Zé) fora do TypeScript: foi por onde entraram os erros
+  da abertura em 11/11/2026. Desde 17/11/2026, o `make check` roda os 16 testes da Imersão (uns
+  2 minutos, em dois processos), e o `npm run check` confere os `jarvis-*.js` e o `avatar/*.js`
+  (`tsconfig.imersao.json`). Eram 235 erros de tipo, resolvidos com JSDoc, sem mudar o que o
+  código faz; as APIs que um script publica em `window` para os outros ficam abertas (`any`) em
+  `zervis/imersivo/web/tipos.d.ts`, até cada uma ganhar o seu tipo. O `stage.html` (3,7 mil
+  linhas) é o Barehands adaptado (`THIRD_PARTY.md`) e fica como veio: dividi-lo afasta do
+  original.
 
 ## Frente 4: Plataforma e alcance (3,5 → 5,5) · Fase C
 
