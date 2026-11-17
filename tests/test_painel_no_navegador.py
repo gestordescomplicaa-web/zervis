@@ -578,6 +578,57 @@ def test_a_copia_do_agente_em_tela_cheia_chega_a_area_de_transferencia(tmp_path:
         assert asyncio.run(conferir(depuracao, endereco)) == ["gh repo create ação"]
 
 
+def _osc52(texto: str) -> bytes:
+    return b"\x1b]52;c;" + base64.b64encode(texto.encode()) + b"\x07"
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_abrir_a_sessao_nao_repete_a_copia_antiga_do_historico(tmp_path: Path) -> None:
+    # Caso real de 16/11/2026: copiar numa sessão e colar na outra trazia um texto velho. Abrir a
+    # outra sessão repassava o histórico dela, e as cópias antigas sobrescreviam a nova.
+    historico = _osc52("copia antiga") + b"antes\r\n"
+    novo = _osc52("copia nova") + b"depois\r\n"
+
+    def saida(dados: dict[str, Any]) -> dict[str, Any]:
+        if dados["desde"] != 0:
+            time.sleep(0.3)
+            return {"posicao": dados["desde"], "vivo": True, "dados": "", "geracao": 3}
+        texto = historico + novo  # um pedaço só, que atravessa o fim do histórico
+        return {
+            "posicao": len(texto),
+            "vivo": True,
+            "geracao": 3,
+            "dados": base64.b64encode(texto).decode(),
+        }
+
+    async def conferir(depuracao: str, endereco: str) -> list[str]:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#sessoes")
+            await nav.avaliar(
+                "window.__copias = []; navigator.clipboard.writeText ="
+                " async (t) => { window.__copias.push(t); }"
+            )
+            await nav.avaliar("document.querySelector('.item-sessao').click()")
+            await _esperar(
+                nav,
+                "!!term && term.buffer.active.getLine(1)?.translateToString(true) === 'depois'",
+            )
+            await asyncio.sleep(0.2)
+            assert not nav.erros, nav.erros
+            copias: list[str] = await nav.avaliar("window.__copias")
+            return copias
+
+    abrir = _escrita({"posicao": 0, "fim": len(historico), "vivo": True})
+    with _painel(
+        tmp_path,
+        extras={"terminal/abrir": abrir},
+        entrada_terminal=lambda _d: None,
+        saida_terminal=saida,
+    ) as (depuracao, endereco):
+        assert asyncio.run(conferir(depuracao, endereco)) == ["copia nova"]
+
+
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
 def test_a_saida_do_terminal_chega_pelo_websocket_e_o_medidor_aparece(tmp_path: Path) -> None:
     # Caso real de 27/10/2026: na VPS, digitar no terminal ficava lento. As teclas já iam pelo

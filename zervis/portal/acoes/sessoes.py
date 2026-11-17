@@ -259,7 +259,8 @@ class AcoesSessoes(Pagina):
             )
         )
         t.redimensionar(int(dados.get("colunas", 120)), int(dados.get("linhas", 32)))
-        return {"posicao": t.inicio, "vivo": t.vivo}
+        # `fim`: até onde vai o histórico, cuja cópia antiga o painel não repete.
+        return {"posicao": t.inicio, "fim": t.fim, "vivo": t.vivo}
 
     def ler_terminal(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Long-poll: espera até 20 s por saída nova a partir de `desde`."""

@@ -31,7 +31,11 @@ export async function abrirTerminal(id) {
   caixa.addEventListener("copy", () => setTimeout(() => termo.clearSelection(), 0));
   // O Claude Code em tela cheia seleciona com o próprio mouse e copia pelo OSC 52 ("copied N chars
   // to clipboard"); o xterm ignorava, e a área de transferência ficava com o texto antigo.
-  termo.parser.registerOscHandler(52, (dados) => { copiarDoAgente(dados); return true; });
+  // Só a cópia nova: ao abrir, o histórico volta inteiro, e as cópias antigas dele sobrescreviam a
+  // área de transferência (copiar numa sessão e colar na outra trazia o texto velho, 16/11/2026).
+  const historico = { ate: Infinity, ativo: true };
+  compartilhado.termHistorico = historico;
+  termo.parser.registerOscHandler(52, (dados) => { if (!historico.ativo) copiarDoAgente(dados); return true; });
   try { ajuste.fit(); } catch { /* fora da tela */ }
   compartilhado.termId = id;
   window.desenharTravaSessoes?.();
@@ -39,8 +43,10 @@ export async function abrirTerminal(id) {
   compartilhado.termParar = parar;
   $("terminal-fechado").hidden = true;
   try {
-    const { posicao } = await api("terminal/abrir", { id, colunas: compartilhado.term.cols, linhas: compartilhado.term.rows }, parar.signal);
+    const { posicao, fim } = await api("terminal/abrir", { id, colunas: compartilhado.term.cols, linhas: compartilhado.term.rows }, parar.signal);
     compartilhado.termPos = posicao;
+    historico.ate = typeof fim === "number" ? fim : posicao;
+    historico.ativo = historico.ate > posicao;
   } catch (erro) {
     if (parar.signal.aborted) return;
     toast(erro.message);
@@ -62,6 +68,23 @@ export async function abrirTerminal(id) {
   compartilhado.termObservador = new ResizeObserver(() => { try { ajuste.fit(); } catch { /* fora da tela */ } });
   compartilhado.termObservador.observe(caixa);
   compartilhado.term.focus();
+}
+
+// A saída que termina em `fim` (posição absoluta). O que vem até o fim do histórico da abertura é
+// passado: o xterm lê na ordem, e o retorno do pedaço velho marca onde começa o novo.
+function escreverSaida(bytes, fim) {
+  const termo = compartilhado.term, h = compartilhado.termHistorico;
+  if (!termo) return;
+  if (!h?.ativo) { termo.write(bytes); return; }
+  const velhos = Math.max(0, Math.min(bytes.length, h.ate - (fim - bytes.length)));
+  const acaba = () => { h.ativo = false; };
+  termo.write(bytes.subarray(0, velhos), fim >= h.ate ? acaba : undefined);
+  if (velhos < bytes.length) termo.write(bytes.subarray(velhos));
+}
+
+// O agente reiniciado começa outra saída: tudo dali em diante é novo.
+function acabouHistorico() {
+  if (compartilhado.termHistorico) compartilhado.termHistorico.ativo = false;
 }
 
 // OSC 52 ("<alvo>;<base64>"): só a escrita. O pedido de leitura ("?") fica sem resposta, para o
@@ -160,7 +183,7 @@ function conectarTerminal(id, sinal, lerPeloHttp) {
       if (evento.data.byteLength < 8 || !compartilhado.term) return;
       compartilhado.termPos = Number(new DataView(evento.data).getBigUint64(0));
       if (evento.data.byteLength > 8) {
-        compartilhado.term.write(new Uint8Array(evento.data, 8));
+        escreverSaida(new Uint8Array(evento.data, 8), compartilhado.termPos);
         ecoChegou("ws");
       }
       return;
@@ -174,7 +197,7 @@ function conectarTerminal(id, sinal, lerPeloHttp) {
       ws.close();
       return;
     }
-    if (resposta.tipo === "reiniciado") { compartilhado.term?.reset(); return; }
+    if (resposta.tipo === "reiniciado") { compartilhado.term?.reset(); acabouHistorico(); return; }
     if (resposta.tipo === "fechado") {
       fechouSessao = true;
       $("terminal-fechado").hidden = false;
@@ -239,10 +262,10 @@ async function lerTerminal(id, sinal) {
     try {
       const r = await api("terminal/ler", { id, desde: compartilhado.termPos, geracao }, sinal);
       if (sinal.aborted) return;
-      if (r.reiniciado) compartilhado.term.reset();
+      if (r.reiniciado) { compartilhado.term.reset(); acabouHistorico(); }
       geracao = r.geracao || geracao;
       if (r.dados) {
-        compartilhado.term.write(Uint8Array.from(atob(r.dados), (c) => c.charCodeAt(0)));
+        escreverSaida(Uint8Array.from(atob(r.dados), (c) => c.charCodeAt(0)), r.posicao);
         ecoChegou("http");
       }
       compartilhado.termPos = r.posicao;

@@ -1123,7 +1123,8 @@
    "resumo": ""
   },
   "terminal/abrir": {
-   "posicao": 0
+   "posicao": 0,
+   "fim": 0
   },
   "terminal/ler": {
    "posicao": 0,
