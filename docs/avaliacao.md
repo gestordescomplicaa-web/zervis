@@ -31,7 +31,9 @@ rodada gasta da conta.
 `zervis placar` junta a última rodada noturna (ou, sem ela, a última com ao menos metade dos
 cenários), a latência da voz por caminho nos últimos 7 dias (`--dias`) e o gasto em tokens por
 cenário, num Markdown só com números agregados: [placar](placar.md). A latência também sai
-sozinha, em JSON: `python -m zervis.voz.latencia --caminhos 7`.
+sozinha, em JSON: `python -m zervis.voz.latencia --caminhos 7`. Cada rodada guarda a versão em
+que rodou, e o placar avisa quando a rodada é de uma versão anterior. O placar publicado é
+regerado a cada versão (`docs/06-qualidade.md`, Publicar uma versão), e o `make check` confere.
 
 ## Escrever um cenário
 
