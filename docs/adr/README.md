@@ -104,3 +104,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0094](0094-metricas-do-site.md) | As métricas do site, só leitura: o Search Console e o Google Analytics | Em validação |
 | [0095](0095-chamado-durante-a-fala.md) | O "Ei Zé" que é a própria voz do Zé não interrompe | Aceita |
 | [0096](0096-imagem-docker.md) | A imagem Docker para a VPS: um volume só, sem systemd, o primeiro acesso sem reiniciar | Em validação |
+| [0097](0097-ferramentas-sob-demanda.md) | As ferramentas do cérebro sob demanda: a busca do Claude Code e as mais usadas à mão | Em validação |

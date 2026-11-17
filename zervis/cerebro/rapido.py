@@ -56,6 +56,10 @@ PASSAR = "[completo]"
 # A frase de espera, só quando a resposta demora (03/11/2026: "vou ver aqui" a cada pedido, até
 # nos que saíam na hora, cansava). Duas, alternadas.
 AVISOS = ("Só um momento.", "Um instante.")
+# A via rápida bateu no limite da conta: até a janela renovar, os pedidos vão direto ao completo
+# (12/11/2026: 110 tentativas seguidas, ~1 s perdido em cada pedido). Sem a hora da renovação,
+# tenta de novo depois disto.
+DESCANSO_S = 15 * 60
 AVISO_APOS_S = 3.0  # sem nenhuma palavra da resposta até aqui (desde o pedido), o Zé avisa
 # O que claramente pede ferramenta vai direto ao completo, sem esperar a via rápida decidir:
 # o aviso sai na hora. Na dúvida fica na via rápida, que ainda pode passar a vez.
@@ -354,6 +358,7 @@ class Roteado:
         self.gastos: list[dict[str, Any]] = []
         self._uso_rapida: dict[str, Any] | None = None
         self._parando: asyncio.Future[None] | None = None
+        self.descanso_ate = 0.0  # time.time(): a via rápida bateu no limite e espera renovar
 
     # --- o que o núcleo lê do cérebro, como antes ------------------------------------------
 
@@ -430,7 +435,7 @@ class Roteado:
         # Cada chamada desta mensagem, para a Conversa mostrar como o Zé gastou os tokens.
         self.gastos, self._uso_rapida = [], None
         falou = False
-        if self.motor_ok and not precisa_do_completo(texto):
+        if self.motor_ok and not precisa_do_completo(texto) and time.time() >= self.descanso_ate:
             resposta = ""
             passar = False
             try:
@@ -443,6 +448,8 @@ class Roteado:
                     yield Texto(pedaco)
             except (MotorErro, TimeoutError) as erro:
                 log.warning("via rápida falhou (%s: %s)", type(erro).__name__, str(erro)[:160])
+                if "limite_de_uso" in str(erro):
+                    self._descansar()
                 passar = True
                 # Em segundo plano: parar o motor travado levava 5 s (TimeoutError do SDK) e o
                 # cérebro completo só começava depois (teste de 27/10/2026).
@@ -470,6 +477,21 @@ class Roteado:
             self.gastos, self._uso_rapida = self._gasto_rapida(), self.motor.uso
         async for evento in self._completo(texto, aviso=not falou, inicio=inicio):
             yield evento
+
+    def _descansar(self, agora: float | None = None) -> None:
+        """Até a janela da conta renovar (a hora vem do aviso de limite do Claude), a via rápida
+        fica de fora: tentar a cada pedido só somava o tempo da falha."""
+        agora = time.time() if agora is None else agora
+        limite = getattr(getattr(self.motor, "cerebro", None), "limite", None) or {}
+        try:
+            renova = float(limite.get("resetsAt") or 0)
+        except (TypeError, ValueError):
+            renova = 0.0
+        self.descanso_ate = renova if renova > agora else agora + DESCANSO_S
+        log.info(
+            "via rápida no limite da conta: direto ao completo por %.0f min",
+            (self.descanso_ate - agora) / 60,
+        )
 
     async def _parar_motor(self) -> None:
         with contextlib.suppress(Exception):

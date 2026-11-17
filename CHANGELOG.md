@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **O Zé gasta menos para pensar:** cada chamada ao modelo levava a descrição de todas as ~100
+  ferramentas; agora as mais usadas ficam à mão e as outras são achadas quando precisa, com as
+  mesmas ferramentas e a mesma resposta. E a via rápida que bate no limite da conta espera a
+  janela renovar, em vez de atrasar cada pedido (ADR 0097).
+
 - **O Zé pelo Docker numa VPS:** uma alternativa ao instalador, com tudo o que é seu num volume e
   as sessões de código presas no contêiner. `docker compose up -d --build` e o primeiro acesso
   pelo endereço seguro, como no instalador (docs/vps.md, ADR 0096).
