@@ -126,6 +126,46 @@ ou arm64; o SHA-256 é conferido antes da extração ([checksums oficiais](https
 Na primeira conexão do WhatsApp, o Zé compila o WaCalls e baixa os módulos Go. O mesmo pareamento
 atende mensagens e ligações.
 
+## Pelo Docker (opcional)
+
+Uma alternativa ao instalador (ADR 0096): o Zé num contêiner, com tudo o que é seu num volume.
+As sessões de código ficam presas no contêiner, longe da casa e das chaves do servidor. Precisa
+do Docker Engine com o plugin `compose` no servidor.
+
+```sh
+git clone https://github.com/gestordescomplicaa-web/zervis.git
+cd zervis
+git checkout "$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)"   # a versão publicada
+docker compose up -d --build
+```
+
+A imagem entra na versão seguinte à 0.5.1: até ela ser publicada, pule o `git checkout` e fique
+na `master`.
+
+A primeira subida baixa os modelos de som para o volume e leva alguns minutos;
+`docker compose ps` mostra `healthy` quando o painel responde. Então:
+
+```sh
+docker compose exec zervis python -m zervis.portal.primeiro_acesso
+```
+
+mostra o endereço seguro e o código de primeiro acesso, como no fim do instalador (passo 3).
+
+| Para | Comando, na pasta do Zé |
+|---|---|
+| Ver se está tudo de pé | `docker compose exec zervis zervis doctor` |
+| Registro ao vivo | `docker compose logs -f` |
+| Atualizar | `git fetch --tags`, `git checkout` da versão nova e `docker compose up -d --build` |
+| Parar e remover | `docker compose down` (com `-v`, apaga também os dados) |
+
+O painel não é publicado numa porta do servidor: o acesso é pelo endereço seguro. Se a rede do
+servidor bloqueia o Cloudflare, suba na rede do servidor e use o túnel SSH de sempre:
+`docker compose -f compose.yaml -f deploy/conteiner/rede-do-servidor.yaml up -d`.
+
+No contêiner não há Chromium: os posts do Instagram e a leitura de páginas pelo navegador ficam
+de fora. Dentro dele, uma sessão de código ainda alcança os dados do Zé no volume (falta separar,
+ADR 0096).
+
 ## Opcionais
 
 | Para | Instale | Por quê |

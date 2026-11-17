@@ -24,7 +24,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from zervis import ambiente, cli, lugares
+from zervis import ambiente, cli, conteiner, lugares
 
 log = logging.getLogger(__name__)
 CANAIS = ("versoes", "desenvolvimento")
@@ -48,6 +48,7 @@ TEXTOS = {
     "desenvolvimento. Para seguir recebendo, use o canal Desenvolvimento.",
     "commits_locais": "Há melhorias locais que ainda não estão na origem (do autodesenvolvimento, "
     "por exemplo). Junte-as antes de atualizar.",
+    "conteiner": "Esta instalação é atualizada pelo Docker, no servidor.",
 }
 RESULTADOS = {
     "ok": "Atualizei o Zé para {para}.",
@@ -138,7 +139,11 @@ class Versoes:
         """Busca a origem agora e guarda o que achou (o painel e a voz leem a última)."""
         with self._procurando:
             canal = self.canal
-            plano = cli.planejar(self.rodar, desenvolvimento=canal == "desenvolvimento")
+            plano = (
+                cli.Plano(motivo="conteiner", recusa=True)
+                if conteiner.em_conteiner()
+                else cli.planejar(self.rodar, desenvolvimento=canal == "desenvolvimento")
+            )
             achado: dict[str, Any] = {
                 "canal": canal,
                 "instalada": cli.versao(self.rodar),
@@ -197,6 +202,8 @@ class Versoes:
 
     def aplicar(self) -> str:
         """Começa a atualização numa unidade própria e devolve na hora (o Zé vai reiniciar)."""
+        if conteiner.em_conteiner():
+            return TEXTOS["conteiner"]
         if self.rodando():
             return "Já há uma atualização em andamento."
         canal = self.canal

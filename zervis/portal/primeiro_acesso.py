@@ -84,11 +84,28 @@ def preparar(
 
 
 def _tunel_ssh() -> str:
+    from zervis import conteiner
+
+    if conteiner.em_conteiner():  # o painel só escuta dentro do contêiner, fora da rede do host
+        return (
+            "No contêiner, o túnel SSH pede a rede do servidor: suba com "
+            "docker compose -f compose.yaml -f deploy/conteiner/rede-do-servidor.yaml up -d "
+            "(docs/vps.md, Pelo Docker)."
+        )
     return "Do seu computador: ssh -N -L 8795:127.0.0.1:8795 <usuário>@<servidor> e abra http://localhost:8795"
 
 
 def main() -> int:
-    for linha in preparar(Acesso()):
+    from zervis import conteiner
+
+    if conteiner.em_conteiner():
+        # Sem systemd para reiniciar: o túnel já subiu com o Zé, porque a entrada do contêiner
+        # o liga enquanto não há senha (ADR 0096). Aqui só se cria o convite e se espera o
+        # endereço, sem apagar o registro do túnel que está no ar.
+        linhas = preparar(Acesso(), reiniciar=lambda: None, tunel_no_ar=lambda: True)
+    else:
+        linhas = preparar(Acesso())
+    for linha in linhas:
         print(linha)
     return 0
 

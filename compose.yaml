@@ -1,0 +1,24 @@
+# O Zé numa VPS pelo Docker (ADR 0096). Guia: docs/vps.md, "Pelo Docker".
+#   docker compose up -d --build
+#   docker compose exec zervis python -m zervis.portal.primeiro_acesso
+# O painel não é publicado numa porta: o acesso é pelo endereço seguro (Cloudflare), que sai de
+# dentro do contêiner. Para o túnel SSH, some deploy/conteiner/rede-do-servidor.yaml.
+name: zervis
+
+services:
+  zervis:
+    build: .
+    image: zervis:local
+    restart: unless-stopped
+    init: false # o tini já é o processo 1 da imagem
+    volumes:
+      - casa:/home/ze
+    # Nada de privilégio extra: as sessões de código ficam presas no contêiner, longe da casa e
+    # das chaves do servidor.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  casa:

@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **O Zé pelo Docker numa VPS:** uma alternativa ao instalador, com tudo o que é seu num volume e
+  as sessões de código presas no contêiner. `docker compose up -d --build` e o primeiro acesso
+  pelo endereço seguro, como no instalador (docs/vps.md, ADR 0096).
+
 - **Placar da versão:** o placar publicado mostra a versão atual e avisa quando a última rodada de
   avaliação é de uma versão anterior; publicar uma versão sem regerá-lo não passa no `make check`.
 

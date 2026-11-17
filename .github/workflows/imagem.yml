@@ -1,0 +1,81 @@
+# A imagem Docker do Zé (ADR 0096): construída e posta de pé com o volume vazio, como numa VPS
+# nova. Confere o `zervis doctor`, o endereço seguro do primeiro acesso e que os dados ficam no
+# volume depois de reiniciar. Ações fixadas pelo commit (a etiqueta fica no comentário).
+name: imagem
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "compose.yaml"
+      - "deploy/conteiner/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "zervis/__main__.py"
+      - "zervis/cli.py"
+      - "zervis/conteiner.py"
+      - "zervis/versoes.py"
+      - "zervis/portal/**"
+      - "zervis/nucleo/ciclo.py"
+      - ".github/workflows/imagem.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: imagem-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  imagem:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Construir e subir com o volume vazio
+        run: docker compose up -d --build
+
+      - name: O painel responde (a primeira subida baixa os modelos para o volume)
+        run: |
+          for i in $(seq 1 120); do
+            estado=$(docker inspect -f '{{.State.Health.Status}}' zervis-zervis-1)
+            [ "$estado" = healthy ] && exit 0
+            [ "$(docker inspect -f '{{.State.Running}}' zervis-zervis-1)" = true ] || break
+            sleep 5
+          done
+          echo "O Zé não ficou de pé ($estado)." >&2
+          exit 1
+
+      - name: zervis doctor
+        run: |
+          docker compose exec -T zervis zervis doctor | tee doctor.txt || true
+          # Sem conta nem chave (volume vazio), o agente e a escuta ficam indisponíveis; o resto
+          # tem de estar de pé.
+          for funcao in "Serviço" "Painel" "Modelos de voz" "WhatsApp (Go)" "Espaço em disco"; do
+            grep -q "^✓ $funcao" doctor.txt || { echo "Falhou no doctor: $funcao" >&2; exit 1; }
+          done
+
+      - name: Primeiro acesso pelo endereço seguro
+        run: |
+          docker compose exec -T zervis python -m zervis.portal.primeiro_acesso | tee acesso.txt
+          grep -q "^Abra no navegador: https://" acesso.txt
+          grep -q "^Código de primeiro acesso: " acesso.txt
+
+      - name: Os dados ficam no volume depois de reiniciar
+        run: |
+          docker compose restart
+          for i in $(seq 1 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' zervis-zervis-1)" = healthy ] && break
+            sleep 5
+          done
+          docker compose exec -T zervis test -s /home/ze/.config/zervis/tunel.json
+          docker compose exec -T zervis zervis status
+
+      - name: Registro do contêiner
+        if: always()
+        run: docker compose logs --no-color --tail 200
