@@ -81,7 +81,8 @@ cada item está na frente dele, com o detalhe.
 - [ ] **Rodada por versão, não por noite** (Frente 3): decidir e agendar.
 - [ ] **Latência da voz** (Frente 3): os 216 turnos sem primeiro token e a via rápida fora da meta.
 - [ ] **A Imersão na porta de qualidade** (Frente 5): testes na CI e tipos no JavaScript do Zé.
-- [ ] **Atualizar com o programa aberto** (Frente 1): hoje a atualização volta atrás.
+- [x] **Atualizar com o programa aberto** (Frente 1): desde 17/11/2026, fechar a janela no
+  meio da troca não desfaz a atualização.
 
 ## Frente 1: Confiabilidade (6,0 → 8,0) · Fase A
 
@@ -101,15 +102,17 @@ encerra todas (visto em 06/11/2026, com 3 sessões abertas).
   arquivo é achado na pasta a cada pedido (`portal/arquivos_web.py`); aceite em
   `tests/test_portal.py`.
 
-- [ ] **Atualizar com o programa aberto** (fecho da Fase B). No PC o Zé é um programa (ADR 0079):
-  fechar a última janela o desliga. A atualização reinicia o Zé e a janela do programa fecha
-  junto (a confirmar por quê: ela parece viver no navegador que o próprio Zé abre); o atalho
-  (`deploy/abrir-painel.sh`) entende que o programa foi fechado e desliga o Zé; em 90 s o painel
-  não responde e a atualização volta para a versão anterior (visto em 11/11/2026, 23:07, com o
-  #165; a das 21:36 só ficou porque o programa foi reaberto em seguida). O atalho precisa
-  distinguir reinício de fechamento: num reinício, espera o Zé voltar e reabre a janela. Vale
-  para qualquer reinício, não só o da atualização. Aceite com o systemd de mentira de
-  `tests/test_instalador_pc.py`.
+- [x] **Atualizar com o programa aberto** (fecho da Fase B). No PC o Zé é um programa (ADR 0079):
+  fechar a última janela o desliga. Em 11/11/2026 (21:36 e 23:07, com o #165) a janela fechou
+  durante a atualização, o atalho (`deploy/abrir-painel.sh`) desligou o Zé no meio da troca, o
+  painel não respondeu em 90 s e a atualização voltou para a versão anterior. Conferido em
+  17/11/2026: o reinício não fecha a janela (o painel de verdade, com o servidor caindo e
+  voltando, segue aberto, e nenhum processo dela fica no serviço do Zé); ela foi fechada à mão.
+  O defeito era o atalho: agora, com a janela fechada no meio de uma atualização (a unidade
+  `zervis-atualizar`) ou de um reinício (um job do serviço, ou ele subindo ou parando), ele
+  espera a troca terminar, até 15 minutos, e só então desliga; uma janela reaberta nesse
+  meio-tempo mantém o Zé ligado. Aceite com o systemd de mentira de
+  `tests/test_instalador_pc.py` (atualização, job e estado de transição).
 
 Aceite: com 3 sessões trabalhando, reiniciar o Zé mantém as 3 vivas e o painel as mostra em menos
 de 10 s; matar o processo no meio de uma automação não a perde. Os dois casos no `make check`.

@@ -201,10 +201,15 @@ def test_reinstalar_mantem_a_porta_que_o_servico_ja_usa(
 
 
 def _atalho_com_servico(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, habilitado: bool, janelas: int = 0
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    habilitado: bool,
+    janelas: int = 0,
+    andamento: str = "",
 ) -> tuple[subprocess.CompletedProcess[str], list[str]]:
     """O atalho com um systemd e um pgrep de mentira, e o painel numa porta que responde.
-    `janelas`: quantas vezes o pgrep ainda acha uma janela do Zé aberta."""
+    `janelas`: quantas vezes o pgrep ainda acha uma janela do Zé aberta. `andamento`: o sinal
+    de troca em curso que o systemd mostra uma vez ("atualizacao", "job" ou "estado")."""
     import socket
 
     binarios = tmp_path / "bin"
@@ -216,14 +221,22 @@ def _atalho_com_servico(
     registro = tmp_path / "systemctl.log"
     contador = tmp_path / "janelas"
     contador.write_text(str(janelas))
+    troca = tmp_path / "andamento"
+    troca.write_text(andamento)
     (binarios / "systemctl").write_text(
         f"""#!/bin/sh
 echo "$*" >> "{registro}"
+uma_vez() {{ [ "$(cat "{troca}")" = "$1" ] && echo > "{troca}"; }}
 case "$2" in
   cat) exit 0 ;;
   is-enabled) exit {0 if habilitado else 1} ;;
-  is-active) exit 1 ;;
+  is-active) [ "$4" = zervis-atualizar ] && uma_vez atualizacao && exit 0; exit 1 ;;
+  show) case "$4" in
+      Job) uma_vez job && echo "42 restart" ;;
+      ActiveState) if uma_vez estado; then echo deactivating; else echo active; fi ;;
+    esac ;;
 esac
+exit 0
 """
     )
     (binarios / "pgrep").write_text(
@@ -261,9 +274,35 @@ def test_como_programa_abrir_liga_o_ze_e_fechar_desliga(
         "--user is-enabled --quiet zervis",
         "--user is-active --quiet zervis",
         "--user start zervis",
+        *EM_ANDAMENTO,  # nada em curso
         "--user stop zervis",  # depois que a última janela fechou
     ]
     assert (tmp_path / "janelas").read_text().strip() == "0"  # esperou a janela fechar
+
+
+EM_ANDAMENTO = [
+    "--user is-active --quiet zervis-atualizar",
+    "--user show -p Job --value zervis",
+    "--user show -p ActiveState --value zervis",
+]
+
+
+@pytest.mark.parametrize("andamento", ["atualizacao", "job", "estado"])
+def test_fechar_no_meio_da_atualizacao_espera_a_troca(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, andamento: str
+) -> None:
+    """Fechar a janela durante a atualização desligava o Zé no meio da troca, e a atualização
+    voltava para a versão anterior (11/11/2026). Agora ele só desliga quando a troca termina."""
+    resultado, systemctl = _atalho_com_servico(
+        tmp_path, monkeypatch, habilitado=False, andamento=andamento
+    )
+    assert resultado.returncode == 0, resultado.stderr
+    assert (tmp_path / "andamento").read_text().strip() == ""  # o sinal foi visto
+    inicio = systemctl.index("--user start zervis") + 1
+    espera = systemctl[inicio:-1]
+    assert systemctl[-1] == "--user stop zervis"
+    assert espera[-3:] == EM_ANDAMENTO  # a última volta não achou nada em curso
+    assert len(espera) > len(EM_ANDAMENTO)  # e houve uma volta antes, esperando a troca
 
 
 def test_com_a_partida_automatica_fechar_nao_desliga(

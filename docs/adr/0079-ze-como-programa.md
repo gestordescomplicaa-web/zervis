@@ -27,5 +27,8 @@ estava ligado. No PC, o esperado é o de um programa: funciona quando está aber
 
 - Com o programa fechado não há lembretes, automações, WhatsApp, ligações, app de voz no
   celular nem acesso remoto.
+- Fechar a janela no meio de uma atualização ou de um reinício não desliga o Zé na hora: o
+  atalho espera a troca terminar (até 15 minutos) e só então desliga; desligar antes fazia a
+  atualização voltar para a versão anterior (17/11/2026, plano de maturidade).
 - Sem Chromium (aberto pelo navegador padrão), o atalho não sabe quando a aba fecha, e o Zé fica
   ligado até `systemctl --user stop zervis`.
