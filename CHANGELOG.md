@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **O Zé não se interrompe com a própria voz:** com headset ou caixa de som, a fala dele chegava
+  ao microfone e disparava o "Ei Zé" no meio da resposta, com o bipe. Agora, quando o chamado é
+  só a fala dele voltando, ele segue falando; o seu "Ei Zé" por cima continua interrompendo
+  (ADR 0095).
+
 - **Copiar de uma sessão para outra:** abrir uma sessão não troca mais o que você copiou pela
   última cópia antiga do histórico dela.
 
