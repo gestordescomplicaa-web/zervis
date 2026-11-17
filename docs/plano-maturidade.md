@@ -26,8 +26,8 @@ testes da Imersão não rodam na CI.
 | Segurança | 15% | 6,5 | 7,8 | 8,0 | 2 |
 | Confiabilidade | 10% | 6,0 | 7,3 | 8,0 | 1 |
 | Avaliação mensurável | 10% | 4,5 | 6,5 | 7,5 | 3 |
-| Alcance e ecossistema | 15% | 3,5 | 4,0 | 5,5 | 4 |
-| **Média ponderada** | | **6,4** | **7,2** | **7,8** | |
+| Alcance e ecossistema | 15% | 3,5 | 4,0 | 5,0 | 4 |
+| **Média ponderada** | | **6,4** | **7,2** | **7,7** | |
 
 Notas do Zérvis: do código e dos testes. Dos concorrentes: documentação e reviews, sem execução.
 
@@ -54,7 +54,7 @@ O que segura cada nota de 11/11 abaixo da meta:
 | A | 0.4.0 | 1, 3 e o ADR do foco (5) | Reinício não derruba sessões; placar publicado | ≈ 7,0 |
 | B | 0.5.0 | 2 e 5 | Zero ações indevidas na bateria de injeção; nenhum módulo acima de 800 linhas | ≈ 7,5 (medido: 7,2) |
 | Fecho da B | 0.5.x | 1, 2, 3 e 5 | Sessão protegida como padrão; placar da versão publicado; testes da Imersão na CI; atualizar com o programa aberto | ≈ 7,5 |
-| C | 0.6.0 | 4 | Atendimento pela API oficial do WhatsApp; uma instalação do zero feita por outra pessoa, sem ajuda | ≈ 7,8 |
+| C | 0.6.0 | 4 | Uma instalação do zero feita por outra pessoa, sem ajuda | ≈ 7,7 |
 
 Fase A: os dois portões passaram na 0.4.0 (09/11/2026). Ficam abertos, para quando valer o gasto
 de tokens: agendar a rodada noturna (a primeira gastou 21,6 milhões) e as tarefas de ponta a ponta.
@@ -63,9 +63,11 @@ Fase B: os dois portões passaram na 0.5.0 (11/11/2026): zero ações indevidas 
 da bateria de injeção, e nenhum módulo acima de 800 linhas. O que ficou aberto virou o fecho da
 fase, abaixo.
 
-Fase C: o portão "3 PRs de fora aceitos" saiu (não depende de quem mantém o projeto) e virou meta
-da Frente 4. No lugar entra algo que se pode fazer acontecer: outra pessoa instalar do zero, só
-com o README.
+Fase C: o portão "3 PRs de fora aceitos" saiu (não depende de quem mantém o projeto). No lugar
+entra algo que se pode fazer acontecer: outra pessoa instalar do zero, só com o README. Em
+17/11/2026, por decisão de quem mantém, saíram também o WhatsApp pela API oficial (que era
+portão), o inglês e os primeiros contribuidores: não são necessários agora. A meta da Frente 4
+cai de 5,5 para 5,0, e a da fase, de ≈ 7,8 para ≈ 7,7.
 
 ## Fecho da Fase B (revisão de 11/11/2026)
 
@@ -234,7 +236,7 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   linhas) é o Barehands adaptado (`THIRD_PARTY.md`) e fica como veio: dividi-lo afasta do
   original.
 
-## Frente 4: Plataforma e alcance (3,5 → 5,5) · Fase C
+## Frente 4: Plataforma e alcance (3,5 → 5,0) · Fase C
 
 É o critério de nota mais baixa (4,0) com 15% do peso: cada ponto aqui vale 0,15 na nota geral.
 Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
@@ -245,22 +247,21 @@ Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
   volume só com a casa do usuário, sem systemd e com o primeiro acesso pelo endereço seguro; a
   CI `imagem` sobe a imagem com o volume vazio e passa no `doctor`. Falta a prova numa VPS de
   verdade e publicar a imagem pronta a cada versão.
-- [ ] **WhatsApp pela API oficial** (Cloud API) para o atendimento a clientes; o caminho atual
-  (whatsmeow e o protocolo de ligação) fica como opção pessoal. Banimento é fatal num atendimento.
 - [ ] **Cérebro pela API** como alternativa testada às CLIs por assinatura; reler os termos de uso
   de cada uma a cada versão.
 - [ ] **Instalação do zero no CI, no Arch.**
-- [ ] **Inglês** no painel e na persona, português como padrão.
-- [ ] **Primeiros contribuidores:** issues para iniciantes, placar como vitrine, vídeo da voz e da
-  oficina. Meta, não portão: 3 PRs de fora aceitos.
+
+Fora por decisão de 17/11/2026 (não são necessários agora): WhatsApp pela API oficial, inglês no
+painel e na persona, e os primeiros contribuidores.
 
 ## Riscos e fora do escopo
 
-- **Uma pessoa só mantém o projeto:** o maior risco; a Frente 4 começa a atacá-lo.
+- **Uma pessoa só mantém o projeto:** o maior risco; atrair contribuidores ficou fora por ora
+  (17/11/2026).
 - **O sandbox pode quebrar sessões que hoje funcionam:** ligar por projeto primeiro.
 - **A bateria gasta a conta:** usar o modelo mais barato que dê nota estável.
 - Fora: apps nativos de macOS e Windows, loja de skills, canais além do WhatsApp, modelo de
-  negócio.
+  negócio; desde 17/11/2026, o WhatsApp pela API oficial, o inglês e a busca por contribuidores.
 
 ## Fontes da comparação (06/11/2026)
 
