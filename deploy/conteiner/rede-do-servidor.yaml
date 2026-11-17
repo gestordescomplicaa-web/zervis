@@ -1,0 +1,7 @@
+# O contêiner na rede do servidor, para usar o túnel SSH em vez do endereço seguro (quando a
+# rede bloqueia o Cloudflare). O painel continua só em 127.0.0.1, agora o do servidor:
+#   docker compose -f compose.yaml -f deploy/conteiner/rede-do-servidor.yaml up -d
+#   ssh -N -L 8795:127.0.0.1:8795 <usuário>@<servidor>   (no seu computador)
+services:
+  zervis:
+    network_mode: host

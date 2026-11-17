@@ -178,6 +178,8 @@ ligações, web) chegam a um cérebro com ferramentas.
   13/11/2026 é o padrão (fecho da Fase B), com a saída por sessão para o projeto que precisar;
   o aceite ("uma sessão não lê `~/.ssh`") vale para toda sessão nova numa máquina com o
   bubblewrap. Falta o contêiner da VPS, que vai com a imagem Docker da Frente 4.
+  Desde 17/11/2026 a imagem existe (ADR 0096): a sessão fica presa no contêiner, longe da casa
+  e das chaves do servidor, mas ainda alcança os dados do Zé no volume. Falta separá-los.
 - [x] **Cofre de segredos fora do agente:** credencial por chamada, com escopo e prazo; o segredo
   inteiro nunca vai ao modelo.
   [ADR 0075](adr/0075-segredos-fora-do-agente.md): o agente não herda os segredos do Zé (só o
@@ -239,8 +241,10 @@ Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
 
 - [x] **Instalação do zero no CI, no Ubuntu 24.04:** o `check` roda o instalador do PC numa
   máquina limpa e confere o serviço, o atalho e o painel (ADR 0079).
-- [ ] **Imagem Docker para a VPS:** primeiro, porque também entrega o contêiner que falta na
-  Frente 2.
+- [x] **Imagem Docker para a VPS:** desde 17/11/2026 ([ADR 0096](adr/0096-imagem-docker.md)), um
+  volume só com a casa do usuário, sem systemd e com o primeiro acesso pelo endereço seguro; a
+  CI `imagem` sobe a imagem com o volume vazio e passa no `doctor`. Falta a prova numa VPS de
+  verdade e publicar a imagem pronta a cada versão.
 - [ ] **WhatsApp pela API oficial** (Cloud API) para o atendimento a clientes; o caminho atual
   (whatsmeow e o protocolo de ligação) fica como opção pessoal. Banimento é fatal num atendimento.
 - [ ] **Cérebro pela API** como alternativa testada às CLIs por assinatura; reler os termos de uso
