@@ -53,3 +53,12 @@ conta é Business e o Zé tem um endereço fixo na internet pelo túnel.
 - Publicar exige o Instagram conectado com permissão de publicar e o acesso de qualquer lugar com
   endereço fixo; sem um deles, o painel diz qual falta.
 - Reels e vídeo ficam para depois (precisam de geração de vídeo), assim como agendar posts.
+- **Publicação interrompida (17/11/2026).** Um reinício do Zé 39 s depois de começar a publicar um
+  carrossel deixou o post em "publicando" para sempre, sem erro: a linha de execução que publicava
+  morreu junto. Agora o post guarda o processo que o cria ou publica; quem lê um post em
+  andamento cujo processo parou o devolve a um estado que diz o que houve. Em "criando", vira
+  erro e pode ser refeito. Em "publicando", passados dois minutos, o Zé lê na hora os posts do
+  perfil: se um com a mesma legenda saiu depois do início, o post fica publicado com o link; se
+  não, volta a rascunho dizendo que não saiu e pode ser publicado de novo, sem duplicar; sem
+  conseguir ler, volta a rascunho pedindo para conferir no Instagram. Um defeito inesperado
+  durante a publicação também volta a rascunho com o erro, em vez de prender o post.

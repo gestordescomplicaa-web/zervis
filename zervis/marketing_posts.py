@@ -15,6 +15,7 @@ import html
 import io
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -47,6 +48,11 @@ LIMITE_ARTIGO = 9000
 MODELO = "claude-sonnet-5-5"
 NAVEGADORES = ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable")
 ESTADOS = ("criando", "rascunho", "publicando", "publicado", "erro")
+ANDAMENTO = ("criando", "publicando")  # feitos por uma linha de execução do Zé
+# Um post "publicando" sem dono só é conferido no Instagram depois disto: a Meta pode levar uns
+# segundos para listar um post cujo pedido de publicar saiu logo antes de o Zé parar.
+CONFERIR_APOS_S = 120.0
+PRAZO_ANDAMENTO_S = 1800.0  # nem criar nem publicar leva isto; depois, o post está órfão
 
 SISTEMA = "Você escreve posts de Instagram para empresas. Responda só com o JSON pedido."
 
@@ -110,6 +116,8 @@ class Post:
     criado: float = field(default_factory=time.time)
     publicado: float = 0.0
     permalink: str = ""
+    processo: int = 0  # o processo do Zé que cria ou publica o post agora
+    desde: float = 0.0  # quando começou a criar ou a publicar
 
 
 def _corte(texto: Any, limite: int) -> str:
@@ -311,6 +319,7 @@ class Posts:
         links: publico.Publicos = publico.PADRAO,
         endereco: Callable[[], str] = endereco_publico,
         publicar: Callable[..., str] = instagram_publicar.publicar,
+        procurar: Callable[[Instagram, str, float], str] = instagram_publicar.procurar,
     ) -> None:
         self.pasta = pasta
         self.pasta_fotos = fotos
@@ -321,7 +330,8 @@ class Posts:
         self.links = links
         self.endereco = endereco
         self._publicar = publicar
-        self._trava = threading.Lock()
+        self._procurar = procurar
+        self._trava = threading.RLock()
 
     # --- guardar --------------------------------------------------------------------------
 
@@ -331,6 +341,9 @@ class Posts:
         return self.pasta / id_
 
     def ler(self, id_: str) -> Post:
+        return self._retomar(self._ler(id_))
+
+    def _ler(self, id_: str) -> Post:
         try:
             dados = json.loads((self._dir(id_) / "post.json").read_text())
             return Post(**{k: v for k, v in dados.items() if k in Post.__dataclass_fields__})
@@ -338,6 +351,12 @@ class Posts:
             raise PostErro("Post desconhecido.") from None
 
     def _gravar(self, post: Post) -> Post:
+        if post.estado in ANDAMENTO:
+            if post.processo != os.getpid():
+                post.desde = time.time()
+            post.processo = os.getpid()
+        else:
+            post.processo, post.desde = 0, 0.0
         pasta = self._dir(post.id)
         pasta.mkdir(parents=True, exist_ok=True, mode=0o700)
         temporario = pasta / "post.next"
@@ -353,6 +372,60 @@ class Posts:
             except PostErro:
                 continue
         return sorted(posts, key=lambda p: p.criado, reverse=True)
+
+    @staticmethod
+    def _orfao(post: Post) -> bool:
+        """Em andamento sem ninguém fazendo: o processo que fazia parou (um reinício do Zé)."""
+        if post.estado not in ANDAMENTO or post.processo == os.getpid():
+            return False
+        if post.processo <= 0 or time.time() - post.desde > PRAZO_ANDAMENTO_S:
+            return True
+        try:
+            os.kill(post.processo, 0)  # só pergunta se o processo existe
+        except ProcessLookupError:
+            return True
+        except (PermissionError, OverflowError):
+            return False
+        return False
+
+    def _retomar(self, post: Post) -> Post:
+        """Um post que um reinício deixou em "criando" ou "publicando" volta a um estado que
+        diz o que houve. O "publicando" confere no Instagram antes se saiu, para que publicar
+        de novo nunca duplique."""
+        if not self._orfao(post):
+            return post
+        with self._trava:
+            post = self._ler(post.id)
+            if not self._orfao(post):
+                return post
+            if post.estado == "criando":
+                post.estado, post.erro = "erro", "A criação foi interrompida. Peça para refazer."
+                log.warning("post %s: criação interrompida", post.id)
+                return self._gravar(post)
+            if time.time() - post.desde < CONFERIR_APOS_S:
+                return post
+            texto = self._conferir_publicacao(post)
+            self._gravar(post)
+        self._avisar(texto)
+        return post
+
+    def _conferir_publicacao(self, post: Post) -> str:
+        try:
+            link = self._procurar(self.instagram, post.legenda, post.desde)
+        except InstagramErro as erro:
+            log.warning("post %s: publicação interrompida, sem conferir (%s)", post.id, erro)
+            post.estado = "rascunho"
+            post.erro = "A publicação foi interrompida. Confira no Instagram antes de publicar."
+            return f"A publicação do post {post.tema or post.artigo} foi interrompida."
+        if link:
+            log.warning("post %s: publicação interrompida, mas o post saiu", post.id)
+            post.estado, post.erro, post.publicado = "publicado", "", post.desde
+            post.permalink = link if link.startswith("https://") else ""
+            return "O post foi publicado no Instagram."
+        log.warning("post %s: publicação interrompida, o post não saiu", post.id)
+        post.estado = "rascunho"
+        post.erro = "A publicação foi interrompida e o post não saiu. Pode publicar de novo."
+        return f"A publicação do post {post.tema or post.artigo} foi interrompida e não saiu."
 
     def slides(self, id_: str) -> list[Path]:
         return sorted(self._dir(id_).glob("slide-*.jpg"), key=lambda p: int(p.stem.split("-")[1]))
@@ -472,6 +545,10 @@ class Posts:
             log.warning("post %s: %s", post.id, erro)
             post.estado, post.erro = "erro", str(erro) if isinstance(erro, PostErro) else "Falhou."
             texto = f"Não consegui criar o post: {post.erro}"
+        except Exception:  # um defeito não deixa o post preso em "criando"
+            log.exception("post %s: falha inesperada ao criar", post.id)
+            post.estado, post.erro = "erro", "Falhou."
+            texto = f"Não consegui criar o post: {post.erro}"
         self._gravar(post)
         self._avisar(texto)
 
@@ -511,6 +588,11 @@ class Posts:
         except InstagramErro as erro:
             post.estado, post.erro = "rascunho", str(erro)
             texto = f"Não publiquei o post: {erro}"
+        except Exception:  # um defeito não deixa o post preso em "publicando"
+            log.exception("post %s: falha inesperada ao publicar", post.id)
+            post.estado = "rascunho"
+            post.erro = "A publicação falhou. Confira no Instagram antes de publicar."
+            texto = f"Não publiquei o post: {post.erro}"
         finally:
             self.links.fechar(segredo)
         self._gravar(post)
