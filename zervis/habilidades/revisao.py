@@ -8,6 +8,10 @@ entrada e criar ou corrigir skill viram **pendência**, que o usuário aprova po
 painel. Economia e eficácia: ADR 0011 (se aprender menos que o Hermes, a regra volta a ser a
 dele).
 
+Fato sobre o usuário só entra sozinho com a frase dele que o sustenta (ADR 0098): o `apoio`,
+copiado da conversa e conferido aqui, palavra por palavra. Sem ele, a proposta vira sugestão.
+A ideia é do OpenMausBot (Apache-2.0), reimplementada sem copiar código.
+
 Os critérios do prompt são adaptados de `agent/background_review.py` do Hermes Agent (Nous
 Research, MIT; ver THIRD_PARTY.md): skill é como fazer bem uma classe de tarefa do jeito do
 usuário; correção de estilo é sinal de primeira classe; não registrar falha de ambiente,
@@ -19,16 +23,19 @@ import json
 import re
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from zervis import usuario
 from zervis.dados.lista import Lista
 from zervis.habilidades.skills import SkillErro, Skills
-from zervis.memoria.curta import Memoria, MemoriaErro, Mudanca
+from zervis.memoria.curta import Memoria, MemoriaErro, Mudanca, normal
 
 MINIMO_TURNOS = 4
+MINIMO_PALAVRAS_APOIO = 3  # "sim", "pode ser" não sustentam um fato sobre ninguém
 LIMITE_ORIGEM = 240
 LIMITE_SKILLS_NO_PROMPT = 12_000
 SINAIS = re.compile(
@@ -67,9 +74,20 @@ nova; criar skill nova. Memória: uma frase curta e duradoura, escrita como fato
 respostas curtas"), nunca como ordem ("responda curto"): uma ordem relida noutra conversa \
 passa por cima do que o usuário pedir na hora. Se nada vale, devolva listas vazias.
 
+Fato novo sobre o usuário (alvo "usuario") só com "apoio": o trecho de uma fala DELE nesta \
+conversa que sustenta o fato, copiado palavra por palavra (pelo menos três palavras). Uma \
+pergunta ("qual o melhor plano para dez pessoas?"), um pedido de tarefa ("escreve um plano de \
+lançamento") ou uma hipótese ("suponha que...", "e se...") nunca é fato sobre quem ele é. Sem \
+uma fala assim, não proponha. Fatos do ambiente (alvo "jarvis") dispensam o apoio.
+
+Hoje é {hoje}. Fato que só vale até um dia conhecido (uma viagem, um prazo, alguém fora até \
+sexta) termina em " · até DD/MM/AAAA", o último dia em que vale. Aniversário e datas que se \
+repetem todo ano nunca levam validade.
+
 Responda SÓ com JSON, sem texto em volta:
 {{"memoria": [{{"acao": "adicionar|trocar|remover", "alvo": "usuario|jarvis", "texto": "...", \
-"antigo": "trecho único da entrada, para trocar/remover"}}],
+"antigo": "trecho único da entrada, para trocar/remover", "apoio": "a fala do usuário, \
+palavra por palavra (fato novo sobre ele)"}}],
 "skills": [{{"acao": "criar|corrigir", "nome": "minusculas-com-hifen", "conteudo": "SKILL.md \
 inteiro com front matter name/description (só para criar)", "trecho_antigo": "...", \
 "trecho_novo": "... (só para corrigir)"}}]}}
@@ -113,8 +131,28 @@ def montar_prompt(turnos: list[dict[str, str]], memoria: Memoria, skills: Skills
         for t in turnos
     )
     return PROMPT.format(
-        memoria=memoria.foto(), skills="\n\n".join(corpos) or "(nenhuma)", conversa=conversa
+        memoria=memoria.foto(),
+        skills="\n\n".join(corpos) or "(nenhuma)",
+        conversa=conversa,
+        hoje=_data(memoria.hoje()),
     )
+
+
+def _data(dia: date) -> str:
+    return dia.strftime("%d/%m/%Y")
+
+
+def apoio_confere(apoio: str, turnos: Sequence[dict[str, str]]) -> bool:
+    """O trecho está, palavra por palavra (sem contar acento e pontuação), numa fala do
+    usuário, e não numa do Zé."""
+    trecho = _sem_pontuacao(apoio)
+    if len(trecho.split()) < MINIMO_PALAVRAS_APOIO:
+        return False
+    return any(trecho in _sem_pontuacao(t.get("pessoa", "")) for t in turnos)
+
+
+def _sem_pontuacao(texto: str) -> str:
+    return " ".join(re.sub(r"[^\w\s]", " ", normal(texto)).split())
 
 
 @dataclass
@@ -143,8 +181,11 @@ def _resumo(tipo: str, d: dict[str, str]) -> str:
     return f"{verbo} a skill {d.get('nome', '')}"
 
 
-def interpretar(saida: str, memoria: Memoria, skills: Skills) -> list[Proposta]:
-    """Só as propostas que passariam na escrita de verdade; o resto é descartado em silêncio."""
+def interpretar(
+    saida: str, memoria: Memoria, skills: Skills, turnos: Sequence[dict[str, str]] = ()
+) -> list[Proposta]:
+    """Só as propostas que passariam na escrita de verdade; o resto é descartado em silêncio.
+    O `apoio` fica só se confere com uma fala do usuário em `turnos`."""
     achado = re.search(r"\{.*\}", saida, re.DOTALL)
     if not achado:
         return []
@@ -157,6 +198,9 @@ def interpretar(saida: str, memoria: Memoria, skills: Skills) -> list[Proposta]:
         if not isinstance(item, dict):
             continue
         d = {k: str(item.get(k, "")) for k in ("acao", "alvo", "texto", "antigo")}
+        apoio = " ".join(str(item.get("apoio", "")).split())
+        if apoio and apoio_confere(apoio, turnos):
+            d["apoio"] = apoio
         try:
             memoria.resultado(Mudanca(d["acao"], d["alvo"], d["texto"], d["antigo"]))
         except MemoriaErro:
@@ -230,8 +274,12 @@ def aplicar(proposta: Proposta, memoria: Memoria, skills: Skills) -> None:
 
 def gravar_sozinho(p: Proposta) -> bool:
     """Só fato novo na memória dispensa a aprovação (ADR 0090); trocar e tirar mexem no que
-    já estava, e skill muda o jeito de fazer uma classe de tarefa."""
-    return p.tipo == "memoria" and p.dados.get("acao") == "adicionar"
+    já estava, e skill muda o jeito de fazer uma classe de tarefa. Fato sobre o usuário, só
+    com a fala dele que o sustenta (ADR 0098)."""
+    d = p.dados
+    if p.tipo != "memoria" or d.get("acao") != "adicionar":
+        return False
+    return d.get("alvo") != "usuario" or bool(d.get("apoio"))
 
 
 def aprender(

@@ -213,7 +213,11 @@ window.maoFalsa = (() => {
     g.fillStyle = `rgb(${m},${m},${m})`; g.fillRect(120, 50, 80, 80); };
   pintar(); cam.srcObject = tela.captureStream(30); cam.play();
   setInterval(pintar, 33);
-  let t0 = performance.now(), parado = false;
+  // Counted in samples from the start of each phase, open hand first: a pinch
+  // already under way when "toques" began reached it as a single frame (the
+  // profile needs two), and a busy runner's slow timers did the same to a
+  // wall-clock pinch.
+  let quadro = 0, faseAntes = '', parado = false;
   const aberta = {ratio:.9, ratio3:.9, f8v:1.9, backMean:1.9, aspect:2.5, tRel:.5};
   const pinca = {ratio:.34, ratio3:.12, f8v:1.25, backMean:1.55, aspect:2.5, tRel:.5};
   // Almost touching: overlapped in the picture (2D gap under the ceiling, OK
@@ -224,7 +228,9 @@ window.maoFalsa = (() => {
     if (parado) return;
     const now = performance.now(), m = window.jarvisMaos, fase = m.estado().fase;
     let f = aberta;
-    if (fase === 'toques') f = ((now - t0) % 900) < 240 ? pinca : aberta;
+    if (fase !== faseAntes) { faseAntes = fase; quadro = 0; }
+    quadro += 1;
+    if (fase === 'toques') f = (quadro % 18) >= 12 ? pinca : aberta;
     else if (fase === 'punho') f = punho;
     else if (fase === 'quase') f = quase;
     const tremor = Math.sin(now / 70) * 2;
@@ -422,7 +428,8 @@ async def calibrar_no_navegador():
                 await check('the new profile recognises the pinch the original missed', 'jarvisMaos.origem==="calibrado" && jarvisMaos.p.pincaFrontal>0.34 && jarvisMaos.p.pincaFrontal<=0.40')
                 await check('never stricter than the original, inside the safe bounds', 'jarvisMaos.valido(jarvisMaos.p) && jarvisMaos.p.tremor>=12 && jarvisMaos.p.tremor<=48 && jarvisMaos.p.contraste<=0.18 && jarvisMaos.p.arco<=1.30 && jarvisMaos.p.pincaFrontal>=0.32')
                 assert perfil.ler()['origem'] == 'calibrado'
-                assert perfil.ler()['resumo']['reconhecidos'] == 5 and perfil.ler()['resumo']['reconhecidosPadrao'] == 0
+                resumo = perfil.ler()['resumo']
+                assert resumo['reconhecidos'] == 5 and resumo['reconhecidosPadrao'] == 0, resumo
                 assert perfil.ler()['resumo']['punhosAceitos'] == 0
                 assert perfil.ler()['resumo']['quasesPadrao'] == 3, perfil.ler()['resumo']
                 assert perfil.ler()['resumo']['quasesAceitos'] == 0, perfil.ler()['resumo']
