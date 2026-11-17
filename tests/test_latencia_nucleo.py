@@ -15,6 +15,7 @@ from zervis.avisos.fila import Fila
 from zervis.cerebro.eco import Eco
 from zervis.nucleo import estados as e
 from zervis.nucleo.laco import Nucleo, Status
+from zervis.voz.eco import Referencia
 from zervis.voz.escuta import Segmentador
 from zervis.voz.latencia import Latencias
 
@@ -24,6 +25,7 @@ class VozCronometrada:
 
     def __init__(self) -> None:
         self.observadores: list[Callable[[float], None]] = []
+        self.eco = Referencia()
 
     def falar(self, texto: str, ao_iniciar: Callable[[float], None] | None = None) -> int:
         if ao_iniciar:

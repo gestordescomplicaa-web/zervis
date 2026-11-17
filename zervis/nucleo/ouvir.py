@@ -220,7 +220,18 @@ def _quadro(n: "Nucleo", dados: bytes) -> None:
             local = n._fonte is None or not n._fonte.conectada  # o microfone deste computador
             if local:
                 minimo = nivel_chamado.PADRAO.minimo(minimo)
-            n._guardar_chamado(nivel < minimo)
+            veredito = n.voz.eco.avaliar(b"".join(n._antes_do_chamado))
+            eco = veredito is not None and veredito.eco
+            n._guardar_chamado(nivel < minimo or eco)
+            if eco and veredito is not None:
+                log.info(
+                    "chamado ignorado: a própria voz do Zé no microfone (nota %.3f, semelhança"
+                    " %.2f, sobra %.1f dB)",
+                    n.detector.nota_disparo,
+                    veredito.semelhanca,
+                    veredito.sobra_db,
+                )
+                return
             if nivel < minimo:
                 log.info(
                     "chamado ignorado: baixo demais (nota %.3f, %.0f dBFS)",

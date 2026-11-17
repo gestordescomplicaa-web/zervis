@@ -23,6 +23,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from zervis.transporte.local import comando_reprodutor
+from zervis.voz.eco import Referencia
 
 log = logging.getLogger(__name__)
 CARACTERES_POR_SEGUNDO_FALADO = 1 / 0.065  # ~65 ms de fala por caractere
@@ -140,6 +141,8 @@ class Voz:
         self.faladas = 0
         self.ao_ficar_ociosa: Callable[[int], None] | None = None
         self.muda = False  # modo silencioso: nada sai no alto-falante, o resto segue igual
+        # O que tocou nos últimos segundos: o chamado que for só o eco disso não interrompe.
+        self.eco = Referencia()
         threading.Thread(target=self._rodar, name="voz", daemon=True).start()
 
     def falar(
@@ -286,11 +289,14 @@ class Voz:
             self.onda.comecar(pedaco.pcm.amostras, taxa, pedaco.texto)
         escritas = 0
         inicio = time.monotonic()
+        soa_em: float | None = None  # quando a primeira amostra foi entregue ao reprodutor
         faltou = False
         try:
             while epoca == self.epoca:
                 amostras = pedaco.pcm.amostras()
                 if len(amostras) > escritas:
+                    soa_em = time.monotonic() if soa_em is None else soa_em
+                    self.eco.tocou(soa_em + escritas / taxa, amostras[escritas:], taxa)
                     dados = amostras[escritas:].astype("<f4").tobytes()
                     if escritas == 0 and ao_iniciar:
                         # O WAV inteiro pode exceder o pipe e bloquear até quase o fim da fala.
