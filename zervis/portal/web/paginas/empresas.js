@@ -1,8 +1,8 @@
 import { ACOES } from "../modulos/acoes.js";
 import { PAGINAS, $, api, botao, cabeca, cartao, confirmar, esc, item, mostrar, ocupado, sub, vazio } from "../painel.js";
 
-// As empresas que quem usa gere (ADR 0105): o grupo de WhatsApp de cada uma, a pasta do projeto e
-// a vitrine (o que foi publicado para ela). Nesta etapa só o cadastro: nada é enviado aos grupos.
+// As empresas que quem usa gere (ADR 0105 e 0108): o grupo de WhatsApp de cada uma, a pasta do
+// projeto e a vitrine. Ligada, o Zé responde no grupo quando chamado, só com o que está na vitrine.
 
 /** @type {{empresas: any[], pastas: string[]}} */
 let ultimo = { empresas: [], pastas: [] };
@@ -27,7 +27,7 @@ function linhaEmpresa(e) {
 }
 
 function formulario() {
-  const e = ultimo.empresas.find((x) => x.id === editando) || { nome: "", grupo: "", grupo_nome: "", pasta: "", ligada: false };
+  const e = ultimo.empresas.find((x) => x.id === editando) || { nome: "", grupo: "", grupo_nome: "", pasta: "", ligada: false, sobre: "" };
   const opcoesGrupo = grupos === null
     ? `<option value="${esc(e.grupo)}">${esc(e.grupo_nome || (e.grupo ? e.grupo : "Carregando grupos…"))}</option>`
     : `<option value="">Nenhum</option>${grupos.map((g) => {
@@ -41,8 +41,9 @@ function formulario() {
     <label>Grupo do WhatsApp<select id="empresa-grupo">${opcoesGrupo}</select></label>
     <label>Projeto<select id="empresa-pasta"><option value="">Nenhum</option>${pastas.map((p) => `<option value="${esc(p)}" ${p === e.pasta ? "selected" : ""}>${esc(p)}</option>`).join("")}</select></label>
     <label class="interruptor"><input type="checkbox" id="empresa-ligada" ${e.ligada ? "checked" : ""}> Ligada</label>
+    <label class="largo">O que o grupo pode saber<textarea id="empresa-sobre" rows="7" maxlength="8000" placeholder="Serviços, horários, quem procurar, perguntas frequentes. O Zé responde no grupo só com isto e com os arquivos da vitrine.">${esc(e.sobre || "")}</textarea></label>
   </div>
-  ${sub("O grupo lista os grupos em que o número do Zé está. Ligada: a empresa entra nos relatórios e nas respostas do grupo, quando existirem.")}
+  ${sub("Ligada: o Zé responde no grupo quando chamado, com uma menção ao número dele, com “Zé,” no começo da mensagem ou respondendo a uma mensagem dele. Pedidos de ação não são feitos: chegam para você.")}
   <div class="linha">${botao("Salvar", "empresa-salvar", "", "principal")}${botao("Cancelar", "empresa-cancelar", "", "discreta")}</div>
   <p class="resultado" id="resultado-empresa"></p>`);
 }
@@ -95,6 +96,7 @@ Object.assign(ACOES, {
       grupo_nome: escolhido?.dataset.nome || escolhido?.textContent || "",
       pasta: /** @type {HTMLSelectElement} */ ($("empresa-pasta")).value,
       ligada: /** @type {HTMLInputElement} */ ($("empresa-ligada")).checked,
+      sobre: /** @type {HTMLTextAreaElement} */ ($("empresa-sobre")).value,
     };
     try {
       ultimo = await ocupado(b, () => api("empresas/salvar", dados));

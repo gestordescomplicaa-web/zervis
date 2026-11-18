@@ -1,7 +1,7 @@
 # Plano — o Zé nos grupos das empresas que você gere (18/11/2026)
 
-**Estado:** etapa 1 feita em 18/11/2026 ([ADR 0105](adr/0105-empresas-e-grupos.md)); as etapas
-2 a 4, propostas. Parte da conversa com o Zé pelo WhatsApp ([ADR 0102](adr/0102-conversa-pelo-whatsapp.md))
+**Estado:** etapas 1 e 3 feitas em 18/11/2026 ([ADR 0105](adr/0105-empresas-e-grupos.md) e
+[ADR 0108](adr/0108-ze-nos-grupos.md)); as etapas 2 e 4, propostas. Parte da conversa com o Zé pelo WhatsApp ([ADR 0102](adr/0102-conversa-pelo-whatsapp.md))
 e da aprovação só no painel ([ADR 0104](adr/0104-aprovacao-no-painel.md)), e muda a regra do
 [ADR 0056](adr/0056-arquivo-do-whatsapp.md) (hoje o Zé lê os grupos e nunca responde neles). Cada etapa entra com o seu ADR e os testes na porta de
 qualidade.
@@ -74,7 +74,7 @@ grupo de WhatsApp por empresa, com o dono e a equipe, onde o Zé:
 - Aceite: um relatório diário em cada um dos cinco grupos durante uma semana, sem envio em
   dobro nem relatório de uma empresa no grupo de outra.
 
-### Etapa 3 — Dúvidas no grupo (leitura)
+### Etapa 3 — Dúvidas no grupo (leitura) (feita em 18/11/2026, ADR 0108)
 
 - O agente da empresa responde quando chamado, com o modelo sem ferramentas, a persona dela e a
   vitrine como contexto. O que não está na vitrine ele não sabe, e diz isso.

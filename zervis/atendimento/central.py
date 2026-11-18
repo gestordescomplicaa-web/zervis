@@ -32,7 +32,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from zervis import lugares, usuario
-from zervis.atendimento import agente, camera_fala, ligacao, projeto, whatsapp
+from zervis.atendimento import agente, camera_fala, grupos, ligacao, projeto, whatsapp
 
 log = logging.getLogger(__name__)
 
@@ -149,6 +149,11 @@ class Central:
             criar_motor, self.whatsapp.enviar, self._passou, perfil=projeto.perfil
         )
         self.eventos = Eventos(registros=self.atendente.registros)
+        self.grupos = grupos.Grupos(  # o Zé nos grupos das empresas ligadas (ADR 0108)
+            criar_motor,
+            lambda c, t, k: self.whatsapp.enviar_ao_grupo(c, t, k),
+            self.eventos.publicar,
+        )
         self._servidor: ThreadingHTTPServer | None = None
 
     # --- o que chega do WhatsApp e do agente -------------------------------------------------
@@ -181,7 +186,9 @@ class Central:
             self.eventos.publicar("respondida", **nome, **comum)
         else:
             self.eventos.publicar("mensagem", nome=r.nome, telefone=r.telefone, **comum)
-        if not r.midia and not r.grupo:
+        if r.grupo:
+            self.grupos.receber(r)  # só responde em grupo de empresa ligada, quando chamado
+        elif not r.midia:
             self.atendente.receber(r)
 
     def _publicar_pedido(self, r: whatsapp.Recebida, texto: str, midia: str, **extra: Any) -> None:
@@ -720,6 +727,7 @@ class Central:
             self._servidor.server_close()
         self.whatsapp.parar()
         self.atendente.parar()
+        self.grupos.parar()
 
 
 async def _decidir(atendida: ligacao.Chamada, decisao: str) -> bool:

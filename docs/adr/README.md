@@ -114,3 +114,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0104](0104-aprovacao-no-painel.md) | A conversa pelo WhatsApp é a mesma, e a aprovação é no painel | Aceito |
 | [0105](0105-empresas-e-grupos.md) | Empresas e o grupo de WhatsApp de cada uma | Aceito |
 | [0106](0106-videos-de-marketing.md) | Vídeos (Reels) em Marketing: o modelo escreve o roteiro, o Zé desenha | Aceito |
+| [0108](0108-ze-nos-grupos.md) | O Zé nos grupos das empresas: responde quando chamado, só com a vitrine | Aceito |

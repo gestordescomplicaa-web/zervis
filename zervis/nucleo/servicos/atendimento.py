@@ -291,6 +291,32 @@ class ServicoAtendimento:
             self._ligacao_feita(evento)
         elif evento.get("tipo") == "camera_conversa":
             self._camera_conversa(evento)
+        elif evento.get("tipo") in ("grupo_resposta", "grupo_pedido"):
+            self._evento_do_grupo(evento)
+
+    # --- o Zé nos grupos das empresas (ADR 0108) ----------------------------------------------
+
+    def _evento_do_grupo(self, evento: dict[str, Any]) -> None:
+        """O agente do grupo respondeu (vai à Atividade) ou encaminhou um pedido: o aviso vem a
+        você, falado e no seu WhatsApp (o número autorizado), porque o grupo não manda em nada."""
+        empresa, quem = str(evento.get("empresa", "")), str(evento.get("quem", ""))
+        if evento.get("tipo") == "grupo_resposta":
+            atividade.PADRAO.registrar(
+                "execucao", f"Grupo {empresa}: respondeu a {quem}", origem="grupo",
+                pergunta=str(evento.get("pergunta", "")), resposta=str(evento.get("resposta", "")),
+            )  # fmt: skip
+            return
+        pedido = str(evento.get("pedido", ""))
+        texto = f"{empresa}: {quem} pediu no grupo: {pedido}."
+        atividade.PADRAO.registrar(
+            "execucao", f"Grupo {empresa}: pedido encaminhado", origem="grupo", pedido=pedido
+        )
+        self._avisar_resultado(texto)
+        ligada, numeros = whatsapp.conversa()
+        if ligada and numeros:
+            chave = hashlib.sha256(f"grupo:{texto}:{time.time()}".encode()).hexdigest()[:24]
+            with contextlib.suppress(cliente.CentralErro):
+                self.n.central.enviar(texto, chave, telefone=numeros[0])
 
     # --- a conversa com o Zé pelo WhatsApp (ADR 0102) -----------------------------------------
 

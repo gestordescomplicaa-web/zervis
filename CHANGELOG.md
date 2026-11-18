@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **O Zé nos grupos das empresas:** no grupo de uma empresa ligada, o Zé responde quando é chamado
+  (uma menção ao número dele, "Zé," no começo da mensagem ou uma resposta a ele), só com o que
+  está em "O que o grupo pode saber" e nos arquivos da vitrine. Pedido de ação não é feito: ele
+  responde "Encaminhei para o gestor." e o pedido chega a você, falado e no seu WhatsApp
+  (ADR 0108).
+
 - **Vídeos em Marketing:** o Zé cria Reels explicativos com a sua marca, sobre qualquer tema ou a
   partir de um artigo do blog. Ele escreve o roteiro, narra com a voz escolhida em Voz e monta o
   vídeo com cenas animadas, legenda palavra por palavra e trilha própria, em uns 5 minutos. Você

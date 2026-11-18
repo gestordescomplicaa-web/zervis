@@ -89,7 +89,7 @@ func validarAgendaMessageRequest(body agendaMessageRequest) (agendaMessageReques
 		if len(body.Phones) > 0 {
 			return body, errors.New("chat_jid or phones, not both")
 		}
-		if _, err := conversaPrivada(body.ChatJID); err != nil {
+		if _, err := destinoPermitido(body.ChatJID); err != nil { // Zérvis: ou um grupo ligado (ADR 0108)
 			return body, err
 		}
 		return body, nil
@@ -233,7 +233,7 @@ func (s *server) handleAgendaMessage(w http.ResponseWriter, r *http.Request) {
 	var target types.JID
 	phone := ""
 	if body.ChatJID != "" {
-		target, _ = conversaPrivada(body.ChatJID) // já validado
+		target, _ = destinoPermitido(body.ChatJID) // já validado
 		phone = target.String()
 	} else {
 		lookupCtx, lookupCancel := context.WithTimeout(r.Context(), 10*time.Second)
