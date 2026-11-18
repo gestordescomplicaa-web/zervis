@@ -60,6 +60,9 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "S"]
 # Modo imersivo: cada leitura de estado falha em silêncio de propósito (sem arquivo, o anel só
 # respira); o servidor nunca derruba a página por um arquivo ausente.
 "zervis/imersivo/servidor.py" = ["S110"]
+# As ferramentas dos vídeos (docs/video): scripts de uma vez, que esperam o Chromium e o disco
+# sem nada mais rodando no mesmo laço.
+"docs/video/*.py" = ["ASYNC210", "ASYNC220", "ASYNC240"]
 
 [tool.mypy]
 python_version = "3.12"
