@@ -602,6 +602,8 @@ class Central:
             return 200, {"id": ident}
         if rota == ("GET", "/whatsapp/agenda"):
             return 200, {"contatos": self.whatsapp.agenda()}
+        if rota == ("GET", "/whatsapp/grupos"):  # para ligar um grupo a uma empresa (ADR 0105)
+            return 200, {"grupos": self.whatsapp.grupos()}
         if rota == ("POST", "/ligacao/decidir"):
             # Você atende ou não quem pediu para falar com você (ADR 0066), pelo Zé.
             atender = corpo.get("atender") is True

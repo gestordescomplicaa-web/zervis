@@ -704,6 +704,21 @@ class WhatsApp:
             if isinstance(c, dict) and str(c.get("name", "")).strip()
         ]  # fmt: skip
 
+    def grupos(self) -> list[dict[str, Any]]:
+        """Os grupos em que o número conectado está (o chat, o nome e quantas pessoas), para ligar
+        um grupo a uma empresa (ADR 0105). Nenhuma mensagem é lida."""
+        sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
+        if not sessoes:
+            raise WhatsAppErro("WhatsApp não conectado.")
+        r = self._api("GET", f"/api/sessions/{sessoes[0]['id']}/groups", espera=20.0)
+        lista = r.get("groups") if isinstance(r, dict) else None
+        return [
+            {"chat": str(g.get("chat", "")), "nome": str(g.get("name", "")).strip(),
+             "participantes": int(g.get("participants") or 0)}
+            for g in (lista if isinstance(lista, list) else [])
+            if isinstance(g, dict) and str(g.get("chat", "")).endswith("@g.us")
+        ]  # fmt: skip
+
     def conectar_em_segundo_plano(self) -> None:
         """`conectar` sem prender quem pediu; a falha fica em `falha`, para a tela."""
         self.falha = ""

@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Empresas:** a página nova, em Trabalho, cadastra as empresas que você gere, cada uma com o seu
+  grupo de WhatsApp (dos grupos em que o número do Zé está), a pasta do projeto e a vitrine, onde
+  fica o que pode ser mostrado a ela. Por enquanto, só o cadastro: nada é enviado aos grupos
+  (ADR 0105).
+
 - **Uma conversa só, com a aprovação no painel:** o Zé do WhatsApp sabe o que foi dito pela voz
   e pelo painel, e o da voz sabe o que foi dito pelo WhatsApp; na Conversa, os pedidos de lá vêm
   marcados "WhatsApp". O que você pedir pelo WhatsApp com efeito aparece na Conversa com

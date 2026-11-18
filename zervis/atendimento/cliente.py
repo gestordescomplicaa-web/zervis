@@ -189,6 +189,11 @@ class Cliente:
         lista = self._api("GET", "/whatsapp/agenda", espera=20.0).get("contatos", [])
         return [c for c in lista if isinstance(c, dict)]
 
+    def grupos(self) -> list[dict[str, Any]]:
+        """Os grupos do número conectado, pelo WhatsApp da Central (bloqueia: rede)."""
+        lista = self._api("GET", "/whatsapp/grupos", espera=25.0).get("grupos", [])
+        return [g for g in lista if isinstance(g, dict)]
+
     def decidir_ligacao(self, chamada: str, atender: bool) -> str:
         """Você atende ou não quem pediu para falar com você (ADR 0066). Atendendo, devolve o
         endereço da ponte de áudio; senão, vazio."""
