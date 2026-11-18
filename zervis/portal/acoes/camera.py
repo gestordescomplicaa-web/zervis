@@ -89,14 +89,6 @@ class AcoesCamera(Pagina):
             "foto": "data:image/jpeg;base64," + base64.b64encode(imagem).decode("ascii"),
         }
 
-
-def _girar(valor: Any) -> list[int] | None:
-    if valor is None:
-        return None
-    if not isinstance(valor, list):
-        raise PedidoInvalido("Lentes inválidas.")
-    return [int(v) for v in valor if isinstance(v, int) and not isinstance(v, bool)]
-
     def ao_vivo_camera(self, consulta: dict[str, str]) -> tuple[str, Iterator[bytes]]:
         """O vídeo ao vivo de uma lente (ADR 0101): `lente` (1, 2…) e `qualidade` (alta, leve)."""
         try:
@@ -110,3 +102,11 @@ def _girar(valor: Any) -> list[int] | None:
         except camera_ao_vivo.AoVivoErro as erro:
             raise PedidoInvalido(str(erro)) from None
         return camera_ao_vivo.TIPO, partes
+
+
+def _girar(valor: Any) -> list[int] | None:
+    if valor is None:
+        return None
+    if not isinstance(valor, list):
+        raise PedidoInvalido("Lentes inválidas.")
+    return [int(v) for v in valor if isinstance(v, int) and not isinstance(v, bool)]

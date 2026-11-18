@@ -178,3 +178,16 @@ def test_a_rota_explica_o_erro(painel: Any) -> None:
     status, _, corpo = _pedir(p, "/fluxo/camera/ao-vivo?lente=9", {"Cookie": cookie})
     assert status == 400 and "Lente inválida." in corpo.decode()
     assert _pedir(p, "/fluxo/outra-coisa", {"Cookie": cookie})[0] == 404
+
+
+def test_o_painel_de_verdade_registra_a_transmissao(tmp_path: Path) -> None:
+    """As ações montadas como na subida do Zé: cada transmissão existe e chega à câmera."""
+    from types import SimpleNamespace
+
+    from zervis.portal.acoes import Acoes
+
+    acoes = Acoes(SimpleNamespace(camera=camera.Camera(tmp_path / "nada.json")), tmp_path, tmp_path)
+    fluxos = acoes.fluxos()
+    assert set(fluxos) == {"camera/ao-vivo"}
+    with pytest.raises(PedidoInvalido, match="não configurada"):
+        fluxos["camera/ao-vivo"]({"lente": "1"})
