@@ -1,16 +1,17 @@
 """O vídeo ao vivo da câmera no painel (ADR 0101): cada lente, enquanto alguém assiste.
 
-A câmera entrega H.265 pelo RTSP, que a maioria dos navegadores não toca. O ffmpeg do sistema
-converte em MJPEG (uma sequência de JPEG), que qualquer navegador mostra num `<img>`. Cada
-pessoa assistindo tem o seu ffmpeg, e ele termina quando ela sai da página. A lente marcada para
-girar no cadastro sai girada, como as fotos.
+O vídeo de cada lente vem pelo DVRIP (`OPMonitor`), o mesmo caminho do app iCSee: nesta câmera, o
+RTSP traz só a lente 1, qualquer que seja o canal pedido. Ele chega em H.265, que a maioria dos
+navegadores não toca; o ffmpeg do sistema recebe o H.265 pela entrada e devolve MJPEG (uma
+sequência de JPEG), que qualquer navegador mostra num `<img>`. A senha não passa pelo ffmpeg.
+Cada vídeo aberto tem a sua conexão e o seu ffmpeg, que terminam quando a pessoa sai da página.
+A lente marcada para girar no cadastro sai girada, como as fotos.
 
 - "Alta": o fluxo principal, 1280x720.
 - "Leve": o fluxo secundário, 640x360, para o celular e a rede de fora.
 """
 
 import contextlib
-import os
 import shutil
 import subprocess
 import threading
@@ -21,14 +22,17 @@ from zervis import camera
 
 FRONTEIRA = "quadro"
 TIPO = f"multipart/x-mixed-replace; boundary={FRONTEIRA}"
-MAXIMO = 3  # pessoas assistindo ao mesmo tempo: cada uma é um ffmpeg convertendo vídeo
+MAXIMO = 6  # vídeos abertos ao mesmo tempo (as 3 lentes em dois aparelhos): conexão e ffmpeg
 PEDACO = 64 * 1024
 MAXIMO_QUADRO = 4 * 1024 * 1024
-QUALIDADES = {"alta": 0, "leve": 1}
+QUALIDADES = ("alta", "leve")
 
 
 class Processo(Protocol):
     """O que o vídeo usa do ffmpeg rodando (um `subprocess.Popen`)."""
+
+    @property
+    def stdin(self) -> Any: ...
 
     @property
     def stdout(self) -> Any: ...  # lido com read1, que o IO[bytes] do typeshed não declara
@@ -38,30 +42,27 @@ class Processo(Protocol):
     def wait(self, timeout: float | None = None) -> int: ...
 
 
-Lancar = Callable[[list[str], int], Processo]
+Lancar = Callable[[list[str]], Processo]
 
 
 class AoVivoErro(camera.CameraErro):
     """Mensagem curta para a tela: o vídeo não pôde começar."""
 
 
-def _lancar(comando: list[str], leitura: int) -> subprocess.Popen[bytes]:
+def _lancar(comando: list[str]) -> subprocess.Popen[bytes]:
     return subprocess.Popen(  # noqa: S603 - executável local fixo, argumentos estruturados.
-        comando,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        pass_fds=(leitura,),
+        comando, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
     )
 
 
-def comando(ffmpeg: str, leitura: int, girar: bool) -> list[str]:
-    """O ffmpeg que lê o RTSP do descritor `leitura` e escreve JPEG atrás de JPEG."""
+def comando(ffmpeg: str, girar: bool) -> list[str]:
+    """O ffmpeg que lê H.265 da entrada e escreve JPEG atrás de JPEG."""
     filtros = ["-vf", "hflip,vflip"] if girar else []
     return [
-        ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error",
-        "-protocol_whitelist", camera.PROTOCOLOS_RTSP,
-        "-f", "concat", "-safe", "0", "-i", f"pipe:{leitura}",
+        ffmpeg, "-hide_banner", "-loglevel", "error",
+        # Sem análise longa do começo: o primeiro quadro sai com o primeiro quadro-chave.
+        "-fflags", "nobuffer", "-flags", "low_delay", "-probesize", "32", "-analyzeduration", "0",
+        "-f", "hevc", "-i", "pipe:0",
         "-an", *filtros, "-q:v", "5", "-f", "image2pipe", "-vcodec", "mjpeg", "pipe:1",
     ]  # fmt: skip
 
@@ -87,8 +88,18 @@ def parte(jpeg: bytes) -> bytes:
     return cabecalho.encode() + jpeg + b"\r\n"
 
 
+def _entregar(video: camera.Video, entrada: Any) -> None:
+    """Da câmera ao ffmpeg, até um dos dois fechar."""
+    with contextlib.suppress(OSError, ValueError, camera.CameraErro):
+        for bloco in video:
+            entrada.write(bloco)
+            entrada.flush()
+    with contextlib.suppress(OSError, ValueError):
+        entrada.close()
+
+
 class AoVivo:
-    """Quem assiste agora e o ffmpeg de cada um."""
+    """Quem assiste agora, com a conexão e o ffmpeg de cada um."""
 
     def __init__(
         self,
@@ -103,7 +114,7 @@ class AoVivo:
 
     def transmitir(self, lente: int, qualidade: str = "alta") -> Iterator[bytes]:
         """As partes do vídeo da lente (1, 2…). Os erros saem antes da primeira parte; fechar o
-        iterador (a pessoa saiu) encerra o ffmpeg."""
+        iterador (a pessoa saiu) encerra a conexão e o ffmpeg."""
         conexao = self.dispositivo.conexao()
         if conexao is None:
             raise AoVivoErro("Câmera não configurada.")
@@ -115,20 +126,29 @@ class AoVivo:
         if not ffmpeg:
             raise AoVivoErro("Instale o ffmpeg para ver ao vivo.")
         if not self._vagas.acquire(blocking=False):
-            raise AoVivoErro(f"Já há {MAXIMO} pessoas assistindo à câmera.")
+            raise AoVivoErro(f"Já há {MAXIMO} vídeos da câmera abertos.")
         try:
-            leitura = camera.manifesto_rtsp(conexao, lente - 1, QUALIDADES[qualidade])
             try:
-                processo = self._lancar(comando(ffmpeg, leitura, lente in conexao.girar), leitura)
-            finally:
-                with contextlib.suppress(OSError):
-                    os.close(leitura)
+                video = self.dispositivo.video(lente - 1, principal=qualidade == "alta")
+            except camera.CameraErro as erro:
+                raise AoVivoErro(str(erro)) from None
+            try:
+                processo = self._lancar(comando(ffmpeg, lente in conexao.girar))
+            except BaseException:
+                video.fechar()
+                raise
         except BaseException:
             self._vagas.release()
             raise
-        return self._partes(processo)
+        entrega = threading.Thread(
+            target=_entregar, args=(video, processo.stdin), name="camera-ao-vivo", daemon=True
+        )
+        entrega.start()
+        return self._partes(processo, video, entrega)
 
-    def _partes(self, processo: Processo) -> Iterator[bytes]:
+    def _partes(
+        self, processo: Processo, video: camera.Video, entrega: threading.Thread
+    ) -> Iterator[bytes]:
         saida = processo.stdout
         try:
             if saida is None:
@@ -136,8 +156,10 @@ class AoVivo:
             for jpeg in quadros(iter(lambda: saida.read1(PEDACO), b"")):
                 yield parte(jpeg)
         finally:
+            video.fechar()  # a leitura da câmera para, e a entrega termina com ela
             with contextlib.suppress(OSError):
                 processo.kill()
             with contextlib.suppress(OSError, subprocess.TimeoutExpired):
                 processo.wait(timeout=5)
+            entrega.join(timeout=5)
             self._vagas.release()

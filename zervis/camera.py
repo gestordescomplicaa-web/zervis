@@ -14,7 +14,7 @@ import struct
 import subprocess
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +34,11 @@ ALFABETO = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 FALA = {"BitRate": 128, "EncodeType": "G711_ALAW", "SampleBit": 16, "SampleRate": 8000}
 VIVA = 1007  # a resposta do KeepAlive (1006): chega a qualquer hora e não responde a nada
 AUDIO = b"\x00\x00\x01\xfa\x0e\x02"  # quadro de áudio: marca, A-law (0x0E), 8 kHz (0x02)
+# Os blocos do fluxo de mídia (OPMonitor, 1412): o tamanho do cabeçalho e onde está o do conteúdo.
+# FC/FE: quadro-chave (16 bytes); FD: quadro P (8); FA: áudio e F9: informação (8, tamanho em 2).
+BLOCOS = {0xFC: (16, 12, "<I"), 0xFE: (16, 12, "<I"), 0xFD: (8, 4, "<I"),
+          0xFA: (8, 6, "<H"), 0xF9: (8, 6, "<H")}  # fmt: skip
+VIDEO = (0xFC, 0xFE, 0xFD)
 
 
 class CameraErro(RuntimeError):
@@ -204,6 +209,35 @@ class Cliente:
             raise
         return canal
 
+    def iniciar_video(self, canal: int, principal: bool) -> None:
+        """O vídeo de uma lente pelo DVRIP (`OPMonitor`), como o app iCSee: nesta câmera, o RTSP
+        traz só a lente 1, qualquer que seja o canal pedido (ADR 0101)."""
+        parametros = {"Channel": canal, "CombinMode": "NONE", "TransMode": "TCP",
+                      "StreamType": "Main" if principal else "Extra"}  # fmt: skip
+        sessao = f"0x{self.sessao:08X}"
+        reserva = {"Action": "Claim", "Parameter": parametros}
+        resposta = self.pedido(
+            1413, {"Name": "OPMonitor", "SessionID": sessao, "OPMonitor": reserva}, resposta=1414
+        )
+        if resposta.get("Ret") != 100:
+            raise CameraErro("A câmera não abriu o vídeo.")
+        inicio = {"Action": "Start", "Parameter": parametros}
+        self._enviar(1410, _corpo({"Name": "OPMonitor", "SessionID": sessao, "OPMonitor": inicio}))
+
+    def ler_video(self) -> Iterator[bytes]:
+        """O H.265 cru da lente aberta em `iniciar_video`, até a conexão fechar."""
+        midia = Midia()
+        proximo_vivo = time.monotonic() + self.intervalo_vivo
+        while True:
+            if time.monotonic() >= proximo_vivo:
+                self.manter_viva()
+                proximo_vivo = time.monotonic() + self.intervalo_vivo
+            codigo, carga, _sessao = self.receber()
+            if codigo == 1412:
+                yield from midia.video(carga)
+            elif codigo == 1504:
+                self._guardar_alarme(carga)
+
     def encerrar_conversa(self) -> None:
         with contextlib.suppress(OSError, CameraErro):
             self.pedido(
@@ -365,6 +399,57 @@ class Cliente:
             if jpeg is None:
                 raise CameraErro("A câmera respondeu sem uma foto JPEG.")
             return jpeg
+
+
+class Midia:
+    """Separa o vídeo do fluxo de mídia da Xiongmai, que chega em pedaços de tamanho qualquer."""
+
+    def __init__(self) -> None:
+        self.resto = b""
+
+    def video(self, dados: bytes) -> Iterator[bytes]:
+        buffer, i = self.resto + dados, 0
+        while (j := buffer.find(b"\x00\x00\x01", i)) >= 0 and j + 8 <= len(buffer):
+            bloco = BLOCOS.get(buffer[j + 3])
+            if bloco is None:
+                i = j + 1
+                continue
+            cabecalho, onde, formato = bloco
+            if j + cabecalho > len(buffer):
+                break
+            fim = j + cabecalho + struct.unpack_from(formato, buffer, j + onde)[0]
+            if fim > len(buffer):
+                break
+            if buffer[j + 3] in VIDEO:
+                yield buffer[j + cabecalho : fim]
+            i = fim
+        else:
+            j = max(i, len(buffer) - 7) if j < 0 else j
+        self.resto = buffer[j:] if len(buffer) - j <= MAX_CARGA else b""
+
+
+class Video:
+    """O vídeo de uma lente numa conexão só dele. `fechar()`, de outra thread, encerra a leitura."""
+
+    def __init__(self, cliente: Cliente, canal: int, principal: bool) -> None:
+        self.cliente = cliente
+        self.canal = canal
+        self.principal = principal
+
+    def abrir(self) -> Video:
+        self.cliente.__enter__()
+        try:
+            self.cliente.iniciar_video(self.canal, self.principal)
+        except BaseException:
+            self.cliente.fechar()
+            raise
+        return self
+
+    def __iter__(self) -> Iterator[bytes]:
+        return self.cliente.ler_video()
+
+    def fechar(self) -> None:
+        self.cliente.fechar()
 
 
 def quadro(sessao: int, sequencia: int, codigo: int, carga: bytes) -> bytes:
@@ -651,6 +736,16 @@ class Camera:
                 return self._fotografar_rtsp(conexao, canal)
             except (OSError, CameraErro):
                 raise CameraErro("A câmera não respondeu ao pedido de foto.") from None
+
+    def video(self, canal: int = 0, principal: bool = True) -> Video:
+        """O vídeo ao vivo de uma lente (0, 1…), já aberto. Erros saem aqui, antes do vídeo."""
+        conexao = self._exigir()
+        try:
+            return Video(self._criar_cliente(conexao), canal, principal).abrir()
+        except CredenciaisInvalidas:
+            raise
+        except (OSError, CameraErro):
+            raise CameraErro("Sem vídeo da câmera agora.") from None
 
     def foto_rtsp(self, canal: int = 0) -> bytes:
         """Usa o fluxo RTSP como alternativa dentro da sessão do vigia."""

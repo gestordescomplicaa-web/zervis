@@ -61,37 +61,51 @@ function conversa(c) {
     <div class="botoes">${acao}</div>${itens ? `<div class="itens">${itens}</div>` : ""}`);
 }
 
-// O vídeo ao vivo (ADR 0101): uma lente por vez, enquanto a página estiver à vista. No PC, a
-// qualidade alta (720p); de outro aparelho, a leve, que pesa menos na rede de fora.
+// O vídeo ao vivo (ADR 0101): uma lente ou todas, lado a lado, enquanto a página estiver à vista.
+// No PC, a qualidade alta (720p); de outro aparelho, a leve, que pesa menos na rede de fora.
 let qualidade = NO_PC ? "alta" : "leve";
+/** @type {number[]} as lentes à vista agora */
+let vendo = [];
 
 function aoVivo(c) {
   if (!c.configurada) return "";
   const lentes = Array.from({ length: Math.max(1, c.lentes || 1) }, (_, i) => i + 1);
+  const todas = lentes.length > 1 ? botao("Todas", "camera-ao-vivo", `data-lentes="${lentes.join(",")}" aria-pressed="false"`, "discreta") : "";
   return cartao("Ao vivo", `${sub("O vídeo de cada lente, enquanto esta página estiver aberta.")}
-    <div class="botoes">${lentes.map((n) => botao(`Lente ${n}`, "camera-ao-vivo", `data-lente="${n}" aria-pressed="false"`, "discreta")).join("")}
+    <div class="botoes">${lentes.map((n) => botao(`Lente ${n}`, "camera-ao-vivo", `data-lentes="${n}" aria-pressed="false"`, "discreta")).join("")}${todas}
       ${botao(qualidade === "alta" ? "Qualidade alta" : "Qualidade leve", "camera-qualidade", "", "discreta")}
       ${botao("Parar", "camera-parar", "hidden", "discreta")}</div>
-    <img id="camera-video" class="foto-impressora" alt="Vídeo ao vivo da câmera" hidden>`);
+    <div class="camera-videos" id="camera-videos"></div>`);
 }
 
 function pararVideo() {
-  const video = /** @type {HTMLImageElement | null} */ ($("camera-video"));
-  if (video) { video.removeAttribute("src"); video.hidden = true; delete video.dataset.lente; }
+  const caixa = $("camera-videos");
+  // Tirar a fonte de cada <img> fecha a transmissão, e o Zé encerra a conexão e o ffmpeg dela.
+  caixa?.querySelectorAll("img").forEach((v) => v.removeAttribute("src"));
+  if (caixa) caixa.replaceChildren();
+  vendo = [];
   document.querySelectorAll('[data-acao="camera-ao-vivo"]').forEach((b) => b.setAttribute("aria-pressed", "false"));
   const parar = document.querySelector('[data-acao="camera-parar"]');
   if (parar) /** @type {HTMLElement} */ (parar).hidden = true;
 }
 
-function verLente(lente) {
-  const video = /** @type {HTMLImageElement | null} */ ($("camera-video"));
-  if (!video) return;
-  video.onerror = () => { if (video.dataset.lente) { pararVideo(); toast("Sem vídeo da câmera agora."); } };
-  video.dataset.lente = String(lente);
-  video.src = `/fluxo/camera/ao-vivo?lente=${lente}&qualidade=${qualidade}&t=${Date.now()}`;
-  video.hidden = false;
+/** @param {number[]} lentes */
+function verLentes(lentes) {
+  const caixa = $("camera-videos");
+  if (!caixa) return;
+  pararVideo();
+  vendo = lentes;
+  caixa.classList.toggle("varias", lentes.length > 1);
+  for (const lente of lentes) {
+    const video = document.createElement("img");
+    video.alt = `Vídeo ao vivo da lente ${lente}`;
+    video.onerror = () => { if (vendo.includes(lente)) { video.remove(); toast(`Sem vídeo da lente ${lente} agora.`); } };
+    video.src = `/fluxo/camera/ao-vivo?lente=${lente}&qualidade=${qualidade}&t=${Date.now()}`;
+    caixa.append(video);
+  }
+  const marcado = lentes.join(",");
   document.querySelectorAll('[data-acao="camera-ao-vivo"]').forEach((b) =>
-    b.setAttribute("aria-pressed", String(/** @type {HTMLElement} */ (b).dataset.lente === String(lente))));
+    b.setAttribute("aria-pressed", String(/** @type {HTMLElement} */ (b).dataset.lentes === marcado)));
   const parar = document.querySelector('[data-acao="camera-parar"]');
   if (parar) /** @type {HTMLElement} */ (parar).hidden = false;
 }
@@ -116,13 +130,12 @@ PAGINAS.camera = async () => {
 };
 
 Object.assign(ACOES, {
-  "camera-ao-vivo": (/** @type {HTMLButtonElement} */ b) => verLente(Number(b.dataset.lente || 1)),
+  "camera-ao-vivo": (/** @type {HTMLButtonElement} */ b) => verLentes((b.dataset.lentes || "1").split(",").map(Number)),
   "camera-parar": () => pararVideo(),
   "camera-qualidade": (/** @type {HTMLButtonElement} */ b) => {
     qualidade = qualidade === "alta" ? "leve" : "alta";
     b.textContent = qualidade === "alta" ? "Qualidade alta" : "Qualidade leve";
-    const lente = /** @type {HTMLImageElement | null} */ ($("camera-video"))?.dataset.lente;
-    if (lente) verLente(Number(lente));
+    if (vendo.length) verLentes(vendo);
   },
   "camera-procurar": async (/** @type {HTMLButtonElement} */ b) => {
     const r = await ocupado(b, () => api("camera/procurar", {}));
@@ -194,3 +207,9 @@ Object.assign(ACOES, {
     } catch (erro) { toast(erro.message); }
   },
 });
+
+document.head.appendChild(Object.assign(document.createElement("style"), { textContent: `
+.camera-videos { display: grid; gap: 10px; margin-top: 10px; }
+.camera-videos img { display: block; width: 100%; max-width: 960px; border-radius: 8px; background: var(--fundo-2); }
+.camera-videos.varias { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+` }));

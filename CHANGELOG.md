@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Câmera ao vivo, as 3 lentes:** as lentes 2 e 3 mostravam a imagem da lente 1, porque o RTSP
+  desta câmera só traz a primeira. Agora cada lente vem pelo protocolo dela, como no app iCSee, e
+  "Todas" mostra as três lado a lado (ADR 0101).
+
 - **Câmera ao vivo:** a página Câmera mostra o vídeo de cada lente, em qualidade alta (720p) no
   PC e leve fora dele, só enquanto a página está aberta (ADR 0101). Precisa do ffmpeg.
 
