@@ -17,6 +17,7 @@ from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
 from zervis.video import estilos as estilos_video
+from zervis.video import roteiro as roteiro_video
 from zervis.video import videos
 
 
@@ -196,6 +197,8 @@ class AcoesMarketing(Pagina):
         return {
             "lista": [v.para_tela(x) for x in v.listar()],
             "estilos": [e.para_tela() for e in estilos_video.listar()],
+            "modelos": [{"id": k, "nome": n} for k, n in videos.MODELOS.items()],
+            "duracoes": sorted(roteiro_video.DURACOES),
             "indisponivel": v.disponivel(),
         }
 
@@ -212,6 +215,8 @@ class AcoesMarketing(Pagina):
                 str(dados.get("artigo", "")),
                 str(dados.get("estilo", "")) or estilos_video.PADRAO,
                 dados.get("voz") is not False,
+                duracao=int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
+                modelo=str(dados.get("modelo") or videos.MODELO),
             )
         )
         atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")
