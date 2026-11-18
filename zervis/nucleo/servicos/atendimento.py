@@ -27,6 +27,9 @@ PEDIDO_VALIDO_S = 600.0  # um pedido mais velho que isto (o WhatsApp entregou at
 PEDIDO_MAXIMO = 4000
 PARTE_MAXIMA = 1900  # a Central aceita até 2000 caracteres por mensagem
 SO_TEXTO = "Por enquanto, só mensagens de texto."
+# O que alguém mandou de fato. O WaCalls marca como "other" o que não é conteúdo: as mensagens de
+# controle do WhatsApp (a troca de chaves que chega junto do texto), reações e edições.
+MIDIAS = frozenset({"audio", "image", "video", "document", "sticker"})
 SEM_RESPOSTA = "Não consegui responder agora. Tente de novo."
 FILA_CHEIA = "Muitos pedidos na fila. Tente de novo em instantes."
 
@@ -289,9 +292,12 @@ class ServicoAtendimento:
         if time.time() - _hora(evento) > PEDIDO_VALIDO_S:
             log.info("whatsapp: pedido atrasado, ignorado")
             return
-        if evento.get("midia"):
+        midia = str(evento.get("midia", ""))
+        if midia in MIDIAS:
             self._responder_no_whatsapp(chat, SO_TEXTO, str(evento.get("evento", "")))
             return
+        if midia:
+            return  # "other": reação, edição, troca de chaves... não é um pedido, nem se responde
         texto = str(evento.get("texto", "")).strip()[:PEDIDO_MAXIMO]
         if not texto:
             return

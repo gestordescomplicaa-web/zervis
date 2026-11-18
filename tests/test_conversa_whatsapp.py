@@ -325,3 +325,16 @@ def test_ao_desligar_o_ze_para_de_ouvir_a_central_e_fecha_o_chat_voce(
     del n.conversa_whatsapp  # nunca houve pedido: nada a fechar
     servico.parar_atendimento()
     assert fechou == ["central", "conversa", "central"]
+
+
+def test_mensagem_de_controle_do_whatsapp_nao_recebe_resposta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A prova de 18/11/2026: depois de cada resposta, o "other" que chega junto (a troca de
+    # chaves, uma reação) recebia "Por enquanto, só mensagens de texto."
+    servico, n = _servico(tmp_path, monkeypatch)
+    servico._evento_da_central(_pedido(texto="", midia="other", evento="s:1"))
+    assert n.conversa_whatsapp.pedidos == [] and n.central.enviadas == []
+    for midia in ("audio", "image", "video", "document", "sticker"):
+        servico._evento_da_central(_pedido(texto="legenda", midia=midia, evento=f"s:{midia}"))
+    assert n.central.enviadas == [(EU, sa.SO_TEXTO)] * 5

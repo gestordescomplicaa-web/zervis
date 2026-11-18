@@ -6,6 +6,9 @@
   com o Zé", na página Redes sociais. A mensagem do seu número ao número do Zé vai a ele, e a
   resposta chega na mesma conversa, com notificação, mesmo com o computador bloqueado. Ações com
   efeito continuam pedindo a voz ou o painel (ADR 0102). Por enquanto, só texto.
+- **Conversa com o Zé sem aviso a mais:** depois de cada resposta, o Zé mandava "Por enquanto,
+  só mensagens de texto." por causa das mensagens de controle que o WhatsApp envia junto. Agora
+  o aviso sai só para áudio, foto, vídeo, documento ou figurinha.
 - **Mensagens do WhatsApp sem espera:** cada mensagem chega ao Zé na hora, e não mais em lotes
   a cada 5 segundos.
 
