@@ -1,6 +1,6 @@
 import { ACOES } from "../modulos/acoes.js";
 import { abrir } from "../modulos/navegacao.js";
-import { PAGINAS, $, api, botao, cabeca, cartao, esc, ocupado, sub, toast, vazio } from "../painel.js";
+import { NO_PC, PAGINAS, $, api, botao, cabeca, cartao, esc, ocupado, sub, toast, vazio } from "../painel.js";
 
 const hora = (valor) => new Date(valor * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 const campo = (id) => /** @type {HTMLInputElement | null} */ ($(id));
@@ -61,6 +61,59 @@ function conversa(c) {
     <div class="botoes">${acao}</div>${itens ? `<div class="itens">${itens}</div>` : ""}`);
 }
 
+// O vídeo ao vivo (ADR 0101): uma lente ou todas, lado a lado, enquanto a página estiver à vista.
+// No PC, a qualidade alta (720p); de outro aparelho, a leve, que pesa menos na rede de fora.
+let qualidade = NO_PC ? "alta" : "leve";
+/** @type {number[]} as lentes à vista agora */
+let vendo = [];
+
+function aoVivo(c) {
+  if (!c.configurada) return "";
+  const lentes = Array.from({ length: Math.max(1, c.lentes || 1) }, (_, i) => i + 1);
+  const todas = lentes.length > 1 ? botao("Todas", "camera-ao-vivo", `data-lentes="${lentes.join(",")}" aria-pressed="false"`, "discreta") : "";
+  return cartao("Ao vivo", `${sub("O vídeo de cada lente, enquanto esta página estiver aberta.")}
+    <div class="botoes">${lentes.map((n) => botao(`Lente ${n}`, "camera-ao-vivo", `data-lentes="${n}" aria-pressed="false"`, "discreta")).join("")}${todas}
+      ${botao(qualidade === "alta" ? "Qualidade alta" : "Qualidade leve", "camera-qualidade", "", "discreta")}
+      ${botao("Parar", "camera-parar", "hidden", "discreta")}</div>
+    <div class="camera-videos" id="camera-videos"></div>`);
+}
+
+function pararVideo() {
+  const caixa = $("camera-videos");
+  // Tirar a fonte de cada <img> fecha a transmissão, e o Zé encerra a conexão e o ffmpeg dela.
+  caixa?.querySelectorAll("img").forEach((v) => v.removeAttribute("src"));
+  if (caixa) caixa.replaceChildren();
+  vendo = [];
+  document.querySelectorAll('[data-acao="camera-ao-vivo"]').forEach((b) => b.setAttribute("aria-pressed", "false"));
+  const parar = document.querySelector('[data-acao="camera-parar"]');
+  if (parar) /** @type {HTMLElement} */ (parar).hidden = true;
+}
+
+/** @param {number[]} lentes */
+function verLentes(lentes) {
+  const caixa = $("camera-videos");
+  if (!caixa) return;
+  pararVideo();
+  vendo = lentes;
+  caixa.classList.toggle("varias", lentes.length > 1);
+  for (const lente of lentes) {
+    const video = document.createElement("img");
+    video.alt = `Vídeo ao vivo da lente ${lente}`;
+    video.onerror = () => { if (vendo.includes(lente)) { video.remove(); toast(`Sem vídeo da lente ${lente} agora.`); } };
+    video.src = `/fluxo/camera/ao-vivo?lente=${lente}&qualidade=${qualidade}&t=${Date.now()}`;
+    caixa.append(video);
+  }
+  const marcado = lentes.join(",");
+  document.querySelectorAll('[data-acao="camera-ao-vivo"]').forEach((b) =>
+    b.setAttribute("aria-pressed", String(/** @type {HTMLElement} */ (b).dataset.lentes === marcado)));
+  const parar = document.querySelector('[data-acao="camera-parar"]');
+  if (parar) /** @type {HTMLElement} */ (parar).hidden = false;
+}
+
+// Fora da página Câmera ou com a janela escondida, o vídeo para (e o ffmpeg do Zé com ele).
+addEventListener("hashchange", () => { if (location.hash !== "#camera") pararVideo(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") pararVideo(); });
+
 function galeria(fotos) {
   const tirar = `<div class="botoes">${botao("Tirar foto agora", "camera-tirar", "", "discreta")}</div>`;
   if (!fotos.length) return cartao("Fotos", vazio("Nenhuma foto guardada.") + tirar);
@@ -73,10 +126,17 @@ function galeria(fotos) {
 
 PAGINAS.camera = async () => {
   const c = await api("camera");
-  return `${cabeca("Câmera", '<a class="acao discreta" href="#dispositivos">Dispositivos</a>')}${formulario(c)}${conversa(c)}${galeria(c.fotos || [])}`;
+  return `${cabeca("Câmera", '<a class="acao discreta" href="#dispositivos">Dispositivos</a>')}${formulario(c)}${aoVivo(c)}${conversa(c)}${galeria(c.fotos || [])}`;
 };
 
 Object.assign(ACOES, {
+  "camera-ao-vivo": (/** @type {HTMLButtonElement} */ b) => verLentes((b.dataset.lentes || "1").split(",").map(Number)),
+  "camera-parar": () => pararVideo(),
+  "camera-qualidade": (/** @type {HTMLButtonElement} */ b) => {
+    qualidade = qualidade === "alta" ? "leve" : "alta";
+    b.textContent = qualidade === "alta" ? "Qualidade alta" : "Qualidade leve";
+    if (vendo.length) verLentes(vendo);
+  },
   "camera-procurar": async (/** @type {HTMLButtonElement} */ b) => {
     const r = await ocupado(b, () => api("camera/procurar", {}));
     const [achada] = r.achadas;
@@ -147,3 +207,9 @@ Object.assign(ACOES, {
     } catch (erro) { toast(erro.message); }
   },
 });
+
+document.head.appendChild(Object.assign(document.createElement("style"), { textContent: `
+.camera-videos { display: grid; gap: 10px; margin-top: 10px; }
+.camera-videos img { display: block; width: 100%; max-width: 960px; border-radius: 8px; background: var(--fundo-2); }
+.camera-videos.varias { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+` }));

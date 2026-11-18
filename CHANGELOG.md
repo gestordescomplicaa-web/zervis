@@ -2,6 +2,48 @@
 
 ## Não lançado
 
+- **Câmera ao vivo, as 3 lentes:** as lentes 2 e 3 mostravam a imagem da lente 1, porque o RTSP
+  desta câmera só traz a primeira. Agora cada lente vem pelo protocolo dela, como no app iCSee, e
+  "Todas" mostra as três lado a lado (ADR 0101).
+
+- **Câmera ao vivo:** a página Câmera mostra o vídeo de cada lente, em qualidade alta (720p) no
+  PC e leve fora dele, só enquanto a página está aberta (ADR 0101). Precisa do ffmpeg.
+
+- **Foto de reserva da câmera:** quando a câmera não entrega a foto pelo protocolo dela, o Zé
+  tira pelo vídeo, agora em 720p. Antes, essa reserva falhava sempre.
+
+- **Imersão de qualquer aparelho:** com o Zé numa VPS, a aba Imersão mostra o Zé animado e os
+  cards no navegador de quem abre o painel, sem câmera (ADR 0100). Do PC, nada muda; no celular,
+  segue o holograma leve.
+
+- **Cards apresentados aparecem:** quando o Zé apresentava um card novo (o diff de uma skill para
+  aprovar, por exemplo), o palco destacava o anel do Zé no lugar dele. Agora o card abre.
+
+- **Live sem gasto no silêncio:** com o app ou o navegador conectado no Ao vivo, o áudio só vai
+  ao Deepgram quando há fala; depois de 2 minutos em silêncio, a conexão fecha e abre de novo
+  quando você volta a falar, sem perder a primeira palavra (ADR 0099).
+
+- **Atualização bloqueada explicada:** quando uma melhoria do próprio Zé está só neste
+  computador, a página Atualizações mostra "Bloqueada", o que está só aqui, quantas mudanças
+  esperam na origem e o botão para abrir o PR a mesclar. O Zé avisa uma vez quando isso segura
+  uma atualização.
+
+- **Memória com validade:** uma entrada que termina em "· até DD/MM/AAAA" sai da memória no dia
+  seguinte e vai para o arquivo; a página Memória a marca como "Vencida". Um fato sobre você que
+  o Zé aprende sozinho só entra com a sua frase que o sustenta; sem ela, vira sugestão (ADR 0098).
+
+- **O Zé gasta menos para pensar:** cada chamada ao modelo levava a descrição de todas as ~100
+  ferramentas; agora as mais usadas ficam à mão e as outras são achadas quando precisa, com as
+  mesmas ferramentas e a mesma resposta. E a via rápida que bate no limite da conta espera a
+  janela renovar, em vez de atrasar cada pedido (ADR 0097).
+
+- **O Zé pelo Docker numa VPS:** uma alternativa ao instalador, com tudo o que é seu num volume e
+  as sessões de código presas no contêiner. `docker compose up -d --build` e o primeiro acesso
+  pelo endereço seguro, como no instalador (docs/vps.md, ADR 0096).
+
+- **Placar da versão:** o placar publicado mostra a versão atual e avisa quando a última rodada de
+  avaliação é de uma versão anterior; publicar uma versão sem regerá-lo não passa no `make check`.
+
 - **Latência da voz medida direito:** o tempo do modelo conta até a primeira palavra da resposta,
   não até o "Só um momento." (que saía sempre aos 3 s), e falar por cima no Ao vivo não conta mais
   como falha. O placar mostra o tempo do modelo por caminho.

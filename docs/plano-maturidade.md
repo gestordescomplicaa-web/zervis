@@ -26,8 +26,8 @@ testes da Imersão não rodam na CI.
 | Segurança | 15% | 6,5 | 7,8 | 8,0 | 2 |
 | Confiabilidade | 10% | 6,0 | 7,3 | 8,0 | 1 |
 | Avaliação mensurável | 10% | 4,5 | 6,5 | 7,5 | 3 |
-| Alcance e ecossistema | 15% | 3,5 | 4,0 | 5,5 | 4 |
-| **Média ponderada** | | **6,4** | **7,2** | **7,8** | |
+| Alcance e ecossistema | 15% | 3,5 | 4,0 | 5,0 | 4 |
+| **Média ponderada** | | **6,4** | **7,2** | **7,7** | |
 
 Notas do Zérvis: do código e dos testes. Dos concorrentes: documentação e reviews, sem execução.
 
@@ -54,7 +54,7 @@ O que segura cada nota de 11/11 abaixo da meta:
 | A | 0.4.0 | 1, 3 e o ADR do foco (5) | Reinício não derruba sessões; placar publicado | ≈ 7,0 |
 | B | 0.5.0 | 2 e 5 | Zero ações indevidas na bateria de injeção; nenhum módulo acima de 800 linhas | ≈ 7,5 (medido: 7,2) |
 | Fecho da B | 0.5.x | 1, 2, 3 e 5 | Sessão protegida como padrão; placar da versão publicado; testes da Imersão na CI; atualizar com o programa aberto | ≈ 7,5 |
-| C | 0.6.0 | 4 | Atendimento pela API oficial do WhatsApp; uma instalação do zero feita por outra pessoa, sem ajuda | ≈ 7,8 |
+| C | 0.6.0 | 4 | Uma instalação do zero feita por outra pessoa, sem ajuda | ≈ 7,7 |
 
 Fase A: os dois portões passaram na 0.4.0 (09/11/2026). Ficam abertos, para quando valer o gasto
 de tokens: agendar a rodada noturna (a primeira gastou 21,6 milhões) e as tarefas de ponta a ponta.
@@ -63,21 +63,26 @@ Fase B: os dois portões passaram na 0.5.0 (11/11/2026): zero ações indevidas 
 da bateria de injeção, e nenhum módulo acima de 800 linhas. O que ficou aberto virou o fecho da
 fase, abaixo.
 
-Fase C: o portão "3 PRs de fora aceitos" saiu (não depende de quem mantém o projeto) e virou meta
-da Frente 4. No lugar entra algo que se pode fazer acontecer: outra pessoa instalar do zero, só
-com o README.
+Fase C: o portão "3 PRs de fora aceitos" saiu (não depende de quem mantém o projeto). No lugar
+entra algo que se pode fazer acontecer: outra pessoa instalar do zero, só com o README. Em
+17/11/2026, por decisão de quem mantém, saíram também o WhatsApp pela API oficial (que era
+portão), o inglês e os primeiros contribuidores: não são necessários agora. A meta da Frente 4
+cai de 5,5 para 5,0, e a da fase, de ≈ 7,8 para ≈ 7,7.
 
 ## Fecho da Fase B (revisão de 11/11/2026)
 
 Exceção registrada em 13/11/2026: a aba Marketing (ADR 0091) entrou antes do fecho, a pedido de
 quem usa, com os testes na porta de qualidade.
+Exceção registrada em 17/11/2026: a validade na memória e a frase de apoio (ADR 0098) entraram
+antes do fecho, a pedido de quem usa, para reforçar o ADR 0090 durante a medição dele.
 
 O que as Fases A e B deixaram aberto e o que a revisão achou no código. Fecha antes da Fase C;
 cada item está na frente dele, com o detalhe.
 
 - [x] **Sessão protegida como padrão** (Frente 2): desde 13/11/2026, sessão nova nasce
   protegida quando a máquina permite; desligar é por sessão (ADR 0074).
-- [ ] **Placar a cada versão** (Frente 3): o publicado diz "Versão 0.3.0" na 0.5.0.
+- [x] **Placar a cada versão** (Frente 3): desde 17/11/2026, o `make check` confere a versão do
+  placar publicado, e gerá-lo está nos passos de publicar uma versão.
 - [ ] **Rodada por versão, não por noite** (Frente 3): decidir e agendar.
 - [ ] **Latência da voz** (Frente 3): os 216 turnos sem primeiro token e a via rápida fora da meta.
 - [x] **A Imersão na porta de qualidade** (Frente 5): desde 17/11/2026, os testes dela no
@@ -148,9 +153,10 @@ Hoje: 14 cenários e uma rodada de referência (91%, 20/10/2026, Sonnet 5.5). Mo
   gastou no turno, lido da conversa dele (`zervis/oficina/custo.py`).
 - [x] **Placar público** em `docs/placar.md`, atualizado a cada versão: nota por área (93% na
   primeira rodada noturna), latência por caminho e tokens por cenário (`zervis placar`).
-- [ ] **O placar acompanha a versão** (fecho da Fase B). O publicado diz "Versão 0.3.0" e traz a
-  rodada de 09/11/2026: não acompanhou a 0.4.0 nem a 0.5.0. Um teste compara a versão do placar
-  com a do projeto, e gerar o placar entra nos passos de publicar uma versão.
+- [x] **O placar acompanha a versão** (fecho da Fase B): desde 17/11/2026, o `make check` falha
+  se `docs/placar.md` não for da versão do projeto, gerar o placar está nos passos de publicar
+  uma versão (`docs/06-qualidade.md`), e cada rodada guarda a versão em que rodou (o placar avisa
+  quando a rodada é de uma versão anterior, como a de 09/11/2026 hoje).
 - [ ] **Latência da voz dentro da meta** (fecho da Fase B). A primeira medição ficou fora (via
   rápida com p50 de 3,9 s e p95 de 27,9 s) e os 216 turnos do Ao vivo sem primeiro token seguem
   sem causa. Achar a causa dos 216, tirar do p95 o que for falha e não lentidão, e então
@@ -170,6 +176,25 @@ versão com sucesso por área, p50/p95 e custo.
 Metas iniciais (confirmar após a primeira medição): 90% de sucesso, p95 de voz abaixo de 2,5 s na
 via rápida.
 
+## Memória e aprendizado (comparação com o OpenMausBot, 17/11/2026)
+
+O OpenMausBot (`milind-soni/OpenMausBot`, `docs/memory.md` e `evals/`) é o mais completo em
+memória dos comparados. O que vale trazer, em ordem:
+
+- [x] **Validade e arquivo:** a entrada com ` · até DD/MM/AAAA` sai da foto no dia seguinte e vai
+  para o `ARQUIVO.md` na próxima escrita (ADR 0098).
+- [x] **Fato sobre o usuário só com a frase dele:** a revisão cita a fala que sustenta o fato e o
+  Zé confere; sem ela, vira sugestão. Pergunta, tarefa e hipótese nunca são fato (ADR 0098).
+  Medir junto com o ADR 0090, até 27/11/2026.
+- [ ] **Lembrança automática a cada pedido:** buscar nas notas e conversas antigas antes do turno
+  e pôr o resultado no pedido, não no prompt de sistema. Hoje a busca só acontece quando o
+  cérebro chama a ferramenta.
+- [ ] **Avaliação sem gastar tokens** (Frente 3): um motor roteirizado repete turnos fixos e
+  testa o que o Zé faz com as ferramentas, no `make check`; conversas reais, com os dados
+  pessoais apagados, viram cenários fixos.
+- [ ] **Verificação numa cópia isolada:** um comando sobe o Zé com pasta de dados temporária e
+  cérebro falso; comandos que mudam algo não acham o serviço vivo sozinhos.
+
 ## Frente 2: Segurança e isolamento (6,5 → 8,0) · Fase B
 
 Autenticação, política de risco e registro de tudo já são bons; falta a parede. As sessões rodam
@@ -185,6 +210,8 @@ ligações, web) chegam a um cérebro com ferramentas.
   13/11/2026 é o padrão (fecho da Fase B), com a saída por sessão para o projeto que precisar;
   o aceite ("uma sessão não lê `~/.ssh`") vale para toda sessão nova numa máquina com o
   bubblewrap. Falta o contêiner da VPS, que vai com a imagem Docker da Frente 4.
+  Desde 17/11/2026 a imagem existe (ADR 0096): a sessão fica presa no contêiner, longe da casa
+  e das chaves do servidor, mas ainda alcança os dados do Zé no volume. Falta separá-los.
 - [x] **Cofre de segredos fora do agente:** credencial por chamada, com escopo e prazo; o segredo
   inteiro nunca vai ao modelo.
   [ADR 0075](adr/0075-segredos-fora-do-agente.md): o agente não herda os segredos do Zé (só o
@@ -239,31 +266,42 @@ disparadas por mensagem maliciosa na bateria; nenhum segredo no contexto enviado
   linhas) é o Barehands adaptado (`THIRD_PARTY.md`) e fica como veio: dividi-lo afasta do
   original.
 
-## Frente 4: Plataforma e alcance (3,5 → 5,5) · Fase C
+## Frente 4: Plataforma e alcance (3,5 → 5,0) · Fase C
 
 É o critério de nota mais baixa (4,0) com 15% do peso: cada ponto aqui vale 0,15 na nota geral.
 Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
 
 - [x] **Instalação do zero no CI, no Ubuntu 24.04:** o `check` roda o instalador do PC numa
   máquina limpa e confere o serviço, o atalho e o painel (ADR 0079).
-- [ ] **Imagem Docker para a VPS:** primeiro, porque também entrega o contêiner que falta na
-  Frente 2.
-- [ ] **WhatsApp pela API oficial** (Cloud API) para o atendimento a clientes; o caminho atual
-  (whatsmeow e o protocolo de ligação) fica como opção pessoal. Banimento é fatal num atendimento.
+- [x] **Imagem Docker para a VPS:** desde 17/11/2026 ([ADR 0096](adr/0096-imagem-docker.md)), um
+  volume só com a casa do usuário, sem systemd e com o primeiro acesso pelo endereço seguro; a
+  CI `imagem` sobe a imagem com o volume vazio e passa no `doctor`. Falta a prova numa VPS de
+  verdade e publicar a imagem pronta a cada versão.
 - [ ] **Cérebro pela API** como alternativa testada às CLIs por assinatura; reler os termos de uso
   de cada uma a cada versão.
 - [ ] **Instalação do zero no CI, no Arch.**
-- [ ] **Inglês** no painel e na persona, português como padrão.
-- [ ] **Primeiros contribuidores:** issues para iniciantes, placar como vitrine, vídeo da voz e da
-  oficina. Meta, não portão: 3 PRs de fora aceitos.
+- [x] **A Imersão de qualquer aparelho:** desde 17/11/2026 ([ADR 0100](adr/0100-imersao-pelo-painel.md)),
+  o painel repassa o palco em `/imersao/` para quem entrou; na VPS, o Zé animado e os cards, sem
+  câmera. Falta a prova numa VPS de verdade.
+- [ ] **Windows e Mac pelo Docker Desktop:** a imagem da VPS também para arm64 (os Macs com
+  Apple Silicon) e o passo a passo. O Zé inteiro pelo navegador em `localhost`, menos o microfone
+  do sistema e as ações do Omarchy. Avaliação de 17/11/2026: é o caminho barato; o Mac nativo é
+  médio (áudio sem o PipeWire, launchd no lugar do systemd em 20 arquivos, caminhos `/usr/bin`
+  fixos em 16, isolamento sem o `bwrap`); o Windows nativo é alto (o terminal das sessões usa
+  `pty`, `termios` e `fcntl`, e não há isolamento equivalente). Testar nas máquinas Windows e
+  macOS da CI do GitHub, de graça para repositório público.
+
+Fora por decisão de 17/11/2026 (não são necessários agora): WhatsApp pela API oficial, inglês no
+painel e na persona, e os primeiros contribuidores.
 
 ## Riscos e fora do escopo
 
-- **Uma pessoa só mantém o projeto:** o maior risco; a Frente 4 começa a atacá-lo.
+- **Uma pessoa só mantém o projeto:** o maior risco; atrair contribuidores ficou fora por ora
+  (17/11/2026).
 - **O sandbox pode quebrar sessões que hoje funcionam:** ligar por projeto primeiro.
 - **A bateria gasta a conta:** usar o modelo mais barato que dê nota estável.
 - Fora: apps nativos de macOS e Windows, loja de skills, canais além do WhatsApp, modelo de
-  negócio.
+  negócio; desde 17/11/2026, o WhatsApp pela API oficial, o inglês e a busca por contribuidores.
 
 ## Fontes da comparação (06/11/2026)
 
@@ -275,5 +313,7 @@ Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
   [CVEs](https://www.cvefind.com/en/blog/openclaw-compromise-ai-agents.html).
 - Grok Bot: [toolradar](https://toolradar.com/blog/what-is-grok-bot),
   [eesel](https://www.eesel.ai/blog/grok-bot-review).
+- OpenMausBot (17/11/2026): [repositório](https://github.com/milind-soni/OpenMausBot), lido
+  no commit `b832de7`, sem instalar.
 - Meta Muse: [TechCrunch](https://techcrunch.com/2026/09/08/meta-debuts-its-muse-ai-agent-will-consumers-trust-it/),
   [Wikipedia](https://en.wikipedia.org/wiki/Muse_(AI_agent)).

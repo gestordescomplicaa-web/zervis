@@ -39,6 +39,7 @@ from claude_agent_sdk import (
 from claude_agent_sdk.types import CanUseToolShadowedWarning, HookInput, SyncHookJSONOutput
 
 from zervis import atividade, fuso
+from zervis.cerebro import carga
 from zervis.cerebro.base import Aprovar, EventoCerebro, Fim, Texto
 from zervis.sistema.politica import frase_confere
 
@@ -158,6 +159,7 @@ class ClaudeBrain:
         de_fora: Callable[[str], str] | None = None,
         com_efeito: frozenset[str] = frozenset(),
         autoaprovar_de_fora: Callable[[str, dict[str, Any]], bool] | None = None,
+        essenciais: Callable[[], set[str]] = carga.do_uso_registrado,
     ) -> None:
         self.modelo = modelo
         self.ferramentas = ferramentas
@@ -169,6 +171,8 @@ class ClaudeBrain:
         # Ferramentas MCP fora da lista: o cérebro nem as vê (cada descrição custa tokens em
         # todo turno; o navegador tem 25 e o Zé usa umas 15).
         self.bloqueadas = bloqueadas or []
+        # As sempre à mão; as outras o modelo acha pela busca (zervis/cerebro/carga.py).
+        self.essenciais = essenciais
         self.foto = foto  # memória curta, lida a cada sessão nova (foto congelada)
         self.prechecar = prechecar  # recusa antes da pergunta falada o que já vai falhar
         self.mostrar = mostrar  # põe na tela o que a fala resume (o diff de uma skill)
@@ -212,10 +216,18 @@ class ClaudeBrain:
         prompt = self.persona
         if self.foto is not None:
             prompt += "\n\n" + self.foto()
+        nativas, livres = list(self.ferramentas), list(self.livres)
+        if self.mcp:
+            # Ferramentas sob demanda: sem o ToolSearch na lista, o Claude Code punha a
+            # descrição de todas em cada chamada (~42 mil tokens, carga.py).
+            if carga.BUSCA not in nativas:
+                nativas.append(carga.BUSCA)
+            livres.append(carga.BUSCA)  # achar uma ferramenta não muda nada: sem pergunta
+            carga.marcar(self.mcp, self.essenciais())
         return ClaudeAgentOptions(
             system_prompt=prompt,
-            tools=self.ferramentas,
-            allowed_tools=list(self.livres),
+            tools=nativas,
+            allowed_tools=livres,
             disallowed_tools=list(self.bloqueadas),
             mcp_servers=self.mcp,
             can_use_tool=self._pode_usar,
@@ -398,7 +410,11 @@ class ClaudeBrain:
                     else "falha_claude"
                 )
             self.modelo_usado = msg.model or self.modelo_usado
-            self.ferramentas_usadas += [b.name for b in msg.content if isinstance(b, ToolUseBlock)]
+            self.ferramentas_usadas += [
+                b.name
+                for b in msg.content
+                if isinstance(b, ToolUseBlock) and b.name != carga.BUSCA  # a busca não é uso
+            ]
         elif isinstance(msg, RateLimitEvent):
             self.limite = msg.rate_limit_info.raw or {}
         elif isinstance(msg, ResultMessage):

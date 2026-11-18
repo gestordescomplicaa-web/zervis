@@ -28,7 +28,8 @@ def ferramentas(
         "Muda a memória curta, que entra no começo de toda conversa. alvo 'usuario' = quem o "
         "o usuário é e o que ele prefere; 'jarvis' = fatos do ambiente e lições suas. acao "
         "'adicionar' (texto), 'trocar' (antigo = trecho único da entrada, texto = nova) ou "
-        "'remover' (antigo). Cada entrada é uma frase curta e duradoura, nunca algo passageiro. "
+        "'remover' (antigo). Cada entrada é uma frase curta e duradoura; o que só vale até um dia "
+        "termina em ' · até DD/MM/AAAA' e sai sozinho depois dele. "
         "Cheia, consolide (troque ou remova) antes. O usuário aprova por voz; vale na próxima "
         "conversa.",
         {

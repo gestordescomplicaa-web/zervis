@@ -58,6 +58,7 @@ test_boot = '''
   document.getElementById('boot').remove();
   window.stageHitTest = hitTest;
   window.boardCalls = 0;
+  window.stageCmds = applyCmds;  // the AI's board commands, as /state delivers them
   window.stagePinch = selector => {
     const c = items.find(i => i.el.matches(selector) && i.anim?.k !== 'out');
     const cur = {x:c.x,y:c.y,history:[{x:c.x,y:c.y,t:10},{x:c.x,y:c.y,t:30}]};

@@ -6,6 +6,7 @@ import threading
 from collections.abc import AsyncIterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -416,3 +417,26 @@ def test_marca_pela_metade_no_fim_nao_vira_fala() -> None:
     assert rapido.Roteado._decidir("[compl", fim=True) == "passar"
     assert rapido.Roteado._decidir("[alegr", fim=True) == "falar_nada"
     assert rapido.Roteado._decidir("[complet") == "esperar"  # ainda chegando
+
+
+def test_no_limite_da_conta_a_via_rapida_descansa_ate_renovar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """12/11/2026: 110 tentativas seguidas depois do limite, ~1 s perdido em cada pedido."""
+    motor = MotorComFalha([[], []])
+    motor.cerebro = SimpleNamespace(limite={"resetsAt": 10_000.0})  # type: ignore[attr-defined]
+    r, completo = roteado(motor)
+    monkeypatch.setattr("zervis.cerebro.rapido.time.time", lambda: 1_000.0)
+    assert falar(r, "Oi") == "Abri o Mapa." and len(motor.pedidos) == 1
+    assert r.descanso_ate == 10_000.0
+    assert falar(r, "Tudo bem?") == "Abri o Mapa."
+    assert len(motor.pedidos) == 1 and len(completo.pedidos) == 2  # nem tentou a rápida
+    monkeypatch.setattr("zervis.cerebro.rapido.time.time", lambda: 10_001.0)  # a janela renovou
+    falar(r, "E agora?")
+    assert len(motor.pedidos) == 2
+
+
+def test_sem_a_hora_da_renovacao_descansa_quinze_minutos() -> None:
+    r, _ = roteado(MotorFalso([]))
+    r._descansar(agora=500.0)
+    assert r.descanso_ate == 500.0 + rapido.DESCANSO_S

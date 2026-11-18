@@ -16,7 +16,7 @@ import urllib.request
 from collections.abc import Callable
 from typing import Any
 
-from zervis.redes.instagram import ESPERA_S, HOSTS, VERSAO, Instagram, InstagramErro
+from zervis.redes.instagram import ESPERA_S, HOSTS, VERSAO, Instagram, InstagramErro, _epoch
 
 log = logging.getLogger(__name__)
 
@@ -117,3 +117,20 @@ def publicar(
         raise InstagramErro("O Instagram não confirmou a publicação.")
     link = _chamar(ig, base, publicado, {"fields": "permalink"}, token, False)
     return str(link.get("permalink", ""))
+
+
+def procurar(ig: Instagram, legenda: str, desde: float) -> str:
+    """O link de um post do perfil publicado desde `desde` com esta legenda; vazio se não há.
+    Lê a lista na hora, sem o cache: é o que diz se uma publicação interrompida saiu."""
+    base, conta, token = ig._token()
+    caminho = f"{'me' if base == 'ig' else conta}/media"
+    lista = _chamar(
+        ig, base, caminho, {"fields": "caption,timestamp,permalink", "limit": "10"}, token, False
+    )
+    alvo = " ".join(legenda.split())
+    for post in lista.get("data", []):
+        if not isinstance(post, dict) or _epoch(post.get("timestamp")) < desde - 60:
+            continue
+        if " ".join(str(post.get("caption", "")).split()) == alvo:
+            return str(post.get("permalink", "")) or "publicado"
+    return ""

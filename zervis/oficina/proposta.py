@@ -137,7 +137,7 @@ def enviar(copia: Path, gh: str, *args: str) -> subprocess.CompletedProcess[str]
     )  # fmt: skip
 
 
-def _pr_aberto(copia: Path, gh: str, branch: str) -> str:
+def pr_aberto(copia: Path, gh: str, branch: str) -> str:
     """O endereço de um PR aberto que já leva exatamente estes commits, ou vazio."""
     ponta = _git(copia, "rev-parse", branch).stdout.strip()
     lista = _rodar([gh, "pr", "list", "--state", "open", "--json", "url,headRefOid"], copia)
@@ -170,7 +170,7 @@ def _propor(
     gh = gh if gh is not None else achar_gh()
     if not gh:
         return Resultado(False, "O GitHub não está conectado nesta máquina (falta o gh).")
-    if aberto := _pr_aberto(copia, gh, branch):
+    if aberto := pr_aberto(copia, gh, branch):
         numero = aberto.rsplit("/", 1)[-1]
         return Resultado(True, f"O PR {numero} já tem estas melhorias.", aberto)
     if not testar(copia):

@@ -17,7 +17,7 @@ from typing import Any
 
 from claude_agent_sdk import SdkMcpTool
 
-from zervis import avaliacao, lugares, usuario
+from zervis import __version__, avaliacao, lugares, usuario
 from zervis.avaliacao import Cenario, Cerebro, Conferencia, placar
 
 HISTORICO = lugares.ESTADO / "avaliacao"
@@ -309,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Avaliando {len(cenarios)} cenários com {rotulo} ({repetir}x cada)…\n")
     relatorio = asyncio.run(avaliar(cenarios, criar, repetir))
     relatorio["modelo"], relatorio["rotulo"] = modelo, rotulo
+    relatorio["versao"] = __version__  # o placar diz se a rodada é da versão publicada
     if args.noturna:
         relatorio["noturna"] = True
         noturna_antes = placar.ultima_noturna(HISTORICO, rotulo)

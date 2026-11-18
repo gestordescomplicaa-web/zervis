@@ -1,4 +1,4 @@
-import { ESTADO_HOLO, desligarImersao, imersao, imersaoLigada, ligarImersao, pedirAbertura, telaHolograma } from "./imersao.js";
+import { ESTADO_HOLO, desligarImersao, imersao, imersaoLigada, ligarImersao, palcoAqui, pedirAbertura, telaHolograma } from "./imersao.js";
 
 import { desenharModoFala, desenharVozRemota } from "./voz.js";
 import { $, ESTADOS, NO_PC, PAGINAS, api, cabeca, cachePaginas, conteudo, encher, esc, fecharTerminalTela, gravacoes, relogioSessoes, toast } from "../painel.js";
@@ -79,12 +79,12 @@ export async function abrir() {
   imersao.hidden = secao !== "imersao";
   conteudo.hidden = secao === "imersao";
   document.body.classList.remove("menu-aberto");
-  document.body.classList.toggle("tela-holo", secao === "imersao" && !NO_PC);
+  document.body.classList.toggle("tela-holo", secao === "imersao" && !palcoAqui());
   conteudo.classList.toggle("cheio", CHEIAS.includes(secao));
   clearInterval(relogioSessoes);
   fecharTerminalTela();
   if (secao !== "imersao" && imersaoLigada()) desligarImersao();
-  if (secao === "imersao" && !NO_PC) {
+  if (secao === "imersao" && !palcoAqui()) {
     imersao.hidden = true; conteudo.hidden = false;
     conteudo.innerHTML = telaHolograma(); desenharVozRemota();
     return;

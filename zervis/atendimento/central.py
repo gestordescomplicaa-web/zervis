@@ -352,19 +352,22 @@ class Central:
             while True:
                 await ws.send(await atendida.para_ponte.get())
 
-        envio = asyncio.ensure_future(da_pessoa())
-        fim = asyncio.ensure_future(atendida.ponte_fim.wait())
-        try:
+        async def do_dono() -> None:
             async for mensagem in ws:
                 if isinstance(mensagem, bytes):
                     atendida.ouvir_dono(mensagem)
-                if fim.done():
-                    break
-        except Exception:
-            log.info("central: a ponte caiu")
+
+        envio = asyncio.ensure_future(da_pessoa())
+        recebe = asyncio.ensure_future(do_dono())
+        fim = asyncio.ensure_future(atendida.ponte_fim.wait())
+        try:
+            # O fim (você desligou pelo celular) fecha na hora, sem esperar o próximo quadro.
+            await asyncio.wait({recebe, fim}, return_when=asyncio.FIRST_COMPLETED)
+            if recebe.done() and not recebe.cancelled() and recebe.exception() is not None:
+                log.info("central: a ponte caiu")
         finally:
-            envio.cancel()
-            fim.cancel()
+            for tarefa in (envio, recebe, fim):
+                tarefa.cancel()
             atendida.ponte_fim.set()
             with contextlib.suppress(Exception):
                 await ws.close()

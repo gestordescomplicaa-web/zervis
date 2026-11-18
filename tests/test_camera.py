@@ -40,6 +40,8 @@ class DVRFalso:
         self.gravacoes = 0
         self.viva_atrasada = False
         self.fotos_pedidas: list[int] = []
+        self.video_pedido: dict[str, Any] = {}
+        self.midia: list[bytes] = []  # o que a câmera manda (1412) depois do Start do vídeo
         self.derrubar_primeira_sessao = derrubar_primeira_sessao
         self.servidor = socket.socket()
         self.servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -114,6 +116,12 @@ class DVRFalso:
                                 break
                         elif comando == 1006:
                             self._responder(sock, 1007, b'{"Ret":100}\n\0')
+                        elif comando == 1413:
+                            self.video_pedido = dados["OPMonitor"]["Parameter"]
+                            self._responder(sock, 1414, b'{"Ret":100}\n\0')
+                        elif comando == 1410 and dados["OPMonitor"]["Action"] == "Start":
+                            for pedaco in self.midia:
+                                self._responder(sock, 1412, pedaco)
                 with self._trava:
                     if self._ativo is sock:
                         self._ativo = None
@@ -464,5 +472,54 @@ def test_resposta_atrasada_do_keepalive_nao_derruba_a_foto(monkeypatch: pytest.M
     try:
         with camera.Cliente(camera.Conexao("127.0.0.1", "admin", "segredo")) as cliente:
             assert cliente.foto() == JPEG
+    finally:
+        dvr.fechar()
+
+
+def _bloco(tipo: int, conteudo: bytes) -> bytes:
+    """Um bloco do fluxo de mídia da Xiongmai: quadro-chave (FC), quadro P (FD) ou áudio (FA)."""
+    if tipo == 0xFC:
+        return (
+            b"\x00\x00\x01\xfc"
+            + struct.pack("<BBBBII", 2, 12, 160, 90, 0, len(conteudo))
+            + conteudo
+        )
+    if tipo == 0xFD:
+        return b"\x00\x00\x01\xfd" + struct.pack("<I", len(conteudo)) + conteudo
+    return b"\x00\x00\x01\xfa" + struct.pack("<BBH", 0x0E, 2, len(conteudo)) + conteudo
+
+
+def test_midia_separa_so_o_video_mesmo_cortado_no_meio() -> None:
+    """O H.265 traz os próprios 00 00 01: o tamanho do bloco manda, não a busca."""
+    fluxo = (
+        _bloco(0xFC, b"\x00\x00\x01chave")
+        + _bloco(0xFA, b"audio")
+        + _bloco(0xFD, b"\x00\x00\x01p1")
+    )
+    midia = camera.Midia()
+    video = b"".join(b for i in range(0, len(fluxo), 5) for b in midia.video(fluxo[i : i + 5]))
+    assert video == b"\x00\x00\x01chave\x00\x00\x01p1"
+
+
+def test_video_de_uma_lente_pelo_dvrip(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """ADR 0101: o RTSP desta câmera só traz a lente 1; cada lente vem pelo OPMonitor."""
+    dvr = DVRFalso(lentes=3)
+    dvr.midia = [_bloco(0xFC, b"chave") + _bloco(0xFA, b"som"), _bloco(0xFD, b"p1")]
+    monkeypatch.setattr(camera, "PORTA", dvr.porta)
+    dispositivo = camera.Camera(tmp_path / "camera.json")
+    dispositivo.guardar("192.168.0.20", "admin", "segredo")
+    monkeypatch.setattr(dispositivo, "_criar_cliente", lambda _c: camera.Cliente(
+        camera.Conexao("127.0.0.1", "admin", "segredo")))  # fmt: skip
+    try:
+        video = dispositivo.video(2, principal=False)
+        lido = b""
+        for bloco in video:
+            lido += bloco
+            if lido == b"chavep1":
+                break
+        video.fechar()
+        assert dvr.video_pedido == {
+            "Channel": 2, "CombinMode": "NONE", "TransMode": "TCP", "StreamType": "Extra"
+        }  # fmt: skip
     finally:
         dvr.fechar()

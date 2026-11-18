@@ -1,0 +1,11 @@
+# O que não entra na imagem: o ambiente e os caches desta máquina, o app do Android e o .git
+# (a imagem cria o próprio histórico local, como o instalador num pacote).
+.git
+.venv
+node_modules
+android
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+.claude

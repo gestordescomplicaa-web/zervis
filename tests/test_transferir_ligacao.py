@@ -161,11 +161,10 @@ def test_a_ponte_da_central_leva_e_traz_o_audio(tmp_path: Path) -> None:
                     break
                 threading.Event().wait(0.02)
             assert ouvidos == [b"\x02\x00" * 1280]
-            central.encerrar("c1")
-            ws.send(b"\x00\x00" * 1280)  # o próximo quadro já encontra a ponte fechada
+            central.encerrar("c1")  # fecha sem precisar de outro quadro do celular
             with pytest.raises(ConnectionClosed):
                 for _ in range(10):
-                    ws.recv(timeout=2)
+                    ws.recv(timeout=5)
         assert atendida.ponte_fim.is_set()
     finally:
         atendente.parar()

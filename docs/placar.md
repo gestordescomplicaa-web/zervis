@@ -1,11 +1,14 @@
 # Placar do Zérvis
 
-Versão 0.3.0. Gerado por `zervis placar` (plano de maturidade, Frente 3), só com
+Versão 0.5.1. Gerado por `zervis placar` (plano de maturidade, Frente 3), só com
 números agregados: nenhuma fala, resposta ou nome.
 
 ## Avaliação do cérebro
 
 Rodada de 2026-11-09, claude:claude-opus-5-5, 103 cenários, 3x cada: **93%**.
+
+Rodada de uma versão anterior: a desta versão sai na próxima
+`zervis avaliar --noturna`.
 
 | Área | Nota |
 | --- | --- |
@@ -27,9 +30,9 @@ abaixo de 2,5 s na via rápida.
 
 | Fala | Caminho | Turnos | p50 | p95 | Falhas |
 | --- | --- | --- | --- | --- | --- |
-| Recorte | Via rápida | 50 | 3,9 s | 27,9 s | 0 |
-| Recorte | Cérebro completo | 230 | 4,0 s | 7,9 s | 0 |
-| Recorte | Comando local | 47 | 2,0 s | 4,3 s | 0 |
-| Ao vivo | Via rápida | 116 | 3,2 s | 36,9 s | 12 |
-| Ao vivo | Cérebro completo | 370 | 3,8 s | 5,3 s | 216 |
-| Ao vivo | Comando local | 19 | 12,2 s | 12,2 s | 0 |
+| Recorte | Via rápida | 21 | 3,4 s | 8,4 s | 1 |
+| Recorte | Cérebro completo | 53 | 4,9 s | 6,5 s | 0 |
+| Recorte | Comando local | 33 | 2,1 s | 2,3 s | 0 |
+| Ao vivo | Via rápida | 102 | 2,6 s | 7,2 s | 3 |
+| Ao vivo | Cérebro completo | 392 | 3,7 s | 6,1 s | 172 |
+| Ao vivo | Comando local | 10 | 26,1 s | 45,3 s | 0 |

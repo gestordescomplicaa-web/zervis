@@ -11,6 +11,7 @@ uma resposta ou um nome.
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -97,6 +98,12 @@ def completa(historico: Path, total: int) -> dict[str, Any] | None:
     return grandes[-1] if grandes else None
 
 
+def versao_do_placar(texto: str) -> str | None:
+    """A versão escrita no cabeçalho de um placar gerado ("Versão 0.5.1. Gerado por...")."""
+    m = re.search(r"^Versão (\S+?)\. Gerado por", texto, re.MULTILINE)
+    return m.group(1) if m else None
+
+
 def _s(ms: float) -> str:
     return f"{ms / 1000:.1f} s".replace(".", ",")
 
@@ -122,10 +129,21 @@ def markdown(
             for c in relatorio.get("cenarios", [])
         )
         repeticoes = max((len(c.get("rodadas", [])) for c in relatorio["cenarios"]), default=1)
+        da_rodada = relatorio.get("versao")
         linhas += [
-            f"Rodada de {str(relatorio.get('quando', ''))[:10]}, {relatorio.get('rotulo', '')}, "
-            f"{n} cenários, {repeticoes}x cada: **{nota:.0f}%**.",
+            f"Rodada de {str(relatorio.get('quando', ''))[:10]}"
+            + (f" (versão {da_rodada})" if da_rodada else "")
+            + f", {relatorio.get('rotulo', '')}, {n} cenários, {repeticoes}x cada: "
+            f"**{nota:.0f}%**.",
             "",
+        ]
+        if da_rodada != versao:
+            linhas += [
+                "Rodada de uma versão anterior: a desta versão sai na próxima",
+                "`zervis avaliar --noturna`.",
+                "",
+            ]
+        linhas += [
             "| Área | Nota |",
             "| --- | --- |",
         ]

@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from zervis import __version__, ambiente
+from zervis import __version__, ambiente, conteiner
 
 REPO = Path(__file__).resolve().parents[1]
 SERVICO = "zervis"
@@ -69,7 +69,10 @@ _PORTA = re.compile(r"(?<![A-Z_])(?:ZERVIS|JARVIS)_PAINEL_PORTA=(\d+)")
 def porta(rodar: Rodar = rodar) -> int:
     """A porta em que o serviço instalado escuta: o ambiente que o systemd dá a ele, com os
     ajustes de `zervis.service.d` (22/10/2026: um `porta.conf` dizia 8796, a unidade 8795, e o
-    `update` esperou o painel na porta errada); senão a unidade, senão o ambiente."""
+    `update` esperou o painel na porta errada); senão a unidade, senão o ambiente. No contêiner,
+    só o ambiente (a imagem o declara)."""
+    if conteiner.em_conteiner():
+        return int(ambiente.ler("PAINEL_PORTA") or PORTA_PADRAO)
     efetivo = rodar(["systemctl", "--user", "show", SERVICO, "-p", "Environment", "--value"])
     if efetivo.returncode == 0 and (achados := _PORTA.findall(efetivo.stdout)):
         return int(achados[-1])
@@ -116,7 +119,9 @@ class Verificacao:
     resolver: str = ""
 
 
-def _ativo(rodar: Rodar) -> bool:
+def _ativo(rodar: Rodar, responde: Responde | None = None) -> bool:
+    if conteiner.em_conteiner():  # sem systemd: o Zé está de pé se o painel responde
+        return (responde or painel_responde)(porta(rodar))
     return rodar(["systemctl", "--user", "is-active", "--quiet", SERVICO]).returncode == 0
 
 
@@ -130,23 +135,34 @@ def verificacoes(rodar: Rodar = rodar, responde: Responde = painel_responde) -> 
     from zervis.voz.deepgram import ler_chave
 
     lista = []
-    ativo = _ativo(rodar)
-    lista.append(
-        Verificacao("Serviço", True, "Rodando.")
-        if ativo
-        else Verificacao(
-            "Serviço", False, "Parado.", f"systemctl --user start {SERVICO}; zervis logs"
+    if conteiner.em_conteiner():
+        # O processo é o contêiner: quem o sobe e o reinicia é o Docker (ADR 0096).
+        lista += [
+            Verificacao("Serviço", True, "Rodando no contêiner.")
+            if _ativo(rodar, responde)
+            else Verificacao("Serviço", False, "Parado.", conteiner.LOGS),
+            Verificacao("Início automático", True, "Pelo Docker (restart: unless-stopped)."),
+        ]
+    else:
+        ativo = _ativo(rodar)
+        lista.append(
+            Verificacao("Serviço", True, "Rodando.")
+            if ativo
+            else Verificacao(
+                "Serviço", False, "Parado.", f"systemctl --user start {SERVICO}; zervis logs"
+            )
         )
-    )
-    habilitado = rodar(["systemctl", "--user", "is-enabled", "--quiet", SERVICO]).returncode == 0
-    # Desligado é o Zé como programa (ADR 0079): liga ao abrir e desliga ao fechar.
-    lista.append(
-        Verificacao(
-            "Início automático",
-            True,
-            "Ligado." if habilitado else "Desligado: o Zé liga ao abrir o programa.",
+        habilitado = (
+            rodar(["systemctl", "--user", "is-enabled", "--quiet", SERVICO]).returncode == 0
         )
-    )
+        # Desligado é o Zé como programa (ADR 0079): liga ao abrir e desliga ao fechar.
+        lista.append(
+            Verificacao(
+                "Início automático",
+                True,
+                "Ligado." if habilitado else "Desligado: o Zé liga ao abrir o programa.",
+            )
+        )
     numero = porta(rodar)
     lista.append(
         Verificacao("Painel", True, f"http://127.0.0.1:{numero}/")
@@ -237,7 +253,7 @@ def verificacoes(rodar: Rodar = rodar, responde: Responde = painel_responde) -> 
 
 def status(rodar: Rodar = rodar, responde: Responde = painel_responde) -> int:
     numero = porta(rodar)
-    ativo, no_ar = _ativo(rodar), responde(numero)
+    ativo, no_ar = _ativo(rodar, responde), responde(numero)
     print(f"Zérvis {versao(rodar)}")
     print(f"Serviço: {'rodando' if ativo else 'parado'}")
     print(f"Painel: http://127.0.0.1:{numero}/ ({'responde' if no_ar else 'sem resposta'})")
@@ -305,7 +321,7 @@ TEXTOS = {
     "a_frente": "Já está à frente da versão mais nova ({rotulo}), no código em desenvolvimento. "
     "Para seguir a master: zervis update --desenvolvimento",
     "commits_locais": "Há commits locais que não estão na origem (melhorias do próprio Zé, por "
-    "exemplo): junte-os numa sessão de autodesenvolvimento antes de atualizar.",
+    "exemplo): mescle o PR deles no GitHub e rode o update de novo.",
 }
 
 
@@ -348,6 +364,9 @@ def update(
     desenvolvimento: bool = False,
 ) -> int:
     """Avança como o `planejar` decidir, e só fica na versão nova se o painel voltar."""
+    if conteiner.em_conteiner():
+        print(conteiner.TEXTO_ATUALIZAR)
+        return 1
     plano = planejar(rodar, desenvolvimento)
     if plano.motivo:
         print(TEXTOS[plano.motivo].format(rotulo=plano.rotulo))
@@ -389,6 +408,9 @@ def uninstall(
 ) -> int:
     from zervis import lugares
 
+    if conteiner.em_conteiner():
+        print("Neste contêiner, remova pelo Docker: docker compose down (e -v apaga os dados).")
+        return 1
     raizes = [lugares.CONFIG, lugares.DADOS, lugares.ESTADO]
     if apagar_dados:
         print("Isto apaga, sem volta, a configuração, as chaves, a memória e as conversas:")
@@ -467,6 +489,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.acao == "version":
         print(f"Zérvis {versao()}")
         return 0
+    if args.acao == "logs" and conteiner.em_conteiner():
+        print(f"Neste contêiner, o registro sai pelo Docker: {conteiner.LOGS}")
+        return 1
     if args.acao == "logs":
         os.execvp("journalctl", ["journalctl", "--user", "-u", SERVICO, "-n", "100", "-f"])  # noqa: S606, S607
     if args.acao == "abrir":

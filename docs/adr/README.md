@@ -103,3 +103,9 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0093](0093-posts-do-instagram.md) | Posts do Instagram: o Zé cria o carrossel com a marca, e publicar é sempre com aprovação | Em validação |
 | [0094](0094-metricas-do-site.md) | As métricas do site, só leitura: o Search Console e o Google Analytics | Em validação |
 | [0095](0095-chamado-durante-a-fala.md) | O "Ei Zé" que é a própria voz do Zé não interrompe | Aceita |
+| [0096](0096-imagem-docker.md) | A imagem Docker para a VPS: um volume só, sem systemd, o primeiro acesso sem reiniciar | Em validação |
+| [0097](0097-ferramentas-sob-demanda.md) | As ferramentas do cérebro sob demanda: a busca do Claude Code e as mais usadas à mão | Em validação |
+| [0098](0098-memoria-com-validade-e-frase-de-apoio.md) | Memória com validade e fato aprendido só com a frase de quem usa | Aceito |
+| [0099](0099-deepgram-so-com-fala.md) | No Live, o Deepgram só ouve quando há fala | Aceito |
+| [0100](0100-imersao-pelo-painel.md) | A Imersão pelo painel: o Zé e os cards de qualquer aparelho | Aceito |
+| [0101](0101-camera-ao-vivo.md) | O vídeo ao vivo da câmera no painel | Aceito |

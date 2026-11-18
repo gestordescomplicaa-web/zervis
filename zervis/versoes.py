@@ -24,7 +24,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from zervis import ambiente, cli, lugares
+from zervis import ambiente, cli, conteiner, lugares
 
 log = logging.getLogger(__name__)
 CANAIS = ("versoes", "desenvolvimento")
@@ -33,6 +33,7 @@ DIA_S = 24 * 3600
 PRIMEIRA_S = 120.0  # a primeira procura, depois de subir: sem disputar o início
 RODANDO_MAXIMO_S = 15 * 60  # um "rodando" mais velho que isso morreu sem escrever o fim
 MAXIMO_NOVIDADES = 12
+MAXIMO_LOCAIS = 5
 # O systemd não passa o ambiente de quem chama: sem estas, a unidade acharia outras pastas.
 REPASSAR = (*ambiente.nomes("PERFIL", "RAIZ"), "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME")
 
@@ -46,8 +47,9 @@ TEXTOS = {
     "em_dia": "O Zé está na versão mais nova ({rotulo}).",
     "a_frente": "O Zé está à frente da versão publicada mais nova ({rotulo}), no código em "
     "desenvolvimento. Para seguir recebendo, use o canal Desenvolvimento.",
-    "commits_locais": "Há melhorias locais que ainda não estão na origem (do autodesenvolvimento, "
-    "por exemplo). Junte-as antes de atualizar.",
+    "commits_locais": "A atualização espera melhorias que estão só neste computador. Mescle o "
+    "PR delas no GitHub e procure de novo.",
+    "conteiner": "Esta instalação é atualizada pelo Docker, no servidor.",
 }
 RESULTADOS = {
     "ok": "Atualizei o Zé para {para}.",
@@ -57,6 +59,18 @@ RESULTADOS = {
 }
 
 Rodar = Callable[[list[str]], subprocess.CompletedProcess[str]]
+
+
+def pr_das_melhorias() -> str:
+    """O PR aberto que leva exatamente os commits locais, pelo `gh` desta máquina; vazio sem ele."""
+    from zervis.oficina import proposta
+
+    if not (gh := proposta.achar_gh()):
+        return ""
+    try:
+        return proposta.pr_aberto(cli.REPO, gh, "HEAD")
+    except (OSError, subprocess.SubprocessError):
+        return ""
 
 
 def _rodar(comando: list[str]) -> subprocess.CompletedProcess[str]:
@@ -109,10 +123,12 @@ class Versoes:
         rodar: cli.Rodar = cli.rodar,
         lancar: Rodar = _rodar,
         agora: Callable[[], float] = time.time,
+        pr_local: Callable[[], str] = pr_das_melhorias,
     ) -> None:
         self.resultado = (estado or lugares.ESTADO) / "atualizar.json"
         self.ajuste = (config or lugares.CONFIG) / "atualizacoes.json"
         self.rodar, self.lancar, self.agora = rodar, lancar, agora
+        self.pr_local = pr_local
         self._ultima: dict[str, Any] = {}
         self._trava = threading.Lock()
         self._procurando = threading.Lock()
@@ -138,7 +154,11 @@ class Versoes:
         """Busca a origem agora e guarda o que achou (o painel e a voz leem a última)."""
         with self._procurando:
             canal = self.canal
-            plano = cli.planejar(self.rodar, desenvolvimento=canal == "desenvolvimento")
+            plano = (
+                cli.Plano(motivo="conteiner", recusa=True)
+                if conteiner.em_conteiner()
+                else cli.planejar(self.rodar, desenvolvimento=canal == "desenvolvimento")
+            )
             achado: dict[str, Any] = {
                 "canal": canal,
                 "instalada": cli.versao(self.rodar),
@@ -151,6 +171,15 @@ class Versoes:
                 "novidades": [],
                 "procurado": self.agora(),
             }
+            if plano.motivo == "commits_locais":
+                # O que só existe aqui (o autodesenvolvimento aplicado e ainda sem PR mesclado)
+                # e quanto da origem espera por isso.
+                locais = cli._git(self.rodar, "log", "--format=%s", f"{plano.alvo}..HEAD")
+                titulos = [t for t in locais.stdout.splitlines() if t.strip()]
+                achado["locais"] = titulos[:MAXIMO_LOCAIS]
+                achado["pr"] = self.pr_local()
+                novos = cli._git(self.rodar, "rev-list", "--count", f"HEAD..{plano.alvo}")
+                achado["mudancas"] = int(novos.stdout.strip() or 0)
             if not plano.motivo:
                 commits = cli._git(self.rodar, "rev-list", "--count", f"HEAD..{plano.alvo}")
                 achado["mudancas"] = int(commits.stdout.strip() or 0)
@@ -182,9 +211,15 @@ class Versoes:
         except (OSError, subprocess.SubprocessError, ValueError) as erro:
             log.warning("atualizações: não consegui procurar: %s", erro)
             return None
-        if not achado["disponivel"] or achado["alvo"] == self._avisado:
+        esperando = achado["motivo"] == "commits_locais" and achado["mudancas"] > 0
+        if not (achado["disponivel"] or esperando) or achado["alvo"] == self._avisado:
             return None
         self._avisado = achado["alvo"]
+        if esperando:
+            return (
+                "Tem atualização do Zé, mas ela espera o PR de uma melhoria feita aqui. "
+                "Está em Atualizações."
+            )
         if achado["canal"] == "versoes":
             return f"Tem versão nova do Zé, a {achado['destino']}. Está em Atualizações."
         return f"Tem atualização do Zé: {achado['mudancas']} mudanças. Está em Atualizações."
@@ -197,6 +232,8 @@ class Versoes:
 
     def aplicar(self) -> str:
         """Começa a atualização numa unidade própria e devolve na hora (o Zé vai reiniciar)."""
+        if conteiner.em_conteiner():
+            return TEXTOS["conteiner"]
         if self.rodando():
             return "Já há uma atualização em andamento."
         canal = self.canal
