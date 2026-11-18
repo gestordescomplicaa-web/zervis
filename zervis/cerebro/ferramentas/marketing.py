@@ -15,6 +15,8 @@ from zervis.automacoes.jobs import JobErro, Jobs
 from zervis.cerebro.ferramentas.comum import _erro, _texto
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
 from zervis.oficina.sessoes import SessaoErro, Sessoes
+from zervis.video import roteiro as roteiro_video
+from zervis.video import videos as videos_mod
 
 
 def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMcpTool[Any]]:
@@ -174,9 +176,66 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
             return _erro(erro)
         return _texto({"post": p.id, "aviso": "Publicando no Instagram."})
 
+    # --- os vídeos (Reels), ADR 0106 e 0109 ------------------------------------------------
+    videos = videos_mod.PADRAO
+
+    @tool(
+        "marketing_videos",
+        "Os vídeos (Reels) que o Zé criou: o título, o estado (criando, pronto, publicando, "
+        "publicado, erro), a duração e o link dos publicados.",
+        {"type": "object", "properties": {}},
+    )
+    async def listar_videos(_args: dict[str, Any]) -> dict[str, Any]:
+        lista = await asyncio.to_thread(videos.listar)
+        campos = ("id", "titulo", "tema", "estado", "etapa", "erro", "duracao", "permalink")
+        return _texto(
+            [{k: videos.para_tela(v)[k] for k in campos} for v in lista[:10]] or "Nenhum vídeo."
+        )
+
+    @tool(
+        "marketing_video_criar",
+        "Cria um vídeo vertical (Reels) com a marca do usuário, narrado pela voz do Zé, sobre um "
+        "tema ou a partir de um artigo do blog (o slug, de marketing_situacao). duracao: 15, 30, "
+        "45 ou 60 segundos (padrão 30). Leva cerca de dois minutos; o Zé avisa quando estiver "
+        "pronto em Marketing. Nada é publicado.",
+        {
+            "type": "object",
+            "properties": {
+                "tema": {"type": "string"},
+                "artigo": {"type": "string"},
+                "duracao": {"type": "integer", "enum": sorted(roteiro_video.DURACOES)},
+            },
+        },
+    )
+    async def criar_video(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            v = await asyncio.to_thread(
+                videos.criar,
+                str(args.get("tema", "")),
+                str(args.get("artigo", "")),
+                duracao=int(args.get("duracao") or roteiro_video.DURACAO_PADRAO),
+            )
+        except (videos_mod.VideoErro, ValueError) as erro:
+            return _erro(erro)
+        return _texto({"video": v.id, "aviso": "Criando. O Zé avisa quando estiver pronto."})
+
+    @tool(
+        "marketing_video_publicar",
+        "Publica no Instagram, como Reels, um vídeo pronto que o usuário assistiu e aprovou "
+        "('pode publicar'). Vídeo: o id de marketing_videos. O Zé avisa quando estiver no ar.",
+        {"type": "object", "properties": {"video": {"type": "string"}}, "required": ["video"]},
+    )
+    async def publicar_video(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            v = await asyncio.to_thread(videos.publicar, str(args["video"]))
+        except videos_mod.VideoErro as erro:
+            return _erro(erro)
+        return _texto({"video": v.id, "aviso": "Publicando no Instagram."})
+
     ferramentas_ = [
         situacao, pedir, abrir_pr, publicar,
         listar_posts, criar_post, refazer_post, publicar_post,
+        listar_videos, criar_video, publicar_video,
     ]  # fmt: skip
     if jobs is None:
         return ferramentas_

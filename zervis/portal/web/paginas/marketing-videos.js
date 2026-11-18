@@ -11,15 +11,26 @@ let vigia;
 
 /** @param {any} v */
 const estado = (v) => v.estado === "criando" ? esc(v.etapa || "Na fila")
-  : v.estado === "erro" ? `Erro · ${esc(v.erro)}` : `Pronto · ${Math.round(v.duracao)} s`;
+  : v.estado === "erro" ? `Erro · ${esc(v.erro)}`
+  : v.estado === "publicando" ? "Publicando no Instagram"
+  : v.estado === "publicado" ? `Publicado · ${Math.round(v.duracao)} s`
+  : `Pronto · ${Math.round(v.duracao)} s${v.erro ? ` · ${esc(v.erro)}` : ""}`;
 
-/** @param {any} v */
-const previa = (v) => `<div class="previa-video">
+/** O botão de publicar, ou o motivo de não poder. @param {any} v @param {any} vs */
+const publicar = (v, vs) => v.estado === "publicado"
+  ? (v.permalink ? `<a class="acao principal" href="${esc(v.permalink)}" target="_blank" rel="noopener">Ver no Instagram</a>` : "")
+  : v.estado !== "rascunho" ? ""
+  : !vs.instagram ? `<p class="nota">Conecte o Instagram em Redes sociais para publicar.</p>`
+  : !vs.publicavel ? `<p class="nota">Publicar exige o acesso de qualquer lugar com endereço fixo.</p>`
+  : botao("Publicar no Instagram", "mk-video-publicar", `data-id="${esc(v.id)}"`, "principal");
+
+/** @param {any} v @param {any} vs */
+const previa = (v, vs) => `<div class="previa-video">
   <video controls playsinline preload="metadata" poster="/fluxo/marketing/video?id=${esc(v.id)}&qual=capa" src="/fluxo/marketing/video?id=${esc(v.id)}"></video>
   <div class="previa-video-lado">
     ${v.legenda ? `<pre class="legenda-post">${esc(v.legenda)}</pre>` : ""}
     <div class="campos"><label>Ajuste<input id="mk-video-ajuste" placeholder="Ex.: gancho mais curto, sem a cena do número" autocomplete="off"></label></div>
-    <div class="linha">${botao("Refazer", "mk-video-refazer", `data-id="${esc(v.id)}"`)}<a class="acao" href="/fluxo/marketing/video?id=${esc(v.id)}" download="${esc((v.titulo || "video").slice(0, 40))}.mp4">Baixar</a>${botao("Descartar", "mk-video-descartar", `data-id="${esc(v.id)}"`, "discreta")}</div>
+    <div class="linha">${publicar(v, vs)}${v.estado === "publicado" ? "" : botao("Refazer", "mk-video-refazer", `data-id="${esc(v.id)}"`)}<a class="acao" href="/fluxo/marketing/video?id=${esc(v.id)}" download="${esc((v.titulo || "video").slice(0, 40))}.mp4">Baixar</a>${botao("Descartar", "mk-video-descartar", `data-id="${esc(v.id)}"`, "discreta")}</div>
     <p class="resultado" id="mk-resultado-video-previa"></p>
   </div></div>`;
 
@@ -28,7 +39,7 @@ export function cartaoVideos(r, vs = r.videos) {
   const publicados = (r.artigos || []).filter((/** @type {any} */ a) => a.estado === "Publicado");
   const lista = vs.lista;
   const v = lista.find((/** @type {any} */ x) => x.id === aberto && x.pronto);
-  vigiar(lista.some((/** @type {any} */ x) => x.estado === "criando"), r);
+  vigiar(lista.some((/** @type {any} */ x) => x.estado === "criando" || x.estado === "publicando"), r);
   return `<div id="mk-videos">${cartao(`Vídeos <span class="etiqueta">${lista.length} ${lista.length === 1 ? "vídeo" : "vídeos"}</span>`,
     `${sub("Reels explicativos com a sua marca: o Zé escreve o roteiro, narra e monta. Você assiste e decide.")}
     ${vs.indisponivel ? `<p class="nota">Indisponível: ${esc(vs.indisponivel.toLowerCase())}</p>` : ""}
@@ -43,9 +54,9 @@ export function cartaoVideos(r, vs = r.videos) {
     <div class="linha">${botao("Criar vídeo", "mk-video-criar", vs.indisponivel ? "disabled" : "", "principal")}</div>
     <p class="resultado" id="mk-resultado-video"></p>
     ${lista.length ? `<div class="itens">${lista.map((/** @type {any} */ x) => item(esc(x.titulo || x.tema || x.artigo), estado(x),
-      x.estado === "criando" ? "" : (x.pronto ? botao(aberto === x.id ? "Fechar" : "Assistir", "mk-video-ver", `data-id="${esc(x.id)}"`, "discreta") : "")
+      ["criando", "publicando"].includes(x.estado) ? "" : (x.pronto ? botao(aberto === x.id ? "Fechar" : "Assistir", "mk-video-ver", `data-id="${esc(x.id)}"`, "discreta") : "")
         + botao("Descartar", "mk-video-descartar", `data-id="${esc(x.id)}"`, "discreta"))).join("")}</div>` : ""}
-    ${v ? previa(v) : ""}`)}</div>`;
+    ${v ? previa(v, vs) : ""}`)}</div>`;
 }
 
 /** Redesenha só este cartão (sem recarregar a página, que lê o site e os PRs). @param {any} r */
@@ -98,6 +109,15 @@ Object.assign(ACOES, {
     const instrucao = /** @type {HTMLInputElement} */ ($("mk-video-ajuste")).value;
     try {
       const r = await ocupado(b, () => api("marketing/video/refazer", { id: b.dataset.id, instrucao }));
+      aberto = null;
+      await redesenhar(ultimaLeitura);
+      mostrar("mk-resultado-video", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-video-previa", false, erro.message); }
+  },
+  "mk-video-publicar": async (/** @type {HTMLButtonElement} */ b) => {
+    if (b.dataset.confirmar !== "1") { b.dataset.confirmar = "1"; b.textContent = "Confirmar publicação"; return; }
+    try {
+      const r = await ocupado(b, () => api("marketing/video/publicar", { id: b.dataset.id }));
       aberto = null;
       await redesenhar(ultimaLeitura);
       mostrar("mk-resultado-video", true, r.aviso);

@@ -1,4 +1,4 @@
-"""Os vídeos de Marketing (ADR 0106): do pedido ao MP4, em segundo plano.
+"""Os vídeos de Marketing (ADR 0106, 0107 e 0109): do pedido ao Reels publicado.
 
 1. **Roteiro:** o modelo escreve as cenas e as falas (`roteiro`), a partir de um tema ou de um
    artigo do blog, na linha editorial do site e no tom do estilo.
@@ -7,8 +7,14 @@
 4. **Quadros e MP4:** a página do motor no Chromium, em paralelo, e o FFmpeg (`captura`,
    `montagem`). Os quadros são apagados no fim; ficam o MP4, a capa e o roteiro.
 
-Um vídeo por vez (é o que mais pesa no Zé); o seguinte espera na fila. Publicar no Instagram é a
-etapa 2 do plano; aqui o vídeo fica como rascunho, com a prévia e o download em Marketing.
+Um vídeo por vez (é o que mais pesa no Zé); o seguinte espera na fila. Pronto, o vídeo fica como
+rascunho, com a prévia e o download em Marketing.
+
+5. **Publicar** (ADR 0109): só com a aprovação de quem usa (quem chama já a recebeu). O MP4 sai
+   por um link público temporário no endereço fixo do Zé (a Meta busca o vídeo), fechado logo
+   depois; o Reels leva a legenda que o diretor escreveu e vai também ao feed. Se o Zé parar no
+   meio, o vídeo não fica preso em "publicando": ele confere no perfil se o Reels saiu antes de
+   deixar publicar de novo (nada de Reels em dobro).
 """
 
 import asyncio
@@ -26,6 +32,9 @@ from pathlib import Path
 from typing import Any
 
 from zervis import lugares, marketing
+from zervis.portal import publico
+from zervis.redes import instagram_publicar
+from zervis.redes.instagram import Instagram, InstagramErro
 from zervis.video import captura, estilos, montagem, narracao, roteiro, trilha
 
 log = logging.getLogger(__name__)
@@ -37,7 +46,12 @@ PENSAMENTO = 3000  # tokens de raciocínio: contar as palavras e variar as cenas
 SISTEMA = "Você é diretor de criação de vídeos curtos para empresas. Responda só com o JSON pedido."
 LIMITE_ARTIGO = 9000
 FORMATO = ("vertical", 1080, 1920)
-ESTADOS = ("criando", "rascunho", "erro")
+ESTADOS = ("criando", "rascunho", "erro", "publicando", "publicado")
+REELS_S = (3.0, 90.0)  # a duração que a Meta aceita num Reels
+LINK_DO_VIDEO_S = 25 * 60.0  # o link público fica aberto enquanto a Meta processa
+# Um vídeo "publicando" sem dono só é conferido no Instagram depois disto (a Meta pode levar uns
+# minutos para listar um Reels publicado logo antes de o Zé parar).
+CONFERIR_APOS_S = 15 * 60.0
 # O tempo mínimo de cada cena na tela, mesmo com a fala curta (uma lista precisa ser lida).
 MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
     "gancho": lambda c: 2.2,
@@ -74,6 +88,9 @@ class Video:
     duracao: float = 0.0
     criado: float = field(default_factory=time.time)
     feito_em: float = 0.0
+    permalink: str = ""  # o link do Reels publicado
+    publicado: float = 0.0
+    publicando_desde: float = 0.0  # epoch: quando o pedido de publicar saiu
 
 
 def _perguntar_ao_modelo(prompt: str, modelo: str) -> str:
@@ -129,6 +146,11 @@ class Videos:
         ouvinte: Callable[[], narracao.Ouvir | None] = _ouvinte_do_ze,
         capturar: Callable[..., list[Path]] = captura.capturar,
         montar: Callable[..., Path] = montagem.montar,
+        instagram: Instagram | None = None,
+        links: publico.Publicos = publico.PADRAO,
+        endereco: Callable[[], str] | None = None,
+        publicar_reels: Callable[..., str] = instagram_publicar.publicar_reels,
+        procurar: Callable[[Instagram, str, float], str] = instagram_publicar.procurar,
     ) -> None:
         self.pasta = pasta
         self.site = site or marketing.PADRAO
@@ -137,9 +159,30 @@ class Videos:
         self.ouvinte = ouvinte
         self.capturar = capturar
         self.montar = montar
+        self._instagram = instagram
+        self.links = links
+        self._endereco = endereco
+        self._publicar_reels = publicar_reels
+        self._procurar = procurar
         self._trava = threading.RLock()
         self._fila = threading.Lock()  # um vídeo por vez
         self._andando: set[str] = set()
+        self._publicando: set[str] = set()
+
+    @property
+    def instagram(self) -> Instagram:
+        if self._instagram is None:
+            from zervis import marketing_posts
+
+            self._instagram = marketing_posts.PADRAO.instagram  # a mesma conta dos posts
+        return self._instagram
+
+    def endereco(self) -> str:
+        if self._endereco is not None:
+            return self._endereco()
+        from zervis import marketing_posts
+
+        return marketing_posts.endereco_publico()
 
     # --- guardar --------------------------------------------------------------------------
 
@@ -167,7 +210,29 @@ class Videos:
             # o Zé reiniciou no meio: não fica preso em "criando"
             video.estado, video.etapa, video.erro = "erro", "", "Interrompido. Refaça o vídeo."
             self._gravar(video)
+        elif video.estado == "publicando" and video.id not in self._publicando:
+            video = self._conferir_publicacao(video)
         return video
+
+    def _conferir_publicacao(self, video: Video) -> Video:
+        """Um "publicando" sem dono (o Zé parou no meio): depois de um tempo, confere no perfil
+        se o Reels saiu. Saiu: publicado. Não saiu (ou sem resposta): volta a rascunho, com o
+        aviso para conferir antes de publicar de novo."""
+        if time.time() - video.publicando_desde < CONFERIR_APOS_S:
+            return video
+        link = ""
+        try:
+            link = self._procurar(self.instagram, video.legenda, video.publicando_desde)
+        except (InstagramErro, OSError) as erro:
+            log.warning("vídeo %s: não consegui conferir a publicação (%s)", video.id, erro)
+        if link:
+            video.estado, video.permalink, video.publicado, video.erro = (
+                "publicado", "" if link == "publicado" else link, time.time(), "",
+            )  # fmt: skip
+        else:
+            video.estado = "rascunho"
+            video.erro = "A publicação foi interrompida. Confira no Instagram antes de publicar."
+        return self._gravar(video)
 
     def listar(self) -> list[Video]:
         if not self.pasta.is_dir():
@@ -189,7 +254,7 @@ class Videos:
 
     def descartar(self, id_: str) -> None:
         video = self.ler(id_)
-        if video.estado == "criando":
+        if video.estado in ("criando", "publicando"):
             raise VideoErro("Espere o vídeo terminar para descartar.")
         shutil.rmtree(self._dir(id_), ignore_errors=True)
 
@@ -380,6 +445,55 @@ class Videos:
         self.montar(quadros, pasta / "trilha.wav", pasta / "video.mp4", capa)
         (pasta / "trilha.wav").unlink(missing_ok=True)
 
+    # --- publicar (ADR 0109) ---------------------------------------------------------------
+
+    def publicar(self, id_: str, esperar: bool = False) -> Video:
+        """Publica como Reels. Só com a aprovação de quem usa: quem chama já a recebeu."""
+        with self._trava:
+            video = self.ler(id_)
+            if video.estado != "rascunho":
+                raise VideoErro("Só um vídeo pronto pode ser publicado.")
+            if not self.instagram.conectado:
+                raise VideoErro("Conecte o Instagram em Redes sociais.")
+            if not self.endereco():
+                raise VideoErro("Publicar exige o acesso de qualquer lugar com endereço fixo.")
+            self.arquivo(id_)
+            if not REELS_S[0] <= video.duracao <= REELS_S[1]:
+                raise VideoErro("Um Reels tem de 3 a 90 segundos.")
+            video.estado, video.erro, video.publicando_desde = "publicando", "", time.time()
+            self._publicando.add(video.id)
+            self._gravar(video)
+        if esperar:
+            self._enviar(video)
+            return self.ler(id_)
+        threading.Thread(
+            target=self._enviar, args=(video,), name="video-publicar", daemon=True
+        ).start()
+        return video
+
+    def _enviar(self, video: Video) -> None:
+        mp4 = self.arquivo(video.id)
+        segredo = self.links.abrir([mp4], LINK_DO_VIDEO_S)
+        try:
+            url = f"{self.endereco()}{publico.PREFIXO}{segredo}/{mp4.name}"
+            video.permalink = self._publicar_reels(self.instagram, url, video.legenda)
+            video.estado, video.publicado, video.erro = "publicado", time.time(), ""
+            texto = f"O vídeo {video.titulo or video.tema} foi publicado no Instagram."
+        except InstagramErro as erro:
+            video.estado, video.erro = "rascunho", str(erro)
+            texto = f"Não publiquei o vídeo: {erro}"
+        except Exception:  # um defeito não deixa o vídeo preso em "publicando"
+            log.exception("vídeo %s: falha inesperada ao publicar", video.id)
+            video.estado = "rascunho"
+            video.erro = "A publicação falhou. Confira no Instagram antes de publicar."
+            texto = f"Não publiquei o vídeo: {video.erro}"
+        finally:
+            self.links.fechar(segredo)
+            self._publicando.discard(video.id)
+        self._gravar(video)
+        if self.site.avisar is not None:
+            self.site.avisar(texto)
+
     # --- a tela ---------------------------------------------------------------------------
 
     def para_tela(self, video: Video) -> dict[str, Any]:
@@ -387,7 +501,7 @@ class Videos:
             k: getattr(video, k)
             for k in (
                 "id", "tema", "artigo", "estilo", "voz", "estado", "etapa", "erro", "titulo",
-                "legenda", "duracao", "criado", "modelo", "duracao_alvo",
+                "legenda", "duracao", "criado", "modelo", "duracao_alvo", "permalink", "publicado",
             )
         }  # fmt: skip
         dados["cenas"] = len(video.roteiro.get("cenas", []))

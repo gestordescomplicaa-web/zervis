@@ -3,7 +3,9 @@ caminho inteiro com o modelo, a voz, a captura e o FFmpeg trocados por falsos.""
 
 import json
 import math
+import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
@@ -387,3 +389,169 @@ def test_deepgram_devolve_cada_palavra_com_o_tempo() -> None:
     assert deepgram.palavras("chave", b"RIFF", abrir=abrir) == [("oi", 0.1, 0.3), ("zé", 0.3, 0.6)]
     assert pedidos[0].get_header("Content-type") == "audio/wav"
     assert deepgram.transcrever("chave", b"x", "audio/ogg", abrir) == "oi zé"
+
+
+# --- publicar como Reels (ADR 0109) ------------------------------------------------------------
+
+
+def test_reels_vai_a_api_com_o_video_e_a_legenda() -> None:
+    from test_marketing_posts import Meta, _ig  # type: ignore[import-not-found]
+
+    from zervis.redes import instagram_publicar
+
+    meta = Meta(["IN_PROGRESS", "IN_PROGRESS", "FINISHED"])
+    esperas: list[float] = []
+    url = "https://ze.exemplo.com/publico/s/video.mp4"
+    link = instagram_publicar.publicar_reels(_ig(meta), url, "Legenda", dormir=esperas.append)
+    assert link == "https://www.instagram.com/p/xyz/"
+    criar = next(d for m, c, d in meta.pedidos if d.get("media_type") == ["REELS"])
+    assert criar["video_url"] == [url] and criar["caption"] == ["Legenda"]
+    assert criar["share_to_feed"] == ["true"] and criar["thumb_offset"] == ["0"]
+    assert esperas == [instagram_publicar.INTERVALO_VIDEO_S] * 2  # o vídeo leva mais
+    publicar = next(d for m, c, d in meta.pedidos if c.endswith("/media_publish"))
+    assert publicar["creation_id"] == ["c1"]
+
+
+def test_link_publico_entrega_o_mp4_e_responde_head(tmp_path: Path) -> None:
+    from zervis.portal import publico
+
+    mp4 = tmp_path / "video.mp4"
+    mp4.write_bytes(b"\x00\x00\x00 ftypisom")
+    links = publico.Publicos()
+    segredo = links.abrir([mp4])
+    assert links.arquivo(f"/publico/{segredo}/video.mp4") == (mp4.read_bytes(), "video/mp4")
+
+    class Pedido:
+        def __init__(self, path: str) -> None:
+            self.path, self.status = path, 0
+            self.cabecalhos: dict[str, str] = {}
+
+        def _host_local(self) -> bool:
+            return True
+
+        def send_response(self, status: int) -> None:
+            self.status = status
+
+        def send_header(self, nome: str, valor: str) -> None:
+            self.cabecalhos[nome] = valor
+
+        def end_headers(self) -> None:
+            pass
+
+    original, publico.PADRAO = publico.PADRAO, links
+    try:
+        certo, errado = Pedido(f"/publico/{segredo}/video.mp4"), Pedido("/api/estado")
+        publico.responder_head(certo)
+        publico.responder_head(errado)
+    finally:
+        publico.PADRAO = original
+    assert certo.status == 200 and certo.cabecalhos["Content-Type"] == "video/mp4"
+    assert certo.cabecalhos["Content-Length"] == str(len(mp4.read_bytes()))
+    assert errado.status == 404  # o resto do painel não responde HEAD
+
+
+class LinksFalsos:
+    def __init__(self) -> None:
+        self.abertos: dict[str, list[Path]] = {}
+        self.prazos: list[float] = []
+
+    def abrir(self, arquivos: list[Path], prazo_s: float = 0) -> str:
+        self.abertos["seg"] = arquivos
+        self.prazos.append(prazo_s)
+        return "seg"
+
+    def fechar(self, segredo: str) -> None:
+        self.abertos.pop(segredo, None)
+
+
+def _publicaveis(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, publicar: Any, conectado: bool = True
+) -> tuple[Any, Any, LinksFalsos]:
+    v, site = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    links = LinksFalsos()
+    v.links = links
+    v._instagram = SimpleNamespace(conectado=conectado)
+    v._endereco = lambda: "https://ze.exemplo.com"
+    v._publicar_reels = publicar
+    return v, site, links
+
+
+def test_publicar_um_video_pronto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    chamadas: list[tuple[str, str]] = []
+
+    def publicar(ig: Any, url: str, legenda: str) -> str:
+        chamadas.append((url, legenda))
+        return "https://www.instagram.com/reel/abc/"
+
+    v, site, links = _publicaveis(tmp_path, monkeypatch, publicar)
+    feito = v.criar(tema="x", esperar=True)
+    publicado = v.publicar(feito.id, esperar=True)
+    assert publicado.estado == "publicado" and publicado.permalink.endswith("/reel/abc/")
+    assert chamadas == [("https://ze.exemplo.com/publico/seg/video.mp4", ROTEIRO["legenda"])]
+    assert links.abertos == {} and links.prazos == [videos.LINK_DO_VIDEO_S]  # fechado depois
+    assert site.avisos[-1] == f"O vídeo {feito.titulo} foi publicado no Instagram."
+    tela = v.para_tela(publicado)
+    assert tela["permalink"] and tela["publicado"]
+    with pytest.raises(videos.VideoErro, match="pronto"):
+        v.publicar(feito.id)  # publicado não publica de novo
+
+
+def test_publicar_exige_instagram_endereco_e_duracao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from zervis.redes.instagram import InstagramErro
+
+    def recusa(ig: Any, url: str, legenda: str) -> str:
+        raise InstagramErro("O Instagram não conseguiu buscar o vídeo.")
+
+    v, _, links = _publicaveis(tmp_path, monkeypatch, recusa, conectado=False)
+    feito = v.criar(tema="x", esperar=True)
+    with pytest.raises(videos.VideoErro, match="Conecte o Instagram"):
+        v.publicar(feito.id)
+    v._instagram = SimpleNamespace(conectado=True)
+    v._endereco = lambda: ""
+    with pytest.raises(videos.VideoErro, match="endereço fixo"):
+        v.publicar(feito.id)
+    v._endereco = lambda: "https://ze.exemplo.com"
+    voltou = v.publicar(feito.id, esperar=True)  # a Meta recusou: volta a rascunho, com o motivo
+    assert voltou.estado == "rascunho" and "buscar o vídeo" in voltou.erro and links.abertos == {}
+    longo = v.ler(feito.id)
+    longo.duracao = 120
+    v._gravar(longo)
+    with pytest.raises(videos.VideoErro, match="3 a 90"):
+        v.publicar(feito.id)
+
+
+def test_reinicio_no_meio_da_publicacao_confere_no_perfil(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    v, _, _ = _publicaveis(tmp_path, monkeypatch, lambda *a: "")
+    achados: list[str] = ["https://www.instagram.com/reel/saiu/"]
+    v._procurar = lambda ig, legenda, desde: achados.pop(0) if achados else ""
+    feito = v.criar(tema="x", esperar=True)
+
+    def preso(desde: float) -> None:
+        video = v.ler(feito.id)
+        video.estado, video.publicando_desde = "publicando", desde
+        v._gravar(video)
+
+    preso(time.time())  # recente: ainda pode estar no ar daqui a pouco
+    assert v.ler(feito.id).estado == "publicando"
+    preso(time.time() - videos.CONFERIR_APOS_S - 1)
+    saiu = v.ler(feito.id)
+    assert saiu.estado == "publicado" and saiu.permalink.endswith("/reel/saiu/")
+    preso(time.time() - videos.CONFERIR_APOS_S - 1)
+    nao_saiu = v.ler(feito.id)
+    assert nao_saiu.estado == "rascunho" and "Confira no Instagram" in nao_saiu.erro
+
+
+def test_pergunta_de_aprovacao_diz_qual_video() -> None:
+    from zervis.cerebro.claude import descrever
+
+    criar = descrever(
+        "mcp__jarvis__marketing_video_criar", {"tema": "agentes de IA", "duracao": 45}
+    )
+    assert criar == "Vou criar um vídeo de 45 segundos sobre agentes de IA."
+    assert descrever("mcp__jarvis__marketing_video_publicar", {"video": "nao-existe"}) == (
+        "Vou publicar no Instagram o vídeo nao-existe."
+    )

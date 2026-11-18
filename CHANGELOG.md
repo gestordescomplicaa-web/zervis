@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Reels no Instagram:** o vídeo pronto ganhou "Publicar no Instagram" em Marketing. Ele vai
+  como Reels, com a legenda que o Zé escreveu, e o link aparece no cartão. Também dá para pedir
+  "faz um vídeo sobre X" pela voz, pela Conversa ou pelo WhatsApp; publicar sempre pede o seu
+  "sim" (ADR 0109).
+
 - **Vídeos com direção:** o Opus 5.5 passa a dirigir os vídeos (objetivo, público, composição,
   câmera e transição de cada cena) e o tempo de cada palavra vem da própria voz, medido pelo
   Deepgram: a legenda e o que entra na tela caem na palavra certa. A tela não repete mais a fala,

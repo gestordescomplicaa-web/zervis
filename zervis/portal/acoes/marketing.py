@@ -200,6 +200,8 @@ class AcoesMarketing(Pagina):
             "modelos": [{"id": k, "nome": n} for k, n in videos.MODELOS.items()],
             "duracoes": sorted(roteiro_video.DURACOES),
             "indisponivel": v.disponivel(),
+            "instagram": marketing_posts.PADRAO.instagram.conectado,
+            "publicavel": bool(marketing_posts.PADRAO.endereco()),
         }
 
     def _videos(self, fazer: Any) -> Any:
@@ -226,6 +228,14 @@ class AcoesMarketing(Pagina):
         id_, instrucao = str(dados.get("id", "")), str(dados.get("instrucao", ""))
         self._videos(lambda: videos.PADRAO.refazer(id_, instrucao))
         return {**self.videos(), "aviso": "Refazendo o vídeo."}
+
+    def publicar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Publica como Reels: o clique em "Confirmar publicação" é a aprovação (ADR 0109)."""
+        video = self._videos(lambda: videos.PADRAO.publicar(str(dados.get("id", ""))))
+        atividade.PADRAO.registrar(
+            "execucao", f"Vídeo enviado ao Instagram: {video.titulo or video.tema}", origem="painel"
+        )
+        return {**self.videos(), "aviso": "Publicando no Instagram. Aviso quando estiver no ar."}
 
     def descartar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
         self._videos(lambda: videos.PADRAO.descartar(str(dados.get("id", ""))))

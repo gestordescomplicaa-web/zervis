@@ -201,6 +201,7 @@ class Acoes:
             "marketing/video/criar": self.criar_video,
             "marketing/video/refazer": self.refazer_video,
             "marketing/video/descartar": self.descartar_video,
+            "marketing/video/publicar": self.publicar_video,
             "marketing/metricas/chave": self.guardar_metricas,
             "marketing/metricas/remover": self.remover_metricas,
             "marketing/fotos": self.fotos_da_marca,
