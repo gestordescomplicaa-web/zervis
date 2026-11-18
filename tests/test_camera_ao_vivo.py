@@ -1,9 +1,9 @@
-"""O vídeo ao vivo da câmera (ADR 0101): o ffmpeg montado sem a senha nos argumentos, os quadros
-separados, o limite de quem assiste, o fim ao sair e a rota do painel só para quem entrou."""
+"""O vídeo ao vivo da câmera (ADR 0101): a lente pedida pelo DVRIP, o ffmpeg sem a senha, os
+quadros separados, o limite de vídeos, o fim ao sair e a rota do painel só para quem entrou."""
 
 import http.client
 import io
-import os
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -19,10 +19,28 @@ JPEG_B = b"\xff\xd8" + b"b" * 70 + b"\xff\xd9"
 SENHA = "senha-de-teste"
 
 
+class Entrada:
+    """A entrada do ffmpeg falso: guarda o H.265 que chegou."""
+
+    def __init__(self) -> None:
+        self.recebido = b""
+        self.fechada = threading.Event()
+
+    def write(self, dados: bytes) -> None:
+        self.recebido += dados
+
+    def flush(self) -> None:
+        return None
+
+    def close(self) -> None:
+        self.fechada.set()
+
+
 class Processo:
-    """O ffmpeg falso: devolve os bytes em pedaços que cortam os JPEG no meio."""
+    """O ffmpeg falso: devolve JPEG em pedaços que cortam os quadros no meio."""
 
     def __init__(self, dados: bytes) -> None:
+        self.stdin = Entrada()
         self.stdout = io.BytesIO(dados)
         self.morto = False
 
@@ -37,27 +55,52 @@ class Lancador:
     def __init__(self, dados: bytes = JPEG_A + JPEG_B) -> None:
         self.dados = dados
         self.comandos: list[list[str]] = []
-        self.manifestos: list[str] = []
         self.processos: list[Processo] = []
 
-    def __call__(self, comando: list[str], leitura: int) -> Processo:
+    def __call__(self, comando: list[str]) -> Processo:
         self.comandos.append(comando)
-        self.manifestos.append(os.read(leitura, 4096).decode())
         processo = Processo(self.dados)
         self.processos.append(processo)
         return processo
 
 
-def _camera(tmp_path: Path, girar: list[int] | None = None) -> camera.Camera:
-    dispositivo = camera.Camera(tmp_path / "camera.json")
+class VideoFalso:
+    def __init__(self, blocos: list[bytes]) -> None:
+        self.blocos = blocos
+        self.fechado = False
+
+    def __iter__(self) -> Iterator[bytes]:
+        return iter(self.blocos)
+
+    def fechar(self) -> None:
+        self.fechado = True
+
+
+class CameraFalsa(camera.Camera):
+    """O cadastro de verdade, com o vídeo de cada lente falso."""
+
+    def __init__(self, arquivo: Path, erro: str = "") -> None:
+        super().__init__(arquivo)
+        self.erro = erro
+        self.pedidos: list[tuple[int, bool]] = []
+        self.videos: list[VideoFalso] = []
+
+    def video(self, canal: int = 0, principal: bool = True) -> Any:
+        if self.erro:
+            raise camera.CameraErro(self.erro)
+        self.pedidos.append((canal, principal))
+        self.videos.append(VideoFalso([b"h265-1", b"h265-2"]))
+        return self.videos[-1]
+
+
+def _camera(tmp_path: Path, girar: list[int] | None = None, erro: str = "") -> CameraFalsa:
+    dispositivo = CameraFalsa(tmp_path / "camera.json", erro)
     dispositivo.guardar("192.168.0.20", "zervis", SENHA, girar=girar or [])
     return dispositivo
 
 
-def _ao_vivo(tmp_path: Path, lancar: Lancador, girar: list[int] | None = None) -> Any:
-    return camera_ao_vivo.AoVivo(
-        _camera(tmp_path, girar), lancar=lancar, achar_ffmpeg=lambda: "/usr/bin/ffmpeg"
-    )
+def _ao_vivo(dispositivo: camera.Camera, lancar: Lancador) -> Any:
+    return camera_ao_vivo.AoVivo(dispositivo, lancar=lancar, achar_ffmpeg=lambda: "/usr/bin/ffmpeg")
 
 
 def test_quadros_inteiros_mesmo_cortados_no_meio() -> None:
@@ -66,38 +109,48 @@ def test_quadros_inteiros_mesmo_cortados_no_meio() -> None:
     assert list(camera_ao_vivo.quadros(iter(pedacos))) == [JPEG_A, JPEG_B]
 
 
-def test_transmite_partes_multipart_da_lente_pedida(tmp_path: Path) -> None:
-    lancar = Lancador()
-    partes = list(_ao_vivo(tmp_path, lancar, girar=[2]).transmitir(2, "leve"))
+def test_a_lente_pedida_pelo_dvrip_e_o_ffmpeg_sem_senha(tmp_path: Path) -> None:
+    lancar, dispositivo = Lancador(), _camera(tmp_path, girar=[2])
+    partes = list(_ao_vivo(dispositivo, lancar).transmitir(2, "leve"))
     assert partes == [camera_ao_vivo.parte(JPEG_A), camera_ao_vivo.parte(JPEG_B)]
     assert partes[0].startswith(b"--quadro\r\nContent-Type: image/jpeg\r\n")
+    assert dispositivo.pedidos == [(1, False)]  # lente 2 (canal 1), o fluxo leve
     (comando,) = lancar.comandos
-    assert SENHA not in " ".join(comando)  # a senha vai só pelo descritor
-    assert "rtp" in comando[comando.index("-protocol_whitelist") + 1].split(",")
-    assert "option rtsp_transport tcp" in lancar.manifestos[0]  # o RTP pelo TCP, sem perdas
+    assert SENHA not in " ".join(comando) and "rtsp" not in " ".join(comando)
+    assert comando[comando.index("-f") + 1] == "hevc"  # o H.265 entra pela entrada padrão
     assert "hflip,vflip" in comando  # a lente 2 está marcada para girar
-    assert "channel=2&stream=1.sdp" in lancar.manifestos[0]  # lente 2, o fluxo leve
-    assert lancar.processos[0].morto
+    processo = lancar.processos[0]
+    assert processo.stdin.fechada.wait(2) and processo.stdin.recebido == b"h265-1h265-2"
+    assert processo.morto and dispositivo.videos[0].fechado
 
 
 def test_a_lente_sem_giro_e_a_qualidade_alta(tmp_path: Path) -> None:
-    lancar = Lancador()
-    list(_ao_vivo(tmp_path, lancar, girar=[2]).transmitir(1))
+    lancar, dispositivo = Lancador(), _camera(tmp_path, girar=[2])
+    list(_ao_vivo(dispositivo, lancar).transmitir(1))
     assert "hflip,vflip" not in lancar.comandos[0]
-    assert "channel=1&stream=0.sdp" in lancar.manifestos[0]
+    assert dispositivo.pedidos == [(0, True)]
 
 
-def test_no_maximo_tres_assistindo_e_sair_libera_a_vaga(tmp_path: Path) -> None:
-    lancar = Lancador()
-    ao_vivo = _ao_vivo(tmp_path, lancar)
+def test_no_maximo_seis_videos_e_sair_libera_a_vaga(tmp_path: Path) -> None:
+    lancar, dispositivo = Lancador(), _camera(tmp_path)
+    ao_vivo = _ao_vivo(dispositivo, lancar)
     abertos = [ao_vivo.transmitir(1) for _ in range(camera_ao_vivo.MAXIMO)]
     for fluxo in abertos:
         next(fluxo)
-    with pytest.raises(camera_ao_vivo.AoVivoErro, match="3 pessoas"):
+    with pytest.raises(camera_ao_vivo.AoVivoErro, match="6 vídeos"):
         ao_vivo.transmitir(1)
-    abertos[0].close()  # a pessoa saiu da página: o ffmpeg dela termina
-    assert lancar.processos[0].morto
+    abertos[0].close()  # a pessoa saiu da página: a conexão e o ffmpeg dela terminam
+    assert lancar.processos[0].morto and dispositivo.videos[0].fechado
     next(ao_vivo.transmitir(1))
+
+
+def test_camera_sem_video_explica_e_devolve_a_vaga(tmp_path: Path) -> None:
+    lancar = Lancador()
+    ao_vivo = _ao_vivo(_camera(tmp_path, erro="Sem vídeo da câmera agora."), lancar)
+    for _ in range(camera_ao_vivo.MAXIMO + 1):
+        with pytest.raises(camera_ao_vivo.AoVivoErro, match="Sem vídeo"):
+            ao_vivo.transmitir(1)
+    assert lancar.comandos == []
 
 
 @pytest.mark.parametrize(
@@ -111,11 +164,11 @@ def test_no_maximo_tres_assistindo_e_sair_libera_a_vaga(tmp_path: Path) -> None:
 def test_erros_antes_de_abrir(
     tmp_path: Path, lente: int, qualidade: str, ffmpeg: str | None, erro: str
 ) -> None:
-    lancar = Lancador()
-    ao_vivo = camera_ao_vivo.AoVivo(_camera(tmp_path), lancar=lancar, achar_ffmpeg=lambda: ffmpeg)
+    lancar, dispositivo = Lancador(), _camera(tmp_path)
+    ao_vivo = camera_ao_vivo.AoVivo(dispositivo, lancar=lancar, achar_ffmpeg=lambda: ffmpeg)
     with pytest.raises(camera_ao_vivo.AoVivoErro, match=erro):
         ao_vivo.transmitir(lente, qualidade)
-    assert lancar.comandos == []
+    assert lancar.comandos == [] and dispositivo.pedidos == []
 
 
 def test_sem_camera_cadastrada(tmp_path: Path) -> None:
