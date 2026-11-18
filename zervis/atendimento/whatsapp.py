@@ -36,7 +36,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from zervis import lugares
+from zervis import empresas, lugares
 from zervis.filho import Filho
 
 log = logging.getLogger(__name__)
@@ -101,6 +101,7 @@ class Recebida:
     grupo_nome: str = ""
     quando: float = 0.0  # a hora da mensagem no WhatsApp (epoch); 0 = desconhecida
     agenda: str = ""  # como está salva na agenda do celular; na sua mensagem, quem recebe
+    chama: bool = False  # no grupo: menciona o Zé ou responde a uma mensagem dele (ADR 0108)
 
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
@@ -268,7 +269,7 @@ def recebidas(corpo: Any) -> list[Recebida]:
         saida.append(
             Recebida(
                 ident, nome, telefone, texto, de_mim, chat, midia, em_grupo, nome_grupo,
-                _hora(m.get("occurred_at")), agenda,
+                _hora(m.get("occurred_at")), agenda, em_grupo and m.get("calls_me") is True,
             )
         )  # fmt: skip
     return saida
@@ -455,6 +456,8 @@ class WhatsApp:
                     "INTERNAL_TOKEN": segredo,
                     "DASHBOARD_URL": f"http://127.0.0.1:{porta_receptor}",
                     "WA_DEVICE_NAME": NOME_DO_APARELHO,
+                    # os grupos que podem receber resposta (ADR 0108): só os de empresas ligadas
+                    "WACALLS_GRUPOS": str(empresas.PADRAO.grupos),
                 },
                 registro=REGISTRO,
             )  # fmt: skip
@@ -651,6 +654,16 @@ class WhatsApp:
         if not chat and not re.fullmatch(r"\d{8,15}", telefone):
             raise WhatsAppErro("Destino inválido.")  # só um número: nunca um grupo
         destino: dict[str, Any] = {"chat_jid": chat} if chat else {"phones": variantes(telefone)}
+        return self._mandar(destino, texto, chave)
+
+    def enviar_ao_grupo(self, chat: str, texto: str, chave: str) -> str:
+        """A resposta do Zé no grupo de uma empresa ligada (ADR 0108); o WaCalls confere de
+        novo pela lista dele. Qualquer outro grupo é recusado aqui."""
+        if not grupo(chat) or empresas.PADRAO.do_grupo(chat) is None:
+            raise WhatsAppErro("Grupo não ligado a uma empresa.")
+        return self._mandar({"chat_jid": chat}, texto, chave)
+
+    def _mandar(self, destino: dict[str, Any], texto: str, chave: str) -> str:
         sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
         if not sessoes:
             raise WhatsAppErro("WhatsApp não conectado.")

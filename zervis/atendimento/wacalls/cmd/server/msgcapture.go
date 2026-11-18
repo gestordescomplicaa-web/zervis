@@ -88,8 +88,10 @@ type mensagemNormalizada struct {
 	Type        string `json:"type"`            // text | media
 	Media       string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
 	// Zérvis (ADR 0056): no grupo, ChatJID é o grupo, e Phone/LID/PushName são de quem falou.
-	IsGroup    bool   `json:"is_group,omitempty"`
-	GroupName  string `json:"group_name,omitempty"`
+	IsGroup   bool   `json:"is_group,omitempty"`
+	GroupName string `json:"group_name,omitempty"`
+	// Zérvis (ADR 0108): no grupo, a mensagem menciona o Zé ou responde a uma mensagem dele.
+	CallsMe    bool   `json:"calls_me,omitempty"`
 	Content    string `json:"content"`
 	OccurredAt string `json:"occurred_at"`
 }
@@ -200,7 +202,7 @@ func deveCapturar(evt *events.Message) (string, bool) {
 	}
 	// Zérvis: passa conversa privada e, para o arquivo do Zé (ADR 0056), grupo (lista do que é
 	// permitido, não do que é proibido): um tipo novo de conversa fica de fora até alguém decidir.
-	// O grupo só é guardado e lido; responder em grupo continua recusado (conversaPrivada).
+	// O grupo é guardado e lido; responder, só nos grupos das empresas ligadas (ADR 0108).
 	switch evt.Info.Chat.Server {
 	case types.DefaultUserServer, types.HiddenUserServer, types.GroupServer:
 	default:
@@ -280,6 +282,13 @@ func (s *Session) handleMessage(evt *events.Message) {
 	}
 	if m.IsGroup {
 		m.GroupName = s.nomeDoGrupo(evt.Info.Chat)
+		if !evt.Info.IsFromMe && s.client != nil && s.client.Store != nil {
+			proprios := []types.JID{s.client.Store.LID}
+			if s.client.Store.ID != nil {
+				proprios = append(proprios, *s.client.Store.ID)
+			}
+			m.CallsMe = chamaOZe(contextoDaMensagem(evt), proprios...)
+		}
 	}
 	payload, err := json.Marshal(m)
 	if err != nil {

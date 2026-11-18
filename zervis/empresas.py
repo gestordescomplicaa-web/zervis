@@ -5,8 +5,11 @@ projeto dela nesta máquina (opcional) e a **vitrine**: a pasta, nos dados do Z�
 publicado para ela (relatórios, métricas, perguntas frequentes). O grupo só vai ver a vitrine
 (docs/plano-empresas.md, regra 2): nunca a sessão, os conectores nem a memória do Zé.
 
-Nesta etapa nada é enviado nem lido no grupo: só o cadastro. O cadastro fica na configuração; a
-vitrine, nos dados, fora de qualquer projeto (dado de cliente não vai para repositório).
+O cadastro fica na configuração; a vitrine, nos dados, fora de qualquer projeto (dado de cliente
+não vai para repositório). Desde o ADR 0108, o Zé responde no grupo de uma empresa **ligada**,
+quando chamado, só com o que está na vitrine: o texto de "O que o grupo pode saber" (`sobre.md`) e
+os arquivos de texto da pasta. A lista dos grupos ligados vai para `GRUPOS_LIGADOS`, que o WaCalls
+lê a cada envio: um grupo fora dela não recebe nada.
 """
 
 import json
@@ -23,8 +26,12 @@ from zervis import fuso, lugares
 
 log = logging.getLogger(__name__)
 ARQUIVO = lugares.CONFIG / "empresas.json"
+GRUPOS_LIGADOS = lugares.CONFIG / "whatsapp-grupos.json"  # o WaCalls lê (WACALLS_GRUPOS)
 PASTA = lugares.DADOS / "empresas"
 NOME_MAXIMO = 60
+SOBRE_MAXIMO = 8000
+VITRINE_MAXIMA = 16000  # o que vai ao agente do grupo, no total
+TEXTOS = (".md", ".txt")
 GRUPO = re.compile(r"\d{6,40}(-\d{6,20})?@g\.us")
 
 
@@ -62,9 +69,12 @@ def identificador(nome: str) -> str:
 
 
 class Empresas:
-    def __init__(self, arquivo: Path | None = None, pasta: Path | None = None) -> None:
+    def __init__(
+        self, arquivo: Path | None = None, pasta: Path | None = None, grupos: Path | None = None
+    ) -> None:
         self.arquivo = arquivo or ARQUIVO
         self.pasta = pasta or PASTA
+        self.grupos = grupos or (self.arquivo.parent / GRUPOS_LIGADOS.name)
         self._trava = threading.Lock()
 
     def listar(self) -> list[Empresa]:
@@ -93,6 +103,47 @@ class Empresas:
 
     def vitrine(self, ident: str) -> Path:
         return self.pasta / ident / "vitrine"
+
+    def sobre(self, ident: str) -> str:
+        """O que quem usa escreveu para o grupo saber (`sobre.md` da vitrine)."""
+        try:
+            return (self.vitrine(ident) / "sobre.md").read_text()[:SOBRE_MAXIMO]
+        except OSError:
+            return ""
+
+    def guardar_sobre(self, ident: str, texto: str) -> None:
+        if self.achar(ident) is None:
+            raise EmpresaErro("Empresa não encontrada.")
+        pasta = self.vitrine(ident)
+        pasta.mkdir(parents=True, exist_ok=True)
+        (pasta / "sobre.md").write_text(texto.strip()[:SOBRE_MAXIMO] + "\n")
+
+    def conhecimento(self, ident: str) -> str:
+        """A vitrine em texto, para o agente do grupo: o `sobre.md` primeiro, depois os outros
+        arquivos de texto (relatórios, perguntas frequentes), até `VITRINE_MAXIMA`."""
+        pasta = self.vitrine(ident)
+        if not pasta.is_dir():
+            return ""
+        arquivos = sorted(
+            (p for p in pasta.rglob("*") if p.is_file() and p.suffix in TEXTOS),
+            key=lambda p: (p.name != "sobre.md", p.name),
+        )
+        partes, total = [], 0
+        for p in arquivos:
+            try:
+                texto = p.read_text(errors="replace").strip()
+            except OSError:
+                continue
+            if not texto:
+                continue
+            bloco = f"## {p.relative_to(pasta)}\n{texto}"
+            if total + len(bloco) > VITRINE_MAXIMA:
+                bloco = bloco[: max(0, VITRINE_MAXIMA - total)]
+            partes.append(bloco)
+            total += len(bloco)
+            if total >= VITRINE_MAXIMA:
+                break
+        return "\n\n".join(partes)
 
     def salvar(
         self,
@@ -160,6 +211,18 @@ class Empresas:
         temporario.write_text(json.dumps(dados, ensure_ascii=False, indent=1))
         temporario.chmod(0o600)
         temporario.replace(self.arquivo)
+        self.publicar_grupos(empresas)
+
+    def publicar_grupos(self, empresas: list[Empresa] | None = None) -> None:
+        """A lista dos grupos ligados, para o WaCalls (a Central chama ao subir, para o arquivo
+        existir mesmo num cadastro de antes do ADR 0108)."""
+        empresas = self.listar() if empresas is None else empresas
+        ligados = {"grupos": [e.grupo for e in empresas if e.ligada and e.grupo]}
+        self.grupos.parent.mkdir(parents=True, exist_ok=True)
+        temporario = self.grupos.with_suffix(".next")
+        temporario.write_text(json.dumps(ligados))
+        temporario.chmod(0o600)
+        temporario.replace(self.grupos)
 
 
 PADRAO = Empresas()

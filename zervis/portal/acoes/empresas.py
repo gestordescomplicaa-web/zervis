@@ -1,5 +1,6 @@
-"""A página Empresas (ADR 0105): as empresas que quem usa gere, o grupo de WhatsApp de cada uma
-e a vitrine. Nesta etapa, só o cadastro: nada é enviado nem lido nos grupos."""
+"""A página Empresas (ADR 0105 e 0108): as empresas que quem usa gere, o grupo de WhatsApp de
+cada uma e a vitrine. Ligada, a empresa tem o Zé respondendo no grupo quando chamado, só com o
+que está na vitrine (o texto "O que o grupo pode saber" e os arquivos da pasta)."""
 
 from typing import Any
 
@@ -15,7 +16,10 @@ class AcoesEmpresas(Pagina):
     def empresas(self) -> dict[str, Any]:
         cadastro = empresas.PADRAO
         return {
-            "empresas": [e.para_tela(cadastro.vitrine(e.id)) for e in cadastro.listar()],
+            "empresas": [
+                {**e.para_tela(cadastro.vitrine(e.id)), "sobre": cadastro.sobre(e.id)}
+                for e in cadastro.listar()
+            ],
             "pastas": self.painel.pastas(),
         }
 
@@ -40,6 +44,8 @@ class AcoesEmpresas(Pagina):
                 ligada=dados.get("ligada") is True,
                 ident=str(dados.get("id", "")),
             )
+            if isinstance(dados.get("sobre"), str):
+                empresas.PADRAO.guardar_sobre(empresa.id, dados["sobre"])
         except empresas.EmpresaErro as erro:
             raise PedidoInvalido(str(erro)) from None
         estado = "ligada" if empresa.ligada else "desligada"
