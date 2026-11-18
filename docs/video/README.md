@@ -18,7 +18,7 @@ cp -r zervis/video/estilos/zervis ~/.config/zervis/video/estilos/meu-estilo
 |---|---|
 | `estilo.json` | `nome` e `descricao` (como aparece em Marketing), `fontes` (do Google Fonts; as da marca do site valem antes), `onda` (a onda da voz), `trilha` (`bpm` de 70 a 160 e `energia`: `calma`, `media` ou `alta`), `tom` (como o roteiro é escrito) e `cenas` (tipos novos de cena, com o formato que o modelo deve seguir) |
 | `estilo.css` | O visual, por cima da estrutura (`zervis/video/web/base.css`). As cores da marca chegam como `--fundo`, `--superficie`, `--texto`, `--suave`, `--destaque` e `--destaque2` |
-| `cenas.js` | Opcional: cenas novas ou trocadas, com `Ze.cena("tipo", {montar(cena, el, ctx), render(t, d, estado, ctx)})`. `render` desenha o instante `t` (segundos desde o começo da cena) e só pode depender dele |
+| `cenas.js` | Opcional: cenas novas ou trocadas, com `Ze.cena("tipo", {montar(cena, el, ctx), render(t, d, estado, ctx)})`. `render` desenha o instante `t` (segundos desde o começo da cena) e só pode depender dele. `montar` devolve `foco` (o elemento de onde a íris abre e para onde o zoom atravessa). Para animar: `Ze.revela(el, t, quando, tipo)` com `desfoque`, `tinta`, `queda`, `lado`, `mascara` ou `giro`; `Ze.sai`, `Ze.mola`, `Ze.letras` e `Ze.animarFala` (ADR 0110) |
 
 Uma pasta com o mesmo nome de um estilo embutido vale no lugar dele; apagar a pasta volta ao
 padrão. Para ver um estilo enquanto edita, abra `zervis/video/web/pagina.html?dados=<dados.js>` no

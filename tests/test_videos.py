@@ -555,3 +555,17 @@ def test_pergunta_de_aprovacao_diz_qual_video() -> None:
     assert descrever("mcp__jarvis__marketing_video_publicar", {"video": "nao-existe"}) == (
         "Vou publicar no Instagram o vídeo nao-existe."
     )
+
+
+def test_edicao_nova_no_plano() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["cenas"][0].update(composicao="gigante", transicao="cor")  # 7 palavras: cabe
+    bruto["cenas"][3].update(transicao="cor")
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert r.cenas[0]["composicao"] == "gigante" and r.cenas[3]["transicao"] == "cor"
+    bruto["cenas"][0]["fala"] = "Sua recepção perde pacientes no WhatsApp toda santa noite."
+    longa = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert longa.cenas[0]["composicao"] == "centro"  # uma palavra por linha não cabe
+    bruto["cenas"].insert(1, {"tipo": "frase", "fala": "Quem responde primeiro, marca.",
+                              "composicao": "cheia"})  # fmt: skip
+    assert roteiro.interpretar(json.dumps(bruto), _estilo()).cenas[1]["composicao"] == "cheia"

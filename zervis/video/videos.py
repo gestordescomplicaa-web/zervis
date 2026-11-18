@@ -31,7 +31,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from zervis import lugares, marketing
+from zervis import lugares, marketing, marketing_visual
 from zervis.portal import publico
 from zervis.redes import instagram_publicar
 from zervis.redes.instagram import Instagram, InstagramErro
@@ -61,7 +61,11 @@ MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
     "conversa": lambda c: 1.4 + 1.0 * len(c.get("mensagens", [])),
     "lista": lambda c: 1.3 + 0.6 * len(c.get("itens", [])),
     "numero": lambda c: 3.0,
-    "fecho": lambda c: 3.2,
+    "fecho": lambda c: 3.4,
+    "icone": lambda c: 2.6,
+    "conexao": lambda c: 1.2 + 0.8 * len(c.get("nos", [])),
+    "hub": lambda c: 1.6 + 0.55 * len(c.get("ao_redor", [])),
+    "caos": lambda c: 3.4,
 }
 
 
@@ -402,6 +406,9 @@ class Videos:
         dados = {
             "largura": largura, "altura": altura, "formato": FORMATO[0], "fps": captura.FPS,
             "duracao": n.duracao, "cenas": cenas, "falas": n.falas, "volume": n.volume,
+            "icones": {
+                n: marketing_visual.icones()[n] for n in roteiro.icones_usados(cenas) | {"sparkles"}
+            },
             "marca": {
                 "nome": marca.nome, "instagram": marca.instagram,
                 "logo": _logo_como_dado(self.site.logo()), "cores": dict(marca.cores),

@@ -71,3 +71,41 @@
 .pontos i.aceso { background: var(--destaque); box-shadow: 0 0 14px var(--destaque); }
 .numero-gigante { background: linear-gradient(170deg, var(--texto) 20%, var(--destaque) 70%, var(--destaque2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+/* edição (ADR 0110) */
+.palavra.destaque::after { background: color-mix(in srgb, var(--destaque) 38%, transparent); }
+.composicao-cheia .fundo-cena { background: linear-gradient(155deg, var(--destaque), var(--destaque2)); }
+.composicao-cheia .palavra.destaque { background: none; -webkit-text-fill-color: #fff; color: #fff; }
+.composicao-cheia .palavra.destaque::after { background: color-mix(in srgb, var(--fundo) 35%, transparent); }
+/* na cortina, o depois cobre o antes inteiro: fundo opaco */
+.dividido .lado.depois { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 92%, white 4%), var(--superficie)); }
+.inunda { background: linear-gradient(160deg, var(--destaque), var(--destaque2)); }
+#legenda span.ativa { background: var(--destaque); color: var(--fundo); }
+#legenda span.ativa.marcada { background: var(--destaque2); }
+.logo3d-camada { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 85%, white 8%), var(--fundo));
+  border: 1.5px solid color-mix(in srgb, var(--destaque) 40%, transparent); }
+.logo3d-camada.frente { box-shadow: 0 50px 140px color-mix(in srgb, var(--destaque) 40%, transparent); }
+.logo3d-letra { color: var(--destaque); }
+
+/* arte (ADR 0110) */
+.malha { opacity: .5; background-image: linear-gradient(color-mix(in srgb, var(--destaque) 45%, transparent) 2px, transparent 2px),
+  linear-gradient(90deg, color-mix(in srgb, var(--destaque) 45%, transparent) 2px, transparent 2px); }
+.arte-heroi { color: var(--texto); filter: drop-shadow(0 0 18px color-mix(in srgb, var(--destaque) 70%, transparent)); }
+.arte-heroi.aceso { color: color-mix(in srgb, var(--destaque) 35%, white); }
+.arte-disco { background: radial-gradient(circle, color-mix(in srgb, var(--destaque) 30%, transparent), color-mix(in srgb, var(--destaque2) 10%, transparent) 60%, transparent 70%);
+  border: 2px solid color-mix(in srgb, var(--destaque) 35%, transparent); }
+.anel { border: 3px solid var(--destaque); }
+.faisca { background: color-mix(in srgb, var(--destaque) 55%, white); box-shadow: 0 0 16px var(--destaque); }
+.arte-rotulo { color: var(--texto); }
+.ligacao { stroke: color-mix(in srgb, var(--destaque) 60%, transparent); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--destaque) 60%, transparent)); }
+.pacote { fill: #fff; filter: drop-shadow(0 0 10px var(--destaque)) drop-shadow(0 0 4px #fff); }
+.no-disco { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--superficie) 80%, white 10%), var(--fundo));
+  border: 3px solid color-mix(in srgb, var(--destaque) 45%, transparent); color: var(--texto);
+  box-shadow: 0 20px 60px color-mix(in srgb, black 50%, transparent); }
+.no.ativo .no-disco, .no.grande .no-disco { border-color: var(--destaque); color: color-mix(in srgb, var(--destaque) 30%, white);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--destaque) 18%, transparent), 0 0 60px color-mix(in srgb, var(--destaque) 55%, transparent); }
+.no-rotulo { color: var(--texto); }
+.caos-item { color: color-mix(in srgb, var(--suave) 80%, #f0877e); background: color-mix(in srgb, var(--superficie) 85%, transparent);
+  border: 2px solid color-mix(in srgb, #f0877e 35%, transparent); }
+.caos-item.ordem { color: color-mix(in srgb, var(--destaque) 30%, white); border-color: color-mix(in srgb, var(--destaque) 70%, transparent);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--destaque) 30%, transparent); }
+

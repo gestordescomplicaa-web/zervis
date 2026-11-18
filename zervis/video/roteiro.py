@@ -18,6 +18,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
+from zervis.marketing_visual import icones as icones_da_marca
 from zervis.video.estilos import Estilo
 
 FALA_PALAVRAS = 22
@@ -27,7 +28,7 @@ LIMITE_LEGENDA = 2200
 DURACOES: dict[int, tuple[int, int]] = {15: (3, 4), 30: (4, 7), 45: (6, 9), 60: (7, 11)}
 DURACAO_PADRAO = 30
 CAMERAS = ("empurra", "afasta", "desliza", "parado")
-TRANSICOES = ("corte", "mascara", "deslize", "zoom")
+TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor")
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
@@ -35,16 +36,18 @@ DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 TIPOS: dict[str, dict[str, Any]] = {
     "gancho": {
         "textos": {"rotulo": 28, "destaque": 40},
-        "composicoes": ("centro", "esquerda"),
+        "composicoes": ("centro", "esquerda", "gigante"),
         "formato": '{"tipo": "gancho", "fala": "...", "destaque": "1 a 3 palavras da fala em cor", '
-        '"rotulo": "opcional, até 28 (o assunto, em cápsula)", "composicao": "centro|esquerda"} '
-        "(a fala aparece inteira na tela, animada; não escreva outro texto)",
+        '"rotulo": "opcional, até 28 (o assunto, em cápsula)", "composicao": '
+        '"centro|esquerda|gigante"} (a fala aparece inteira na tela, animada; não escreva outro '
+        'texto; "gigante" é uma palavra por linha, enorme: só para falas de até 7 palavras)',
     },
     "frase": {
         "textos": {"destaque": 40},
-        "composicoes": ("centro", "esquerda"),
+        "composicoes": ("centro", "esquerda", "cheia"),
         "formato": '{"tipo": "frase", "fala": "...", "destaque": "...", '
-        '"composicao": "centro|esquerda"} (a fala vira a tipografia; para uma afirmação forte)',
+        '"composicao": "centro|esquerda|cheia"} (a fala vira a tipografia; para uma afirmação '
+        'forte; "cheia" pinta a tela inteira com a cor da marca: use uma vez, no momento-chave)',
     },
     "passos": {
         "textos": {"titulo": 32},
@@ -83,6 +86,38 @@ TIPOS: dict[str, dict[str, Any]] = {
         'diz (até 60)", "fonte": "de onde veio", "composicao": "anel|gigante"} (só com um '
         "número do material, com a fonte)",
     },
+    # --- as cenas de arte (ADR 0110): a ideia em ícones e movimento, a fala na legenda ---
+    "icone": {
+        "textos": {"rotulo": 22, "quando": 30},
+        "icones": ("icone",),
+        "composicoes": ("heroi",),
+        "formato": '{"tipo": "icone", "fala": "...", "icone": "<um da lista>", "rotulo": '
+        '"opcional, 1 a 3 palavras", "quando": "a palavra da fala em que ele se desenha"} (um '
+        "conceito: o ícone enorme se desenha, ondas e faíscas saem dele)",
+    },
+    "conexao": {
+        "nos": (2, 4, 16),
+        "composicoes": ("fluxo",),
+        "formato": '{"tipo": "conexao", "fala": "...", "nos": [{"icone": "<da lista>", '
+        '"rotulo": "1 ou 2 palavras", "quando": "palavra da fala"}]} (2 a 4: um fluxo ou uma '
+        "integração; linhas ligam os nós e dados correm por elas)",
+    },
+    "hub": {
+        "nos": (3, 6, 16),
+        "campo_nos": "ao_redor",
+        "composicoes": ("orbita",),
+        "formato": '{"tipo": "hub", "fala": "...", "centro": {"icone": "<da lista> ou marca", '
+        '"rotulo": "opcional"}, "ao_redor": [{"icone": "<da lista>", "rotulo": "opcional, 1 '
+        'palavra", "quando": "palavra da fala"}]} (3 a 6 em volta de um centro: tudo ligado a '
+        'uma coisa só; a marca no centro com "marca")',
+    },
+    "caos": {
+        "textos": {"rotulo": 26, "quando": 30},
+        "composicoes": ("grade",),
+        "formato": '{"tipo": "caos", "fala": "...", "icones": ["4 a 9 da lista"], "rotulo": '
+        '"opcional, o que a ordem significa", "quando": "a palavra da fala em que tudo se '
+        'organiza"} (o problema virando solução: ícones espalhados e tremendo se alinham)',
+    },
     "fecho": {
         "textos": {"chamada": 32, "detalhe": 32},
         "obrigatorios": ("chamada",),
@@ -93,6 +128,8 @@ TIPOS: dict[str, dict[str, Any]] = {
 }
 for _regra in TIPOS.values():
     _regra.setdefault("obrigatorios", tuple(_regra.get("listas", {})) or ())
+DE_ARTE = ("icone", "conexao", "hub", "caos")
+DE_CARTAO = ("passos", "lista", "antes_depois", "conversa")
 
 PROMPT = """Você é o diretor de criação de um Reels (vídeo vertical, cerca de {duracao} segundos)
 para {marca}. Pense como roteirista, motion designer e editor: o vídeo precisa parecer feito por
@@ -121,8 +158,16 @@ Regras:
   palavras (títulos e itens curtos, diferentes da fala).
 - quando: a palavra da fala daquela cena (exatamente como escrita nela) em que o elemento entra;
   assim a tela acompanha a voz. Use palavras diferentes para elementos diferentes.
-- camera: {cameras}. transicao (como a cena entra): {transicoes}. Varie: nada de repetir a mesma
-  câmera ou transição em cenas seguidas; use "corte" nos momentos de impacto.
+- camera: {cameras}. "empurra" é um soco de câmera na palavra de destaque (dê um destaque à
+  cena); "afasta" e "desliza" mexem só na chegada; "parado" não mexe.
+- transicao (como a cena entra): {transicoes}. "mascara" abre um círculo a partir do que estava
+  em foco; "deslize" é um chicote rápido para o lado; "zoom" atravessa o que estava em foco; "cor"
+  inunda a tela com a cor da marca (para mudar de assunto); "corte" é seco, na batida. Use 3 a 5
+  tipos no vídeo e nunca a mesma transição em cenas seguidas; "corte" nos momentos de impacto.
+- **Mostre, não escreva.** Pelo menos metade das cenas entre o gancho e o fecho são de arte
+  (icone, conexao, hub, caos): a ideia vira um ícone que se desenha, um fluxo por onde correm
+  dados, uma constelação em volta de um centro, o caos que vira ordem. Cartões de texto (passos,
+  lista, antes_depois, conversa) no máximo dois no vídeo. Pense numa analogia para cada ideia.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
 - Não invente números, casos, clientes nem depoimentos. "numero" só com um dado do material,
   com a fonte. Uma "conversa" é sempre um exemplo.
@@ -131,6 +176,8 @@ Regras:
 {tom}
 Tipos de cena:
 {tipos}
+
+Ícones (use só estes nomes): {icones}
 
 ## Linha editorial (o manual do site)
 {manual}
@@ -204,8 +251,28 @@ def montar_prompt(
         transicoes=" | ".join(TRANSICOES),
         tom=f"- Tom: {estilo.tom}\n" if estilo.tom else "",
         tipos="\n".join(f"- {formato}" for formato in tipos_do_estilo(estilo).values()),
+        icones=", ".join(sorted(icones_da_marca())),
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
     )
+
+
+def _icone(nome: Any) -> str:
+    """Um ícone da lista; um nome que não existe vira "sparkles" (nunca um desenho do modelo)."""
+    nome = str(nome or "").strip().lower()
+    return nome if nome in icones_da_marca() else "sparkles"
+
+
+def icones_usados(cenas: list[dict[str, Any]]) -> set[str]:
+    nomes: set[str] = set()
+    for c in cenas:
+        if isinstance(c.get("icone"), str):
+            nomes.add(c["icone"])
+        for campo in ("nos", "ao_redor"):
+            nomes.update(str(x.get("icone", "")) for x in c.get(campo) or [])
+        if isinstance(c.get("centro"), dict):
+            nomes.add(str(c["centro"].get("icone", "")))
+        nomes.update(str(x) for x in c.get("icones") or [])
+    return {n for n in nomes if n in icones_da_marca()}
 
 
 def _quando(valor: Any, fala: str) -> str:
@@ -265,6 +332,8 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
     composicao = str(bruta.get("composicao", ""))
     composicoes = regra["composicoes"]
     cena["composicao"] = composicao if composicao in composicoes else composicoes[0]
+    if cena["composicao"] == "gigante" and tipo == "gancho" and len(fala.split()) > 7:
+        cena["composicao"] = "centro"  # uma palavra por linha só cabe com fala curta
     for campo, limite in regra.get("textos", {}).items():
         if valor := _texto(bruta.get(campo), limite):
             cena[campo] = valor
@@ -289,6 +358,37 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
         if len(msgs) < minimo:
             raise RoteiroErro("A conversa precisa de pelo menos 2 mensagens.")
         cena["mensagens"] = msgs
+    if "icones" in regra:
+        cena["icone"] = _icone(bruta.get("icone"))
+    if "nos" in regra:
+        minimo, maximo, limite = regra["nos"]
+        campo = regra.get("campo_nos", "nos")
+        nos = [
+            {
+                "icone": _icone(x.get("icone")),
+                "rotulo": _texto(x.get("rotulo"), limite),
+                "quando": _quando(x.get("quando"), fala),
+            }
+            for x in (bruta.get(campo) or [])
+            if isinstance(x, dict)
+        ][:maximo]
+        if len(nos) < minimo:
+            raise RoteiroErro(f"A cena {tipo} precisa de pelo menos {minimo} nós.")
+        cena[campo] = nos
+        if tipo == "hub":
+            centro: dict[str, Any] = (
+                bruta["centro"] if isinstance(bruta.get("centro"), dict) else {}
+            )
+            marca = str(centro.get("icone", "")) == "marca"
+            cena["centro"] = {
+                "icone": "marca" if marca else _icone(centro.get("icone")),
+                "rotulo": _texto(centro.get("rotulo"), limite),
+            }
+    if tipo == "caos":
+        nomes = [_icone(x) for x in (bruta.get("icones") or []) if isinstance(x, str)][:9]
+        if len(nomes) < 4:
+            raise RoteiroErro("A cena caos precisa de pelo menos 4 ícones.")
+        cena["icones"] = nomes
     if tipo == "numero" and not re.search(r"\d", cena.get("valor", "")):
         raise RoteiroErro("O número da cena não tem número.")
     faltando = [c for c in regra["obrigatorios"] if not cena.get(c)]
@@ -347,7 +447,7 @@ def tempos_dos_gatilhos(cena: dict[str, Any], palavras: list[dict[str, Any]]) ->
         return None
 
     saida: dict[str, Any] = {}
-    for campo in ("passos", "itens", "mensagens"):
+    for campo in ("passos", "itens", "mensagens", "nos", "ao_redor"):
         if campo in cena:
             saida[f"tempos_{campo}"] = [achar(str(x.get("quando", ""))) for x in cena[campo]]
     if cena.get("quando"):
