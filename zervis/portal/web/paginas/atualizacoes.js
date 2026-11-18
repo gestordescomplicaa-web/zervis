@@ -28,10 +28,13 @@ PAGINAS.atualizacoes = async () => {
     ${sub("De onde vêm as atualizações.")}
     <div class="modos-fala" role="radiogroup" aria-label="Canal">${CANAIS.map(([v, n, d]) => `<button type="button" role="radio" class="modo" data-acao="atualizacoes-canal" data-canal="${v}" aria-checked="${v === a.canal}" ${AJUSTES ? "" : "disabled"}><strong>${n}</strong><small>${d}</small></button>`).join("")}</div>`);
   const novidades = (u.novidades || []).map((t) => `<li>${esc(t)}</li>`).join("");
+  const locais = (u.locais || []).map((t) => `<li>${esc(t)}</li>`).join("");
+  const pr = /^https:\/\/github\.com\//.test(u.pr || "") ? `<div class="linha"><a class="acao principal" href="${esc(u.pr)}" target="_blank" rel="noopener">Abrir PR</a></div>` : "";
   const situacao = !u.procurado
     ? `<p class="vazio">Procurando…</p>`
     : `${sub(esc(u.texto))}
       ${novidades ? `<h3 class="subtitulo">O que muda</h3><ul class="novidades">${novidades}</ul>${u.mais ? `<p class="sub">E mais ${u.mais}.</p>` : ""}` : ""}
+      ${locais ? `<h3 class="subtitulo">Só neste computador</h3><ul class="novidades">${locais}</ul>${u.mudancas ? `<p class="sub">${u.mudancas} ${u.mudancas === 1 ? "mudança espera" : "mudanças esperam"} na origem.</p>` : ""}${pr}` : ""}
       <p class="sub">Instalada: ${esc(u.instalada)} · procurado ${quando(new Date(u.procurado * 1000).toISOString())}</p>
       ${u.disponivel ? (AJUSTES
         ? `<div class="linha">${botao("Atualizar agora", "atualizacoes-aplicar", "", "principal")}</div><p class="resultado" id="resultado-atualizacao"></p>`
@@ -42,7 +45,7 @@ PAGINAS.atualizacoes = async () => {
         ${sub(`${esc(r.texto)} ${r.fim ? quando(new Date(r.fim * 1000).toISOString()) : ""}`)}
         ${r.registro ? `<details class="detalhes"><summary>Detalhes</summary><pre class="mono quebra">${esc(r.registro)}</pre></details>` : ""}`) : "";
   return `${cabeca("Atualizações", botao("Procurar agora", "atualizacoes-procurar"))}${sub("O Zé procura uma vez por dia e só avisa. Instalar é com você.")}
-    ${r.rodando ? estado : ""}${cartao("", `<div class="cabeca"><h2>Versão</h2>${u.disponivel ? '<span class="etiqueta bom">Atualização disponível</span>' : ""}</div>${situacao}`)}${r.rodando ? "" : estado}${canal}`;
+    ${r.rodando ? estado : ""}${cartao("", `<div class="cabeca"><h2>Versão</h2>${u.disponivel ? '<span class="etiqueta bom">Atualização disponível</span>' : u.motivo === "commits_locais" ? '<span class="etiqueta alerta">Bloqueada</span>' : ""}</div>${situacao}`)}${r.rodando ? "" : estado}${canal}`;
 };
 
 Object.assign(ACOES, {

@@ -321,7 +321,7 @@ TEXTOS = {
     "a_frente": "Já está à frente da versão mais nova ({rotulo}), no código em desenvolvimento. "
     "Para seguir a master: zervis update --desenvolvimento",
     "commits_locais": "Há commits locais que não estão na origem (melhorias do próprio Zé, por "
-    "exemplo): junte-os numa sessão de autodesenvolvimento antes de atualizar.",
+    "exemplo): mescle o PR deles no GitHub e rode o update de novo.",
 }
 
 
