@@ -207,7 +207,8 @@
     "empresas/remover",
     "marketing/video/criar",
     "marketing/video/refazer",
-    "marketing/video/descartar"
+    "marketing/video/descartar",
+    "marketing/video/publicar"
   ],
   "envios": [
     "sessao/anexo",

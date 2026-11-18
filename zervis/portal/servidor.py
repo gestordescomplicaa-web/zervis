@@ -639,6 +639,8 @@ class Portal:
                 )
                 self._enviar(200 if ok else 400, corpo.encode(), "text/html")
 
+            do_HEAD = publico.responder_head  # só os links públicos (ADR 0109)
+
             def do_GET(self) -> None:
                 if not self._host_local():
                     self._json(403, {"erro": "host"})

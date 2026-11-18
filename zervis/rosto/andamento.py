@@ -73,6 +73,9 @@ ROTULOS = {
     "marketing_post_criar": "Criando o post",
     "marketing_post_refazer": "Refazendo o post",
     "marketing_post_publicar": "Publicando no Instagram",
+    "marketing_videos": "Olhando os vídeos",
+    "marketing_video_criar": "Criando o vídeo",
+    "marketing_video_publicar": "Publicando o Reels",
 }
 
 

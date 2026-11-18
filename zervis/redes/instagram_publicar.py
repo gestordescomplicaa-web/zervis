@@ -1,4 +1,4 @@
-"""Publicar no Instagram (ADR 0093): só com a aprovação de quem usa, um post por vez.
+"""Publicar no Instagram (ADR 0093 e 0109): só com a aprovação de quem usa, um post por vez.
 
 `instagram.py` continua só leitura (ADR 0057); escrever fica aqui, num lugar só. A API da Meta não
 recebe a imagem: recebe um link público em JPEG, que os servidores dela buscam. Num carrossel, cada
@@ -22,7 +22,9 @@ log = logging.getLogger(__name__)
 
 MAXIMO_SLIDES = 10  # o limite do carrossel na API
 ESPERA_PRONTO_S = 90.0
+ESPERA_VIDEO_S = 600.0  # o Reels: a Meta baixa o MP4 e processa; leva de segundos a minutos
 INTERVALO_S = 3.0
+INTERVALO_VIDEO_S = 8.0
 
 
 def _recusa(erro: urllib.error.HTTPError) -> InstagramErro:
@@ -37,7 +39,10 @@ def _recusa(erro: urllib.error.HTTPError) -> InstagramErro:
         return InstagramErro("O token não tem permissão para publicar no Instagram.")
     if codigo in (4, 17, 32, 613, 9):
         return InstagramErro("Limite de publicações do Instagram. Tente mais tarde.")
-    if codigo in (36000, 2207052, 2207026) or "image" in str(detalhe.get("message", "")).lower():
+    mensagem = str(detalhe.get("message", "")).lower()
+    if "video" in mensagem:
+        return InstagramErro("O Instagram não conseguiu buscar o vídeo.")
+    if codigo in (36000, 2207052, 2207026) or "image" in mensagem:
         return InstagramErro("O Instagram não conseguiu buscar as imagens do post.")
     return InstagramErro("O Instagram recusou a publicação.")
 
@@ -94,6 +99,42 @@ def publicar(
             {"media_type": "CAROUSEL", "children": ",".join(filhos), "caption": legenda},
             token, True,
         )  # fmt: skip
+    return _quando_pronto(ig, base, conta, token, principal, dormir, prazo_s, INTERVALO_S, "o post")
+
+
+def publicar_reels(
+    ig: Instagram,
+    video: str,
+    legenda: str,
+    dormir: Callable[[float], None] = time.sleep,
+    prazo_s: float = ESPERA_VIDEO_S,
+) -> str:
+    """Publica um Reels (o link público do MP4) com a legenda e devolve o link (ADR 0109). A capa
+    é o primeiro quadro do vídeo (o Zé já põe a capa nele); o Reels também vai ao feed."""
+    base, conta, token = ig._token()
+    principal = _chamar(
+        ig, base, f"{conta}/media",
+        {"media_type": "REELS", "video_url": video, "caption": legenda, "share_to_feed": "true",
+         "thumb_offset": "0"},
+        token, True,
+    )  # fmt: skip
+    return _quando_pronto(
+        ig, base, conta, token, principal, dormir, prazo_s, INTERVALO_VIDEO_S, "o vídeo"
+    )
+
+
+def _quando_pronto(
+    ig: Instagram,
+    base: str,
+    conta: str,
+    token: str,
+    principal: dict[str, Any],
+    dormir: Callable[[float], None],
+    prazo_s: float,
+    intervalo_s: float,
+    o_que: str,
+) -> str:
+    """Espera o contêiner ficar pronto na Meta, publica e devolve o link."""
     criado = str(principal.get("id", ""))
     if not criado:
         raise InstagramErro("O Instagram recusou a publicação.")
@@ -104,10 +145,10 @@ def publicar(
         if situacao == "FINISHED":
             break
         if situacao in ("ERROR", "EXPIRED"):
-            raise InstagramErro("O Instagram não conseguiu preparar o post.")
+            raise InstagramErro(f"O Instagram não conseguiu preparar {o_que}.")
         if time.monotonic() > fim:
-            raise InstagramErro("O Instagram demorou demais para preparar o post.")
-        dormir(INTERVALO_S)
+            raise InstagramErro(f"O Instagram demorou demais para preparar {o_que}.")
+        dormir(intervalo_s)
     publicado = str(
         _chamar(ig, base, f"{conta}/media_publish", {"creation_id": criado}, token, True).get(
             "id", ""

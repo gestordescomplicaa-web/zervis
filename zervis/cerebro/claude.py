@@ -113,6 +113,13 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
             str(entrada.get("acao")), "mudar"
         )
         return f"Vou {acao} a automação {entrada.get('id', '')}."
+    if nome == "mcp__jarvis__marketing_video_criar":
+        assunto = entrada.get("tema") or f"o artigo {entrada.get('artigo', '')}"
+        return f"Vou criar um vídeo de {entrada.get('duracao') or 30} segundos sobre {assunto}."
+    if nome == "mcp__jarvis__marketing_video_publicar":
+        return (
+            f"Vou publicar no Instagram o vídeo {_titulo_do_video(str(entrada.get('video', '')))}."
+        )
     if nome == "mcp__jarvis__janela_abrir":
         return "Vou abrir a minha janela; a câmera acende."
     if nome == "mcp__jarvis__conector_cadastrar":
@@ -135,6 +142,17 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
         resumo = f": {argumentos[:120]}" if argumentos else ""
         return f"Vou usar {ferramenta.replace('_', ' ')} do {servidor}{resumo}."
     return f"Vou usar a ferramenta {nome}."
+
+
+def _titulo_do_video(ident: str) -> str:
+    """O título do vídeo, para a pergunta de aprovação dizer qual é (ADR 0109)."""
+    from zervis.video import videos
+
+    try:
+        v = videos.PADRAO.ler(ident)
+    except videos.VideoErro:
+        return ident
+    return f"“{v.titulo or v.tema}”"
 
 
 class ClaudeBrain:
