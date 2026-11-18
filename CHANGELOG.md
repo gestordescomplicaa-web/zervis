@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Câmera ao vivo:** a página Câmera mostra o vídeo de cada lente, em qualidade alta (720p) no
+  PC e leve fora dele, só enquanto a página está aberta (ADR 0101). Precisa do ffmpeg.
+
+- **Foto de reserva da câmera:** quando a câmera não entrega a foto pelo protocolo dela, o Zé
+  tira pelo vídeo, agora em 720p. Antes, essa reserva falhava sempre.
+
 - **Imersão de qualquer aparelho:** com o Zé numa VPS, a aba Imersão mostra o Zé animado e os
   cards no navegador de quem abre o painel, sem câmera (ADR 0100). Do PC, nada muda; no celular,
   segue o holograma leve.

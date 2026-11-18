@@ -30,7 +30,7 @@ import secrets
 import struct
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -77,6 +77,9 @@ Voz = Callable[[websocket.Conexao, int], None]  # o canal de voz do navegador (b
 VozApp = Callable[[websocket.Conexao, int, str, dict[str, Any]], None]
 Escrita = Callable[[dict[str, Any]], Any]
 Envio = Callable[[bytes, dict[str, str]], Any]  # corpo cru (um arquivo) e os parâmetros da URL
+# Uma transmissão (o vídeo ao vivo da câmera, ADR 0101): da consulta, o tipo e as partes.
+Fluxo = Callable[[dict[str, str]], tuple[str, Iterator[bytes]]]
+PREFIXO_FLUXO = "/fluxo/"
 # A ponte dos conectores (`oficina.ponte`): método, conector, cabeçalhos e corpo; volta o status,
 # os cabeçalhos e o corpo da resposta.
 Conectores = Callable[[str, str, dict[str, str], bytes], tuple[int, list[tuple[str, str]], bytes]]
@@ -108,9 +111,11 @@ class Portal:
         permissoes: Permissoes | None = None,
         conectores: Conectores | None = None,
         imersivo: int = palco.PORTA,
+        fluxos: dict[str, Fluxo] | None = None,
     ) -> None:
         self.acesso = acesso
         self.imersivo = imersivo  # a porta do palco, repassado em /imersao/ (ADR 0100)
+        self.fluxos = fluxos or {}  # transmissões para quem entrou, em /fluxo/<nome>
         self.permissoes = permissoes  # os pedidos de permissão das sessões (ADR 0039)
         self.conectores = conectores  # a ponte dos conectores das sessões (ADR 0076)
         self.voz_app = voz_app
@@ -434,6 +439,39 @@ class Portal:
                 self.end_headers()
                 self.wfile.write(resposta)
 
+            def _fluxo(self, nome: str) -> None:
+                """Uma transmissão longa (ADR 0101) para quem já entrou: abre num `<img>`, que não
+                manda o token da API, então vale o cookie, como a Imersão."""
+                fluxo = portal.fluxos.get(nome)
+                if fluxo is None:
+                    self._json(404, {"erro": "não existe"})
+                    return
+                consulta = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items() if v}
+                try:
+                    tipo, partes = fluxo(consulta)
+                except (PedidoInvalido, ValueError) as erro:
+                    self._json(400, {"erro": str(erro)})
+                    return
+                except Exception as erro:
+                    self._json(503, {"erro": str(erro) or "Transmissão indisponível."})
+                    return
+                try:
+                    self.send_response(200)
+                    self.send_header("Content-Type", tipo)
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.send_header("Content-Security-Policy", "frame-ancestors 'self'")
+                    self.end_headers()
+                    for pedaco in partes:
+                        self.wfile.write(pedaco)
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass  # a pessoa saiu da página
+                finally:
+                    close = getattr(partes, "close", None)
+                    if close is not None:
+                        close()
+
             def _imersao(self, metodo: str) -> None:
                 """O palco pelo painel (ADR 0100), para quem já entrou."""
                 alvo = self.path.removeprefix(imersao.PREFIXO[:-1]) or "/"
@@ -644,6 +682,9 @@ class Portal:
                     return
                 if caminho.startswith(imersao.PREFIXO):
                     self._imersao("GET")
+                    return
+                if caminho.startswith(PREFIXO_FLUXO):
+                    self._fluxo(caminho.removeprefix(PREFIXO_FLUXO))
                     return
                 arquivo = arquivos_web.achar(WEB, caminho)
                 if arquivo is not None:

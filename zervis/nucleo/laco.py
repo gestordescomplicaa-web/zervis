@@ -239,8 +239,7 @@ class Nucleo(
         self.espera = espera.ler()  # quanto esperar antes de achar que a pessoa terminou
         self._aplicar_espera()
         self.transcricoes = concurrent.futures.ThreadPoolExecutor(1, "transcricao")
-        # Só Deepgram (decisão de 09/10/2026): sem a chave o Zé não escuta; painel e teclado
-        # continuam. Nada de modelo local de transcrição ocupando a máquina.
+        # Só Deepgram (09/10/2026): sem a chave o Zé não escuta; o painel e o teclado continuam.
         self.modo_fala = modo_fala.ler()  # quando o Zé fala sozinho (ADR 0018)
         self.chamado = chamado.ler()  # "Ei Zé" ou só o botão (ADR 0022)
         self.deepgram = Deepgram(cfg.caminho("escuta", "chave_deepgram"))
@@ -585,6 +584,7 @@ class Nucleo(
                 acoes.leituras(),
                 escritas,
                 envios=acoes.envios(),
+                fluxos=acoes.fluxos(),
                 acesso=self.acesso,
                 voz=self.voz_pelo_navegador,
                 voz_app=self.voz_pelo_app,

@@ -30,7 +30,7 @@ from zervis.portal.acoes.projetos3d import AcoesProjetos3D
 from zervis.portal.acoes.sessoes import AcoesSessoes
 from zervis.portal.acoes.tela_tv import AcoesTelaTV
 from zervis.portal.acoes.voz import AcoesVoz
-from zervis.portal.servidor import Escrita, Leitura, PedidoInvalido
+from zervis.portal.servidor import Escrita, Fluxo, Leitura, PedidoInvalido
 
 
 class Acoes:
@@ -285,6 +285,9 @@ class Acoes:
             "atualizacoes/canal": self.canal_de_atualizacao,
             "atualizacoes/aplicar": self.aplicar_atualizacao,
         }
+
+    def fluxos(self) -> dict[str, Fluxo]:
+        return {"camera/ao-vivo": self.ao_vivo_camera}
 
     def envios(self) -> dict[str, Any]:
         return {

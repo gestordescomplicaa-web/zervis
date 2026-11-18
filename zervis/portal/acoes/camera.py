@@ -1,9 +1,10 @@
 """Ações da seção Câmera no painel."""
 
 import base64
+from collections.abc import Iterator
 from typing import Any
 
-from zervis import camera
+from zervis import camera, camera_ao_vivo
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
 
@@ -87,6 +88,20 @@ class AcoesCamera(Pagina):
             "nome": caminho.name,
             "foto": "data:image/jpeg;base64," + base64.b64encode(imagem).decode("ascii"),
         }
+
+    def ao_vivo_camera(self, consulta: dict[str, str]) -> tuple[str, Iterator[bytes]]:
+        """O vídeo ao vivo de uma lente (ADR 0101): `lente` (1, 2…) e `qualidade` (alta, leve)."""
+        try:
+            lente = int(consulta.get("lente", "1"))
+        except ValueError:
+            raise PedidoInvalido("Lente inválida.") from None
+        if not hasattr(self, "_ao_vivo"):
+            self._ao_vivo = camera_ao_vivo.AoVivo(self.n.camera)
+        try:
+            partes = self._ao_vivo.transmitir(lente, consulta.get("qualidade", "alta"))
+        except camera_ao_vivo.AoVivoErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        return camera_ao_vivo.TIPO, partes
 
 
 def _girar(valor: Any) -> list[int] | None:
