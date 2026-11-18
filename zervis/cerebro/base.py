@@ -27,6 +27,16 @@ class Texto:
 
 
 @dataclass(frozen=True)
+class Espera(Texto):
+    """A frase de espera ("Só um momento."), dita quando a resposta demora: é falada como a
+    resposta, mas não é ela (a latência do cérebro conta da primeira palavra de verdade)."""
+
+
+# Duas, alternadas (03/11/2026: "vou ver aqui" a cada pedido cansava).
+AVISOS_DE_ESPERA = ("Só um momento.", "Um instante.")
+
+
+@dataclass(frozen=True)
 class Fim:
     erro: str | None = None
 
@@ -148,7 +158,7 @@ class Ponte:
                 pass
             async for evento in self.cerebro.ask(texto):
                 if isinstance(evento, Texto):
-                    if primeiro and evento.texto.strip():
+                    if primeiro and evento.texto.strip() and not isinstance(evento, Espera):
                         primeiro = False
                         if self.ao_primeiro_texto:
                             try:

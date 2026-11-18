@@ -44,6 +44,10 @@
 - **Placar da versão:** o placar publicado mostra a versão atual e avisa quando a última rodada de
   avaliação é de uma versão anterior; publicar uma versão sem regerá-lo não passa no `make check`.
 
+- **Latência da voz medida direito:** o tempo do modelo conta até a primeira palavra da resposta,
+  não até o "Só um momento." (que saía sempre aos 3 s), e falar por cima no Ao vivo não conta mais
+  como falha. O placar mostra o tempo do modelo por caminho.
+
 - **O Zé não se interrompe com a própria voz:** com headset ou caixa de som, a fala dele chegava
   ao microfone e disparava o "Ei Zé" no meio da resposta, com o bipe. Agora, quando o chamado é
   só a fala dele voltando, ele segue falando; o seu "Ei Zé" por cima continua interrompendo

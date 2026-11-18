@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from zervis import atividade
 from zervis.automacoes.agenda import FUSO
+from zervis.cerebro.base import AVISOS_DE_ESPERA
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import AJUSTES_DA_TELA as AJUSTES_DA_TELA
 from zervis.nucleo.apoio import AVISO_RECENTE_S as AVISO_RECENTE_S
@@ -137,7 +138,13 @@ def _executar(n: "Nucleo", efeito: e.Efeito) -> None:
             if turno is not None:
                 n.latencias.marcar(turno, "primeira_frase")
                 n.latencias.marcar(turno, "sintese_pedida")
-            tipo = "confirmacao" if n.maquina.estado is e.Estado.CONFIRMANDO else "resposta"
+            tipo = (
+                "confirmacao"
+                if n.maquina.estado is e.Estado.CONFIRMANDO
+                else "aviso"
+                if texto.strip() in AVISOS_DE_ESPERA
+                else "resposta"
+            )
 
             def ao_iniciar(em: float) -> None:
                 n.latencias.primeiro_som(turno, em, tipo)

@@ -35,6 +35,10 @@ ETAPAS = {
     "total": ("fim_fala", "primeiro_som"),
 }
 MARCOS = {m for par in ETAPAS.values() for m in par} | {"fim_cerebro"}
+# 2 (17/11/2026): o primeiro token é a primeira palavra da resposta, não a frase de espera ("Só um
+# momento.", aos 3 s), e o primeiro som que é essa frase tem o tipo "aviso". Na versão 1 o
+# "cerebro" do caminho completo era sempre 3 s, qualquer que fosse o modelo.
+VERSAO = 2
 CAMPOS_GRUPO = (
     "origem",
     "rota",
@@ -76,7 +80,7 @@ class Turno:
             if a in marcos and b in marcos and marcos[b] >= marcos[a]:
                 etapas[nome] = round(marcos[b] - marcos[a], 3)
         return {
-            "versao": 1,
+            "versao": VERSAO,
             "id": self.id,
             "em": self.em,
             "origem": self.origem,
@@ -103,7 +107,7 @@ def ler_turnos(arquivo: Path) -> list[dict[str, Any]]:
                     r = json.loads(linha)
                     if (
                         isinstance(r, dict)
-                        and r.get("versao") == 1
+                        and r.get("versao") in (1, VERSAO)
                         and isinstance(r.get("etapas_ms"), dict)
                     ):
                         registros.append(r)
@@ -185,7 +189,9 @@ def _falhou(r: dict[str, Any]) -> bool:
 
 def por_caminho(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Do fim da fala ao primeiro som, por caminho: p50 e p95 dos turnos que falaram, e quantos
-    falharam (sem som ou com erro; ser cortado ou um comando de controle não é falha)."""
+    falharam (sem som ou com erro; ser cortado ou um comando de controle não é falha). Também o
+    tempo do modelo (do pedido enviado à primeira palavra) e quantos começaram pela frase de
+    espera."""
     grupos: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for r in registros:
         if (chave := caminho(r)) is not None:
@@ -205,6 +211,16 @@ def por_caminho(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
             )
             if not valores:
                 continue
+            modelo = sorted(
+                float(v)
+                for r in linhas
+                if r.get("resultado") == "concluido"
+                and r.get("versao") == VERSAO
+                and isinstance(v := (r.get("etapas_ms") or {}).get("cerebro"), (int, float))
+                and not isinstance(v, bool)
+                and math.isfinite(v)
+                and v >= 0
+            )
             saida.append(
                 {
                     "modo": modo,
@@ -214,6 +230,10 @@ def por_caminho(registros: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "p50_ms": round(_p(valores, 0.5), 1),
                     "p95_ms": round(_p(valores, 0.95), 1),
                     "falhas": sum(_falhou(r) for r in linhas),
+                    # Do pedido enviado à primeira palavra da resposta: o quanto é do modelo.
+                    "modelo_p50_ms": round(_p(modelo, 0.5), 1) if modelo else None,
+                    "modelo_p95_ms": round(_p(modelo, 0.95), 1) if modelo else None,
+                    "com_aviso": sum(r.get("primeiro_som_tipo") == "aviso" for r in linhas),
                 }
             )
     return saida

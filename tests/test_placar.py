@@ -38,6 +38,22 @@ def test_p50_e_p95_so_dos_turnos_que_falaram() -> None:
     assert (g["p50_ms"], g["p95_ms"], g["falhas"]) == (1000.0, 1900.0, 1)
 
 
+def test_o_tempo_do_modelo_so_vem_dos_registros_que_separam_a_frase_de_espera() -> None:
+    """Na versão 1 o primeiro token do cérebro completo era a frase de espera: sempre 3 s."""
+    turnos = [
+        {**_turno(3800, versao=1), "etapas_ms": {"total": 3800, "cerebro": 3001}},
+        {
+            **_turno(3800, versao=2, primeiro_som_tipo="aviso"),
+            "etapas_ms": {"total": 3800, "cerebro": 6200},
+        },
+        {**_turno(2000, versao=2), "etapas_ms": {"total": 2000, "cerebro": 1500}},
+    ]
+    (g,) = latencia.por_caminho(turnos)
+    assert (g["modelo_p50_ms"], g["modelo_p95_ms"], g["com_aviso"]) == (1500.0, 6200.0, 1)
+    tabela = placar.markdown(None, [g], "0.6.0", 7)
+    assert "| Ao vivo |" not in tabela and "| 1,5 s | 6,2 s |" in tabela
+
+
 def test_le_os_ultimos_dias(tmp_path: Path) -> None:
     for dia in ("2026-11-07", "2026-11-08", "2026-11-09"):
         (tmp_path / f"{dia}.jsonl").write_text(json.dumps(_turno(1)) + "\n")
@@ -82,7 +98,7 @@ def test_o_placar_usa_a_ultima_noturna_e_nao_mostra_respostas(tmp_path: Path) ->
     assert (
         "Versão 0.4.0" in texto and "**100%**" in texto and "| Voz e fala curta | 100% |" in texto
     )
-    assert "| Recorte | Via rápida | 1 | 1,5 s | 1,5 s | 0 |" in texto
+    assert "| Recorte | Via rápida | 1 | 1,5 s | 1,5 s | sem dado | sem dado | 0 |" in texto
     assert "Marta" not in texto  # o repositório é público
 
 
