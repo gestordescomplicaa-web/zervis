@@ -31,7 +31,14 @@ jeito, um zoom lento e eterno em cada cena, o brilho "respirando", o anel de cli
    girando até ficar de frente com a luz correndo na face; os cartões dos passos, da lista e da
    conversa girando em perspectiva; o número crescendo enquanto conta, com um estalo ao chegar.
    Tela de produto nunca é inclinada.
-6. **Legenda de Reels:** grupos de 3 a 5 palavras, a palavra da vez numa pílula da cor da marca, e
+6. **Cenas de arte em vez de cartões** (`web/artes.js`): o diretor prefere metáforas animadas.
+   "icone" desenha um conceito enorme, traço por traço, com ondas e faíscas; "conexao" liga nós
+   por linhas que se desenham, com dados correndo; "hub" põe a marca (ou um ícone) no centro e a
+   constelação em volta, ligada a ele, girando devagar; "caos" mostra ícones espalhados e tremendo
+   que se organizam na palavra-chave. Os ícones são os 63 da Lucide que o Zé já traz: o modelo só
+   escolhe o nome. Cartões de texto, no máximo dois por vídeo. Todas as cenas ganham um piso em
+   perspectiva andando ao fundo.
+7. **Legenda de Reels:** grupos de 3 a 5 palavras, a palavra da vez numa pílula da cor da marca, e
    nada da cena nova por cima da cena que sai durante a transição.
 
 ## Consequências

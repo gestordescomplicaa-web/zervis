@@ -376,7 +376,9 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
             raise RoteiroErro(f"A cena {tipo} precisa de pelo menos {minimo} nós.")
         cena[campo] = nos
         if tipo == "hub":
-            centro = bruta.get("centro") if isinstance(bruta.get("centro"), dict) else {}
+            centro: dict[str, Any] = (
+                bruta["centro"] if isinstance(bruta.get("centro"), dict) else {}
+            )
             marca = str(centro.get("icone", "")) == "marca"
             cena["centro"] = {
                 "icone": "marca" if marca else _icone(centro.get("icone")),
