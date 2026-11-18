@@ -86,11 +86,8 @@ type mensagemNormalizada struct {
 	Type        string `json:"type"`            // text | media
 	Media       string `json:"media,omitempty"` // Zérvis: audio | image | video | document | sticker | other
 	// Zérvis (ADR 0056): no grupo, ChatJID é o grupo, e Phone/LID/PushName são de quem falou.
-	IsGroup   bool   `json:"is_group,omitempty"`
-	GroupName string `json:"group_name,omitempty"`
-	// Zérvis (ADR 0102): a conversa do número consigo mesmo (o chat "Você"), por onde quem usa
-	// fala com o Zé.
-	IsSelf     bool   `json:"is_self,omitempty"`
+	IsGroup    bool   `json:"is_group,omitempty"`
+	GroupName  string `json:"group_name,omitempty"`
 	Content    string `json:"content"`
 	OccurredAt string `json:"occurred_at"`
 }
@@ -278,9 +275,6 @@ func (s *Session) handleMessage(evt *events.Message) {
 	if m.IsGroup {
 		m.GroupName = s.nomeDoGrupo(evt.Info.Chat)
 	}
-	if s.client != nil && s.client.Store != nil && s.client.Store.ID != nil {
-		m.IsSelf = conversaComigo(evt, *s.client.Store.ID, s.client.Store.GetLID())
-	}
 	payload, err := json.Marshal(m)
 	if err != nil {
 		s.log.Error("mensagem nao normalizou", "erro", err)
@@ -293,27 +287,11 @@ func (s *Session) handleMessage(evt *events.Message) {
 		s.log.Error("mensagem nao entrou na outbox", "erro", err)
 		return
 	}
+	avisarOutbox() // Zérvis (ADR 0102): a conversa com o Zé não espera o próximo tique
 	// Info, nao Debug: o volume aqui e o de mensagens reais, e e o unico sinal
 	// de que a captura esta viva. Sem numero de telefone no log — ele nao
 	// acrescenta nada ao diagnostico e o log e lido por mais gente que o banco.
 	s.log.Info("mensagem capturada", "direcao", direcao, "tipo", tipo)
-}
-
-// conversaComigo diz se a mensagem é do número para ele mesmo (o chat "Você" do WhatsApp):
-// enviada por este número, numa conversa privada cujo outro lado é o próprio número, na forma de
-// telefone ou de LID. Só isso vale como quem usa falando com o Zé (ADR 0102).
-func conversaComigo(evt *events.Message, eu, euLID types.JID) bool {
-	if !evt.Info.IsFromMe || evt.Info.IsGroup {
-		return false
-	}
-	chat := evt.Info.Chat
-	switch chat.Server {
-	case types.DefaultUserServer:
-		return eu.User != "" && chat.User == eu.User
-	case types.HiddenUserServer:
-		return euLID.User != "" && chat.User == euLID.User
-	}
-	return false
 }
 
 // agendaDeContatos é a parte do store do whatsmeow com a agenda do celular, que o próprio

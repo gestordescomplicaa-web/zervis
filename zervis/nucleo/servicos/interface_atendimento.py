@@ -90,11 +90,11 @@ class InterfaceAtendimento(InterfaceServico):
     def resposta_do_whatsapp(self, feito: Feito) -> None:
         servico(self, ServicoAtendimento).resposta_do_whatsapp(feito)
 
-    def conversa_pelo_whatsapp(self) -> bool:
+    def conversa_pelo_whatsapp(self) -> dict[str, Any]:
         return servico(self, ServicoAtendimento).conversa_pelo_whatsapp()
 
-    def ligar_conversa_whatsapp(self, ativo: bool) -> str:
-        return servico(self, ServicoAtendimento).ligar_conversa_whatsapp(ativo)
+    def configurar_conversa_whatsapp(self, ativo: bool, numero: str) -> str:
+        return servico(self, ServicoAtendimento).configurar_conversa_whatsapp(ativo, numero)
 
     def parar_atendimento(self) -> None:
         servico(self, ServicoAtendimento).parar_atendimento()

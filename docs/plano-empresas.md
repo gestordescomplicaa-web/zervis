@@ -1,7 +1,7 @@
 # Plano — o Zé nos grupos das empresas que você gere (18/11/2026)
 
 **Estado:** proposta, nada feito. Depende do [ADR 0102](adr/0102-conversa-pelo-whatsapp.md)
-(o chat "Você", PR #220) e muda a regra do [ADR 0056](adr/0056-arquivo-do-whatsapp.md) (hoje o
+(a conversa com o Zé pelo WhatsApp, PRs #220 e seguinte) e muda a regra do [ADR 0056](adr/0056-arquivo-do-whatsapp.md) (hoje o
 Zé lê os grupos e nunca responde neles). Cada etapa entra com o seu ADR e os testes na porta de
 qualidade.
 
@@ -14,7 +14,7 @@ grupo de WhatsApp por empresa, com o dono e a equipe, onde o Zé:
 - **entrega relatórios e métricas** daquela empresa, no horário combinado;
 - **tira dúvidas e responde leituras** sobre o que já foi publicado para ela;
 - **nunca executa pedidos** de quem está no grupo. Pedidos com efeito continuam só com você,
-  pela voz, pelo painel ou pelo chat "Você".
+  pela voz, pelo painel ou pela sua conversa com o Zé no WhatsApp.
 
 ## O que já existe e o que falta
 
@@ -95,7 +95,7 @@ grupo de WhatsApp por empresa, com o dono e a equipe, onde o Zé:
 
 ### Depois, se fizer falta
 
-- Áudio no grupo (depende do áudio no chat "Você").
+- Áudio no grupo (depende do áudio na conversa com o Zé).
 - Um gestor da empresa, com o número autorizado por você, aprovar um pedido específico (por
   exemplo, reenviar um relatório). Só com ADR próprio.
 

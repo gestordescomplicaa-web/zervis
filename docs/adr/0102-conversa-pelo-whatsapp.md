@@ -1,8 +1,9 @@
-# 0102 — Conversar com o Zé pelo próprio WhatsApp (o chat "Você")
+# 0102 — Conversar com o Zé pelo WhatsApp
 
 - Data: 18/11/2026
 - Status: **Aceito** (pedido de quem usa, 18/11/2026). Exceção ao congelamento da Fase B, como
-  os ADRs 0091 e 0098, com os testes na porta de qualidade.
+  os ADRs 0091 e 0098, com os testes na porta de qualidade. **Revisto no mesmo dia:** o chat
+  "Você" deu lugar ao número do Zé (ver "Revisão" no fim).
 - Relacionados: [ADR 0031](0031-atendimento-whatsapp-e-telefonia.md) (a Central e o WaCalls),
   [ADR 0054](0054-whatsapp-do-ze-recepcionista.md) e [ADR 0056](0056-arquivo-do-whatsapp.md) (a
   caixa e o arquivo), [ADR 0073](0073-entrada-de-fora.md) (o que vem de terceiros).
@@ -40,7 +41,7 @@ a pessoa fora). Quem escreve pelo WhatsApp está, quase sempre, longe do computa
    aberto, só consegue perguntar, não executar (essência, item 5). O que a política já libera sem
    pergunta (risco baixo) segue liberado.
 6. **Ligado no painel, desligado de início:** "Conversa com o Zé", no cartão do WhatsApp. Muita
-   gente usa o chat "Você" para anotações, e cada uma viraria um pedido.
+   gente usa o chat "Você" para anotações, e cada uma viraria um pedido. (Revisto: ver o fim.)
 7. **Registro:** cada pedido entra na Atividade (`origem: whatsapp`), na conversa do dia (que
    alimenta a memória) e no consumo.
 8. **Por enquanto, só texto.** Áudio, foto ou documento recebem "Por enquanto, só mensagens de
@@ -56,3 +57,28 @@ a pessoa fora). Quem escreve pelo WhatsApp está, quase sempre, longe do computa
   não roda.
 - Duas sessões do cérebro podem rodar ao mesmo tempo (a da voz e a do WhatsApp), com o consumo
   das duas.
+
+## Revisão de 18/11/2026: o número do Zé e o seu número autorizado
+
+A prova no número de quem usa mostrou que o chat "Você" não serve: as mensagens nos dois sentidos
+aparecem como enviadas pela própria conta, sem notificação, e a conversa não parece uma conversa
+com um assistente. Fica como nos agentes comparados (OpenClaw, Hermes): o Zé tem o próprio número,
+e você escreve a ele do seu.
+
+1. **O número conectado ao Zé é o do Zé.** No painel, "Conversa com o Zé" leva o interruptor e o
+   **seu número**: só a mensagem que chega desse número, numa conversa privada, vira o evento
+   `pedido`. O número vem do WhatsApp (o remetente é autenticado por ele); com ou sem o nono
+   dígito vale o mesmo. Sem o número (só o LID), a mensagem é de fora.
+2. **Essa conversa não vai ao arquivo nem ao agente de atendimento**, nos dois sentidos: a
+   resposta do Zé é uma mensagem enviada nela, e não precisa mais do descarte de eco.
+3. **Saem a marca `is_self` do WaCalls e o descarte de eco da Central**, que só existiam para o
+   chat "Você".
+4. **A entrega não espera o tique:** o WaCalls levava as mensagens ao Zé em lotes a cada 5 s, e
+   o pedido esperava até 5 s antes de chegar. Agora cada mensagem nova acorda a entrega na hora;
+   o tique segue para as reentregas.
+5. O resto da decisão vale como estava: o cérebro próprio, um pedido por vez, nada com efeito
+   confirmado pelo WhatsApp, o registro, só texto por enquanto.
+
+Consequência: com o número do Zé conectado, a caixa de entrada, os avisos de lead e o agente de
+atendimento passam a ser os desse número, não os do seu WhatsApp pessoal. Ter os dois ao mesmo
+tempo pede o Zé com duas sessões do WaCalls (ele aceita várias; o Zé usa só a primeira).
