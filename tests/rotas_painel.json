@@ -31,7 +31,8 @@
     "dispositivos",
     "marketing",
     "marketing/metricas",
-    "impressora"
+    "impressora",
+    "empresas"
   ],
   "escritas": [
     "cerebro",
@@ -199,7 +200,10 @@
     "camera/testar",
     "camera/foto",
     "camera/atender",
-    "camera/encerrar"
+    "camera/encerrar",
+    "empresas/grupos",
+    "empresas/salvar",
+    "empresas/remover"
   ],
   "envios": [
     "sessao/anexo",

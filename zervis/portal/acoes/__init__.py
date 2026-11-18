@@ -20,6 +20,7 @@ from zervis.portal.acoes.cerebro import AcoesCerebro
 from zervis.portal.acoes.conectores import AcoesConectores
 from zervis.portal.acoes.configuracao import AcoesConfiguracao
 from zervis.portal.acoes.dispositivos import AcoesDispositivos
+from zervis.portal.acoes.empresas import AcoesEmpresas
 from zervis.portal.acoes.inicio import AcoesInicio
 from zervis.portal.acoes.marketing import AcoesMarketing
 from zervis.portal.acoes.melhorias import AcoesMelhorias
@@ -61,6 +62,7 @@ class Acoes:
             AcoesPesquisas,
             AcoesProjetos3D,
             AcoesTelaTV,
+            AcoesEmpresas,
             AcoesAbertura,
         ):
             pagina = tipo(
@@ -109,6 +111,7 @@ class Acoes:
             "pesquisas": self.lista_de_pesquisas,
             "projetos3d": self.projetos_3d,
             "tv": self.modo_tv,
+            "empresas": self.empresas,
             "camera": self.camera,
             "dispositivos": self.dispositivos,
             "marketing": self.marketing,
@@ -199,6 +202,9 @@ class Acoes:
             "marketing/fotos": self.fotos_da_marca,
             "marketing/foto/remover": self.remover_foto,
             "tv/procurar": self.procurar_tv,
+            "empresas/grupos": self.grupos_whatsapp,
+            "empresas/salvar": self.salvar_empresa,
+            "empresas/remover": self.remover_empresa,
             "tv/abrir": self.abrir_tv,
             "tv/fechar": self.fechar_tv,
             "whatsapp/desconectar": self.desconectar_whatsapp,

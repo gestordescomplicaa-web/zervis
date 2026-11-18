@@ -33,6 +33,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /api/sessions/{sid}/history", s.handleHistory)
 	mux.HandleFunc("GET /api/sessions/{sid}/contacts", s.handleContacts) // Zérvis: a agenda
 	mux.HandleFunc("GET /api/sessions/{sid}/audio", s.handleAudio)       // Zérvis: ADR 0103
+	mux.HandleFunc("GET /api/sessions/{sid}/groups", s.handleGroups)     // Zérvis: ADR 0105
 
 	mux.HandleFunc("GET /api/events", s.handleEvents)
 

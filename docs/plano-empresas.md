@@ -1,8 +1,9 @@
 # Plano — o Zé nos grupos das empresas que você gere (18/11/2026)
 
-**Estado:** proposta, nada feito. Depende do [ADR 0102](adr/0102-conversa-pelo-whatsapp.md)
-(a conversa com o Zé pelo WhatsApp, PRs #220 e seguinte) e muda a regra do [ADR 0056](adr/0056-arquivo-do-whatsapp.md) (hoje o
-Zé lê os grupos e nunca responde neles). Cada etapa entra com o seu ADR e os testes na porta de
+**Estado:** etapa 1 feita em 18/11/2026 ([ADR 0105](adr/0105-empresas-e-grupos.md)); as etapas
+2 a 4, propostas. Parte da conversa com o Zé pelo WhatsApp ([ADR 0102](adr/0102-conversa-pelo-whatsapp.md))
+e da aprovação só no painel ([ADR 0104](adr/0104-aprovacao-no-painel.md)), e muda a regra do
+[ADR 0056](adr/0056-arquivo-do-whatsapp.md) (hoje o Zé lê os grupos e nunca responde neles). Cada etapa entra com o seu ADR e os testes na porta de
 qualidade.
 
 ## O pedido
@@ -49,14 +50,15 @@ grupo de WhatsApp por empresa, com o dono e a equipe, onde o Zé:
 
 ## Etapas
 
-### Etapa 1 — Empresas no Zé
+### Etapa 1 — Empresas no Zé (feita em 18/11/2026)
 
-- **Empresa** é um projeto com: o nome, o grupo de WhatsApp ligado, a vitrine
-  (`<projeto>/vitrine/`) e a persona do agente da empresa (`<projeto>/agente-grupo/`, com
-  persona, conhecimento e testes de conversa, como o agente de atendimento).
+- **Empresa** é um cadastro com: o nome, o grupo de WhatsApp ligado, a pasta do projeto e a
+  vitrine (`<dados>/empresas/<id>/vitrine/`, fora do projeto: dado de cliente não vai para
+  repositório). A persona do agente da empresa entra na etapa 3.
 - Página **Empresas** no painel: a lista, o grupo ligado, o estado ("Ligado", "Desligado") e o
   último relatório enviado.
-- **Segundo número:** parear o número do Zé como uma segunda sessão do WaCalls, separada do seu.
+- **Número do Zé:** já é o conectado (ADR 0102), e os grupos são os dele. Ter o seu número
+  pessoal conectado junto (duas sessões) fica para depois.
 - Aceite: cinco empresas cadastradas, cada uma com o seu grupo, sem nenhuma mensagem enviada.
 
 ### Etapa 2 — Relatórios no grupo (só de ida)
