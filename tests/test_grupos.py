@@ -96,7 +96,7 @@ def test_responde_so_quando_chamado_e_so_com_a_vitrine(tmp_path: Path) -> None:
     try:
         grupos.receber(_msg("bom dia pessoal"))  # conversa: vai ao histórico, sem resposta
         grupos.receber(_msg("Zé, que horas abre?"))
-        _esperar(lambda: enviadas)
+        _esperar(lambda: eventos)  # o evento sai depois do envio e do registro
     finally:
         grupos.parar()
     assert enviadas == [(LIGADO, "Abrimos às 6h.")]

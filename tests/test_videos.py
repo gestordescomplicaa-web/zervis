@@ -19,11 +19,13 @@ ROTEIRO: dict[str, Any] = {
     "legenda": "Legenda do Instagram.",
     "cenas": [
         {"tipo": "gancho", "fala": "Sua recepção perde pacientes no WhatsApp.",
-         "texto": "Sua recepção perde pacientes", "destaque": "perde pacientes"},
+         "destaque": "perde pacientes", "composicao": "esquerda", "camera": "voa"},
         {"tipo": "passos", "fala": "O paciente chama, o agente agenda.", "titulo": "Como funciona",
-         "passos": ["Paciente chama", "Agente agenda", "Recepção confirma"]},
+         "passos": [{"texto": "Paciente chama", "quando": "chama,"}, "Agente agenda",
+                    {"texto": "Recepção confirma", "quando": "inexistente"}]},
         {"tipo": "antes_depois", "fala": "Antes no dia seguinte, agora em segundos.",
-         "antes": "Resposta no dia seguinte", "depois": "Resposta em segundos"},
+         "antes": "Resposta no dia seguinte", "depois": "Resposta em segundos", "quando": "agora",
+         "composicao": "dividido", "transicao": "mascara"},
         {"tipo": "conversa", "fala": "Assim, a qualquer hora.", "mensagens": [
             {"de": "cliente", "texto": "Tem horário amanhã?"},
             {"de": "empresa", "texto": "Tenho às 9h e às 10h30."}]},
@@ -67,17 +69,57 @@ def test_estilo_embutido_e_o_de_quem_usa_no_lugar(tmp_path: Path) -> None:
 # --- roteiro ----------------------------------------------------------------------------------
 
 
-def test_roteiro_conferido_e_cortado() -> None:
+def test_plano_de_direcao_conferido_e_cortado() -> None:
     bruto = json.loads(json.dumps(ROTEIRO))
-    bruto["cenas"][0]["texto"] = "x" * 200
+    bruto["cenas"][1]["titulo"] = "x" * 200
     bruto["cenas"][1]["passos"].append("<b>quarto</b>")
+    bruto["objetivo"] = "Fazer o dono de clínica pedir uma conversa"
     resposta = "Aqui está:\n```json\n" + json.dumps(bruto) + "\n```"
     r = roteiro.interpretar(resposta, _estilo())
     assert [c["tipo"] for c in r.cenas] == [c["tipo"] for c in ROTEIRO["cenas"]]
-    assert len(r.cenas[0]["texto"]) == 70 and r.cenas[0]["texto"].endswith("…")
-    assert r.cenas[1]["passos"][-1] == "<b>quarto</b>"  # texto puro: a página mostra como texto
+    gancho, passos, antes_depois = r.cenas[:3]
+    assert gancho["composicao"] == "esquerda" and gancho["camera"] == "empurra"  # "voa" não existe
+    assert gancho["transicao"] == "zoom" and "texto" not in gancho  # a fala é a tipografia
+    assert len(passos["titulo"]) == 32 and passos["titulo"].endswith("…")
+    assert passos["passos"][-1] == {"texto": "<b>quarto</b>", "quando": ""}  # texto puro
+    # o "quando" só vale com uma palavra da fala (sem pontuação nem maiúscula)
+    assert [p["quando"] for p in passos["passos"][:3]] == ["chama", "", ""]
+    assert antes_depois["quando"] == "agora" and antes_depois["composicao"] == "dividido"
     assert r.falas[0] == "Sua recepção perde pacientes no WhatsApp."
-    assert r.titulo == ROTEIRO["titulo"]
+    assert r.titulo == ROTEIRO["titulo"] and r.objetivo.startswith("Fazer")
+
+
+def test_duracao_muda_o_tamanho_do_plano() -> None:
+    assert roteiro.limites(15) == (3, 4, 26, 44) and roteiro.limites(60)[1] == 11
+    with pytest.raises(roteiro.RoteiroErro, match="3 a 4 cenas"):
+        roteiro.interpretar(json.dumps(ROTEIRO), _estilo(), 15)
+    prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), 45)
+    assert "cerca de 45 segundos" in prompt and "78 a 130 palavras" in prompt
+
+
+def test_alinhamento_casa_as_palavras_e_preenche_as_que_faltam() -> None:
+    ouvidas = [("Em", 0.0, 0.2), ("treze", 0.2, 0.6), ("de", 0.6, 0.7), ("novembro", 0.7, 1.2),
+               ("tudo", 1.3, 1.5), ("parou.", 1.5, 2.0)]  # fmt: skip
+    alinhadas = narracao.alinhar("Em 13 de novembro, tudo parou.", ouvidas, 2.0)
+    assert [p for p, _, _ in alinhadas] == ["Em", "13", "de", "novembro,", "tudo", "parou."]
+    assert alinhadas[0][1:] == (0.0, 0.2) and alinhadas[3][1:] == (0.7, 1.2)
+    assert alinhadas[1][1:] == (0.2, 0.6)  # "13" não casa com "treze": entre as vizinhas
+    sem = narracao.alinhar("duas palavras", [], 1.0)
+    assert sem[0][1] == 0 and sem[-1][2] == pytest.approx(1.0)
+
+
+def test_gatilhos_viram_segundos_desde_o_comeco_da_cena() -> None:
+    passos = [{"texto": "a", "quando": "agenda"}, {"texto": "b", "quando": ""}]
+    cena = {"inicio": 10.0, "passos": passos, "quando": "agora"}
+    palavras = [
+        {"p": "O", "i": 10.2, "f": 10.3},
+        {"p": "agente", "i": 10.3, "f": 10.7},
+        {"p": "agenda.", "i": 10.8, "f": 11.3},
+        {"p": "Agora", "i": 11.5, "f": 11.9},
+    ]
+    assert roteiro.tempos_dos_gatilhos(cena, palavras) == {
+        "tempos_passos": [0.8, None], "tempo": 1.5,
+    }  # fmt: skip
 
 
 @pytest.mark.parametrize(
@@ -90,9 +132,10 @@ def test_roteiro_conferido_e_cortado() -> None:
                                          "rotulo": "a", "fonte": "b"}), "não tem número"),
         (lambda r: r["cenas"].insert(1, {"tipo": "numero", "fala": "x", "valor": "9%",
                                          "rotulo": "a"}), "sem fonte"),
-        (lambda r: r["cenas"][2].update(fala="ab " * 50), "longa"),
+        (lambda r: r["cenas"][2].update(fala="ab " * 40), "longa"),
         (lambda r: r["cenas"][2].update(fala=""), "sem fala"),
         (lambda r: r.update(cenas=r["cenas"][:2]), "4 a 7"),
+        (lambda r: r["cenas"][2].update(depois=""), "depois"),
     ],
 )  # fmt: skip
 def test_roteiro_fora_do_formato_e_recusado(mudar: Any, erro: str) -> None:
@@ -113,7 +156,10 @@ def test_cena_de_um_estilo_entra_so_com_texto(tmp_path: Path) -> None:
     bruto["cenas"].insert(1, {"tipo": "citacao", "fala": "Uma frase.", "texto": "y" * 300,
                               "autor": {"nome": "objeto"}, "Ruim": "x"})  # fmt: skip
     r = roteiro.interpretar(json.dumps(bruto), estilo)
-    assert r.cenas[1] == {"tipo": "citacao", "fala": "Uma frase.", "texto": "y" * 199 + "…"}
+    assert r.cenas[1] == {
+        "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom",
+        "texto": "y" * 199 + "…",
+    }  # fmt: skip
     assert "citacao" in roteiro.montar_prompt("Marca", "Tema: x", "", estilo)
 
 
@@ -133,7 +179,15 @@ def _fala(taxa: int = 24000) -> narracao.Sintetizar:
 
 
 def test_falas_sem_silencio_cada_uma_numa_batida() -> None:
-    n = narracao.narrar(["um", "dois", "três"], _fala(), minimos=[0, 3.0, 0])
+    ouvidos: list[bytes] = []
+
+    def ouvir(wav: bytes) -> list[tuple[str, float, float]]:
+        ouvidos.append(wav)
+        return [("um", 0.1, 0.5)]
+
+    n = narracao.narrar(["um", "dois", "três"], _fala(), minimos=[0, 3.0, 0], ouvir=ouvir)
+    assert len(ouvidos) == 3 and ouvidos[0][:4] == b"RIFF"
+    assert n.falas[0]["palavras"] == [{"p": "um", "i": 0.6, "f": 1.0}]  # o tempo real, no vídeo
     inicios = [f["inicio"] for f in n.falas]
     assert inicios[0] == narracao.INICIO_S
     assert all(math.isclose(i / 0.5, round(i / 0.5)) for i in inicios)  # 120 BPM
@@ -142,7 +196,8 @@ def test_falas_sem_silencio_cada_uma_numa_batida() -> None:
     assert n.cenas[0][0] == 0 and n.cenas[-1][1] == n.duracao
     assert len(n.volume) == round(n.duracao * narracao.FPS) and max(n.volume) == 1.0
 
-    sem_voz = narracao.narrar(["uma fala com cinco palavras", "fim"], None)
+    sem_voz = narracao.narrar(["uma fala com cinco palavras", "fim"], None, ouvir=ouvir)
+    assert len(ouvidos) == 3  # sem voz, nada a ouvir
     assert not sem_voz.voz.any() and sem_voz.falas[0]["dur"] == pytest.approx(0.4 + 0.36 * 5)
 
 
@@ -160,11 +215,11 @@ def test_trilha_normalizada_e_abaixa_sob_a_voz() -> None:
 
 def _dados(pasta: Path, video: dict[str, Any] | None = None) -> Path:
     cenas, t = [], 0.0
-    for c in ROTEIRO["cenas"]:
+    estilo = _estilo()
+    for c in roteiro.interpretar(json.dumps(ROTEIRO), estilo).cenas:
         cenas.append({**c, "inicio": t, "fim": t + 2.0})
         t += 2.0
     falas = [{"texto": c["fala"], "inicio": c["inicio"] + 0.3, "dur": 1.2} for c in cenas]
-    estilo = _estilo()
     dados = video or {
         "largura": 1080, "altura": 1920, "formato": "vertical", "fps": 30, "duracao": t,
         "cenas": cenas, "falas": falas, "volume": [0.5] * int(t * 30),
@@ -218,8 +273,8 @@ def _videos(tmp_path: Path, resposta: str, monkeypatch: pytest.MonkeyPatch) -> t
     site = SiteFalso()
     pedidos: list[str] = []
 
-    def perguntar(prompt: str) -> str:
-        pedidos.append(prompt)
+    def perguntar(prompt: str, modelo: str) -> str:
+        pedidos.append(f"[{modelo}] {prompt}")
         return resposta
 
     def capturar(url: str, pasta: Path, largura: int, altura: int, **_: Any) -> list[Path]:
@@ -235,7 +290,15 @@ def _videos(tmp_path: Path, resposta: str, monkeypatch: pytest.MonkeyPatch) -> t
         saida.with_name("capa.jpg").write_bytes(b"jpg")
         return saida
 
-    v = videos.Videos(tmp_path, site, perguntar, lambda: _fala(), capturar, montar)  # type: ignore[arg-type]
+    v = videos.Videos(
+        tmp_path,
+        site,  # type: ignore[arg-type]
+        perguntar,
+        lambda: _fala(),
+        lambda: None,
+        capturar,
+        montar,
+    )
     v.pedidos = pedidos  # type: ignore[attr-defined]
     return v, site
 
@@ -245,6 +308,7 @@ def test_do_pedido_ao_mp4(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     feito = v.criar(tema="Atendimento fora do horário", esperar=True)
     assert feito.estado == "rascunho" and feito.erro == "" and feito.etapa == ""
     assert feito.titulo == ROTEIRO["titulo"] and feito.duracao > 6
+    assert v.pedidos[0].startswith("[claude-opus-5-5]")  # o Opus dirige por padrão
     assert "Clínica Sorriso (@clinica)" in v.pedidos[0] and "Fale com donos" in v.pedidos[0]
     pasta = tmp_path / feito.id
     assert v.arquivo(feito.id).read_bytes() == b"mp4" and v.arquivo(feito.id, "capa").is_file()
@@ -255,6 +319,10 @@ def test_do_pedido_ao_mp4(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     assert [c["tipo"] for c in dados["cenas"]] == [c["tipo"] for c in ROTEIRO["cenas"]]
     assert dados["marca"]["logo"].startswith("data:image/svg+xml;base64,")
     assert dados["cenas"][0]["inicio"] == 0 and dados["cenas"][-1]["fim"] == dados["duracao"]
+    gancho, passos = dados["cenas"][:2]
+    assert gancho["legenda"] == "cinetica" and passos["legenda"] == "rodape"
+    assert [p["p"] for p in gancho["palavras"]][:2] == ["Sua", "recepção"]
+    assert passos["tempos_passos"][1] is None and isinstance(passos["tempos_passos"][0], float)
     assert site.avisos == [f"O vídeo {feito.titulo} está pronto para assistir em Marketing."]
     assert v.para_tela(feito)["pronto"] and v.para_tela(feito)["cenas"] == 6
 
@@ -281,6 +349,10 @@ def test_pedido_invalido_e_video_interrompido(
         v.criar()
     with pytest.raises(videos.VideoErro, match="Artigo"):
         v.criar(artigo="nao-existe")
+    with pytest.raises(videos.VideoErro, match="Duração"):
+        v.criar(tema="x", duracao=20)
+    with pytest.raises(videos.VideoErro, match="Modelo"):
+        v.criar(tema="x", modelo="gpt")
     with pytest.raises(videos.VideoErro, match="Vídeo"):
         v.ler("../x")
     preso = videos.Video("abcdef12", tema="x")  # criando, de antes de um reinício
@@ -289,3 +361,29 @@ def test_pedido_invalido_e_video_interrompido(
     monkeypatch.setattr(videos.Videos, "disponivel", staticmethod(lambda: "Falta o FFmpeg."))
     with pytest.raises(videos.VideoErro, match="indisponíveis"):
         v.criar(tema="x")
+
+
+def test_deepgram_devolve_cada_palavra_com_o_tempo() -> None:
+    import io
+
+    from zervis.voz import deepgram
+
+    pedidos: list[Any] = []
+
+    class Resposta(io.BytesIO):
+        def __enter__(self) -> "Resposta":
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            pass
+
+    def abrir(pedido: Any, timeout: float) -> Resposta:
+        pedidos.append(pedido)
+        corpo = {"results": {"channels": [{"alternatives": [{"transcript": "oi zé", "words": [
+            {"word": "oi", "start": 0.1, "end": 0.3}, {"word": "zé", "start": 0.3, "end": 0.6},
+            {"word": "quebrada"}]}]}]}}  # fmt: skip
+        return Resposta(json.dumps(corpo).encode())
+
+    assert deepgram.palavras("chave", b"RIFF", abrir=abrir) == [("oi", 0.1, 0.3), ("zé", 0.3, 0.6)]
+    assert pedidos[0].get_header("Content-type") == "audio/wav"
+    assert deepgram.transcrever("chave", b"x", "audio/ogg", abrir) == "oi zé"

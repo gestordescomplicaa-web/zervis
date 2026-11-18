@@ -35,6 +35,8 @@ export function cartaoVideos(r, vs = r.videos) {
     <div class="campos">
       <label>Tema do vídeo<input id="mk-video-tema" placeholder="Ex.: como o WhatsApp perde clientes à noite" autocomplete="off"></label>
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-video-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
+      <label>Duração<select id="mk-video-duracao">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
+      <label>Diretor<select id="mk-video-modelo">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}">${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}">${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
       <label class="interruptor"><input type="checkbox" id="mk-video-voz" checked> Narração</label>
     </div>
@@ -78,6 +80,8 @@ Object.assign(ACOES, {
       artigo: artigo?.value || "",
       estilo: /** @type {HTMLSelectElement} */ ($("mk-video-estilo")).value,
       voz: /** @type {HTMLInputElement} */ ($("mk-video-voz")).checked,
+      duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-duracao")).value),
+      modelo: /** @type {HTMLSelectElement} */ ($("mk-video-modelo")).value,
     };
     try {
       const r = await ocupado(b, () => api("marketing/video/criar", dados));

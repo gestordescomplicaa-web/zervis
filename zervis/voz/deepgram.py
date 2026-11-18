@@ -90,12 +90,15 @@ ARQUIVO_PARAMETROS = {"model": "nova-3", "language": "pt-BR", "punctuate": "true
                       "smart_format": "false"}  # fmt: skip
 
 
-def transcrever(
-    chave: str, audio: bytes, tipo: str, abrir: Callable[..., Any] = urllib.request.urlopen
-) -> str:
-    """O texto de um áudio gravado (a mensagem de voz do WhatsApp, por exemplo); "" se não houve
-    fala. A falha sobe como EscutaErro, com o motivo."""
-    consulta_arquivo = urlencode([*ARQUIVO_PARAMETROS.items(), *(("keyterm", t) for t in TERMOS)])
+def _arquivo(
+    chave: str,
+    audio: bytes,
+    tipo: str,
+    termos: tuple[str, ...],
+    abrir: Callable[..., Any],
+) -> dict[str, Any]:
+    """Um áudio inteiro, de uma vez (ADR 0103): o primeiro canal da resposta ({} sem fala)."""
+    consulta_arquivo = urlencode([*ARQUIVO_PARAMETROS.items(), *(("keyterm", t) for t in termos)])
     pedido = urllib.request.Request(  # noqa: S310 (endereço fixo do Deepgram, https)
         f"{ARQUIVO}?{consulta_arquivo}",
         data=audio,
@@ -110,10 +113,35 @@ def transcrever(
     except (OSError, ValueError) as erro:
         raise EscutaErro("sem conexão com o Deepgram") from erro
     try:
-        canal = dados["results"]["channels"][0]
-        return str(canal["alternatives"][0]["transcript"]).strip()
+        return dict(dados["results"]["channels"][0]["alternatives"][0])
     except (KeyError, IndexError, TypeError):
-        return ""
+        return {}
+
+
+def transcrever(
+    chave: str, audio: bytes, tipo: str, abrir: Callable[..., Any] = urllib.request.urlopen
+) -> str:
+    """O texto de um áudio gravado (a mensagem de voz do WhatsApp, por exemplo); "" se não houve
+    fala. A falha sobe como EscutaErro, com o motivo."""
+    return str(_arquivo(chave, audio, tipo, TERMOS, abrir).get("transcript", "")).strip()
+
+
+def palavras(
+    chave: str,
+    audio: bytes,
+    tipo: str = "audio/wav",
+    termos: tuple[str, ...] = (),
+    abrir: Callable[..., Any] = urllib.request.urlopen,
+) -> list[tuple[str, float, float]]:
+    """Cada palavra dita, com o início e o fim em segundos (os vídeos, ADR 0107: a legenda e o
+    que entra na tela caem na palavra certa). `termos`: as palavras que o Deepgram deve esperar."""
+    saida = []
+    for p in _arquivo(chave, audio, tipo, (*TERMOS, *termos)[:100], abrir).get("words") or []:
+        try:
+            saida.append((str(p.get("word", "")), float(p["start"]), float(p["end"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return saida
 
 
 def _conectar_websocket(url: str, chave: str) -> Any:

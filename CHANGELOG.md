@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Vídeos com direção:** o Opus 5.5 passa a dirigir os vídeos (objetivo, público, composição,
+  câmera e transição de cada cena) e o tempo de cada palavra vem da própria voz, medido pelo
+  Deepgram: a legenda e o que entra na tela caem na palavra certa. A tela não repete mais a fala,
+  as cenas ganharam movimento de câmera e transições de verdade, e dá para escolher a duração
+  (15 a 60 s) e o modelo que dirige (ADR 0107).
 - **O Zé nos grupos das empresas:** no grupo de uma empresa ligada, o Zé responde quando é chamado
   (uma menção ao número dele, "Zé," no começo da mensagem ou uma resposta a ele), só com o que
   está em "O que o grupo pode saber" e nos arquivos da vitrine. Pedido de ação não é feito: ele

@@ -30,21 +30,24 @@ from zervis.video import captura, estilos, montagem, narracao, roteiro, trilha
 
 log = logging.getLogger(__name__)
 PASTA = lugares.DADOS / "marketing" / "videos"
-MODELO = "claude-sonnet-5-5"
-SISTEMA = "Você escreve roteiros de Reels para empresas. Responda só com o JSON pedido."
+# O diretor: o plano de direção é uma chamada só, e a qualidade dele é o vídeo (ADR 0107).
+MODELOS = {"claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5"}
+MODELO = "claude-opus-5-5"
+PENSAMENTO = 3000  # tokens de raciocínio: contar as palavras e variar as cenas cabe aqui
+SISTEMA = "Você é diretor de criação de vídeos curtos para empresas. Responda só com o JSON pedido."
 LIMITE_ARTIGO = 9000
 FORMATO = ("vertical", 1080, 1920)
 ESTADOS = ("criando", "rascunho", "erro")
 # O tempo mínimo de cada cena na tela, mesmo com a fala curta (uma lista precisa ser lida).
 MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
-    "gancho": lambda c: 2.6,
-    "frase": lambda c: 2.8,
-    "passos": lambda c: 1.4 + 0.8 * len(c.get("passos", [])),
-    "antes_depois": lambda c: 3.8,
-    "conversa": lambda c: 1.4 + 1.1 * len(c.get("mensagens", [])),
-    "lista": lambda c: 1.3 + 0.7 * len(c.get("itens", [])),
-    "numero": lambda c: 3.2,
-    "fecho": lambda c: 3.4,
+    "gancho": lambda c: 2.2,
+    "frase": lambda c: 2.4,
+    "passos": lambda c: 1.4 + 0.7 * len(c.get("passos", [])),
+    "antes_depois": lambda c: 3.4,
+    "conversa": lambda c: 1.4 + 1.0 * len(c.get("mensagens", [])),
+    "lista": lambda c: 1.3 + 0.6 * len(c.get("itens", [])),
+    "numero": lambda c: 3.0,
+    "fecho": lambda c: 3.2,
 }
 
 
@@ -60,6 +63,8 @@ class Video:
     instrucao: str = ""
     estilo: str = estilos.PADRAO
     voz: bool = True
+    modelo: str = MODELO
+    duracao_alvo: int = roteiro.DURACAO_PADRAO
     estado: str = "criando"
     etapa: str = "Na fila"
     erro: str = ""
@@ -71,13 +76,23 @@ class Video:
     feito_em: float = 0.0
 
 
-def _perguntar_ao_modelo(prompt: str) -> str:
+def _perguntar_ao_modelo(prompt: str, modelo: str) -> str:
     from zervis.habilidades import revisao
 
     saida, _uso = asyncio.run(
-        revisao.perguntar_ao_modelo(prompt, MODELO, lugares.DADOS / "cerebro", 0, SISTEMA)
+        revisao.perguntar_ao_modelo(prompt, modelo, lugares.DADOS / "cerebro", PENSAMENTO, SISTEMA)
     )
     return saida
+
+
+def _ouvinte_do_ze() -> narracao.Ouvir | None:
+    """O tempo real das palavras pelo Deepgram (a chave da escuta); sem a chave, None."""
+    from zervis.voz import deepgram
+
+    chave = deepgram.ler_chave(lugares.CONFIG / "deepgram.key")
+    if not chave:
+        return None
+    return lambda wav: deepgram.palavras(chave, wav, "audio/wav")
 
 
 def _sintetizador_do_ze() -> narracao.Sintetizar:
@@ -109,8 +124,9 @@ class Videos:
         self,
         pasta: Path = PASTA,
         site: marketing.Marketing | None = None,
-        perguntar: Callable[[str], str] = _perguntar_ao_modelo,
+        perguntar: Callable[[str, str], str] = _perguntar_ao_modelo,
         sintetizador: Callable[[], narracao.Sintetizar] = _sintetizador_do_ze,
+        ouvinte: Callable[[], narracao.Ouvir | None] = _ouvinte_do_ze,
         capturar: Callable[..., list[Path]] = captura.capturar,
         montar: Callable[..., Path] = montagem.montar,
     ) -> None:
@@ -118,6 +134,7 @@ class Videos:
         self.site = site or marketing.PADRAO
         self.perguntar = perguntar
         self.sintetizador = sintetizador
+        self.ouvinte = ouvinte
         self.capturar = capturar
         self.montar = montar
         self._trava = threading.RLock()
@@ -194,6 +211,8 @@ class Videos:
         estilo: str = estilos.PADRAO,
         voz: bool = True,
         esperar: bool = False,
+        duracao: int = roteiro.DURACAO_PADRAO,
+        modelo: str = MODELO,
     ) -> Video:
         tema, artigo = " ".join(tema.split())[:200], artigo.strip()
         if not tema and not artigo:
@@ -202,7 +221,14 @@ class Videos:
             raise VideoErro("Artigo não encontrado no blog.")
         if falta := self.disponivel():
             raise VideoErro(f"Vídeos indisponíveis: {falta.lower()}")
-        video = Video(uuid.uuid4().hex[:8], tema, artigo, "", estilos.achar(estilo).id, voz)
+        if duracao not in roteiro.DURACOES:
+            raise VideoErro("Duração inválida.")
+        if modelo not in MODELOS:
+            raise VideoErro("Modelo inválido.")
+        video = Video(
+            uuid.uuid4().hex[:8], tema, artigo, "", estilos.achar(estilo).id, voz, modelo=modelo,
+            duracao_alvo=duracao,
+        )  # fmt: skip
         return self._comecar(self._gravar(video), esperar)
 
     def refazer(self, id_: str, instrucao: str, esperar: bool = False) -> Video:
@@ -274,10 +300,11 @@ class Videos:
         nome = f"{marca.nome} (@{marca.instagram})" if marca.instagram else marca.nome
 
         self._etapa(video, "Escrevendo o roteiro")
-        prompt = roteiro.montar_prompt(nome, self._pedido(video), self.site.manual(), estilo)
-        resposta = self.perguntar(prompt)
+        alvo = video.duracao_alvo
+        prompt = roteiro.montar_prompt(nome, self._pedido(video), self.site.manual(), estilo, alvo)
+        resposta = self.perguntar(prompt, video.modelo)
         try:
-            r = roteiro.interpretar(resposta, estilo)
+            r = roteiro.interpretar(resposta, estilo, alvo)
         except roteiro.RoteiroErro as erro:
             # uma volta: o modelo recebe o que escreveu e o que está errado (acontece com a fala
             # longa demais); se errar de novo, o vídeo fica com o erro
@@ -286,18 +313,27 @@ class Videos:
                 f"{prompt}\n\n## Sua resposta anterior foi recusada\n{erro}\n"
                 f"Resposta anterior: {resposta[:6000]}\nEscreva de novo, corrigindo isso."
             )
-            r = roteiro.interpretar(self.perguntar(corrigir), estilo)
+            r = roteiro.interpretar(self.perguntar(corrigir, video.modelo), estilo, alvo)
         video.titulo, video.legenda, video.roteiro = r.titulo, r.legenda, r.para_json()
 
         self._etapa(video, "Gravando a voz" if video.voz else "Montando o tempo")
         minimos = [MINIMOS[c["tipo"]](c) if c["tipo"] in MINIMOS else 3.0 for c in r.cenas]
         n = narracao.narrar(
-            r.falas, self.sintetizador() if video.voz else None, minimos, estilo.bpm
+            r.falas,
+            self.sintetizador() if video.voz else None,
+            minimos,
+            estilo.bpm,
+            self.ouvinte() if video.voz else None,
         )
         video.duracao = n.duracao
 
         _, largura, altura = FORMATO
-        cenas = [{**c, "inicio": a, "fim": b} for c, (a, b) in zip(r.cenas, n.cenas, strict=True)]
+        cenas = []
+        for c, (a, b), fala in zip(r.cenas, n.cenas, n.falas, strict=True):
+            cena = {**c, "inicio": a, "fim": b, "palavras": fala["palavras"]}
+            cena.update(roteiro.tempos_dos_gatilhos(cena, fala["palavras"]))
+            cena["legenda"] = "cinetica" if c["tipo"] in roteiro.DE_TEXTO else "rodape"
+            cenas.append(cena)
         dados = {
             "largura": largura, "altura": altura, "formato": FORMATO[0], "fps": captura.FPS,
             "duracao": n.duracao, "cenas": cenas, "falas": n.falas, "volume": n.volume,
@@ -351,7 +387,7 @@ class Videos:
             k: getattr(video, k)
             for k in (
                 "id", "tema", "artigo", "estilo", "voz", "estado", "etapa", "erro", "titulo",
-                "legenda", "duracao", "criado",
+                "legenda", "duracao", "criado", "modelo", "duracao_alvo",
             )
         }  # fmt: skip
         dados["cenas"] = len(video.roteiro.get("cenas", []))
