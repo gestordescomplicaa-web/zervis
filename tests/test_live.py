@@ -213,7 +213,7 @@ class Aparelho:
 class Laco:
     """Os efeitos como o `laco.py` executa, com um cérebro falso de latência conhecida."""
 
-    def __init__(self, roteiro: "queue.Queue[str]") -> None:
+    def __init__(self, roteiro: "queue.Queue[str]", dormir_s: float = 120.0) -> None:
         self.eventos: queue.Queue[Any] = queue.Queue()
         self.maquina = e.Maquina(estado=e.Estado.ATIVO)
         self.numero = self.ultima = self.vistos = self.marca = 0
@@ -231,6 +231,7 @@ class Laco:
                 stt=lambda: TranscritorDeRoteiro(roteiro),
                 aquecimento_eco_s=0.0,
             ),
+            dormir_s=dormir_s,
         )
         self.parar = threading.Event()
 
@@ -301,10 +302,9 @@ class Laco:
         return False
 
 
-@pytest.fixture
-def conversa() -> Iterator[tuple[Laco, Aparelho, "queue.Queue[str]"]]:
+def _conversa(dormir_s: float) -> Iterator[tuple[Laco, Aparelho, "queue.Queue[str]"]]:
     roteiro: queue.Queue[str] = queue.Queue()
-    laco = Laco(roteiro)
+    laco = Laco(roteiro, dormir_s)
     aparelho = Aparelho()
     assert laco.live.preparar()
     threading.Thread(target=laco.rodar, daemon=True).start()
@@ -318,6 +318,16 @@ def conversa() -> Iterator[tuple[Laco, Aparelho, "queue.Queue[str]"]]:
         aparelho.parar_mic.set()
         laco.live.desligar()
         laco.parar.set()
+
+
+@pytest.fixture
+def conversa() -> Iterator[tuple[Laco, Aparelho, "queue.Queue[str]"]]:
+    yield from _conversa(120.0)
+
+
+@pytest.fixture
+def conversa_que_dorme() -> Iterator[tuple[Laco, Aparelho, "queue.Queue[str]"]]:
+    yield from _conversa(1.0)
 
 
 def _vez(laco: Laco, aparelho: Aparelho, roteiro: "queue.Queue[str]", texto: str) -> None:
@@ -635,3 +645,20 @@ def test_no_live_so_o_bipe_de_conectar(tmp_path: Path) -> None:
     n.live = None  # type: ignore[assignment]
     n.tratar(e.FalaAoVivo("Zé?"))  # fora do Live, o bipe de "estou ouvindo" continua
     assert bipes == [1, 1]
+
+
+def test_o_deepgram_so_ouve_quando_ha_fala(conversa_que_dorme: Any) -> None:
+    """ADR 0099: com o aparelho conectado e a casa em silêncio, a conexão com o transcritor de
+    fora não abre; abre com a fala, fecha depois do tempo sem fala e reabre na próxima, sem
+    perder o começo do pedido (o segundo de antes vai primeiro)."""
+    laco, aparelho, roteiro = conversa_que_dorme
+    transcritor = laco.live.transcritor
+    time.sleep(1.5)  # só silêncio
+    assert transcritor.aberturas == 0 and not transcritor.aberto
+    _vez(laco, aparelho, roteiro, "Que horas são?")
+    assert laco.esperar(lambda: laco.pedidos == ["Que horas são?"])
+    assert transcritor.aberturas == 1
+    assert laco.esperar(lambda: not transcritor.aberto, prazo=8.0)
+    _vez(laco, aparelho, roteiro, "E amanhã?")
+    assert laco.esperar(lambda: laco.pedidos == ["Que horas são?", "E amanhã?"])
+    assert transcritor.aberturas == 2

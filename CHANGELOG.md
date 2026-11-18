@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Live sem gasto no silêncio:** com o app ou o navegador conectado no Ao vivo, o áudio só vai
+  ao Deepgram quando há fala; depois de 2 minutos em silêncio, a conexão fecha e abre de novo
+  quando você volta a falar, sem perder a primeira palavra (ADR 0099).
+
 - **Atualização bloqueada explicada:** quando uma melhoria do próprio Zé está só neste
   computador, a página Atualizações mostra "Bloqueada", o que está só aqui, quantas mudanças
   esperam na origem e o botão para abrir o PR a mesclar. O Zé avisa uma vez quando isso segura
