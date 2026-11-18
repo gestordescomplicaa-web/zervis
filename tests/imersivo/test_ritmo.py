@@ -59,7 +59,7 @@ async def main():
     errors, passed = [], []
     with tempfile.TemporaryDirectory(prefix='jarvis-ritmo-', ignore_cleanup_errors=True) as profile:
         process = subprocess.Popen([
-            '/usr/bin/chromium', '--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + profile,
+            '/usr/bin/chromium', '--headless=new', '--mute-audio', '--remote-debugging-port=0', '--user-data-dir=' + profile,
             '--no-first-run', '--window-size=1280,720', '--disable-background-networking',
             f'http://127.0.0.1:{server.server_port}/stage.html?res=1280x720',
         ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -48,7 +48,7 @@ async def verificar(tmp_path):
     p.iniciar()
     perfil = tmp_path / 'chromium'
     processo = subprocess.Popen([
-        '/usr/bin/chromium', '--headless=new', '--remote-debugging-port=0',
+        '/usr/bin/chromium', '--headless=new', '--mute-audio', '--remote-debugging-port=0',
         f'--user-data-dir={perfil}', '--no-first-run', '--disable-background-networking',
         f'{p.endereco}#sessoes',
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
