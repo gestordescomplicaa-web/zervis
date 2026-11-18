@@ -117,3 +117,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0107](0107-direcao-dos-videos.md) | Direção dos vídeos: o Opus dirige, o tempo vem da voz | Aceito |
 | [0108](0108-ze-nos-grupos.md) | O Zé nos grupos das empresas: responde quando chamado, só com a vitrine | Aceito |
 | [0109](0109-publicar-reels.md) | Publicar os vídeos como Reels, e pedir vídeos de qualquer lugar | Aceito |
+| [0110](0110-edicao-dos-videos.md) | A edição dos vídeos: menos cara de vídeo gerado | Aceito |

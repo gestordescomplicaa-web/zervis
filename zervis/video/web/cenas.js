@@ -1,21 +1,23 @@
-// As cenas embutidas dos vídeos do Zé (ADR 0106 e 0107). Cada uma recebe a cena do plano de
+// As cenas embutidas dos vídeos do Zé (ADR 0106, 0107 e 0110). Cada uma recebe a cena do plano de
 // direção e desenha com a marca; o visual fino é do estilo (CSS). Um estilo pode trocar qualquer
 // uma ou acrescentar outras no próprio `cenas.js`, com `Ze.cena(tipo, {montar, render})`.
 //
 // O tempo vem da voz: `c.palavras` traz cada palavra da fala com o instante em que é dita, e os
 // `tempos_*` dizem quando cada elemento entra (a palavra do "quando", em segundos desde o começo
-// da cena). Sem eles, os elementos se espalham no tempo da cena. `ctx.cena` é a cena.
+// da cena). `ctx.cena` é a cena. `montar` devolve `foco`: o elemento de onde a íris abre e para
+// onde o zoom atravessa na transição para a cena seguinte.
 //
-// A tela não repete a fala: gancho e frase são a própria fala em tipografia, palavra por palavra;
-// as outras mostram a ideia em poucas palavras e deixam a fala para a legenda embaixo.
+// A edição (ADR 0110): cada cena entra de um jeito (desfoque, tinta, queda, lado, máscara, giro em
+// perspectiva), o que assenta fica parado, e o 3D aparece onde é conteúdo gerado (cartões, o logo),
+// nunca numa tela de produto.
 (() => {
-  const { h, entra, mola, tamanho, prog, curvas, contar, cl } = window.Ze;
+  const { h, revela, mola, prog, curvas, contar, cl } = window.Ze;
 
-  /** O brilho atrás do que importa: cresce na entrada e respira com a voz. */
-  function brilho(el, t, a, v = 0) {
-    const p = curvas.sai(prog(t, a, 0.9));
+  /** O brilho atrás do que importa: cresce na entrada e fica (nada de respirar). */
+  function brilho(el, t, a) {
+    const p = curvas.chega(prog(t, a, 0.9));
     el.style.opacity = String(0.85 * p);
-    el.style.transform = `translate(-50%, -50%) scale(${0.6 + 0.4 * p + 0.05 * v})`;
+    el.style.transform = `translate(-50%, -50%) scale(${0.6 + 0.4 * p})`;
   }
 
   /** Quando cada um dos `n` elementos entra: o tempo da palavra ou, sem ela, espalhado. */
@@ -26,49 +28,70 @@
       const dado = lista && lista[i];
       const t = typeof dado === "number" ? dado : inicio + i * passo;
       // o tempo da voz vale, mas nunca antes do anterior: a ordem da tela é a da lista
-      saida.push(Math.max(t, i ? saida[i - 1] + 0.25 : 0.15));
+      saida.push(Math.max(t, i ? saida[i - 1] + 0.22 : 0.15));
     }
     return saida;
   }
 
+  /** O marca-texto do destaque: a faixa corre por baixo da palavra depois que ela é dita. */
+  function marcaTexto(spans, c, t) {
+    spans.forEach((x, k) => {
+      if (!x.classList.contains("destaque")) return;
+      const w = c.palavras[k];
+      const p = curvas.chega(prog(t, (w ? w.f - c.inicio : 0) - 0.05, 0.45));
+      x.style.setProperty("--marca", p.toFixed(3));
+    });
+  }
+
   // --- gancho e frase: a fala é a tipografia ----------------------------------------------------
-  function falaGrande(classe, max, min) {
+  function falaGrande(classe) {
     return {
       montar(c, el) {
         const b = h("div", "brilho");
         const r = c.rotulo ? h("div", "rotulo", c.rotulo) : null;
-        const aspas = classe === "frase" ? h("div", "aspas", "“") : null;
+        const aspas = classe === "frase" && c.composicao !== "cheia" ? h("div", "aspas", "“") : null;
         const t = h("h1", `fala-grande ${classe}`);
-        t.style.fontSize = `${tamanho(c.fala, max, min, 20, 110)}px`;
         const spans = Ze.falaCinetica(t, c);
-        const traco = h("div", "traco");
+        const gigante = c.composicao === "gigante";
+        if (gigante) {
+          // uma palavra por linha: o tamanho que a maior couber na largura e todas na altura;
+          // palavras de até 2 letras grudam na seguinte ("o dia", "a sua"), sem linha sozinha
+          const maior = Math.max(...c.palavras.map((w) => w.p.length));
+          const linhas = c.palavras.filter((w, k) => !(w.p.length <= 2 && k < c.palavras.length - 1)).length;
+          t.style.fontSize = `${Math.round(Math.min(220, 900 / (maior * 0.56), 1120 / (linhas * 0.93)))}px`;
+          spans.forEach((x, k) => { if (x.textContent.length <= 2 && k < spans.length - 1) x.classList.add("cola"); });
+        } else {
+          const n = c.fala.length;
+          const [max, min] = classe === "gancho" ? [118, 72] : [94, 62];
+          t.style.fontSize = `${Math.round(max - (max - min) * cl((n - 20) / 90))}px`;
+        }
         el.append(b);
         if (r) el.append(r);
         if (aspas) el.append(aspas);
-        el.append(t, traco);
-        return { b, r, aspas, spans, traco };
+        el.append(t);
+        const foco = spans.find((s) => s.classList.contains("destaque")) || t;
+        return { b, r, aspas, spans, foco };
       },
       render(t, d, s, ctx) {
         const c = ctx.cena;
-        brilho(s.b, t, 0, ctx.volume);
-        if (s.r) entra(s.r, t, 0.02, { y: 20, blur: 0, d: 0.4 });
+        brilho(s.b, t, 0);
+        if (s.r) revela(s.r, t, 0.02, "mascara");
         if (s.aspas) mola(s.aspas, t, 0.0, { de: 0.2 });
-        Ze.animarFala(s.spans, c, t);
-        const fim = c.palavras.length ? c.palavras[c.palavras.length - 1].f - c.inicio : 1;
-        s.traco.style.transform = `scaleX(${curvas.saiForte(prog(t, fim - 0.1, 0.6))})`;
-        // o destaque varre um brilho por dentro das letras depois de dito
-        s.spans.forEach((x, k) => {
-          if (!x.classList.contains("destaque")) return;
-          const w = c.palavras[k];
-          x.style.setProperty("--varre", String(prog(t, w ? w.f - c.inicio : 0, 1.1)));
-        });
+        // cada composição entra de um jeito: gigante cai com peso, à esquerda chega de lado,
+        // a frase em fundo cheio acende do cinza, e o centro nasce do desfoque
+        const jeito = c.composicao === "gigante" ? "queda"
+          : c.composicao === "esquerda" ? "lado"
+          : c.composicao === "cheia" || classe === "frase" ? "tinta"
+          : "desfoque";
+        Ze.animarFala(s.spans, c, t, jeito);
+        marcaTexto(s.spans, c, t);
       },
     };
   }
-  Ze.cena("gancho", falaGrande("gancho", 118, 74));
-  Ze.cena("frase", falaGrande("frase", 92, 62));
+  Ze.cena("gancho", falaGrande("gancho"));
+  Ze.cena("frase", falaGrande("frase"));
 
-  // --- passos: um fluxo que se monta, cada passo na palavra dele --------------------------------
+  // --- passos: cartões que giram em perspectiva até ficar de frente, na palavra deles ---------
   Ze.cena("passos", {
     montar(c, el) {
       const titulo = c.titulo ? h("h2", "titulo-cena", c.titulo) : null;
@@ -84,25 +107,28 @@
       });
       if (titulo) el.append(titulo);
       el.append(lista);
-      return { titulo, itens, linha };
+      return { titulo, itens, linha, foco: lista };
     },
     render(t, d, s, ctx) {
-      if (s.titulo) entra(s.titulo, t, 0.05);
+      if (s.titulo) revela(s.titulo, t, 0.02, "mascara");
       const n = s.itens.length;
       const quando = tempos(ctx.cena.tempos_passos, n, d);
+      let ativo = 0;
       s.itens.forEach(({ item, num }, i) => {
-        entra(item, t, quando[i], { x: -50, y: 0, blur: 8, d: 0.45 });
-        mola(num, t, quando[i] + 0.06, { de: 0.3 });
-        item.classList.toggle("ativo", t >= quando[i] && (i === n - 1 || t < quando[i + 1]));
+        revela(item, t, quando[i], "giro");
+        mola(num, t, quando[i] + 0.12, { de: 0.3 });
+        if (t >= quando[i]) ativo = i;
       });
+      s.itens.forEach(({ item }, i) => item.classList.toggle("ativo", t >= quando[i] && i === ativo));
+      s.foco = s.itens[ativo].item;
       // a linha chega a cada número junto com ele
       const alvo = quando.findLastIndex((q) => t >= q);
-      const ate = alvo <= 0 ? 0 : (alvo - 1 + curvas.sai(prog(t, quando[alvo], 0.4))) / Math.max(1, n - 1);
+      const ate = alvo <= 0 ? 0 : (alvo - 1 + curvas.chega(prog(t, quando[alvo], 0.4))) / Math.max(1, n - 1);
       s.linha.style.transform = `scaleY(${cl(ate)})`;
     },
   });
 
-  // --- antes e depois: empilhado (o depois empurra o antes) ou dividido (uma cortina) ----------
+  // --- antes e depois: empilhado (o depois cai por cima) ou dividido (uma cortina) -------------
   Ze.cena("antes_depois", {
     montar(c, el) {
       const titulo = c.titulo ? h("h2", "titulo-cena", c.titulo) : null;
@@ -120,37 +146,39 @@
         const fio = h("div", "dividido-fio");
         palco.append(antes, depois, fio);
         el.append(palco);
-        return { titulo, antes, depois, icone, fio };
+        return { titulo, antes, depois, icone, fio, foco: depois };
       }
       el.append(antes, depois);
-      return { titulo, antes, depois, icone, fio: null };
+      return { titulo, antes, depois, icone, fio: null, foco: depois };
     },
     render(t, d, s, ctx) {
       const c = ctx.cena;
-      if (s.titulo) entra(s.titulo, t, 0.05);
+      if (s.titulo) revela(s.titulo, t, 0.02, "mascara");
       const virada = typeof c.tempo === "number" ? Math.max(0.9, c.tempo) : Math.min(d * 0.42, 2.2);
       if (s.fio) {
-        // dividido: o depois abre por cima do antes como uma cortina, com o fio aceso na borda
-        entra(s.antes, t, 0.1, { y: 0, blur: 8, escala: 1.04 });
-        const p = curvas.vaivem(prog(t, virada, 0.7));
+        revela(s.antes, t, 0.1, "desfoque", { d: 0.2 });
+        const p = curvas.vaivem(prog(t, virada, 0.6));
         s.depois.style.clipPath = `inset(0 ${(1 - p) * 100}% 0 0 round 34px)`;
+        s.antes.style.opacity = String(1 - p);  // some por baixo da cortina, sem vazar
         s.fio.style.opacity = String(p > 0 && p < 1 ? 1 : 0);
         s.fio.style.transform = `translateX(${p * 900}px)`;
-        mola(s.icone, t, virada + 0.5, { de: 0.2 });
+        mola(s.icone, t, virada + 0.45, { de: 0.2 });
         return;
       }
-      entra(s.antes, t, 0.2, { y: 60 });
-      entra(s.depois, t, virada, { y: 90, escala: 0.94 });
-      mola(s.icone, t, virada + 0.25, { de: 0.2 });
-      const r = curvas.sai(prog(t, virada, 0.6));
+      revela(s.antes, t, 0.15, "lado");
+      revela(s.depois, t, virada, "queda");
+      mola(s.icone, t, virada + 0.2, { de: 0.2 });
+      // o antes recua quando o depois chega (sem sumir: a comparação continua na tela)
       if (t >= virada) {
-        s.antes.style.opacity = String(1 - 0.45 * r);
-        s.antes.style.transform = `scale(${1 - 0.05 * r})`;
+        const r = curvas.chega(prog(t, virada, 0.5));
+        s.antes.style.opacity = String(1 - 0.5 * r);
+        s.antes.style.transform = `scale(${1 - 0.06 * r})`;
+        s.antes.style.filter = r > 0.05 ? `saturate(${1 - 0.8 * r})` : "none";
       }
     },
   });
 
-  // --- conversa: balões chegando na palavra deles, com o "digitando" antes da resposta ----------
+  // --- conversa: balões que estalam do canto deles, com o "digitando" antes da resposta ---------
   Ze.cena("conversa", {
     montar(c, el, ctx) {
       const janela = h("div", "conversa");
@@ -168,17 +196,19 @@
         const linha = h("div", `msg ${empresa ? "empresa" : "cliente"}`);
         const digitando = empresa ? h("div", "digitando") : null;
         if (digitando) { digitando.append(h("i"), h("i"), h("i")); corpo.append(digitando); }
-        linha.append(h("div", "balao", m.texto));
+        const balao = h("div", "balao", m.texto);
+        balao.style.transformOrigin = empresa ? "0% 100%" : "100% 100%";
+        linha.append(balao);
         corpo.append(linha);
-        return { linha, digitando };
+        return { linha, balao, digitando };
       });
       el.append(janela);
-      return { janela, msgs };
+      return { janela, msgs, foco: janela };
     },
     render(t, d, s, ctx) {
-      entra(s.janela, t, 0, { y: 70, escala: 0.96 });
+      revela(s.janela, t, 0, "giro");
       const quando = tempos(ctx.cena.tempos_mensagens, s.msgs.length, d, 0.5);
-      s.msgs.forEach(({ linha, digitando }, i) => {
+      s.msgs.forEach(({ linha, balao, digitando }, i) => {
         const chega = quando[i];
         if (digitando) {
           const de = Math.max(i ? quando[i - 1] + 0.3 : 0.3, chega - 0.6);
@@ -188,12 +218,12 @@
           });
         }
         linha.style.display = t >= chega ? "" : "none";
-        entra(linha, t, chega, { y: 26, blur: 0, d: 0.36, escala: 0.92 });
+        mola(balao, t, chega, { de: 0.55, d: 0.4 });
       });
     },
   });
 
-  // --- lista: cartões que acendem, ou um item por vez, grande ----------------------------------
+  // --- lista: cartões que giram em perspectiva, ou um item por vez, enorme ----------------------
   Ze.cena("lista", {
     montar(c, el) {
       const titulo = c.titulo ? h("h2", "titulo-cena", c.titulo) : null;
@@ -211,38 +241,39 @@
       if (titulo) el.append(titulo);
       el.append(lista);
       if (pontos) el.append(pontos);
-      return { titulo, itens, umPorVez, pontos };
+      return { titulo, itens, umPorVez, pontos, foco: lista };
     },
     render(t, d, s, ctx) {
-      if (s.titulo) entra(s.titulo, t, 0.05);
+      if (s.titulo) revela(s.titulo, t, 0.02, "mascara");
       const n = s.itens.length;
       const quando = tempos(ctx.cena.tempos_itens, n, d);
+      const atual = Math.max(0, quando.findLastIndex((q) => t >= q));
+      s.foco = s.itens[atual].item;
       if (s.umPorVez) {
-        // um de cada vez: o da vez entra de baixo, o anterior sobe e some
-        const atual = Math.max(0, quando.findLastIndex((q) => t >= q));
+        // um de cada vez: o da vez cai enorme, o anterior sai rápido para cima, borrado
         s.itens.forEach(({ item, marca }, i) => {
           if (i < atual) {
-            const p = curvas.saiForte(prog(t, quando[i + 1], 0.4));
+            const p = curvas.acelera(prog(t, quando[i + 1] - 0.05, 0.22));
             item.style.opacity = String(1 - p);
-            item.style.transform = `translateY(${-90 * p}px) scale(${1 - 0.08 * p})`;
-            item.style.filter = p > 0 && p < 1 ? `blur(${6 * p}px)` : "none";
+            item.style.transform = `translateY(${-140 * p}px)`;
+            item.style.filter = p > 0.05 && p < 1 ? `blur(${(10 * p).toFixed(1)}px)` : "none";
           } else {
-            entra(item, t, quando[i], { y: 110, blur: 12, d: 0.5 });
-            mola(marca, t, quando[i] + 0.05, { de: 0.5 });
+            revela(item, t, quando[i], "queda");
+            revela(marca, t, quando[i] + 0.08, "mascara");
           }
         });
         [...s.pontos.children].forEach((p, i) => p.classList.toggle("aceso", i <= atual && t >= quando[0]));
         return;
       }
       s.itens.forEach(({ item, marca }, i) => {
-        entra(item, t, quando[i], { y: 40, d: 0.45 });
-        mola(marca, t, quando[i] + 0.12, { de: 0.1 });
-        item.classList.toggle("ativo", t >= quando[i] && (i === n - 1 || t < quando[i + 1]));
+        revela(item, t, quando[i], "giro");
+        mola(marca, t, quando[i] + 0.15, { de: 0.1 });
+        item.classList.toggle("ativo", t >= quando[i] && i === atual);
       });
     },
   });
 
-  // --- número: anel que enche ou o número gigante, contando -----------------------------------
+  // --- número: conta crescendo junto (quanto maior, maior na tela) e assenta --------------------
   Ze.cena("numero", {
     montar(c, el) {
       const b = h("div", "brilho");
@@ -269,58 +300,79 @@
       el.append(r);
       if (fonte) el.append(fonte);
       const pct = /%\s*$/.test(c.valor) ? cl(parseFloat(String(c.valor).replace(",", ".")) / 100) : 1;
-      return { b, anel, arco, valor, traco, r, fonte, pct, texto: String(c.valor) };
+      return { b, anel, arco, valor, traco, r, fonte, pct, texto: String(c.valor), foco: valor };
     },
-    render(t, d, s, ctx) {
-      brilho(s.b, t, 0, ctx.volume);
-      const p = prog(t, 0.2, 1.4);
+    render(t, d, s) {
+      brilho(s.b, t, 0);
+      // a contagem dura 1,4 s e assenta; o número cresce com ela e dá um estalo ao chegar
+      const p = prog(t, 0.15, 1.4);
       contar(s.valor, s.texto, p);
+      const estalo = Math.sin(Math.PI * prog(t, 1.55, 0.22)) * 0.05;
+      s.valor.style.opacity = String(cl(p * 5));
+      s.valor.style.transform = `scale(${0.72 + 0.28 * curvas.saiForte(p) + estalo})`;
+      s.valor.style.filter = p < 0.2 ? `blur(${((0.2 - p) * 40).toFixed(1)}px)` : "none";
       if (s.anel) {
-        mola(s.anel, t, 0.05, { de: 0.7, d: 0.7 });
+        revela(s.anel, t, 0.0, "desfoque", { d: 0.25 });
         s.arco.style.strokeDashoffset = String(553 * (1 - s.pct * curvas.saiForte(p)));
-        entra(s.valor, t, 0.15, { y: 20, blur: 6 });
       } else {
-        // gigante: o número chega de perto, nítido, e o traço sublinha quando assenta
-        entra(s.valor, t, 0.1, { y: 0, blur: 14, escala: 0.7, d: 0.8 });
-        s.traco.style.transform = `scaleX(${curvas.saiForte(prog(t, 1.2, 0.6))})`;
+        s.traco.style.transform = `scaleX(${curvas.chega(prog(t, 1.5, 0.5))})`;
       }
-      entra(s.r, t, 0.6, { y: 24 });
-      if (s.fonte) entra(s.fonte, t, 1.0, { y: 10, blur: 0 });
+      revela(s.r, t, 1.55, "mascara");
+      if (s.fonte) revela(s.fonte, t, 1.9, "tinta");
     },
   });
 
-  // --- fecho: a marca, a chamada como botão e o clique ------------------------------------------
+  // --- fecho: o logo extrudado em 3D vira com a luz correndo, o nome letra a letra -------------
+  const CAMADAS = 12;
   Ze.cena("fecho", {
     montar(c, el, ctx) {
       const b = h("div", "brilho");
-      const logo = h("div", "fecho-logo");
-      if (ctx.marca.logo) { const img = h("img"); img.src = ctx.marca.logo; logo.append(img); }
-      else logo.textContent = (ctx.marca.nome || "?").slice(0, 1);
-      const nome = h("div", "fecho-nome", ctx.marca.nome || "");
+      const palco = h("div", "logo3d");
+      const giro = h("div", "logo3d-giro");
+      for (let i = CAMADAS - 1; i >= 0; i--) {
+        const camada = h("div", `logo3d-camada${i === 0 ? " frente" : ""}`);
+        if (ctx.marca.logo) { const img = h("img"); img.src = ctx.marca.logo; camada.append(img); }
+        else camada.append(h("span", "logo3d-letra", (ctx.marca.nome || "?").slice(0, 1)));
+        // a extrusão: camadas para trás, cada uma mais escura (o lado do bloco)
+        camada.style.transform = `translateZ(${-i * 4}px)`;
+        if (i > 0) camada.style.filter = `brightness(${(0.62 - i * 0.025).toFixed(3)})`;
+        if (i === 0) camada.append(h("div", "logo3d-luz"));
+        giro.append(camada);
+      }
+      palco.append(giro);
+      const nome = h("div", "fecho-nome");
+      const letras = Ze.letras(nome, ctx.marca.nome || "");
       const arroba = ctx.marca.instagram ? h("div", "fecho-arroba", `@${ctx.marca.instagram}`) : null;
       const botao = h("div", "fecho-chamada", c.chamada || "");
-      const onda = h("div", "fecho-onda");
-      botao.append(onda);
       const detalhe = c.detalhe ? h("div", "fecho-detalhe", c.detalhe) : null;
-      el.append(b, logo, nome);
+      el.append(b, palco, nome);
       if (arroba) el.append(arroba);
       el.append(botao);
       if (detalhe) el.append(detalhe);
-      return { b, logo, nome, arroba, botao, onda, detalhe };
+      const luz = giro.querySelector(".logo3d-luz");
+      return { b, palco, giro, luz, letras, arroba, botao, detalhe, foco: botao };
     },
-    render(t, d, s, ctx) {
-      brilho(s.b, t, 0, ctx.volume);
-      mola(s.logo, t, 0.05, { de: 0.3, d: 0.7 });
-      entra(s.nome, t, 0.3);
-      if (s.arroba) entra(s.arroba, t, 0.45, { y: 20, blur: 0 });
-      entra(s.botao, t, 0.7, { y: 40, escala: 0.9 });
-      const clique = Math.min(1.7, d * 0.5);
-      const aperto = prog(t, clique, 0.12), solta = prog(t, clique + 0.12, 0.45);
-      if (t >= clique) s.botao.style.transform = `scale(${1 - 0.06 * aperto + 0.06 * curvas.mola(solta)})`;
-      const o = prog(t, clique + 0.1, 0.8);
-      s.onda.style.opacity = String(o > 0 && o < 1 ? 0.55 * (1 - o) : 0);
-      s.onda.style.transform = `scale(${1 + 0.45 * curvas.sai(o)})`;
-      if (s.detalhe) entra(s.detalhe, t, 1.0, { y: 16, blur: 0 });
+    render(t, d, s) {
+      brilho(s.b, t, 0);
+      // o logo: chega de lado, girando em Y e inclinado em X, e assenta de frente com peso
+      // (começa depois da transição e gira devagar o bastante para o 3D ser visto)
+      const k = prog(t, 0.3, 1.3), p = curvas.vaivem(k);
+      s.palco.style.opacity = String(cl(prog(t, 0.2, 0.25)));
+      s.giro.style.transform = `rotateX(${(16 * (1 - p)).toFixed(2)}deg) rotateY(${(-118 * (1 - p)).toFixed(2)}deg) scale(${0.7 + 0.3 * p})`;
+      // a luz corre pela face quando ele assenta
+      const l = curvas.vaivem(prog(t, 1.5, 0.9));
+      s.luz.style.transform = `translateX(${(-130 + 260 * l).toFixed(1)}%) skewX(-18deg)`;
+      s.luz.style.opacity = String(l > 0 && l < 1 ? 1 : 0);
+      s.letras.forEach((x, i) => revela(x, t, 1.1 + i * 0.035, "desfoque", { d: 0.16 }));
+      if (s.arroba) revela(s.arroba, t, 1.5, "desfoque", { d: 0.2 });
+      revela(s.botao, t, 1.6, "mascara");
+      // o botão: aperta e volta com mola (sem anel de clique: é cara de vídeo gerado)
+      const clique = Math.min(2.6, d * 0.6);
+      if (t >= clique) {
+        const aperto = prog(t, clique, 0.1), solta = prog(t, clique + 0.1, 0.4);
+        s.botao.style.transform = `scale(${1 - 0.07 * aperto + 0.07 * curvas.mola(solta)})`;
+      }
+      if (s.detalhe) revela(s.detalhe, t, 1.9, "desfoque", { d: 0.2 });
     },
   });
 })();

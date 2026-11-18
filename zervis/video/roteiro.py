@@ -27,7 +27,7 @@ LIMITE_LEGENDA = 2200
 DURACOES: dict[int, tuple[int, int]] = {15: (3, 4), 30: (4, 7), 45: (6, 9), 60: (7, 11)}
 DURACAO_PADRAO = 30
 CAMERAS = ("empurra", "afasta", "desliza", "parado")
-TRANSICOES = ("corte", "mascara", "deslize", "zoom")
+TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor")
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
@@ -35,16 +35,18 @@ DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 TIPOS: dict[str, dict[str, Any]] = {
     "gancho": {
         "textos": {"rotulo": 28, "destaque": 40},
-        "composicoes": ("centro", "esquerda"),
+        "composicoes": ("centro", "esquerda", "gigante"),
         "formato": '{"tipo": "gancho", "fala": "...", "destaque": "1 a 3 palavras da fala em cor", '
-        '"rotulo": "opcional, até 28 (o assunto, em cápsula)", "composicao": "centro|esquerda"} '
-        "(a fala aparece inteira na tela, animada; não escreva outro texto)",
+        '"rotulo": "opcional, até 28 (o assunto, em cápsula)", "composicao": '
+        '"centro|esquerda|gigante"} (a fala aparece inteira na tela, animada; não escreva outro '
+        'texto; "gigante" é uma palavra por linha, enorme: só para falas de até 7 palavras)',
     },
     "frase": {
         "textos": {"destaque": 40},
-        "composicoes": ("centro", "esquerda"),
+        "composicoes": ("centro", "esquerda", "cheia"),
         "formato": '{"tipo": "frase", "fala": "...", "destaque": "...", '
-        '"composicao": "centro|esquerda"} (a fala vira a tipografia; para uma afirmação forte)',
+        '"composicao": "centro|esquerda|cheia"} (a fala vira a tipografia; para uma afirmação '
+        'forte; "cheia" pinta a tela inteira com a cor da marca: use uma vez, no momento-chave)',
     },
     "passos": {
         "textos": {"titulo": 32},
@@ -121,8 +123,12 @@ Regras:
   palavras (títulos e itens curtos, diferentes da fala).
 - quando: a palavra da fala daquela cena (exatamente como escrita nela) em que o elemento entra;
   assim a tela acompanha a voz. Use palavras diferentes para elementos diferentes.
-- camera: {cameras}. transicao (como a cena entra): {transicoes}. Varie: nada de repetir a mesma
-  câmera ou transição em cenas seguidas; use "corte" nos momentos de impacto.
+- camera: {cameras}. "empurra" é um soco de câmera na palavra de destaque (dê um destaque à
+  cena); "afasta" e "desliza" mexem só na chegada; "parado" não mexe.
+- transicao (como a cena entra): {transicoes}. "mascara" abre um círculo a partir do que estava
+  em foco; "deslize" é um chicote rápido para o lado; "zoom" atravessa o que estava em foco; "cor"
+  inunda a tela com a cor da marca (para mudar de assunto); "corte" é seco, na batida. Use 3 a 5
+  tipos no vídeo e nunca a mesma transição em cenas seguidas; "corte" nos momentos de impacto.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
 - Não invente números, casos, clientes nem depoimentos. "numero" só com um dado do material,
   com a fonte. Uma "conversa" é sempre um exemplo.
@@ -265,6 +271,8 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
     composicao = str(bruta.get("composicao", ""))
     composicoes = regra["composicoes"]
     cena["composicao"] = composicao if composicao in composicoes else composicoes[0]
+    if cena["composicao"] == "gigante" and tipo == "gancho" and len(fala.split()) > 7:
+        cena["composicao"] = "centro"  # uma palavra por linha só cabe com fala curta
     for campo, limite in regra.get("textos", {}).items():
         if valor := _texto(bruta.get(campo), limite):
             cena[campo] = valor

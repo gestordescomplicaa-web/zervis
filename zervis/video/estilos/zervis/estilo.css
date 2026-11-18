@@ -71,3 +71,18 @@
 .pontos i.aceso { background: var(--destaque); box-shadow: 0 0 14px var(--destaque); }
 .numero-gigante { background: linear-gradient(170deg, var(--texto) 20%, var(--destaque) 70%, var(--destaque2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+/* edição (ADR 0110) */
+.palavra.destaque::after { background: color-mix(in srgb, var(--destaque) 38%, transparent); }
+.composicao-cheia .fundo-cena { background: linear-gradient(155deg, var(--destaque), var(--destaque2)); }
+.composicao-cheia .palavra.destaque { background: none; -webkit-text-fill-color: #fff; color: #fff; }
+.composicao-cheia .palavra.destaque::after { background: color-mix(in srgb, var(--fundo) 35%, transparent); }
+/* na cortina, o depois cobre o antes inteiro: fundo opaco */
+.dividido .lado.depois { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 92%, white 4%), var(--superficie)); }
+.inunda { background: linear-gradient(160deg, var(--destaque), var(--destaque2)); }
+#legenda span.ativa { background: var(--destaque); color: var(--fundo); }
+#legenda span.ativa.marcada { background: var(--destaque2); }
+.logo3d-camada { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 85%, white 8%), var(--fundo));
+  border: 1.5px solid color-mix(in srgb, var(--destaque) 40%, transparent); }
+.logo3d-camada.frente { box-shadow: 0 50px 140px color-mix(in srgb, var(--destaque) 40%, transparent); }
+.logo3d-letra { color: var(--destaque); }
+
