@@ -106,3 +106,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0096](0096-imagem-docker.md) | A imagem Docker para a VPS: um volume só, sem systemd, o primeiro acesso sem reiniciar | Em validação |
 | [0097](0097-ferramentas-sob-demanda.md) | As ferramentas do cérebro sob demanda: a busca do Claude Code e as mais usadas à mão | Em validação |
 | [0098](0098-memoria-com-validade-e-frase-de-apoio.md) | Memória com validade e fato aprendido só com a frase de quem usa | Aceito |
+| [0099](0099-deepgram-so-com-fala.md) | No Live, o Deepgram só ouve quando há fala | Aceito |

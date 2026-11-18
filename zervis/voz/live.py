@@ -13,6 +13,11 @@ confirmações ("Aprovo?") e os avisos seguem pelo laço. O que o laço manda fa
 dentro da vez da pessoa, vira a resposta dela; fora (um aviso), é falado pela sessão. A voz é o
 motor do Zé (`nuvem.Motor`: Fish, ElevenLabs ou o Cadu).
 
+O Deepgram só ouve quando há fala (ADR 0099): o Silero, local, ouve sempre; a conexão com o
+Deepgram abre quando ele percebe voz e fecha depois de `DORMIR_S` sem fala
+(`deepgram_que_dorme.py`). Antes, com o app esquecido conectado, o
+Deepgram recebia o silêncio da casa a noite inteira (35 h em 7 dias, novembro de 2026).
+
 O detector de fim de fala é da LiveKit Model License: grátis, mas só dentro do LiveKit Agents e não
 aberto. Fica fora do repositório e é baixado na primeira subida (`garantir_modelo`), na pasta de
 modelos do Zé.
@@ -32,6 +37,7 @@ from typing import Any
 import numpy as np
 
 from zervis import lugares
+from zervis.voz.deepgram_que_dorme import que_dorme
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +68,7 @@ INTERRUPCAO_MIN_PALAVRAS = 2
 # navegador e o celular já chegam com o cancelamento ligado.
 AQUECIMENTO_ECO_S = 1.5
 PRAZO_LIGAR_S = 15.0
+DORMIR_S = 120.0  # sem fala por este tempo, a conexão com o Deepgram fecha
 
 
 def _hf() -> None:
@@ -148,6 +155,7 @@ class Live:
         ao_ociosa: Callable[[int], None],
         espera: Callable[[], str] = lambda: "normal",
         pecas: "Pecas | None" = None,
+        dormir_s: float = DORMIR_S,
     ) -> None:
         self.chave = chave
         self.motor_voz = motor_voz
@@ -156,6 +164,8 @@ class Live:
         self.ao_ociosa = ao_ociosa
         self.espera = espera
         self.pecas = pecas  # outras peças de ouvir (os testes); None: Silero, Deepgram, detector
+        self.dormir_s = dormir_s
+        self.transcritor: Any = None  # o da sessão aberta: o Deepgram que só ouve quando há fala
         self.fonte: Any = None
         self.pessoa_falando = False
         self.erro: str | None = None
@@ -283,6 +293,7 @@ class Live:
                 http_session=self._http,
             )
             deteccao = _detector(self._executor, self._modulos["detector"])
+        self.transcritor = stt = que_dorme(stt, self._vad, self.dormir_s)
         fim_min, fim_max = tempos_de_fim(self.espera())
         sessao: Any = AgentSession(
             vad=self._vad,

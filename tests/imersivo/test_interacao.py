@@ -73,6 +73,12 @@ async def main():
                     assert 'exceptionDetails' not in r, r
                     return r.get('result', {}).get('value')
 
+                async def quadros():
+                    # What is on screen is drawn by the stage loop, one frame at a time: on a
+                    # busy runner a fixed sleep could end before any frame, and the panel was
+                    # measured mid-opening (tilted, 58% size).
+                    await ev("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r(1))))")
+
                 async def check(name, js):
                     result=await ev(js)
                     if not result:
@@ -126,6 +132,7 @@ async def main():
                 await check('each reading mode keeps its own size', 'jarvisCerebro.estado().zoom===100')
                 await ev("document.querySelector('.focus').scrollTop=0;pinch('[data-action=\"window-fit\"]')")
                 await asyncio.sleep(.2)
+                await quadros()
                 await check('window fit enlarges the frame within the display', "document.querySelector('#jv-mapa').getBoundingClientRect().width>=innerWidth-26")
                 shot=await call('Page.captureScreenshot', {'format':'png'})
                 Path('/tmp/jarvis-interacao-foco.png').write_bytes(base64.b64decode(shot['data']))
@@ -141,9 +148,11 @@ async def main():
                 await check('panel fit returns to default size', 'it.scale===1')
                 await ev("""pinch('.panel [data-panel-action="smaller"]');pinch('.panel [data-panel-action="smaller"]');""")
                 await asyncio.sleep(.2)
+                await quadros()
                 await check('panel controls stay usable at the smallest scale', "[...pane.querySelectorAll('button')].every(e=>e.getBoundingClientRect().width>=54&&e.getBoundingClientRect().height>=54)")
                 await ev("jarvisPanels.scale(it,2)")
                 await asyncio.sleep(.2)
+                await quadros()
                 await check('maximal panel zoom keeps every control on screen', "[...pane.querySelectorAll('button')].every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})")
                 await ev("jarvisPanels.scale(it,1)")
                 await asyncio.sleep(.2)
