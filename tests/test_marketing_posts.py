@@ -280,6 +280,114 @@ def test_publicar_exige_instagram_e_endereco_e_a_recusa_volta_a_rascunho(tmp_pat
         sem_ig.publicar(r.id)
 
 
+def _processo_que_parou() -> int:
+    import subprocess
+
+    filho = subprocess.Popen(["/usr/bin/true"])
+    filho.wait()
+    return filho.pid
+
+
+def _deixar_em(posts: Posts, id_: str, estado: str, ha_s: float) -> None:
+    """Como um reinício do Zé deixa o post: o estado em andamento, de um processo que parou."""
+    import time
+
+    arquivo = posts.pasta / id_ / "post.json"
+    dados = json.loads(arquivo.read_text())
+    dados.update(estado=estado, processo=_processo_que_parou(), desde=time.time() - ha_s)
+    arquivo.write_text(json.dumps(dados))
+
+
+def test_reinicio_no_meio_da_publicacao_nao_deixa_o_post_preso(tmp_path: Path) -> None:
+    """17/11/2026: o Zé reiniciou 39 s depois de começar a publicar um carrossel, e o post ficou
+    em "publicando" para sempre, sem erro. Agora quem lê o post confere no Instagram se saiu."""
+    procurados: list[tuple[str, float]] = []
+    achado = {"link": ""}
+
+    def procurar(_ig: Any, legenda: str, desde: float) -> str:
+        procurados.append((legenda, desde))
+        return achado["link"]
+
+    enviados: list[list[str]] = []
+
+    def publicar(_ig: Any, urls: list[str], _legenda: str) -> str:
+        enviados.append(urls)
+        return "https://www.instagram.com/p/novo/"
+
+    posts, site, _ = _posts(tmp_path, procurar=procurar, publicar=publicar)
+    p = posts.criar(tema="planilhas copiadas à mão", esperar=True)
+
+    _deixar_em(posts, p.id, "publicando", ha_s=30)  # recente: a Meta pode ainda não listar
+    assert posts.ler(p.id).estado == "publicando" and not procurados
+
+    _deixar_em(posts, p.id, "publicando", ha_s=600)
+    (lido,) = posts.listar()
+    assert lido.estado == "rascunho" and "não saiu" in lido.erro and "publicar de novo" in lido.erro
+    assert procurados[-1][0] == lido.legenda and "não saiu" in site.avisos[-1]
+    assert posts.publicar(p.id, esperar=True).estado == "publicado" and len(enviados) == 1
+
+    q = posts.criar(tema="outro tema", esperar=True)
+    _deixar_em(posts, q.id, "publicando", ha_s=600)
+    achado["link"] = "https://www.instagram.com/p/saiu/"
+    feito = posts.ler(q.id)
+    assert feito.estado == "publicado" and feito.permalink == "https://www.instagram.com/p/saiu/"
+    with pytest.raises(PostErro):
+        posts.publicar(q.id)  # já saiu: publicar de novo duplicaria
+    assert len(enviados) == 1
+
+
+def test_sem_conferir_no_instagram_o_post_pede_para_conferir(tmp_path: Path) -> None:
+    def procurar(*_a: Any) -> str:
+        raise InstagramErro("Sem conexão com o Instagram.")
+
+    posts, _, _ = _posts(tmp_path, procurar=procurar)
+    p = posts.criar(tema="x", esperar=True)
+    _deixar_em(posts, p.id, "publicando", ha_s=600)
+    lido = posts.ler(p.id)
+    assert lido.estado == "rascunho" and "Confira no Instagram" in lido.erro
+
+
+def test_reinicio_no_meio_da_criacao_vira_erro_e_pode_refazer(tmp_path: Path) -> None:
+    posts, _, _ = _posts(tmp_path)
+    p = posts.criar(tema="x", esperar=True)
+    _deixar_em(posts, p.id, "criando", ha_s=5)
+    lido = posts.ler(p.id)
+    assert lido.estado == "erro" and "interrompida" in lido.erro
+    assert posts.refazer(p.id, "de novo", esperar=True).estado == "rascunho"
+
+
+def test_o_post_que_este_processo_publica_nao_e_mexido(tmp_path: Path) -> None:
+    import threading
+
+    publicando, solta = threading.Event(), threading.Event()
+
+    def publicar(*_a: Any) -> str:
+        publicando.set()
+        solta.wait(10)
+        return "https://www.instagram.com/p/abc/"
+
+    def procurar(*_a: Any) -> str:
+        raise AssertionError("não confere um post que ainda está sendo publicado")
+
+    posts, _, _ = _posts(tmp_path, publicar=publicar, procurar=procurar)
+    p = posts.criar(tema="x", esperar=True)
+    posts.publicar(p.id)
+    assert publicando.wait(10)
+    assert posts.ler(p.id).estado == "publicando"
+    solta.set()
+
+
+def test_defeito_inesperado_ao_publicar_nao_deixa_o_post_preso(tmp_path: Path) -> None:
+    def quebrar(*_a: Any) -> str:
+        raise KeyError("id")
+
+    posts, site, _ = _posts(tmp_path, publicar=quebrar)
+    p = posts.criar(tema="x", esperar=True)
+    feito = posts.publicar(p.id, esperar=True)
+    assert feito.estado == "rascunho" and "Confira no Instagram" in feito.erro
+    assert site.avisos[-1].startswith("Não publiquei o post")
+
+
 # --- a API do Instagram -------------------------------------------------------------------
 
 
@@ -341,6 +449,31 @@ def test_uma_imagem_so_e_foto_e_erro_da_meta_nao_publica() -> None:
     assert not any(c.endswith("/media_publish") for _m, c, _d in ruim.pedidos)
     with pytest.raises(InstagramErro, match="de 1 a 10"):
         instagram_publicar.publicar(_ig(Meta([])), [], "L")
+
+
+def test_procurar_acha_o_post_pela_legenda_e_pela_hora() -> None:
+    pedidos: list[str] = []
+    lista = {
+        "data": [
+            {"caption": "Legenda  nova", "timestamp": "2026-11-17T20:51:00+0000",
+             "permalink": "https://www.instagram.com/p/novo/"},
+            {"caption": "Legenda nova", "timestamp": "2026-11-16T12:00:00+0000",
+             "permalink": "https://www.instagram.com/p/velho/"},
+        ]
+    }  # fmt: skip
+
+    def abrir(pedido: Any, timeout: float) -> Any:
+        pedidos.append(pedido.full_url)
+        return io.BytesIO(json.dumps(lista).encode())
+
+    ig: Any = SimpleNamespace(abrir=abrir, _token=lambda: ("ig", "1784", "IGtoken"))
+    desde = 1_794_948_600.0  # 17/11/2026 20:50 UTC
+    assert instagram_publicar.procurar(ig, "Legenda nova", desde) == (
+        "https://www.instagram.com/p/novo/"
+    )
+    assert instagram_publicar.procurar(ig, "Outra legenda", desde) == ""
+    assert instagram_publicar.procurar(ig, "Legenda nova", desde + 86400) == ""
+    assert "/me/media?" in pedidos[0] and "caption" in pedidos[0]
 
 
 # --- os visuais e as fotos ----------------------------------------------------------------
