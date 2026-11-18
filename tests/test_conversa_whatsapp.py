@@ -272,7 +272,7 @@ def test_pedido_atrasado_grupo_e_midia_nao_vao_ao_cerebro(
     servico, n = _servico(tmp_path, monkeypatch)
     servico._evento_da_central(_pedido(hora=time.time() - sa.PEDIDO_VALIDO_S - 5))
     servico._evento_da_central(_pedido(chat="120363000000000000@g.us"))
-    servico._evento_da_central(_pedido(texto="", midia="audio", evento="s:9"))
+    servico._evento_da_central(_pedido(texto="", midia="video", evento="s:9"))
     assert n.conversa_whatsapp.pedidos == []
     assert n.central.enviadas == [(EU, sa.SO_TEXTO)]
 
@@ -325,3 +325,17 @@ def test_ao_desligar_o_ze_para_de_ouvir_a_central_e_fecha_o_chat_voce(
     del n.conversa_whatsapp  # nunca houve pedido: nada a fechar
     servico.parar_atendimento()
     assert fechou == ["central", "conversa", "central"]
+
+
+def test_mensagem_de_controle_do_whatsapp_nao_recebe_resposta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A prova de 18/11/2026: depois de cada resposta, o "other" que chega junto (a troca de
+    # chaves, uma reação) recebia "Por enquanto, só mensagens de texto."
+    servico, n = _servico(tmp_path, monkeypatch)
+    servico._evento_da_central(_pedido(texto="", midia="other", evento="s:1"))
+    assert n.conversa_whatsapp.pedidos == [] and n.central.enviadas == []
+    for midia in ("audio", "image", "video", "document", "sticker"):
+        servico._evento_da_central(_pedido(texto="legenda", midia=midia, evento=f"s:{midia}"))
+    # O áudio que chega até aqui é o que a Central não conseguiu transcrever (ADR 0103).
+    assert n.central.enviadas == [(EU, sa.AUDIO_FALHOU)] + [(EU, sa.SO_TEXTO)] * 4

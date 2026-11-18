@@ -85,6 +85,37 @@ def conferir(chave: str, abrir: Callable[..., Any] = urllib.request.urlopen) -> 
         return False, "Sem conexão com o Deepgram."
 
 
+ARQUIVO = "https://api.deepgram.com/v1/listen"  # um áudio inteiro, de uma vez (ADR 0103)
+ARQUIVO_PARAMETROS = {"model": "nova-3", "language": "pt-BR", "punctuate": "true",
+                      "smart_format": "false"}  # fmt: skip
+
+
+def transcrever(
+    chave: str, audio: bytes, tipo: str, abrir: Callable[..., Any] = urllib.request.urlopen
+) -> str:
+    """O texto de um áudio gravado (a mensagem de voz do WhatsApp, por exemplo); "" se não houve
+    fala. A falha sobe como EscutaErro, com o motivo."""
+    consulta_arquivo = urlencode([*ARQUIVO_PARAMETROS.items(), *(("keyterm", t) for t in TERMOS)])
+    pedido = urllib.request.Request(  # noqa: S310 (endereço fixo do Deepgram, https)
+        f"{ARQUIVO}?{consulta_arquivo}",
+        data=audio,
+        method="POST",
+        headers={"Authorization": f"Token {chave}", "Content-Type": tipo or "audio/ogg"},
+    )
+    try:
+        with abrir(pedido, timeout=60) as resposta:
+            dados = json.loads(resposta.read())
+    except urllib.error.HTTPError as erro:
+        raise EscutaErro(RECUSAS.get(erro.code, f"HTTP {erro.code}")) from erro
+    except (OSError, ValueError) as erro:
+        raise EscutaErro("sem conexão com o Deepgram") from erro
+    try:
+        canal = dados["results"]["channels"][0]
+        return str(canal["alternatives"][0]["transcript"]).strip()
+    except (KeyError, IndexError, TypeError):
+        return ""
+
+
 def _conectar_websocket(url: str, chave: str) -> Any:
     from websockets.sync.client import connect
 

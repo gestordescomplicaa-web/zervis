@@ -28,6 +28,7 @@ import subprocess
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -668,6 +669,25 @@ class WhatsApp:
         if not r.get("acknowledged"):
             raise WhatsAppErro("Mensagem não enviada.")
         return f"{sid}:{r.get('message_id', '')}"
+
+    def baixar_audio(self, evento: str) -> tuple[bytes, str]:
+        """O arquivo de um áudio recebido há pouco, pelo id do evento (ADR 0103): o WaCalls só
+        guarda a referência, e baixa agora. Devolve os bytes e o tipo (audio/ogg)."""
+        sessoes = [s for s in self.sessoes() if s.get("paired") and s.get("state") == "open"]
+        if not sessoes:
+            raise WhatsAppErro("WhatsApp não conectado.")
+        consulta = urllib.parse.urlencode({"evento": evento})
+        pedido = urllib.request.Request(
+            f"http://127.0.0.1:{self.porta}/api/sessions/{sessoes[0]['id']}/audio?{consulta}",
+            headers={"X-Internal-Token": self.token, "X-Client-Id": CLIENTE},
+        )
+        try:
+            with self.abrir(pedido, timeout=40.0) as resposta:
+                return resposta.read(), str(resposta.headers.get("Content-Type", ""))
+        except urllib.error.HTTPError as erro:
+            raise WhatsAppErro(f"O WhatsApp não entregou o áudio ({erro.code}).") from erro
+        except (urllib.error.URLError, OSError) as erro:
+            raise WhatsAppErro("Sem conexão com o WhatsApp.") from erro
 
     def agenda(self) -> list[dict[str, str]]:
         """Os contatos salvos na agenda do celular (nome, número, LID), que o WhatsApp sincroniza
