@@ -232,11 +232,13 @@ def _servico(
     monkeypatch.setattr(w, "CONVERSA", tmp_path / "whatsapp-conversa.json")
     if ligada:
         w.configurar_conversa(True, [DONO])
-    registradas: list[tuple[str, str]] = []
+    registradas: list[tuple[str, str, str]] = []
     n = SimpleNamespace(
         central=CentralFalsa(),
         conversa_whatsapp=ConversaFalsa(),
-        conversas=SimpleNamespace(registrar=lambda p, r: registradas.append((p, r))),
+        conversas=SimpleNamespace(
+            registrar=lambda p, r, origem="": registradas.append((p, r, origem))
+        ),
         consumo=SimpleNamespace(somar=lambda uso, provedor: None),
         provedor="claude",
         registradas=registradas,
@@ -294,7 +296,7 @@ def test_resposta_vai_ao_chat_em_partes_e_entra_na_conversa_do_dia(
     assert len(partes) == 2 and all(len(p) <= sa.PARTE_MAXIMA for p in partes)
     assert " ".join(partes) == longa
     assert all(chat == EU for chat, _ in n.central.enviadas)
-    assert n.registradas == [("resuma", longa)]
+    assert n.registradas == [("resuma", longa, "whatsapp")]
 
     servico.resposta_do_whatsapp(pm.Feito("oi", "", "TimeoutError", EU))
     assert n.central.enviadas[-1] == (EU, sa.SEM_RESPOSTA)

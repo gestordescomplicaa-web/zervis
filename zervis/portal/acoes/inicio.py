@@ -28,6 +28,7 @@ class AcoesInicio(Pagina):
         "_aplicar_depois",
         "_fonte",
         "atualizacao",
+        "aprovacoes_pendentes",
         "autoconhecimento",
         "central",
         "cerebro",
@@ -36,6 +37,7 @@ class AcoesInicio(Pagina):
         "consumo",
         "conversa_em_andamento",
         "conversas",
+        "decidir_aprovacao",
         "escrever",
         "espera",
         "foco",
@@ -98,7 +100,10 @@ class AcoesInicio(Pagina):
         itens: list[dict[str, Any]] = []
         for t in self.n.conversas.do_dia(hoje.date()):
             quando = t.em.isoformat(timespec="seconds")
-            itens.append({"quando": quando, "tipo": "voce", "texto": t.pessoa})
+            pedido: dict[str, Any] = {"quando": quando, "tipo": "voce", "texto": t.pessoa}
+            if origem := getattr(t, "origem", ""):
+                pedido["origem"] = origem  # "whatsapp": a Conversa marca (ADR 0104)
+            itens.append(pedido)
             if t.ze:
                 resposta: dict[str, Any] = {"quando": quando, "tipo": "ze", "texto": t.ze}
                 if gasto := getattr(t, "gasto", None):
@@ -126,10 +131,12 @@ class AcoesInicio(Pagina):
                 itens.append({**_item(atual, "ze"), "pendente": "1"})
         fila = getattr(self.n, "fila", None)
         esperando = [a.titulo or a.texto for a in fila.validos()] if fila is not None else []
+        pendentes = getattr(self.n, "aprovacoes_pendentes", None)  # sem a Central nos testes
         return {
             "itens": itens[-200:],
             "esperando": esperando,
             "consumo": self._consumo_de_hoje(),
+            "aprovacoes": pendentes() if pendentes is not None else [],
         }
 
     def _consumo_de_hoje(self) -> dict[str, Any]:
@@ -152,6 +159,11 @@ class AcoesInicio(Pagina):
     def escrever(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Um pedido escrito no painel: o mesmo caminho da fala."""
         return {"aviso": self.n.escrever(str(dados.get("texto", "")))}
+
+    def decidir_aprovacao(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Aprovar ou negar uma ação pedida pelo WhatsApp (ADR 0104): só aqui, com login."""
+        ident = str(dados.get("id", ""))[:32]
+        return {"aviso": self.n.decidir_aprovacao(ident, dados.get("aprovar") is True)}
 
     def atividade(self) -> dict[str, Any]:
         """O que o Zé fez e onde tropeçou (ADR 0025), do mais recente ao mais antigo."""

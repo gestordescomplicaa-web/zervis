@@ -289,8 +289,10 @@ Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
   ([ADR 0102](adr/0102-conversa-pelo-whatsapp.md)), o número conectado é o do Zé, e a mensagem
   do seu número, autorizado no painel, é um pedido, respondido na mesma conversa por um cérebro
   próprio, com o Zé inativo; nada com efeito é confirmado por ali. O áudio do seu número é
-  transcrito desde 18/11/2026 ([ADR 0103](adr/0103-audio-na-conversa-com-o-ze.md)). Falta ter
-  o seu número e o do Zé conectados ao mesmo tempo.
+  transcrito desde 18/11/2026 ([ADR 0103](adr/0103-audio-na-conversa-com-o-ze.md)). Desde
+  18/11/2026 ([ADR 0104](adr/0104-aprovacao-no-painel.md)), é a mesma conversa da voz e do
+  painel, e o que tem efeito espera a aprovação no painel. Falta ter o seu número e o do Zé
+  conectados ao mesmo tempo.
 - [ ] **Windows e Mac pelo Docker Desktop:** a imagem da VPS também para arm64 (os Macs com
   Apple Silicon) e o passo a passo. O Zé inteiro pelo navegador em `localhost`, menos o microfone
   do sistema e as ações do Omarchy. Avaliação de 17/11/2026: é o caminho barato; o Mac nativo é

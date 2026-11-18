@@ -11,9 +11,12 @@ import { compartilhado, carregadas } from "../modulos/estado.js";
 //
 // Cada resposta mostra o que gastou (pedido de 27/10/2026: entender como o Zé gasta os tokens),
 // por parte: a via rápida, o cérebro e a pesquisa; no topo, o dia e o que rodou em segundo plano.
+//
+// A conversa pelo WhatsApp é a mesma (ADR 0104): os pedidos de lá vêm marcados, e o que eles
+// pedirem com efeito espera aqui, em "Aprovação pendente", porque só o painel exige login.
 
 PAGINAS.conversa = async () => `<div class="pagina-conversa">
-  <header class="conversa-cabeca">${cabeca("Conversa")}${sub("O que você falou com o Zé hoje, as respostas e os avisos.")}<p class="consumo-dia" id="consumo-dia" hidden></p><p class="esperando" id="esperando" hidden></p></header>
+  <header class="conversa-cabeca">${cabeca("Conversa")}${sub("O que você falou com o Zé hoje, as respostas e os avisos.")}<p class="consumo-dia" id="consumo-dia" hidden></p><p class="esperando" id="esperando" hidden></p><div class="aprovacoes" id="aprovacoes" hidden></div></header>
   <div class="fio" id="fio" aria-live="polite"></div>
   <form class="escrever" id="escrever">
     <textarea id="escrever-texto" rows="1" placeholder="Escreva para o Zé" autocomplete="off" aria-label="Mensagem"></textarea>
@@ -27,7 +30,8 @@ let fioTimer = null;
  * de novo, a mensagem fica como entregue, sem o "digitando".
  * @type {{texto: string, quando: string, em: number, erro: boolean, entregue: boolean}[]} */
 let enviadas = [];
-let ultimoFio = { itens: [], esperando: [], consumo: null };
+let ultimoFio = { itens: [], esperando: [], consumo: null, aprovacoes: [] };
+let aprovacoesVistas = "";
 const horaFio = (q) => q.slice(11, 16);
 const agoraIso = () => { const d = new Date(), z = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`; };
 const digitando = '<div class="fala ze digitando" aria-label="O Zé está respondendo"><p><i></i><i></i><i></i></p></div>';
@@ -64,10 +68,22 @@ function consumoDoDia(itens, consumo) {
   return partes.join(" · ");
 }
 
+/** As ações pedidas pelo WhatsApp que esperam o "sim" daqui. */
+function montarAprovacoes() {
+  const caixa = $("aprovacoes");
+  const lista = ultimoFio.aprovacoes || [];
+  const marca = JSON.stringify(lista);
+  if (!caixa || marca === aprovacoesVistas) return;
+  aprovacoesVistas = marca;
+  caixa.hidden = !lista.length;
+  caixa.innerHTML = lista.map((a) => `<div class="aprovacao" data-id="${esc(a.id)}"><div><b>Aprovação pendente</b><span>WhatsApp · ${horaFio(a.quando)}</span><p>${esc(a.descricao)}</p></div><div class="botoes"><button type="button" class="acao principal" data-aprovar="1">Aprovar</button><button type="button" class="acao" data-aprovar="0">Negar</button></div></div>`).join("");
+}
+
 /** O fio na tela: o histórico, a troca em curso e as mensagens que acabaram de sair daqui. */
 function montarFio() {
   const fio = $("fio");
   if (!fio) return;
+  montarAprovacoes();
   const { itens, esperando, consumo } = ultimoFio;
   const dia = $("consumo-dia");
   const resumo = consumoDoDia(itens, consumo);
@@ -89,7 +105,7 @@ function montarFio() {
   const embaixo = fio.scrollHeight - fio.scrollTop - fio.clientHeight < 80;
   const balao = (i) => i.tipo === "aviso"
     ? `<div class="fala aviso"><span>Aviso · ${horaFio(i.quando)}</span><p>${esc(i.texto)}</p></div>`
-    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}"><p>${esc(i.texto)}</p><span>${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
+    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}"><p>${esc(i.texto)}</p><span>${i.origem === "whatsapp" ? "WhatsApp · " : ""}${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
   const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}"><p>${esc(m.texto)}</p><span>${m.erro ? "Não enviado" : horaFio(m.quando)}</span></div>`);
   const tudo = [...itens.map(balao), ...minhas, ...(esperandoResposta ? [digitando] : [])];
   fio.innerHTML = tudo.length ? tudo.join("") : vazio("Nada por aqui hoje.");
@@ -115,7 +131,7 @@ function vigiarFio(vez) {
 
 /** @param {number} vez */
 export async function prepararConversa(vez) {
-  fioVisto = "";
+  fioVisto = ""; aprovacoesVistas = "";
   await desenharFio();
   if (vez !== compartilhado.navegacao) return;
   vigiarFio(vez);
@@ -140,6 +156,14 @@ export async function prepararConversa(vez) {
     fioVisto = ""; await desenharFio().catch(() => montarFio());
   };
   $("escrever").addEventListener("submit", enviar);
+  $("aprovacoes").addEventListener("click", async (ev) => {
+    const botao = /** @type {HTMLButtonElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest("button[data-aprovar]"));
+    const id = /** @type {HTMLElement | null} */ (botao?.closest("[data-id]"))?.dataset.id;
+    if (!botao || !id) return;
+    for (const b of botao.parentElement?.querySelectorAll("button") || []) /** @type {HTMLButtonElement} */ (b).disabled = true;
+    try { toast((await api("conversa/aprovacao", { id, aprovar: botao.dataset.aprovar === "1" })).aviso); } catch (erro) { toast(erro.message); }
+    aprovacoesVistas = ""; await desenharFio().catch(() => {});
+  });
   campo.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) enviar(ev); });
   campo.addEventListener("input", () => { campo.style.height = ""; campo.style.height = Math.min(campo.scrollHeight, 160) + "px"; });
   campo.focus();
@@ -158,6 +182,12 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .gasto ul { margin: 6px 0 2px; padding: 8px 10px; list-style: none; display: grid; gap: 6px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo-2); }
 .gasto b { color: var(--texto); font-weight: 600; }
 .esperando { margin: 8px 0 0; padding: 6px 10px; border-radius: 10px; font-size: 13.5px; color: var(--alerta); border: 1px solid rgb(239 190 124 / .4); }
+.aprovacoes { display: grid; gap: 8px; margin: 10px 0 0; }
+.aprovacao { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; border: 1px solid rgb(239 190 124 / .45); background: var(--fundo-2); }
+.aprovacao > div:first-child { display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.aprovacao span { font-size: 11.5px; color: var(--suave); }
+.aprovacao p { margin: 2px 0 0; overflow-wrap: anywhere; }
+.aprovacao .botoes { display: flex; gap: 8px; }
 .fio { overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
 .fala { max-width: 78%; display: grid; gap: 2px; }
 .fala p { margin: 0; padding: 9px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Uma conversa só, com a aprovação no painel:** o Zé do WhatsApp sabe o que foi dito pela voz
+  e pelo painel, e o da voz sabe o que foi dito pelo WhatsApp; na Conversa, os pedidos de lá vêm
+  marcados "WhatsApp". O que você pedir pelo WhatsApp com efeito aparece na Conversa com
+  **Aprovar** e **Negar** e só roda se aprovado ali, em até 10 minutos. Anotar na memória passa
+  direto (ADR 0104).
+
 - **Áudio na conversa com o Zé:** o áudio que você manda do seu número ao Zé pelo WhatsApp é
   transcrito e respondido como uma mensagem escrita (ADR 0103). Usa a chave do Deepgram da
   escuta. Os áudios dos outros contatos continuam sem ser baixados.

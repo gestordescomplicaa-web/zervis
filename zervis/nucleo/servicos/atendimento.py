@@ -1,11 +1,13 @@
 """Serviço de atendimento; pode ser exercitado com dependências próprias, sem subir o núcleo."""
 
+import asyncio
 import contextlib
 import hashlib
 import logging
 import re
 import secrets
 import time
+from datetime import datetime
 from typing import Any, Protocol
 
 from zervis import atividade, fuso, usuario
@@ -14,8 +16,10 @@ from zervis.avisos import caixa as caixa_mod
 from zervis.avisos import falas_whatsapp, ligacoes, mensagens, pendentes
 from zervis.avisos import modo as modo_fala
 from zervis.cerebro import catalogo, rapido
+from zervis.cerebro.aprovacoes import Aprovacoes
 from zervis.cerebro.base import Brain
 from zervis.cerebro.por_mensagem import ConversaPorMensagem, Feito
+from zervis.memoria import conversas as conversas_mod
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import DADOS
 
@@ -34,6 +38,10 @@ AUDIO_FALHOU = "Áudio não reconhecido. Envie de novo ou em texto."
 MIDIAS = frozenset({"audio", "image", "video", "document", "sticker"})
 SEM_RESPOSTA = "Não consegui responder agora. Tente de novo."
 FILA_CHEIA = "Muitos pedidos na fila. Tente de novo em instantes."
+AGUARDANDO = "Aprovação pendente no painel do Zé (Conversa): {descricao}"
+FUSO = fuso.local()
+TURNOS_NOVO = 8  # o cérebro do WhatsApp que acabou de subir leva os últimos turnos do dia
+TURNOS_DO_WHATSAPP = 6  # o da voz leva no máximo estes, do WhatsApp, por pedido
 
 
 class ContextoAtendimento(Protocol):
@@ -63,6 +71,10 @@ class ContextoAtendimento(Protocol):
 class ServicoAtendimento:
     def __init__(self, contexto: ContextoAtendimento) -> None:
         self.n = contexto
+        self.aprovacoes = Aprovacoes()  # as ações pedidas pelo WhatsApp (ADR 0104)
+        agora = datetime.now(FUSO)
+        self._visto_pelo_whatsapp = agora  # até onde o cérebro do WhatsApp já viu a voz
+        self._visto_pela_voz = agora.replace(hour=0, minute=0, second=0, microsecond=0)
 
     def _mensagem_importante(self, texto: str) -> None:
         self.n._na_linha("aviso", texto)
@@ -315,7 +327,11 @@ class ServicoAtendimento:
         nele)."""
         if (conversa := getattr(self.n, "conversa_whatsapp", None)) is None:
             conversa = ConversaPorMensagem(
-                self._cerebro_do_whatsapp, self.n.persona, self.resposta_do_whatsapp
+                self._cerebro_do_whatsapp,
+                self.n.persona,
+                self.resposta_do_whatsapp,
+                aprovar=self._aprovar_no_painel,
+                contexto=self._contexto_da_voz,
             )
             self.n.conversa_whatsapp = conversa  # type: ignore[attr-defined]
         return conversa
@@ -330,8 +346,65 @@ class ServicoAtendimento:
         """O Zé desligando: para de ouvir a Central (que continua atendendo) e fecha a conversa
         pelo WhatsApp."""
         self.n.central.parar()
+        self.aprovacoes.negar_todas()  # o cérebro que espera a decisão para de esperar
         if (conversa := getattr(self.n, "conversa_whatsapp", None)) is not None:
             conversa.fechar()
+
+    # --- a mesma conversa, com a aprovação no painel (ADR 0104) --------------------------------
+
+    async def _aprovar_no_painel(self, descricao: str, destino: str) -> bool:
+        """Uma ação pedida pelo WhatsApp: o aviso vai ao seu número, e ela espera a sua decisão
+        no painel (que exige login) até o prazo; vencido, é negada."""
+        atividade.PADRAO.registrar(
+            "execucao", f"Aprovação pendente: {descricao}", origem="whatsapp"
+        )
+        chave = hashlib.sha256(f"aprovar:{destino}:{time.time()}".encode()).hexdigest()[:24]
+        aviso = AGUARDANDO.format(descricao=descricao)
+        await asyncio.to_thread(self._responder_no_whatsapp, destino, aviso, chave)
+        decisao = await self.aprovacoes.esperar(descricao, "whatsapp")
+        if decisao is None:
+            atividade.PADRAO.registrar("negada", descricao, motivo="aprovação expirada")
+        return bool(decisao)
+
+    def aprovacoes_pendentes(self) -> list[dict[str, Any]]:
+        return self.aprovacoes.listar()
+
+    def decidir_aprovacao(self, ident: str, aprovar: bool) -> str:
+        """O painel: aprovar ou negar uma ação pedida pelo WhatsApp."""
+        pendente = self.aprovacoes.decidir(ident, aprovar)
+        if pendente is None:
+            return "Aprovação expirada."
+        decisao = "Aprovado" if aprovar else "Negado"
+        atividade.PADRAO.registrar(
+            "execucao", f"{decisao} no painel: {pendente.descricao}", origem="painel"
+        )
+        return f"{decisao}."
+
+    def _contexto_da_voz(self, novo: bool) -> str:
+        """Para o cérebro do WhatsApp: o que foi dito pela voz e pelo painel desde o pedido
+        anterior; recém-subido, os últimos turnos do dia, de onde vierem."""
+        agora = datetime.now(FUSO)
+        if novo:
+            hoje = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+            turnos = self.n.conversas.depois(hoje)[-TURNOS_NOVO:]
+        else:
+            turnos = self.n.conversas.depois(self._visto_pelo_whatsapp, {""})
+        self._visto_pelo_whatsapp = agora
+        return conversas_mod.em_texto(turnos)
+
+    def com_o_whatsapp(self, texto: str) -> str:
+        """Para o cérebro da voz: o que foi dito pelo WhatsApp desde o pedido anterior."""
+        agora = datetime.now(FUSO)
+        try:
+            turnos = self.n.conversas.depois(self._visto_pela_voz, {"whatsapp"})
+        except Exception:
+            log.exception("conversas: o WhatsApp não entrou no contexto")
+            return texto
+        self._visto_pela_voz = agora
+        if not turnos:
+            return texto
+        conversa = conversas_mod.em_texto(turnos[-TURNOS_DO_WHATSAPP:])
+        return f"(Pelo WhatsApp, desde o pedido anterior:\n{conversa})\n{texto}"
 
     def resposta_do_whatsapp(self, feito: Feito) -> None:
         """A resposta do cérebro do WhatsApp: no chat, na Atividade, na conversa do dia e no
@@ -346,7 +419,7 @@ class ServicoAtendimento:
         )
         if feito.resposta:
             try:
-                self.n.conversas.registrar(feito.pedido, feito.resposta)
+                self.n.conversas.registrar(feito.pedido, feito.resposta, origem="whatsapp")
             except OSError as erro:
                 log.warning("conversas: %s", erro)
         chave = hashlib.sha256(f"{feito.destino}:{time.time()}".encode()).hexdigest()[:24]

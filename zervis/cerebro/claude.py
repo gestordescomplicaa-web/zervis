@@ -359,7 +359,7 @@ class ClaudeBrain:
         atividade.PADRAO.registrar(
             "negada", titulo, ferramenta=curto, entrada=entrada, motivo="não aprovada", fala=fala
         )
-        motivo = "O usuário não aprovou por voz."
+        motivo = "O usuário não aprovou."
         if fala:
             # Uma correção ("sim, mas no projeto Y") chega aqui: o cérebro ajusta e pergunta.
             motivo += f' Ele respondeu: "{fala}". Siga o que ele disse; se corrigiu, ajuste.'
