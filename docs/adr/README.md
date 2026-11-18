@@ -110,3 +110,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0100](0100-imersao-pelo-painel.md) | A Imersão pelo painel: o Zé e os cards de qualquer aparelho | Aceito |
 | [0101](0101-camera-ao-vivo.md) | O vídeo ao vivo da câmera no painel | Aceito |
 | [0102](0102-conversa-pelo-whatsapp.md) | Conversar com o Zé pelo WhatsApp (o número do Zé) | Aceito |
+| [0103](0103-audio-na-conversa-com-o-ze.md) | Áudio na conversa com o Zé pelo WhatsApp | Aceito |

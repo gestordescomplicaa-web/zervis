@@ -158,11 +158,14 @@ class Central:
         texto da conversa privada. A conversa de um número autorizado é à parte: um pedido ao Zé
         (ADR 0102)."""
         if not r.grupo and self._com_o_ze(r):
-            if not r.de_mim:  # a resposta do Zé, nessa conversa, não vai a lugar nenhum
-                self.eventos.publicar(
-                    "pedido", chat=r.chat, texto=r.texto, midia=r.midia, evento=r.id,
-                    hora=r.quando,
-                )  # fmt: skip
+            if r.de_mim:  # a resposta do Zé, nessa conversa, não vai a lugar nenhum
+                return
+            if r.midia == "audio":  # baixar e transcrever leva segundos: fora do receptor
+                threading.Thread(
+                    target=self._pedido_falado, args=(r,), name="central-audio", daemon=True
+                ).start()
+                return
+            self._publicar_pedido(r, r.texto, r.midia)
             return
         comum = {
             "chat": r.chat,
@@ -180,6 +183,30 @@ class Central:
             self.eventos.publicar("mensagem", nome=r.nome, telefone=r.telefone, **comum)
         if not r.midia and not r.grupo:
             self.atendente.receber(r)
+
+    def _publicar_pedido(self, r: whatsapp.Recebida, texto: str, midia: str, **extra: Any) -> None:
+        self.eventos.publicar(
+            "pedido", chat=r.chat, texto=texto, midia=midia, evento=r.id, hora=r.quando, **extra
+        )
+
+    def _pedido_falado(self, r: whatsapp.Recebida) -> None:
+        """O áudio do seu número (ADR 0103): o WaCalls baixa só este, o Deepgram transcreve, e o
+        texto vira o pedido. Sem a chave ou sem fala reconhecida, o pedido leva o motivo."""
+        from zervis.voz import deepgram
+
+        if not (chave := self.chave_deepgram()):
+            self._publicar_pedido(r, "", "audio", falha="sem_chave")
+            return
+        texto = ""
+        try:
+            dados, tipo = self.whatsapp.baixar_audio(r.id)
+            texto = deepgram.transcrever(chave, dados, tipo)
+        except (whatsapp.WhatsAppErro, deepgram.EscutaErro) as erro:
+            log.warning("central: áudio do seu número não transcrito (%s)", erro)
+        if texto:
+            self._publicar_pedido(r, texto, "", audio=True)
+        else:
+            self._publicar_pedido(r, "", "audio", falha="transcricao")
 
     def _com_o_ze(self, r: whatsapp.Recebida) -> bool:
         """A conversa com um número que você autorizou a falar com o Zé: nem arquivo nem agente

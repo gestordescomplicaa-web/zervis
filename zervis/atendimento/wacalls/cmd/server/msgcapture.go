@@ -14,7 +14,9 @@ package main
 // caminhos mais associados a bloqueio — e está fora de propósito.
 //
 // SEM MÍDIA (decisão de 13/08/2026): só texto puro. Guardamos que existiu um
-// áudio ou uma imagem, nunca o arquivo.
+// áudio ou uma imagem, nunca o arquivo. Exceção (Zérvis, ADR 0103): do áudio em
+// conversa privada fica a referência, em memória, para o Zé baixar o do número
+// autorizado a falar com ele (audio.go).
 
 import (
 	"context"
@@ -245,6 +247,10 @@ func (s *Session) handleMessage(evt *events.Message) {
 		// aparecer com buracos inexplicáveis ("ela mandou um áudio aqui").
 		tipo, midia = "media", tipoDaMidia(evt)
 		texto = legendaDaMidia(evt)
+		if midia == "audio" && !evt.Info.IsGroup && !evt.Info.IsFromMe && s.mgr.audios != nil {
+			// Só a referência, para o Zé baixar se for do número autorizado (ADR 0103).
+			s.mgr.audios.guardar(eventID, evt.Message.GetAudioMessage(), time.Now())
+		}
 	}
 	if len(texto) > textoMaxChars {
 		texto = texto[:textoMaxChars]

@@ -26,7 +26,9 @@ log = logging.getLogger(__name__)
 PEDIDO_VALIDO_S = 600.0  # um pedido mais velho que isto (o WhatsApp entregou atrasado) não roda
 PEDIDO_MAXIMO = 4000
 PARTE_MAXIMA = 1900  # a Central aceita até 2000 caracteres por mensagem
-SO_TEXTO = "Por enquanto, só mensagens de texto."
+SO_TEXTO = "Por enquanto, só mensagens de texto e áudio."
+AUDIO_SEM_CHAVE = "Reconhecimento de fala não configurado. Envie em texto."
+AUDIO_FALHOU = "Áudio não reconhecido. Envie de novo ou em texto."
 # O que alguém mandou de fato. O WaCalls marca como "other" o que não é conteúdo: as mensagens de
 # controle do WhatsApp (a troca de chaves que chega junto do texto), reações e edições.
 MIDIAS = frozenset({"audio", "image", "video", "document", "sticker"})
@@ -293,8 +295,11 @@ class ServicoAtendimento:
             log.info("whatsapp: pedido atrasado, ignorado")
             return
         midia = str(evento.get("midia", ""))
-        if midia in MIDIAS:
-            self._responder_no_whatsapp(chat, SO_TEXTO, str(evento.get("evento", "")))
+        if midia in MIDIAS:  # o áudio que chega aqui é o que não deu para transcrever
+            aviso = SO_TEXTO
+            if midia == "audio":
+                aviso = AUDIO_SEM_CHAVE if evento.get("falha") == "sem_chave" else AUDIO_FALHOU
+            self._responder_no_whatsapp(chat, aviso, str(evento.get("evento", "")))
             return
         if midia:
             return  # "other": reação, edição, troca de chaves... não é um pedido, nem se responde

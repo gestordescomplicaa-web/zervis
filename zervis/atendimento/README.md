@@ -35,7 +35,8 @@ próprio e integrações.
   Ligar o agente, o modo (teste ou todos) e os números de teste só pela página.
 - **A conversa com o seu número é de quem usa, não de cliente** (ADR 0102). Com a conversa
   ligada, a mensagem do número autorizado no painel vira o evento `pedido`, que o Zé responde
-  com um cérebro próprio; essa conversa nunca vai ao agente nem ao arquivo.
+  com um cérebro próprio; essa conversa nunca vai ao agente nem ao arquivo. Só o áudio desse
+  número é baixado (sob pedido da Central) e transcrito (ADR 0103).
 - **Dados de cliente ficam na pasta privada** (`<dados>/atendente/`), nunca no projeto do
   agente nem no repositório.
 

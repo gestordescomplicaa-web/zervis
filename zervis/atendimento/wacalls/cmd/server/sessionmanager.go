@@ -26,6 +26,8 @@ type SessionManager struct {
 	// nao mudar a assinatura do construtor (usada nos testes).
 	db      *sql.DB
 	captura *capturaCache
+	// Zérvis (ADR 0103): as referências dos áudios recentes, para baixar sob pedido.
+	audios *audiosRecentes
 	// Mensagem de texto e' contexto acessorio. Ela nunca pode bloquear o mesmo
 	// callback do whatsmeow que entrega offer/accept/transport das chamadas.
 	msgQueue chan mensagemParaCaptura
@@ -47,6 +49,7 @@ func newSessionManager(ctx context.Context, container *sqlstore.Container, broke
 		sessions:  map[string]*Session{},
 		db:        store.db,
 		captura:   novaCapturaCache(),
+		audios:    novosAudios(),
 		msgQueue:  make(chan mensagemParaCaptura, capturaFilaMax),
 	}
 }

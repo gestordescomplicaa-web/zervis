@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Áudio na conversa com o Zé:** o áudio que você manda do seu número ao Zé pelo WhatsApp é
+  transcrito e respondido como uma mensagem escrita (ADR 0103). Usa a chave do Deepgram da
+  escuta. Os áudios dos outros contatos continuam sem ser baixados.
+
 - **Conversa com o Zé pelo WhatsApp:** conecte um número para o Zé e informe o seu em "Conversa
   com o Zé", na página Redes sociais. A mensagem do seu número ao número do Zé vai a ele, e a
   resposta chega na mesma conversa, com notificação, mesmo com o computador bloqueado. Ações com
