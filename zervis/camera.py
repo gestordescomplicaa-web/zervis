@@ -23,6 +23,9 @@ from urllib.parse import quote
 
 PORTA = 34567
 PORTA_RTSP = 554
+# O RTSP entrega o vídeo em RTP: sem "rtp" na lista, o ffmpeg recusa o fluxo (17/11/2026: a foto
+# de reserva nunca tinha funcionado por isso).
+PROTOCOLOS_RTSP = "file,pipe,concat,rtsp,rtp,tcp,udp,crypto"
 ESPERA_S = 8.0
 MAX_CARGA = 16 * 1024 * 1024
 FOTOS = 500
@@ -415,23 +418,30 @@ def _jpeg(carga: bytes) -> bytes | None:
     return carga[inicio : fim + 2]
 
 
+def manifesto_rtsp(conexao: Conexao, canal: int = 0, fluxo: int = 0) -> int:
+    """O descritor de leitura com o endereço RTSP da lente (`fluxo` 0: o principal; 1: o leve),
+    para o ffmpeg herdar (`-f concat -i pipe:N`). Assim a credencial não aparece na lista de
+    processos nem em arquivo temporário. Quem chama fecha o descritor."""
+    url = (
+        f"rtsp://{conexao.ip}:{PORTA_RTSP}/user={quote(conexao.usuario, safe='')}"
+        f"&password={quote(conexao.senha, safe='')}&channel={canal + 1}&stream={fluxo}.sdp"
+    )
+    leitura, escrita = os.pipe()
+    try:
+        # Por TCP: no Wi-Fi, o RTP por UDP perde pacotes e o quadro sai borrado.
+        manifesto = f"ffconcat version 1.0\nfile '{url}'\noption rtsp_transport tcp\n"
+        os.write(escrita, manifesto.encode())
+    finally:
+        os.close(escrita)
+    return leitura
+
+
 def _foto_rtsp(conexao: Conexao, canal: int = 0, espera_s: float = 12.0) -> bytes:
     """Decodifica um quadro por RTSP com ffmpeg opcional, sem pôr a senha nos argumentos."""
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise CameraErro("A câmera não respondeu ao pedido de foto.")
-    url = (
-        f"rtsp://{conexao.ip}:{PORTA_RTSP}/user={quote(conexao.usuario, safe='')}"
-        f"&password={quote(conexao.senha, safe='')}&channel={canal + 1}&stream=0.sdp"
-    )
-    # O manifesto entra por um descritor anônimo herdado pelo ffmpeg. Assim a credencial não
-    # aparece na lista de processos nem em arquivo temporário.
-    manifesto = f"ffconcat version 1.0\nfile '{url}'\n".encode()
-    leitura, escrita = os.pipe()
-    try:
-        os.write(escrita, manifesto)
-    finally:
-        os.close(escrita)
+    leitura = manifesto_rtsp(conexao, canal)
     try:
         processo = subprocess.run(  # noqa: S603 - executável local fixo, argumentos estruturados.
             [
@@ -441,7 +451,7 @@ def _foto_rtsp(conexao: Conexao, canal: int = 0, espera_s: float = 12.0) -> byte
                 "-loglevel",
                 "error",
                 "-protocol_whitelist",
-                "file,pipe,concat,rtsp,tcp,udp,crypto",
+                PROTOCOLOS_RTSP,
                 "-f",
                 "concat",
                 "-safe",

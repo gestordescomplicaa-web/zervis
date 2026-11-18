@@ -1,6 +1,6 @@
 import { ACOES } from "../modulos/acoes.js";
 import { abrir } from "../modulos/navegacao.js";
-import { PAGINAS, $, api, botao, cabeca, cartao, esc, ocupado, sub, toast, vazio } from "../painel.js";
+import { NO_PC, PAGINAS, $, api, botao, cabeca, cartao, esc, ocupado, sub, toast, vazio } from "../painel.js";
 
 const hora = (valor) => new Date(valor * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 const campo = (id) => /** @type {HTMLInputElement | null} */ ($(id));
@@ -61,6 +61,45 @@ function conversa(c) {
     <div class="botoes">${acao}</div>${itens ? `<div class="itens">${itens}</div>` : ""}`);
 }
 
+// O vídeo ao vivo (ADR 0101): uma lente por vez, enquanto a página estiver à vista. No PC, a
+// qualidade alta (720p); de outro aparelho, a leve, que pesa menos na rede de fora.
+let qualidade = NO_PC ? "alta" : "leve";
+
+function aoVivo(c) {
+  if (!c.configurada) return "";
+  const lentes = Array.from({ length: Math.max(1, c.lentes || 1) }, (_, i) => i + 1);
+  return cartao("Ao vivo", `${sub("O vídeo de cada lente, enquanto esta página estiver aberta.")}
+    <div class="botoes">${lentes.map((n) => botao(`Lente ${n}`, "camera-ao-vivo", `data-lente="${n}" aria-pressed="false"`, "discreta")).join("")}
+      ${botao(qualidade === "alta" ? "Qualidade alta" : "Qualidade leve", "camera-qualidade", "", "discreta")}
+      ${botao("Parar", "camera-parar", "hidden", "discreta")}</div>
+    <img id="camera-video" class="foto-impressora" alt="Vídeo ao vivo da câmera" hidden>`);
+}
+
+function pararVideo() {
+  const video = /** @type {HTMLImageElement | null} */ ($("camera-video"));
+  if (video) { video.removeAttribute("src"); video.hidden = true; delete video.dataset.lente; }
+  document.querySelectorAll('[data-acao="camera-ao-vivo"]').forEach((b) => b.setAttribute("aria-pressed", "false"));
+  const parar = document.querySelector('[data-acao="camera-parar"]');
+  if (parar) /** @type {HTMLElement} */ (parar).hidden = true;
+}
+
+function verLente(lente) {
+  const video = /** @type {HTMLImageElement | null} */ ($("camera-video"));
+  if (!video) return;
+  video.onerror = () => { if (video.dataset.lente) { pararVideo(); toast("Sem vídeo da câmera agora."); } };
+  video.dataset.lente = String(lente);
+  video.src = `/fluxo/camera/ao-vivo?lente=${lente}&qualidade=${qualidade}&t=${Date.now()}`;
+  video.hidden = false;
+  document.querySelectorAll('[data-acao="camera-ao-vivo"]').forEach((b) =>
+    b.setAttribute("aria-pressed", String(/** @type {HTMLElement} */ (b).dataset.lente === String(lente))));
+  const parar = document.querySelector('[data-acao="camera-parar"]');
+  if (parar) /** @type {HTMLElement} */ (parar).hidden = false;
+}
+
+// Fora da página Câmera ou com a janela escondida, o vídeo para (e o ffmpeg do Zé com ele).
+addEventListener("hashchange", () => { if (location.hash !== "#camera") pararVideo(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") pararVideo(); });
+
 function galeria(fotos) {
   const tirar = `<div class="botoes">${botao("Tirar foto agora", "camera-tirar", "", "discreta")}</div>`;
   if (!fotos.length) return cartao("Fotos", vazio("Nenhuma foto guardada.") + tirar);
@@ -73,10 +112,18 @@ function galeria(fotos) {
 
 PAGINAS.camera = async () => {
   const c = await api("camera");
-  return `${cabeca("Câmera", '<a class="acao discreta" href="#dispositivos">Dispositivos</a>')}${formulario(c)}${conversa(c)}${galeria(c.fotos || [])}`;
+  return `${cabeca("Câmera", '<a class="acao discreta" href="#dispositivos">Dispositivos</a>')}${formulario(c)}${aoVivo(c)}${conversa(c)}${galeria(c.fotos || [])}`;
 };
 
 Object.assign(ACOES, {
+  "camera-ao-vivo": (/** @type {HTMLButtonElement} */ b) => verLente(Number(b.dataset.lente || 1)),
+  "camera-parar": () => pararVideo(),
+  "camera-qualidade": (/** @type {HTMLButtonElement} */ b) => {
+    qualidade = qualidade === "alta" ? "leve" : "alta";
+    b.textContent = qualidade === "alta" ? "Qualidade alta" : "Qualidade leve";
+    const lente = /** @type {HTMLImageElement | null} */ ($("camera-video"))?.dataset.lente;
+    if (lente) verLente(Number(lente));
+  },
   "camera-procurar": async (/** @type {HTMLButtonElement} */ b) => {
     const r = await ocupado(b, () => api("camera/procurar", {}));
     const [achada] = r.achadas;

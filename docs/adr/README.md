@@ -108,3 +108,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0098](0098-memoria-com-validade-e-frase-de-apoio.md) | Memória com validade e fato aprendido só com a frase de quem usa | Aceito |
 | [0099](0099-deepgram-so-com-fala.md) | No Live, o Deepgram só ouve quando há fala | Aceito |
 | [0100](0100-imersao-pelo-painel.md) | A Imersão pelo painel: o Zé e os cards de qualquer aparelho | Aceito |
+| [0101](0101-camera-ao-vivo.md) | O vídeo ao vivo da câmera no painel | Aceito |
