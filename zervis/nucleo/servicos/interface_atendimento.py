@@ -98,3 +98,12 @@ class InterfaceAtendimento(InterfaceServico):
 
     def parar_atendimento(self) -> None:
         servico(self, ServicoAtendimento).parar_atendimento()
+
+    def aprovacoes_pendentes(self) -> list[dict[str, Any]]:
+        return servico(self, ServicoAtendimento).aprovacoes_pendentes()
+
+    def decidir_aprovacao(self, ident: str, aprovar: bool) -> str:
+        return servico(self, ServicoAtendimento).decidir_aprovacao(ident, aprovar)
+
+    def _com_o_whatsapp(self, texto: str) -> str:
+        return servico(self, ServicoAtendimento).com_o_whatsapp(texto)

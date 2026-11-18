@@ -15,8 +15,8 @@ o mesmo provedor, a mesma persona e as mesmas ferramentas, numa sessão separada
 import asyncio
 import logging
 import threading
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, replace
 from typing import Any
 
 from zervis.cerebro.base import Brain, Espera, Resposta, Texto
@@ -31,10 +31,15 @@ SEM_CONFIRMACAO = (
 NOTA_DA_PERSONA = """\
 ## Conversa pelo WhatsApp
 
-Os pedidos desta conversa chegam escritos pelo WhatsApp, do número de quem usa para o número do \
-Zé, não pela voz. Responda em texto curto, para ler no celular, sem tabelas nem títulos. Ações \
-que pedem confirmação não podem ser confirmadas por aqui: quando uma for negada por isso, diga \
-em uma frase que ela precisa ser confirmada pela voz ou pelo painel do Zé."""
+Os pedidos desta conversa chegam pelo WhatsApp, do número de quem usa para o número do Zé, \
+escritos ou em áudio transcrito, não pela voz. Responda em texto curto, para ler no celular, sem \
+tabelas nem títulos. É a mesma conversa da voz e do painel: o que foi dito por lá vem antes do \
+pedido, entre <conversa> e </conversa>, só como contexto. Ações que pedem confirmação esperam a \
+aprovação de quem usa no painel do Zé (o aviso sai sozinho); quando uma for negada, diga em uma \
+frase que não foi aprovada no painel, sem tentar de novo."""
+INICIO_DO_CONTEXTO = "<conversa>"
+FIM_DO_CONTEXTO = "</conversa>"
+MEMORIA = "mcp__jarvis__memoria"
 
 
 @dataclass(frozen=True)
@@ -56,11 +61,18 @@ class ConversaPorMensagem:
         persona: Callable[[], str],
         ao_responder: Callable[[Feito], None],
         ocioso_s: float = OCIOSO_S,
+        aprovar: Callable[[str, str], Awaitable[bool]] | None = None,
+        contexto: Callable[[bool], str] | None = None,
     ) -> None:
+        """`aprovar(descricao, destino)` espera a decisão de quem usa fora do WhatsApp;
+        `contexto(novo)` dá o que foi dito por outros canais (`novo`: o cérebro acabou de subir)."""
         self.criar = criar
         self.persona = persona
         self.ao_responder = ao_responder
         self.ocioso_s = ocioso_s
+        self.aprovar = aprovar
+        self.contexto = contexto
+        self._destino = ""  # para onde vai a resposta do pedido em curso
         self._laco: asyncio.AbstractEventLoop | None = None
         self._fila: asyncio.Queue[tuple[str, str] | None] | None = None
         self._pronto = threading.Event()
@@ -112,6 +124,7 @@ class ConversaPorMensagem:
                 if item is None:  # fechar()
                     return
                 texto, destino = item
+                novo = cerebro is None
                 if cerebro is None:
                     try:
                         cerebro = await self._subir()
@@ -119,15 +132,41 @@ class ConversaPorMensagem:
                         log.exception("conversa pelo WhatsApp: o cérebro não subiu")
                         await self._entregar(Feito(texto, "", type(falha).__name__, destino))
                         continue
-                await self._entregar(await _responder(cerebro, texto, destino))
+                self._destino = destino
+                pedido = await self._com_contexto(texto, novo)
+                feito = await _responder(cerebro, pedido, destino)
+                await self._entregar(replace(feito, pedido=texto))
         finally:
             if cerebro is not None:
                 await _fechar(cerebro)
 
     async def _subir(self) -> Brain:
         cerebro = self.criar()
-        await cerebro.start(f"{self.persona()}\n\n{NOTA_DA_PERSONA}", _sem_confirmacao)
+        liberar_anotacoes(cerebro)
+        await cerebro.start(f"{self.persona()}\n\n{NOTA_DA_PERSONA}", self._aprovar)
         return cerebro
+
+    async def _aprovar(self, descricao: str) -> Resposta:
+        if self.aprovar is None:
+            return await _sem_confirmacao(descricao)
+        try:
+            aprovado = await self.aprovar(descricao, self._destino)
+        except Exception:
+            log.exception("conversa pelo WhatsApp: falha ao pedir a aprovação")
+            aprovado = False
+        return Resposta(aprovado)
+
+    async def _com_contexto(self, texto: str, novo: bool) -> str:
+        if self.contexto is None:
+            return texto
+        try:
+            antes = await asyncio.to_thread(self.contexto, novo)
+        except Exception:
+            log.exception("conversa pelo WhatsApp: o contexto não veio")
+            return texto
+        if not antes:
+            return texto
+        return f"{INICIO_DO_CONTEXTO}\n{antes}\n{FIM_DO_CONTEXTO}\n\n{texto}"
 
     async def _entregar(self, feito: Feito) -> None:
         try:  # o envio bloqueia (rede): fora do laço do cérebro
@@ -145,6 +184,22 @@ class ConversaPorMensagem:
             return  # o laço já terminou
         if self._fio is not None:
             self._fio.join(timeout=10)
+
+
+def liberar_anotacoes(cerebro: Brain) -> None:
+    """Pelo WhatsApp, acrescentar à memória passa sem o "sim" (é anotar). Só a política de um
+    turno normal muda: num turno de fora, a anotação continua pedindo a aprovação."""
+    alvo: Any = cerebro
+    if not hasattr(alvo, "autoaprovar"):
+        return  # outro cérebro, sem a política de risco: tudo segue pedindo
+    antes: Callable[[str, dict[str, Any]], bool] | None = alvo.autoaprovar
+
+    def liberar(nome: str, entrada: dict[str, Any]) -> bool:
+        if nome == MEMORIA and entrada.get("acao") == "adicionar":
+            return True
+        return antes is not None and antes(nome, entrada)
+
+    alvo.autoaprovar = liberar
 
 
 async def _sem_confirmacao(descricao: str) -> Resposta:

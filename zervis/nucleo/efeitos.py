@@ -89,7 +89,8 @@ def _executar(n: "Nucleo", efeito: e.Efeito) -> None:
             n.turnos.append({"pessoa": texto, "jarvis": ""})
             n._gastos_extras = []  # o que as ferramentas desta mensagem gastarem
             n._pedido_quando = datetime.now(FUSO)
-            pedido = n._com_memoria(n._com_foco(n._com_avisos(n._com_nucleo(texto))))
+            pedido = n._com_o_whatsapp(n._com_nucleo(texto))  # o que foi dito pelo WhatsApp
+            pedido = n._com_memoria(n._com_foco(n._com_avisos(pedido)))
             n._turno_cerebro = (n.marca, n._turno_atual)
             n.latencias.contexto(
                 n._turno_atual,

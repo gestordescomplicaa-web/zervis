@@ -133,6 +133,7 @@ class Acoes:
             "ze/diagnosticar": self.diagnosticar,
             "ze/manutencao": self.manutencao,
             "conversa/escrever": self.escrever,
+            "conversa/aprovacao": self.decidir_aprovacao,
             "ze/diagnostico": self.diagnostico,
             "ze/diagnostico/recomecar": self.recomecar_diagnostico,
             "ze/sessao": self.sessao_de_melhorias,

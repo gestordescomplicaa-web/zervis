@@ -40,6 +40,9 @@ class Turno:
     ze: str
     # O que a resposta gastou, por parte (via rápida, cérebro, pesquisa); só a Conversa mostra.
     gasto: dict[str, Any] | None = field(default=None, compare=False)
+    # Por onde veio: "" (a voz ou o painel) ou "whatsapp" (ADR 0104); só a Conversa e o contexto
+    # entre os dois cérebros usam, a página do ai-memory não muda.
+    origem: str = field(default="", compare=False)
 
     def para_json(self) -> str:
         return json.dumps(
@@ -54,7 +57,7 @@ class Turno:
         return f"{self.em.isoformat(timespec='seconds')}|{self.pessoa[:200]}"
 
 
-_CAMPOS = {"em", "ze", "dia", "pessoa"}
+_CAMPOS = {"em", "ze", "dia", "pessoa", "origem"}
 
 
 def _turno(d: dict[str, Any]) -> Turno:
@@ -63,7 +66,9 @@ def _turno(d: dict[str, Any]) -> Turno:
     fala = d.get("pessoa")
     if fala is None:
         fala = next((v for k, v in d.items() if k not in _CAMPOS), "")
-    return Turno(datetime.fromisoformat(d["em"]), str(fala), str(d["ze"]))
+    return Turno(
+        datetime.fromisoformat(d["em"]), str(fala), str(d["ze"]), origem=str(d.get("origem", ""))
+    )
 
 
 def nome_do_dia(dia: date) -> str:
@@ -94,13 +99,17 @@ class Conversas:
         ze: str,
         em: datetime | None = None,
         gasto: dict[str, Any] | None = None,
+        origem: str = "",
     ) -> Turno:
         turno = Turno(
-            (em or datetime.now(FUSO)).astimezone(FUSO), pessoa.strip(), ze.strip(), gasto
+            (em or datetime.now(FUSO)).astimezone(FUSO), pessoa.strip(), ze.strip(), gasto, origem
         )
         dia = turno.em.date().isoformat()
+        dado = {**json.loads(turno.para_json()), "dia": dia}
+        if origem:
+            dado["origem"] = origem
         with self._dados.banco.transacao():
-            self._dados.guardar("conversas", {**json.loads(turno.para_json()), "dia": dia})
+            self._dados.guardar("conversas", dado)
             if gasto:
                 chave = turno.chave_do_gasto
                 self._dados.guardar("gastos", {"dia": dia, "chave": chave, "gasto": gasto}, chave)
@@ -114,6 +123,15 @@ class Conversas:
             for g in self._dados.filtrar("gastos", "dia", [dia.isoformat()], -1)
         }
         return [replace(t, gasto=gastos.get(t.chave_do_gasto)) for t in turnos]
+
+    def depois(self, desde: datetime, origens: Iterable[str] | None = None) -> list[Turno]:
+        """Os turnos de hoje depois de `desde`, só das `origens` dadas (todas, sem elas)."""
+        aceitas = None if origens is None else set(origens)
+        return [
+            t
+            for t in self.do_dia(datetime.now(FUSO).date())
+            if t.em > desde and (aceitas is None or t.origem in aceitas)
+        ]
 
     def dias(self) -> list[date]:
         return sorted({date.fromisoformat(d["dia"]) for d in self._dados.listar("conversas")})
@@ -237,3 +255,23 @@ def importar_sdk(pasta_sdk: Path, conversas: Conversas) -> int:
         except OSError:
             continue
     return conversas.juntar(turnos)
+
+
+def em_texto(turnos: Iterable[Turno], limite: int = 2400, fala: int = 400) -> str:
+    """Os turnos como contexto para um cérebro, dos mais novos para trás até o `limite`, cada
+    fala cortada em `fala` caracteres."""
+
+    def curto(texto: str) -> str:
+        texto = " ".join(texto.split())
+        return texto if len(texto) <= fala else texto[: fala - 1] + "…"
+
+    blocos: list[str] = []
+    total = 0
+    for t in reversed(list(turnos)):
+        onde = " pelo WhatsApp" if t.origem == "whatsapp" else ""
+        bloco = f"[{t.em:%H:%M}{onde}] Usuário: {curto(t.pessoa)}\nZé: {curto(t.ze)}"
+        if total + len(bloco) > limite:
+            break
+        blocos.append(bloco)
+        total += len(bloco)
+    return "\n".join(reversed(blocos))

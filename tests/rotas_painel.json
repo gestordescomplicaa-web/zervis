@@ -49,6 +49,7 @@
     "ze/diagnosticar",
     "ze/manutencao",
     "conversa/escrever",
+    "conversa/aprovacao",
     "ze/diagnostico",
     "ze/diagnostico/recomecar",
     "ze/sessao",
