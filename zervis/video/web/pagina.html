@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Vídeo do Zé</title>
+<!-- A página que vira vídeo (ADR 0106): o motor desenha cada instante; o roteiro, a voz, a marca e
+     o estilo chegam por ?dados=<dados.js>. Abra no navegador com ?dados= para ver e, no console,
+     window.render(3.2) para ir a um instante. -->
+<link rel="stylesheet" href="base.css">
+</head>
+<body>
+<div id="palco">
+  <div id="fundo"><div class="mancha um"></div><div class="mancha dois"></div><div class="grao"></div></div>
+  <div id="mundo"></div>
+  <div id="onda"></div>
+  <div id="legenda"></div>
+  <div id="preto"></div>
+</div>
+<script src="motor.js"></script>
+<script src="cenas.js"></script>
+</body>
+</html>

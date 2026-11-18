@@ -4,6 +4,7 @@ os PRs abertos. Pedir e abrir PR passam pelo mesmo caminho da voz."""
 import base64
 import io
 import json
+from collections.abc import Iterator
 from datetime import datetime
 from typing import Any
 
@@ -15,6 +16,8 @@ from zervis.marca import CORES_PADRAO
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
+from zervis.video import estilos as estilos_video
+from zervis.video import videos
 
 
 class AcoesMarketing(Pagina):
@@ -30,6 +33,7 @@ class AcoesMarketing(Pagina):
             "pedidos": m.pedidos(self.n.sessoes),
             "prs": m.prs(),
             "posts": [marketing_posts.PADRAO.para_tela(p) for p in marketing_posts.PADRAO.listar()],
+            "videos": self.videos(),
             "marca": self._marca(),
             "automaticos": [
                 {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
@@ -184,3 +188,52 @@ class AcoesMarketing(Pagina):
         metricas_site.PADRAO.remover()
         atividade.PADRAO.registrar("execucao", "Métricas do site desligadas", origem="painel")
         return {**self.metricas(), "aviso": "Chave removida."}
+
+    # --- os vídeos (Reels) da marca (ADR 0106) --------------------------------------------
+
+    def videos(self) -> dict[str, Any]:
+        v = videos.PADRAO
+        return {
+            "lista": [v.para_tela(x) for x in v.listar()],
+            "estilos": [e.para_tela() for e in estilos_video.listar()],
+            "indisponivel": v.disponivel(),
+        }
+
+    def _videos(self, fazer: Any) -> Any:
+        try:
+            return fazer()
+        except (videos.VideoErro, marketing.MarketingErro, FileNotFoundError) as erro:
+            raise PedidoInvalido(str(erro)) from erro
+
+    def criar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self._videos(
+            lambda: videos.PADRAO.criar(
+                str(dados.get("tema", "")),
+                str(dados.get("artigo", "")),
+                str(dados.get("estilo", "")) or estilos_video.PADRAO,
+                dados.get("voz") is not False,
+            )
+        )
+        atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")
+        return {**self.videos(), "aviso": "Criando o vídeo. Aviso quando estiver pronto."}
+
+    def refazer_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        id_, instrucao = str(dados.get("id", "")), str(dados.get("instrucao", ""))
+        self._videos(lambda: videos.PADRAO.refazer(id_, instrucao))
+        return {**self.videos(), "aviso": "Refazendo o vídeo."}
+
+    def descartar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        self._videos(lambda: videos.PADRAO.descartar(str(dados.get("id", ""))))
+        return {**self.videos(), "aviso": "Descartado."}
+
+    def arquivo_video(self, consulta: dict[str, str]) -> tuple[str, Iterator[bytes]]:
+        """O MP4 (ou a capa) para a prévia e o download, em pedaços."""
+        qual = "capa" if consulta.get("qual") == "capa" else "video"
+        arquivo = self._videos(lambda: videos.PADRAO.arquivo(consulta.get("id", ""), qual))
+
+        def pedacos() -> Iterator[bytes]:
+            with arquivo.open("rb") as f:
+                while pedaco := f.read(256 * 1024):
+                    yield pedaco
+
+        return ("image/jpeg" if qual == "capa" else "video/mp4"), pedacos()

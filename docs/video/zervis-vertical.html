@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Zérvis — vertical</title>
+<!-- O vídeo vertical do Zé (Reels/Shorts), narrado por ele. As cenas seguem as falas de
+     narracao.js (?dados=...): cada cena começa quando a fala dela começa. Ver docs/video/README.md. -->
+<link rel="stylesheet" href="../../zervis/portal/web/painel.css">
+<style>
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body { --sans: "Noto Sans", "Liberation Sans", sans-serif; font-family: var(--sans); }
+  .cartao { backdrop-filter: none !important; } /* pesa no Chromium sem GPU e mal aparece aqui */
+  .cena { position: absolute; inset: 0; display: none; }
+  #grade { position: absolute; inset: -80px; background-image:
+      linear-gradient(rgb(70 217 222 / .045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(70 217 222 / .045) 1px, transparent 1px); background-size: 80px 80px; }
+  #brilho { position: absolute; width: 1200px; height: 1200px; left: -60px; top: 120px; border-radius: 50%;
+    background: radial-gradient(circle, rgb(70 217 222 / .15), transparent 62%); }
+
+  /* a onda da voz e a legenda: em todas as cenas, no meio da área segura dos Reels */
+  #onda { position: absolute; left: 80px; width: 860px; top: 1150px; height: 90px; display: flex; gap: 7px; justify-content: center; align-items: center; z-index: 3; }
+  #onda i { width: 9px; border-radius: 5px; background: linear-gradient(var(--acento), #2a8fd8); box-shadow: 0 0 14px rgb(70 217 222 / .45); }
+  #legenda { position: absolute; left: 80px; width: 860px; top: 1270px; text-align: center; font-size: 58px; line-height: 1.22; font-weight: 700; letter-spacing: -.01em; z-index: 3; }
+  #legenda span { color: rgb(230 244 245 / .28); }
+  #legenda span.dita { color: #f2fbfc; }
+  #legenda span.destaque { color: var(--acento); }
+
+  .rotulo-cena { position: absolute; left: 90px; top: 270px; font-size: 30px; letter-spacing: .14em; text-transform: uppercase; color: var(--acento); font-weight: 600; }
+  .ui { position: absolute; left: 90px; width: 840px; top: 350px; }
+  .ui .cartao { padding: 42px 46px; gap: 28px; font-size: 37px; border-radius: 30px; box-shadow: 0 40px 120px rgb(0 0 0 / .45); }
+  .ui .cartao h2 { font-size: 48px; display: flex; align-items: center; gap: 18px; }
+  .etiqueta { font-size: 27px; padding: 4px 18px; font-weight: 500; }
+  .passo { display: flex; gap: 18px; align-items: center; }
+  .passo::before { content: "✓"; color: var(--bom); font-weight: 700; }
+  .passo .mono { font-size: 33px; color: var(--suave); font-family: "Liberation Mono", monospace; }
+  .bolha { max-width: 86%; padding: 20px 28px; border-radius: 26px; font-size: 35px; line-height: 1.38; }
+  .bolha.ze { background: var(--vidro-forte); border: 1px solid var(--borda); justify-self: start; }
+  .bolha.voce { background: var(--acento-escuro); border: 1px solid var(--borda-forte); justify-self: end; }
+  .rodape { font-size: 26px; color: var(--suave); }
+
+  /* 1. gancho */
+  #logo { position: absolute; left: 50%; top: 360px; width: 420px; height: 420px; margin-left: -210px; border-radius: 92px;
+    background: linear-gradient(160deg, #0b1620, #02060a); display: grid; place-items: center;
+    box-shadow: 0 0 0 1px rgb(70 217 222 / .25), 0 40px 160px rgb(70 217 222 / .28); }
+  #logo img { width: 320px; filter: drop-shadow(0 0 26px rgb(70 217 222 / .7)); }
+  #nome1 { position: absolute; left: 0; right: 0; top: 850px; text-align: center; font-size: 120px; font-weight: 700; letter-spacing: -.03em; color: #f2fbfc; }
+
+  /* 3. WhatsApp */
+  #celular { position: absolute; left: 90px; top: 340px; width: 540px; height: 780px; border-radius: 58px; padding: 18px; background: #05090d;
+    box-shadow: 0 0 0 2px rgb(70 217 222 / .25), 0 40px 120px rgb(0 0 0 / .5); }
+  #celular .tela { height: 100%; border-radius: 42px; background: var(--fundo-2); overflow: hidden; }
+  #celular header { padding: 28px 26px 18px; border-bottom: 1px solid var(--borda); display: flex; gap: 14px; align-items: center; font-size: 26px; }
+  #celular header img { width: 50px; height: 50px; border-radius: 14px; background: #02060a; padding: 6px; }
+  #celular header small { display: block; font-size: 18px; color: var(--suave); }
+  #celular .msgs { padding: 22px; display: grid; gap: 14px; }
+  #celular .bolha { font-size: 28px; max-width: 92%; }
+  #aprovacao { position: absolute; left: 400px; top: 640px; width: 530px; z-index: 2; }
+  #aprovacao .cartao { border-color: rgb(239 190 124 / .6); gap: 12px; padding: 26px 28px; font-size: 25px; }
+  #aprovacao b { font-size: 29px; }
+  #aprovacao span { font-size: 19px; color: var(--suave); }
+  #aprovacao .botoes { display: flex; gap: 12px; }
+  #aprovacao .acao { font-size: 24px; padding: 12px 26px; border-radius: 12px; }
+  #toast { position: absolute; left: 400px; top: 1000px; padding: 12px 22px; border-radius: 12px; background: var(--vidro-forte); border: 1px solid var(--borda-forte); font-size: 24px; color: var(--bom); z-index: 2; }
+  #cursor { position: absolute; width: 42px; height: 42px; z-index: 5; filter: drop-shadow(0 4px 8px rgb(0 0 0 / .6)); }
+
+  /* 4. empresas */
+  .empresa { padding: 32px 32px; border-radius: 20px; background: rgb(255 255 255 / .03); border: 1px solid var(--borda); }
+  .empresa strong { font-size: 40px; display: flex; gap: 16px; align-items: center; }
+  .empresa small { display: block; margin-top: 10px; font-size: 29px; color: var(--suave); }
+
+  /* 5. fecho */
+  #logo2 { position: absolute; left: 50%; top: 330px; width: 260px; height: 260px; margin-left: -130px; border-radius: 60px; background: linear-gradient(160deg, #0b1620, #02060a); display: grid; place-items: center; box-shadow: 0 0 0 1px rgb(70 217 222 / .25), 0 30px 110px rgb(70 217 222 / .28); }
+  #logo2 img { width: 200px; filter: drop-shadow(0 0 20px rgb(70 217 222 / .7)); }
+  #nome2 { position: absolute; left: 0; right: 0; top: 640px; text-align: center; font-size: 130px; font-weight: 700; letter-spacing: -.03em; color: #f2fbfc; }
+  #selo { position: absolute; left: 0; right: 0; top: 830px; text-align: center; font-size: 34px; color: var(--suave); letter-spacing: .04em; }
+  #git { position: absolute; left: 80px; width: 860px; top: 900px; text-align: center; font-size: 35px; font-weight: 600; color: var(--acento); }
+  #preto { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 9; }
+</style>
+</head>
+<body>
+<div id="grade"></div><div id="brilho"></div>
+
+<section class="cena" id="c1">
+  <div id="logo"><img src="../../.github/ze-logo.svg" alt=""></div>
+  <div id="nome1">Zérvis</div>
+</section>
+
+<section class="cena" id="c2">
+  <div class="rotulo-cena">Sessões de código</div>
+  <div class="ui"><section class="cartao">
+    <h2>site <span class="etiqueta" id="estado">Trabalhando</span></h2>
+    <div class="passo" id="p1">Abriu <span class="mono">contato.html</span></div>
+    <div class="passo" id="p2">Corrigiu a validação do e-mail</div>
+    <div class="passo" id="p3">Testes passando</div>
+    <div class="bolha ze" id="b1">Aplicar as mudanças no site. Aprovo?</div>
+    <div class="bolha voce" id="b2">Sim.</div>
+    <div class="rodape">Claude Code · cópia isolada do projeto</div>
+  </section></div>
+</section>
+
+<section class="cena" id="c3">
+  <div class="rotulo-cena">WhatsApp</div>
+  <div id="celular"><div class="tela">
+    <header><img src="../../.github/ze-logo.svg" alt=""><div>Zé<small>WhatsApp</small></div></header>
+    <div class="msgs">
+      <div class="bolha voce" id="w1">manda a sessão do site publicar a correção</div>
+      <div class="bolha ze" id="w2">Aprovação pendente no painel do Zé (Conversa): Vou mandar para a sessão: publica a correção.</div>
+    </div>
+  </div></div>
+  <div id="aprovacao"><section class="cartao">
+    <div><b>Aprovação pendente</b><br><span>Painel · Conversa</span></div>
+    <div>Vou mandar para a sessão: publica a correção.</div>
+    <div class="botoes"><button class="acao principal" id="aprovar">Aprovar</button><button class="acao">Negar</button></div>
+  </section></div>
+  <div id="toast">Aprovado.</div>
+  <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2 L4 20 L9 15 L12.5 22 L15.5 20.6 L12 13.8 L19 13.8 Z" fill="#fff" stroke="#05090d" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</section>
+
+<section class="cena" id="c4">
+  <div class="rotulo-cena">Empresas</div>
+  <div class="ui"><section class="cartao">
+    <div class="empresa" id="e1"><strong>Padaria Pão Quente <span class="etiqueta bom">Ligada</span></strong><small>Grupo: Padaria · equipe · Vitrine: 4 arquivos</small></div>
+    <div class="empresa" id="e2"><strong>Academia Forte <span class="etiqueta bom">Ligada</span></strong><small>Grupo: Academia · gestão · Vitrine: 2 arquivos</small></div>
+    <div class="empresa" id="e3"><strong>Clínica Sorriso <span class="etiqueta bom">Ligada</span></strong><small>Grupo: Clínica · recepção · Vitrine: 3 arquivos</small></div>
+  </section></div>
+</section>
+
+<section class="cena" id="c5">
+  <div id="logo2"><img src="../../.github/ze-logo.svg" alt=""></div>
+  <div id="nome2">Zérvis</div>
+  <div id="selo">Código aberto · AGPL-3.0 · Linux</div>
+  <div id="git">github.com/gestordescomplicaa-web/zervis</div>
+</section>
+
+<div id="onda"></div>
+<div id="legenda"></div>
+<div id="preto"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => cl((t - a) / (b - a));
+const sai = (p) => 1 - Math.pow(1 - p, 3);
+const vaivem = (p) => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const MARCAS = new Set(["Zé.", "Zé,", "Zérvis.", "WhatsApp", "Claude", "Code", "Codex", "sim", "Linux.", "GitHub:"]);
+const SAIDA = 0.25;
+
+function entra(el, t, a, d = 0.35, dist = 26) {
+  const p = sai(prog(t, a, a + d));
+  el.style.opacity = String(p);
+  el.style.transform = `translateY(${(1 - p) * dist}px)`;
+}
+
+function carregarDados() {
+  const dados = new URLSearchParams(location.search).get("dados");
+  if (!dados) return Promise.reject(new Error("falta ?dados=narracao.js"));
+  return new Promise((ok, falha) => {
+    const s = document.createElement("script");
+    s.src = dados; s.onload = ok; s.onerror = falha;
+    document.head.appendChild(s);
+  });
+}
+
+let N, CENAS, LEGENDAS;
+function montar() {
+  N = window.NARRACAO;
+  const inicios = N.falas.map((f) => f.inicio);
+  CENAS = ["c1", "c2", "c3", "c4", "c5"].map((id, i) => [id, i === 0 ? 0 : inicios[i], i + 1 < inicios.length ? inicios[i + 1] : N.duracao]);
+  const onda = $("onda");
+  for (let i = 0; i < 48; i++) onda.appendChild(document.createElement("i"));
+  // Cada fala vira palavras com o instante em que são ditas (proporcional ao tamanho delas).
+  LEGENDAS = N.falas.map((f) => {
+    const palavras = f.texto.split(" ");
+    const total = palavras.reduce((s, p) => s + p.length + 1, 0);
+    let acc = 0;
+    return palavras.map((p) => { const em = f.inicio + f.dur * (acc / total); acc += p.length + 1; return { p, em }; });
+  });
+}
+
+function volume(t) {
+  const i = Math.floor(t * N.fps);
+  const a = N.volume[i] || 0, b = N.volume[i + 1] || 0;
+  return a + (b - a) * (t * N.fps - i);
+}
+
+let legendaVista = -1;
+window.render = (t) => {
+  $("grade").style.transform = `translate(${(t * 12) % 80}px, ${(t * 8) % 80}px)`;
+  $("brilho").style.transform = `scale(${1 + 0.05 * Math.sin(t * 1.6)})`;
+  for (const [id, a, b] of CENAS) {
+    const el = $(id), dentro = t >= a && t < b;
+    el.style.display = dentro ? "block" : "none";
+    el.style.opacity = dentro ? String(id === "c5" ? 1 : 1 - prog(t, b - SAIDA, b)) : "0";
+  }
+  const v = volume(t);
+
+  // a onda: a voz de verdade, quadro a quadro
+  [...$("onda").children].forEach((barra, i) => {
+    const x = i / 47, env = Math.sin(Math.PI * x);
+    const h = 8 + v * env * (24 + 62 * Math.abs(Math.sin(t * 9.1 + i * 0.67) * Math.cos(t * 3.7 + i * 0.29)));
+    barra.style.height = `${h}px`;
+    barra.style.opacity = String(0.3 + 0.7 * Math.min(1, v * 1.5));
+  });
+
+  // a legenda da fala da vez, palavra por palavra
+  let atual = -1;
+  N.falas.forEach((f, i) => { if (t >= f.inicio - 0.15 && t < (N.falas[i + 1]?.inicio ?? N.duracao) - 0.1) atual = i; });
+  const leg = $("legenda");
+  if (atual !== legendaVista) {
+    leg.innerHTML = atual < 0 ? "" : LEGENDAS[atual].map(({ p }) => `<span>${p}</span>`).join(" ");
+    legendaVista = atual;
+  }
+  if (atual >= 0) {
+    [...leg.children].forEach((s, k) => {
+      const { p, em } = LEGENDAS[atual][k];
+      s.className = t >= em ? (MARCAS.has(p) ? "dita destaque" : "dita") : "";
+    });
+    entra(leg, t, N.falas[atual].inicio - 0.15, 0.25, 14);
+  }
+
+  const [, s2] = CENAS[1], [, s3] = CENAS[2], [, s4] = CENAS[3], [, s5] = CENAS[4];
+
+  // 1. gancho: o logo respira com a voz
+  const lp = sai(prog(t, 0, 0.45));
+  $("logo").style.opacity = String(lp);
+  $("logo").style.transform = `scale(${(0.85 + 0.15 * lp) * (1 + 0.04 * v)})`;
+  entra($("nome1"), t, 0.3, 0.4);
+
+  // 2. sessão de código
+  entra(document.querySelector("#c2 .rotulo-cena"), t, s2 + 0.05, 0.3, 10);
+  entra(document.querySelector("#c2 .ui"), t, s2 + 0.15, 0.45, 40);
+  ["p1", "p2", "p3"].forEach((id, i) => entra($(id), t, s2 + 0.6 + i * 0.4, 0.3, 14));
+  entra($("b1"), t, s2 + 2.2, 0.3, 14);
+  entra($("b2"), t, s2 + 3.2, 0.3, 14);
+  const pronto = t >= s2 + 3.7, est = $("estado");
+  est.textContent = pronto ? "Pronto" : "Trabalhando";
+  est.className = `etiqueta ${pronto ? "bom" : "alerta"}`;
+  est.style.transform = `scale(${pronto ? 1 + 0.25 * (1 - prog(t, s2 + 3.7, s2 + 4.0)) : 1})`;
+
+  // 3. WhatsApp e a aprovação no painel
+  entra(document.querySelector("#c3 .rotulo-cena"), t, s3 + 0.05, 0.3, 10);
+  entra($("celular"), t, s3 + 0.15, 0.45, 40);
+  entra($("w1"), t, s3 + 0.5, 0.3, 14);
+  entra($("w2"), t, s3 + 1.2, 0.3, 14);
+  entra($("aprovacao"), t, s3 + 2.0, 0.4, 30);
+  const cp = vaivem(prog(t, s3 + 2.5, s3 + 3.2));
+  const alvo = $("aprovar").getBoundingClientRect();
+  const ax = alvo.left + alvo.width * 0.45, ay = alvo.top + alvo.height * 0.5;
+  const cur = $("cursor");
+  cur.style.left = `${880 + (ax - 880) * cp}px`; cur.style.top = `${1120 + (ay - 1120) * cp}px`;
+  cur.style.opacity = String(prog(t, s3 + 2.4, s3 + 2.6));
+  const clique = t >= s3 + 3.25 && t < s3 + 3.4;
+  $("aprovar").style.transform = `scale(${clique ? 0.94 : 1})`;
+  $("aprovar").style.filter = clique ? "brightness(1.25)" : "none";
+  entra($("toast"), t, s3 + 3.4, 0.25, 12);
+
+  // 4. empresas
+  entra(document.querySelector("#c4 .rotulo-cena"), t, s4 + 0.05, 0.3, 10);
+  entra(document.querySelector("#c4 .ui"), t, s4 + 0.15, 0.45, 40);
+  ["e1", "e2", "e3"].forEach((id, i) => entra($(id), t, s4 + 0.4 + i * 0.3, 0.3, 16));
+
+  // 5. fecho
+  entra($("logo2"), t, s5 + 0.05, 0.4, 20);
+  entra($("nome2"), t, s5 + 0.25, 0.4);
+  entra($("selo"), t, s5 + 0.9, 0.4, 14);
+  entra($("git"), t, s5 + 2.6, 0.4, 14);
+  $("preto").style.opacity = String(prog(t, N.duracao - 0.3, N.duracao));
+};
+
+window.pronto = carregarDados().then(() => {
+  montar();
+  return Promise.all([document.fonts.ready, ...[...document.images].map((i) => i.decode().catch(() => {}))]);
+}).then(() => window.render(0));
+</script>
+</body>
+</html>

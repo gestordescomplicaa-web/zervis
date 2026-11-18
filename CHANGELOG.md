@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Vídeos em Marketing:** o Zé cria Reels explicativos com a sua marca, sobre qualquer tema ou a
+  partir de um artigo do blog. Ele escreve o roteiro, narra com a voz escolhida em Voz e monta o
+  vídeo com cenas animadas, legenda palavra por palavra e trilha própria, em uns 5 minutos. Você
+  assiste no cartão Vídeos, refaz com um ajuste ou baixa. O visual vem de estilos: o Zé traz o
+  "Zérvis", e qualquer um pode criar o seu (ADR 0106, `docs/video/README.md`).
+
 - **Empresas:** a página nova, em Trabalho, cadastra as empresas que você gere, cada uma com o seu
   grupo de WhatsApp (dos grupos em que o número do Zé está), a pasta do projeto e a vitrine, onde
   fica o que pode ser mostrado a ela. Por enquanto, só o cadastro: nada é enviado aos grupos

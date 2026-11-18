@@ -116,6 +116,7 @@ class Acoes:
             "dispositivos": self.dispositivos,
             "marketing": self.marketing,
             "marketing/metricas": self.metricas,
+            "marketing/videos": self.videos,
             "impressora": self.impressora_3d,
         }
 
@@ -197,6 +198,9 @@ class Acoes:
             "marketing/post/refazer": self.refazer_post,
             "marketing/post/publicar": self.publicar_post,
             "marketing/post/descartar": self.descartar_post,
+            "marketing/video/criar": self.criar_video,
+            "marketing/video/refazer": self.refazer_video,
+            "marketing/video/descartar": self.descartar_video,
             "marketing/metricas/chave": self.guardar_metricas,
             "marketing/metricas/remover": self.remover_metricas,
             "marketing/fotos": self.fotos_da_marca,
@@ -295,7 +299,7 @@ class Acoes:
         }
 
     def fluxos(self) -> dict[str, Fluxo]:
-        return {"camera/ao-vivo": self.ao_vivo_camera}
+        return {"camera/ao-vivo": self.ao_vivo_camera, "marketing/video": self.arquivo_video}
 
     def envios(self) -> dict[str, Any]:
         return {

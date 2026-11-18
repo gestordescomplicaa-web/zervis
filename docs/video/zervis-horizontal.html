@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Zérvis — horizontal</title>
+<!-- O primeiro vídeo do Zé (18/11/2026), sem narração: 21 s, 1920×1080. Ver docs/video/README.md. -->
+<link rel="stylesheet" href="../../zervis/portal/web/painel.css">
+<style>
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body { font-family: "Noto Sans", "Liberation Sans", sans-serif; --sans: "Noto Sans", "Liberation Sans", sans-serif; --mono: "JetBrainsMono Nerd Font", "Liberation Mono", monospace; }
+  .cena { position: absolute; inset: 0; display: none; }
+  .cartao { backdrop-filter: none !important; } /* o desfoque pesa no Chromium sem GPU e mal aparece no fundo escuro */
+  #grade { position: absolute; inset: -80px; background-image:
+      linear-gradient(rgb(70 217 222 / .045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(70 217 222 / .045) 1px, transparent 1px);
+    background-size: 80px 80px; }
+  #brilho { position: absolute; width: 1100px; height: 1100px; border-radius: 50%;
+    background: radial-gradient(circle, rgb(70 217 222 / .16), transparent 62%); left: 410px; top: -10px; }
+
+  /* 1. gancho */
+  #onda { position: absolute; left: 0; right: 0; top: 330px; height: 220px; display: flex; gap: 10px; justify-content: center; align-items: center; }
+  #onda i { width: 12px; border-radius: 6px; background: linear-gradient(var(--acento), #2a8fd8); box-shadow: 0 0 18px rgb(70 217 222 / .5); }
+  #fala { position: absolute; left: 0; right: 0; top: 620px; text-align: center; font-size: 76px; font-weight: 600; letter-spacing: -.01em; }
+  #fala .ei { color: var(--acento); }
+  #fala span { display: inline-block; }
+
+  /* 2. revelação */
+  #logo { position: absolute; left: 50%; top: 170px; width: 300px; height: 300px; margin-left: -150px; border-radius: 64px;
+    background: linear-gradient(160deg, #0b1620, #02060a); display: grid; place-items: center;
+    box-shadow: 0 0 0 1px rgb(70 217 222 / .25), 0 30px 120px rgb(70 217 222 / .25); }
+  #logo img { width: 230px; filter: drop-shadow(0 0 22px rgb(70 217 222 / .7)); }
+  #nome { position: absolute; left: 0; right: 0; top: 520px; text-align: center; font-size: 150px; font-weight: 700; letter-spacing: -.03em; color: #f2fbfc; }
+  #frase { position: absolute; left: 0; right: 0; top: 740px; text-align: center; font-size: 56px; color: var(--texto); }
+  #frase b { color: var(--acento); font-weight: 600; }
+
+  /* destaques: título à esquerda, interface à direita */
+  .titulo { position: absolute; left: 130px; top: 360px; width: 700px; }
+  .titulo h1 { margin: 0; font-size: 78px; line-height: 1.08; letter-spacing: -.02em; font-weight: 700; }
+  .titulo h1 em { font-style: normal; color: var(--acento); }
+  .titulo p { margin: 26px 0 0; font-size: 34px; color: var(--suave); }
+  .ui { position: absolute; left: 930px; top: 190px; width: 860px; }
+  .ui .cartao { padding: 30px 34px; gap: 18px; font-size: 26px; border-radius: 22px; box-shadow: 0 40px 120px rgb(0 0 0 / .45); }
+  .ui .cartao h2 { font-size: 32px; display: flex; align-items: center; gap: 16px; }
+  .ui .etiqueta { font-size: 20px; padding: 3px 14px; font-weight: 500; }
+  .passo { display: flex; gap: 16px; align-items: center; color: var(--texto); }
+  .passo::before { content: "✓"; color: var(--bom); font-weight: 700; }
+  .passo .mono { font-size: 24px; color: var(--suave); }
+  .bolha { max-width: 82%; padding: 16px 22px; border-radius: 22px; font-size: 26px; line-height: 1.4; }
+  .bolha.ze { background: var(--vidro-forte); border: 1px solid var(--borda); justify-self: start; }
+  .bolha.voce { background: var(--acento-escuro); border: 1px solid var(--borda-forte); justify-self: end; }
+  .rodape { font-size: 19px; color: var(--suave); }
+  .acao { font-size: 24px; padding: 12px 26px; border-radius: 12px; }
+
+  /* WhatsApp: o celular */
+  #celular { position: absolute; left: 930px; top: 120px; width: 470px; height: 840px; border-radius: 56px; padding: 18px;
+    background: #05090d; box-shadow: 0 0 0 2px rgb(70 217 222 / .25), 0 40px 120px rgb(0 0 0 / .5); }
+  #celular .tela { height: 100%; border-radius: 40px; background: var(--fundo-2); display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+  #celular header { padding: 26px 26px 18px; border-bottom: 1px solid var(--borda); display: flex; gap: 14px; align-items: center; font-size: 24px; }
+  #celular header img { width: 48px; height: 48px; border-radius: 14px; background: #02060a; padding: 6px; }
+  #celular header small { display: block; font-size: 17px; color: var(--suave); }
+  #celular .msgs { padding: 22px; display: grid; align-content: start; gap: 14px; }
+  #celular .bolha { font-size: 21px; max-width: 88%; }
+  #aprovacao { position: absolute; left: 1370px; top: 440px; width: 470px; }
+  #aprovacao b { font-size: 27px; }
+  #aprovacao .acao { font-size: 23px; padding: 12px 26px; border-radius: 12px; }
+  #aprovacao .cartao { border-color: rgb(239 190 124 / .55); gap: 12px; }
+  #aprovacao span { font-size: 18px; color: var(--suave); }
+  #aprovacao .botoes { display: flex; gap: 12px; }
+  #toast { position: absolute; left: 1370px; top: 760px; padding: 12px 22px; border-radius: 12px; background: var(--vidro-forte); border: 1px solid var(--borda-forte); font-size: 22px; color: var(--bom); }
+  #cursor { position: absolute; width: 38px; height: 38px; z-index: 5; filter: drop-shadow(0 4px 8px rgb(0 0 0 / .6)); }
+
+  /* empresas */
+  .empresa { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 24px; border-radius: 16px; background: rgb(255 255 255 / .03); border: 1px solid var(--borda); }
+  .empresa strong { font-size: 28px; display: flex; gap: 14px; align-items: center; }
+  .empresa small { display: block; margin-top: 6px; font-size: 20px; color: var(--suave); }
+
+  /* fecho */
+  #fecho-logo { position: absolute; left: 50%; top: 150px; width: 170px; height: 170px; margin-left: -85px; border-radius: 40px; background: linear-gradient(160deg, #0b1620, #02060a); display: grid; place-items: center; box-shadow: 0 0 0 1px rgb(70 217 222 / .25), 0 20px 80px rgb(70 217 222 / .25); }
+  #fecho-logo img { width: 130px; filter: drop-shadow(0 0 16px rgb(70 217 222 / .7)); }
+  #fecho1, #fecho2 { position: absolute; left: 0; right: 0; text-align: center; font-weight: 700; letter-spacing: -.02em; }
+  #fecho1 { top: 390px; font-size: 96px; }
+  #fecho2 { top: 510px; font-size: 96px; color: var(--acento); }
+  #fecho3 { position: absolute; left: 0; right: 0; top: 700px; text-align: center; font-size: 34px; color: var(--suave); letter-spacing: .04em; }
+  #fecho4 { position: absolute; left: 0; right: 0; top: 775px; text-align: center; font-size: 42px; font-weight: 600; color: var(--acento); }
+  #preto { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 9; }
+</style>
+</head>
+<body>
+<div id="grade"></div>
+<div id="brilho"></div>
+
+<section class="cena" id="c1">
+  <div id="onda"></div>
+  <div id="fala"><span class="ei" id="ei">Ei Zé,</span> <span id="pedido"></span></div>
+</section>
+
+<section class="cena" id="c2">
+  <div id="logo"><img src="../../.github/ze-logo.svg" alt=""></div>
+  <div id="nome">Zérvis</div>
+  <div id="frase">O assistente de voz que <b>trabalha com você.</b></div>
+</section>
+
+<section class="cena" id="c3">
+  <div class="titulo"><h1>Conduz o <em>Claude Code</em> e o <em>Codex</em>.</h1><p>Você pede, ele trabalha numa cópia isolada.</p></div>
+  <div class="ui"><section class="cartao">
+    <h2>site <span class="etiqueta" id="estado-sessao">Trabalhando</span></h2>
+    <div class="passo" id="p1">Abriu <span class="mono">contato.html</span></div>
+    <div class="passo" id="p2">Corrigiu a validação do e-mail</div>
+    <div class="passo" id="p3">Testes passando</div>
+    <div class="bolha ze" id="b1">Aplicar as mudanças no site. Aprovo?</div>
+    <div class="bolha voce" id="b2">Sim.</div>
+    <div class="rodape" id="r1">Claude Code · cópia isolada do projeto</div>
+  </section></div>
+</section>
+
+<section class="cena" id="c4">
+  <div class="titulo"><h1>Converse pelo <em>WhatsApp</em>.</h1><p>O que tem efeito, só com o seu sim no painel.</p></div>
+  <div id="celular"><div class="tela">
+    <header><img src="../../.github/ze-logo.svg" alt=""><div>Zé<small>WhatsApp</small></div></header>
+    <div class="msgs">
+      <div class="bolha voce" id="w1">manda a sessão do site publicar a correção</div>
+      <div class="bolha ze" id="w2">Aprovação pendente no painel do Zé (Conversa): Vou mandar para a sessão: publica a correção.</div>
+    </div>
+  </div></div>
+  <div id="aprovacao"><section class="cartao">
+    <div><b>Aprovação pendente</b><br><span>WhatsApp · 14:32</span></div>
+    <div style="font-size:23px">Vou mandar para a sessão: publica a correção.</div>
+    <div class="botoes"><button class="acao principal" id="aprovar">Aprovar</button><button class="acao">Negar</button></div>
+  </section></div>
+  <div id="toast">Aprovado.</div>
+  <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2 L4 20 L9 15 L12.5 22 L15.5 20.6 L12 13.8 L19 13.8 Z" fill="#fff" stroke="#05090d" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</section>
+
+<section class="cena" id="c5">
+  <div class="titulo"><h1>Um grupo de WhatsApp <em>por empresa</em>.</h1><p>Cada uma com a sua vitrine.</p></div>
+  <div class="ui" style="top:250px"><section class="cartao">
+    <h2>Empresas</h2>
+    <div class="empresa" id="e1"><div><strong>Padaria Pão Quente <span class="etiqueta bom">Ligada</span></strong><small>Grupo: Padaria · equipe · Vitrine: 4 arquivos</small></div></div>
+    <div class="empresa" id="e2"><div><strong>Academia Forte <span class="etiqueta bom">Ligada</span></strong><small>Grupo: Academia · gestão · Vitrine: 2 arquivos</small></div></div>
+    <div class="empresa" id="e3"><div><strong>Clínica Sorriso <span class="etiqueta bom">Ligada</span></strong><small>Grupo: Clínica · recepção · Vitrine: 3 arquivos</small></div></div>
+  </section></div>
+</section>
+
+<section class="cena" id="c6">
+  <div id="fecho-logo"><img src="../../.github/ze-logo.svg" alt=""></div>
+  <div id="fecho1">Você fala. O Zé faz.</div>
+  <div id="fecho2">E pergunta antes.</div>
+  <div id="fecho3">Código aberto · AGPL-3.0 · Linux</div>
+  <div id="fecho4">github.com/gestordescomplicaa-web/zervis</div>
+</section>
+<div id="preto"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => cl((t - a) / (b - a));
+const sai = (p) => 1 - Math.pow(1 - p, 3);          // ease-out
+const vaivem = (p) => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+// Cenas: [início, fim]. Cada uma sai nos últimos 0,25 s e a próxima entra depois do corte.
+const CENAS = { c1: [0, 3], c2: [3, 6.5], c3: [6.5, 10.5], c4: [10.5, 14.5], c5: [14.5, 17.5], c6: [17.5, 21] };
+const SAIDA = 0.25;
+
+/** Entrada: aparece subindo, de `a` por `d` segundos. */
+function entra(el, t, a, d = 0.35, dist = 26) {
+  const p = sai(prog(t, a, a + d));
+  el.style.opacity = String(p);
+  el.style.transform = `translateY(${(1 - p) * dist}px)`;
+}
+
+const BARRAS = 56;
+const onda = $("onda");
+for (let i = 0; i < BARRAS; i++) onda.appendChild(document.createElement("i"));
+const PEDIDO = "corrige o formulário do site.".split(" ");
+$("pedido").innerHTML = PEDIDO.map((p) => `<span>${p}</span>`).join(" ");
+
+window.render = (t) => {
+  // fundo: a grade anda devagar, o brilho respira
+  $("grade").style.transform = `translate(${(t * 14) % 80}px, ${(t * 9) % 80}px)`;
+  $("brilho").style.transform = `scale(${1 + 0.05 * Math.sin(t * 1.6)})`;
+
+  for (const [id, [a, b]] of Object.entries(CENAS)) {
+    const el = $(id);
+    const dentro = t >= a && t < b;
+    el.style.display = dentro ? "block" : "none";
+    el.style.opacity = dentro ? String(id === "c6" ? 1 : 1 - prog(t, b - SAIDA, b)) : "0";
+  }
+
+  // 1. gancho: a onda fala, o pedido aparece palavra por palavra
+  const voz = prog(t, 0.2, 0.5) * (1 - prog(t, 2.5, 2.9));
+  [...onda.children].forEach((b, i) => {
+    const x = i / BARRAS;
+    const env = Math.sin(Math.PI * x);
+    const h = 10 + voz * env * (60 + 140 * Math.abs(Math.sin(t * 7.3 + i * 0.61) * Math.cos(t * 3.1 + i * 0.23)));
+    b.style.height = `${h}px`;
+    b.style.opacity = String(0.35 + 0.65 * voz);
+  });
+  entra($("ei"), t, 0.25, 0.3);
+  [...$("pedido").children].forEach((s, i) => entra(/** @type {HTMLElement} */ (s), t, 0.7 + i * 0.11, 0.25, 18));
+
+  // 2. revelação
+  const lp = sai(prog(t, 3.0, 3.55));
+  $("logo").style.opacity = String(lp);
+  $("logo").style.transform = `scale(${0.82 + 0.18 * lp})`;
+  entra($("nome"), t, 3.3, 0.4);
+  entra($("frase"), t, 3.55, 0.4);
+
+  // 3. sessão de código
+  entra(document.querySelector("#c3 .titulo"), t, 6.6, 0.4);
+  entra(document.querySelector("#c3 .ui"), t, 6.75, 0.45, 40);
+  ["p1", "p2", "p3"].forEach((id, i) => entra($(id), t, 7.1 + i * 0.3, 0.3, 14));
+  entra($("b1"), t, 8.1, 0.3, 14);
+  entra($("b2"), t, 8.8, 0.3, 14);
+  entra($("r1"), t, 6.9, 0.3, 0);
+  const pronto = t >= 9.2;
+  const est = $("estado-sessao");
+  est.textContent = pronto ? "Pronto" : "Trabalhando";
+  est.className = `etiqueta ${pronto ? "bom" : "alerta"}`;
+  est.style.transform = `scale(${pronto ? 1 + 0.25 * (1 - prog(t, 9.2, 9.5)) : 1})`;
+
+  // 4. WhatsApp e a aprovação no painel
+  entra(document.querySelector("#c4 .titulo"), t, 10.6, 0.4);
+  entra($("celular"), t, 10.7, 0.45, 40);
+  entra($("w1"), t, 11.0, 0.3, 14);
+  entra($("w2"), t, 11.6, 0.3, 14);
+  entra($("aprovacao"), t, 12.2, 0.4, 30);
+  const cp = vaivem(prog(t, 12.6, 13.25));
+  const alvo = $("aprovar").getBoundingClientRect();
+  const ax = alvo.left + alvo.width * 0.45, ay = alvo.top + alvo.height * 0.5;
+  const cx = 1760 + (ax - 1760) * cp, cy = 1000 + (ay - 1000) * cp;
+  const cursor = $("cursor");
+  cursor.style.left = `${cx}px`; cursor.style.top = `${cy}px`;
+  cursor.style.opacity = String(prog(t, 12.5, 12.7));
+  const clique = t >= 13.3 && t < 13.45;
+  $("aprovar").style.transform = `scale(${clique ? 0.94 : 1})`;
+  $("aprovar").style.filter = clique ? "brightness(1.25)" : "none";
+  entra($("toast"), t, 13.45, 0.25, 12);
+
+  // 5. empresas
+  entra(document.querySelector("#c5 .titulo"), t, 14.6, 0.4);
+  entra(document.querySelector("#c5 .ui"), t, 14.7, 0.45, 40);
+  ["e1", "e2", "e3"].forEach((id, i) => entra($(id), t, 14.95 + i * 0.2, 0.3, 16));
+
+  // 6. fecho
+  entra($("fecho-logo"), t, 17.55, 0.4, 20);
+  entra($("fecho1"), t, 17.7, 0.4);
+  entra($("fecho2"), t, 18.2, 0.4);
+  entra($("fecho3"), t, 18.8, 0.4, 14);
+  entra($("fecho4"), t, 19.0, 0.4, 14);
+  $("preto").style.opacity = String(prog(t, 20.7, 21));
+};
+
+window.pronto = Promise.all([document.fonts.ready, ...[...document.images].map((i) => i.decode().catch(() => {}))]);
+window.render(0);
+</script>
+</body>
+</html>

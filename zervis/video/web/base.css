@@ -1,0 +1,101 @@
+/* A estrutura dos vídeos do Zé (ADR 0106): onde cada coisa fica, nos formatos. O visual (cores
+   finas, sombras, brilhos) é do estilo; as cores vêm da marca, como variáveis. */
+:root {
+  --fundo: #111114; --superficie: #1b1b20; --texto: #f4f4f6; --suave: #a3a3ad;
+  --destaque: #4f8cff; --destaque2: #8b5cf6;
+  --fonte-reserva: "Noto Sans", "Liberation Sans", system-ui, sans-serif;
+  --fonte-titulo: var(--fonte-reserva);
+  --fonte-texto: var(--fonte-reserva);
+  --raio: 30px;
+  /* A área das cenas e a da legenda, no vertical (Reels): o que se lê fica entre 13% e 80% da
+     altura e fora dos 140 px da direita na metade de baixo (os botões do Instagram). */
+  --cena-topo: 250px; --cena-altura: 900px; --lado: 90px;
+  --legenda-topo: 1250px; --onda-topo: 1150px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; width: var(--largura, 1080px); height: var(--altura, 1920px); overflow: hidden; background: var(--fundo); }
+body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+#palco { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+/* o fundo vivo: duas manchas de luz que andam devagar (seno do tempo), grão e vinheta */
+#fundo { position: absolute; inset: 0; background: var(--fundo); --t: 0; }
+.mancha { position: absolute; width: 1300px; height: 1300px; border-radius: 50%; opacity: .55; }
+.mancha.um { left: -420px; top: -360px; background: radial-gradient(circle, color-mix(in srgb, var(--destaque) 38%, transparent), transparent 64%);
+  transform: translate(calc(sin(var(--t) * .23rad) * 140px), calc(cos(var(--t) * .17rad) * 110px)); }
+.mancha.dois { right: -520px; bottom: -220px; background: radial-gradient(circle, color-mix(in srgb, var(--destaque2) 34%, transparent), transparent 64%);
+  transform: translate(calc(cos(var(--t) * .19rad) * 150px), calc(sin(var(--t) * .29rad) * 120px)); }
+.grao { position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+#fundo::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, transparent 55%, color-mix(in srgb, var(--fundo) 85%, black) 100%); }
+
+/* cada cena ocupa a área de cima; a legenda fica embaixo, fixa */
+#mundo { position: absolute; inset: 0; }
+.cena { position: absolute; left: 0; right: 0; top: var(--cena-topo); height: var(--cena-altura); padding: 0 var(--lado);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; transform-origin: 50% 45%; }
+.brilho { position: absolute; left: 50%; top: 48%; width: 980px; height: 980px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--destaque) 30%, transparent), transparent 62%); }
+.palavra, .rotulo, .item, .passo, .lado, .conversa, .msg { will-change: transform, opacity; }
+.palavra { display: inline-block; }
+
+#onda { position: absolute; left: 80px; width: 860px; top: var(--onda-topo); height: 80px; display: flex; gap: 8px; justify-content: center; align-items: center; z-index: 3; }
+#onda i { width: 8px; height: 6px; border-radius: 4px; background: var(--destaque); }
+#legenda { position: absolute; left: 80px; width: 860px; top: var(--legenda-topo); text-align: center; z-index: 3;
+  font-family: var(--fonte-titulo); font-size: 58px; line-height: 1.22; font-weight: 750; letter-spacing: -.01em; }
+#legenda span { display: inline-block; color: color-mix(in srgb, var(--texto) 30%, transparent); }
+#legenda span.dita { color: var(--texto); }
+#legenda span.dita.marcada { color: var(--destaque); }
+#preto { position: absolute; inset: 0; background: #000; opacity: 0; z-index: 9; pointer-events: none; }
+
+/* --- as cenas --- */
+.rotulo { padding: 10px 26px; border-radius: 999px; font-size: 26px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; }
+.manchete { margin: 0; text-align: center; font-family: var(--fonte-titulo); font-weight: 800; line-height: 1.02; letter-spacing: -.035em; max-width: 920px; }
+.traco { width: 180px; height: 9px; border-radius: 9px; transform: scaleX(0); }
+.apoio { margin: 0; font-size: 40px; text-align: center; color: var(--suave); max-width: 860px; line-height: 1.3; }
+.titulo-cena { margin: 0 0 6px; font-family: var(--fonte-titulo); font-size: 60px; font-weight: 750; letter-spacing: -.025em; text-align: center; line-height: 1.08; max-width: 900px; }
+.aspas { font-family: var(--fonte-titulo); font-size: 240px; line-height: .6; height: 120px; font-weight: 800; }
+.frase-texto { margin: 0; font-family: var(--fonte-titulo); font-weight: 750; line-height: 1.12; letter-spacing: -.025em; text-align: center; max-width: 900px; }
+
+.passos { position: relative; width: 900px; display: flex; flex-direction: column; gap: 24px; }
+.passos-linha { position: absolute; left: 73px; top: 70px; bottom: 70px; width: 4px; border-radius: 4px; transform-origin: top; transform: scaleY(0); }
+.passo { position: relative; z-index: 1; display: flex; align-items: center; gap: 28px; padding: 26px 32px; border-radius: var(--raio); }
+.passo-num { flex: none; width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-family: var(--fonte-titulo); font-size: 40px; font-weight: 800; }
+.passo-texto { font-size: 42px; font-weight: 600; line-height: 1.2; }
+
+.lado { position: relative; width: 900px; padding: 34px 38px 38px; border-radius: 34px; display: grid; grid-template-columns: auto 1fr; gap: 10px 26px; align-items: center; }
+.lado-rotulo { grid-column: 1 / -1; font-size: 26px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.lado-icone { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; font-size: 40px; font-weight: 800; }
+.lado-texto { font-size: 44px; font-weight: 650; line-height: 1.2; }
+
+.conversa { width: 880px; border-radius: 44px; overflow: hidden; }
+.conversa-topo { display: flex; align-items: center; gap: 20px; padding: 28px 32px; }
+.conversa-avatar { width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; font-size: 38px; font-weight: 800; overflow: hidden; }
+.conversa-avatar img { width: 80%; height: 80%; object-fit: contain; }
+.conversa-quem { flex: 1; display: grid; font-size: 34px; }
+.conversa-quem small { font-size: 24px; }
+.selo { padding: 8px 18px; border-radius: 999px; font-size: 22px; font-weight: 650; letter-spacing: .06em; }
+.conversa-corpo { display: flex; flex-direction: column; gap: 18px; padding: 30px; min-height: 520px; }
+.msg { display: flex; }
+.msg.cliente { justify-content: flex-end; }
+.balao { max-width: 82%; padding: 22px 28px; border-radius: 30px; font-size: 36px; line-height: 1.32; }
+.digitando { display: flex; gap: 10px; padding: 26px 30px; border-radius: 30px; width: fit-content; }
+.digitando i { width: 14px; height: 14px; border-radius: 50%; }
+
+.lista-itens { width: 900px; display: flex; flex-direction: column; gap: 22px; }
+.item { display: flex; align-items: center; gap: 26px; padding: 26px 32px; border-radius: var(--raio); }
+.item-check { flex: none; width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; font-weight: 800; }
+.item-texto { font-size: 42px; font-weight: 600; line-height: 1.22; }
+
+.anel { width: 500px; height: 500px; transform-origin: center; }
+.anel circle { fill: none; stroke-width: 12; }
+.anel-arco { stroke-linecap: round; stroke-dasharray: 553; stroke-dashoffset: 553; transform: rotate(-90deg); transform-origin: 100px 100px; }
+.numero-valor { margin: -360px 0 170px; height: 190px; display: grid; place-items: center; font-family: var(--fonte-titulo); font-size: 150px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.numero-rotulo { margin: 0; font-size: 46px; font-weight: 650; text-align: center; max-width: 860px; line-height: 1.2; }
+.numero-fonte { margin: 0; font-size: 26px; }
+
+.fecho-logo { width: 250px; height: 250px; border-radius: 64px; display: grid; place-items: center; font-size: 120px; font-weight: 800; overflow: hidden; }
+.fecho-logo img { width: 78%; height: 78%; object-fit: contain; }
+.fecho-nome { font-family: var(--fonte-titulo); font-size: 92px; font-weight: 800; letter-spacing: -.035em; text-align: center; line-height: 1; }
+.fecho-arroba { font-size: 40px; margin-top: -14px; }
+.fecho-chamada { position: relative; margin-top: 18px; padding: 30px 60px; border-radius: 999px; font-size: 44px; font-weight: 750; text-align: center; }
+.fecho-onda { position: absolute; inset: -4px; border-radius: 999px; border: 4px solid var(--destaque); opacity: 0; }
+.fecho-detalhe { font-size: 32px; }
