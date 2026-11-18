@@ -2,6 +2,15 @@
 
 ## Não lançado
 
+- **Atualização bloqueada explicada:** quando uma melhoria do próprio Zé está só neste
+  computador, a página Atualizações mostra "Bloqueada", o que está só aqui, quantas mudanças
+  esperam na origem e o botão para abrir o PR a mesclar. O Zé avisa uma vez quando isso segura
+  uma atualização.
+
+- **Memória com validade:** uma entrada que termina em "· até DD/MM/AAAA" sai da memória no dia
+  seguinte e vai para o arquivo; a página Memória a marca como "Vencida". Um fato sobre você que
+  o Zé aprende sozinho só entra com a sua frase que o sustenta; sem ela, vira sugestão (ADR 0098).
+
 - **O Zé gasta menos para pensar:** cada chamada ao modelo levava a descrição de todas as ~100
   ferramentas; agora as mais usadas ficam à mão e as outras são achadas quando precisa, com as
   mesmas ferramentas e a mesma resposta. E a via rápida que bate no limite da conta espera a

@@ -265,3 +265,21 @@ def test_a_voz_so_le(repo: Path, tmp_path: Path) -> None:
     dados = json.loads(resposta["content"][0]["text"])
     assert dados["disponivel"] and dados["diga"].startswith("Há uma versão nova (v0.2.0)")
     assert dados["onde"] == "Atualizações, no painel"
+
+
+def test_melhoria_so_daqui_bloqueia_e_diz_qual_e_o_pr(repo: Path, tmp_path: Path) -> None:
+    """O autodesenvolvimento aplicado aqui, com o PR ainda aberto: a procura diz o que está só
+    neste computador, quanto espera na origem e o PR a mesclar; a procura do dia avisa uma vez."""
+    _git(repo, "reset", "-q", "--hard", "v0.2.0")
+    _commit(repo, MASTER.replace("Algo ainda", "Melhoria do Zé,"), "Posts: o reinício não prende")
+    pr = "https://github.com/exemplo/ze/pull/7"
+    v = _versoes(tmp_path, pr_local=lambda: pr)
+    v.mudar_canal("desenvolvimento")
+    achado = v.procurar()
+    assert not achado["disponivel"] and achado["motivo"] == "commits_locais"
+    assert achado["locais"] == ["Posts: o reinício não prende"]
+    assert achado["mudancas"] == 1 and achado["pr"] == pr
+    assert "Mescle o PR" in achado["texto"]
+    aviso = "Tem atualização do Zé, mas ela espera o PR de uma melhoria feita aqui."
+    assert (v.procurar_do_dia() or "").startswith(aviso)
+    assert v.procurar_do_dia() is None
