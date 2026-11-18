@@ -1,0 +1,63 @@
+/* O estilo "Zérvis" (ADR 0106): o exemplo que vem com o Zé. Copie esta pasta para
+   <config>/video/estilos/<nome>/ e mude à vontade; as cores vêm da marca (variáveis --fundo,
+   --superficie, --texto, --suave, --destaque e --destaque2). */
+
+/* vidro: a superfície da marca, translúcida, com a borda acesa por cima */
+.passo, .item, .lado, .conversa, .rotulo, .selo {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 92%, white 4%), color-mix(in srgb, var(--superficie) 70%, transparent));
+  border: 1.5px solid color-mix(in srgb, var(--destaque) 22%, transparent);
+  box-shadow: 0 30px 80px color-mix(in srgb, black 45%, transparent), inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+}
+.rotulo, .selo { color: var(--destaque); box-shadow: none; }
+
+/* o destaque: gradiente da marca por dentro das letras, com um brilho que varre */
+.palavra.destaque {
+  --varre: 0;
+  background: linear-gradient(100deg, var(--destaque) 0%, var(--destaque2) 45%, color-mix(in srgb, white 70%, var(--destaque)) 50%, var(--destaque2) 55%, var(--destaque) 100%);
+  background-size: 300% 100%;
+  background-position: calc(100% - var(--varre) * 100%) 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  padding-bottom: .06em;
+}
+.traco { background: linear-gradient(90deg, var(--destaque), var(--destaque2)); box-shadow: 0 0 30px color-mix(in srgb, var(--destaque) 60%, transparent); }
+.aspas { color: var(--destaque); text-shadow: 0 0 60px color-mix(in srgb, var(--destaque) 50%, transparent); }
+
+.passos-linha { background: linear-gradient(var(--destaque), var(--destaque2)); box-shadow: 0 0 18px color-mix(in srgb, var(--destaque) 60%, transparent); }
+.passo-num, .item-check {
+  background: linear-gradient(145deg, var(--destaque), var(--destaque2)); color: var(--fundo);
+  box-shadow: 0 10px 34px color-mix(in srgb, var(--destaque) 45%, transparent);
+}
+.passo.ativo, .item.ativo {
+  border-color: color-mix(in srgb, var(--destaque) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--destaque) 40%, transparent), 0 24px 70px color-mix(in srgb, var(--destaque) 22%, transparent);
+}
+.passo:not(.ativo) .passo-texto, .item:not(.ativo) .item-texto { color: color-mix(in srgb, var(--texto) 78%, transparent); }
+
+.lado.antes .lado-rotulo { color: var(--suave); }
+.lado.antes .lado-icone { background: color-mix(in srgb, var(--suave) 18%, transparent); color: var(--suave); }
+.lado.antes .lado-texto { color: color-mix(in srgb, var(--texto) 75%, transparent); }
+.lado.depois { border-color: color-mix(in srgb, var(--destaque) 75%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--destaque) 35%, transparent), 0 40px 110px color-mix(in srgb, var(--destaque) 25%, transparent); }
+.lado.depois .lado-rotulo { color: var(--destaque); }
+.lado.depois .lado-icone { background: linear-gradient(145deg, var(--destaque), var(--destaque2)); color: var(--fundo); }
+
+.conversa-topo { border-bottom: 1px solid color-mix(in srgb, var(--destaque) 16%, transparent); }
+.conversa-avatar { background: color-mix(in srgb, var(--fundo) 80%, black); color: var(--destaque); border: 1px solid color-mix(in srgb, var(--destaque) 30%, transparent); }
+.conversa-quem small { color: var(--bom, #5fd6a0); }
+.balao { background: color-mix(in srgb, var(--texto) 9%, transparent); }
+.msg.empresa .balao { background: color-mix(in srgb, var(--destaque) 22%, var(--superficie)); border: 1px solid color-mix(in srgb, var(--destaque) 35%, transparent); }
+.digitando { background: color-mix(in srgb, var(--destaque) 16%, var(--superficie)); }
+.digitando i { background: var(--destaque); }
+
+.anel-fundo { stroke: color-mix(in srgb, var(--texto) 10%, transparent); }
+.anel-arco { stroke: var(--destaque); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--destaque) 70%, transparent)); }
+.numero-valor { background: linear-gradient(160deg, var(--texto), var(--destaque)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.numero-fonte, .fecho-detalhe, .fecho-arroba { color: var(--suave); }
+
+.fecho-logo { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 90%, white 4%), var(--fundo)); color: var(--destaque);
+  border: 1.5px solid color-mix(in srgb, var(--destaque) 30%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--destaque) 15%, transparent), 0 40px 140px color-mix(in srgb, var(--destaque) 35%, transparent); }
+.fecho-chamada { background: linear-gradient(120deg, var(--destaque), var(--destaque2)); color: var(--fundo);
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--destaque) 45%, transparent), inset 0 1px 0 color-mix(in srgb, white 35%, transparent); }
+
+#onda i { background: linear-gradient(var(--destaque), var(--destaque2)); box-shadow: 0 0 12px color-mix(in srgb, var(--destaque) 45%, transparent); }

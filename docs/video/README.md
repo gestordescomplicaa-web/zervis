@@ -1,6 +1,37 @@
 # Vídeos do Zé
 
-Como os vídeos de apresentação do Zé são feitos, para repetir sem redescobrir. O processo segue a
+Desde 18/11/2026 o Zé cria vídeos sozinho, em **Marketing → Vídeos** ([ADR 0106](../adr/0106-videos-de-marketing.md)):
+o modelo escreve o roteiro e o motor de `zervis/video/` desenha, narra e monta. Abaixo, como criar
+**o seu estilo** e, depois, como os vídeos de apresentação do próprio Zé foram feitos à mão, com as
+mesmas peças.
+
+## Criar o seu estilo
+
+Um estilo é uma pasta. Copie o de exemplo e mude:
+
+```bash
+mkdir -p ~/.config/zervis/video/estilos
+cp -r zervis/video/estilos/zervis ~/.config/zervis/video/estilos/meu-estilo
+```
+
+| Arquivo | O que muda |
+|---|---|
+| `estilo.json` | `nome` e `descricao` (como aparece em Marketing), `fontes` (do Google Fonts; as da marca do site valem antes), `onda` (a onda da voz), `trilha` (`bpm` de 70 a 160 e `energia`: `calma`, `media` ou `alta`), `tom` (como o roteiro é escrito) e `cenas` (tipos novos de cena, com o formato que o modelo deve seguir) |
+| `estilo.css` | O visual, por cima da estrutura (`zervis/video/web/base.css`). As cores da marca chegam como `--fundo`, `--superficie`, `--texto`, `--suave`, `--destaque` e `--destaque2` |
+| `cenas.js` | Opcional: cenas novas ou trocadas, com `Ze.cena("tipo", {montar(cena, el, ctx), render(t, d, estado, ctx)})`. `render` desenha o instante `t` (segundos desde o começo da cena) e só pode depender dele |
+
+Uma pasta com o mesmo nome de um estilo embutido vale no lugar dele; apagar a pasta volta ao
+padrão. Para ver um estilo enquanto edita, abra `zervis/video/web/pagina.html?dados=<dados.js>` no
+Chromium (o `dados.js` de um vídeo fica em `<dados>/marketing/videos/<id>/`) e chame
+`window.render(3.2)` no console.
+
+Regras que valem para qualquer estilo: o texto do roteiro entra sempre como texto (nunca HTML), o
+que se lê fica entre 13% e 80% da altura e fora dos 140 px da direita na metade de baixo (os botões
+do Instagram), e nada de `backdrop-filter` (no Chromium sem GPU, ele custa 2 s por quadro).
+
+## Os vídeos de apresentação do Zé
+
+Feitos à mão, com as mesmas peças, para repetir sem redescobrir. O processo segue a
 skill [`brag-slim`](https://github.com/latent-spaces/brag) (MIT): ler o projeto, escrever o
 roteiro, montar com as ferramentas que já estão na máquina, conferir quadros parados e entregar o
 vídeo, a capa e o texto para postar. Tudo roda local; só a narração usa a nuvem (a voz do Zé).
@@ -12,8 +43,8 @@ vídeo, a capa e o texto para postar. Tudo roda local; só a narração usa a nu
 
 ## O que precisa
 
-Chromium, FFmpeg e o ambiente do Zé (`numpy`, `websockets` e `zervis.voz`, para a narração).
-Nada é instalado.
+Chromium, FFmpeg e o ambiente do Zé. Os scripts daqui são linhas de comando finas sobre
+`zervis.video` (`narracao`, `trilha`, `captura`): o mesmo código da função de Marketing.
 
 ## Passo a passo (o vídeo vertical)
 

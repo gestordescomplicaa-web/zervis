@@ -32,7 +32,8 @@
     "marketing",
     "marketing/metricas",
     "impressora",
-    "empresas"
+    "empresas",
+    "marketing/videos"
   ],
   "escritas": [
     "cerebro",
@@ -203,7 +204,10 @@
     "camera/encerrar",
     "empresas/grupos",
     "empresas/salvar",
-    "empresas/remover"
+    "empresas/remover",
+    "marketing/video/criar",
+    "marketing/video/refazer",
+    "marketing/video/descartar"
   ],
   "envios": [
     "sessao/anexo",
