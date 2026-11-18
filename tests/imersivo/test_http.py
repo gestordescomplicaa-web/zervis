@@ -107,3 +107,85 @@ async def verificar(tmp_path, monkeypatch):
 
 def test_fetch_autoriza_pedidos_locais_sem_enviar_token_a_outro_servidor(tmp_path, monkeypatch):
     asyncio.run(verificar(tmp_path, monkeypatch))
+
+
+async def verificar_pelo_painel(tmp_path, monkeypatch):
+    """ADR 0100: a mesma página atrás do painel, em /imersao/. Os caminhos da raiz ganham o
+    prefixo num lugar só (o fetch e o zeCaminho), e o pedido chega ao palco real."""
+    from zervis.portal.servidor import Portal
+
+    pagina = (servidor.HERE / "stage.html").read_text()
+    web = tmp_path / "web"
+    web.mkdir()
+    (web / "stage.html").write_text(
+        pagina[:pagina.index("<title>")] + "</head><body>Teste HTTP</body></html>"
+    )
+    estado = tmp_path / "estado"
+    estado.mkdir()
+    monkeypatch.setattr(servidor, "HERE", web)
+    monkeypatch.setattr(servidor, "ESTADO", estado)
+    monkeypatch.setattr(servidor, "TOKEN", "token-sintetico-do-browser")
+    http = ThreadingHTTPServer(("127.0.0.1", 0), servidor.Handler)
+    threading.Thread(target=http.serve_forever, daemon=True).start()
+    painel = Portal({}, {}, porta=0, imersivo=http.server_port)
+    painel.iniciar()
+    perfil = tmp_path / "chromium"
+    perfil.mkdir()
+    processo = subprocess.Popen([
+        "/usr/bin/chromium", "--headless=new", "--remote-debugging-port=0",
+        f"--user-data-dir={perfil}", "--no-first-run", "--disable-background-networking",
+        f"http://127.0.0.1:{painel.porta}/imersao/stage.html?camera=0",
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        porta = perfil / "DevToolsActivePort"
+        for _ in range(100):
+            if porta.exists():
+                break
+            await asyncio.sleep(.1)
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{int(porta.read_text().splitlines()[0])}/json/list", timeout=5
+        ) as resposta:
+            alvo = next(p for p in json.load(resposta) if p["type"] == "page")
+        async with websockets.connect(alvo["webSocketDebuggerUrl"]) as ws:
+            seq = 0
+
+            async def avaliar(texto):
+                nonlocal seq
+                seq += 1
+                await ws.send(json.dumps({"id": seq, "method": "Runtime.evaluate", "params": {
+                    "expression": texto, "awaitPromise": True, "returnByValue": True,
+                }}))
+                while True:
+                    evento = json.loads(await asyncio.wait_for(ws.recv(), 10))
+                    if evento.get("id") == seq:
+                        resultado = evento["result"]
+                        assert "exceptionDetails" not in resultado, resultado
+                        return resultado.get("result", {}).get("value")
+
+            for _ in range(50):
+                if await avaliar("document.readyState === 'complete' && !!window.zeCaminho"):
+                    break
+                await asyncio.sleep(.1)
+            assert await avaliar("location.pathname") == "/imersao/stage.html"
+            assert await avaliar("window.zeCaminho('/media/a b.png')") == "/imersao/media/a b.png"
+            assert await avaliar("window.zeCaminho('avatar/ze.glb')") == "avatar/ze.glb"
+            assert await avaliar("fetch('/config').then(r => r.status)") == 200
+            assert await avaliar("""fetch(new Request(location.origin + '/teclado', {
+                method:'POST',headers:{'Content-Type':'application/json'},body:'{"texto":"Pelo painel"}'
+                })).then(r => r.status)""") == 200
+            assert json.loads((estado / "teclado.json").read_text())["texto"] == "Pelo painel"
+            assert await avaliar("fetch('/camera/info?nome=x').then(r => r.status)") == 403
+    finally:
+        processo.terminate()
+        try:
+            processo.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            processo.kill()
+            processo.wait(timeout=5)
+        painel.parar()
+        http.shutdown()
+        http.server_close()
+
+
+def test_pelo_painel_os_caminhos_ganham_o_prefixo(tmp_path, monkeypatch):
+    asyncio.run(verificar_pelo_painel(tmp_path, monkeypatch))

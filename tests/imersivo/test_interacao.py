@@ -216,6 +216,10 @@ async def main():
                 await check('Foco zoom keeps its close and zoom toolbar accessible on a smaller screen', "[...document.querySelectorAll('#jv-mapa .grip button,#jv-mapa .ferramentas button:not([hidden])')].every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})")
                 shot=await call('Page.captureScreenshot', {'format':'png'})
                 Path('/tmp/jarvis-interacao-pequena.png').write_bytes(base64.b64decode(shot['data']))
+                await ev("document.querySelector('#jv-mapa')?.classList.remove('aberto');stageCmds([{a:'present',title:'Skill resumo-falado',body:'+ Use frases curtas.'}])")
+                await asyncio.sleep(.3)
+                await quadros()
+                await check('present with a new title creates its card instead of spotlighting another item', "[...document.querySelectorAll('.card.presented')].some(e=>e.textContent.includes('Skill resumo-falado'))&&!document.querySelector('.ringcard.presented')")
                 assert not errors,errors
                 print(json.dumps({'passed':len(passed),'checks':passed},ensure_ascii=False,indent=2))
         finally:

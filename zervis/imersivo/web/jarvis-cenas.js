@@ -421,7 +421,7 @@
     // the real thing, not a hologram: the picture sharp, a slow push-in, the caption over it
     foto(reg, caixa, b) {
       caixa.innerHTML = `<figure class="jv-c-foto"><i class="fundo"></i><img alt="${esc(b.legenda || b.titulo)}" decoding="async"></figure>`;
-      const fig = caixa.firstElementChild, img = fig.querySelector("img"), src = "/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/");
+      const fig = caixa.firstElementChild, img = fig.querySelector("img"), src = window.zeCaminho("/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/"));
       img.addEventListener("error", () => { fig.classList.add("falhou"); fig.textContent = "Foto indisponível"; }, { once: true });
       img.addEventListener("load", () => fig.classList.add("pronta"), { once: true });
       fig.querySelector(".fundo").style.backgroundImage = `url("${src}")`;
@@ -433,7 +433,7 @@
       const fig = caixa.firstElementChild, v = fig.querySelector("video");
       v.addEventListener("error", () => { fig.classList.add("falhou"); fig.textContent = "Vídeo indisponível"; }, { once: true });
       v.addEventListener("loadeddata", () => fig.classList.add("pronta"), { once: true });
-      v.src = "/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/");
+      v.src = window.zeCaminho("/media/" + b.arquivo.split("/").map(encodeURIComponent).join("/"));
       if (b.legenda) fig.insertAdjacentHTML("beforeend", `<figcaption>${esc(b.legenda)}</figcaption>`);
     },
     lista(reg, caixa, b) {

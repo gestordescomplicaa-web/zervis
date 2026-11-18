@@ -37,8 +37,9 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from zervis import ambiente
+from zervis import imersivo as palco
 from zervis.oficina.permissoes import ChaveInvalida, Permissoes
-from zervis.portal import arquivos_web, publico
+from zervis.portal import arquivos_web, imersao, publico
 from zervis.portal.senha import Acesso, SenhaErro
 from zervis.portal.voz_app import AparelhosDeVoz, PareamentoErro
 from zervis.transporte import websocket
@@ -106,8 +107,10 @@ class Portal:
         aparelhos_voz: AparelhosDeVoz | None = None,
         permissoes: Permissoes | None = None,
         conectores: Conectores | None = None,
+        imersivo: int = palco.PORTA,
     ) -> None:
         self.acesso = acesso
+        self.imersivo = imersivo  # a porta do palco, repassado em /imersao/ (ADR 0100)
         self.permissoes = permissoes  # os pedidos de permissão das sessões (ADR 0039)
         self.conectores = conectores  # a ponte dos conectores das sessões (ADR 0076)
         self.voz_app = voz_app
@@ -178,7 +181,7 @@ class Portal:
                     "style-src 'self' 'unsafe-inline'; script-src 'self'; "
                     f"connect-src 'self' {VOZ_REMOTA}; "
                     "frame-ancestors 'none'; "
-                    f"frame-src {IMERSIVO}",
+                    f"frame-src 'self' {IMERSIVO}",
                 )
                 self.end_headers()
                 self.wfile.write(corpo)
@@ -431,6 +434,35 @@ class Portal:
                 self.end_headers()
                 self.wfile.write(resposta)
 
+            def _imersao(self, metodo: str) -> None:
+                """O palco pelo painel (ADR 0100), para quem já entrou."""
+                alvo = self.path.removeprefix(imersao.PREFIXO[:-1]) or "/"
+                if imersao.bloqueado(metodo, alvo.split("?", 1)[0]):
+                    self._json(403, {"erro": "só no computador do Zé"})
+                    return
+                tamanho = int(self.headers.get("Content-Length") or 0)
+                if tamanho > imersao.MAXIMO_CORPO:
+                    self._json(413, {"erro": "grande demais"})
+                    return
+                corpo = self.rfile.read(tamanho) if tamanho else b""
+                try:
+                    resposta = imersao.repassar(
+                        metodo, alvo, dict(self.headers.items()), corpo, portal.imersivo
+                    )
+                except OSError:
+                    self._json(502, {"erro": "Imersão indisponível"})
+                    return
+                self.send_response(resposta.status)
+                for chave, valor in resposta.cabecalhos:
+                    self.send_header(chave, valor)
+                # A página do palco só abre dentro do próprio painel.
+                self.send_header("X-Frame-Options", "SAMEORIGIN")
+                self.send_header("Content-Security-Policy", "frame-ancestors 'self'")
+                self.end_headers()
+                with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+                    for pedaco in resposta.pedacos():
+                        self.wfile.write(pedaco)
+
             def _voz_app(self) -> None:
                 """A voz do app: a chave do pareamento no cabeçalho, sem cookie nem origem (não é
                 um navegador, e a chave não abre mais nada)."""
@@ -610,6 +642,9 @@ class Portal:
                     else:
                         self._ir("/entrar")
                     return
+                if caminho.startswith(imersao.PREFIXO):
+                    self._imersao("GET")
+                    return
                 arquivo = arquivos_web.achar(WEB, caminho)
                 if arquivo is not None:
                     corpo = arquivo.read_bytes()
@@ -659,6 +694,12 @@ class Portal:
                         if portal.acesso is not None:
                             portal.acesso.sair(self._cookie())
                         self._ir("/entrar", f"{COOKIE}=; Path=/; Max-Age=0")
+                    return
+                if caminho.startswith(imersao.PREFIXO) and self._host_local():
+                    if self._entrou():
+                        self._imersao("POST")
+                    else:
+                        self._json(401, {"erro": "entrar"})
                     return
                 if not self._autorizado():
                     self._json(403, {"erro": "token"})
