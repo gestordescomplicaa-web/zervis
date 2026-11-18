@@ -4,6 +4,8 @@
 // arquivo, e estas pontes ficam abertas (`any`) até cada uma ganhar o seu tipo.
 interface Window {
   // Os scripts do Zé (zervis/imersivo/web/jarvis-*.js).
+  /** Um caminho da raiz do palco ("/media/x.png") onde ele mora (ADR 0100: /imersao/ pelo painel). */
+  zeCaminho: (caminho: string) => string;
   jarvisAbertura: any;
   jarvisAndamento: any;
   jarvisApresentacao: any;

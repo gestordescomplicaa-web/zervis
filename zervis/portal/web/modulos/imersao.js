@@ -1,7 +1,7 @@
 import { $, NO_PC, botao } from "../painel.js";
 import { compartilhado } from "./estado.js";
 
-// --- Imersão no celular: o holograma do Zé reagindo à conversa (a completa é só do PC) ---
+// --- Imersão no celular: o holograma do Zé reagindo à conversa (o palco pede tela grande) ---
 
 export const ESTADO_HOLO = { inativo: "Inativo", ativo: "Pronto", ouvindo: "Ouvindo", pensando: "Pensando", falando: "Falando", confirmando: "Esperando o seu sim" };
 
@@ -13,7 +13,12 @@ export const telaHolograma = () => `<div class="holo" data-estado="${compartilha
 
 // --- Imersão: o modo imersivo de sempre, numa moldura ---
 
-const IMERSIVO = "http://127.0.0.1:8794/stage.html?res=1280x720&fps=auto";
+// Do PC, o palco direto, com a câmera e as mãos. De outro aparelho com tela grande (o painel na
+// VPS), o palco pelo próprio painel, sem câmera: o Zé e os cards (ADR 0100).
+const IMERSIVO = NO_PC
+  ? "http://127.0.0.1:8794/stage.html?res=1280x720&fps=auto"
+  : "/imersao/stage.html?res=1280x720&fps=auto&camera=0";
+export const palcoAqui = () => NO_PC || matchMedia("(min-width: 900px)").matches;
 export const imersao = $("imersao");
 export const moldura = $("moldura");
 export const imersaoLigada = () => !!/** @type {HTMLIFrameElement} */ (moldura.querySelector("iframe"));
@@ -37,7 +42,7 @@ export function desligarImersao() {
 
 // A Imersão só roda à vista: sair dela ou esconder o painel desliga a câmera e o holograma.
 document.addEventListener("visibilitychange", () => {
-  if (location.hash !== "#imersao" || !NO_PC) return;
+  if (location.hash !== "#imersao" || !palcoAqui()) return;
   if (document.visibilityState === "hidden") desligarImersao(); else ligarImersao();
 });
 

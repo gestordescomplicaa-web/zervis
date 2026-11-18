@@ -2,6 +2,13 @@
 
 ## Não lançado
 
+- **Imersão de qualquer aparelho:** com o Zé numa VPS, a aba Imersão mostra o Zé animado e os
+  cards no navegador de quem abre o painel, sem câmera (ADR 0100). Do PC, nada muda; no celular,
+  segue o holograma leve.
+
+- **Cards apresentados aparecem:** quando o Zé apresentava um card novo (o diff de uma skill para
+  aprovar, por exemplo), o palco destacava o anel do Zé no lugar dele. Agora o card abre.
+
 - **Live sem gasto no silêncio:** com o app ou o navegador conectado no Ao vivo, o áudio só vai
   ao Deepgram quando há fala; depois de 2 minutos em silêncio, a conexão fecha e abre de novo
   quando você volta a falar, sem perder a primeira palavra (ADR 0099).

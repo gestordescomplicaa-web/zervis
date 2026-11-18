@@ -5,8 +5,9 @@ um comando (ADR 0034, etapa I3) ainda não existe; este é o caminho verificado 
 
 No servidor, o Zé tem o cérebro, a memória, as skills, o Foco, as sessões de código nos projetos
 do servidor, as automações, os avisos e o painel. Você fala com ele pelo navegador do computador
-ou pelo celular. O que depende do seu PC (microfone e alto-falante locais, janela, modo imersivo,
-ações do Omarchy) não existe no servidor, e o Zé sabe disso: a persona recebe "Esta máquina".
+ou pelo celular. O que depende do seu PC (microfone e alto-falante locais, janela, câmera e mãos
+na Imersão, ações do Omarchy) não existe no servidor, e o Zé sabe disso: a persona recebe "Esta
+máquina". A aba Imersão mostra o Zé animado e os cards no navegador, sem câmera (ADR 0100).
 
 ## O que precisa
 

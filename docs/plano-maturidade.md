@@ -271,6 +271,16 @@ Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
 - [ ] **Cérebro pela API** como alternativa testada às CLIs por assinatura; reler os termos de uso
   de cada uma a cada versão.
 - [ ] **Instalação do zero no CI, no Arch.**
+- [x] **A Imersão de qualquer aparelho:** desde 17/11/2026 ([ADR 0100](adr/0100-imersao-pelo-painel.md)),
+  o painel repassa o palco em `/imersao/` para quem entrou; na VPS, o Zé animado e os cards, sem
+  câmera. Falta a prova numa VPS de verdade.
+- [ ] **Windows e Mac pelo Docker Desktop:** a imagem da VPS também para arm64 (os Macs com
+  Apple Silicon) e o passo a passo. O Zé inteiro pelo navegador em `localhost`, menos o microfone
+  do sistema e as ações do Omarchy. Avaliação de 17/11/2026: é o caminho barato; o Mac nativo é
+  médio (áudio sem o PipeWire, launchd no lugar do systemd em 20 arquivos, caminhos `/usr/bin`
+  fixos em 16, isolamento sem o `bwrap`); o Windows nativo é alto (o terminal das sessões usa
+  `pty`, `termios` e `fcntl`, e não há isolamento equivalente). Testar nas máquinas Windows e
+  macOS da CI do GitHub, de graça para repositório público.
 
 Fora por decisão de 17/11/2026 (não são necessários agora): WhatsApp pela API oficial, inglês no
 painel e na persona, e os primeiros contribuidores.

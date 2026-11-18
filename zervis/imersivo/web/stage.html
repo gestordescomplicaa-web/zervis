@@ -25,15 +25,29 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 <meta name="ze-token" content="__ZE_TOKEN__">
 <script>
 // A autorização só acompanha pedidos para o próprio imersivo; nunca chega aos CDNs.
+// Pelo painel (ADR 0100), o palco mora em /imersao/: os caminhos da raiz ("/state", "/media/…")
+// ganham esse começo aqui, num lugar só (window.zeCaminho, também para imagens e vídeos).
 {
   const fetchLocal = window.fetch.bind(window);
   const token = document.querySelector('meta[name="ze-token"]').content;
+  const base = location.pathname.replace(/[^/]*$/, "");
+  window.zeCaminho = (caminho) => base !== "/" && caminho.startsWith("/") && !caminho.startsWith(base)
+    ? base + caminho.slice(1) : caminho;
   window.fetch = (entrada, opcoes = {}) => {
     const url = new URL(entrada instanceof Request ? entrada.url : entrada, location.href);
     if (url.origin === location.origin) {
       const headers = new Headers(opcoes.headers || (entrada instanceof Request ? entrada.headers : undefined));
       headers.set("X-Ze-Token", token);
       opcoes = { ...opcoes, headers };
+      const caminho = window.zeCaminho(url.pathname);
+      if (caminho !== url.pathname) {
+        url.pathname = caminho;
+        if (!(entrada instanceof Request)) return fetchLocal(url.href, opcoes);
+        const pedido = entrada;
+        const semCorpo = ["GET", "HEAD"].includes(pedido.method);
+        return (semCorpo ? Promise.resolve(undefined) : pedido.arrayBuffer()).then((body) =>
+          fetchLocal(url.href, { method: pedido.method, body, cache: pedido.cache, signal: pedido.signal, ...opcoes }));
+      }
     }
     return fetchLocal(entrada, opcoes);
   };
@@ -346,6 +360,8 @@ const Q = new URLSearchParams(location.search);
 // Everything downstream is aspect-agnostic (fractions + cover-fit):
 // shape the tracker WINDOW to match, 9:16 OBS canvas for the render.
 const PORTRAIT = Q.get("portrait") === "1";
+// De outro aparelho (o painel na VPS, ADR 0100): o Zé e os cards, sem câmera nem mãos.
+const SEM_CAMERA = Q.get("camera") === "0";
 const RES = (() => {
   const m = /^(\d{3,4})x(\d{3,4})$/i.exec(Q.get("res") || "");
   return m ? [+m[1], +m[2]] : [1920, 1080];
@@ -465,8 +481,8 @@ function makeImage(src, title) {
   const el = document.createElement("div");
   el.className = "card imgcard" + (fx || vid ? " fxcard" : "");
   el.innerHTML = vid
-    ? `<video src="${escT(src)}" autoplay loop muted playsinline></video>`
-    : `<img src="${escT(src)}" alt="">`;
+    ? `<video src="${escT(window.zeCaminho(src))}" autoplay loop muted playsinline></video>`
+    : `<img src="${escT(window.zeCaminho(src))}" alt="">`;
   BEHIND.appendChild(el);
   el.classList.add("mat");                     // arrives as light...
   setTimeout(() => el.classList.remove("mat"), 650);   // ...resolves true
@@ -1263,12 +1279,16 @@ function renderModels() {
 // away off-screen); hover = pulse for attention.
 let lastTouchedId = null;
 
-function findItem(title) {
+// `reserva`: with no title match, the held / last touched / newest item. The present verb asks
+// without it: a new card's title matches nothing yet, and the fallback presented the ring instead
+// of creating the card (the skill diff never showed while the ring was on the board).
+function findItem(title, reserva = true) {
   if (title) {
     const t = title.toLowerCase();
     const f = items.find(i => (i.def.title || "").toLowerCase().includes(t) ||
                               (i.def.src || "").toLowerCase().includes(t));
     if (f) return f;
+    if (!reserva) return null;
   }
   return items.find(i => i.grabbedBy.length) ||
          items.find(i => i.id === lastTouchedId) ||
@@ -1368,7 +1388,7 @@ function applyCmds(cmds) {
       // THE PRESENT verb: show-and-tell. Stage (or find) the thing, fly
       // it center stage, enlarge it, dim everything else. Ends when the
       // person grabs it, it leaves the board, or a new present/clear.
-      let t = c.title ? findItem(c.title) : null;
+      let t = c.title ? findItem(c.title, false) : null;
       if (!t && c.src) {
         t = isModelSrc(c.src) ? makeModel(c.src, c.title, c.mode, c.lift)
                               : makeImage(c.src, c.title);
@@ -2432,6 +2452,14 @@ function physics(dt) {
 }
 
 async function boot() {
+  if (!SEM_CAMERA) await iniciarMaos();
+  document.getElementById("boot").remove();
+  await loadTree();
+  spawnStage();
+  iniciarQuadros();
+}
+
+async function iniciarMaos() {
   await pickInitialCam();
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
@@ -2452,9 +2480,9 @@ async function boot() {
     // KEEP-tracking eased to 0.5 so a latched hand rides through blur;
     // fresh DETECTION stays 0.7 — the busy-background ghost wall holds.
     minHandPresenceConfidence: 0.5 });
-  document.getElementById("boot").remove();
-  await loadTree();
-  spawnStage();
+}
+
+function iniciarQuadros() {
   toast("ZÉ · gdautomacao.ia", 2000);  // build fingerprint
   let lastT = performance.now();
 
@@ -2469,7 +2497,7 @@ async function boot() {
     // for 1,5 s, detect only IDLE_HZ times a second; the first hand back
     // restores full rate at once, so every gesture still runs at full rate.
     const trackingIdle = IDLE_HZ > 0 && now - lastHandAt > 1500;
-    if (cam.currentTime !== lastVideoTs && (!trackingIdle || now - lastDetectAt >= 1000 / IDLE_HZ)) {
+    if (landmarker && cam.currentTime !== lastVideoTs && (!trackingIdle || now - lastDetectAt >= 1000 / IDLE_HZ)) {
       lastVideoTs = cam.currentTime; lastDetectAt = now;
       const detectionStarted = performance.now();
       // barehands-jarvis: jarvis-maos.js may hand over a light-corrected copy
@@ -3483,8 +3511,8 @@ async function renderLoop() {
           el = document.createElement("div");
           el.className = "card imgcard" + (it.fxf ? " fxcard" : "");
           el.innerHTML = it.vd
-            ? `<video src="${escT(it.src)}" autoplay loop muted playsinline></video>`
-            : `<img src="${escT(it.src)}" alt="">`;
+            ? `<video src="${escT(window.zeCaminho(it.src))}" autoplay loop muted playsinline></video>`
+            : `<img src="${escT(window.zeCaminho(it.src))}" alt="">`;
           el.classList.add("mat");
           setTimeout(() => el.classList.remove("mat"), 650);
         } else if (it.type === "card") {
