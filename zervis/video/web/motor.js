@@ -96,7 +96,7 @@
   Ze.cena = (tipo, def) => { Ze.cenas[tipo] = def; };
 
   // --- o vídeo ----------------------------------------------------------------------------------
-  let V, palco, mundo, cenas = [], legenda, onda, preto, fundo, legendaVista = -1, palavrasDaFala = [];
+  let V, palco, mundo, cenas = [], legenda, onda, preto, fundo;
 
   function carregar(src, tipo) {
     return new Promise((ok, falha) => {
@@ -129,20 +129,60 @@
     const ctx = { marca: V.marca, estilo: V.estilo, video: V };
     cenas = V.cenas.map((c, i) => {
       const def = Ze.cenas[c.tipo] || Ze.cenas.frase;
-      const el = Ze.h("section", `cena cena-${c.tipo}`);
+      const el = Ze.h("section", `cena cena-${c.tipo} composicao-${c.composicao || "padrao"}`);
+      // cada cena tem o próprio fundo (as mesmas manchas, no mesmo tempo): na máscara e no
+      // deslize, a que entra cobre a que sai, sem dupla exposição
+      const fundoCena = Ze.h("div", "fundo-cena");
+      fundoCena.append(Ze.h("div", "mancha um"), Ze.h("div", "mancha dois"));
+      const camera = Ze.h("div", "camera");
+      el.append(fundoCena, camera);
       el.style.display = "none";
       mundo.append(el);
-      return { c, el, def, i, estado: def.montar(c, el, ctx) || {}, ctx };
+      c.palavras = c.palavras && c.palavras.length ? c.palavras : estimadas(c, i);
+      const ctxCena = { ...ctx, cena: c };
+      return { c, el, camera, def, i, estado: def.montar(c, camera, ctxCena) || {}, ctx: ctxCena, blocos: blocos(c) };
     });
     if (V.estilo.onda !== false) for (let i = 0; i < 44; i++) onda.append(Ze.h("i"));
     else onda.remove();
-    palavrasDaFala = V.falas.map((f) => {
-      const palavras = f.texto.split(/\s+/).filter(Boolean);
-      const total = palavras.reduce((s, p) => s + p.length + 1, 0);
-      let acc = 0;
-      return palavras.map((p) => { const em = f.inicio + f.dur * (acc / total); acc += p.length + 1; return { p, em }; });
+  }
+
+  /** Sem o tempo real (um dados.js antigo), o tempo de cada palavra pelo tamanho dela. */
+  function estimadas(c, i) {
+    const f = V.falas[i] || { inicio: c.inicio, dur: Math.max(0.5, c.fim - c.inicio - 0.4), texto: c.fala };
+    const palavras = String(f.texto || c.fala || "").split(/\s+/).filter(Boolean);
+    const total = palavras.reduce((s, p) => s + p.length + 1, 0) || 1;
+    let acc = 0;
+    return palavras.map((p) => {
+      const ini = f.inicio + f.dur * (acc / total);
+      acc += p.length + 1;
+      return { p, i: ini, f: f.inicio + f.dur * (acc / total) };
     });
   }
+
+  /** A legenda em blocos curtos (até 6 palavras ou 32 letras, quebrando na pontuação): é o que
+   * se lê de relance num Reels, sem a frase inteira na tela. */
+  function blocos(c) {
+    const saida = [];
+    let atual = [];
+    const fecha = () => { if (atual.length) saida.push(atual); atual = []; };
+    c.palavras.forEach((w) => {
+      const letras = atual.reduce((n, x) => n + x.p.length + 1, 0) + w.p.length;
+      if (atual.length >= 6 || letras > 32) fecha();
+      atual.push(w);
+      if (/[.,!?;:…]$/.test(w.p)) fecha();
+    });
+    fecha();
+    return saida;
+  }
+
+  /** A fala da cena como tipografia: cada palavra entra quando é dita. */
+  Ze.falaCinetica = (el, c) => Ze.palavras(el, c.palavras.map((w) => w.p).join(" "), c.destaque || "");
+  Ze.animarFala = (spans, c, t, o = {}) => {
+    spans.forEach((s, k) => {
+      const w = c.palavras[k];
+      Ze.entra(s, t, (w ? w.i - c.inicio : 0) - 0.08, { d: 0.42, y: 46, blur: 12, ...o });
+    });
+  };
 
   function volume(t) {
     const i = Math.floor(t * V.fps), v = V.volume || [];
@@ -150,37 +190,33 @@
     return a + (b - a) * (t * V.fps - i);
   }
 
-  const SAIDA = 0.32;
+  let blocoVisto = null;
 
-  function desenharLegenda(t) {
-    let atual = -1;
-    V.falas.forEach((f, i) => {
-      const fim = (V.falas[i + 1]?.inicio ?? V.duracao) - 0.12;
-      if (t >= f.inicio - 0.15 && t < fim) atual = i;
-    });
-    if (atual !== legendaVista) {
+  function desenharLegenda(t, x) {
+    // nas cenas de texto, a própria fala é a tipografia: nada embaixo
+    const bloco = x && x.c.legenda !== "cinetica"
+      ? x.blocos.find((b, k) => t >= b[0].i - 0.12 && t < (x.blocos[k + 1]?.[0].i ?? x.c.fim) - 0.06)
+      : null;
+    if (bloco !== blocoVisto) {
       legenda.textContent = "";
-      if (atual >= 0) {
-        const cena = cenas.find((x) => t >= x.c.inicio && t < x.c.fim);
-        const marcadas = new Set(normalizar(cena?.c.destaque || "").split(" ").filter(Boolean));
-        palavrasDaFala[atual].forEach(({ p }, k) => {
+      if (bloco) {
+        const marcadas = new Set(normalizar(x.c.destaque || "").split(" ").filter(Boolean));
+        bloco.forEach((w, k) => {
           if (k) legenda.append(" ");
-          legenda.append(Ze.h("span", marcadas.has(normalizar(p)) ? "marcada" : "", p));
+          legenda.append(Ze.h("span", marcadas.has(normalizar(w.p)) ? "marcada" : "", w.p));
         });
       }
-      legendaVista = atual;
+      blocoVisto = bloco;
     }
-    if (atual < 0) return;
+    if (!bloco) return;
     [...legenda.querySelectorAll("span")].forEach((s, k) => {
-      const { em } = palavrasDaFala[atual][k];
-      const q = prog(t, em - 0.04, 0.18);
+      const w = bloco[k];
+      const q = prog(t, w.i - 0.03, 0.16);
       s.classList.toggle("dita", q > 0.5);
-      // a palavra da vez cresce um pouco e volta (o "brilho" de quem fala)
       const pulso = q > 0 && q < 1 ? Math.sin(q * Math.PI) : 0;
       s.style.transform = pulso ? `translateY(${-6 * pulso}px)` : ""; // só sobe: crescer comeria o espaço
     });
-    const inicio = V.falas[atual].inicio - 0.15;
-    Ze.entra(legenda, t, inicio, { d: 0.3, y: 16, blur: 0 });
+    Ze.entra(legenda, t, bloco[0].i - 0.12, { d: 0.22, y: 14, blur: 0, escala: 0.96 });
   }
 
   function desenharOnda(t, v) {
@@ -193,24 +229,85 @@
     });
   }
 
-  window.render = (t) => {
-    fundo.style.setProperty("--t", String(t));
-    const v = volume(t);
-    for (const x of cenas) {
-      const { c, el, def, estado, ctx } = x;
-      const dentro = t >= c.inicio && t < c.fim;
-      el.style.display = dentro ? "" : "none";
-      if (!dentro) continue;
-      const local = t - c.inicio, d = c.fim - c.inicio;
-      def.render(local, d, estado, { ...ctx, volume: v });
-      // a câmera: um empurrão lento por cena; a saída encolhe e desfoca, sem dupla exposição
-      const sai = x.i === cenas.length - 1 ? 0 : prog(local, d - SAIDA, SAIDA);
-      const empurra = 1 + 0.035 * curvas.vaivem(prog(local, 0, d));
-      el.style.opacity = String(1 - sai);
-      el.style.transform = `scale(${empurra * (1 - 0.05 * sai)})`;
-      el.style.filter = sai > 0 ? `blur(${sai * 10}px)` : "none";
+  // --- câmera e transições ------------------------------------------------------------------
+  const TRANSICAO = 0.42; // quanto a cena que sai continua na tela por baixo da que entra
+
+  /** O movimento de câmera da cena (no miolo, para não brigar com a transição). */
+  function camera(x, local, d) {
+    const p = curvas.vaivem(prog(local, 0, d));
+    const tipo = x.c.camera || "empurra";
+    const [esc, tx, ty] = tipo === "afasta" ? [1.09 - 0.09 * p, 0, 8 * (1 - p)]
+      : tipo === "desliza" ? [1.045, 28 - 56 * p, 0]
+      : tipo === "parado" ? [1 + 0.012 * p, 0, 0]
+      : [1 + 0.07 * p, 0, -12 * p];
+    x.camera.style.transform = `translate(${tx}px, ${ty}px) scale(${esc})`;
+  }
+
+  /** A cena que entra (`x`) e a que sai (`antes`), durante a transição de `x`. */
+  function transicao(x, antes, local) {
+    const tipo = x.c.transicao || "zoom";
+    const q = prog(local, 0, TRANSICAO), p = curvas.saiForte(q);
+    const el = x.el;
+    el.style.clipPath = "none";
+    el.style.filter = "none";
+    el.style.opacity = "1";
+    el.style.transform = "none";
+    if (tipo === "corte") {
+      // corte seco na batida, com um soco de câmera
+      el.style.transform = `scale(${1.06 - 0.06 * curvas.saiForte(prog(local, 0, 0.3))})`;
+      return;
     }
-    desenharLegenda(t);
+    if (!antes || q >= 1) return;
+    const sai = antes.el;
+    sai.style.display = "";
+    sai.style.zIndex = "1";
+    el.style.zIndex = "2";
+    if (tipo === "mascara") {
+      el.style.clipPath = `circle(${p * 150}% at 50% 42%)`;
+      sai.style.transform = `scale(${1 + 0.05 * p})`;
+    } else if (tipo === "deslize") {
+      const v = Math.sin(q * Math.PI); // a velocidade: o desfoque segue o movimento
+      el.style.transform = `translateX(${(1 - p) * 100}%)`;
+      el.style.filter = v > 0.05 ? `blur(${5 * v}px)` : "none";
+      sai.style.transform = `translateX(${-35 * p}%)`;
+      sai.style.opacity = String(1 - 0.7 * p);
+      sai.style.filter = v > 0.05 ? `blur(${5 * v}px)` : "none";
+    } else {
+      // zoom: a que sai cresce e some; a que entra chega de trás
+      el.style.transform = `scale(${0.86 + 0.14 * p})`;
+      el.style.opacity = String(p);
+      sai.style.transform = `scale(${1 + 0.35 * p})`;
+      sai.style.opacity = String(1 - p);
+      sai.style.filter = q > 0.05 ? `blur(${8 * q}px)` : "none";
+    }
+  }
+
+  window.render = (t) => {
+    document.documentElement.style.setProperty("--t", String(t));
+    const v = volume(t);
+    let atual = null;
+    for (const x of cenas) {
+      const dentro = t >= x.c.inicio && t < x.c.fim;
+      x.el.style.display = dentro ? "" : "none";
+      x.el.style.zIndex = "";
+      if (!dentro) continue;
+      atual = x;
+    }
+    if (atual) {
+      const antes = cenas[atual.i - 1];
+      const local = t - atual.c.inicio, d = atual.c.fim - atual.c.inicio;
+      // a cena que sai continua desenhando (um pouco além do fim dela) por baixo da que entra
+      if (antes && local < TRANSICAO && atual.c.transicao !== "corte") {
+        const la = t - antes.c.inicio, da = antes.c.fim - antes.c.inicio;
+        antes.def.render(la, da, antes.estado, { ...antes.ctx, volume: v });
+        camera(antes, la, da);
+        antes.el.style.clipPath = "none";
+      }
+      atual.def.render(local, d, atual.estado, { ...atual.ctx, volume: v });
+      camera(atual, local, d);
+      transicao(atual, antes, local);
+    }
+    desenharLegenda(t, atual);
     desenharOnda(t, v);
     preto.style.opacity = String(prog(t, V.duracao - 0.35, 0.35));
   };

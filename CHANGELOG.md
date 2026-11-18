@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Vídeos com direção:** o Opus 5.5 passa a dirigir os vídeos (objetivo, público, composição,
+  câmera e transição de cada cena) e o tempo de cada palavra vem da própria voz, medido pelo
+  Deepgram: a legenda e o que entra na tela caem na palavra certa. A tela não repete mais a fala,
+  as cenas ganharam movimento de câmera e transições de verdade, e dá para escolher a duração
+  (15 a 60 s) e o modelo que dirige (ADR 0107).
+
 - **Vídeos em Marketing:** o Zé cria Reels explicativos com a sua marca, sobre qualquer tema ou a
   partir de um artigo do blog. Ele escreve o roteiro, narra com a voz escolhida em Voz e monta o
   vídeo com cenas animadas, legenda palavra por palavra e trilha própria, em uns 5 minutos. Você
