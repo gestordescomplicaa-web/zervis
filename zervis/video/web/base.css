@@ -141,3 +141,34 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
   background: linear-gradient(90deg, transparent 30%, rgb(255 255 255 / .5) 50%, transparent 70%); }
 .fecho-nome { margin-top: 10px; }
 
+/* arte (ADR 0110): ícones de traço, nós, conexões, faíscas e o palco vivo -------------------- */
+.malha { position: absolute; left: -60%; right: -60%; bottom: -6%; height: 62%; transform-origin: 50% 100%;
+  transform: perspective(700px) rotateX(72deg); background-size: 96px 96px; background-position: 0 var(--desloca, 0px);
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 80%); mask-image: linear-gradient(to top, #000 0%, transparent 80%); }
+.composicao-cheia .malha { display: none; }
+.icone { overflow: visible; }
+.icone path, .icone circle, .icone rect, .icone line, .icone polyline, .icone polygon, .icone ellipse {
+  fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.arte-icone { position: relative; width: 760px; height: 760px; display: grid; place-items: center; }
+.arte-disco { position: absolute; width: 540px; height: 540px; border-radius: 50%; }
+.arte-heroi { position: relative; width: 420px; height: 420px; z-index: 1; }
+.anel { position: absolute; left: 50%; top: 50%; width: 540px; height: 540px; border-radius: 50%; opacity: 0; pointer-events: none; }
+.faiscas { position: absolute; left: 50%; top: 50%; width: 0; height: 0; z-index: 2; }
+.faisca { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; opacity: 0; }
+.arte-rotulo { font-family: var(--fonte-titulo); font-size: 76px; font-weight: 800; letter-spacing: -.02em; text-align: center; max-width: 900px; line-height: 1.05; }
+.rede { position: relative; width: 900px; height: 860px; }
+.rede-linhas { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ligacao { fill: none; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.pacote { opacity: 0; }
+.rede .anel { width: 300px; height: 300px; }
+.no { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 14px; z-index: 1; }
+.no-disco { width: 230px; height: 230px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; }
+.no-icone { width: 118px; height: 118px; }
+.no.grande .no-disco { width: 260px; height: 260px; }
+.no.grande .no-icone { width: 140px; height: 140px; }
+.no.marca .no-disco img { width: 70%; height: 70%; object-fit: contain; }
+.no-rotulo { font-family: var(--fonte-titulo); font-size: 44px; font-weight: 750; white-space: nowrap; letter-spacing: -.01em; }
+.caos { position: relative; width: 900px; height: 820px; }
+.caos-item { position: absolute; width: 220px; height: 220px; border-radius: 52px; display: grid; place-items: center; }
+.caos-icone { width: 120px; height: 120px; }
+

@@ -208,7 +208,7 @@
       // cada cena tem o próprio fundo (as mesmas manchas, no mesmo tempo): na íris e no chicote,
       // a que entra cobre a que sai, sem dupla exposição
       const fundoCena = Ze.h("div", "fundo-cena");
-      fundoCena.append(Ze.h("div", "mancha um"), Ze.h("div", "mancha dois"));
+      fundoCena.append(Ze.h("div", "mancha um"), Ze.h("div", "mancha dois"), Ze.h("div", "malha"));
       const camera = Ze.h("div", "camera");
       el.append(fundoCena, camera);
       el.style.display = "none";
@@ -404,6 +404,8 @@
 
   window.render = (t) => {
     document.documentElement.style.setProperty("--t", String(t));
+    // o piso em perspectiva anda devagar para a frente (o palco vivo, não um título se mexendo)
+    document.documentElement.style.setProperty("--desloca", `${((t * 45) % 90).toFixed(2)}px`);
     const v = volume(t);
     let atual = null;
     for (const x of cenas) {
