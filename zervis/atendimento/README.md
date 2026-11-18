@@ -33,9 +33,9 @@ próprio e integrações.
   você).
 - **Clientes só veem a versão publicada**, e Publicar exige todos os testes de conversa passando.
   Ligar o agente, o modo (teste ou todos) e os números de teste só pela página.
-- **O chat "Você" é de quem usa, não de cliente** (ADR 0102). A mensagem do número para ele
-  mesmo vira o evento `pedido`, que o Zé responde com um cérebro próprio; nunca vai ao agente
-  nem ao arquivo. A resposta do Zé volta como eco e é descartada pela Central.
+- **A conversa com o seu número é de quem usa, não de cliente** (ADR 0102). Com a conversa
+  ligada, a mensagem do número autorizado no painel vira o evento `pedido`, que o Zé responde
+  com um cérebro próprio; essa conversa nunca vai ao agente nem ao arquivo.
 - **Dados de cliente ficam na pasta privada** (`<dados>/atendente/`), nunca no projeto do
   agente nem no repositório.
 

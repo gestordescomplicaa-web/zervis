@@ -158,6 +158,18 @@ func enviarLote(ctx context.Context, itens []outboxItem) ([]string, error) {
 	return ids, nil
 }
 
+// avisoOutbox acorda a entrega assim que uma mensagem entra na outbox (Zérvis, ADR 0102): sem
+// ele, a mensagem esperava até um tique inteiro (5 s) antes de chegar ao Zé. O tique continua,
+// para as reentregas. Um aviso só basta: a entrega leva tudo o que estiver pendente.
+var avisoOutbox = make(chan struct{}, 1)
+
+func avisarOutbox() {
+	select {
+	case avisoOutbox <- struct{}{}:
+	default:
+	}
+}
+
 // rodarEnvioOutbox mantém a fila andando até o processo encerrar.
 func rodarEnvioOutbox(ctx context.Context, db *sql.DB, log *slog.Logger) {
 	tick := time.NewTicker(envioIntervalo)
@@ -167,6 +179,7 @@ func rodarEnvioOutbox(ctx context.Context, db *sql.DB, log *slog.Logger) {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
+		case <-avisoOutbox:
 		}
 		if n := expurgar(ctx, db); n > 0 {
 			// Não é rotina: é mensagem de cliente que se perdeu.

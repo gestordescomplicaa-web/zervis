@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 FONTE = Path(__file__).with_name("wacalls")
 PASTA = lugares.DADOS / "whatsapp"
 ESCOLHA = lugares.CONFIG / "whatsapp.json"
+CONVERSA = lugares.CONFIG / "whatsapp-conversa.json"  # a conversa com o Zé (ADR 0102)
 REGISTRO = lugares.ESTADO / "whatsapp.log"
 NOME_DO_APARELHO = "Zérvis"  # o que aparece em "Aparelhos conectados" no celular
 ROTULO = "agente-voz/interno/v1:"  # a derivação do token do receptor, a mesma do WaCalls
@@ -99,9 +100,6 @@ class Recebida:
     grupo_nome: str = ""
     quando: float = 0.0  # a hora da mensagem no WhatsApp (epoch); 0 = desconhecida
     agenda: str = ""  # como está salva na agenda do celular; na sua mensagem, quem recebe
-    # O chat "Você" (ADR 0102): sua mensagem para o próprio número, que vale como pedido ao Zé.
-    # Só a sua, numa conversa privada: o WaCalls marca, e aqui se confere de novo.
-    proprio: bool = False
 
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
@@ -134,6 +132,40 @@ def escolhido(arquivo: Path = ESCOLHA) -> bool:
         return bool(json.loads(arquivo.read_text()).get("ativo"))
     except (OSError, ValueError, AttributeError):
         return False
+
+
+def conversa(arquivo: Path | None = None) -> tuple[bool, list[str]]:
+    """A conversa com o Zé (ADR 0102): se está ligada e os números autorizados a pedir."""
+    try:
+        dados = json.loads((arquivo or CONVERSA).read_text())
+    except (OSError, ValueError):
+        return False, []
+    if not isinstance(dados, dict):
+        return False, []
+    numeros = dados.get("numeros")
+    lista = (
+        [str(n) for n in numeros if re.fullmatch(r"\d{10,15}", str(n))]
+        if isinstance(numeros, list)
+        else []
+    )
+    return dados.get("ativo") is True, lista
+
+
+def configurar_conversa(ativo: bool, numeros: list[str], arquivo: Path | None = None) -> None:
+    arquivo = arquivo or CONVERSA
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    temporario = arquivo.with_suffix(".next")
+    temporario.write_text(json.dumps({"ativo": ativo, "numeros": numeros}))
+    temporario.replace(arquivo)
+
+
+def autorizado(telefone: str, numeros: list[str]) -> bool:
+    """O número de quem escreveu é um dos autorizados, com ou sem o nono dígito. Sem o número
+    (só o LID), nunca: na dúvida, a mensagem é de fora."""
+    if not telefone:
+        return False
+    alvo = set(variantes(telefone))
+    return any(alvo & set(variantes(n)) for n in numeros)
 
 
 def escolher(ativo: bool, arquivo: Path = ESCOLHA) -> None:
@@ -236,7 +268,6 @@ def recebidas(corpo: Any) -> list[Recebida]:
             Recebida(
                 ident, nome, telefone, texto, de_mim, chat, midia, em_grupo, nome_grupo,
                 _hora(m.get("occurred_at")), agenda,
-                m.get("is_self") is True and de_mim and not em_grupo,
             )
         )  # fmt: skip
     return saida

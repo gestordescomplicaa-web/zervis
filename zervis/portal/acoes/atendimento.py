@@ -24,11 +24,11 @@ class AcoesAtendimento(Pagina):
         "_motor_do_atendente",
         "central",
         "conectar_whatsapp",
+        "configurar_conversa_whatsapp",
         "conversa_pelo_whatsapp",
         "deepgram",
         "desconectar_whatsapp",
         "instagram",
-        "ligar_conversa_whatsapp",
         "ligar_mensagens",
         "mensagens",
         "projeto_agente",
@@ -41,12 +41,14 @@ class AcoesAtendimento(Pagina):
         return {"ligado": self.n.mensagens.ativo, "aviso": aviso}
 
     def mudar_conversa_whatsapp(self, dados: dict[str, Any]) -> dict[str, Any]:
-        aviso = self.n.ligar_conversa_whatsapp(dados.get("ligar") is True)
-        return {"ligado": self.n.conversa_pelo_whatsapp(), "aviso": aviso}
+        aviso = self.n.configurar_conversa_whatsapp(
+            dados.get("ligar") is True, str(dados.get("numero", ""))[:40]
+        )
+        return {**self.n.conversa_pelo_whatsapp(), "aviso": aviso}
 
     def atendimento(self) -> dict[str, Any]:
         tela = self.n.central.para_tela()
-        tela["conversa"] = self.n.conversa_pelo_whatsapp()  # o chat "Você" (ADR 0102)
+        tela["conversa"] = self.n.conversa_pelo_whatsapp()  # ADR 0102
         if qr := tela.pop("qr", ""):
             tela["qr"] = segno.make(qr, error="l").svg_inline(
                 scale=4, dark="#070c11", light="#ffffff", border=2

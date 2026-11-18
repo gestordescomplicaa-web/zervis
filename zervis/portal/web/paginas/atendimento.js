@@ -1,5 +1,6 @@
 import { ACOES, ESCOLHAS, MUDAR, recarregar } from "../modulos/acoes.js";
 import { $, PAGINAS, api, botao, cabeca, cartao, confirmar, esc, escolha, item, liga, mostrar, ocupado, sub, toast, valorCampo, vazio } from "../painel.js";
+import { cartaoConversa } from "../modulos/conversa-ze.js";
 import { compartilhado } from "../modulos/estado.js";
 
 // A página Redes sociais (antes Atendimento; ADR 0031 e 0057), carregada sob demanda pelo painel:
@@ -38,6 +39,7 @@ PAGINAS.atendimento = async () => {
   agenteVisto = a.agente;
   return `${cabeca("Redes sociais")}${sub("O WhatsApp e o Instagram ligados ao Zé.")}
     <div id="cartao-whatsapp">${cartaoWhatsapp(a.whatsapp)}</div>
+    ${cartaoConversa(a.whatsapp.conversa)}
     ${cartaoInstagram(a.instagram)}
     ${cartao("", `<div class="cabeca"><h2>Avisos</h2></div>
       ${item("Lead quente", "O Zé avisa quando alguém quer comprar.", liga(a.avisos.ligado, "atendimento-avisos", "", "Avisos de lead quente"))}`)}
@@ -74,8 +76,7 @@ function cartaoWhatsapp(w) {
   const topo = `<div class="cabeca"><h2>WhatsApp</h2><span class="etiqueta ${tom}">${esc(rotulo)}</span></div>`;
   let corpo;
   if (w.estado === "conectado") {
-    corpo = item("", `Número conectado: <span class="mono">+${esc(w.numero)}</span>`, botao("Desconectar", "whatsapp-desconectar", "", "perigo"))
-      + item("Conversa com o Zé", "Mensagens para o próprio número vão ao Zé.", liga(w.conversa, "whatsapp-conversa", "", "Conversa com o Zé"));
+    corpo = item("", `Número conectado: <span class="mono">+${esc(w.numero)}</span>`, botao("Desconectar", "whatsapp-desconectar", "", "perigo"));
   } else if (w.estado === "aguardando") {
     corpo = `<div class="acesso-qr">${w.qr}<div class="campos"><p>No celular, abra o WhatsApp › Aparelhos conectados › Conectar aparelho e leia o código.</p>
       <p class="nota">O código se renova sozinho.</p>
@@ -213,11 +214,6 @@ ESCOLHAS["cerebro-atendente"] = (valor) => salvar({ cerebro: valor });
 Object.assign(MUDAR, {
   "atendente-ligado": (el) => salvar({ ligado: el.checked }),
   "atendente-ligacoes": (el) => salvar({ ligacoes: el.checked }),
-  "whatsapp-conversa": async (el) => {
-    const r = await api("whatsapp/conversa", { ligar: el.checked });
-    toast(r.aviso);
-    await recarregar();
-  },
   "atendimento-avisos": async (el) => {
     const r = await api("mensagens/whatsapp", { ligar: el.checked });
     toast(r.aviso);

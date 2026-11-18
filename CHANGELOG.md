@@ -2,10 +2,12 @@
 
 ## Não lançado
 
-- **Conversa pelo WhatsApp:** com "Conversa com o Zé" ligada no cartão do WhatsApp, a mensagem
-  que você envia para o próprio número vai ao Zé, e a resposta chega no mesmo chat, mesmo com o
-  computador bloqueado. Ações com efeito continuam pedindo a voz ou o painel (ADR 0102). Por
-  enquanto, só texto.
+- **Conversa com o Zé pelo WhatsApp:** conecte um número para o Zé e informe o seu em "Conversa
+  com o Zé", na página Redes sociais. A mensagem do seu número ao número do Zé vai a ele, e a
+  resposta chega na mesma conversa, com notificação, mesmo com o computador bloqueado. Ações com
+  efeito continuam pedindo a voz ou o painel (ADR 0102). Por enquanto, só texto.
+- **Mensagens do WhatsApp sem espera:** cada mensagem chega ao Zé na hora, e não mais em lotes
+  a cada 5 segundos.
 
 - **Câmera ao vivo, as 3 lentes:** as lentes 2 e 3 mostravam a imagem da lente 1, porque o RTSP
   desta câmera só traz a primeira. Agora cada lente vem pelo protocolo dela, como no app iCSee, e

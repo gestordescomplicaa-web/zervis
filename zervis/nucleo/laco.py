@@ -787,7 +787,7 @@ class Nucleo(
         self.tunel.soltar()  # o túnel continua de pé: o endereço não muda
         self.mensagens.parar()
         self.buscador.parar()
-        self.parar_atendimento()  # a Central continua atendendo; o chat "Você" fecha
+        self.parar_atendimento()  # a Central continua; a conversa pelo WhatsApp fecha
         self.testes_do_atendente.parar()
         self.memoria_longa.parar()
         self.sessoes.ponte.parar()

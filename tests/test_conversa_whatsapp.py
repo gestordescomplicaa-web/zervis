@@ -1,5 +1,6 @@
-"""O chat "Você" do WhatsApp (ADR 0102): sua mensagem para o próprio número é um pedido ao Zé,
-respondido no mesmo chat por um cérebro próprio, sem confirmação de nada com efeito."""
+"""A conversa com o Zé pelo WhatsApp (ADR 0102): a mensagem do seu número, autorizado no painel,
+ao número do Zé é um pedido, respondido na mesma conversa por um cérebro próprio, sem confirmação
+de nada com efeito."""
 
 import asyncio
 import time
@@ -20,35 +21,20 @@ from zervis.nucleo.servicos import atendimento as sa
 EU = "5511999990000@s.whatsapp.net"
 
 
-def _msg(**campos: Any) -> dict[str, Any]:
-    return {
-        "event_id": "s:1",
-        "direction": "outbound",
-        "chat_jid": EU,
-        "phone": "5511999990000",
-        "type": "text",
-        "content": "que horas são?",
-        **campos,
-    }
-
-
-def test_so_a_sua_mensagem_numa_conversa_privada_vale_como_o_chat_voce() -> None:
-    lote = {
-        "mensagens": [
-            _msg(is_self=True),
-            _msg(event_id="s:2", is_self=True, direction="inbound"),  # não é sua
-            _msg(event_id="s:3", is_self=True, chat_jid="120363000000000000@g.us"),  # grupo
-            _msg(event_id="s:4"),  # sem a marca do WaCalls
-            _msg(event_id="s:5", is_self="true"),  # só o booleano vale
-        ]
-    }
-    assert [(r.id, r.proprio) for r in w.recebidas(lote)] == [
-        ("s:1", True),
-        ("s:2", False),
-        ("s:3", False),
-        ("s:4", False),
-        ("s:5", False),
-    ]
+def test_numero_autorizado_com_ou_sem_o_nono_digito_e_nunca_sem_numero(tmp_path: Path) -> None:
+    arquivo = tmp_path / "whatsapp-conversa.json"
+    assert w.conversa(arquivo) == (False, [])
+    w.configurar_conversa(True, ["5511999990000"], arquivo)
+    ligada, numeros = w.conversa(arquivo)
+    assert ligada and numeros == ["5511999990000"]
+    assert w.autorizado("5511999990000", numeros)
+    assert w.autorizado("551199990000", numeros)  # o mesmo celular, sem o nono dígito
+    assert not w.autorizado("5511988887777", numeros)
+    assert not w.autorizado("", numeros)  # só o LID: na dúvida, é de fora
+    arquivo.write_text('{"ativo": true, "numeros": ["abc", 5511]}')
+    assert w.conversa(arquivo) == (True, [])  # lixo no arquivo não autoriza ninguém
+    arquivo.write_text('{"ativo": true}')  # o arquivo da versão do chat "Você"
+    assert w.conversa(arquivo) == (True, [])
 
 
 # --- a Central ------------------------------------------------------------------------------
@@ -82,41 +68,45 @@ def _central(tmp_path: Path) -> tuple[c.Central, WhatsAppFalso, AtendenteFalso]:
     return c.Central(lambda: None, wa, at), wa, at  # type: ignore[arg-type, return-value]
 
 
-def test_central_faz_do_chat_voce_um_pedido_e_descarta_o_eco_da_resposta(
-    tmp_path: Path,
+DONO = "5511999990000"
+OUTRO = "5511988887777@s.whatsapp.net"
+
+
+def _ligar(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, ativo: bool = True) -> None:
+    monkeypatch.setattr(w, "CONVERSA", tmp_path / "whatsapp-conversa.json")
+    w.configurar_conversa(ativo, [DONO])
+
+
+def test_central_faz_da_mensagem_do_seu_numero_um_pedido_fora_do_arquivo_e_do_agente(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    central, wa, at = _central(tmp_path)
-    central._recebida(Recebida("s:1", "Eu", "5511", "que horas são?", True, EU, proprio=True))
+    _ligar(monkeypatch, tmp_path)
+    central, _, at = _central(tmp_path)
+    central._recebida(Recebida("s:1", "Gabriel", "551199990000", "que horas são?", chat=EU))
     eventos, _ = central.eventos.depois(0)
     assert [(e["tipo"], e["texto"], e["chat"]) for e in eventos] == [
         ("pedido", "que horas são?", EU)
     ]
-    assert at.recebidas == []  # nem o agente de atendimento nem o arquivo ("respondida")
-
-    corpo = {"chat": EU, "texto": "São  dez horas.", "chave": "k", "proprio": True}
-    assert central.responder("POST", "/whatsapp/enviar", corpo)[0] == 200
-    assert wa.enviadas == [(EU, "São  dez horas.")]
-    # A resposta volta pelo WaCalls como mensagem sua: não vira pedido (senão, um laço).
-    central._recebida(Recebida("s:2", "Eu", "5511", "São dez horas.", True, EU, proprio=True))
-    assert central.eventos.depois(1)[0] == []
-    # A mesma frase escrita de novo por você, depois do eco, é um pedido.
-    central._recebida(Recebida("s:3", "Eu", "5511", "São dez horas.", True, EU, proprio=True))
-    assert [e["tipo"] for e in central.eventos.depois(1)[0]] == ["pedido"]
+    # A resposta do Zé nessa conversa volta como mensagem do número do Zé: não vai a lugar algum.
+    central._recebida(Recebida("s:2", "Zé", DONO, "São dez horas.", de_mim=True, chat=EU))
+    assert central.eventos.depois(1)[0] == [] and at.recebidas == []
 
 
-def test_eco_so_vale_para_a_resposta_marcada_e_dentro_do_prazo(
+def test_outros_numeros_grupo_e_conversa_desligada_seguem_como_antes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    central, _, _ = _central(tmp_path)
-    corpo = {"chat": EU, "texto": "Pronto.", "chave": "k"}
-    central.responder("POST", "/whatsapp/enviar", corpo)  # sem "proprio": resposta a um lead
-    central._recebida(Recebida("s:1", "Eu", "5511", "Pronto.", True, EU, proprio=True))
-    assert [e["tipo"] for e in central.eventos.depois(0)[0]] == ["pedido"]
+    _ligar(monkeypatch, tmp_path)
+    central, _, at = _central(tmp_path)
+    central._recebida(Recebida("s:1", "Ana", "5511988887777", "quanto custa?", chat=OUTRO))
+    grupo = "120363000000000000@g.us"
+    central._recebida(Recebida("s:2", "Gabriel", DONO, "bom dia", chat=grupo, grupo=True))
+    assert [e["tipo"] for e in central.eventos.depois(0)[0]] == ["mensagem", "mensagem"]
+    assert [r.id for r in at.recebidas] == ["s:1"]  # o grupo nunca vai ao agente
 
-    monkeypatch.setattr(c, "ECO_S", -1.0)  # o eco chegou tarde demais
-    central.responder("POST", "/whatsapp/enviar", {**corpo, "proprio": True})
-    central._recebida(Recebida("s:2", "Eu", "5511", "Pronto.", True, EU, proprio=True))
-    assert [e["tipo"] for e in central.eventos.depois(1)[0]] == ["pedido"]
+    w.configurar_conversa(False, [DONO])  # desligada: o seu número é um contato como outro
+    central._recebida(Recebida("s:3", "Gabriel", DONO, "oi", chat=EU))
+    assert [e["tipo"] for e in central.eventos.depois(2)[0]] == ["mensagem"]
+    assert [r.id for r in at.recebidas] == ["s:1", "s:3"]
 
 
 # --- o cérebro do WhatsApp ------------------------------------------------------------------
@@ -220,10 +210,10 @@ def test_cerebro_que_nao_sobe_vira_resposta_de_falha() -> None:
 
 class CentralFalsa:
     def __init__(self) -> None:
-        self.enviadas: list[tuple[str, str, bool]] = []
+        self.enviadas: list[tuple[str, str]] = []
 
-    def enviar(self, texto: str, chave: str, chat: str = "", proprio: bool = False) -> None:
-        self.enviadas.append((chat, texto, proprio))
+    def enviar(self, texto: str, chave: str, chat: str = "") -> None:
+        self.enviadas.append((chat, texto))
 
 
 class ConversaFalsa:
@@ -239,9 +229,9 @@ class ConversaFalsa:
 def _servico(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ligada: bool = True
 ) -> tuple[sa.ServicoAtendimento, Any]:
-    monkeypatch.setattr(sa, "CONVERSA", tmp_path / "whatsapp-conversa.json")
+    monkeypatch.setattr(w, "CONVERSA", tmp_path / "whatsapp-conversa.json")
     if ligada:
-        w.escolher(True, sa.CONVERSA)
+        w.configurar_conversa(True, [DONO])
     registradas: list[tuple[str, str]] = []
     n = SimpleNamespace(
         central=CentralFalsa(),
@@ -264,10 +254,16 @@ def test_pedido_so_com_a_conversa_ligada_no_painel(
     servico, n = _servico(tmp_path, monkeypatch, ligada=False)
     servico._evento_da_central(_pedido())
     assert n.conversa_whatsapp.pedidos == [] and n.central.enviadas == []
-    assert servico.ligar_conversa_whatsapp(True) == "Conversa pelo WhatsApp ligada."
-    assert servico.conversa_pelo_whatsapp()
+    assert servico.configurar_conversa_whatsapp(True, "") == "Informe o seu número."
+    assert servico.configurar_conversa_whatsapp(True, "12 34") == "Número inválido."
+    assert servico.configurar_conversa_whatsapp(True, "+55 (11) 99999-0000") == (
+        "Conversa com o Zé ligada."
+    )
+    assert servico.conversa_pelo_whatsapp() == {"ligado": True, "numero": DONO}
     servico._evento_da_central(_pedido())
     assert n.conversa_whatsapp.pedidos == [("que horas são?", EU)]
+    assert servico.configurar_conversa_whatsapp(False, "") == "Conversa com o Zé desligada."
+    assert servico.conversa_pelo_whatsapp() == {"ligado": False, "numero": ""}
 
 
 def test_pedido_atrasado_grupo_e_midia_nao_vao_ao_cerebro(
@@ -278,14 +274,14 @@ def test_pedido_atrasado_grupo_e_midia_nao_vao_ao_cerebro(
     servico._evento_da_central(_pedido(chat="120363000000000000@g.us"))
     servico._evento_da_central(_pedido(texto="", midia="audio", evento="s:9"))
     assert n.conversa_whatsapp.pedidos == []
-    assert n.central.enviadas == [(EU, sa.SO_TEXTO, True)]
+    assert n.central.enviadas == [(EU, sa.SO_TEXTO)]
 
 
 def test_fila_cheia_avisa_no_chat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     servico, n = _servico(tmp_path, monkeypatch)
     n.conversa_whatsapp.aceita = False
     servico._evento_da_central(_pedido())
-    assert n.central.enviadas == [(EU, sa.FILA_CHEIA, True)]
+    assert n.central.enviadas == [(EU, sa.FILA_CHEIA)]
 
 
 def test_resposta_vai_ao_chat_em_partes_e_entra_na_conversa_do_dia(
@@ -294,14 +290,14 @@ def test_resposta_vai_ao_chat_em_partes_e_entra_na_conversa_do_dia(
     servico, n = _servico(tmp_path, monkeypatch)
     longa = ("Uma frase de resposta. " * 100).strip()
     servico.resposta_do_whatsapp(pm.Feito("resuma", longa, None, EU))
-    partes = [t for _, t, _ in n.central.enviadas]
+    partes = [t for _, t in n.central.enviadas]
     assert len(partes) == 2 and all(len(p) <= sa.PARTE_MAXIMA for p in partes)
     assert " ".join(partes) == longa
-    assert all(chat == EU and proprio for chat, _, proprio in n.central.enviadas)
+    assert all(chat == EU for chat, _ in n.central.enviadas)
     assert n.registradas == [("resuma", longa)]
 
     servico.resposta_do_whatsapp(pm.Feito("oi", "", "TimeoutError", EU))
-    assert n.central.enviadas[-1] == (EU, sa.SEM_RESPOSTA, True)
+    assert n.central.enviadas[-1] == (EU, sa.SEM_RESPOSTA)
     assert len(n.registradas) == 1  # a falha não entra na conversa do dia
 
 

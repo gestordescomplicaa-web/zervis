@@ -234,14 +234,15 @@ class Cliente:
     def devolver(self, telefone: str) -> None:
         self._api("POST", "/devolver", {"telefone": telefone})
 
-    def enviar(
-        self, texto: str, chave: str, chat: str = "", telefone: str = "", proprio: bool = False
-    ) -> None:
+    def enviar(self, texto: str, chave: str, chat: str = "", telefone: str = "") -> None:
         """Uma resposta já aprovada, pelo WhatsApp da Central, à conversa (ou ao número); a
-        `chave` evita o envio em dobro. `proprio`: a resposta do Zé no chat "Você" (ADR 0102),
-        que a Central reconhece quando volta."""
-        corpo = {"telefone": telefone, "chat": chat, "texto": texto, "chave": chave}
-        self._api("POST", "/whatsapp/enviar", {**corpo, "proprio": proprio}, espera=40.0)
+        `chave` evita o envio em dobro."""
+        self._api(
+            "POST",
+            "/whatsapp/enviar",
+            {"telefone": telefone, "chat": chat, "texto": texto, "chave": chave},
+            espera=40.0,
+        )
 
     # --- os eventos ---------------------------------------------------------------------------
 
@@ -263,7 +264,7 @@ class Cliente:
                         recente = agora - e.get("quando", 0) < REPASSAR_S
                         # "respondida": a resposta dada com o Zé fora encerra a pendência;
                         # "mensagem": vai só para a caixa de entrada, sem novo aviso;
-                        # "pedido": o do chat "Você" que chegou com o Zé reiniciando.
+                        # "pedido": o do seu número que chegou com o Zé reiniciando.
                         tipos = ("passou", "respondida", "mensagem", "pedido")
                         if e.get("tipo") in tipos and recente:
                             self._entregar({**e, "repassado": True})

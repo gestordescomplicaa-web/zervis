@@ -1,4 +1,5 @@
-"""Pedidos escritos fora do painel, num cérebro próprio: o chat "Você" do WhatsApp (ADR 0102).
+"""Pedidos escritos fora do painel, num cérebro próprio: a conversa com o Zé pelo WhatsApp
+(ADR 0102).
 
 A aba Conversa passa pela máquina de voz, que recusa pedidos com o Zé inativo (tela bloqueada,
 você fora). Pelo WhatsApp você está justamente fora, então estes pedidos têm o próprio cérebro:
@@ -30,10 +31,10 @@ SEM_CONFIRMACAO = (
 NOTA_DA_PERSONA = """\
 ## Conversa pelo WhatsApp
 
-Os pedidos desta conversa chegam escritos pelo WhatsApp de quem usa (o chat consigo mesmo), não \
-pela voz. Responda em texto curto, para ler no celular, sem tabelas nem títulos. Ações que pedem \
-confirmação não podem ser confirmadas por aqui: quando uma for negada por isso, diga em uma frase \
-que ela precisa ser confirmada pela voz ou pelo painel do Zé."""
+Os pedidos desta conversa chegam escritos pelo WhatsApp, do número de quem usa para o número do \
+Zé, não pela voz. Responda em texto curto, para ler no celular, sem tabelas nem títulos. Ações \
+que pedem confirmação não podem ser confirmadas por aqui: quando uma for negada por isso, diga \
+em uma frase que ela precisa ser confirmada pela voz ou pelo painel do Zé."""
 
 
 @dataclass(frozen=True)
