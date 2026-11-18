@@ -252,7 +252,7 @@ async def calibrar_no_navegador():
     errors, passed = [], []
     with tempfile.TemporaryDirectory(prefix='jarvis-maos-browser-', ignore_cleanup_errors=True) as profile:
         process = subprocess.Popen([
-            '/usr/bin/chromium', '--headless=new', '--remote-debugging-port=0',
+            '/usr/bin/chromium', '--headless=new', '--mute-audio', '--remote-debugging-port=0',
             '--user-data-dir=' + profile, '--no-first-run', '--window-size=1440,900',
             '--disable-background-networking', '--autoplay-policy=no-user-gesture-required',
             f'http://127.0.0.1:{server.server_port}/stage.html',

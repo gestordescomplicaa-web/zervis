@@ -109,3 +109,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0099](0099-deepgram-so-com-fala.md) | No Live, o Deepgram só ouve quando há fala | Aceito |
 | [0100](0100-imersao-pelo-painel.md) | A Imersão pelo painel: o Zé e os cards de qualquer aparelho | Aceito |
 | [0101](0101-camera-ao-vivo.md) | O vídeo ao vivo da câmera no painel | Aceito |
+| [0102](0102-conversa-pelo-whatsapp.md) | Conversar com o Zé pelo próprio WhatsApp (o chat "Você") | Aceito |

@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Conversa pelo WhatsApp:** com "Conversa com o Zé" ligada no cartão do WhatsApp, a mensagem
+  que você envia para o próprio número vai ao Zé, e a resposta chega no mesmo chat, mesmo com o
+  computador bloqueado. Ações com efeito continuam pedindo a voz ou o painel (ADR 0102). Por
+  enquanto, só texto.
+
 - **Câmera ao vivo, as 3 lentes:** as lentes 2 e 3 mostravam a imagem da lente 1, porque o RTSP
   desta câmera só traz a primeira. Agora cada lente vem pelo protocolo dela, como no app iCSee, e
   "Todas" mostra as três lado a lado (ADR 0101).

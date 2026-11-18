@@ -381,10 +381,12 @@ def test_painel_mostra_o_qr_como_imagem_e_exige_confirmacao_para_desconectar(
         deepgram=SimpleNamespace(disponivel=True),
         projeto_agente=tmp_path / "agente",
         desconectar_whatsapp=desconectar,
+        conversa_pelo_whatsapp=lambda: False,
     )
     acoes = Acoes(nucleo, tmp_path, tmp_path)
     tela = acoes.atendimento()
     assert tela["whatsapp"]["estado"] == "aguardando"
+    assert tela["whatsapp"]["conversa"] is False  # o chat "Você" desligado (ADR 0102)
     assert tela["whatsapp"]["qr"].startswith("<svg") and "2@codigo" not in tela["whatsapp"]["qr"]
     assert tela["avisos"] == {"ligado": False}
     with pytest.raises(PedidoInvalido):

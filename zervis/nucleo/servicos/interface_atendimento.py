@@ -3,6 +3,7 @@
 from typing import Any
 
 from zervis.cerebro import rapido
+from zervis.cerebro.por_mensagem import Feito
 from zervis.nucleo.servicos.atendimento import ServicoAtendimento
 from zervis.nucleo.servicos.interface import InterfaceServico, servico
 
@@ -85,3 +86,15 @@ class InterfaceAtendimento(InterfaceServico):
 
     def ligar_mensagens(self, ativo: bool) -> str:
         return servico(self, ServicoAtendimento).ligar_mensagens(ativo)
+
+    def resposta_do_whatsapp(self, feito: Feito) -> None:
+        servico(self, ServicoAtendimento).resposta_do_whatsapp(feito)
+
+    def conversa_pelo_whatsapp(self) -> bool:
+        return servico(self, ServicoAtendimento).conversa_pelo_whatsapp()
+
+    def ligar_conversa_whatsapp(self, ativo: bool) -> str:
+        return servico(self, ServicoAtendimento).ligar_conversa_whatsapp(ativo)
+
+    def parar_atendimento(self) -> None:
+        servico(self, ServicoAtendimento).parar_atendimento()

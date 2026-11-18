@@ -342,6 +342,7 @@ def test_painel_salva_no_rascunho_e_so_liga_publicado(
         ),
         mensagens=SimpleNamespace(ativo=False),
         deepgram=SimpleNamespace(disponivel=True),
+        conversa_pelo_whatsapp=lambda: False,
     )
     acoes = Acoes(nucleo, tmp_path, tmp_path)
     r = acoes.salvar_atendente(
@@ -409,6 +410,7 @@ def test_chave_de_api_pela_pagina_e_volta_ao_padrao_ao_remover(
         central=SimpleNamespace(para_tela=lambda: {"estado": "conectado"}, pausados=lambda: []),
         mensagens=SimpleNamespace(ativo=False),
         deepgram=SimpleNamespace(disponivel=True),
+        conversa_pelo_whatsapp=lambda: False,
     )
     acoes = Acoes(nucleo, tmp_path, tmp_path)
     monkeypatch.setattr(acoes, "_testar_cerebro", lambda escolha: True)

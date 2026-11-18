@@ -4,18 +4,31 @@ import contextlib
 import hashlib
 import logging
 import secrets
+import time
 from typing import Any, Protocol
 
-from zervis import atividade, fuso, usuario
+from zervis import atividade, fuso, lugares, usuario
 from zervis.atendimento import agente, cliente, whatsapp
 from zervis.avisos import caixa as caixa_mod
 from zervis.avisos import falas_whatsapp, ligacoes, mensagens, pendentes
 from zervis.avisos import modo as modo_fala
-from zervis.cerebro import rapido
+from zervis.cerebro import catalogo, rapido
+from zervis.cerebro.base import Brain
+from zervis.cerebro.por_mensagem import ConversaPorMensagem, Feito
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import DADOS
 
 log = logging.getLogger(__name__)
+
+# O chat "Você" (ADR 0102): ligado no painel, desligado de início (muita gente guarda anotações
+# nele, e cada uma viraria um pedido).
+CONVERSA = lugares.CONFIG / "whatsapp-conversa.json"
+PEDIDO_VALIDO_S = 600.0  # um pedido mais velho que isto (o WhatsApp entregou atrasado) não roda
+PEDIDO_MAXIMO = 4000
+PARTE_MAXIMA = 1900  # a Central aceita até 2000 caracteres por mensagem
+SO_TEXTO = "Por enquanto, só mensagens de texto."
+SEM_RESPOSTA = "Não consegui responder agora. Tente de novo."
+FILA_CHEIA = "Muitos pedidos na fila. Tente de novo em instantes."
 
 
 class ContextoAtendimento(Protocol):
@@ -23,7 +36,11 @@ class ContextoAtendimento(Protocol):
     caixa: Any
     central: Any
     cfg: Any
+    consumo: Any
+    conversas: Any
+    escolhido: Any
     eventos: Any
+    extras: Any
     leads: Any
     ligacao_pendente: Any
     maquina: Any
@@ -31,9 +48,11 @@ class ContextoAtendimento(Protocol):
     modo_fala: Any
     ponte_ligacao: Any
     prioridade: Any
+    provedor: str
 
     def _atendente_passou(self, nome: str, motivo: str) -> None: ...
     def _na_linha(self, tipo: str, texto: str) -> None: ...
+    def persona(self) -> str: ...
 
 
 class ServicoAtendimento:
@@ -245,6 +264,8 @@ class ServicoAtendimento:
                     str(evento.get("grupo_nome", "")), str(evento.get("nome", "")),
                 )  # fmt: skip
             self._lead_respondido(chat, _quando(evento))
+        elif evento.get("tipo") == "pedido":
+            self._pedido_do_whatsapp(evento)
         elif evento.get("tipo") == "ligacao":
             self._ligacao_terminou(evento)
         elif evento.get("tipo") == "chamando":
@@ -253,6 +274,90 @@ class ServicoAtendimento:
             self._ligacao_feita(evento)
         elif evento.get("tipo") == "camera_conversa":
             self._camera_conversa(evento)
+
+    # --- o chat "Você": conversar com o Zé pelo próprio WhatsApp (ADR 0102) -------------------
+
+    def _pedido_do_whatsapp(self, evento: dict[str, Any]) -> None:
+        """Sua mensagem para o próprio número, com a conversa ligada no painel: um pedido ao
+        Zé, respondido no mesmo chat por um cérebro próprio (funciona com o Zé inativo)."""
+        if not whatsapp.escolhido(CONVERSA):
+            return
+        chat = str(evento.get("chat", ""))
+        if not whatsapp.privado(chat):
+            return
+        if time.time() - _hora(evento) > PEDIDO_VALIDO_S:
+            log.info("whatsapp: pedido do chat Você atrasado, ignorado")
+            return
+        if evento.get("midia"):
+            self._responder_no_whatsapp(chat, SO_TEXTO, str(evento.get("evento", "")))
+            return
+        texto = str(evento.get("texto", "")).strip()[:PEDIDO_MAXIMO]
+        if not texto:
+            return
+        log.info("whatsapp: pedido pelo chat Você (%d caracteres)", len(texto))
+        if not self._conversa().pedir(texto, chat):
+            self._responder_no_whatsapp(chat, FILA_CHEIA, str(evento.get("evento", "")))
+
+    def _conversa(self) -> Any:
+        """O cérebro do chat "Você", criado no primeiro pedido (o modelo só sobe nele)."""
+        if (conversa := getattr(self.n, "conversa_whatsapp", None)) is None:
+            conversa = ConversaPorMensagem(
+                self._cerebro_do_whatsapp, self.n.persona, self.resposta_do_whatsapp
+            )
+            self.n.conversa_whatsapp = conversa  # type: ignore[attr-defined]
+        return conversa
+
+    def _cerebro_do_whatsapp(self) -> Brain:
+        """O mesmo provedor e as mesmas ferramentas do Zé, numa sessão à parte."""
+        escolha = catalogo.ler_escolha(self.n.escolhido)
+        pasta = DADOS / "cerebro-whatsapp"
+        return catalogo.montar(self.n.cfg, pasta, escolha, self.n.extras)[0]
+
+    def parar_atendimento(self) -> None:
+        """O Zé desligando: para de ouvir a Central (que continua atendendo) e fecha o chat
+        "Você"."""
+        self.n.central.parar()
+        if (conversa := getattr(self.n, "conversa_whatsapp", None)) is not None:
+            conversa.fechar()
+
+    def resposta_do_whatsapp(self, feito: Feito) -> None:
+        """A resposta do cérebro do WhatsApp: no chat, na Atividade, na conversa do dia e no
+        consumo. Roda fora do laço do cérebro (o envio bloqueia)."""
+        resposta = feito.resposta or SEM_RESPOSTA
+        if feito.erro:
+            log.warning("whatsapp: o cérebro do chat Você falhou (%s)", feito.erro)
+        with contextlib.suppress(Exception):
+            self.n.consumo.somar(feito.uso, self.n.provedor)
+        atividade.PADRAO.registrar(
+            "pedido", feito.pedido, resposta=feito.resposta, origem="whatsapp"
+        )
+        if feito.resposta:
+            try:
+                self.n.conversas.registrar(feito.pedido, feito.resposta)
+            except OSError as erro:
+                log.warning("conversas: %s", erro)
+        chave = hashlib.sha256(f"{feito.destino}:{time.time()}".encode()).hexdigest()[:24]
+        self._responder_no_whatsapp(feito.destino, resposta, chave)
+
+    def _responder_no_whatsapp(self, chat: str, texto: str, chave: str) -> None:
+        for i, parte in enumerate(_partes(texto)):
+            try:
+                self.n.central.enviar(parte, f"{chave}:{i}", chat=chat, proprio=True)
+            except cliente.CentralErro as erro:
+                log.warning("whatsapp: resposta no chat Você não enviada (%s)", erro)
+                return
+
+    def conversa_pelo_whatsapp(self) -> bool:
+        return whatsapp.escolhido(CONVERSA)
+
+    def ligar_conversa_whatsapp(self, ativo: bool) -> str:
+        whatsapp.escolher(ativo, CONVERSA)
+        atividade.PADRAO.registrar(
+            "execucao",
+            "Conversa pelo WhatsApp " + ("ligada" if ativo else "desligada"),
+            origem="painel",
+        )
+        return "Conversa pelo WhatsApp ligada." if ativo else "Conversa pelo WhatsApp desligada."
 
     def _ligacao_terminou(self, evento: dict[str, Any]) -> None:
         """O agente atendeu uma ligação: o Zé guarda o que foi dito e avisa quem ligou, quanto
@@ -529,6 +634,19 @@ NAO_ATENDEU = {
     "busy": "{quem} estava em outra ligação. O recado não foi dado.",
     "timeout": "{quem} não atendeu. O recado não foi dado.",
 }
+
+
+def _partes(texto: str, limite: int = PARTE_MAXIMA) -> list[str]:
+    """O texto em mensagens de até `limite` caracteres, quebrando em parágrafo, linha ou espaço."""
+    texto = texto.strip()
+    partes: list[str] = []
+    while len(texto) > limite:
+        corte = max(texto.rfind(sep, 0, limite) for sep in ("\n\n", "\n", " "))
+        if corte <= 0:
+            corte = limite
+        partes.append(texto[:corte].strip())
+        texto = texto[corte:].strip()
+    return [*partes, texto] if texto else partes
 
 
 def _numero_dito(telefone: str) -> str:

@@ -74,7 +74,8 @@ function cartaoWhatsapp(w) {
   const topo = `<div class="cabeca"><h2>WhatsApp</h2><span class="etiqueta ${tom}">${esc(rotulo)}</span></div>`;
   let corpo;
   if (w.estado === "conectado") {
-    corpo = item("", `Número conectado: <span class="mono">+${esc(w.numero)}</span>`, botao("Desconectar", "whatsapp-desconectar", "", "perigo"));
+    corpo = item("", `Número conectado: <span class="mono">+${esc(w.numero)}</span>`, botao("Desconectar", "whatsapp-desconectar", "", "perigo"))
+      + item("Conversa com o Zé", "Mensagens para o próprio número vão ao Zé.", liga(w.conversa, "whatsapp-conversa", "", "Conversa com o Zé"));
   } else if (w.estado === "aguardando") {
     corpo = `<div class="acesso-qr">${w.qr}<div class="campos"><p>No celular, abra o WhatsApp › Aparelhos conectados › Conectar aparelho e leia o código.</p>
       <p class="nota">O código se renova sozinho.</p>
@@ -212,6 +213,11 @@ ESCOLHAS["cerebro-atendente"] = (valor) => salvar({ cerebro: valor });
 Object.assign(MUDAR, {
   "atendente-ligado": (el) => salvar({ ligado: el.checked }),
   "atendente-ligacoes": (el) => salvar({ ligacoes: el.checked }),
+  "whatsapp-conversa": async (el) => {
+    const r = await api("whatsapp/conversa", { ligar: el.checked });
+    toast(r.aviso);
+    await recarregar();
+  },
   "atendimento-avisos": async (el) => {
     const r = await api("mensagens/whatsapp", { ligar: el.checked });
     toast(r.aviso);

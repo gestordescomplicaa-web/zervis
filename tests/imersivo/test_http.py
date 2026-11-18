@@ -46,7 +46,7 @@ async def verificar(tmp_path, monkeypatch):
     perfil = tmp_path / "chromium"
     perfil.mkdir()
     processo = subprocess.Popen([
-        "/usr/bin/chromium", "--headless=new", "--remote-debugging-port=0",
+        "/usr/bin/chromium", "--headless=new", "--mute-audio", "--remote-debugging-port=0",
         f"--user-data-dir={perfil}", "--no-first-run", "--disable-background-networking",
         f"http://127.0.0.1:{http.server_port}/stage.html",
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -132,7 +132,7 @@ async def verificar_pelo_painel(tmp_path, monkeypatch):
     perfil = tmp_path / "chromium"
     perfil.mkdir()
     processo = subprocess.Popen([
-        "/usr/bin/chromium", "--headless=new", "--remote-debugging-port=0",
+        "/usr/bin/chromium", "--headless=new", "--mute-audio", "--remote-debugging-port=0",
         f"--user-data-dir={perfil}", "--no-first-run", "--disable-background-networking",
         f"http://127.0.0.1:{painel.porta}/imersao/stage.html?camera=0",
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -120,6 +120,7 @@ def _chromium(perfil: Path) -> tuple[subprocess.Popen[bytes], str]:
             [
                 str(CHROMIUM),
                 "--headless=new",
+                "--mute-audio",
                 "--remote-debugging-port=0",
                 f"--user-data-dir={perfil}",
                 "--no-first-run",
