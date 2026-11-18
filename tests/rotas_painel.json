@@ -71,6 +71,7 @@
     "voz-app/remover",
     "mensagens/whatsapp",
     "whatsapp/conectar",
+    "whatsapp/conversa",
     "instagram/conectar",
     "instagram/desconectar",
     "pesquisas/buscar",

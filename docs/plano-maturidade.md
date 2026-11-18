@@ -75,6 +75,8 @@ Exceção registrada em 13/11/2026: a aba Marketing (ADR 0091) entrou antes do f
 quem usa, com os testes na porta de qualidade.
 Exceção registrada em 17/11/2026: a validade na memória e a frase de apoio (ADR 0098) entraram
 antes do fecho, a pedido de quem usa, para reforçar o ADR 0090 durante a medição dele.
+Exceção registrada em 18/11/2026: a conversa pelo próprio WhatsApp (ADR 0102) entrou antes do
+fecho, a pedido de quem usa, com os testes na porta de qualidade.
 
 O que as Fases A e B deixaram aberto e o que a revisão achou no código. Fecha antes da Fase C;
 cada item está na frente dele, com o detalhe.
@@ -283,6 +285,10 @@ Ordem revista em 11/11/2026, do que destrava mais para o que depende de fora:
 - [x] **A Imersão de qualquer aparelho:** desde 17/11/2026 ([ADR 0100](adr/0100-imersao-pelo-painel.md)),
   o painel repassa o palco em `/imersao/` para quem entrou; na VPS, o Zé animado e os cards, sem
   câmera. Falta a prova numa VPS de verdade.
+- [x] **Conversar pelo próprio WhatsApp:** desde 18/11/2026
+  ([ADR 0102](adr/0102-conversa-pelo-whatsapp.md)), a mensagem para o próprio número (o chat
+  "Você") é um pedido ao Zé, respondido no mesmo chat por um cérebro próprio, com o Zé inativo;
+  nada com efeito é confirmado por ali. Falta o áudio (o WaCalls não baixa mídia).
 - [ ] **Windows e Mac pelo Docker Desktop:** a imagem da VPS também para arm64 (os Macs com
   Apple Silicon) e o passo a passo. O Zé inteiro pelo navegador em `localhost`, menos o microfone
   do sistema e as ações do Omarchy. Avaliação de 17/11/2026: é o caminho barato; o Mac nativo é

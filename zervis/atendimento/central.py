@@ -47,6 +47,7 @@ ESPERA_EVENTOS_S = 25.0
 CAMERA = camera_fala.ID  # a conversa pela câmera, nas ligações e na ponte (ADR 0088)
 CORPO_MAXIMO = 64 * 1024
 TEXTO_ENVIADO_MAXIMO = 2000  # uma resposta ditada; mais que isto não é resposta falada
+ECO_S = 300.0  # a resposta do Zé no chat "Você" volta como mensagem sua: reconhecida até aqui
 
 
 def versao(pasta: Path = Path(__file__).parent) -> str:
@@ -55,6 +56,10 @@ def versao(pasta: Path = Path(__file__).parent) -> str:
     for arquivo in sorted(pasta.glob("*.py")):
         h.update(arquivo.name.encode() + b"\0" + arquivo.read_bytes())
     return h.hexdigest()[:16]
+
+
+def _resumo(texto: str) -> str:
+    return hashlib.sha256(" ".join(texto.split()).encode()).hexdigest()
 
 
 def garantir_token(arquivo: Path = TOKEN) -> str:
@@ -150,12 +155,18 @@ class Central:
         )
         self.eventos = Eventos(registros=self.atendente.registros)
         self._servidor: ThreadingHTTPServer | None = None
+        # As respostas do Zé no chat "Você" (ADR 0102), pelo resumo do texto, até quando valem.
+        self._ecos: dict[str, float] = {}
+        self._trava_ecos = threading.Lock()
 
     # --- o que chega do WhatsApp e do agente -------------------------------------------------
 
     def _recebida(self, r: whatsapp.Recebida) -> None:
         """Para o arquivo do Zé (ADR 0054 e 0056), tudo, inclusive grupo; para o agente, só o
-        texto da conversa privada."""
+        texto da conversa privada. O chat "Você" é à parte: um pedido ao Zé (ADR 0102)."""
+        if r.proprio:
+            self._comigo(r)
+            return
         comum = {
             "chat": r.chat,
             "texto": r.texto,
@@ -172,6 +183,27 @@ class Central:
             self.eventos.publicar("mensagem", nome=r.nome, telefone=r.telefone, **comum)
         if not r.midia and not r.grupo:
             self.atendente.receber(r)
+
+    def _comigo(self, r: whatsapp.Recebida) -> None:
+        """Sua mensagem para o próprio número: nem arquivo nem agente, só o pedido ao Zé. A
+        resposta dele volta pelo WaCalls como mensagem sua; essa é reconhecida e descartada, ou
+        o Zé responderia a si mesmo sem parar."""
+        if self._eco(r.texto):
+            return
+        self.eventos.publicar(
+            "pedido", chat=r.chat, texto=r.texto, midia=r.midia, evento=r.id, hora=r.quando
+        )
+
+    def _esperar_eco(self, texto: str) -> None:
+        agora = time.monotonic()
+        with self._trava_ecos:
+            self._ecos = {k: v for k, v in self._ecos.items() if v > agora}
+            self._ecos[_resumo(texto)] = agora + ECO_S
+
+    def _eco(self, texto: str) -> bool:
+        with self._trava_ecos:
+            ate = self._ecos.pop(_resumo(texto), 0.0)
+        return ate > time.monotonic()
 
     def _passou(self, nome: str, motivo: str) -> None:
         self.eventos.publicar("passou", nome=nome, motivo=motivo)
@@ -552,6 +584,8 @@ class Central:
             texto = str(corpo.get("texto", "")).strip()
             if not 0 < len(texto) <= TEXTO_ENVIADO_MAXIMO:
                 return 400, {"erro": "Texto vazio ou longo demais."}
+            if corpo.get("proprio") is True:  # a resposta do Zé no chat "Você" (ADR 0102)
+                self._esperar_eco(texto)
             ident = self.whatsapp.enviar(
                 str(corpo.get("telefone", "")),
                 texto,

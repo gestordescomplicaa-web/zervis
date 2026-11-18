@@ -271,3 +271,35 @@ func TestNomeDaAgendaPeloNumeroOuPeloLID(t *testing.T) {
 		t.Fatalf("sem agenda: %q", got)
 	}
 }
+
+// ---------- o chat "Você" (ADR 0102) ----------
+
+func TestConversaComigoPeloTelefoneEPeloLID(t *testing.T) {
+	eu := types.JID{User: "558199990000", Server: types.DefaultUserServer, Device: 12}
+	euLID := jidLID("100000000000001")
+	if !conversaComigo(msgDe(jidPN("558199990000"), eu, "S1", true, false), eu, euLID) {
+		t.Fatal("o chat com o próprio número devia valer")
+	}
+	if !conversaComigo(msgDe(euLID, euLID, "S2", true, false), eu, euLID) {
+		t.Fatal("o chat com o próprio LID devia valer")
+	}
+}
+
+func TestConversaComigoNaoValeParaOutros(t *testing.T) {
+	eu := jidPN("558199990000")
+	euLID := jidLID("100000000000001")
+	casos := map[string]*events.Message{
+		"de outra pessoa para mim": msgDe(jidPN("558199990000"), jidPN("558199991111"), "N1", false, false),
+		"minha para outra pessoa":  msgDe(jidPN("558199991111"), eu, "N2", true, false),
+		"minha num grupo":          msgDe(types.JID{User: "1203630", Server: types.GroupServer}, eu, "N3", true, true),
+		"outro LID":                msgDe(jidLID("200000000000002"), euLID, "N4", true, false),
+	}
+	for nome, evt := range casos {
+		if conversaComigo(evt, eu, euLID) {
+			t.Fatalf("%s: não devia valer como o chat \"Você\"", nome)
+		}
+	}
+	if conversaComigo(msgDe(jidLID(""), euLID, "N5", true, false), eu, types.JID{}) {
+		t.Fatal("sem o próprio LID, nada vale pelo LID")
+	}
+}

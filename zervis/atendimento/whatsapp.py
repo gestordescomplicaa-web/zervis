@@ -99,6 +99,9 @@ class Recebida:
     grupo_nome: str = ""
     quando: float = 0.0  # a hora da mensagem no WhatsApp (epoch); 0 = desconhecida
     agenda: str = ""  # como está salva na agenda do celular; na sua mensagem, quem recebe
+    # O chat "Você" (ADR 0102): sua mensagem para o próprio número, que vale como pedido ao Zé.
+    # Só a sua, numa conversa privada: o WaCalls marca, e aqui se confere de novo.
+    proprio: bool = False
 
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
@@ -233,6 +236,7 @@ def recebidas(corpo: Any) -> list[Recebida]:
             Recebida(
                 ident, nome, telefone, texto, de_mim, chat, midia, em_grupo, nome_grupo,
                 _hora(m.get("occurred_at")), agenda,
+                m.get("is_self") is True and de_mim and not em_grupo,
             )
         )  # fmt: skip
     return saida

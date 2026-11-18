@@ -155,6 +155,7 @@ class Acoes:
             "voz-app/codigo": self.codigo_app_voz,
             "voz-app/remover": self.remover_app_voz,
             "mensagens/whatsapp": self.mudar_mensagens,
+            "whatsapp/conversa": self.mudar_conversa_whatsapp,
             "whatsapp/conectar": self.conectar_whatsapp,
             "instagram/conectar": self.conectar_instagram,
             "instagram/desconectar": self.desconectar_instagram,
