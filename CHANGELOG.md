@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Fotos nos vídeos:** as fotos da marca e fotos livres da Wikimedia, em tela cheia, como polaroid
+  ou numa janela com um ícone; o crédito vai na tela e na legenda. Sem foto que sirva, a cena vira
+  um ícone (ADR 0112).
 - **Vídeos automáticos:** o Zé cria os vídeos na agenda (temas seus ou escolhidos pelo site e
   pelos artigos), avisa no app e publica no Instagram só com a sua aprovação. O diretor vê os
   últimos vídeos e muda a receita a cada um (ADR 0111).

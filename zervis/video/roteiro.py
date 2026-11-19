@@ -96,6 +96,17 @@ TIPOS: dict[str, dict[str, Any]] = {
         '"opcional, 1 a 3 palavras", "quando": "a palavra da fala em que ele se desenha"} (um '
         "conceito: o ícone enorme se desenha, ondas e faíscas saem dele)",
     },
+    # --- a foto (ADR 0112): uma das fotos da marca ou uma foto livre (Wikimedia), com crédito ---
+    "foto": {
+        "textos": {"foto": 80, "rotulo": 26, "quando": 30},
+        "icones": ("icone",),
+        "composicoes": ("cheia", "polaroid", "janela"),
+        "formato": '{"tipo": "foto", "fala": "...", "foto": "<nome de uma foto da marca> ou '
+        'busca: <o que mostrar, em inglês>", "composicao": "cheia | polaroid | janela", '
+        '"rotulo": "opcional, 1 a 3 palavras", "icone": "<objeto> (só na janela: o ícone que '
+        'salta no canto da foto)", "quando": "palavra da fala"} (o real: "cheia" ocupa a tela, '
+        '"polaroid" cai como uma foto impressa, "janela" é a foto com um ícone que comenta)',
+    },
     "conexao": {
         "nos": (2, 4, 16),
         "composicoes": ("fluxo",),
@@ -129,7 +140,7 @@ TIPOS: dict[str, dict[str, Any]] = {
 }
 for _regra in TIPOS.values():
     _regra.setdefault("obrigatorios", tuple(_regra.get("listas", {})) or ())
-DE_ARTE = ("icone", "conexao", "hub", "caos")
+DE_ARTE = ("icone", "conexao", "hub", "caos", "foto")
 DE_CARTAO = ("passos", "lista", "antes_depois", "conversa")
 
 PROMPT = """Você é o diretor de criação de um Reels (vídeo vertical, cerca de {duracao} segundos)
@@ -172,7 +183,7 @@ Regras:
 - fundo: {fundos}. Alterne: cenas seguidas com fundos diferentes, como cartas diferentes do
   baralho; pelo menos uma "claro" e uma "cor". "escuro" no gancho e no fecho.
 - **Mostre, não escreva.** Pelo menos metade das cenas entre o gancho e o fecho são de arte
-  (icone, conexao, hub, caos): a ideia vira um ícone que se desenha, um fluxo por onde correm
+  (icone, conexao, hub, caos, foto): a ideia vira um ícone que se desenha, um fluxo por onde correm
   dados, uma constelação em volta de um centro, o caos que vira ordem. Cartões de texto (passos,
   lista, antes_depois, conversa) no máximo dois no vídeo. Pense numa analogia para cada ideia.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
@@ -188,7 +199,7 @@ Tipos de cena:
 "delivery truck", "tooth", "dumbbell", "scissors", "shopping cart", "calendar" (o Zé tem 1.500
 desenhos e acha o mais parecido). Prefira o objeto do assunto ao símbolo genérico: para uma
 pizzaria, "pizza", não "store"; para uma clínica, "stethoscope", não "heart".
-{recentes}
+{fotos}{recentes}
 ## Linha editorial (o manual do site)
 {manual}
 """
@@ -275,6 +286,24 @@ def secao_recentes(recentes: list[dict[str, Any]]) -> str:
     )
 
 
+def secao_fotos(fotos: list[str]) -> str:
+    """As fotos que o diretor pode usar: as da marca pelo nome (que as descreve) e a busca livre."""
+    da_marca = (
+        "Fotos da marca (use o nome exato; são as mais fortes, é o real de quem fala): "
+        + ", ".join(fotos[:40])
+        if fotos
+        else "A marca ainda não tem fotos próprias."
+    )
+    return (
+        f'\n## Fotos\n{da_marca}\nFoto livre: "busca: <2 ou 3 palavras concretas em inglês>" '
+        '(uma coisa ou um lugar de verdade, como "busca: mechanic workshop" ou "busca: dental '
+        'chair"; nunca uma pessoa). **Use uma ou '
+        "duas cenas de foto em todo vídeo**: a da marca, se houver uma que combine; senão, uma "
+        "busca que mostre o cenário do assunto (a oficina, a cozinha, o consultório). O resto, "
+        "arte.\n"
+    )
+
+
 def montar_prompt(
     marca: str,
     pedido: str,
@@ -282,6 +311,7 @@ def montar_prompt(
     estilo: Estilo,
     duracao: int = DURACAO_PADRAO,
     recentes: list[dict[str, Any]] | None = None,
+    fotos: list[str] | None = None,
 ) -> str:
     minimo, maximo, minimo_palavras, total = limites(duracao)
     return PROMPT.format(
@@ -300,6 +330,7 @@ def montar_prompt(
         tipos="\n".join(f"- {formato}" for formato in tipos_do_estilo(estilo).values()),
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
         recentes=secao_recentes(recentes or []),
+        fotos=secao_fotos(fotos or []),
     )
 
 
@@ -386,6 +417,8 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
             cena[campo] = valor
     if "quando" in cena:
         cena["quando"] = _quando(cena["quando"], fala)
+    if tipo == "foto" and not cena.get("foto"):
+        raise RoteiroErro("A cena foto precisa da foto (o nome de uma foto da marca ou a busca).")
     for campo, (minimo, maximo, limite) in regra.get("listas", {}).items():
         itens = _itens(bruta.get(campo), limite, fala)[:maximo]
         if len(itens) < minimo:

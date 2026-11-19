@@ -37,6 +37,7 @@ from zervis.portal import publico
 from zervis.redes import instagram_publicar
 from zervis.redes.instagram import Instagram, InstagramErro
 from zervis.video import biblioteca, captura, estilos, montagem, narracao, roteiro, trilha
+from zervis.video import fotos as fotos_mod
 
 log = logging.getLogger(__name__)
 PASTA = lugares.DADOS / "marketing" / "videos"
@@ -71,6 +72,7 @@ MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
     "conexao": lambda c: 1.2 + 0.8 * len(c.get("nos", [])),
     "hub": lambda c: 1.6 + 0.55 * len(c.get("ao_redor", [])),
     "caos": lambda c: 3.4,
+    "foto": lambda c: 2.8,
 }
 
 
@@ -160,6 +162,7 @@ class Videos:
         endereco: Callable[[], str] | None = None,
         publicar_reels: Callable[..., str] = instagram_publicar.publicar_reels,
         procurar: Callable[[Instagram, str, float], str] = instagram_publicar.procurar,
+        fotos: fotos_mod.Fotos | None = None,
     ) -> None:
         self.pasta = pasta
         self.site = site or marketing.PADRAO
@@ -173,6 +176,7 @@ class Videos:
         self._endereco = endereco
         self._publicar_reels = publicar_reels
         self._procurar = procurar
+        self.fotos = fotos or fotos_mod.PADRAO
         self._trava = threading.RLock()
         self._fila = threading.Lock()  # um vídeo por vez
         self._andando: set[str] = set()
@@ -417,8 +421,9 @@ class Videos:
         # um ajuste pedido segue a versão anterior; um vídeo novo foge da receita dos últimos
         recentes = [] if video.instrucao else self.recentes(video.id)
         prompt = roteiro.montar_prompt(
-            nome, self._pedido(video), self.site.manual(), estilo, alvo, recentes
-        )
+            nome, self._pedido(video), self.site.manual(), estilo, alvo, recentes,
+            self.fotos.nomes(),
+        )  # fmt: skip
         resposta = self.perguntar(prompt, video.modelo)
         try:
             r = roteiro.interpretar(resposta, estilo, alvo)
@@ -435,6 +440,9 @@ class Videos:
                 f"Resposta anterior: {resposta[:6000]}\nEscreva de novo, corrigindo isso."
             )
             r = roteiro.interpretar(self.perguntar(corrigir, video.modelo), estilo, alvo)
+        # as fotos viram arquivos na pasta do vídeo (a que não vier vira ícone); crédito na legenda
+        if creditos := self.fotos.resolver(r.cenas, pasta):
+            r.legenda = f"{r.legenda}\n\nFotos: {'; '.join(dict.fromkeys(creditos))}"
         video.titulo, video.legenda, video.roteiro = r.titulo, r.legenda, r.para_json()
 
         self._etapa(video, "Gravando a voz" if video.voz else "Montando o tempo")

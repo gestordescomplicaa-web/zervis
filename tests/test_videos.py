@@ -13,6 +13,7 @@ import pytest
 
 from zervis.marca import Marca
 from zervis.video import captura, estilos, narracao, roteiro, trilha, videos
+from zervis.video.fotos import Fotos
 
 EMBUTIDOS = estilos.EMBUTIDOS
 
@@ -307,6 +308,7 @@ def _videos(tmp_path: Path, resposta: str, monkeypatch: pytest.MonkeyPatch) -> t
         lambda: None,
         capturar,
         montar,
+        fotos=Fotos(da_marca=lambda: [], buscar=lambda b: []),  # sem o painel nem a rede
     )
     v.pedidos = pedidos  # type: ignore[attr-defined]
     return v, site
@@ -707,3 +709,73 @@ def test_video_agendado_cria_na_hora(tmp_path: Path, monkeypatch: pytest.MonkeyP
         threading.Event().wait(0.02)
     assert n.jobs.listar()[0].ultimo_status == "ok"
     assert linha == ["Comecei o vídeo agendado: Agenda cheia."]
+
+
+def _achado(id_: str, titulo: str) -> Any:
+    from zervis.imersivo.imagens import Achado
+
+    return Achado(id_, titulo, "", "foto", "CC BY 4.0", "Ana (talk)", "", "")
+
+
+def _fotos(tmp_path: Path) -> tuple[Fotos, list[str]]:
+    marca = tmp_path / "marca"
+    marca.mkdir()
+    (marca / "recepcao.jpg").write_bytes(b"jpg")
+    buscas: list[str] = []
+
+    def buscar(busca: str) -> list[Any]:
+        buscas.append(busca)
+        return [_achado("commons:File:Rua.jpg", "Street at night"),
+                _achado("commons:File:Oficina.jpg", "Mechanic workshop in Recife")]  # fmt: skip
+
+    def baixar(id_: str, pasta: Path) -> dict[str, Any]:
+        assert id_ == "commons:File:Oficina.jpg"  # a que tem as palavras do pedido
+        (pasta / "imagens").mkdir(parents=True, exist_ok=True)
+        (pasta / "imagens" / "oficina.jpg").write_bytes(b"jpg")
+        return {"arquivo": "imagens/oficina.jpg", "autor": "Ana (talk)", "tipo": "foto",
+                "licenca": "CC BY 4.0", "fonte": "Wikimedia Commons"}  # fmt: skip
+
+    f = Fotos(da_marca=lambda: ["recepcao.jpg"], pasta_da_marca=lambda: marca, buscar=buscar,
+              baixar=baixar)  # fmt: skip
+    return f, buscas
+
+
+def test_fotos_da_marca_e_livres(tmp_path: Path) -> None:
+    f, buscas = _fotos(tmp_path)
+    pasta = tmp_path / "video"
+    cenas: list[dict[str, Any]] = [
+        {"tipo": "foto", "foto": "recepcao", "icone": "sparkles"},
+        {"tipo": "foto", "foto": "busca: mechanic workshop", "icone": "sparkles"},
+        {"tipo": "foto", "foto": "busca: car wash", "icone": "sparkles"},  # passa do limite
+        {"tipo": "foto", "foto": "../../etc/passwd", "icone": "sparkles"},  # não é da marca
+    ]
+    creditos = f.resolver(cenas, pasta)
+    assert cenas[0]["imagem"].endswith("/video/fotos/recepcao.jpg") and "credito" not in cenas[0]
+    assert cenas[1]["imagem"].endswith("/imagens/oficina.jpg")
+    assert creditos == ["Foto: Ana · CC BY 4.0 · Wikimedia Commons"]  # sem o "(talk)"
+    assert buscas == ["mechanic workshop", "car wash"]
+    # sem foto que sirva, a cena vira um ícone do objeto (o vídeo não falha)
+    assert cenas[2]["tipo"] == "icone" and cenas[2]["icone"] == "car" and "foto" not in cenas[2]
+    assert cenas[3]["tipo"] == "icone" and cenas[3]["composicao"] == "heroi"
+
+
+def test_foto_no_plano_e_no_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["cenas"][1] = {"tipo": "foto", "fala": "A oficina não para.", "foto": "busca: mechanic "
+                         "workshop", "composicao": "janela", "icone": "car"}  # fmt: skip
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert r.cenas[1]["foto"] == "busca: mechanic workshop" and r.cenas[1]["icone"] == "car"
+    del bruto["cenas"][1]["foto"]
+    with pytest.raises(roteiro.RoteiroErro):
+        roteiro.interpretar(json.dumps(bruto), _estilo())
+    prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), fotos=["recepcao.jpg"])
+    assert "Fotos da marca" in prompt and "recepcao.jpg" in prompt
+    assert "ainda não tem fotos" in roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
+    # no vídeo: a foto vira arquivo e o crédito vai para a legenda do Instagram
+    bruto["cenas"][1]["foto"] = "busca: mechanic workshop"
+    v, _ = _videos(tmp_path, json.dumps(bruto), monkeypatch)
+    v.fotos, _b = _fotos(tmp_path)
+    feito = v.criar(tema="Oficina", esperar=True)
+    assert feito.estado == "rascunho"
+    assert feito.legenda.endswith("Fotos: Foto: Ana · CC BY 4.0 · Wikimedia Commons")
+    assert feito.roteiro["cenas"][1]["imagem"].startswith("file://")

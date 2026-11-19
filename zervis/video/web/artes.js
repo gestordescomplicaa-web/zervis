@@ -304,4 +304,62 @@
       if (s.rot) revela(s.rot, t, ordem + 0.6, "mascara");
     },
   });
+
+  // --- foto (ADR 0112): o real, em tela cheia, como polaroid ou numa janela com um ícone -------
+  Ze.cena("foto", {
+    montar(c, el) {
+      const comp = c.composicao || "cheia";
+      const quadro = h("div", `foto-quadro foto-${comp}`);
+      const img = h("img");
+      img.src = c.imagem || "";
+      img.alt = "";
+      const moldura = h("div", "foto-moldura");
+      moldura.append(img);
+      quadro.append(moldura);
+      let badge = null;
+      if (comp === "cheia") quadro.append(h("div", "foto-veu"));
+      if (comp === "polaroid") {
+        quadro.append(h("i", "foto-fita"));
+        if (c.rotulo) quadro.append(h("div", "foto-escrita", c.rotulo));
+      }
+      if (comp === "janela") {
+        badge = no(c.icone || "sparkles", "");
+        badge.caixa.classList.add("foto-selo");
+        quadro.append(badge.caixa);
+      }
+      el.append(quadro);
+      const r = c.rotulo && comp !== "polaroid" ? h("div", `arte-rotulo foto-rotulo-${comp}`, c.rotulo) : null;
+      if (r) el.append(r);
+      // o crédito fica junto da foto: por cima, na tela cheia; embaixo dela, na polaroid e na janela
+      if (c.credito) (comp === "cheia" ? el : quadro).append(h("div", "foto-credito", c.credito));
+      return { comp, quadro, img, moldura, badge, r, foco: moldura };
+    },
+    render(t, d, s, ctx) {
+      const a = typeof ctx.cena.tempo === "number" ? Math.max(0.5, ctx.cena.tempo) : 0.9;
+      if (s.comp === "cheia") {
+        // a foto assenta uma vez (chega grande e para), sem zoom lento eterno
+        const p = curvas.chega(prog(t, 0, 1.1));
+        s.img.style.transform = `scale(${(1.18 - 0.18 * p).toFixed(4)}) translateY(${(30 * (1 - p)).toFixed(1)}px)`;
+      } else if (s.comp === "polaroid") {
+        // cai na mesa: vem de cima, girando, e assenta torta com uma mola
+        const p = curvas.mola(prog(t, 0.05, 0.9)), k = cl(prog(t, 0.05, 0.25));
+        s.quadro.style.opacity = String(k);
+        s.quadro.style.transform = `translateY(${(-140 * (1 - p)).toFixed(1)}px) rotate(${(-16 + 12.5 * p).toFixed(2)}deg) scale(${(1.3 - 0.3 * p).toFixed(4)})`;
+        const escrita = s.quadro.querySelector(".foto-escrita");
+        if (escrita) revela(escrita, t, a, "tinta");
+      } else {
+        // a janela abre de baixo; o ícone salta no canto na palavra e solta as ondas
+        const p = curvas.chega(prog(t, 0.05, 0.7));
+        s.quadro.style.opacity = String(cl(prog(t, 0.05, 0.2)));
+        s.quadro.style.transform = `translateY(${(90 * (1 - p)).toFixed(1)}px) scale(${(0.94 + 0.06 * p).toFixed(4)})`;
+        s.img.style.transform = `scale(${(1.12 - 0.12 * p).toFixed(4)})`;
+        if (s.badge) {
+          mola(s.badge.disco, t, a, { de: 0, d: 0.55 });
+          Ze.desenhar(s.badge.svg, t, a + 0.1, 0.6);
+          s.badge.caixa.classList.toggle("ativo", t >= a);
+        }
+      }
+      if (s.r) revela(s.r, t, a, "mascara");
+    },
+  });
 })();

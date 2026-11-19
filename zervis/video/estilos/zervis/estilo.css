@@ -123,3 +123,13 @@
 .fundo-claro .arte-heroi { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--marca1) 35%, transparent)); }
 .fundo-claro .faisca { background: var(--marca1); }
 
+/* foto */
+.foto-veu { background: linear-gradient(180deg, color-mix(in srgb, var(--fundo) 55%, transparent) 0%, transparent 22%, transparent 42%, color-mix(in srgb, var(--fundo) 92%, transparent) 78%); }
+.foto-rotulo-cheia { color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, .45); }
+.foto-polaroid { background: #fbfaf7; box-shadow: 0 50px 120px rgba(0, 0, 0, .5), 0 8px 24px rgba(0, 0, 0, .25); }
+.foto-fita { background: color-mix(in srgb, var(--marca1) 45%, rgba(255, 255, 255, .55)); box-shadow: 0 2px 6px rgba(0, 0, 0, .15); }
+.foto-escrita { color: #1b1c22; }
+.foto-janela .foto-moldura { border: 3px solid color-mix(in srgb, var(--marca1) 55%, transparent);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--marca1) 12%, transparent), 0 40px 120px rgba(0, 0, 0, .5); }
+.foto-credito { color: color-mix(in srgb, var(--texto) 70%, transparent); }
+.composicao-cheia .foto-credito { color: rgba(255, 255, 255, .78); }
