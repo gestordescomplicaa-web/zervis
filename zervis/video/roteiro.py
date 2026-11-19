@@ -12,6 +12,7 @@ palavra por palavra, no tempo da voz; nas cenas visuais, a legenda acompanha emb
 mostra só a ideia, em poucas palavras.
 """
 
+import itertools
 import json
 import re
 import unicodedata
@@ -112,6 +113,17 @@ TIPOS: dict[str, dict[str, Any]] = {
         'salta no canto da foto)", "quando": "palavra da fala"} (o real: "cheia" ocupa a tela, '
         '"polaroid" cai como uma foto impressa, "janela" é a foto com um ícone que comenta)',
     },
+    # --- a lista (ADR 0114): um cartão que fica e troca de conteúdo, com o placar embaixo ---
+    "item": {
+        "textos": {"nome": 28, "detalhe": 80, "valor": 14, "categoria": 22, "quando": 30},
+        "icones": ("icone",),
+        "composicoes": ("cartao",),
+        "formato": '{"tipo": "item", "fala": "...", "nome": "o nome do item, até 28", '
+        '"detalhe": "o que ele faz, uma linha", "valor": "opcional, um número curto do material '
+        '("24h", "3x")", "categoria": "opcional, até 22", "icone": "<objeto>"} (um item de '
+        "uma lista: itens seguidos ficam no mesmo cartão, que só troca o conteúdo, e um placar "
+        "embaixo acende um selo por item; use de 3 a 8 seguidos, um por cena)",
+    },
     "conexao": {
         "nos": (2, 4, 16),
         "composicoes": ("fluxo",),
@@ -136,13 +148,14 @@ TIPOS: dict[str, dict[str, Any]] = {
         'organiza"} (o problema virando solução: ícones espalhados e tremendo se alinham)',
     },
     "fecho": {
-        "textos": {"chamada": 32, "detalhe": 32},
+        "textos": {"chamada": 32, "detalhe": 32, "palavra": 16},
         "obrigatorios": ("chamada",),
-        "composicoes": ("marca", "chamada"),
+        "composicoes": ("marca", "chamada", "comenta"),
         "formato": '{"tipo": "fecho", "fala": "...", "chamada": "o convite, até 32", '
-        '"detalhe": "opcional (por exemplo, Link na bio)", "composicao": "marca|chamada"} '
+        '"detalhe": "opcional (por exemplo, Link na bio)", "composicao": "marca|chamada|comenta"} '
         '("marca" é o logo em 3D girando; "chamada" é o convite enorme na cor da marca, com uma '
-        "seta para o link; alterne entre os vídeos)",
+        'seta para o link; "comenta" pede um comentário com uma palavra ("palavra": "VÍDEO", e a '
+        'fala diz "comenta vídeo que eu te mando..."); alterne entre os vídeos)',
     },
 }
 for _regra in TIPOS.values():
@@ -513,6 +526,10 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     if not isinstance(brutas, list) or not minimo <= len(brutas) <= maximo:
         raise RoteiroErro(f"O roteiro precisa de {minimo} a {maximo} cenas.")
     cenas = [_cena(c, estilo.cenas_extras) for c in brutas]
+    for antes, cena in itertools.pairwise(cenas):
+        if antes["tipo"] == cena["tipo"] == "item":
+            # itens seguidos são o mesmo cartão: o mesmo fundo, sem transição
+            cena["fundo"], cena["transicao"] = antes["fundo"], "corte"
     if cenas[0]["tipo"] not in ABERTURAS or cenas[-1]["tipo"] != "fecho":
         raise RoteiroErro(
             f"O roteiro precisa abrir com {', '.join(ABERTURAS)} e terminar com um fecho."

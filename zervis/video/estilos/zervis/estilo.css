@@ -145,3 +145,23 @@
 .chamada-seta { filter: drop-shadow(0 0 16px rgba(255, 255, 255, .6)); }
 .chamada-detalhe { background: #fff; color: var(--marca1); }
 
+
+/* lista (ADR 0114) */
+.item-cartao { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 92%, white 4%), color-mix(in srgb, var(--superficie) 75%, transparent));
+  border: 1.5px solid color-mix(in srgb, var(--destaque) 25%, transparent); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); color: var(--texto); }
+.item-icone, .item-valor-icone { color: var(--destaque); }
+.item-categoria { color: var(--suave); }
+.item-caixa { background: color-mix(in srgb, var(--fundo) 80%, black); }
+.item-caixa-titulo { color: var(--suave); }
+.item-traco { background: linear-gradient(90deg, var(--destaque), var(--destaque2)); }
+.item-valor { background: color-mix(in srgb, var(--destaque) 12%, transparent); }
+.placar { background: color-mix(in srgb, var(--superficie) 80%, transparent); border: 1px solid color-mix(in srgb, var(--destaque) 20%, transparent); }
+.placar-selo { background: color-mix(in srgb, var(--texto) 8%, transparent); color: color-mix(in srgb, var(--texto) 30%, transparent); }
+.placar-selo.aceso { background: linear-gradient(145deg, var(--destaque), var(--destaque2)); color: #fff; }
+.placar-selo.atual { box-shadow: 0 0 0 4px var(--fundo), 0 0 0 7px var(--destaque); }
+.placar-conta { color: var(--texto); }
+.comenta-marca { background: color-mix(in srgb, var(--destaque) 55%, transparent); }
+.comenta-caixa { background: var(--superficie); box-shadow: 0 30px 80px rgba(0, 0, 0, .4); }
+.comenta-quem small, .comenta-detalhe { color: var(--suave); }
+.comenta-seguir { background: var(--destaque); color: #fff; }
+.comenta-seguir.feito { background: color-mix(in srgb, var(--texto) 15%, transparent); color: var(--texto); }

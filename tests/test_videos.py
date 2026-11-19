@@ -47,7 +47,8 @@ def _estilo() -> estilos.Estilo:
 
 
 def test_estilo_embutido_e_o_de_quem_usa_no_lugar(tmp_path: Path) -> None:
-    [zervis] = estilos.listar(EMBUTIDOS, tmp_path)
+    zervis, editorial = estilos.listar(EMBUTIDOS, tmp_path)
+    assert editorial.id == "editorial" and not editorial.proprio
     assert zervis.id == "zervis" and zervis.css is not None and not zervis.proprio
     assert "Inter+Tight" in zervis.fontes_url() and "Poppins" in zervis.fontes_url("Poppins")
 
@@ -62,7 +63,7 @@ def test_estilo_embutido_e_o_de_quem_usa_no_lugar(tmp_path: Path) -> None:
     (tmp_path / "quebrado" / "estilo.json").write_text("{")
     (tmp_path / "Maiusculo").mkdir()
     (tmp_path / "Maiusculo" / "estilo.json").write_text("{}")
-    [proprio] = estilos.listar(EMBUTIDOS, tmp_path)  # o de quem usa vale no lugar do embutido
+    proprio, _ = estilos.listar(EMBUTIDOS, tmp_path)  # o de quem usa vale no lugar do embutido
     assert proprio.nome == "Meu" and proprio.proprio and proprio.js is not None
     assert proprio.bpm == 160 and proprio.energia == "alta" and not proprio.onda
     assert list(proprio.cenas_extras) == ["citacao"]
@@ -893,3 +894,21 @@ def test_sintetizador_escolhe_o_locutor() -> None:
     with pytest.raises(RuntimeError):
         narracao.sintetizador(motor)("oi")
     assert pedidos == [("a" * 32, "s2.1-pro"), ("voz-do-ze", "s2.1-pro")]
+
+
+def test_lista_e_estilo_editorial() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    itens = [{"tipo": "item", "fala": f"Item {n}.", "nome": f"Nome {n}", "detalhe": "Faz algo.",
+              "icone": "wrench", "fundo": f, "transicao": "carta"}
+             for n, f in ((1, "claro"), (2, "cor"), (3, "escuro"))]  # fmt: skip
+    bruto["cenas"][1:4] = itens
+    bruto["cenas"][-1].update(composicao="comenta", palavra="oficina")
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    um, dois, tres = r.cenas[1:4]
+    assert um["transicao"] == "carta" and um["icone"] == "wrench"
+    # itens seguidos são o mesmo cartão: o fundo do primeiro, sem transição
+    assert (dois["fundo"], dois["transicao"]) == ("claro", "corte") == (tres["fundo"], "corte")
+    assert r.cenas[-1]["composicao"] == "comenta" and r.cenas[-1]["palavra"] == "oficina"
+    e = estilos.achar("editorial")
+    assert e.nome == "Editorial" and e.fonte_legenda == "Instrument Serif" and e.css
+    assert "family=Instrument+Serif:ital@0;1" in e.fontes_url()

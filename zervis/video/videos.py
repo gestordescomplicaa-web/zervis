@@ -73,6 +73,7 @@ MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
     "hub": lambda c: 1.6 + 0.55 * len(c.get("ao_redor", [])),
     "caos": lambda c: 3.4,
     "foto": lambda c: 2.8,
+    "item": lambda c: 2.6,
 }
 
 
@@ -565,6 +566,7 @@ class Videos:
                 "fontes": {
                     "titulo": marca.titulo or estilo.fonte_titulo,
                     "texto": marca.texto or estilo.fonte_texto,
+                    "legenda": estilo.fonte_legenda,
                 },
                 "fontes_url": estilo.fontes_url(marca.titulo, marca.texto),
             },

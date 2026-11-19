@@ -1,0 +1,8 @@
+{
+  "nome": "Editorial",
+  "descricao": "Claro, papel e revista: cartões brancos, legenda serifada e um placar que evolui.",
+  "fontes": {"titulo": "Inter Tight", "texto": "Inter", "legenda": "Instrument Serif"},
+  "onda": false,
+  "trilha": {"bpm": 112, "energia": "media"},
+  "tom": "Didático e direto, como quem ensina um colega; frases curtas. Prefira listas numeradas (o formato lista, com cenas item seguidas e o placar) e feche pedindo um comentário (fecho comenta)."
+}

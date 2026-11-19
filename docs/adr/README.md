@@ -121,3 +121,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0111](0111-videos-na-semana.md) | Vídeos na semana, sem repetir a receita | Aceito |
 | [0112](0112-fotos-nos-videos.md) | Fotos nos vídeos | Aceito |
 | [0113](0113-formato-ritmo-e-voz.md) | Formato, gancho, ritmo e voz dos vídeos | Aceito |
+| [0114](0114-estilo-editorial-e-lista.md) | O estilo Editorial e a lista que evolui | Aceito |

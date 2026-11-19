@@ -1,0 +1,90 @@
+/* O estilo "Editorial" (ADR 0114): papel, cartões brancos, legenda serifada e o placar. Parte do
+   estilo Zérvis (as peças de todas as cenas) e troca a paleta por uma clara, de revista. Copie
+   as duas pastas para <config>/video/estilos/ para mudar. */
+@import url("../zervis/estilo.css");
+
+#palco {
+  --fundo: #ede6da; --superficie: #ffffff; --texto: #151515; --suave: #6e675d;
+  --destaque: #e2462c; --destaque2: #f0a202; --marca1: #e2462c; --marca2: #f0a202;
+  --tinta: #e2462c; --ouro: #f2b705;
+}
+
+/* o papel: bege com uma trama clara, sem manchas de luz nem vinheta */
+#fundo, .fundo-cena {
+  background-color: var(--fundo);
+  background-image:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .45) 0 2px, transparent 2px 52px),
+    repeating-linear-gradient(45deg, rgba(120, 90, 50, .05) 0 2px, transparent 2px 52px);
+}
+.fundo-cena .mancha, .malha, .fundo-cena::after, #fundo::after, .brilho, .grao { display: none; }
+.fundo-claro { --fundo: #f6f2ea; }
+.fundo-cor { --fundo: #f6d860; --texto: #151515; --suave: #4d4636; --destaque: #151515; --destaque2: #151515; }
+.fundo-cor .fundo-cena { background: #f6d860; }
+#palco[data-fundo="cor"] #legenda { --texto: #151515; }
+
+/* a tipografia: preto em negrito; o destaque em serifa itálica vermelha, sublinhado */
+.fala-grande { color: var(--texto); font-weight: 800; }
+.palavra.destaque, .composicao-cheia .palavra.destaque {
+  background: none; -webkit-text-fill-color: var(--tinta); color: var(--tinta);
+  font-family: var(--fonte-legenda); font-style: italic; font-weight: 400; letter-spacing: 0;
+}
+.palavra.destaque::after, .composicao-cheia .palavra.destaque::after { background: var(--tinta); height: .05em; bottom: .02em; }
+.composicao-cheia .fundo-cena { background: #151515; }
+.composicao-cheia .fala-grande { color: #f6f2ea; }
+.corte-escuro { background: #151515; color: #f6f2ea; }
+.corte-claro { background: #f6f2ea; color: #151515; }
+.corte-marca { background: var(--ouro); color: #151515; }
+
+/* a legenda: serifa em caixa alta, palavra por palavra; a palavra-chave em itálico vermelho */
+#legenda { font-family: var(--fonte-legenda); text-transform: uppercase; font-size: 78px; font-weight: 400; line-height: 1.02; letter-spacing: .005em; }
+#legenda span { color: var(--texto); opacity: 0; }
+#legenda span.dita { opacity: 1; color: var(--texto); }
+#legenda span.ativa, #legenda span.ativa.marcada { background: none !important; color: var(--texto) !important; }
+#legenda span.marcada.dita, #legenda span.marcada.dita.ativa { color: var(--tinta) !important; font-style: italic; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 10px; }
+#palco[data-fundo="cor"] #legenda span.marcada.dita { color: #151515; }
+
+/* os cartões: brancos, sombra macia, a caixa escura do "sobre" */
+.item-cartao, .passo, .item, .item-grande, .lado, .conversa, .comenta-caixa {
+  background: #ffffff; border: 1px solid rgba(40, 30, 20, .08); box-shadow: 0 30px 70px rgba(70, 50, 25, .16);
+}
+.item-caixa { background: #1a1a1a; color: #f2efe9; }
+.item-caixa-titulo { color: #a9a39a; }
+.item-icone, .item-valor-icone { color: #151515; }
+.item-traco { background: var(--ouro); }
+.item-valor { background: #f6f2ea; color: #151515; }
+.item-valor-icone { color: var(--ouro); }
+
+/* o placar: os selos coloridos que acendem */
+.placar { background: #ffffff; border: 1px solid rgba(40, 30, 20, .08); box-shadow: 0 20px 50px rgba(70, 50, 25, .14); }
+.placar-selo { background: #ece6dc; color: #b8b0a3; }
+.placar-selo.aceso { color: #fff; background: var(--cor-selo); }
+.placar-selo.atual { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #151515; }
+.cor-0 { --cor-selo: #4f6ef7; } .cor-1 { --cor-selo: #8b5cf6; } .cor-2 { --cor-selo: #f97316; }
+.cor-3 { --cor-selo: #ef4444; } .cor-4 { --cor-selo: #10b981; } .cor-5 { --cor-selo: #0ea5e9; }
+.cor-6 { --cor-selo: #ec4899; } .cor-7 { --cor-selo: #eab308; }
+.placar-conta { color: #151515; }
+
+/* o fecho "comenta" e a chamada */
+.comenta-marca { background: var(--ouro); }
+.comenta-seguir { background: var(--ouro); color: #151515; }
+.cena-fecho.composicao-chamada .fundo-cena { background: var(--ouro); }
+.chamada-nome, .chamada-texto, .chamada-seta { color: #151515; }
+.chamada-detalhe { background: #151515; color: #fff; }
+
+/* as artes no papel: discos brancos, linhas escuras, sem neon */
+.no-disco { background: #ffffff; border-color: rgba(40, 30, 20, .12); color: #151515; box-shadow: 0 18px 40px rgba(70, 50, 25, .14); }
+.no.ativo .no-disco, .no.grande .no-disco { border-color: var(--tinta); color: var(--tinta); box-shadow: 0 0 0 8px rgba(226, 70, 44, .12), 0 18px 40px rgba(70, 50, 25, .16); }
+.ligacao { stroke: #151515; filter: none; }
+.pacote { fill: var(--ouro); filter: none; }
+.arte-heroi { color: #151515; filter: none; }
+.arte-heroi.aceso { color: var(--tinta); }
+.arte-disco { background: #ffffff; border-color: rgba(40, 30, 20, .1); box-shadow: 0 30px 70px rgba(70, 50, 25, .14); }
+.anel { border-color: var(--tinta); }
+.faisca { background: var(--ouro); box-shadow: none; }
+.caos-item { background: #ffffff; color: #8a8378; border-color: rgba(40, 30, 20, .1); box-shadow: 0 14px 30px rgba(70, 50, 25, .12); }
+.caos-item.ordem { color: #151515; border-color: var(--ouro); box-shadow: 0 14px 30px rgba(70, 50, 25, .16); }
+.arte-rotulo, .no-rotulo { color: #151515; }
+.foto-janela .foto-moldura { border: 10px solid #fff; box-shadow: 0 30px 70px rgba(70, 50, 25, .2); }
+/* a foto em tela cheia: véu escuro (o papel lavaria a foto) e o rótulo claro */
+.foto-veu { background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0%, transparent 24%, transparent 46%, rgba(0, 0, 0, .7) 84%); }
+.foto-rotulo-cheia { color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, .5); }

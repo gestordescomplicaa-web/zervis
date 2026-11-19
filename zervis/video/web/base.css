@@ -221,3 +221,34 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .chamada-seta { width: 120px; height: 120px; }
 .chamada-detalhe { font-size: 38px; font-weight: 700; padding: 14px 34px; border-radius: 999px; }
 
+/* lista (ADR 0114): o cartão do item, o placar e o fecho "comenta" ------------------------- */
+.cena-item .camera { justify-content: flex-start; padding-top: 80px; }
+.item-cartao { width: 900px; border-radius: 36px; padding: 40px 44px 44px; display: grid; gap: 26px; }
+.item-topo { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 600; }
+.item-icone { width: 54px; height: 54px; }
+.item-num { margin-left: auto; font-family: var(--fonte-titulo); font-weight: 800; font-size: 34px; }
+.item-caixa { border-radius: 22px; padding: 26px 30px; display: grid; gap: 10px; }
+.item-caixa-titulo { font-size: 26px; font-weight: 700; }
+.item-detalhe { font-size: 34px; line-height: 1.3; }
+.item-nome { font-family: var(--fonte-titulo); font-weight: 800; font-size: 96px; line-height: 1; letter-spacing: -.035em; }
+.item-traco { height: 8px; width: 120px; border-radius: 4px; transform-origin: 0 50%; }
+.item-valor { display: flex; align-items: center; gap: 14px; font-family: var(--fonte-titulo); font-weight: 800; font-size: 68px; border-radius: 22px; padding: 18px 26px; }
+.item-valor-icone { width: 52px; height: 52px; }
+.placar { position: absolute; left: 70px; right: 70px; top: 1060px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; z-index: 3; opacity: 0; padding: 18px 22px; border-radius: 26px; }
+.placar-selo { width: 74px; height: 74px; border-radius: 20px; display: grid; place-items: center; font-family: var(--fonte-titulo); font-weight: 800; font-size: 26px; }
+.placar-conta { margin-left: auto; font-family: var(--fonte-titulo); font-weight: 800; font-size: 40px; }
+.cena-fecho.composicao-comenta .camera { gap: 30px; }
+.comenta-pede { font-size: 64px; font-weight: 600; }
+.comenta-palavra { position: relative; font-family: var(--fonte-titulo); font-weight: 900; font-size: 170px; letter-spacing: -.04em; line-height: 1; }
+.comenta-palavra span { position: relative; }
+.comenta-marca { position: absolute; left: -.1em; right: -.1em; bottom: .08em; height: .42em; transform-origin: 0 50%; border-radius: .08em; }
+.comenta-caixa { display: flex; align-items: center; gap: 22px; width: 860px; padding: 26px 30px; border-radius: 30px; }
+.comenta-avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; flex: none; }
+.comenta-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.comenta-quem { display: grid; gap: 4px; font-size: 32px; }
+.comenta-quem small { font-size: 26px; }
+.comenta-seguir { margin-left: auto; font-weight: 700; font-size: 32px; padding: 16px 34px; border-radius: 16px; }
+.comenta-detalhe { font-size: 34px; }
+/* a legenda sobre a foto em tela cheia: clara, com sombra (qualquer estilo) */
+#palco[data-tipo="foto"][data-composicao="cheia"] #legenda span.dita { color: #fff !important; text-shadow: 0 3px 24px rgba(0, 0, 0, .75); }
+

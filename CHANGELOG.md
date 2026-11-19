@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Estilo Editorial nos vídeos:** papel, cartões brancos, legenda serifada palavra por palavra,
+  uma lista cujo cartão fica e só troca o conteúdo, com um placar que acende a cada item, e o
+  fecho "comenta". O crédito das fotos livres vai só na legenda (ADR 0114).
 - **Vídeos menos repetitivos:** oito formatos editoriais (POV, mito, erro, lista...), ganchos com
   técnica, um corte a cada 2 a 4 s, palavras em cortes e carimbo, fecho alternativo, música que
   muda a cada vídeo e som nas transições. **Voz do vídeo** escolhida no cartão Vídeos (ADR 0113).

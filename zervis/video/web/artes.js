@@ -330,8 +330,7 @@
       el.append(quadro);
       const r = c.rotulo && comp !== "polaroid" ? h("div", `arte-rotulo foto-rotulo-${comp}`, c.rotulo) : null;
       if (r) el.append(r);
-      // o crédito fica junto da foto: por cima, na tela cheia; embaixo dela, na polaroid e na janela
-      if (c.credito) (comp === "cheia" ? el : quadro).append(h("div", "foto-credito", c.credito));
+      // o crédito da foto livre vai na legenda do post (a licença aceita): a tela fica limpa
       return { comp, quadro, img, moldura, badge, r, foco: moldura };
     },
     render(t, d, s, ctx) {

@@ -15,7 +15,8 @@
 // curtas, câmera só com intenção (um soco na palavra de destaque, não um zoom lento eterno) e
 // transições com causa (o chicote, o zoom através do foco, a íris do ponto, a cor que inunda).
 (() => {
-  const Ze = (window.Ze = { cenas: {}, erros: [] });
+  // camadas: o que atravessa as cenas (o placar de uma lista), desenhado a cada quadro por cima
+  const Ze = (window.Ze = { cenas: {}, erros: [], camadas: [] });
   window.addEventListener("error", (e) => Ze.erros.push(String(e.message || e)));
   window.addEventListener("unhandledrejection", (e) => Ze.erros.push(String(e.reason)));
 
@@ -188,6 +189,7 @@
     const f = V.estilo.fontes || {};
     if (f.titulo) r.setProperty("--fonte-titulo", `"${f.titulo}", var(--fonte-reserva)`);
     if (f.texto) r.setProperty("--fonte-texto", `"${f.texto}", var(--fonte-reserva)`);
+    if (f.legenda) r.setProperty("--fonte-legenda", `"${f.legenda}", var(--fonte-reserva)`);
     r.setProperty("--largura", `${V.largura}px`);
     r.setProperty("--altura", `${V.altura}px`);
     document.body.classList.add(`formato-${V.formato}`, `estilo-${V.estilo.id}`);
@@ -366,6 +368,7 @@
     el.style.transformOrigin = "";
     inunda.style.transform = "translateY(100%)";
     palco.classList.toggle("mesa", false);
+    if (antes && antes.c.tipo === "item" && x.c.tipo === "item") return; // o cartão continua
     if (tipo === "corte" || !antes) {
       // corte seco na batida: a cena chega um pouco grande e assenta (o soco do corte)
       if (antes) el.style.transform = `scale(${1.05 - 0.05 * curvas.chega(prog(local, 0, 0.3))})`;
@@ -496,7 +499,12 @@
         atual.el.style.filter = "brightness(0.6)";
       }
     }
-    if (atual) palco.dataset.fundo = atual.el.dataset.fundo;
+    if (atual) {
+      palco.dataset.fundo = atual.el.dataset.fundo;
+      palco.dataset.composicao = atual.c.composicao || "";
+      palco.dataset.tipo = atual.c.tipo;
+    }
+    for (const camada of Ze.camadas) camada(t, atual ? atual.i : -1, V, palco);
     desenharLegenda(t, atual);
     desenharOnda(t, v);
     preto.style.opacity = String(prog(t, V.duracao - 0.35, 0.35));
@@ -514,7 +522,8 @@
     montar();
     const f = V.estilo.fontes || {};
     await Promise.all(
-      [f.titulo && `800 40px "${f.titulo}"`, f.titulo && `700 40px "${f.titulo}"`, f.texto && `400 40px "${f.texto}"`, f.texto && `600 40px "${f.texto}"`]
+      [f.titulo && `800 40px "${f.titulo}"`, f.titulo && `700 40px "${f.titulo}"`, f.texto && `400 40px "${f.texto}"`, f.texto && `600 40px "${f.texto}"`,
+        f.legenda && `400 40px "${f.legenda}"`, f.legenda && `italic 400 40px "${f.legenda}"`]
         .filter(Boolean).map((x) => document.fonts.load(x).catch(() => {})),
     );
     await document.fonts.ready;
