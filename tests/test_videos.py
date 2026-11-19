@@ -270,6 +270,12 @@ class SiteFalso:
     def artigo(self, slug: str) -> str:
         return "Texto do artigo." if slug == "existe" else ""
 
+    def artigos(self) -> list[dict[str, Any]]:
+        return [
+            {"slug": "rascunho", "estado": "Rascunho"},
+            {"slug": "existe", "estado": "Publicado"},
+        ]
+
 
 def _videos(tmp_path: Path, resposta: str, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Any]:
     monkeypatch.setattr(videos.Videos, "disponivel", staticmethod(lambda: ""))
@@ -616,3 +622,88 @@ def test_transicoes_de_carta_e_fundos() -> None:
     assert (r.cenas[1]["transicao"], r.cenas[1]["fundo"]) == ("carta", "claro")
     assert (r.cenas[2]["transicao"], r.cenas[2]["fundo"]) == ("cubo", "escuro")
     assert {"carta", "baralho", "cubo", "fatias"} <= set(roteiro.TRANSICOES)
+
+
+def test_memoria_dos_ultimos_videos(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    v, _ = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    primeiro = v.criar(tema="Atendimento fora do horário", esperar=True)
+    assert "Os últimos vídeos desta marca" not in v.pedidos[0]  # ainda não há vídeos
+    # o segundo vê o primeiro (tema, gancho e receita); a mesma receita volta para o diretor
+    segundo = v.criar(tema="Outro tema", esperar=True)
+    memoria = v.pedidos[1]
+    assert "Os últimos vídeos desta marca" in memoria and ROTEIRO["titulo"] in memoria
+    assert ROTEIRO["cenas"][0]["fala"] in memoria and "gancho (" in memoria
+    assert "ficou igual à de um vídeo recente" in v.pedidos[2]
+    assert segundo.estado == "rascunho"  # na segunda vez, aceita: o vídeo não falha por isso
+    # um ajuste segue a versão anterior, sem a memória
+    v.refazer(primeiro.id, "mais curto", esperar=True)
+    assert "Os últimos vídeos desta marca" not in v.pedidos[-1]
+    assert len(v.recentes()) == 2 and v.recentes(menos=primeiro.id)[0]["titulo"]
+
+
+def test_tema_do_video_agendado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    v, _ = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    assert v.proximo_tema(["Agenda cheia", "Recepção"]) == ("Agenda cheia", "")
+    v.criar(tema="Agenda cheia", esperar=True)
+    assert v.proximo_tema(["agenda  CHEIA", "Recepção"]) == ("Recepção", "")
+    v.criar(tema="Recepção", esperar=True)
+    assert v.proximo_tema(["Recepção"]) == ("", "existe")  # o artigo publicado novo
+    v.criar(artigo="existe", esperar=True)
+    assert v.proximo_tema([]) == (videos.TEMA_LIVRE, "")
+
+
+def test_pedido_da_agenda_de_videos() -> None:
+    texto = videos.Videos.pedido_agendado("Agenda cheia\n\n  Recepção  \n", 45)
+    assert json.loads(texto) == {"temas": ["Agenda cheia", "Recepção"], "duracao": 45}
+    assert len(json.loads(videos.Videos.pedido_agendado(["x"] * 30, 30))["temas"]) == 10
+    with pytest.raises(videos.VideoErro):
+        videos.Videos.pedido_agendado([], 31)
+    with pytest.raises(videos.VideoErro):
+        videos.Videos.pedido_agendado(["ã" * 80] * 10, 30)
+    from zervis.cerebro.claude import descrever
+
+    fala = descrever("mcp__jarvis__marketing_video_agendar", {"quando": "cron 0 9 * * 1"})
+    assert fala.startswith("Vou agendar vídeos (cron 0 9 * * 1) com o tema escolhido pelo site")
+    assert fala.endswith("; publicar fica com você.")
+
+
+def test_video_agendado_cria_na_hora(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+    from datetime import datetime
+    from queue import Queue
+    from types import SimpleNamespace
+
+    from zervis import fuso
+    from zervis.automacoes.jobs import Jobs
+    from zervis.nucleo.servicos.automacoes import ServicoAutomacoes
+
+    pedidos: list[dict[str, Any]] = []
+    feito = threading.Event()
+
+    class VideosFalsos:
+        def proximo_tema(self, temas: list[str]) -> tuple[str, str]:
+            return temas[0], ""
+
+        def criar(self, **kw: Any) -> Any:
+            pedidos.append(kw)
+            feito.set()
+            return SimpleNamespace(tema=kw["tema"], artigo="")
+
+    monkeypatch.setattr(videos, "PADRAO", VideosFalsos())
+    linha: list[str] = []
+    n: Any = SimpleNamespace(eventos=Queue(), jobs=Jobs(tmp_path / "jobs.json"), _rodando=set())
+    n._na_linha = lambda tipo, texto: linha.append(texto)
+    n.eventos_sistema = SimpleNamespace(novos=lambda: [])
+    n._vigia_em = n._n8n_em = n._versoes_em = n._agenda_em = 1e18
+    agora = datetime(2099, 1, 2, 8, 0, tzinfo=fuso.local())
+    texto = videos.Videos.pedido_agendado(["Agenda cheia"], 45)
+    n.jobs.criar("Vídeo da marca", "2099-01-02 09:00", "video", texto, agora)
+    ServicoAutomacoes(n)._agendador(datetime(2099, 1, 2, 9, 0, 30, tzinfo=fuso.local()).timestamp())
+    assert feito.wait(2)
+    assert pedidos == [{"tema": "Agenda cheia", "artigo": "", "duracao": 45}]
+    for _ in range(50):
+        if n.jobs.listar()[0].ultimo_status == "ok":
+            break
+        threading.Event().wait(0.02)
+    assert n.jobs.listar()[0].ultimo_status == "ok"
+    assert linha == ["Comecei o vídeo agendado: Agenda cheia."]

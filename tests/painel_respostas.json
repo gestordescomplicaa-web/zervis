@@ -12,6 +12,7 @@
    "posts": [{"id": "b1c2d3e4", "tema": "Exemplo", "artigo": "", "estado": "rascunho", "erro": "", "legenda": "Exemplo", "chamada": "Exemplo", "permalink": "", "criado": 1794600000, "slides": 5}],
    "marca": {"paleta": "site", "cores": {}, "atual": {"fundo": "#111114", "superficie": "#1b1b20", "texto": "#f4f4f6", "suave": "#a3a3ad", "destaque": "#4f8cff", "destaque2": "#8b5cf6"}, "site": {"fundo": "#111114", "superficie": "#1b1b20", "texto": "#f4f4f6", "suave": "#a3a3ad", "destaque": "#4f8cff", "destaque2": "#8b5cf6"}, "declarada": true, "instagram": true, "publicavel": true},
    "automaticos": [{"id": "j1", "agenda": "cron 0 9 * * 1,4", "proxima": "2026-11-16T09:00:00-03:00", "ativo": true}],
+   "videos_automaticos": [{"id": "j2", "agenda": "cron 0 9 * * 1,4", "proxima": "2026-11-19T09:00:00-03:00", "ativo": true, "temas": 3, "duracao": 30}],
    "prs": [{"numero": 3, "titulo": "blog: Exemplo", "endereco": "https://github.com/exemplo/site/pull/3"}]
   },
   "pesquisas": {

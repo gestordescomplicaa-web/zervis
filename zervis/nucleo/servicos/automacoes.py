@@ -121,6 +121,12 @@ class ServicoAutomacoes:
             threading.Thread(
                 target=self._pedir_artigo, args=(x,), name="artigo-agendado", daemon=True
             ).start()
+        elif x.tipo == "video":
+            log.info("automação %s: vídeo da marca", x.job)
+            self.n._rodando.add(x.id)
+            threading.Thread(
+                target=self._pedir_video, args=(x,), name="video-agendado", daemon=True
+            ).start()
         elif x.tipo == "ligacao":
             log.info("automação %s: ligação agendada", x.job)
             self.n._rodando.add(x.id)
@@ -174,6 +180,30 @@ class ServicoAutomacoes:
         except (ValueError, AttributeError, marketing.MarketingErro, SessaoErro) as falha:
             status, erro = "erro", str(falha)[:200]
             texto = f"Não comecei o artigo do blog: {erro}"
+            self.n._na_linha("aviso", texto)
+            self.n.fila.guardar(texto, "automacao")
+        finally:
+            self.n.jobs.concluir(x.id, status, datetime.now(FUSO), erro)
+            self.n._rodando.discard(x.id)
+
+    def _pedir_video(self, x: Execucao) -> None:
+        """O vídeo agendado (ADR 0111): o Zé cria e avisa no app quando estiver pronto; publicar
+        no Instagram espera a aprovação de quem usa."""
+        from zervis.video import roteiro as roteiro_video  # só quem agenda vídeo carrega
+        from zervis.video import videos
+
+        status, erro = "ok", ""
+        try:
+            pedido = json.loads(x.texto)
+            temas = [str(t) for t in pedido.get("temas") or [] if str(t).strip()]
+            v = videos.PADRAO
+            tema, artigo = v.proximo_tema(temas)
+            duracao = int(pedido.get("duracao") or roteiro_video.DURACAO_PADRAO)
+            feito = v.criar(tema=tema, artigo=artigo, duracao=duracao)
+            self.n._na_linha("aviso", f"Comecei o vídeo agendado: {feito.tema or feito.artigo}.")
+        except (ValueError, AttributeError, TypeError, videos.VideoErro) as falha:
+            status, erro = "erro", str(falha)[:200]
+            texto = f"Não comecei o vídeo agendado: {erro}"
             self.n._na_linha("aviso", texto)
             self.n.fila.guardar(texto, "automacao")
         finally:

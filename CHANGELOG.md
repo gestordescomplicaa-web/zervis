@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Vídeos automáticos:** o Zé cria os vídeos na agenda (temas seus ou escolhidos pelo site e
+  pelos artigos), avisa no app e publica no Instagram só com a sua aprovação. O diretor vê os
+  últimos vídeos e muda a receita a cada um (ADR 0111).
 - **Edição dos vídeos:** as cenas entram de jeitos diferentes (desfoque, queda, cortina, giro em
   perspectiva), a câmera dá um soco na palavra de destaque em vez de um zoom lento, as transições
   têm causa (íris do ponto em foco, zoom através, chicote, a cor da marca inundando a tela), o logo
