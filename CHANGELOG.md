@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Vídeos menos repetitivos:** oito formatos editoriais (POV, mito, erro, lista...), ganchos com
+  técnica, um corte a cada 2 a 4 s, palavras em cortes e carimbo, fecho alternativo, música que
+  muda a cada vídeo e som nas transições. **Voz do vídeo** escolhida no cartão Vídeos (ADR 0113).
 - **Fotos nos vídeos:** as fotos da marca e fotos livres da Wikimedia, em tela cheia, como polaroid
   ou numa janela com um ícone; o crédito vai na tela e na legenda. Sem foto que sirva, a cena vira
   um ícone (ADR 0112).

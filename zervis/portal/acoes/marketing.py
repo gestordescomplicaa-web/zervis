@@ -212,6 +212,8 @@ class AcoesMarketing(Pagina):
             "estilos": [e.para_tela() for e in estilos_video.listar()],
             "modelos": [{"id": k, "nome": n} for k, n in videos.MODELOS.items()],
             "duracoes": sorted(roteiro_video.DURACOES),
+            "vozes": v.vozes(),
+            "locutor": v.locutor_padrao(),
             "indisponivel": v.disponivel(),
             "instagram": marketing_posts.PADRAO.instagram.conectado,
             "publicavel": bool(marketing_posts.PADRAO.endereco()),
@@ -232,6 +234,7 @@ class AcoesMarketing(Pagina):
                 dados.get("voz") is not False,
                 duracao=int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
                 modelo=str(dados.get("modelo") or videos.MODELO),
+                locutor=str(dados.get("locutor", "")) if "locutor" in dados else None,
             )
         )
         atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")

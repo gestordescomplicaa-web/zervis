@@ -133,3 +133,15 @@
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--marca1) 12%, transparent), 0 40px 120px rgba(0, 0, 0, .5); }
 .foto-credito { color: color-mix(in srgb, var(--texto) 70%, transparent); }
 .composicao-cheia .foto-credito { color: rgba(255, 255, 255, .78); }
+
+/* ritmo */
+.corte-escuro { background: var(--fundo); color: var(--texto); }
+.corte-claro { background: #f3f1ec; color: #13141b; }
+.corte-marca { background: linear-gradient(155deg, var(--marca1), var(--marca2)); color: #fff; }
+.cena-fecho.composicao-chamada .fundo-cena { background: linear-gradient(160deg, var(--marca1), var(--marca2)); }
+.cena-fecho.composicao-chamada .fundo-cena .mancha, .cena-fecho.composicao-chamada .malha, .cena-fecho.composicao-chamada .fundo-cena::after { display: none; }
+.chamada-logo { background: var(--fundo); box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.chamada-nome, .chamada-texto, .chamada-seta { color: #fff; }
+.chamada-seta { filter: drop-shadow(0 0 16px rgba(255, 255, 255, .6)); }
+.chamada-detalhe { background: #fff; color: var(--marca1); }
+

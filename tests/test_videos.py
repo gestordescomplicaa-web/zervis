@@ -93,9 +93,11 @@ def test_plano_de_direcao_conferido_e_cortado() -> None:
 
 
 def test_duracao_muda_o_tamanho_do_plano() -> None:
-    assert roteiro.limites(15) == (3, 4, 26, 44) and roteiro.limites(60)[1] == 11
-    with pytest.raises(roteiro.RoteiroErro, match="3 a 4 cenas"):
-        roteiro.interpretar(json.dumps(ROTEIRO), _estilo(), 15)
+    assert roteiro.limites(15) == (4, 6, 26, 44) and roteiro.limites(60)[1] == 16
+    sete = json.loads(json.dumps(ROTEIRO))
+    sete["cenas"].insert(1, dict(sete["cenas"][1]))
+    with pytest.raises(roteiro.RoteiroErro, match="4 a 6 cenas"):
+        roteiro.interpretar(json.dumps(sete), _estilo(), 15)
     prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), 45)
     assert "cerca de 45 segundos" in prompt and "78 a 130 palavras" in prompt
 
@@ -128,7 +130,7 @@ def test_gatilhos_viram_segundos_desde_o_comeco_da_cena() -> None:
 @pytest.mark.parametrize(
     ("mudar", "erro"),
     [
-        (lambda r: r["cenas"].pop(0), "gancho"),
+        (lambda r: r["cenas"].reverse(), "abrir"),
         (lambda r: r["cenas"][1].update(tipo="slide"), "desconhecido"),
         (lambda r: r["cenas"][1].update(passos=["só um"]), "pelo menos 2"),
         (lambda r: r["cenas"].insert(1, {"tipo": "numero", "fala": "x", "valor": "muito",
@@ -137,7 +139,7 @@ def test_gatilhos_viram_segundos_desde_o_comeco_da_cena() -> None:
                                          "rotulo": "a"}), "sem fonte"),
         (lambda r: r["cenas"][2].update(fala="ab " * 40), "longa"),
         (lambda r: r["cenas"][2].update(fala=""), "sem fala"),
-        (lambda r: r.update(cenas=r["cenas"][:2]), "4 a 7"),
+        (lambda r: r.update(cenas=r["cenas"][:2]), "6 a 10"),
         (lambda r: r["cenas"][2].update(depois=""), "depois"),
     ],
 )  # fmt: skip
@@ -604,6 +606,7 @@ def test_cenas_de_arte_no_plano() -> None:
         {"tipo": "hub", "fala": "Tudo ligado ao agente.", "centro": {"icone": "marca"},
          "ao_redor": [{"icone": "whatsapp"}, {"icone": "pizza"}, {"icone": "truck"}]},
     ]  # fmt: skip
+    bruto["cenas"].insert(-1, dict(ROTEIRO["cenas"][1]))  # o mínimo de cenas do ritmo
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
     icone, caos, hub = r.cenas[1:4]
     assert icone["icone"] == "pizza"
@@ -779,3 +782,114 @@ def test_foto_no_plano_e_no_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert feito.estado == "rascunho"
     assert feito.legenda.endswith("Fotos: Foto: Ana · CC BY 4.0 · Wikimedia Commons")
     assert feito.roteiro["cenas"][1]["imagem"].startswith("file://")
+
+
+def test_formato_gancho_e_ritmo_no_plano() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["formato"] = "erro"
+    bruto["cenas"][0] = {"tipo": "foto", "fala": "POV: sua recepção às onze da noite.",
+                         "foto": "busca: reception desk"}  # fmt: skip
+    bruto["cenas"][1] = {"tipo": "frase", "fala": "Ninguém responde ninguém.",
+                         "composicao": "cortes"}  # fmt: skip
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert r.formato == "erro" and r.para_json()["formato"] == "erro"
+    assert r.cenas[0]["tipo"] == "foto"  # o vídeo pode abrir com foto
+    assert r.cenas[1]["composicao"] == "cortes"
+    bruto["cenas"][1]["fala"] = "uma fala comprida demais para caber uma palavra por tela inteira"
+    assert roteiro.interpretar(json.dumps(bruto), _estilo()).cenas[1]["composicao"] == "carimbo"
+    bruto["formato"] = "inventado"
+    assert roteiro.interpretar(json.dumps(bruto), _estilo()).formato == ""
+    prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
+    assert "## Formato e gancho" in prompt and "- pov:" in prompt and "um corte a cada" in prompt
+
+
+def test_formato_repetido_volta_ao_diretor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    com_formato = {**ROTEIRO, "formato": "lista"}
+    v, _ = _videos(tmp_path, json.dumps(com_formato), monkeypatch)
+    v.criar(tema="Um", esperar=True)
+    outro = {**com_formato, "cenas": [*ROTEIRO["cenas"][:1], *ROTEIRO["cenas"][2:]]}
+    outro["cenas"].insert(-1, dict(ROTEIRO["cenas"][2]))  # outra receita, o mesmo formato
+
+    def perguntar(prompt: str, modelo: str) -> str:
+        v.pedidos.append(prompt)
+        return json.dumps(outro)
+
+    v.perguntar = perguntar
+    v.criar(tema="Dois", esperar=True)
+    assert "formato: lista" in v.pedidos[1]
+    assert 'O formato "lista" é o mesmo do último vídeo' in v.pedidos[2]
+
+
+def test_efeitos_sonoros_das_acoes() -> None:
+    cenas: list[dict[str, Any]] = [
+        {"inicio": 0.0, "composicao": "cortes", "palavras": [
+            {"p": "Você", "i": 0.1}, {"p": "está", "i": 0.5}, {"p": "a", "i": 0.8},
+            {"p": "perdendo", "i": 0.9}]},
+        {"inicio": 2.0, "transicao": "corte", "composicao": "carimbo", "destaque": "pior",
+         "palavras": [{"p": "O", "i": 2.1}, {"p": "pior.", "i": 2.4}]},
+        {"inicio": 4.0, "transicao": "carta"},
+        {"inicio": 6.0, "transicao": "cubo"},
+    ]  # fmt: skip
+    assert videos.efeitos_sonoros(cenas) == [
+        (0.5, "estalo"), (0.9, "estalo"),
+        (2.0, "impacto"), (2.4, "impacto"),
+        (4.0, "whoosh"), (4.25, "estalo"),
+        (6.0, "whoosh"),
+    ]  # fmt: skip
+    from zervis.video import trilha
+
+    a = trilha.compor(3.0, [1.0], semente=1, efeitos=[(1.0, "impacto")])
+    b = trilha.compor(3.0, [1.0], semente=2, efeitos=[(1.0, "impacto")])
+    assert a.shape == b.shape and not (a == b).all()  # a música muda de um vídeo para outro
+
+
+def test_locutor_do_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    v, _ = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    usados: list[str] = []
+
+    def sintetizador(locutor: str = "") -> Any:
+        usados.append(locutor)
+        return _fala()
+
+    v.sintetizador = sintetizador
+    v._vozes_do_fish = lambda: [
+        {"id": "f" * 32, "nome": "Locutora", "detalhe": "sua, female"},
+        {"id": "e" * 32, "nome": "Famoso", "detalhe": "male, old"},  # da biblioteca: fica fora
+    ]
+    assert [x["id"] for x in v.vozes()] == ["", "cadu", "f" * 32]
+    primeiro = v.criar(tema="Um", esperar=True, locutor="cadu")
+    assert primeiro.locutor == "cadu" and usados == ["cadu"]
+    segundo = v.criar(tema="Dois", esperar=True)  # sem escolha (o agendado): o último escolhido
+    assert segundo.locutor == "cadu" and v.para_tela(segundo)["locutor"] == "cadu"
+    v.criar(tema="Três", esperar=True, locutor="")  # a voz da página Voz
+    assert usados[-1] == "" and v.locutor_padrao() == ""
+
+
+def test_sintetizador_escolhe_o_locutor() -> None:
+    from types import SimpleNamespace
+
+    pedidos: list[tuple[str, str]] = []
+
+    class Fish:
+        ENDERECO, TAXA = "https://fish.invalido", 44100
+
+        @staticmethod
+        def pedido(texto: str, voz: str, modelo: str, chave: str) -> Any:
+            pedidos.append((voz, modelo))
+            raise RuntimeError("sem rede no teste")
+
+    class Local:
+        def abrir_fluxo(self, texto: str) -> Any:
+            partes = iter([b"pcm", b""])
+            return 22050, SimpleNamespace(read1=lambda n: next(partes))
+
+    motor = SimpleNamespace(
+        ativo="fish", local=Local(), provedores={"fish": Fish}, chaves={"fish": "k"},
+        escolha=SimpleNamespace(voz=lambda p: {"id": "voz-do-ze", "modelo": "s2.1-pro"}),
+    )  # fmt: skip
+    assert narracao.sintetizador(motor, "cadu")("oi") == (22050, b"pcm")
+    with pytest.raises(RuntimeError):
+        narracao.sintetizador(motor, "a" * 32)("oi")
+    with pytest.raises(RuntimeError):
+        narracao.sintetizador(motor)("oi")
+    assert pedidos == [("a" * 32, "s2.1-pro"), ("voz-do-ze", "s2.1-pro")]

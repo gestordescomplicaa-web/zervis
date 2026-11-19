@@ -49,6 +49,7 @@ export function cartaoVideos(r, vs = r.videos) {
       <label>Duração<select id="mk-video-duracao">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
       <label>Diretor<select id="mk-video-modelo">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}">${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}">${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
+      <label>Voz<select id="mk-video-locutor">${(vs.vozes || []).map((/** @type {any} */ x) => `<option value="${esc(x.id)}" ${x.id === (vs.locutor || "") ? "selected" : ""}>${esc(x.nome)}${x.detalhe ? ` · ${esc(x.detalhe)}` : ""}</option>`).join("")}</select></label>
       <label class="interruptor"><input type="checkbox" id="mk-video-voz" checked> Narração</label>
     </div>
     <div class="linha">${botao("Criar vídeo", "mk-video-criar", vs.indisponivel ? "disabled" : "", "principal")}</div>
@@ -119,6 +120,7 @@ Object.assign(ACOES, {
       voz: /** @type {HTMLInputElement} */ ($("mk-video-voz")).checked,
       duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-duracao")).value),
       modelo: /** @type {HTMLSelectElement} */ ($("mk-video-modelo")).value,
+      locutor: /** @type {HTMLSelectElement | null} */ ($("mk-video-locutor"))?.value || "",
     };
     try {
       const r = await ocupado(b, () => api("marketing/video/criar", dados));
