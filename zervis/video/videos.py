@@ -31,11 +31,11 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from zervis import lugares, marketing, marketing_visual
+from zervis import lugares, marketing
 from zervis.portal import publico
 from zervis.redes import instagram_publicar
 from zervis.redes.instagram import Instagram, InstagramErro
-from zervis.video import captura, estilos, montagem, narracao, roteiro, trilha
+from zervis.video import biblioteca, captura, estilos, montagem, narracao, roteiro, trilha
 
 log = logging.getLogger(__name__)
 PASTA = lugares.DADOS / "marketing" / "videos"
@@ -407,7 +407,7 @@ class Videos:
             "largura": largura, "altura": altura, "formato": FORMATO[0], "fps": captura.FPS,
             "duracao": n.duracao, "cenas": cenas, "falas": n.falas, "volume": n.volume,
             "icones": {
-                n: marketing_visual.icones()[n] for n in roteiro.icones_usados(cenas) | {"sparkles"}
+                n: biblioteca.todos()[n] for n in roteiro.icones_usados(cenas) | {"sparkles"}
             },
             "marca": {
                 "nome": marca.nome, "instagram": marca.instagram,

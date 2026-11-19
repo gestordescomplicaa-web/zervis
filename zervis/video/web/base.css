@@ -172,3 +172,17 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .caos-item { position: absolute; width: 220px; height: 220px; border-radius: 52px; display: grid; place-items: center; }
 .caos-icone { width: 120px; height: 120px; }
 
+/* cenas como cartas (ADR 0110): o fundo de cada cena e a mesa por trás nas transições ---------- */
+:root { --marca1: var(--destaque); --marca2: var(--destaque2); --texto-escuro: var(--texto); }
+.cena { overflow: hidden; backface-visibility: hidden; }
+.cena.carta { box-shadow: 0 40px 120px rgba(0, 0, 0, .55), 0 0 0 2px color-mix(in srgb, var(--marca1) 35%, transparent); }
+#palco.mesa #fundo { filter: brightness(.35) saturate(.8); }
+.fundo-claro { --fundo: #f3f1ec; --superficie: #ffffff; --texto: #13141b; --suave: #5d606c; }
+.fundo-claro .fundo-cena::after { display: none; }
+.fundo-cor { --texto: #ffffff; --suave: rgba(255, 255, 255, .78); --destaque: #ffffff; --destaque2: #ffffff;
+  --superficie: color-mix(in srgb, var(--marca2) 55%, black 25%); --fundo: color-mix(in srgb, var(--marca1) 70%, black 30%); }
+.fundo-cor .fundo-cena { background: linear-gradient(155deg, var(--marca1), var(--marca2)); }
+.fundo-cor .fundo-cena .mancha, .fundo-cor .fundo-cena::after { display: none; }
+#palco[data-fundo="claro"] #legenda { --texto: #13141b; }
+#palco[data-fundo="cor"] #legenda { --texto: #ffffff; --destaque: #ffffff; }
+

@@ -204,7 +204,9 @@
     const ctx = { marca: V.marca, estilo: V.estilo, video: V };
     cenas = V.cenas.map((c, i) => {
       const def = Ze.cenas[c.tipo] || Ze.cenas.frase;
-      const el = Ze.h("section", `cena cena-${c.tipo} composicao-${c.composicao || "padrao"}`);
+      const fundo = ["escuro", "claro", "cor"].includes(c.fundo) ? c.fundo : "escuro";
+      const el = Ze.h("section", `cena cena-${c.tipo} composicao-${c.composicao || "padrao"} fundo-${fundo}`);
+      el.dataset.fundo = fundo;
       // cada cena tem o próprio fundo (as mesmas manchas, no mesmo tempo): na íris e no chicote,
       // a que entra cobre a que sai, sem dupla exposição
       const fundoCena = Ze.h("div", "fundo-cena");
@@ -316,7 +318,11 @@
   }
 
   // --- câmera e transições ------------------------------------------------------------------
-  const TRANSICAO = { mascara: 0.38, deslize: 0.3, zoom: 0.42, cor: 0.5, corte: 0 };
+  const TRANSICAO = {
+    mascara: 0.38, deslize: 0.3, zoom: 0.42, cor: 0.5, corte: 0,
+    carta: 0.8, baralho: 0.6, cubo: 0.62, fatias: 0.6,
+  };
+  const CARTA = new Set(["carta", "baralho", "cubo"]);
 
   /** A câmera da cena (no miolo, para não brigar com a transição). Nada de zoom lento eterno:
    * empurra = um soco na palavra de destaque (rápido, e fica); afasta e desliza = um movimento
@@ -359,6 +365,7 @@
     el.style.transform = "none";
     el.style.transformOrigin = "";
     inunda.style.transform = "translateY(100%)";
+    palco.classList.toggle("mesa", false);
     if (tipo === "corte" || !antes) {
       // corte seco na batida: a cena chega um pouco grande e assenta (o soco do corte)
       if (antes) el.style.transform = `scale(${1.05 - 0.05 * curvas.chega(prog(local, 0, 0.3))})`;
@@ -370,7 +377,53 @@
     sai.style.display = "";
     sai.style.zIndex = "1";
     el.style.zIndex = "2";
-    if (tipo === "mascara") {
+    if (CARTA.has(tipo)) palco.classList.add("mesa");
+    if (tipo === "carta") {
+      // a tela vira carta: encolhe, gira no eixo vertical mostrando o verso (a cena nova) e volta
+      const s = 1 - 0.16 * Math.sin(Math.PI * curvas.vaivem(q));
+      const f = curvas.vaivem(prog(q, 0.18, 0.64));
+      const borda = `${Math.round(64 * cl(Math.sin(Math.PI * q) * 3))}px`;
+      [[sai, -180 * f], [el, 180 * (1 - f)]].forEach(([c, ang]) => {
+        c.style.transform = `perspective(2400px) scale(${s.toFixed(4)}) rotateY(${ang.toFixed(2)}deg)`;
+        c.style.borderRadius = borda;
+        c.classList.add("carta");
+      });
+      el.style.zIndex = f >= 0.5 ? "2" : "1";
+      sai.style.zIndex = f >= 0.5 ? "1" : "2";
+    } else if (tipo === "baralho") {
+      // a carta de cima é jogada para o lado, girando; a de baixo cresce e acende
+      const a = curvas.acelera(q), b = curvas.chega(prog(q, 0.15, 0.85));
+      const borda = `${Math.round(64 * cl(Math.sin(Math.PI * q) * 3))}px`;
+      sai.style.zIndex = "2";
+      el.style.zIndex = "1";
+      sai.style.transformOrigin = "50% 110%";
+      sai.style.transform = `translate(${(-125 * a).toFixed(2)}%, ${(-6 * a).toFixed(2)}%) rotate(${(-24 * a).toFixed(2)}deg) scale(${(1 - 0.08 * Math.min(1, q * 4)).toFixed(4)})`;
+      sai.style.borderRadius = `${Math.round(64 * Math.min(1, q * 4))}px`;
+      el.style.transform = `scale(${(0.88 + 0.12 * b).toFixed(4)})`;
+      el.style.borderRadius = borda;
+      el.style.filter = b < 1 ? `brightness(${(0.55 + 0.45 * b).toFixed(3)})` : "none";
+      sai.classList.add("carta");
+      el.classList.add("carta");
+    } else if (tipo === "cubo") {
+      // a tela é a face de um cubo que gira: a nova face vem da direita, presa pela aresta
+      const p = curvas.vaivem(q), s = 1 - 0.12 * Math.sin(Math.PI * p);
+      sai.style.transformOrigin = "100% 50%";
+      el.style.transformOrigin = "0% 50%";
+      sai.style.transform = `perspective(2000px) scale(${s.toFixed(4)}) translateX(${(-100 * p).toFixed(3)}%) rotateY(${(-90 * p).toFixed(2)}deg)`;
+      el.style.transform = `perspective(2000px) scale(${s.toFixed(4)}) translateX(${(100 * (1 - p)).toFixed(3)}%) rotateY(${(90 * (1 - p)).toFixed(2)}deg)`;
+      sai.style.filter = `brightness(${(1 - 0.5 * p).toFixed(3)})`;
+      el.style.filter = p < 1 ? `brightness(${(0.5 + 0.5 * p).toFixed(3)})` : "none";
+    } else if (tipo === "fatias") {
+      // a cena nova desce em tiras, uma logo depois da outra; a que sai recua e escurece
+      const n = 6, w = V.largura / n, h = V.altura, pts = ["0px 0px"];
+      for (let i = 0; i < n; i++) {
+        const y = (curvas.chega(prog(q, i * 0.07, 0.6)) * h * 1.02).toFixed(1);
+        pts.push(`${(i * w).toFixed(1)}px ${y}px`, `${((i + 1) * w).toFixed(1)}px ${y}px`, `${((i + 1) * w).toFixed(1)}px 0px`);
+      }
+      el.style.clipPath = `polygon(${pts.join(", ")})`;
+      sai.style.transform = `scale(${(1 - 0.06 * curvas.chega(q)).toFixed(4)})`;
+      sai.style.filter = `brightness(${(1 - 0.45 * q).toFixed(3)})`;
+    } else if (tipo === "mascara") {
       // íris: abre do ponto de foco da cena que sai
       const [fx, fy] = foco(antes);
       el.style.clipPath = `circle(${curvas.chega(q) * 160}% at ${fx}px ${fy}px)`;
@@ -416,6 +469,9 @@
       x.el.style.filter = "none";
       x.el.style.opacity = "1";
       x.el.style.clipPath = "none";
+      x.el.style.borderRadius = "";
+      x.el.style.transformOrigin = "";
+      x.el.classList.remove("carta");
       if (dentro) atual = x;
     }
     if (atual) {
@@ -437,6 +493,7 @@
         atual.el.style.filter = "brightness(0.6)";
       }
     }
+    if (atual) palco.dataset.fundo = atual.el.dataset.fundo;
     desenharLegenda(t, atual);
     desenharOnda(t, v);
     preto.style.opacity = String(prog(t, V.duracao - 0.35, 0.35));

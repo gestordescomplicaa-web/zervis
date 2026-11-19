@@ -160,6 +160,7 @@ def test_cena_de_um_estilo_entra_so_com_texto(tmp_path: Path) -> None:
     r = roteiro.interpretar(json.dumps(bruto), estilo)
     assert r.cenas[1] == {
         "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom",
+        "fundo": "escuro",
         "texto": "y" * 199 + "…",
     }  # fmt: skip
     assert "citacao" in roteiro.montar_prompt("Marca", "Tema: x", "", estilo)
@@ -569,3 +570,49 @@ def test_edicao_nova_no_plano() -> None:
     bruto["cenas"].insert(1, {"tipo": "frase", "fala": "Quem responde primeiro, marca.",
                               "composicao": "cheia"})  # fmt: skip
     assert roteiro.interpretar(json.dumps(bruto), _estilo()).cenas[1]["composicao"] == "cheia"
+
+
+def test_biblioteca_acha_o_objeto_da_fala() -> None:
+    from zervis.video import biblioteca
+
+    assert len(biblioteca.todos()) > 1500
+    assert biblioteca.achar("pizza") == "pizza"
+    assert biblioteca.achar("Delivery Trucks") == "truck"  # parte do nome, plural
+    assert biblioteca.achar("invoice") == "receipt"  # sinônimo
+    assert biblioteca.achar("house") == "house"  # o ícone base, não "map-pin-house"
+    assert biblioteca.achar("xyzzy") == biblioteca.achar("") == "sparkles"
+    # o desenho é só de traço: nada que rode na página
+    assert not any("<script" in d or "href" in d for d in biblioteca.todos().values())
+
+
+def test_cenas_de_arte_no_plano() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["cenas"][1:-1] = [
+        {"tipo": "icone", "fala": "Toda pizza sai no tempo certo.", "icone": "pizza",
+         "quando": "pizza"},
+        {"tipo": "caos", "fala": "Pedido, entrega, conta e estoque se organizam sozinhos.",
+         "icones": ["invoice", "delivery truck", "money", "stock", "nada-disso"],
+         "quando": "organizam"},
+        {"tipo": "hub", "fala": "Tudo ligado ao agente.", "centro": {"icone": "marca"},
+         "ao_redor": [{"icone": "whatsapp"}, {"icone": "pizza"}, {"icone": "truck"}]},
+    ]  # fmt: skip
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    icone, caos, hub = r.cenas[1:4]
+    assert icone["icone"] == "pizza"
+    assert caos["icones"] == ["receipt", "truck", "banknote", "package", "sparkles"]
+    assert hub["centro"]["icone"] == "marca"
+    assert [x["icone"] for x in hub["ao_redor"]] == ["message-circle", "pizza", "truck"]
+    assert roteiro.icones_usados(r.cenas) >= {"pizza", "receipt", "message-circle"}
+    bruto["cenas"][2]["icones"] = ["pizza"]
+    with pytest.raises(roteiro.RoteiroErro):
+        roteiro.interpretar(json.dumps(bruto), _estilo())
+
+
+def test_transicoes_de_carta_e_fundos() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["cenas"][1].update(transicao="carta", fundo="claro")
+    bruto["cenas"][2].update(transicao="cubo", fundo="neon")  # fundo que não existe
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert (r.cenas[1]["transicao"], r.cenas[1]["fundo"]) == ("carta", "claro")
+    assert (r.cenas[2]["transicao"], r.cenas[2]["fundo"]) == ("cubo", "escuro")
+    assert {"carta", "baralho", "cubo", "fatias"} <= set(roteiro.TRANSICOES)

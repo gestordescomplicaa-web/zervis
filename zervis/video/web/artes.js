@@ -108,7 +108,8 @@
     },
     render(t, d, s, ctx) {
       const a = typeof ctx.cena.tempo === "number" ? ctx.cena.tempo : 0.15;
-      mola(s.disco, t, a - 0.05, { de: 0.2, d: 0.6 });
+      // o disco já está na carta quando ela chega; o ícone se desenha na palavra
+      mola(s.disco, t, Math.min(a - 0.05, 0.1), { de: 0.2, d: 0.6 });
       Ze.desenhar(s.svg, t, a, 0.85);
       const pousou = a + 0.75;
       // o ícone dá um estalo quando termina de ser desenhado; as ondas e as faíscas saem dele
@@ -165,6 +166,8 @@
     },
     render(t, d, s, ctx) {
       const quando = tempos(ctx.cena.tempos_nos, s.nos.length, d);
+      // o primeiro nó já está na carta quando ela chega (a cena nunca entra vazia)
+      quando[0] = Math.min(quando[0], 0.15);
       let ativo = 0;
       s.nos.forEach((nn, i) => {
         mola(nn.disco, t, quando[i], { de: 0.3, d: 0.5 });

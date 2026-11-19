@@ -18,7 +18,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
-from zervis.marketing_visual import icones as icones_da_marca
+from zervis.video import biblioteca
 from zervis.video.estilos import Estilo
 
 FALA_PALAVRAS = 22
@@ -28,7 +28,8 @@ LIMITE_LEGENDA = 2200
 DURACOES: dict[int, tuple[int, int]] = {15: (3, 4), 30: (4, 7), 45: (6, 9), 60: (7, 11)}
 DURACAO_PADRAO = 30
 CAMERAS = ("empurra", "afasta", "desliza", "parado")
-TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor")
+TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor", "carta", "baralho", "cubo", "fatias")
+FUNDOS = ("escuro", "claro", "cor")
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
@@ -91,14 +92,14 @@ TIPOS: dict[str, dict[str, Any]] = {
         "textos": {"rotulo": 22, "quando": 30},
         "icones": ("icone",),
         "composicoes": ("heroi",),
-        "formato": '{"tipo": "icone", "fala": "...", "icone": "<um da lista>", "rotulo": '
+        "formato": '{"tipo": "icone", "fala": "...", "icone": "<objeto>", "rotulo": '
         '"opcional, 1 a 3 palavras", "quando": "a palavra da fala em que ele se desenha"} (um '
         "conceito: o ícone enorme se desenha, ondas e faíscas saem dele)",
     },
     "conexao": {
         "nos": (2, 4, 16),
         "composicoes": ("fluxo",),
-        "formato": '{"tipo": "conexao", "fala": "...", "nos": [{"icone": "<da lista>", '
+        "formato": '{"tipo": "conexao", "fala": "...", "nos": [{"icone": "<objeto>", '
         '"rotulo": "1 ou 2 palavras", "quando": "palavra da fala"}]} (2 a 4: um fluxo ou uma '
         "integração; linhas ligam os nós e dados correm por elas)",
     },
@@ -106,15 +107,15 @@ TIPOS: dict[str, dict[str, Any]] = {
         "nos": (3, 6, 16),
         "campo_nos": "ao_redor",
         "composicoes": ("orbita",),
-        "formato": '{"tipo": "hub", "fala": "...", "centro": {"icone": "<da lista> ou marca", '
-        '"rotulo": "opcional"}, "ao_redor": [{"icone": "<da lista>", "rotulo": "opcional, 1 '
+        "formato": '{"tipo": "hub", "fala": "...", "centro": {"icone": "<objeto> ou marca", '
+        '"rotulo": "opcional"}, "ao_redor": [{"icone": "<objeto>", "rotulo": "opcional, 1 '
         'palavra", "quando": "palavra da fala"}]} (3 a 6 em volta de um centro: tudo ligado a '
         'uma coisa só; a marca no centro com "marca")',
     },
     "caos": {
         "textos": {"rotulo": 26, "quando": 30},
         "composicoes": ("grade",),
-        "formato": '{"tipo": "caos", "fala": "...", "icones": ["4 a 9 da lista"], "rotulo": '
+        "formato": '{"tipo": "caos", "fala": "...", "icones": ["4 a 9 objetos"], "rotulo": '
         '"opcional, o que a ordem significa", "quando": "a palavra da fala em que tudo se '
         'organiza"} (o problema virando solução: ícones espalhados e tremendo se alinham)',
     },
@@ -162,8 +163,14 @@ Regras:
   cena); "afasta" e "desliza" mexem só na chegada; "parado" não mexe.
 - transicao (como a cena entra): {transicoes}. "mascara" abre um círculo a partir do que estava
   em foco; "deslize" é um chicote rápido para o lado; "zoom" atravessa o que estava em foco; "cor"
-  inunda a tela com a cor da marca (para mudar de assunto); "corte" é seco, na batida. Use 3 a 5
-  tipos no vídeo e nunca a mesma transição em cenas seguidas; "corte" nos momentos de impacto.
+  inunda a tela com a cor da marca (para mudar de assunto); "corte" é seco, na batida. As cenas são
+  cartas inteiras: "carta" vira a tela como carta de baralho (virada, revelação, antes e depois);
+  "baralho" joga a carta de cima para o lado e revela a próxima (o próximo item, o próximo passo);
+  "cubo" gira a tela como um cubo (outro lado, outra etapa); "fatias" faz a cena nova descer em
+  tiras (revelação forte). Use 4 a 6 tipos no vídeo, pelo menos dois desses de carta, e nunca a
+  mesma transição em cenas seguidas; "corte" nos momentos de impacto.
+- fundo: {fundos}. Alterne: cenas seguidas com fundos diferentes, como cartas diferentes do
+  baralho; pelo menos uma "claro" e uma "cor". "escuro" no gancho e no fecho.
 - **Mostre, não escreva.** Pelo menos metade das cenas entre o gancho e o fecho são de arte
   (icone, conexao, hub, caos): a ideia vira um ícone que se desenha, um fluxo por onde correm
   dados, uma constelação em volta de um centro, o caos que vira ordem. Cartões de texto (passos,
@@ -177,7 +184,10 @@ Regras:
 Tipos de cena:
 {tipos}
 
-Ícones (use só estes nomes): {icones}
+Ícones: escreva em inglês o objeto concreto que a fala diz, como "pizza", "stethoscope",
+"delivery truck", "tooth", "dumbbell", "scissors", "shopping cart", "calendar" (o Zé tem 1.500
+desenhos e acha o mais parecido). Prefira o objeto do assunto ao símbolo genérico: para uma
+pizzaria, "pizza", não "store"; para uma clínica, "stethoscope", não "heart".
 
 ## Linha editorial (o manual do site)
 {manual}
@@ -249,17 +259,16 @@ def montar_prompt(
         fala=FALA_PALAVRAS,
         cameras=" | ".join(CAMERAS),
         transicoes=" | ".join(TRANSICOES),
+        fundos=" | ".join(FUNDOS),
         tom=f"- Tom: {estilo.tom}\n" if estilo.tom else "",
         tipos="\n".join(f"- {formato}" for formato in tipos_do_estilo(estilo).values()),
-        icones=", ".join(sorted(icones_da_marca())),
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
     )
 
 
 def _icone(nome: Any) -> str:
-    """Um ícone da lista; um nome que não existe vira "sparkles" (nunca um desenho do modelo)."""
-    nome = str(nome or "").strip().lower()
-    return nome if nome in icones_da_marca() else "sparkles"
+    """O ícone da biblioteca para o objeto pedido (nunca um desenho do modelo)."""
+    return biblioteca.achar(str(nome or "").strip()[:60])
 
 
 def icones_usados(cenas: list[dict[str, Any]]) -> set[str]:
@@ -272,7 +281,7 @@ def icones_usados(cenas: list[dict[str, Any]]) -> set[str]:
         if isinstance(c.get("centro"), dict):
             nomes.add(str(c["centro"].get("icone", "")))
         nomes.update(str(x) for x in c.get("icones") or [])
-    return {n for n in nomes if n in icones_da_marca()}
+    return {n for n in nomes if n in biblioteca.todos()}
 
 
 def _quando(valor: Any, fala: str) -> str:
@@ -313,6 +322,7 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
         "fala": fala,
         "camera": camera if camera in CAMERAS else "empurra",
         "transicao": transicao if transicao in TRANSICOES else "zoom",
+        "fundo": str(bruta.get("fundo")) if bruta.get("fundo") in FUNDOS else "escuro",
     }
     if tipo in extras and tipo not in TIPOS:
         # uma cena do estilo: só texto e listas de texto, cortados
