@@ -115,12 +115,20 @@ TIPOS: dict[str, dict[str, Any]] = {
     },
     # --- a lista (ADR 0114): um cartão que fica e troca de conteúdo, com o placar embaixo ---
     "item": {
-        "textos": {"nome": 28, "detalhe": 80, "valor": 14, "categoria": 22, "quando": 30},
+        "textos": {
+            "nome": 28,
+            "detalhe": 80,
+            "valor": 14,
+            "categoria": 22,
+            "quando": 30,
+            "mostrar": 80,
+        },
         "icones": ("icone",),
         "composicoes": ("cartao",),
         "formato": '{"tipo": "item", "fala": "...", "nome": "o nome do item, até 28", '
         '"detalhe": "o que ele faz, uma linha", "valor": "opcional, um número curto do material '
-        '("24h", "3x")", "categoria": "opcional, até 22", "icone": "<objeto>"} (um item de '
+        '("24h", "3x")", "categoria": "opcional, até 22", "icone": "<objeto>", "mostrar": '
+        '"opcional: logo: <marca> ou busca: <foto>, a imagem do item"} (um item de '
         "uma lista: itens seguidos ficam no mesmo cartão, que só troca o conteúdo, e um placar "
         "embaixo acende um selo por item; use de 3 a 8 seguidos, um por cena)",
     },
@@ -140,12 +148,16 @@ TIPOS: dict[str, dict[str, Any]] = {
         'palavra", "quando": "palavra da fala"}]} (3 a 6 em volta de um centro: tudo ligado a '
         'uma coisa só; a marca no centro com "marca")',
     },
-    "caos": {
-        "textos": {"rotulo": 26, "quando": 30},
-        "composicoes": ("grade",),
-        "formato": '{"tipo": "caos", "fala": "...", "icones": ["4 a 9 objetos"], "rotulo": '
-        '"opcional, o que a ordem significa", "quando": "a palavra da fala em que tudo se '
-        'organiza"} (o problema virando solução: ícones espalhados e tremendo se alinham)',
+    # --- a copy manda (ADR 0115): cada coisa dita vira imagem real, na palavra ---
+    "visual": {
+        "batidas": (1, 4, 18),
+        "composicoes": ("sequencia", "colagem"),
+        "formato": '{"tipo": "visual", "fala": "...", "composicao": "sequencia|colagem", '
+        '"batidas": [{"quando": "a palavra da fala", "mostrar": "logo: <marca> | busca: <2 ou 3 '
+        'palavras em inglês> | <nome de uma foto da marca>", "rotulo": "opcional, até 18"}]} (1 a '
+        '4 batidas: cada coisa concreta da fala aparece na palavra em que é dita; "sequencia" '
+        'troca a imagem inteira a cada batida, em corte seco; "colagem" junta as imagens na '
+        "tela, uma a uma)",
     },
     "fecho": {
         "textos": {"chamada": 32, "detalhe": 32, "palavra": 16},
@@ -160,7 +172,7 @@ TIPOS: dict[str, dict[str, Any]] = {
 }
 for _regra in TIPOS.values():
     _regra.setdefault("obrigatorios", tuple(_regra.get("listas", {})) or ())
-DE_ARTE = ("icone", "conexao", "hub", "caos", "foto")
+DE_ARTE = ("icone", "conexao", "hub", "foto", "visual")
 DE_CARTAO = ("passos", "lista", "antes_depois", "conversa")
 
 PROMPT = """Você é o diretor de criação de um Reels (vídeo vertical, cerca de {duracao} segundos)
@@ -204,10 +216,13 @@ Regras:
   mesma transição em cenas seguidas; "corte" nos momentos de impacto.
 - fundo: {fundos}. Alterne: cenas seguidas com fundos diferentes, como cartas diferentes do
   baralho; pelo menos uma "claro" e uma "cor".
-- **Mostre, não escreva.** Pelo menos metade das cenas entre o gancho e o fecho são de arte
-  (icone, conexao, hub, caos, foto): a ideia vira um ícone que se desenha, um fluxo por onde correm
-  dados, uma constelação em volta de um centro, o caos que vira ordem. Cartões de texto (passos,
-  lista, antes_depois, conversa) no máximo dois no vídeo. Pense numa analogia para cada ideia.
+- **A copy é a mãe da animação.** Escreva a fala primeiro; depois faça cada coisa concreta que
+  ela diz aparecer na tela na palavra em que é dita: "prédio" vira a foto de um prédio,
+  "WhatsApp" vira o logo do WhatsApp, "planilha" vira o logo do Google Planilhas. A maior parte
+  das cenas é "visual" (as batidas) ou "item" com imagem. Use logos de empresas que existem
+  ("logo: whatsapp", "logo: google calendar", "logo: ifood", "logo: instagram") e fotos
+  ("busca: office building"). Ícone desenhado, conexão e hub só quando não houver coisa real para
+  mostrar. Cartões de texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
 - Não invente números, casos, clientes nem depoimentos. "numero" só com um dado do material,
   com a fonte. Uma "conversa" é sempre um exemplo.
@@ -317,20 +332,22 @@ def secao_recentes(recentes: list[dict[str, Any]]) -> str:
 
 
 def secao_fotos(fotos: list[str]) -> str:
-    """As fotos que o diretor pode usar: as da marca pelo nome (que as descreve) e a busca livre."""
+    """As imagens que o diretor pode pedir: as fotos da marca pelo nome, a foto livre e o logo."""
     da_marca = (
-        "Fotos da marca (use o nome exato; são as mais fortes, é o real de quem fala): "
+        "Fotos da marca (o nome exato; são as mais fortes, é o real de quem fala): "
         + ", ".join(fotos[:40])
         if fotos
         else "A marca ainda não tem fotos próprias."
     )
     return (
-        f'\n## Fotos\n{da_marca}\nFoto livre: "busca: <2 ou 3 palavras concretas em inglês>" '
-        '(uma coisa ou um lugar de verdade, como "busca: mechanic workshop" ou "busca: dental '
-        'chair"; nunca uma pessoa). **Use uma ou '
-        "duas cenas de foto em todo vídeo**: a da marca, se houver uma que combine; senão, uma "
-        "busca que mostre o cenário do assunto (a oficina, a cozinha, o consultório). O resto, "
-        "arte.\n"
+        f'\n## Imagens (o que "mostrar" aceita)\n{da_marca}\n'
+        '- "logo: <marca>": o logo de uma empresa que existe, na cor dela ("logo: whatsapp", '
+        '"logo: google sheets", "logo: mercado pago"). Só marcas que a fala cita de verdade.\n'
+        '- "busca: <2 ou 3 palavras concretas em inglês>": uma foto livre de uma coisa ou um lugar '
+        '("busca: office building", "busca: mechanic workshop"); nunca uma pessoa. Seja '
+        'específico: "car dashboard", não "car interior" (que traz vagão de trem).\n'
+        'Até 12 imagens livres por vídeo. A cena "foto" mostra uma imagem grande sozinha; a '
+        '"visual" mostra várias, cada uma na sua palavra.\n'
     )
 
 
@@ -375,7 +392,7 @@ def icones_usados(cenas: list[dict[str, Any]]) -> set[str]:
     for c in cenas:
         if isinstance(c.get("icone"), str):
             nomes.add(c["icone"])
-        for campo in ("nos", "ao_redor"):
+        for campo in ("nos", "ao_redor", "batidas"):
             nomes.update(str(x.get("icone", "")) for x in c.get(campo) or [])
         if isinstance(c.get("centro"), dict):
             nomes.add(str(c["centro"].get("icone", "")))
@@ -497,11 +514,20 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
                 "icone": "marca" if marca else _icone(centro.get("icone")),
                 "rotulo": _texto(centro.get("rotulo"), limite),
             }
-    if tipo == "caos":
-        nomes = [_icone(x) for x in (bruta.get("icones") or []) if isinstance(x, str)][:9]
-        if len(nomes) < 4:
-            raise RoteiroErro("A cena caos precisa de pelo menos 4 ícones.")
-        cena["icones"] = nomes
+    if "batidas" in regra:
+        minimo, maximo, limite = regra["batidas"]
+        batidas = [
+            {
+                "quando": _quando(b.get("quando"), fala),
+                "mostrar": _texto(b.get("mostrar"), 80),
+                "rotulo": _texto(b.get("rotulo"), limite),
+            }
+            for b in (bruta.get("batidas") or [])
+            if isinstance(b, dict) and str(b.get("mostrar", "")).strip()
+        ][:maximo]
+        if len(batidas) < minimo:
+            raise RoteiroErro("A cena visual precisa de pelo menos uma batida (o que mostrar).")
+        cena["batidas"] = batidas
     if tipo == "numero" and not re.search(r"\d", cena.get("valor", "")):
         raise RoteiroErro("O número da cena não tem número.")
     faltando = [c for c in regra["obrigatorios"] if not cena.get(c)]
@@ -567,7 +593,7 @@ def tempos_dos_gatilhos(cena: dict[str, Any], palavras: list[dict[str, Any]]) ->
         return None
 
     saida: dict[str, Any] = {}
-    for campo in ("passos", "itens", "mensagens", "nos", "ao_redor"):
+    for campo in ("passos", "itens", "mensagens", "nos", "ao_redor", "batidas"):
         if campo in cena:
             saida[f"tempos_{campo}"] = [achar(str(x.get("quando", ""))) for x in cena[campo]]
     if cena.get("quando"):

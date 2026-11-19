@@ -165,3 +165,12 @@
 .comenta-quem small, .comenta-detalhe { color: var(--suave); }
 .comenta-seguir { background: var(--destaque); color: #fff; }
 .comenta-seguir.feito { background: color-mix(in srgb, var(--texto) 15%, transparent); color: var(--texto); }
+
+/* a copy manda */
+.vis-midia { background: var(--superficie); border: 2px solid color-mix(in srgb, var(--destaque) 30%, transparent); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+.vis-logo { background: #fff; }
+.vis-icone { color: var(--destaque); }
+.vis-rotulo { background: var(--destaque); color: #fff; }
+.vis-colagem .vis-peca.atual .vis-midia { box-shadow: 0 0 0 6px var(--destaque), 0 30px 80px rgba(0, 0, 0, .45); }
+.placar-selo.com-logo.aceso { background: #fff; }
+

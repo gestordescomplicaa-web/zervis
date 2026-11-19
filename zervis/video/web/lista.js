@@ -65,7 +65,13 @@
       const el = h("div", "placar");
       const selos = itens.map((x, k) => {
         const selo = h("div", `placar-selo cor-${k % 8}`);
-        selo.append(h("span", "placar-sigla", sigla(x.c.nome)));
+        if (x.c.imagem && x.c.imagem_tipo === "logo") {
+          // o selo de um item com logo é o próprio logo
+          const img = h("img", "placar-logo");
+          img.src = x.c.imagem;
+          selo.append(img);
+          selo.classList.add("com-logo");
+        } else selo.append(h("span", "placar-sigla", sigla(x.c.nome)));
         el.append(selo);
         return selo;
       });

@@ -601,23 +601,59 @@ def test_cenas_de_arte_no_plano() -> None:
     bruto["cenas"][1:-1] = [
         {"tipo": "icone", "fala": "Toda pizza sai no tempo certo.", "icone": "pizza",
          "quando": "pizza"},
-        {"tipo": "caos", "fala": "Pedido, entrega, conta e estoque se organizam sozinhos.",
-         "icones": ["invoice", "delivery truck", "money", "stock", "nada-disso"],
-         "quando": "organizam"},
+        {"tipo": "visual", "fala": "O pedido chega no WhatsApp e vai para o forno.",
+         "composicao": "colagem", "batidas": [
+             {"quando": "WhatsApp", "mostrar": "logo: whatsapp", "rotulo": "Pedido"},
+             {"quando": "forno", "mostrar": "busca: pizza oven"}, {"quando": "x", "mostrar": ""}]},
         {"tipo": "hub", "fala": "Tudo ligado ao agente.", "centro": {"icone": "marca"},
          "ao_redor": [{"icone": "whatsapp"}, {"icone": "pizza"}, {"icone": "truck"}]},
     ]  # fmt: skip
     bruto["cenas"].insert(-1, dict(ROTEIRO["cenas"][1]))  # o mínimo de cenas do ritmo
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
-    icone, caos, hub = r.cenas[1:4]
+    icone, visual, hub = r.cenas[1:4]
     assert icone["icone"] == "pizza"
-    assert caos["icones"] == ["receipt", "truck", "banknote", "package", "sparkles"]
+    assert visual["composicao"] == "colagem"
+    assert [b["mostrar"] for b in visual["batidas"]] == ["logo: whatsapp", "busca: pizza oven"]
+    assert visual["batidas"][0]["quando"] == "whatsapp" and visual["batidas"][0]["rotulo"]
     assert hub["centro"]["icone"] == "marca"
     assert [x["icone"] for x in hub["ao_redor"]] == ["message-circle", "pizza", "truck"]
-    assert roteiro.icones_usados(r.cenas) >= {"pizza", "receipt", "message-circle"}
-    bruto["cenas"][2]["icones"] = ["pizza"]
+    visual["batidas"][1]["icone"] = "flame"  # o ícone de reserva de uma batida sem foto
+    assert roteiro.icones_usados(r.cenas) >= {"pizza", "flame", "message-circle"}
+    bruto["cenas"][2]["batidas"] = []
     with pytest.raises(roteiro.RoteiroErro):
         roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert "caos" not in roteiro.TIPOS  # o caos virando ordem saiu: repetia em todo vídeo
+
+
+def test_logos_e_batidas_viram_imagem(tmp_path: Path) -> None:
+    from zervis.video import fotos as fotos_mod
+
+    assert fotos_mod.slug_do_logo("Google Calendar") == "googlecalendar"
+    assert fotos_mod.slug_do_logo("Mercado Pago") == "mercadopago"
+    svg = b'<svg fill="#25D366" viewBox="0 0 24 24"><path d="M1 1h2"/></svg>'
+    pedidos: list[str] = []
+
+    def logo(slug: str) -> bytes:
+        pedidos.append(slug)
+        if slug == "naoexiste":
+            raise OSError("404")
+        return b'<svg onload="x()"/>' if slug == "malicioso" else svg
+
+    f = Fotos(da_marca=lambda: [], buscar=lambda b: [], logo=logo)
+    cenas: list[dict[str, Any]] = [
+        {"tipo": "visual", "batidas": [
+            {"mostrar": "logo: WhatsApp"}, {"mostrar": "logo: whatsapp"},
+            {"mostrar": "logo: nao existe"}, {"mostrar": "logo: malicioso"},
+            {"mostrar": "busca: closed garage night"}]},
+        {"tipo": "item", "mostrar": "logo: whatsapp", "icone": "wrench"},
+    ]  # fmt: skip
+    assert f.resolver(cenas, tmp_path) == []
+    a, b, c, d, e = cenas[0]["batidas"]
+    assert a["imagem_tipo"] == b["imagem_tipo"] == "logo" and a["imagem"].endswith("whatsapp.svg")
+    assert pedidos.count("whatsapp") == 1  # o mesmo pedido, uma ida à rede
+    assert "imagem" not in c and "imagem" not in d  # o que falha ou não é só desenho vira ícone
+    assert e["icone"] == "moon"  # a reserva vem da palavra certa (a noite)
+    assert cenas[1]["imagem_tipo"] == "logo"
 
 
 def test_transicoes_de_carta_e_fundos() -> None:

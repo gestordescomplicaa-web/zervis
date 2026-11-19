@@ -74,6 +74,7 @@ MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
     "caos": lambda c: 3.4,
     "foto": lambda c: 2.8,
     "item": lambda c: 2.6,
+    "visual": lambda c: 0.9 + 0.75 * len(c.get("batidas", [])),
 }
 
 

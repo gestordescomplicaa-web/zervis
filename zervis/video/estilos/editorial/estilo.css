@@ -1,90 +1,109 @@
-/* O estilo "Editorial" (ADR 0114): papel, cartões brancos, legenda serifada e o placar. Parte do
-   estilo Zérvis (as peças de todas as cenas) e troca a paleta por uma clara, de revista. Copie
-   as duas pastas para <config>/video/estilos/ para mudar. */
+/* O estilo "Editorial" (ADR 0114 e 0115): claro, de revista, com as cores da marca. Parte do
+   estilo Zérvis (as peças de todas as cenas) e define um sistema só:
+
+   - cor: o papel claro, a tinta escura da marca (--marca-fundo) e os dois destaques da marca;
+     a cena "cor" é o gradiente da marca com letra branca. Nada de cor fora da marca.
+   - tipo: o título da marca em 800 (escala --t-*), o texto em 400/600 e a legenda em serifa
+     (Instrument Serif), em caixa alta, com a palavra-chave em itálico na cor da marca.
+   - layout: a imagem na área de cima, o placar no meio, a legenda embaixo, sempre no mesmo lugar.
+
+   Copie as duas pastas para <config>/video/estilos/ para mudar. */
 @import url("../zervis/estilo.css");
 
 #palco {
-  --fundo: #ede6da; --superficie: #ffffff; --texto: #151515; --suave: #6e675d;
-  --destaque: #e2462c; --destaque2: #f0a202; --marca1: #e2462c; --marca2: #f0a202;
-  --tinta: #e2462c; --ouro: #f2b705;
+  --fundo: #f4f5f8; --superficie: #ffffff; --texto: var(--marca-fundo); --suave: #6b6e7a;
+  --t-titulo: 92px; --t-rotulo: 54px; --t-corpo: 34px; --t-legenda: 76px;
+  --sombra: 0 30px 70px rgba(17, 17, 30, .12); --borda: 1px solid rgba(17, 17, 30, .08);
 }
 
-/* o papel: bege com uma trama clara, sem manchas de luz nem vinheta */
+/* o papel: claro, com uma trama de pontos na cor da marca, sem manchas de luz nem vinheta */
 #fundo, .fundo-cena {
   background-color: var(--fundo);
-  background-image:
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, .45) 0 2px, transparent 2px 52px),
-    repeating-linear-gradient(45deg, rgba(120, 90, 50, .05) 0 2px, transparent 2px 52px);
+  background-image: radial-gradient(color-mix(in srgb, var(--marca1) 16%, transparent) 1.6px, transparent 1.8px);
+  background-size: 36px 36px;
 }
 .fundo-cena .mancha, .malha, .fundo-cena::after, #fundo::after, .brilho, .grao { display: none; }
-.fundo-claro { --fundo: #f6f2ea; }
-.fundo-cor { --fundo: #f6d860; --texto: #151515; --suave: #4d4636; --destaque: #151515; --destaque2: #151515; }
-.fundo-cor .fundo-cena { background: #f6d860; }
-#palco[data-fundo="cor"] #legenda { --texto: #151515; }
+.fundo-claro { --fundo: #ffffff; }
+.fundo-cor { --texto: #ffffff; --suave: rgba(255, 255, 255, .8); --superficie: #ffffff; }
+.fundo-cor .fundo-cena { background: linear-gradient(160deg, var(--marca1), var(--marca2)); }
+#palco[data-fundo="cor"] #legenda { --texto: #ffffff; }
 
-/* a tipografia: preto em negrito; o destaque em serifa itálica vermelha, sublinhado */
+/* a tipografia: a tinta da marca em 800; o destaque em serifa itálica na cor da marca */
 .fala-grande { color: var(--texto); font-weight: 800; }
 .palavra.destaque, .composicao-cheia .palavra.destaque {
-  background: none; -webkit-text-fill-color: var(--tinta); color: var(--tinta);
+  background: none; -webkit-text-fill-color: var(--marca1); color: var(--marca1);
   font-family: var(--fonte-legenda); font-style: italic; font-weight: 400; letter-spacing: 0;
 }
-.palavra.destaque::after, .composicao-cheia .palavra.destaque::after { background: var(--tinta); height: .05em; bottom: .02em; }
-.composicao-cheia .fundo-cena { background: #151515; }
-.composicao-cheia .fala-grande { color: #f6f2ea; }
-.corte-escuro { background: #151515; color: #f6f2ea; }
-.corte-claro { background: #f6f2ea; color: #151515; }
-.corte-marca { background: var(--ouro); color: #151515; }
+.fundo-cor .palavra.destaque { -webkit-text-fill-color: #fff; color: #fff; }
+.palavra.destaque::after, .composicao-cheia .palavra.destaque::after { background: currentColor; height: .05em; bottom: .02em; }
+.composicao-cheia .fundo-cena { background: linear-gradient(160deg, var(--marca1), var(--marca2)); }
+.composicao-cheia .fala-grande { color: #fff; }
+.composicao-cheia .palavra.destaque { -webkit-text-fill-color: #fff; color: #fff; }
+.corte-escuro { background: var(--marca-fundo); color: #fff; }
+.corte-claro { background: #fff; color: var(--marca-fundo); }
+.corte-marca { background: linear-gradient(160deg, var(--marca1), var(--marca2)); color: #fff; }
+.arte-rotulo, .no-rotulo, .vis-rotulo, .foto-escrita { font-family: var(--fonte-titulo); font-weight: 800; letter-spacing: -.02em; }
+.arte-rotulo { font-size: var(--t-rotulo); color: var(--texto); }
+.no-rotulo { color: var(--texto); }
 
-/* a legenda: serifa em caixa alta, palavra por palavra; a palavra-chave em itálico vermelho */
-#legenda { font-family: var(--fonte-legenda); text-transform: uppercase; font-size: 78px; font-weight: 400; line-height: 1.02; letter-spacing: .005em; }
+/* a legenda: serifa em caixa alta, palavra por palavra; a palavra-chave em itálico na cor da marca */
+#legenda { font-family: var(--fonte-legenda); text-transform: uppercase; font-size: var(--t-legenda); font-weight: 400; line-height: 1.02; letter-spacing: .005em; }
 #legenda span { color: var(--texto); opacity: 0; }
 #legenda span.dita { opacity: 1; color: var(--texto); }
 #legenda span.ativa, #legenda span.ativa.marcada { background: none !important; color: var(--texto) !important; }
-#legenda span.marcada.dita, #legenda span.marcada.dita.ativa { color: var(--tinta) !important; font-style: italic; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 10px; }
-#palco[data-fundo="cor"] #legenda span.marcada.dita { color: #151515; }
+#legenda span.marcada.dita, #legenda span.marcada.dita.ativa { color: var(--marca1) !important; font-style: italic; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 10px; }
+#palco[data-fundo="cor"] #legenda span.marcada.dita { color: #fff !important; }
 
-/* os cartões: brancos, sombra macia, a caixa escura do "sobre" */
-.item-cartao, .passo, .item, .item-grande, .lado, .conversa, .comenta-caixa {
-  background: #ffffff; border: 1px solid rgba(40, 30, 20, .08); box-shadow: 0 30px 70px rgba(70, 50, 25, .16);
+/* os cartões: brancos, a mesma borda e a mesma sombra em tudo */
+.item-cartao, .passo, .item, .item-grande, .lado, .conversa, .comenta-caixa, .vis-midia, .placar {
+  background: #ffffff; border: var(--borda); box-shadow: var(--sombra);
 }
-.item-caixa { background: #1a1a1a; color: #f2efe9; }
-.item-caixa-titulo { color: #a9a39a; }
-.item-icone, .item-valor-icone { color: #151515; }
-.item-traco { background: var(--ouro); }
-.item-valor { background: #f6f2ea; color: #151515; }
-.item-valor-icone { color: var(--ouro); }
+.item-caixa { background: var(--marca-fundo); color: #f4f4f6; }
+.item-caixa-titulo { color: rgba(244, 244, 246, .6); }
+.item-nome { font-size: var(--t-titulo); color: var(--marca-fundo); }
+.item-detalhe { font-size: var(--t-corpo); }
+.item-icone { color: var(--marca-fundo); }
+.item-traco { background: linear-gradient(90deg, var(--marca1), var(--marca2)); }
+.item-valor { background: color-mix(in srgb, var(--marca1) 8%, #fff); color: var(--marca-fundo); }
+.item-valor-icone { color: var(--marca1); }
+.item-categoria { color: var(--suave); }
 
-/* o placar: os selos coloridos que acendem */
-.placar { background: #ffffff; border: 1px solid rgba(40, 30, 20, .08); box-shadow: 0 20px 50px rgba(70, 50, 25, .14); }
-.placar-selo { background: #ece6dc; color: #b8b0a3; }
+/* a imagem das batidas: a foto inteira; o logo num cartão branco; o rótulo na tinta da marca */
+.vis-logo { background: #ffffff; }
+.vis-icone { background: #ffffff; color: var(--marca1); }
+.vis-rotulo { background: var(--marca-fundo); color: #fff; }
+.fundo-cor .vis-rotulo { background: #fff; color: var(--marca-fundo); }
+.vis-colagem .vis-peca.atual .vis-midia { box-shadow: 0 0 0 6px var(--marca1), var(--sombra); }
+
+/* o placar: os selos acendem nos tons da marca (do primeiro destaque ao segundo) */
+.placar-selo { background: #eceef3; color: #b3b6c2; }
 .placar-selo.aceso { color: #fff; background: var(--cor-selo); }
-.placar-selo.atual { box-shadow: 0 0 0 4px #fff, 0 0 0 7px #151515; }
-.cor-0 { --cor-selo: #4f6ef7; } .cor-1 { --cor-selo: #8b5cf6; } .cor-2 { --cor-selo: #f97316; }
-.cor-3 { --cor-selo: #ef4444; } .cor-4 { --cor-selo: #10b981; } .cor-5 { --cor-selo: #0ea5e9; }
-.cor-6 { --cor-selo: #ec4899; } .cor-7 { --cor-selo: #eab308; }
-.placar-conta { color: #151515; }
+.placar-selo.com-logo.aceso { background: #fff; box-shadow: inset 0 0 0 2px var(--cor-selo); }
+.placar-selo.atual { box-shadow: 0 0 0 4px #fff, 0 0 0 7px var(--marca-fundo); }
+.cor-0, .cor-4 { --cor-selo: var(--marca1); }
+.cor-1, .cor-5 { --cor-selo: color-mix(in srgb, var(--marca1) 66%, var(--marca2)); }
+.cor-2, .cor-6 { --cor-selo: color-mix(in srgb, var(--marca1) 34%, var(--marca2)); }
+.cor-3, .cor-7 { --cor-selo: var(--marca2); }
+.placar-conta { color: var(--marca-fundo); }
 
 /* o fecho "comenta" e a chamada */
-.comenta-marca { background: var(--ouro); }
-.comenta-seguir { background: var(--ouro); color: #151515; }
-.cena-fecho.composicao-chamada .fundo-cena { background: var(--ouro); }
-.chamada-nome, .chamada-texto, .chamada-seta { color: #151515; }
-.chamada-detalhe { background: #151515; color: #fff; }
+.comenta-marca { background: color-mix(in srgb, var(--marca1) 30%, transparent); }
+.comenta-seguir { background: var(--marca1); color: #fff; }
+.comenta-palavra { color: var(--marca-fundo); }
+.cena-fecho.composicao-chamada .fundo-cena { background: linear-gradient(160deg, var(--marca1), var(--marca2)); }
+.chamada-nome, .chamada-texto, .chamada-seta { color: #fff; }
+.chamada-detalhe { background: #fff; color: var(--marca-fundo); }
 
-/* as artes no papel: discos brancos, linhas escuras, sem neon */
-.no-disco { background: #ffffff; border-color: rgba(40, 30, 20, .12); color: #151515; box-shadow: 0 18px 40px rgba(70, 50, 25, .14); }
-.no.ativo .no-disco, .no.grande .no-disco { border-color: var(--tinta); color: var(--tinta); box-shadow: 0 0 0 8px rgba(226, 70, 44, .12), 0 18px 40px rgba(70, 50, 25, .16); }
-.ligacao { stroke: #151515; filter: none; }
-.pacote { fill: var(--ouro); filter: none; }
-.arte-heroi { color: #151515; filter: none; }
-.arte-heroi.aceso { color: var(--tinta); }
-.arte-disco { background: #ffffff; border-color: rgba(40, 30, 20, .1); box-shadow: 0 30px 70px rgba(70, 50, 25, .14); }
-.anel { border-color: var(--tinta); }
-.faisca { background: var(--ouro); box-shadow: none; }
-.caos-item { background: #ffffff; color: #8a8378; border-color: rgba(40, 30, 20, .1); box-shadow: 0 14px 30px rgba(70, 50, 25, .12); }
-.caos-item.ordem { color: #151515; border-color: var(--ouro); box-shadow: 0 14px 30px rgba(70, 50, 25, .16); }
-.arte-rotulo, .no-rotulo { color: #151515; }
-.foto-janela .foto-moldura { border: 10px solid #fff; box-shadow: 0 30px 70px rgba(70, 50, 25, .2); }
-/* a foto em tela cheia: véu escuro (o papel lavaria a foto) e o rótulo claro */
+/* as artes no papel: discos brancos, linhas na tinta da marca, sem neon */
+.no-disco { background: #ffffff; border-color: rgba(17, 17, 30, .1); color: var(--marca-fundo); box-shadow: var(--sombra); }
+.no.ativo .no-disco, .no.grande .no-disco { border-color: var(--marca1); color: var(--marca1); box-shadow: 0 0 0 8px color-mix(in srgb, var(--marca1) 14%, transparent), var(--sombra); }
+.ligacao { stroke: var(--marca-fundo); filter: none; }
+.pacote { fill: var(--marca1); filter: none; }
+.arte-heroi { color: var(--marca-fundo); filter: none; }
+.arte-heroi.aceso { color: var(--marca1); }
+.arte-disco { background: #ffffff; border-color: rgba(17, 17, 30, .08); box-shadow: var(--sombra); }
+.anel { border-color: var(--marca1); }
+.faisca { background: var(--marca2); box-shadow: none; }
+.foto-janela .foto-moldura { border: 10px solid #fff; box-shadow: var(--sombra); }
 .foto-veu { background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0%, transparent 24%, transparent 46%, rgba(0, 0, 0, .7) 84%); }
 .foto-rotulo-cheia { color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, .5); }
