@@ -159,7 +159,8 @@ def test_cena_de_um_estilo_entra_so_com_texto(tmp_path: Path) -> None:
                               "autor": {"nome": "objeto"}, "Ruim": "x"})  # fmt: skip
     r = roteiro.interpretar(json.dumps(bruto), estilo)
     assert r.cenas[1] == {
-        "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom", "fundo": "escuro",
+        "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom",
+        "fundo": "escuro",
         "texto": "y" * 199 + "…",
     }  # fmt: skip
     assert "citacao" in roteiro.montar_prompt("Marca", "Tema: x", "", estilo)

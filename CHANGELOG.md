@@ -6,6 +6,8 @@
   perspectiva), a câmera dá um soco na palavra de destaque em vez de um zoom lento, as transições
   têm causa (íris do ponto em foco, zoom através, chicote, a cor da marca inundando a tela), o logo
   aparece em 3D girando no fecho, e a legenda destaca a palavra da vez numa pílula (ADR 0110).
+- Vídeos: os 1.539 ícones da Lucide, achados pelo objeto que a fala diz; transições de cena
+  inteira (carta, baralho, cubo e fatias) e fundo escuro, claro ou na cor da marca por cena (ADR 0110).
 
 - **Reels no Instagram:** o vídeo pronto ganhou "Publicar no Instagram" em Marketing. Ele vai
   como Reels, com a legenda que o Zé escreveu, e o link aparece no cartão. Também dá para pedir
