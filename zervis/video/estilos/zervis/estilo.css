@@ -73,7 +73,7 @@
 
 /* edição (ADR 0110) */
 .palavra.destaque::after { background: color-mix(in srgb, var(--destaque) 38%, transparent); }
-.composicao-cheia .fundo-cena { background: linear-gradient(155deg, var(--destaque), var(--destaque2)); }
+.composicao-cheia .fundo-cena { background: linear-gradient(155deg, var(--marca1), var(--marca2)); }
 .composicao-cheia .palavra.destaque { background: none; -webkit-text-fill-color: #fff; color: #fff; }
 .composicao-cheia .palavra.destaque::after { background: color-mix(in srgb, var(--fundo) 35%, transparent); }
 /* na cortina, o depois cobre o antes inteiro: fundo opaco */
@@ -108,4 +108,18 @@
   border: 2px solid color-mix(in srgb, #f0877e 35%, transparent); }
 .caos-item.ordem { color: color-mix(in srgb, var(--destaque) 30%, white); border-color: color-mix(in srgb, var(--destaque) 70%, transparent);
   box-shadow: 0 0 40px color-mix(in srgb, var(--destaque) 30%, transparent); }
+
+/* fundos das cartas */
+.fundo-claro .mancha.um { opacity: .35; }
+.fundo-claro .mancha.dois { opacity: .25; }
+.fundo-claro .malha { opacity: .28; }
+.fundo-claro .no-disco { box-shadow: 0 18px 40px rgba(20, 20, 40, .14); }
+.fundo-cor .malha { opacity: .35; background-image: linear-gradient(rgba(255,255,255,.35) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,.35) 2px, transparent 2px); }
+#palco[data-fundo="claro"] #legenda span.ativa { background: var(--marca1); color: #fff; }
+#palco[data-fundo="cor"] #legenda span.ativa { background: #fff; color: var(--marca1); }
+.fundo-claro .arte-heroi.aceso, .fundo-claro .caos-item.ordem, .fundo-claro .no.ativo .no-disco,
+.fundo-claro .no.grande .no-disco { color: var(--marca1); }
+.fundo-claro .caos-item { color: #8a5a57; }
+.fundo-claro .arte-heroi { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--marca1) 35%, transparent)); }
+.fundo-claro .faisca { background: var(--marca1); }
 

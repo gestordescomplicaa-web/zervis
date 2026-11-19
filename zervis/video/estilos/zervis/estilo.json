@@ -2,7 +2,7 @@
   "nome": "Zérvis",
   "descricao": "Escuro, vidro e luz na cor da marca; tipografia grande e movimento suave.",
   "fontes": {"titulo": "Inter Tight", "texto": "Inter"},
-  "onda": true,
+  "onda": false,
   "trilha": {"bpm": 120, "energia": "media"},
   "tom": "Claro, confiante e próximo, como quem explica para um cliente; frases curtas."
 }

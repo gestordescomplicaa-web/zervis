@@ -159,7 +159,7 @@ def test_cena_de_um_estilo_entra_so_com_texto(tmp_path: Path) -> None:
                               "autor": {"nome": "objeto"}, "Ruim": "x"})  # fmt: skip
     r = roteiro.interpretar(json.dumps(bruto), estilo)
     assert r.cenas[1] == {
-        "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom",
+        "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom", "fundo": "escuro",
         "texto": "y" * 199 + "…",
     }  # fmt: skip
     assert "citacao" in roteiro.montar_prompt("Marca", "Tema: x", "", estilo)
@@ -605,3 +605,13 @@ def test_cenas_de_arte_no_plano() -> None:
     bruto["cenas"][2]["icones"] = ["pizza"]
     with pytest.raises(roteiro.RoteiroErro):
         roteiro.interpretar(json.dumps(bruto), _estilo())
+
+
+def test_transicoes_de_carta_e_fundos() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["cenas"][1].update(transicao="carta", fundo="claro")
+    bruto["cenas"][2].update(transicao="cubo", fundo="neon")  # fundo que não existe
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert (r.cenas[1]["transicao"], r.cenas[1]["fundo"]) == ("carta", "claro")
+    assert (r.cenas[2]["transicao"], r.cenas[2]["fundo"]) == ("cubo", "escuro")
+    assert {"carta", "baralho", "cubo", "fatias"} <= set(roteiro.TRANSICOES)

@@ -48,3 +48,16 @@ jeito, um zoom lento e eterno em cada cena, o brilho "respirando", o anel de cli
   `Ze.sai`, `Ze.letras` e o `foco` das transições.
 - A música continua composta em código; a referência do HyperFrames recomenda música de catálogo
   (precisa de conta na HeyGen). Fica para um passo seguinte, como opção.
+
+## Adendo: objetos da fala e cenas como cartas
+
+- **Biblioteca inteira** (`zervis/video/biblioteca.py`): os 1.539 ícones da Lucide, com as
+  etiquetas. O diretor escreve em inglês o objeto que a fala diz e o Zé acha o desenho (nome,
+  etiquetas, sinônimos comuns); a lista não vai no pedido, então o custo por vídeo não muda.
+- **Transições de cena inteira:** "carta" (a tela vira como carta de baralho), "baralho" (a carta
+  de cima é jogada para o lado e revela a próxima), "cubo" (a tela gira como um cubo) e "fatias"
+  (a cena nova desce em tiras). Nas três primeiras, a mesa escurece por trás e a cena ganha
+  cantos e sombra de carta. O primeiro elemento de cada cena de arte já está nela quando chega.
+- **Fundo por cena:** "escuro", "claro" ou "cor" da marca, alternados pelo diretor, para que cada
+  cena seja uma carta diferente. A onda da voz sai do estilo padrão.
+

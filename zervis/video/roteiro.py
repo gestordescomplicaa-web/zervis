@@ -28,7 +28,8 @@ LIMITE_LEGENDA = 2200
 DURACOES: dict[int, tuple[int, int]] = {15: (3, 4), 30: (4, 7), 45: (6, 9), 60: (7, 11)}
 DURACAO_PADRAO = 30
 CAMERAS = ("empurra", "afasta", "desliza", "parado")
-TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor")
+TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor", "carta", "baralho", "cubo", "fatias")
+FUNDOS = ("escuro", "claro", "cor")
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
@@ -162,8 +163,14 @@ Regras:
   cena); "afasta" e "desliza" mexem só na chegada; "parado" não mexe.
 - transicao (como a cena entra): {transicoes}. "mascara" abre um círculo a partir do que estava
   em foco; "deslize" é um chicote rápido para o lado; "zoom" atravessa o que estava em foco; "cor"
-  inunda a tela com a cor da marca (para mudar de assunto); "corte" é seco, na batida. Use 3 a 5
-  tipos no vídeo e nunca a mesma transição em cenas seguidas; "corte" nos momentos de impacto.
+  inunda a tela com a cor da marca (para mudar de assunto); "corte" é seco, na batida. As cenas são
+  cartas inteiras: "carta" vira a tela como carta de baralho (virada, revelação, antes e depois);
+  "baralho" joga a carta de cima para o lado e revela a próxima (o próximo item, o próximo passo);
+  "cubo" gira a tela como um cubo (outro lado, outra etapa); "fatias" faz a cena nova descer em
+  tiras (revelação forte). Use 4 a 6 tipos no vídeo, pelo menos dois desses de carta, e nunca a
+  mesma transição em cenas seguidas; "corte" nos momentos de impacto.
+- fundo: {fundos}. Alterne: cenas seguidas com fundos diferentes, como cartas diferentes do
+  baralho; pelo menos uma "claro" e uma "cor". "escuro" no gancho e no fecho.
 - **Mostre, não escreva.** Pelo menos metade das cenas entre o gancho e o fecho são de arte
   (icone, conexao, hub, caos): a ideia vira um ícone que se desenha, um fluxo por onde correm
   dados, uma constelação em volta de um centro, o caos que vira ordem. Cartões de texto (passos,
@@ -252,6 +259,7 @@ def montar_prompt(
         fala=FALA_PALAVRAS,
         cameras=" | ".join(CAMERAS),
         transicoes=" | ".join(TRANSICOES),
+        fundos=" | ".join(FUNDOS),
         tom=f"- Tom: {estilo.tom}\n" if estilo.tom else "",
         tipos="\n".join(f"- {formato}" for formato in tipos_do_estilo(estilo).values()),
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
@@ -314,6 +322,7 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
         "fala": fala,
         "camera": camera if camera in CAMERAS else "empurra",
         "transicao": transicao if transicao in TRANSICOES else "zoom",
+        "fundo": str(bruta.get("fundo")) if bruta.get("fundo") in FUNDOS else "escuro",
     }
     if tipo in extras and tipo not in TIPOS:
         # uma cena do estilo: só texto e listas de texto, cortados
