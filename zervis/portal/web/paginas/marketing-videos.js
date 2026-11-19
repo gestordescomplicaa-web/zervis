@@ -28,6 +28,7 @@ const publicar = (v, vs) => v.estado === "publicado"
 const previa = (v, vs) => `<div class="previa-video">
   <video controls playsinline preload="metadata" poster="/fluxo/marketing/video?id=${esc(v.id)}&qual=capa" src="/fluxo/marketing/video?id=${esc(v.id)}"></video>
   <div class="previa-video-lado">
+    ${v.palavra ? `<p class="nota">Comentário: <strong>${esc(v.palavra)}</strong>${v.entrega ? ` · Entrega: ${esc(v.entrega)}` : ""}</p>` : ""}
     ${v.legenda ? `<pre class="legenda-post">${esc(v.legenda)}</pre>` : ""}
     <div class="campos"><label>Ajuste<input id="mk-video-ajuste" placeholder="Ex.: gancho mais curto, sem a cena do número" autocomplete="off"></label></div>
     <div class="linha">${publicar(v, vs)}${v.estado === "publicado" ? "" : botao("Refazer", "mk-video-refazer", `data-id="${esc(v.id)}"`)}<a class="acao" href="/fluxo/marketing/video?id=${esc(v.id)}" download="${esc((v.titulo || "video").slice(0, 40))}.mp4">Baixar</a>${botao("Descartar", "mk-video-descartar", `data-id="${esc(v.id)}"`, "discreta")}</div>
@@ -46,6 +47,9 @@ export function cartaoVideos(r, vs = r.videos) {
     <div class="campos">
       <label>Tema do vídeo<input id="mk-video-tema" placeholder="Ex.: como o WhatsApp perde clientes à noite" autocomplete="off"></label>
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-video-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
+      <label>Para quem<select id="mk-video-linha"><option value="">O Zé escolhe pelo tema</option><option value="empresarios">Empresários</option><option value="ferramenta">Ferramenta</option></select></label>
+      <label>Entrega<input id="mk-video-entrega" placeholder="O que quem comentar recebe. Ex.: o link e o passo a passo" autocomplete="off"></label>
+      <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: OFICINA" maxlength="16" autocomplete="off"></label>
       <label>Duração<select id="mk-video-duracao">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
       <label>Diretor<select id="mk-video-modelo">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}">${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}">${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
@@ -121,6 +125,9 @@ Object.assign(ACOES, {
       duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-duracao")).value),
       modelo: /** @type {HTMLSelectElement} */ ($("mk-video-modelo")).value,
       locutor: /** @type {HTMLSelectElement | null} */ ($("mk-video-locutor"))?.value || "",
+      linha: /** @type {HTMLSelectElement} */ ($("mk-video-linha")).value,
+      entrega: /** @type {HTMLInputElement} */ ($("mk-video-entrega")).value,
+      palavra: /** @type {HTMLInputElement} */ ($("mk-video-palavra")).value,
     };
     try {
       const r = await ocupado(b, () => api("marketing/video/criar", dados));

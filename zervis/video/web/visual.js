@@ -11,7 +11,15 @@
   /** O conteúdo de uma batida: foto (cobre), logo (no centro, na cor da marca dele) ou ícone. */
   function midia(b, classe) {
     const caixa = h("div", `vis-midia ${classe} vis-${b.imagem ? b.imagem_tipo || "foto" : "icone"}`);
-    if (b.imagem) {
+    if (b.imagem && b.imagem_tipo === "site") {
+      // o print do site numa janela de navegador: a barra com o endereço em cima
+      const barra = h("div", "vis-barra");
+      barra.append(h("i"), h("i"), h("i"), h("span", "vis-endereco", b.site || ""));
+      const img = h("img");
+      img.src = b.imagem;
+      img.alt = "";
+      caixa.append(barra, img);
+    } else if (b.imagem) {
       const img = h("img");
       img.src = b.imagem;
       img.alt = "";
@@ -50,6 +58,7 @@
         const peca = h("div", "vis-peca");
         const m = midia(b, "");
         peca.append(m);
+        const desenho = m.querySelector("svg.vis-icone"); // o ícone de reserva se desenha na palavra
         const r = b.rotulo ? h("div", "vis-rotulo", b.rotulo) : null;
         if (r) peca.append(r);
         if (comp === "colagem") {
@@ -60,7 +69,7 @@
           peca.style.setProperty("--rot", `${rot}deg`);
         }
         area.append(peca);
-        return { peca, m, r };
+        return { peca, m, r, desenho };
       });
       el.append(area);
       return { comp, pecas, foco: area };
@@ -78,6 +87,7 @@
           const primeira = i === 0 ? cl(prog(t, quando[0], 0.12)) : 1;
           x.peca.style.opacity = String(primeira);
           x.peca.style.transform = `scale(${(1.1 - 0.1 * p).toFixed(4)})`;
+          if (x.desenho) Ze.desenhar(x.desenho, t, quando[i], 0.5);
           if (x.r) revela(x.r, t, quando[i] + 0.08, "desfoque", { d: 0.14 });
         });
         s.foco = s.pecas[atual].peca;
@@ -93,6 +103,7 @@
           x.peca.style.opacity = visivel ? String(cl(prog(t, q, 0.12))) : "0";
           x.peca.style.transform = `translate(-50%, -50%) rotate(calc(var(--rot) * ${p.toFixed(3)})) scale(calc(var(--escala) * ${((0.4 + 0.6 * p) * pulso).toFixed(4)}))`;
           x.peca.classList.toggle("atual", i === atual);
+          if (x.desenho) Ze.desenhar(x.desenho, t, q + 0.05, 0.5);
           if (x.r) revela(x.r, t, q + 0.15, "desfoque", { d: 0.16 });
         });
         if (atual >= 0) s.foco = s.pecas[atual].peca;

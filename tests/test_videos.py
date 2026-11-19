@@ -644,7 +644,7 @@ def test_logos_e_batidas_viram_imagem(tmp_path: Path) -> None:
         {"tipo": "visual", "batidas": [
             {"mostrar": "logo: WhatsApp"}, {"mostrar": "logo: whatsapp"},
             {"mostrar": "logo: nao existe"}, {"mostrar": "logo: malicioso"},
-            {"mostrar": "busca: closed garage night"}]},
+            {"mostrar": "busca: smartphone unread notification"}]},
         {"tipo": "item", "mostrar": "logo: whatsapp", "icone": "wrench"},
     ]  # fmt: skip
     assert f.resolver(cenas, tmp_path) == []
@@ -652,7 +652,7 @@ def test_logos_e_batidas_viram_imagem(tmp_path: Path) -> None:
     assert a["imagem_tipo"] == b["imagem_tipo"] == "logo" and a["imagem"].endswith("whatsapp.svg")
     assert pedidos.count("whatsapp") == 1  # o mesmo pedido, uma ida à rede
     assert "imagem" not in c and "imagem" not in d  # o que falha ou não é só desenho vira ícone
-    assert e["icone"] == "moon"  # a reserva vem da palavra certa (a noite)
+    assert e["icone"] == "smartphone"  # a reserva vem da palavra que é o objeto
     assert cenas[1]["imagem_tipo"] == "logo"
 
 
@@ -948,3 +948,49 @@ def test_lista_e_estilo_editorial() -> None:
     e = estilos.achar("editorial")
     assert e.nome == "Editorial" and e.fonte_legenda == "Instrument Serif" and e.css
     assert "family=Instrument+Serif:ital@0;1" in e.fontes_url()
+
+
+def test_linha_entrega_e_comenta_no_plano() -> None:
+    prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), linha="ferramenta",
+                                   entrega="o link e o passo a passo", palavra="N8N")  # fmt: skip
+    assert "## Linha e entrega" in prompt and "Sobre uma ferramenta" in prompt
+    assert "Quem comentar vai receber: o link e o passo a passo" in prompt and '"N8N"' in prompt
+    sem = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
+    assert "Escolha a linha pelo tema" in sem and "Sugira uma entrega" in sem
+    bruto = {**json.loads(json.dumps(ROTEIRO)), "palavra": "oficina", "entrega": "o checklist"}
+    bruto["cenas"][-1].pop("composicao", None)
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert r.cenas[-1]["composicao"] == "comenta"  # o fecho é sempre o comenta
+    assert r.palavra == "OFICINA" and r.entrega == "o checklist"
+    assert r.para_json()["palavra"] == "OFICINA"
+
+
+def test_print_de_site_vira_imagem(tmp_path: Path) -> None:
+    from zervis.video import fotos as fotos_mod
+
+    assert fotos_mod.endereco_do_site("n8n.io") == "https://n8n.io"
+    assert fotos_mod.endereco_do_site("192.168.0.1") == ""  # nada da rede de casa
+    abertos: list[str] = []
+
+    def capturar(url: str, pasta: Path) -> dict[str, Any]:
+        abertos.append(url)
+        (pasta / "imagens" / "capturas").mkdir(parents=True, exist_ok=True)
+        (pasta / "imagens" / "capturas" / "n8n.png").write_bytes(b"png")
+        return {"arquivo": "imagens/capturas/n8n.png"}
+
+    f = Fotos(da_marca=lambda: [], buscar=lambda b: [], capturar=capturar)
+    cenas: list[dict[str, Any]] = [{"tipo": "visual", "batidas": [{"mostrar": "site: n8n.io"}]}]
+    f.resolver(cenas, tmp_path)
+    b = cenas[0]["batidas"][0]
+    assert abertos == ["https://n8n.io"] and b["imagem_tipo"] == "site" and b["site"] == "n8n.io"
+
+
+def test_video_guarda_linha_entrega_e_palavra(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    v, _ = _videos(tmp_path, json.dumps({**ROTEIRO, "palavra": "AGENDA"}), monkeypatch)
+    feito = v.criar(tema="x", esperar=True, linha="empresarios", entrega="o modelo", palavra="ag!")
+    assert (feito.linha, feito.entrega, feito.palavra) == ("empresarios", "o modelo", "AG")
+    assert "Quem comentar vai receber: o modelo" in v.pedidos[0] and '"AG"' in v.pedidos[0]
+    tela = v.para_tela(feito)
+    assert tela["linha"] == "empresarios" and tela["palavra"] == "AGENDA"

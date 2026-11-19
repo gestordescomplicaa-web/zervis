@@ -273,4 +273,10 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .item-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .placar-logo { width: 62%; height: 62%; object-fit: contain; }
 .placar-selo.com-logo:not(.aceso) .placar-logo { filter: grayscale(1); opacity: .35; }
+.vis-site { grid-template-rows: auto 1fr; place-items: stretch; align-content: stretch; }
+.vis-site img { object-fit: cover; object-position: top center; }
+.vis-barra { display: flex; align-items: center; gap: 12px; padding: 18px 24px; }
+.vis-barra i { width: 18px; height: 18px; border-radius: 50%; }
+.vis-endereco { margin-left: 14px; font-size: 26px; padding: 8px 22px; border-radius: 999px; flex: 1; }
+.item-foto img[src*="capturas"] { object-position: top center; }
 

@@ -235,6 +235,9 @@ class AcoesMarketing(Pagina):
                 duracao=int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
                 modelo=str(dados.get("modelo") or videos.MODELO),
                 locutor=str(dados.get("locutor", "")) if "locutor" in dados else None,
+                linha=str(dados.get("linha", "")),
+                entrega=str(dados.get("entrega", "")),
+                palavra=str(dados.get("palavra", "")),
             )
         )
         atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")

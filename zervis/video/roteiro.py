@@ -186,7 +186,8 @@ escreva a fala do vídeo inteiro e divida em cenas; cada cena tem um papel só (
 provar, convidar) e um jeito de mostrar.
 
 Responda só com JSON, sem texto em volta:
-{{"objetivo": "...", "publico": "...", "formato": "...", "titulo": "...", "legenda": "...",
+{{"objetivo": "...", "publico": "...", "formato": "...", "palavra": "...", "entrega": "...",
+"titulo": "...", "legenda": "...",
 "cenas": [{{"tipo": "...", "fala": "...", "camera": "...", "transicao": "...", ...}}]}}
 
 O limite mais importante: **a fala inteira tem de {minimo_palavras} a {total} palavras**. Conte
@@ -230,6 +231,7 @@ Regras:
   explicação em parágrafos curtos, a chamada, no máximo 3 emojis e até 5 hashtags no fim.
 {tom}
 {formatos}
+{entrega}
 Tipos de cena:
 {tipos}
 
@@ -255,6 +257,8 @@ class Roteiro:
     objetivo: str = ""
     publico: str = ""
     formato: str = ""
+    palavra: str = ""  # a palavra para comentar (ADR 0116)
+    entrega: str = ""  # o que quem comenta recebe no direct
 
     @property
     def falas(self) -> list[str]:
@@ -264,6 +268,8 @@ class Roteiro:
         return {
             "objetivo": self.objetivo,
             "formato": self.formato,
+            "palavra": self.palavra,
+            "entrega": self.entrega,
             "publico": self.publico,
             "titulo": self.titulo,
             "legenda": self.legenda,
@@ -346,6 +352,8 @@ def secao_fotos(fotos: list[str]) -> str:
         '- "busca: <2 ou 3 palavras concretas em inglês>": uma foto livre de uma coisa ou um lugar '
         '("busca: office building", "busca: mechanic workshop"); nunca uma pessoa. Seja '
         'específico: "car dashboard", não "car interior" (que traz vagão de trem).\n'
+        '- "site: <endereço>": o print do site de uma ferramenta, numa janela de navegador ("site: '
+        'n8n.io"); até 3 por vídeo, só de sites de verdade que a fala cita.\n'
         'Até 12 imagens livres por vídeo. A cena "foto" mostra uma imagem grande sozinha; a '
         '"visual" mostra várias, cada uma na sua palavra.\n'
     )
@@ -359,6 +367,9 @@ def montar_prompt(
     duracao: int = DURACAO_PADRAO,
     recentes: list[dict[str, Any]] | None = None,
     fotos: list[str] | None = None,
+    linha: str = "",
+    entrega: str = "",
+    palavra: str = "",
 ) -> str:
     minimo, maximo, minimo_palavras, total = limites(duracao)
     return PROMPT.format(
@@ -378,6 +389,7 @@ def montar_prompt(
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
         recentes=secao_recentes(recentes or []),
         formatos=formatos.secao(),
+        entrega=formatos.secao_entrega(linha, entrega, palavra),
         fotos=secao_fotos(fotos or []),
     )
 
@@ -567,6 +579,11 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
             f"Corte {palavras - total} palavras ou mais: frases mais curtas e, se precisar, uma "
             "cena a menos."
         )
+    # o fecho é sempre o "comenta" (a entrega é o motivo de comentar)
+    fecho = cenas[-1]
+    palavra = _texto(fecho.get("palavra") or dados.get("palavra"), 16)
+    palavra = palavra or _texto((str(fecho.get("chamada", "")).split() or ["comenta"])[0], 16)
+    fecho.update(composicao="comenta", palavra=palavra)
     titulo = _texto(dados.get("titulo"), 60) or _texto(cenas[0]["fala"], 60)
     return Roteiro(
         titulo,
@@ -575,6 +592,8 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
         _texto(dados.get("objetivo"), 200),
         _texto(dados.get("publico"), 200),
         formato if (formato := str(dados.get("formato", ""))) in formatos.FORMATOS else "",
+        palavra.upper(),
+        _texto(dados.get("entrega"), 140),
     )
 
 

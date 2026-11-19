@@ -173,4 +173,7 @@
 .vis-rotulo { background: var(--destaque); color: #fff; }
 .vis-colagem .vis-peca.atual .vis-midia { box-shadow: 0 0 0 6px var(--destaque), 0 30px 80px rgba(0, 0, 0, .45); }
 .placar-selo.com-logo.aceso { background: #fff; }
+.vis-barra { background: color-mix(in srgb, var(--superficie) 70%, black); }
+.vis-barra i { background: color-mix(in srgb, var(--texto) 30%, transparent); }
+.vis-endereco { background: color-mix(in srgb, var(--fundo) 80%, transparent); color: var(--suave); }
 

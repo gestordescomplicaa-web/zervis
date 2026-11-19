@@ -107,3 +107,17 @@
 .foto-janela .foto-moldura { border: 10px solid #fff; box-shadow: var(--sombra); }
 .foto-veu { background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0%, transparent 24%, transparent 46%, rgba(0, 0, 0, .7) 84%); }
 .foto-rotulo-cheia { color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, .5); }
+
+/* o print de site: a janela do navegador clara */
+.vis-barra { background: #eef0f4; border-bottom: var(--borda); }
+.vis-barra i:nth-child(1) { background: #ff5f57; } .vis-barra i:nth-child(2) { background: #febc2e; } .vis-barra i:nth-child(3) { background: #28c840; }
+.vis-endereco { background: #fff; color: var(--suave); }
+
+/* o fecho "comenta" sobre a cor da marca: a palavra branca, a caixa do perfil na tinta escura */
+.comenta-caixa { color: var(--marca-fundo); }
+.comenta-caixa small { color: var(--suave); }
+.fundo-cor .comenta-palavra, .fundo-cor .comenta-pede, .fundo-cor .comenta-detalhe { color: #fff; }
+.fundo-cor .comenta-caixa small { color: #6b6e7a; }
+.fundo-cor .comenta-marca { background: rgba(255, 255, 255, .28); }
+
+.comenta-seguir.feito { background: #eceef3; color: var(--marca-fundo); }

@@ -20,13 +20,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from zervis.imersivo import imagens
+from zervis.imersivo import capturas, imagens
 from zervis.video import biblioteca
 
 log = logging.getLogger(__name__)
 
 BUSCA = "busca:"
 LOGO = "logo:"
+SITE = "site:"
+SITES_POR_VIDEO = 3  # prints de site por vídeo (cada um abre o Chromium)
 POR_VIDEO = 12  # buscas livres por vídeo (cada uma é uma ida à rede; em paralelo)
 SIMPLE_ICONS = "https://cdn.simpleicons.org/"  # os logos das marcas, na cor delas (CC0)
 LOGO_MAX = 64 * 1024
@@ -82,6 +84,17 @@ def _chave(pedido: str) -> str:
     return f"{LOGO} {slug_do_logo(p[len(LOGO) :])}" if p.lower().startswith(LOGO) else p
 
 
+def _capturar_site(url: str, pasta: Path) -> dict[str, Any]:
+    return capturas.capturar(url, pasta)  # só HTTPS, atrás da trava de rede (ADR 0058)
+
+
+def endereco_do_site(texto: str) -> str:
+    """ "notion.so" ou "https://www.notion.so/produto" → o endereço https, sem nada além."""
+    t = texto.strip().split()[0] if texto.strip() else ""
+    t = re.sub(r"^https?://", "", t, flags=re.I)
+    return f"https://{t}" if re.fullmatch(r"[a-z0-9.-]+\.[a-z]{2,}(/[\w\-./]*)?", t, re.I) else ""
+
+
 def _baixar_logo(slug: str) -> bytes:
     from zervis.imersivo.modelos3d import AGENTE  # o nome genérico do Zé nos pedidos à rede
 
@@ -111,12 +124,14 @@ class Fotos:
         buscar: Callable[[str], list[imagens.Achado]] = _buscar_no_commons,
         baixar: Callable[[str, Path], dict[str, Any]] = imagens.baixar,
         logo: Callable[[str], bytes] = _baixar_logo,
+        capturar: Callable[[str, Path], dict[str, Any]] | None = None,
     ) -> None:
         self.da_marca = da_marca
         self.pasta_da_marca = pasta_da_marca
         self.buscar = buscar
         self.baixar = baixar
         self.logo = logo
+        self.capturar = capturar or _capturar_site
 
     def nomes(self) -> list[str]:
         """Os nomes das fotos da marca, para o diretor (vazio se o painel não tiver nenhuma)."""
@@ -135,6 +150,9 @@ class Fotos:
         if p.lower().startswith(BUSCA):
             livre = self._livre(p[len(BUSCA) :].strip(), pasta)
             return (*livre, "foto") if livre else None
+        if p.lower().startswith(SITE):
+            site = self._site(p[len(SITE) :], pasta)
+            return (site, "", "site") if site else None
         da_marca = self._da_marca_na_pasta(p, pasta)
         return (*da_marca, "foto") if da_marca else None
 
@@ -152,7 +170,13 @@ class Fotos:
                 alvos.append((c, str(c["mostrar"]), c))
         pedidos = list(dict.fromkeys(_chave(p) for _, p, _ in alvos if p.strip()))
         livres = [p for p in pedidos if p.lower().startswith(BUSCA)][:POR_VIDEO]
-        pedidos = [p for p in pedidos if not p.lower().startswith(BUSCA) or p in livres]
+        sites = [p for p in pedidos if p.lower().startswith(SITE)][:SITES_POR_VIDEO]
+        pedidos = [
+            p
+            for p in pedidos
+            if (not p.lower().startswith(BUSCA) or p in livres)
+            and (not p.lower().startswith(SITE) or p in sites)
+        ]
         with concurrent.futures.ThreadPoolExecutor(6) as grupo:
             achados = dict(
                 zip(pedidos, grupo.map(lambda p: self.achar(p, pasta), pedidos), strict=True)
@@ -169,10 +193,25 @@ class Fotos:
                 continue
             arquivo, credito, tipo = achado
             onde["imagem"], onde["imagem_tipo"] = arquivo.resolve().as_uri(), tipo
+            if tipo == "site":  # a barra do navegador mostra o endereço
+                onde["site"] = endereco_do_site(pedido.strip()[len(SITE) :]).removeprefix(
+                    "https://"
+                )
             if credito:
                 onde["credito"] = credito
                 creditos.append(credito)
         return list(dict.fromkeys(creditos))
+
+    def _site(self, texto: str, pasta: Path) -> Path | None:
+        url = endereco_do_site(texto)
+        if not url:
+            return None
+        try:
+            registro = self.capturar(url, pasta)
+            return pasta / str(registro["arquivo"])
+        except (capturas.CapturaErro, OSError, KeyError) as erro:  # não abriu: fica um ícone
+            log.info("print de '%s' não veio: %s", url, erro)
+            return None
 
     def _logo(self, nome: str, pasta: Path) -> Path | None:
         slug = slug_do_logo(nome)
@@ -224,7 +263,7 @@ class Fotos:
     @staticmethod
     def _objeto(pedido: str) -> str:
         p = pedido.strip()
-        for prefixo in (BUSCA, LOGO):
+        for prefixo in (BUSCA, LOGO, SITE):
             if p.lower().startswith(prefixo):
                 p = p[len(prefixo) :]
         return re.sub(r"[-_]+", " ", Path(p.strip()).stem)
@@ -237,13 +276,15 @@ class Fotos:
 
     @staticmethod
     def _icone_do_objeto(objeto: str) -> str:
-        """O ícone do objeto: a frase inteira só se o nome casar; senão, palavra por palavra do
-        fim para o começo ("closed garage night" é a noite, não um olho fechado)."""
-        palavras = objeto.split()
+        """O ícone do objeto: primeiro a palavra que é o nome de um ícone ("smartphone"), do fim
+        para o começo; depois a mais parecida, sem as palavras genéricas ("close up", "night")."""
+        genericas = {"close", "view", "with", "from", "photo", "image", "shot", "detail", "night",
+                     "closed", "open", "empty", "unread", "modern", "small", "large"}  # fmt: skip
+        palavras = [w for w in objeto.lower().split() if len(w) >= 3 and w not in genericas]
         for w in reversed(palavras):
-            if (achado := biblioteca.achar(w)) != biblioteca.RESERVA:
+            if w in (achado := biblioteca.achar(w)).split("-"):
                 return achado
-        return biblioteca.achar(objeto)
+        return biblioteca.achar(" ".join(palavras)) if palavras else biblioteca.RESERVA
 
     def _virar_icone(self, cena: dict[str, Any], pedido: str) -> None:
         objeto = self._objeto(pedido)

@@ -196,14 +196,19 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
         "marketing_video_criar",
         "Cria um vídeo vertical (Reels) com a marca do usuário, narrado pela voz do Zé, sobre um "
         "tema ou a partir de um artigo do blog (o slug, de marketing_situacao). duracao: 15, 30, "
-        "45 ou 60 segundos (padrão 30). Leva cerca de dois minutos; o Zé avisa quando estiver "
-        "pronto em Marketing. Nada é publicado.",
+        "45 ou 60 segundos (padrão 30). linha: 'empresarios' (para donos de empresa) ou "
+        "'ferramenta' (sobre uma ferramenta); entrega: o que quem comentar recebe no direct; "
+        "palavra: a palavra para comentar (sem elas, o diretor sugere). Leva cerca de dois "
+        "minutos; o Zé avisa quando estiver pronto em Marketing. Nada é publicado.",
         {
             "type": "object",
             "properties": {
                 "tema": {"type": "string"},
                 "artigo": {"type": "string"},
                 "duracao": {"type": "integer", "enum": sorted(roteiro_video.DURACOES)},
+                "linha": {"type": "string", "enum": ["empresarios", "ferramenta"]},
+                "entrega": {"type": "string"},
+                "palavra": {"type": "string"},
             },
         },
     )
@@ -214,6 +219,9 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
                 str(args.get("tema", "")),
                 str(args.get("artigo", "")),
                 duracao=int(args.get("duracao") or roteiro_video.DURACAO_PADRAO),
+                linha=str(args.get("linha", "")),
+                entrega=str(args.get("entrega", "")),
+                palavra=str(args.get("palavra", "")),
             )
         except (videos_mod.VideoErro, ValueError) as erro:
             return _erro(erro)

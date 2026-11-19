@@ -36,7 +36,7 @@ from zervis import lugares, marketing
 from zervis.portal import publico
 from zervis.redes import instagram_publicar
 from zervis.redes.instagram import Instagram, InstagramErro
-from zervis.video import biblioteca, captura, estilos, montagem, narracao, roteiro, trilha
+from zervis.video import biblioteca, captura, estilos, formatos, montagem, narracao, roteiro, trilha
 from zervis.video import fotos as fotos_mod
 
 log = logging.getLogger(__name__)
@@ -105,6 +105,9 @@ class Video:
     publicado: float = 0.0
     publicando_desde: float = 0.0  # epoch: quando o pedido de publicar saiu
     locutor: str = ""  # "" a voz da página Voz; "cadu"; ou o id de uma voz do Fish (ADR 0113)
+    linha: str = ""  # "empresarios" ou "ferramenta"; vazio: o diretor escolhe (ADR 0116)
+    entrega: str = ""  # o que quem comentar recebe, se quem pediu disse; vazio: o diretor sugere
+    palavra: str = ""  # a palavra para comentar, se quem pediu disse
 
 
 def _perguntar_ao_modelo(prompt: str, modelo: str) -> str:
@@ -402,6 +405,9 @@ class Videos:
         duracao: int = roteiro.DURACAO_PADRAO,
         modelo: str = MODELO,
         locutor: str | None = None,
+        linha: str = "",
+        entrega: str = "",
+        palavra: str = "",
     ) -> Video:
         tema, artigo = " ".join(tema.split())[:200], artigo.strip()
         if not tema and not artigo:
@@ -423,6 +429,9 @@ class Videos:
         video = Video(
             uuid.uuid4().hex[:8], tema, artigo, "", estilos.achar(estilo).id, voz, modelo=modelo,
             duracao_alvo=duracao, locutor=locutor,
+            linha=linha if linha in formatos.LINHAS else "",
+            entrega=" ".join(entrega.split())[:140],
+            palavra=re.sub(r"[^\wÀ-ÿ]", "", palavra)[:16].upper(),
         )  # fmt: skip
         return self._comecar(self._gravar(video), esperar)
 
@@ -500,7 +509,7 @@ class Videos:
         recentes = [] if video.instrucao else self.recentes(video.id)
         prompt = roteiro.montar_prompt(
             nome, self._pedido(video), self.site.manual(), estilo, alvo, recentes,
-            self.fotos.nomes(),
+            self.fotos.nomes(), video.linha, video.entrega, video.palavra,
         )  # fmt: skip
         resposta = self.perguntar(prompt, video.modelo)
         try:
@@ -656,9 +665,11 @@ class Videos:
             for k in (
                 "id", "tema", "artigo", "estilo", "voz", "estado", "etapa", "erro", "titulo",
                 "legenda", "duracao", "criado", "modelo", "duracao_alvo", "permalink", "publicado",
-                "locutor",
+                "locutor", "linha",
             )
         }  # fmt: skip
+        dados["palavra"] = video.roteiro.get("palavra", "")
+        dados["entrega"] = video.roteiro.get("entrega", "")
         dados["cenas"] = len(video.roteiro.get("cenas", []))
         dados["pronto"] = (self.pasta / video.id / "video.mp4").is_file()
         return dados
