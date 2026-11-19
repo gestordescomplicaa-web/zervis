@@ -76,6 +76,7 @@ ROTULOS = {
     "marketing_videos": "Olhando os vídeos",
     "marketing_video_criar": "Criando o vídeo",
     "marketing_video_publicar": "Publicando o Reels",
+    "marketing_video_agendar": "Agendando os vídeos",
 }
 
 

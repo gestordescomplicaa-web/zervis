@@ -199,6 +199,7 @@ class Acoes:
             "marketing/post/publicar": self.publicar_post,
             "marketing/post/descartar": self.descartar_post,
             "marketing/video/criar": self.criar_video,
+            "marketing/video/agendar": self.agendar_video,
             "marketing/video/refazer": self.refazer_video,
             "marketing/video/descartar": self.descartar_video,
             "marketing/video/publicar": self.publicar_video,

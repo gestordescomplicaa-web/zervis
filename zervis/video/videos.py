@@ -19,6 +19,7 @@ rascunho, com a prévia e o download em Marketing.
 
 import asyncio
 import base64
+import contextlib
 import json
 import logging
 import re
@@ -43,6 +44,10 @@ PASTA = lugares.DADOS / "marketing" / "videos"
 MODELOS = {"claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5"}
 MODELO = "claude-opus-5-5"
 PENSAMENTO = 3000  # tokens de raciocínio: contar as palavras e variar as cenas cabe aqui
+# a memória do diretor: quantos vídeos recentes ele vê para não repetir a receita
+RECENTES = 5
+# o vídeo agendado sem tema da lista nem artigo novo: o diretor escolhe
+TEMA_LIVRE = "Um assunto da linha editorial do site que os últimos vídeos ainda não trataram"
 SISTEMA = "Você é diretor de criação de vídeos curtos para empresas. Responda só com o JSON pedido."
 LIMITE_ARTIGO = 9000
 FORMATO = ("vertical", 1080, 1920)
@@ -250,6 +255,45 @@ class Videos:
                     continue
         return sorted(videos, key=lambda v: v.criado, reverse=True)
 
+    def recentes(self, menos: str = "") -> list[dict[str, Any]]:
+        """Os roteiros dos últimos vídeos feitos (a memória do diretor, para não repetir)."""
+        feitos = [
+            v.roteiro
+            for v in self.listar()
+            if v.id != menos and v.estado != "erro" and v.roteiro.get("cenas")
+        ]
+        return feitos[:RECENTES]
+
+    def proximo_tema(self, temas: list[str]) -> tuple[str, str]:
+        """O tema do vídeo agendado: o primeiro da lista que ainda não virou vídeo; sem ele, o
+        artigo publicado mais novo que ainda não virou vídeo; sem ele, o diretor escolhe pela
+        linha editorial do site, longe dos últimos vídeos. Devolve (tema, artigo)."""
+        feitos = self.listar()
+        usados = {roteiro.base(v.tema) for v in feitos if v.tema}
+        for tema in temas:
+            if (limpo := " ".join(str(tema).split())[:200]) and roteiro.base(limpo) not in usados:
+                return limpo, ""
+        de_artigo = {v.artigo for v in feitos if v.artigo}
+        # um site fora do ar não impede o vídeo
+        with contextlib.suppress(marketing.MarketingErro, OSError, ValueError):
+            for a in self.site.artigos():
+                if a.get("estado") == "Publicado" and a.get("slug") not in de_artigo:
+                    return "", str(a["slug"])
+        return TEMA_LIVRE, ""
+
+    @staticmethod
+    def pedido_agendado(temas: list[str] | str, duracao: int) -> str:
+        """O texto da automação de vídeos: até 10 temas curtos e a duração, em JSON."""
+        if isinstance(temas, str):
+            temas = temas.splitlines()
+        limpos = [" ".join(str(t).split())[:80] for t in temas if str(t).strip()][:10]
+        if duracao not in roteiro.DURACOES:
+            raise VideoErro("Duração inválida.")
+        texto = json.dumps({"temas": limpos, "duracao": duracao}, ensure_ascii=False)
+        if len(texto) > 600:
+            raise VideoErro("Temas longos demais. Use frases curtas.")
+        return texto
+
     def arquivo(self, id_: str, qual: str = "video") -> Path:
         alvo = self._dir(id_) / ("capa.jpg" if qual == "capa" else "video.mp4")
         if not alvo.is_file():
@@ -370,10 +414,18 @@ class Videos:
 
         self._etapa(video, "Escrevendo o roteiro")
         alvo = video.duracao_alvo
-        prompt = roteiro.montar_prompt(nome, self._pedido(video), self.site.manual(), estilo, alvo)
+        # um ajuste pedido segue a versão anterior; um vídeo novo foge da receita dos últimos
+        recentes = [] if video.instrucao else self.recentes(video.id)
+        prompt = roteiro.montar_prompt(
+            nome, self._pedido(video), self.site.manual(), estilo, alvo, recentes
+        )
         resposta = self.perguntar(prompt, video.modelo)
         try:
             r = roteiro.interpretar(resposta, estilo, alvo)
+            if roteiro.miolo(r.cenas) in {roteiro.miolo(x["cenas"]) for x in recentes}:
+                raise roteiro.RoteiroErro(
+                    "A sequência de cenas ficou igual à de um vídeo recente. Mude a receita."
+                )
         except roteiro.RoteiroErro as erro:
             # uma volta: o modelo recebe o que escreveu e o que está errado (acontece com a fala
             # longa demais); se errar de novo, o vídeo fica com o erro
@@ -406,6 +458,7 @@ class Videos:
         dados = {
             "largura": largura, "altura": altura, "formato": FORMATO[0], "fps": captura.FPS,
             "duracao": n.duracao, "cenas": cenas, "falas": n.falas, "volume": n.volume,
+            "semente": int(video.id, 16) if re.fullmatch(r"[0-9a-f]{1,12}", video.id) else 7,
             "icones": {
                 n: biblioteca.todos()[n] for n in roteiro.icones_usados(cenas) | {"sparkles"}
             },

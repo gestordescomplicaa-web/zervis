@@ -188,7 +188,7 @@ Tipos de cena:
 "delivery truck", "tooth", "dumbbell", "scissors", "shopping cart", "calendar" (o Zé tem 1.500
 desenhos e acha o mais parecido). Prefira o objeto do assunto ao símbolo genérico: para uma
 pizzaria, "pizza", não "store"; para uma clínica, "stethoscope", não "heart".
-
+{recentes}
 ## Linha editorial (o manual do site)
 {manual}
 """
@@ -244,8 +244,44 @@ def tipos_do_estilo(estilo: Estilo) -> dict[str, str]:
     return {**{t: d["formato"] for t, d in TIPOS.items()}, **extras}
 
 
+def receita(cenas: list[dict[str, Any]]) -> str:
+    """O esqueleto de um vídeo: tipo, transição e fundo de cada cena, em ordem."""
+    return " → ".join(
+        f"{c.get('tipo')} ({c.get('transicao')}, {c.get('fundo', 'escuro')})" for c in cenas
+    )
+
+
+def miolo(cenas: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Os tipos entre o gancho e o fecho: o que faz dois vídeos parecerem o mesmo."""
+    return tuple(str(c.get("tipo")) for c in cenas if c.get("tipo") not in ("gancho", "fecho"))
+
+
+def secao_recentes(recentes: list[dict[str, Any]]) -> str:
+    """A memória dos últimos vídeos para o diretor: o tema, o gancho e a receita de cada um,
+    com o pedido de fazer diferente (sem isso, o modelo repete a receita que deu certo)."""
+    if not recentes:
+        return ""
+    linhas = []
+    for r in recentes:
+        cenas = r.get("cenas") or []
+        gancho = next((c.get("fala", "") for c in cenas if c.get("tipo") == "gancho"), "")
+        linhas.append(f'- "{r.get("titulo", "")}" · gancho: "{gancho}" · {receita(cenas)}')
+    return (
+        "\n## Os últimos vídeos desta marca (não repita a receita)\n"
+        + "\n".join(linhas)
+        + "\nFaça este diferente de todos eles: outra sequência de tipos depois do gancho, um "
+        "gancho que abre de outro jeito (pergunta, número, cena, provocação), transições e fundos "
+        "em outra ordem e analogias novas. Não repita um tema já tratado.\n"
+    )
+
+
 def montar_prompt(
-    marca: str, pedido: str, manual: str, estilo: Estilo, duracao: int = DURACAO_PADRAO
+    marca: str,
+    pedido: str,
+    manual: str,
+    estilo: Estilo,
+    duracao: int = DURACAO_PADRAO,
+    recentes: list[dict[str, Any]] | None = None,
 ) -> str:
     minimo, maximo, minimo_palavras, total = limites(duracao)
     return PROMPT.format(
@@ -263,6 +299,7 @@ def montar_prompt(
         tom=f"- Tom: {estilo.tom}\n" if estilo.tom else "",
         tipos="\n".join(f"- {formato}" for formato in tipos_do_estilo(estilo).values()),
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
+        recentes=secao_recentes(recentes or []),
     )
 
 
