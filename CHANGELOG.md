@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **A copy manda na tela:** cada coisa dita vira imagem real na palavra (logos de marcas, fotos
+  livres ou da marca, prints de site); o Editorial usa as cores da marca, com um sistema de tipo
+  e layout; sai o "caos virando ordem" (ADR 0115).
+- **Linhas e entrega:** vídeos para empresários ou sobre uma ferramenta, sempre fechando com
+  "comenta PALAVRA" e a entrega prometida, que o painel mostra (ADR 0116).
 - **Estilo Editorial nos vídeos:** papel, cartões brancos, legenda serifada palavra por palavra,
   uma lista cujo cartão fica e só troca o conteúdo, com um placar que acende a cada item, e o
   fecho "comenta". O crédito das fotos livres vai só na legenda (ADR 0114).

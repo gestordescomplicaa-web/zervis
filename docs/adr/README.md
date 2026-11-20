@@ -122,3 +122,5 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0112](0112-fotos-nos-videos.md) | Fotos nos vídeos | Aceito |
 | [0113](0113-formato-ritmo-e-voz.md) | Formato, gancho, ritmo e voz dos vídeos | Aceito |
 | [0114](0114-estilo-editorial-e-lista.md) | O estilo Editorial e a lista que evolui | Aceito |
+| [0115](0115-copy-manda-na-tela.md) | A copy manda na tela: imagem real na palavra | Aceito |
+| [0116](0116-linhas-e-entrega.md) | Linhas editoriais e a entrega do comentário | Aceito |
