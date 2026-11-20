@@ -116,6 +116,10 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
     if nome == "mcp__jarvis__marketing_video_criar":
         assunto = entrada.get("tema") or f"o artigo {entrada.get('artigo', '')}"
         return f"Vou criar um vídeo de {entrada.get('duracao') or 30} segundos sobre {assunto}."
+    if nome == "mcp__jarvis__marketing_video_agendar":
+        temas = [str(t) for t in entrada.get("temas") or []]
+        sobre = f"sobre {', '.join(temas[:3])}" if temas else "com o tema escolhido pelo site"
+        return f"Vou agendar vídeos ({entrada.get('quando', '')}) {sobre}; publicar fica com você."
     if nome == "mcp__jarvis__marketing_video_publicar":
         return (
             f"Vou publicar no Instagram o vídeo {_titulo_do_video(str(entrada.get('video', '')))}."

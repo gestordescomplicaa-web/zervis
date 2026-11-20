@@ -28,6 +28,7 @@ const publicar = (v, vs) => v.estado === "publicado"
 const previa = (v, vs) => `<div class="previa-video">
   <video controls playsinline preload="metadata" poster="/fluxo/marketing/video?id=${esc(v.id)}&qual=capa" src="/fluxo/marketing/video?id=${esc(v.id)}"></video>
   <div class="previa-video-lado">
+    ${v.palavra ? `<p class="nota">Comentário: <strong>${esc(v.palavra)}</strong>${v.entrega ? ` · Entrega: ${esc(v.entrega)}` : ""}</p>` : ""}
     ${v.legenda ? `<pre class="legenda-post">${esc(v.legenda)}</pre>` : ""}
     <div class="campos"><label>Ajuste<input id="mk-video-ajuste" placeholder="Ex.: gancho mais curto, sem a cena do número" autocomplete="off"></label></div>
     <div class="linha">${publicar(v, vs)}${v.estado === "publicado" ? "" : botao("Refazer", "mk-video-refazer", `data-id="${esc(v.id)}"`)}<a class="acao" href="/fluxo/marketing/video?id=${esc(v.id)}" download="${esc((v.titulo || "video").slice(0, 40))}.mp4">Baixar</a>${botao("Descartar", "mk-video-descartar", `data-id="${esc(v.id)}"`, "discreta")}</div>
@@ -46,9 +47,13 @@ export function cartaoVideos(r, vs = r.videos) {
     <div class="campos">
       <label>Tema do vídeo<input id="mk-video-tema" placeholder="Ex.: como o WhatsApp perde clientes à noite" autocomplete="off"></label>
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-video-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
+      <label>Para quem<select id="mk-video-linha"><option value="">O Zé escolhe pelo tema</option><option value="empresarios">Empresários</option><option value="ferramenta">Ferramenta</option></select></label>
+      <label>Entrega<input id="mk-video-entrega" placeholder="O que quem comentar recebe. Ex.: o link e o passo a passo" autocomplete="off"></label>
+      <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: OFICINA" maxlength="16" autocomplete="off"></label>
       <label>Duração<select id="mk-video-duracao">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
       <label>Diretor<select id="mk-video-modelo">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}">${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}">${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
+      <label>Voz<select id="mk-video-locutor">${(vs.vozes || []).map((/** @type {any} */ x) => `<option value="${esc(x.id)}" ${x.id === (vs.locutor || "") ? "selected" : ""}>${esc(x.nome)}${x.detalhe ? ` · ${esc(x.detalhe)}` : ""}</option>`).join("")}</select></label>
       <label class="interruptor"><input type="checkbox" id="mk-video-voz" checked> Narração</label>
     </div>
     <div class="linha">${botao("Criar vídeo", "mk-video-criar", vs.indisponivel ? "disabled" : "", "principal")}</div>
@@ -57,6 +62,32 @@ export function cartaoVideos(r, vs = r.videos) {
       ["criando", "publicando"].includes(x.estado) ? "" : (x.pronto ? botao(aberto === x.id ? "Fechar" : "Assistir", "mk-video-ver", `data-id="${esc(x.id)}"`, "discreta") : "")
         + botao("Descartar", "mk-video-descartar", `data-id="${esc(x.id)}"`, "discreta"))).join("")}</div>` : ""}
     ${v ? previa(v, vs) : ""}`)}</div>`;
+}
+
+const AGENDAS = [
+  ["cron 0 9 * * 1,4", "Segunda e quinta, 9h"],
+  ["cron 0 9 * * 1", "Toda segunda, 9h"],
+  ["cron 0 10 * * 2,5", "Terça e sexta, 10h"],
+  ["cron 0 9 * * 1-5", "Todo dia útil, 9h"],
+];
+/** @param {string} agenda */
+const nomeAgenda = (agenda) => (AGENDAS.find(([v]) => v === agenda) || [agenda, agenda])[1];
+
+/** O cartão Vídeos automáticos (ADR 0111). @param {any} r a leitura "marketing" */
+export function cartaoVideosAutomaticos(r) {
+  const jobs = r.videos_automaticos || [];
+  const ativo = jobs.some((/** @type {any} */ j) => j.ativo);
+  return `<div id="mk-videos-auto">${cartao(`Vídeos automáticos <span class="etiqueta ${ativo ? "bom" : ""}">${ativo ? "Ativo" : "Desligado"}</span>`,
+    `${sub("O Zé cria os vídeos na agenda e avisa no app. Publicar no Instagram continua com a sua aprovação.")}
+    ${jobs.length ? `<div class="itens">${jobs.map((/** @type {any} */ j) => item(esc(nomeAgenda(j.agenda)),
+      `${j.ativo ? `Próximo: ${esc(String(j.proxima).slice(0, 16).replace("T", " "))}` : "Pausado"} · ${j.temas ? `${j.temas} ${j.temas === 1 ? "tema" : "temas"}` : "Tema pelo site"} · ${esc(String(j.duracao || 30))} s`, "")).join("")}</div>` : ""}
+    <div class="campos">
+      <label>Quando<select id="mk-video-agenda">${AGENDAS.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select></label>
+      <label>Duração<select id="mk-video-agenda-duracao">${((r.videos && r.videos.duracoes) || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
+      <label class="largo">Temas<textarea id="mk-video-temas" rows="4" placeholder="Um por linha. Opcional: sem temas, o Zé escolhe pelo site e pelos artigos."></textarea></label>
+    </div>
+    <div class="linha">${botao("Agendar", "mk-video-agendar", r.videos && r.videos.indisponivel ? "disabled" : "", jobs.length ? "discreta" : "principal")}<a class="acao discreta" href="#automacoes">Automações</a></div>
+    <p class="resultado" id="mk-resultado-video-agenda"></p>`)}</div>`;
 }
 
 /** Redesenha só este cartão (sem recarregar a página, que lê o site e os PRs). @param {any} r */
@@ -93,6 +124,10 @@ Object.assign(ACOES, {
       voz: /** @type {HTMLInputElement} */ ($("mk-video-voz")).checked,
       duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-duracao")).value),
       modelo: /** @type {HTMLSelectElement} */ ($("mk-video-modelo")).value,
+      locutor: /** @type {HTMLSelectElement | null} */ ($("mk-video-locutor"))?.value || "",
+      linha: /** @type {HTMLSelectElement} */ ($("mk-video-linha")).value,
+      entrega: /** @type {HTMLInputElement} */ ($("mk-video-entrega")).value,
+      palavra: /** @type {HTMLInputElement} */ ($("mk-video-palavra")).value,
     };
     try {
       const r = await ocupado(b, () => api("marketing/video/criar", dados));
@@ -100,6 +135,21 @@ Object.assign(ACOES, {
       await redesenhar(ultimaLeitura);
       mostrar("mk-resultado-video", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video", false, erro.message); }
+  },
+  "mk-video-agendar": async (/** @type {HTMLButtonElement} */ b) => {
+    const dados = {
+      quando: /** @type {HTMLSelectElement} */ ($("mk-video-agenda")).value,
+      duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-agenda-duracao")).value),
+      temas: /** @type {HTMLTextAreaElement} */ ($("mk-video-temas")).value,
+    };
+    try {
+      const r = await ocupado(b, () => api("marketing/video/agendar", dados));
+      ultimaLeitura = r;
+      const novo = document.createElement("div");
+      novo.innerHTML = cartaoVideosAutomaticos(r);
+      $("mk-videos-auto")?.replaceWith(/** @type {Element} */ (novo.firstElementChild));
+      mostrar("mk-resultado-video-agenda", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-video-agenda", false, erro.message); }
   },
   "mk-video-ver": async (/** @type {HTMLButtonElement} */ b) => {
     aberto = aberto === b.dataset.id ? null : b.dataset.id || null;

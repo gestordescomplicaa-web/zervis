@@ -36,12 +36,25 @@ class AcoesMarketing(Pagina):
             "posts": [marketing_posts.PADRAO.para_tela(p) for p in marketing_posts.PADRAO.listar()],
             "videos": self.videos(),
             "marca": self._marca(),
-            "automaticos": [
-                {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
-                for j in self.n.jobs.listar()
-                if j.tipo == "artigo"
-            ],
+            "automaticos": self._automaticos("artigo"),
+            "videos_automaticos": self._automaticos("video"),
         }
+
+    def _automaticos(self, tipo: str) -> list[dict[str, Any]]:
+        saida = []
+        for j in self.n.jobs.listar():
+            if j.tipo != tipo:
+                continue
+            item = {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
+            if tipo == "video":
+                try:
+                    pedido = json.loads(j.texto)
+                except ValueError:
+                    pedido = {}
+                item["temas"] = len(pedido.get("temas") or [])
+                item["duracao"] = pedido.get("duracao")
+            saida.append(item)
+        return saida
 
     def guardar_site(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -199,6 +212,8 @@ class AcoesMarketing(Pagina):
             "estilos": [e.para_tela() for e in estilos_video.listar()],
             "modelos": [{"id": k, "nome": n} for k, n in videos.MODELOS.items()],
             "duracoes": sorted(roteiro_video.DURACOES),
+            "vozes": v.vozes(),
+            "locutor": v.locutor_padrao(),
             "indisponivel": v.disponivel(),
             "instagram": marketing_posts.PADRAO.instagram.conectado,
             "publicavel": bool(marketing_posts.PADRAO.endereco()),
@@ -219,10 +234,31 @@ class AcoesMarketing(Pagina):
                 dados.get("voz") is not False,
                 duracao=int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
                 modelo=str(dados.get("modelo") or videos.MODELO),
+                locutor=str(dados.get("locutor", "")) if "locutor" in dados else None,
+                linha=str(dados.get("linha", "")),
+                entrega=str(dados.get("entrega", "")),
+                palavra=str(dados.get("palavra", "")),
             )
         )
         atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")
         return {**self.videos(), "aviso": "Criando o vídeo. Aviso quando estiver pronto."}
+
+    def agendar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        cruas = dados.get("temas")
+        temas: list[str] | str = cruas if isinstance(cruas, (list, str)) else ""
+        texto = self._videos(
+            lambda: videos.Videos.pedido_agendado(
+                temas, int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO)
+            )
+        )
+        try:
+            self.n.jobs.criar(
+                "Vídeo da marca", str(dados.get("quando", "")), "video", texto, datetime.now(FUSO)
+            )
+        except JobErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        atividade.PADRAO.registrar("execucao", "Vídeos automáticos agendados", origem="painel")
+        return {**self.marketing(), "aviso": "Agendado."}
 
     def refazer_video(self, dados: dict[str, Any]) -> dict[str, Any]:
         id_, instrucao = str(dados.get("id", "")), str(dados.get("instrucao", ""))

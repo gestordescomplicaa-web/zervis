@@ -123,3 +123,57 @@
 .fundo-claro .arte-heroi { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--marca1) 35%, transparent)); }
 .fundo-claro .faisca { background: var(--marca1); }
 
+/* foto */
+.foto-veu { background: linear-gradient(180deg, color-mix(in srgb, var(--fundo) 55%, transparent) 0%, transparent 22%, transparent 42%, color-mix(in srgb, var(--fundo) 92%, transparent) 78%); }
+.foto-rotulo-cheia { color: #fff; text-shadow: 0 4px 30px rgba(0, 0, 0, .45); }
+.foto-polaroid { background: #fbfaf7; box-shadow: 0 50px 120px rgba(0, 0, 0, .5), 0 8px 24px rgba(0, 0, 0, .25); }
+.foto-fita { background: color-mix(in srgb, var(--marca1) 45%, rgba(255, 255, 255, .55)); box-shadow: 0 2px 6px rgba(0, 0, 0, .15); }
+.foto-escrita { color: #1b1c22; }
+.foto-janela .foto-moldura { border: 3px solid color-mix(in srgb, var(--marca1) 55%, transparent);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--marca1) 12%, transparent), 0 40px 120px rgba(0, 0, 0, .5); }
+.foto-credito { color: color-mix(in srgb, var(--texto) 70%, transparent); }
+.composicao-cheia .foto-credito { color: rgba(255, 255, 255, .78); }
+
+/* ritmo */
+.corte-escuro { background: var(--fundo); color: var(--texto); }
+.corte-claro { background: #f3f1ec; color: #13141b; }
+.corte-marca { background: linear-gradient(155deg, var(--marca1), var(--marca2)); color: #fff; }
+.cena-fecho.composicao-chamada .fundo-cena { background: linear-gradient(160deg, var(--marca1), var(--marca2)); }
+.cena-fecho.composicao-chamada .fundo-cena .mancha, .cena-fecho.composicao-chamada .malha, .cena-fecho.composicao-chamada .fundo-cena::after { display: none; }
+.chamada-logo { background: var(--fundo); box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.chamada-nome, .chamada-texto, .chamada-seta { color: #fff; }
+.chamada-seta { filter: drop-shadow(0 0 16px rgba(255, 255, 255, .6)); }
+.chamada-detalhe { background: #fff; color: var(--marca1); }
+
+
+/* lista (ADR 0114) */
+.item-cartao { background: linear-gradient(160deg, color-mix(in srgb, var(--superficie) 92%, white 4%), color-mix(in srgb, var(--superficie) 75%, transparent));
+  border: 1.5px solid color-mix(in srgb, var(--destaque) 25%, transparent); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); color: var(--texto); }
+.item-icone, .item-valor-icone { color: var(--destaque); }
+.item-categoria { color: var(--suave); }
+.item-caixa { background: color-mix(in srgb, var(--fundo) 80%, black); }
+.item-caixa-titulo { color: var(--suave); }
+.item-traco { background: linear-gradient(90deg, var(--destaque), var(--destaque2)); }
+.item-valor { background: color-mix(in srgb, var(--destaque) 12%, transparent); }
+.placar { background: color-mix(in srgb, var(--superficie) 80%, transparent); border: 1px solid color-mix(in srgb, var(--destaque) 20%, transparent); }
+.placar-selo { background: color-mix(in srgb, var(--texto) 8%, transparent); color: color-mix(in srgb, var(--texto) 30%, transparent); }
+.placar-selo.aceso { background: linear-gradient(145deg, var(--destaque), var(--destaque2)); color: #fff; }
+.placar-selo.atual { box-shadow: 0 0 0 4px var(--fundo), 0 0 0 7px var(--destaque); }
+.placar-conta { color: var(--texto); }
+.comenta-marca { background: color-mix(in srgb, var(--destaque) 55%, transparent); }
+.comenta-caixa { background: var(--superficie); box-shadow: 0 30px 80px rgba(0, 0, 0, .4); }
+.comenta-quem small, .comenta-detalhe { color: var(--suave); }
+.comenta-seguir { background: var(--destaque); color: #fff; }
+.comenta-seguir.feito { background: color-mix(in srgb, var(--texto) 15%, transparent); color: var(--texto); }
+
+/* a copy manda */
+.vis-midia { background: var(--superficie); border: 2px solid color-mix(in srgb, var(--destaque) 30%, transparent); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+.vis-logo { background: #fff; }
+.vis-icone { color: var(--destaque); }
+.vis-rotulo { background: var(--destaque); color: #fff; }
+.vis-colagem .vis-peca.atual .vis-midia { box-shadow: 0 0 0 6px var(--destaque), 0 30px 80px rgba(0, 0, 0, .45); }
+.placar-selo.com-logo.aceso { background: #fff; }
+.vis-barra { background: color-mix(in srgb, var(--superficie) 70%, black); }
+.vis-barra i { background: color-mix(in srgb, var(--texto) 30%, transparent); }
+.vis-endereco { background: color-mix(in srgb, var(--fundo) 80%, transparent); color: var(--suave); }
+

@@ -19,6 +19,7 @@ rascunho, com a prévia e o download em Marketing.
 
 import asyncio
 import base64
+import contextlib
 import json
 import logging
 import re
@@ -35,7 +36,8 @@ from zervis import lugares, marketing
 from zervis.portal import publico
 from zervis.redes import instagram_publicar
 from zervis.redes.instagram import Instagram, InstagramErro
-from zervis.video import biblioteca, captura, estilos, montagem, narracao, roteiro, trilha
+from zervis.video import biblioteca, captura, estilos, formatos, montagem, narracao, roteiro, trilha
+from zervis.video import fotos as fotos_mod
 
 log = logging.getLogger(__name__)
 PASTA = lugares.DADOS / "marketing" / "videos"
@@ -43,6 +45,10 @@ PASTA = lugares.DADOS / "marketing" / "videos"
 MODELOS = {"claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5"}
 MODELO = "claude-opus-5-5"
 PENSAMENTO = 3000  # tokens de raciocínio: contar as palavras e variar as cenas cabe aqui
+# a memória do diretor: quantos vídeos recentes ele vê para não repetir a receita
+RECENTES = 5
+# o vídeo agendado sem tema da lista nem artigo novo: o diretor escolhe
+TEMA_LIVRE = "Um assunto da linha editorial do site que os últimos vídeos ainda não trataram"
 SISTEMA = "Você é diretor de criação de vídeos curtos para empresas. Responda só com o JSON pedido."
 LIMITE_ARTIGO = 9000
 FORMATO = ("vertical", 1080, 1920)
@@ -66,6 +72,9 @@ MINIMOS: dict[str, Callable[[dict[str, Any]], float]] = {
     "conexao": lambda c: 1.2 + 0.8 * len(c.get("nos", [])),
     "hub": lambda c: 1.6 + 0.55 * len(c.get("ao_redor", [])),
     "caos": lambda c: 3.4,
+    "foto": lambda c: 2.8,
+    "item": lambda c: 2.6,
+    "visual": lambda c: 0.9 + 0.75 * len(c.get("batidas", [])),
 }
 
 
@@ -95,6 +104,10 @@ class Video:
     permalink: str = ""  # o link do Reels publicado
     publicado: float = 0.0
     publicando_desde: float = 0.0  # epoch: quando o pedido de publicar saiu
+    locutor: str = ""  # "" a voz da página Voz; "cadu"; ou o id de uma voz do Fish (ADR 0113)
+    linha: str = ""  # "empresarios" ou "ferramenta"; vazio: o diretor escolhe (ADR 0116)
+    entrega: str = ""  # o que quem comentar recebe, se quem pediu disse; vazio: o diretor sugere
+    palavra: str = ""  # a palavra para comentar, se quem pediu disse
 
 
 def _perguntar_ao_modelo(prompt: str, modelo: str) -> str:
@@ -116,10 +129,44 @@ def _ouvinte_do_ze() -> narracao.Ouvir | None:
     return lambda wav: deepgram.palavras(chave, wav, "audio/wav")
 
 
-def _sintetizador_do_ze() -> narracao.Sintetizar:
+def _sintetizador_do_ze(locutor: str = "") -> narracao.Sintetizar:
     from zervis.voz import nuvem
 
-    return narracao.sintetizador(nuvem.Motor())
+    return narracao.sintetizador(nuvem.Motor(), locutor)
+
+
+def _vozes_do_fish() -> list[dict[str, str]]:
+    """As vozes do Fish Audio da página Voz (as suas e as mais usadas em português)."""
+    from zervis.voz import fish
+    from zervis.voz.deepgram import ler_chave
+
+    chave = ler_chave(lugares.CONFIG / f"{fish.NOME}.key")
+    return fish.vozes(chave) if chave else []
+
+
+def efeitos_sonoros(cenas: list[dict[str, Any]]) -> list[tuple[float, str]]:
+    """O som de cada ação na tela (ADR 0113): o corte seco bate, a carta estala com o whoosh,
+    as outras transições passam com o whoosh; as palavras do gancho em cortes estalam e o
+    carimbo bate."""
+    efeitos: list[tuple[float, str]] = []
+    for i, c in enumerate(cenas):
+        a = float(c["inicio"])
+        if i:
+            transicao = c.get("transicao")
+            if transicao == "corte":
+                efeitos.append((a, "impacto"))
+            else:
+                efeitos.append((a, "whoosh"))
+                if transicao in ("carta", "baralho"):
+                    efeitos.append((a + 0.25, "estalo"))
+        palavras = c.get("palavras") or []
+        if c.get("composicao") == "cortes":
+            efeitos += [(float(w["i"]), "estalo") for w in palavras[1:] if len(w["p"]) > 2]
+        elif c.get("composicao") == "carimbo" and palavras:
+            marcadas = {roteiro.base(p) for p in str(c.get("destaque", "")).split()}
+            alvo = next((w for w in palavras if roteiro.base(w["p"]) in marcadas), palavras[-1])
+            efeitos.append((float(alvo["i"]), "impacto"))
+    return efeitos
 
 
 def _logo_como_dado(logo: bytes) -> str:
@@ -146,7 +193,7 @@ class Videos:
         pasta: Path = PASTA,
         site: marketing.Marketing | None = None,
         perguntar: Callable[[str, str], str] = _perguntar_ao_modelo,
-        sintetizador: Callable[[], narracao.Sintetizar] = _sintetizador_do_ze,
+        sintetizador: Callable[..., narracao.Sintetizar] = _sintetizador_do_ze,
         ouvinte: Callable[[], narracao.Ouvir | None] = _ouvinte_do_ze,
         capturar: Callable[..., list[Path]] = captura.capturar,
         montar: Callable[..., Path] = montagem.montar,
@@ -155,6 +202,8 @@ class Videos:
         endereco: Callable[[], str] | None = None,
         publicar_reels: Callable[..., str] = instagram_publicar.publicar_reels,
         procurar: Callable[[Instagram, str, float], str] = instagram_publicar.procurar,
+        fotos: fotos_mod.Fotos | None = None,
+        vozes_do_fish: Callable[[], list[dict[str, str]]] = _vozes_do_fish,
     ) -> None:
         self.pasta = pasta
         self.site = site or marketing.PADRAO
@@ -168,6 +217,9 @@ class Videos:
         self._endereco = endereco
         self._publicar_reels = publicar_reels
         self._procurar = procurar
+        self.fotos = fotos or fotos_mod.PADRAO
+        self._vozes_do_fish = vozes_do_fish
+        self._vozes_cache: tuple[float, list[dict[str, str]]] = (0.0, [])
         self._trava = threading.RLock()
         self._fila = threading.Lock()  # um vídeo por vez
         self._andando: set[str] = set()
@@ -250,6 +302,76 @@ class Videos:
                     continue
         return sorted(videos, key=lambda v: v.criado, reverse=True)
 
+    # --- o locutor dos vídeos (ADR 0113) ---------------------------------------------------
+
+    def vozes(self) -> list[dict[str, str]]:
+        """As vozes que um vídeo pode ter: a do Zé, o Cadu e as suas do Fish (lista guardada 10
+        min; o Fish fora do ar não tira as outras). Só as suas: a biblioteca popular do Fish tem
+        vozes que imitam pessoas reais, e um vídeo de marca não fala com a voz de ninguém."""
+        quando, fish = self._vozes_cache
+        if time.time() - quando > 600:
+            try:
+                fish = self._vozes_do_fish()
+            except (OSError, ValueError, RuntimeError):  # rede ou chave: a lista fica sem o Fish
+                log.info("vozes do Fish indisponíveis", exc_info=True)
+                fish = []
+            self._vozes_cache = (time.time(), fish)
+        suas = [v for v in fish if str(v.get("detalhe", "")).startswith("sua")]
+        return [
+            {"id": "", "nome": "Voz do Zé", "detalhe": "a da página Voz"},
+            {"id": narracao.CADU, "nome": "Cadu", "detalhe": "local"},
+            *suas,
+        ]
+
+    def locutor_padrao(self) -> str:
+        try:
+            return str(json.loads((self.pasta / "locutor.json").read_text()).get("id", ""))
+        except (OSError, ValueError, AttributeError):
+            return ""
+
+    def _guardar_locutor(self, locutor: str) -> None:
+        self.pasta.mkdir(parents=True, exist_ok=True)
+        (self.pasta / "locutor.json").write_text(json.dumps({"id": locutor}))
+
+    def recentes(self, menos: str = "") -> list[dict[str, Any]]:
+        """Os roteiros dos últimos vídeos feitos (a memória do diretor, para não repetir)."""
+        feitos = [
+            v.roteiro
+            for v in self.listar()
+            if v.id != menos and v.estado != "erro" and v.roteiro.get("cenas")
+        ]
+        return feitos[:RECENTES]
+
+    def proximo_tema(self, temas: list[str]) -> tuple[str, str]:
+        """O tema do vídeo agendado: o primeiro da lista que ainda não virou vídeo; sem ele, o
+        artigo publicado mais novo que ainda não virou vídeo; sem ele, o diretor escolhe pela
+        linha editorial do site, longe dos últimos vídeos. Devolve (tema, artigo)."""
+        feitos = self.listar()
+        usados = {roteiro.base(v.tema) for v in feitos if v.tema}
+        for tema in temas:
+            if (limpo := " ".join(str(tema).split())[:200]) and roteiro.base(limpo) not in usados:
+                return limpo, ""
+        de_artigo = {v.artigo for v in feitos if v.artigo}
+        # um site fora do ar não impede o vídeo
+        with contextlib.suppress(marketing.MarketingErro, OSError, ValueError):
+            for a in self.site.artigos():
+                if a.get("estado") == "Publicado" and a.get("slug") not in de_artigo:
+                    return "", str(a["slug"])
+        return TEMA_LIVRE, ""
+
+    @staticmethod
+    def pedido_agendado(temas: list[str] | str, duracao: int) -> str:
+        """O texto da automação de vídeos: até 10 temas curtos e a duração, em JSON."""
+        if isinstance(temas, str):
+            temas = temas.splitlines()
+        limpos = [" ".join(str(t).split())[:80] for t in temas if str(t).strip()][:10]
+        if duracao not in roteiro.DURACOES:
+            raise VideoErro("Duração inválida.")
+        texto = json.dumps({"temas": limpos, "duracao": duracao}, ensure_ascii=False)
+        if len(texto) > 600:
+            raise VideoErro("Temas longos demais. Use frases curtas.")
+        return texto
+
     def arquivo(self, id_: str, qual: str = "video") -> Path:
         alvo = self._dir(id_) / ("capa.jpg" if qual == "capa" else "video.mp4")
         if not alvo.is_file():
@@ -282,6 +404,10 @@ class Videos:
         esperar: bool = False,
         duracao: int = roteiro.DURACAO_PADRAO,
         modelo: str = MODELO,
+        locutor: str | None = None,
+        linha: str = "",
+        entrega: str = "",
+        palavra: str = "",
     ) -> Video:
         tema, artigo = " ".join(tema.split())[:200], artigo.strip()
         if not tema and not artigo:
@@ -294,9 +420,18 @@ class Videos:
             raise VideoErro("Duração inválida.")
         if modelo not in MODELOS:
             raise VideoErro("Modelo inválido.")
+        # sem escolha (o agendado, a voz), o último locutor; com escolha, ela vira o padrão
+        if locutor is None:
+            locutor = self.locutor_padrao()
+        else:
+            locutor = re.sub(r"[^a-z0-9]", "", locutor.lower())[:40]
+            self._guardar_locutor(locutor)
         video = Video(
             uuid.uuid4().hex[:8], tema, artigo, "", estilos.achar(estilo).id, voz, modelo=modelo,
-            duracao_alvo=duracao,
+            duracao_alvo=duracao, locutor=locutor,
+            linha=linha if linha in formatos.LINHAS else "",
+            entrega=" ".join(entrega.split())[:140],
+            palavra=re.sub(r"[^\wÀ-ÿ]", "", palavra)[:16].upper(),
         )  # fmt: skip
         return self._comecar(self._gravar(video), esperar)
 
@@ -370,10 +505,23 @@ class Videos:
 
         self._etapa(video, "Escrevendo o roteiro")
         alvo = video.duracao_alvo
-        prompt = roteiro.montar_prompt(nome, self._pedido(video), self.site.manual(), estilo, alvo)
+        # um ajuste pedido segue a versão anterior; um vídeo novo foge da receita dos últimos
+        recentes = [] if video.instrucao else self.recentes(video.id)
+        prompt = roteiro.montar_prompt(
+            nome, self._pedido(video), self.site.manual(), estilo, alvo, recentes,
+            self.fotos.nomes(), video.linha, video.entrega, video.palavra,
+        )  # fmt: skip
         resposta = self.perguntar(prompt, video.modelo)
         try:
             r = roteiro.interpretar(resposta, estilo, alvo)
+            if roteiro.miolo(r.cenas) in {roteiro.miolo(x["cenas"]) for x in recentes}:
+                raise roteiro.RoteiroErro(
+                    "A sequência de cenas ficou igual à de um vídeo recente. Mude a receita."
+                )
+            if r.formato and recentes and r.formato == recentes[0].get("formato"):
+                raise roteiro.RoteiroErro(
+                    f'O formato "{r.formato}" é o mesmo do último vídeo. Escolha outro formato.'
+                )
         except roteiro.RoteiroErro as erro:
             # uma volta: o modelo recebe o que escreveu e o que está errado (acontece com a fala
             # longa demais); se errar de novo, o vídeo fica com o erro
@@ -383,13 +531,18 @@ class Videos:
                 f"Resposta anterior: {resposta[:6000]}\nEscreva de novo, corrigindo isso."
             )
             r = roteiro.interpretar(self.perguntar(corrigir, video.modelo), estilo, alvo)
+        # as fotos viram arquivos na pasta do vídeo (a que não vier vira ícone); crédito na legenda
+        if creditos := self.fotos.resolver(r.cenas, pasta):
+            r.legenda = f"{r.legenda}\n\nFotos: {'; '.join(dict.fromkeys(creditos))}"
         video.titulo, video.legenda, video.roteiro = r.titulo, r.legenda, r.para_json()
 
         self._etapa(video, "Gravando a voz" if video.voz else "Montando o tempo")
         minimos = [MINIMOS[c["tipo"]](c) if c["tipo"] in MINIMOS else 3.0 for c in r.cenas]
         n = narracao.narrar(
             r.falas,
-            self.sintetizador() if video.voz else None,
+            (self.sintetizador(video.locutor) if video.locutor else self.sintetizador())
+            if video.voz
+            else None,
             minimos,
             estilo.bpm,
             self.ouvinte() if video.voz else None,
@@ -406,8 +559,10 @@ class Videos:
         dados = {
             "largura": largura, "altura": altura, "formato": FORMATO[0], "fps": captura.FPS,
             "duracao": n.duracao, "cenas": cenas, "falas": n.falas, "volume": n.volume,
+            "semente": int(video.id, 16) if re.fullmatch(r"[0-9a-f]{1,12}", video.id) else 7,
             "icones": {
-                n: biblioteca.todos()[n] for n in roteiro.icones_usados(cenas) | {"sparkles"}
+                n: biblioteca.todos()[n]
+                for n in roteiro.icones_usados(cenas) | {"sparkles", "arrow-down"}
             },
             "marca": {
                 "nome": marca.nome, "instagram": marca.instagram,
@@ -421,6 +576,7 @@ class Videos:
                 "fontes": {
                     "titulo": marca.titulo or estilo.fonte_titulo,
                     "texto": marca.texto or estilo.fonte_texto,
+                    "legenda": estilo.fonte_legenda,
                 },
                 "fontes_url": estilo.fontes_url(marca.titulo, marca.texto),
             },
@@ -431,7 +587,7 @@ class Videos:
         self._etapa(video, "Compondo a trilha")
         mix = trilha.compor(
             n.duracao, [a for a, _ in n.cenas[1:]], n.voz if video.voz else None,
-            estilo.bpm, estilo.energia,
+            estilo.bpm, estilo.energia, int(str(dados["semente"])), efeitos_sonoros(cenas),
         )  # fmt: skip
         trilha.gravar(mix, pasta / "trilha.wav")
 
@@ -509,8 +665,11 @@ class Videos:
             for k in (
                 "id", "tema", "artigo", "estilo", "voz", "estado", "etapa", "erro", "titulo",
                 "legenda", "duracao", "criado", "modelo", "duracao_alvo", "permalink", "publicado",
+                "locutor", "linha",
             )
         }  # fmt: skip
+        dados["palavra"] = video.roteiro.get("palavra", "")
+        dados["entrega"] = video.roteiro.get("entrega", "")
         dados["cenas"] = len(video.roteiro.get("cenas", []))
         dados["pronto"] = (self.pasta / video.id / "video.mp4").is_file()
         return dados

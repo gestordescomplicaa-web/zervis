@@ -196,14 +196,19 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
         "marketing_video_criar",
         "Cria um vídeo vertical (Reels) com a marca do usuário, narrado pela voz do Zé, sobre um "
         "tema ou a partir de um artigo do blog (o slug, de marketing_situacao). duracao: 15, 30, "
-        "45 ou 60 segundos (padrão 30). Leva cerca de dois minutos; o Zé avisa quando estiver "
-        "pronto em Marketing. Nada é publicado.",
+        "45 ou 60 segundos (padrão 30). linha: 'empresarios' (para donos de empresa) ou "
+        "'ferramenta' (sobre uma ferramenta); entrega: o que quem comentar recebe no direct; "
+        "palavra: a palavra para comentar (sem elas, o diretor sugere). Leva cerca de dois "
+        "minutos; o Zé avisa quando estiver pronto em Marketing. Nada é publicado.",
         {
             "type": "object",
             "properties": {
                 "tema": {"type": "string"},
                 "artigo": {"type": "string"},
                 "duracao": {"type": "integer", "enum": sorted(roteiro_video.DURACOES)},
+                "linha": {"type": "string", "enum": ["empresarios", "ferramenta"]},
+                "entrega": {"type": "string"},
+                "palavra": {"type": "string"},
             },
         },
     )
@@ -214,6 +219,9 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
                 str(args.get("tema", "")),
                 str(args.get("artigo", "")),
                 duracao=int(args.get("duracao") or roteiro_video.DURACAO_PADRAO),
+                linha=str(args.get("linha", "")),
+                entrega=str(args.get("entrega", "")),
+                palavra=str(args.get("palavra", "")),
             )
         except (videos_mod.VideoErro, ValueError) as erro:
             return _erro(erro)
@@ -265,4 +273,34 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
             return _erro(erro)
         return _texto({"criada": job.resumo(), "id": job.id, "proxima": job.proxima})
 
-    return [*ferramentas_, agendar]
+    @tool(
+        "marketing_video_agendar",
+        "Agenda vídeos da marca sozinhos (ADR 0111): em cada vez, o Zé cria um vídeo e avisa no "
+        "app; publicar no Instagram espera a aprovação do usuário (marketing_video_publicar). "
+        "quando: 'cron 0 9 * * 1,4' (segunda e quinta às 9h), 'a cada 3d'... temas: opcional, "
+        "um por vez na ordem, os já feitos são pulados; sem temas, o Zé escolhe pelo site e "
+        "pelos artigos, sem repetir os últimos vídeos.",
+        {
+            "type": "object",
+            "properties": {
+                "quando": {"type": "string"},
+                "temas": {"type": "array", "items": {"type": "string"}},
+                "duracao": {"type": "integer", "enum": sorted(roteiro_video.DURACOES)},
+            },
+            "required": ["quando"],
+        },
+    )
+    async def agendar_video(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            texto = videos_mod.Videos.pedido_agendado(
+                list(args.get("temas") or []),
+                int(args.get("duracao") or roteiro_video.DURACAO_PADRAO),
+            )
+            job = jobs.criar(
+                "Vídeo da marca", str(args["quando"]), "video", texto, datetime.now(FUSO)
+            )
+        except (JobErro, videos_mod.VideoErro, ValueError) as erro:
+            return _erro(erro)
+        return _texto({"criada": job.resumo(), "id": job.id, "proxima": job.proxima})
+
+    return [*ferramentas_, agendar, agendar_video]

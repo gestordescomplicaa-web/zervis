@@ -12,43 +12,49 @@ palavra por palavra, no tempo da voz; nas cenas visuais, a legenda acompanha emb
 mostra só a ideia, em poucas palavras.
 """
 
+import itertools
 import json
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
-from zervis.video import biblioteca
+from zervis.video import biblioteca, formatos
 from zervis.video.estilos import Estilo
 
-FALA_PALAVRAS = 22
+FALA_PALAVRAS = 16  # uma frase curta por cena: o corte a cada 2 a 4 segundos (ADR 0113)
 PALAVRAS_POR_SEGUNDO = 2.9  # o ritmo medido da voz do Zé (Fish Audio): 95 palavras em 33 s
 LIMITE_LEGENDA = 2200
 # A duração pedida -> (mínimo, máximo) de cenas.
-DURACOES: dict[int, tuple[int, int]] = {15: (3, 4), 30: (4, 7), 45: (6, 9), 60: (7, 11)}
+DURACOES: dict[int, tuple[int, int]] = {15: (4, 6), 30: (6, 10), 45: (8, 13), 60: (10, 16)}
 DURACAO_PADRAO = 30
 CAMERAS = ("empurra", "afasta", "desliza", "parado")
 TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor", "carta", "baralho", "cubo", "fatias")
 FUNDOS = ("escuro", "claro", "cor")
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
+ABERTURAS = ("gancho", "foto", "icone", "numero", "frase")  # o que pode abrir o vídeo
+CORTES_PALAVRAS = 9  # "cortes": uma palavra por tela só cabe numa fala curta
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
 # as composições e o que o modelo lê sobre ele.
 TIPOS: dict[str, dict[str, Any]] = {
     "gancho": {
         "textos": {"rotulo": 28, "destaque": 40},
-        "composicoes": ("centro", "esquerda", "gigante"),
+        "composicoes": ("centro", "esquerda", "gigante", "cortes", "carimbo"),
         "formato": '{"tipo": "gancho", "fala": "...", "destaque": "1 a 3 palavras da fala em cor", '
         '"rotulo": "opcional, até 28 (o assunto, em cápsula)", "composicao": '
-        '"centro|esquerda|gigante"} (a fala aparece inteira na tela, animada; não escreva outro '
-        'texto; "gigante" é uma palavra por linha, enorme: só para falas de até 7 palavras)',
+        '"centro|esquerda|gigante|cortes|carimbo"} (a fala aparece na tela, animada; não escreva '
+        'outro texto; "gigante" é uma palavra por linha, enorme, para até 7 palavras; "cortes" '
+        "põe cada palavra sozinha na tela inteira, num corte seco a cada palavra, para até 9; "
+        '"carimbo" faz o destaque bater na tela como um carimbo, com tremor)',
     },
     "frase": {
         "textos": {"destaque": 40},
-        "composicoes": ("centro", "esquerda", "cheia"),
+        "composicoes": ("centro", "esquerda", "cheia", "cortes", "carimbo"),
         "formato": '{"tipo": "frase", "fala": "...", "destaque": "...", '
-        '"composicao": "centro|esquerda|cheia"} (a fala vira a tipografia; para uma afirmação '
-        'forte; "cheia" pinta a tela inteira com a cor da marca: use uma vez, no momento-chave)',
+        '"composicao": "centro|esquerda|cheia|cortes|carimbo"} (a fala vira a tipografia; para '
+        'uma afirmação forte; "cheia" pinta a tela inteira com a cor da marca; "cortes" e '
+        '"carimbo" como no gancho)',
     },
     "passos": {
         "textos": {"titulo": 32},
@@ -96,6 +102,36 @@ TIPOS: dict[str, dict[str, Any]] = {
         '"opcional, 1 a 3 palavras", "quando": "a palavra da fala em que ele se desenha"} (um '
         "conceito: o ícone enorme se desenha, ondas e faíscas saem dele)",
     },
+    # --- a foto (ADR 0112): uma das fotos da marca ou uma foto livre (Wikimedia), com crédito ---
+    "foto": {
+        "textos": {"foto": 80, "rotulo": 26, "quando": 30},
+        "icones": ("icone",),
+        "composicoes": ("cheia", "polaroid", "janela"),
+        "formato": '{"tipo": "foto", "fala": "...", "foto": "<nome de uma foto da marca> ou '
+        'busca: <o que mostrar, em inglês>", "composicao": "cheia | polaroid | janela", '
+        '"rotulo": "opcional, 1 a 3 palavras", "icone": "<objeto> (só na janela: o ícone que '
+        'salta no canto da foto)", "quando": "palavra da fala"} (o real: "cheia" ocupa a tela, '
+        '"polaroid" cai como uma foto impressa, "janela" é a foto com um ícone que comenta)',
+    },
+    # --- a lista (ADR 0114): um cartão que fica e troca de conteúdo, com o placar embaixo ---
+    "item": {
+        "textos": {
+            "nome": 28,
+            "detalhe": 80,
+            "valor": 14,
+            "categoria": 22,
+            "quando": 30,
+            "mostrar": 80,
+        },
+        "icones": ("icone",),
+        "composicoes": ("cartao",),
+        "formato": '{"tipo": "item", "fala": "...", "nome": "o nome do item, até 28", '
+        '"detalhe": "o que ele faz, uma linha", "valor": "opcional, um número curto do material '
+        '("24h", "3x")", "categoria": "opcional, até 22", "icone": "<objeto>", "mostrar": '
+        '"opcional: logo: <marca> ou busca: <foto>, a imagem do item"} (um item de '
+        "uma lista: itens seguidos ficam no mesmo cartão, que só troca o conteúdo, e um placar "
+        "embaixo acende um selo por item; use de 3 a 8 seguidos, um por cena)",
+    },
     "conexao": {
         "nos": (2, 4, 16),
         "composicoes": ("fluxo",),
@@ -112,24 +148,31 @@ TIPOS: dict[str, dict[str, Any]] = {
         'palavra", "quando": "palavra da fala"}]} (3 a 6 em volta de um centro: tudo ligado a '
         'uma coisa só; a marca no centro com "marca")',
     },
-    "caos": {
-        "textos": {"rotulo": 26, "quando": 30},
-        "composicoes": ("grade",),
-        "formato": '{"tipo": "caos", "fala": "...", "icones": ["4 a 9 objetos"], "rotulo": '
-        '"opcional, o que a ordem significa", "quando": "a palavra da fala em que tudo se '
-        'organiza"} (o problema virando solução: ícones espalhados e tremendo se alinham)',
+    # --- a copy manda (ADR 0115): cada coisa dita vira imagem real, na palavra ---
+    "visual": {
+        "batidas": (1, 4, 18),
+        "composicoes": ("sequencia", "colagem"),
+        "formato": '{"tipo": "visual", "fala": "...", "composicao": "sequencia|colagem", '
+        '"batidas": [{"quando": "a palavra da fala", "mostrar": "logo: <marca> | busca: <2 ou 3 '
+        'palavras em inglês> | <nome de uma foto da marca>", "rotulo": "opcional, até 18"}]} (1 a '
+        '4 batidas: cada coisa concreta da fala aparece na palavra em que é dita; "sequencia" '
+        'troca a imagem inteira a cada batida, em corte seco; "colagem" junta as imagens na '
+        "tela, uma a uma)",
     },
     "fecho": {
-        "textos": {"chamada": 32, "detalhe": 32},
+        "textos": {"chamada": 32, "detalhe": 32, "palavra": 16},
         "obrigatorios": ("chamada",),
-        "composicoes": ("marca",),
+        "composicoes": ("marca", "chamada", "comenta"),
         "formato": '{"tipo": "fecho", "fala": "...", "chamada": "o convite, até 32", '
-        '"detalhe": "opcional (por exemplo, Link na bio)"}',
+        '"detalhe": "opcional (por exemplo, Link na bio)", "composicao": "marca|chamada|comenta"} '
+        '("marca" é o logo em 3D girando; "chamada" é o convite enorme na cor da marca, com uma '
+        'seta para o link; "comenta" pede um comentário com uma palavra ("palavra": "VÍDEO", e a '
+        'fala diz "comenta vídeo que eu te mando..."); alterne entre os vídeos)',
     },
 }
 for _regra in TIPOS.values():
     _regra.setdefault("obrigatorios", tuple(_regra.get("listas", {})) or ())
-DE_ARTE = ("icone", "conexao", "hub", "caos")
+DE_ARTE = ("icone", "conexao", "hub", "foto", "visual")
 DE_CARTAO = ("passos", "lista", "antes_depois", "conversa")
 
 PROMPT = """Você é o diretor de criação de um Reels (vídeo vertical, cerca de {duracao} segundos)
@@ -143,16 +186,19 @@ escreva a fala do vídeo inteiro e divida em cenas; cada cena tem um papel só (
 provar, convidar) e um jeito de mostrar.
 
 Responda só com JSON, sem texto em volta:
-{{"objetivo": "...", "publico": "...", "titulo": "...", "legenda": "...",
+{{"objetivo": "...", "publico": "...", "formato": "...", "palavra": "...", "entrega": "...",
+"titulo": "...", "legenda": "...",
 "cenas": [{{"tipo": "...", "fala": "...", "camera": "...", "transicao": "...", ...}}]}}
 
 O limite mais importante: **a fala inteira tem de {minimo_palavras} a {total} palavras**. Conte
 antes de responder; passou, corte. Um bom Reels diz pouco e mostra muito.
 
 Regras:
-- De {minimo} a {maximo} cenas. A primeira é um "gancho" (a frase que faz parar de rolar, nos
-  dois primeiros segundos); a última, um "fecho".
-- fala: português do Brasil falado, uma ou duas frases curtas, até {fala} palavras. Sem siglas
+- De {minimo} a {maximo} cenas. A primeira prende (veja Formato e gancho); a última é um
+  "fecho".
+- **Ritmo de edição:** um corte a cada 2 a 4 segundos. Uma ideia por cena; quando a ideia é
+  grande, quebre em duas cenas seguidas com um "corte" entre elas. Vídeo lento parece pronto.
+- fala: português do Brasil falado, uma frase curta, até {fala} palavras. Sem siglas
   difíceis de falar e sem emojis. Números como se fala ("treze de novembro").
 - **A tela não repete a fala.** Em "gancho" e "frase" a própria fala aparece animada; não escreva
   outro texto. Nas outras cenas, a legenda já mostra a fala: a tela mostra só a ideia, em poucas
@@ -170,17 +216,22 @@ Regras:
   tiras (revelação forte). Use 4 a 6 tipos no vídeo, pelo menos dois desses de carta, e nunca a
   mesma transição em cenas seguidas; "corte" nos momentos de impacto.
 - fundo: {fundos}. Alterne: cenas seguidas com fundos diferentes, como cartas diferentes do
-  baralho; pelo menos uma "claro" e uma "cor". "escuro" no gancho e no fecho.
-- **Mostre, não escreva.** Pelo menos metade das cenas entre o gancho e o fecho são de arte
-  (icone, conexao, hub, caos): a ideia vira um ícone que se desenha, um fluxo por onde correm
-  dados, uma constelação em volta de um centro, o caos que vira ordem. Cartões de texto (passos,
-  lista, antes_depois, conversa) no máximo dois no vídeo. Pense numa analogia para cada ideia.
+  baralho; pelo menos uma "claro" e uma "cor".
+- **A copy é a mãe da animação.** Escreva a fala primeiro; depois faça cada coisa concreta que
+  ela diz aparecer na tela na palavra em que é dita: "prédio" vira a foto de um prédio,
+  "WhatsApp" vira o logo do WhatsApp, "planilha" vira o logo do Google Planilhas. A maior parte
+  das cenas é "visual" (as batidas) ou "item" com imagem. Use logos de empresas que existem
+  ("logo: whatsapp", "logo: google calendar", "logo: ifood", "logo: instagram") e fotos
+  ("busca: office building"). Ícone desenhado, conexão e hub só quando não houver coisa real para
+  mostrar. Cartões de texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
 - Não invente números, casos, clientes nem depoimentos. "numero" só com um dado do material,
   com a fonte. Uma "conversa" é sempre um exemplo.
 - titulo: até 60 caracteres. legenda: a do Instagram, de 300 a 1.000 caracteres, com o gancho, a
   explicação em parágrafos curtos, a chamada, no máximo 3 emojis e até 5 hashtags no fim.
 {tom}
+{formatos}
+{entrega}
 Tipos de cena:
 {tipos}
 
@@ -188,7 +239,7 @@ Tipos de cena:
 "delivery truck", "tooth", "dumbbell", "scissors", "shopping cart", "calendar" (o Zé tem 1.500
 desenhos e acha o mais parecido). Prefira o objeto do assunto ao símbolo genérico: para uma
 pizzaria, "pizza", não "store"; para uma clínica, "stethoscope", não "heart".
-
+{fotos}{recentes}
 ## Linha editorial (o manual do site)
 {manual}
 """
@@ -205,6 +256,9 @@ class Roteiro:
     cenas: list[dict[str, Any]] = field(default_factory=list)
     objetivo: str = ""
     publico: str = ""
+    formato: str = ""
+    palavra: str = ""  # a palavra para comentar (ADR 0116)
+    entrega: str = ""  # o que quem comenta recebe no direct
 
     @property
     def falas(self) -> list[str]:
@@ -213,6 +267,9 @@ class Roteiro:
     def para_json(self) -> dict[str, Any]:
         return {
             "objetivo": self.objetivo,
+            "formato": self.formato,
+            "palavra": self.palavra,
+            "entrega": self.entrega,
             "publico": self.publico,
             "titulo": self.titulo,
             "legenda": self.legenda,
@@ -244,8 +301,75 @@ def tipos_do_estilo(estilo: Estilo) -> dict[str, str]:
     return {**{t: d["formato"] for t, d in TIPOS.items()}, **extras}
 
 
+def receita(cenas: list[dict[str, Any]]) -> str:
+    """O esqueleto de um vídeo: tipo, transição e fundo de cada cena, em ordem."""
+    return " → ".join(
+        f"{c.get('tipo')} ({c.get('composicao')}, {c.get('transicao')}, {c.get('fundo', 'escuro')})"
+        for c in cenas
+    )
+
+
+def miolo(cenas: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Os tipos entre o gancho e o fecho: o que faz dois vídeos parecerem o mesmo."""
+    return tuple(str(c.get("tipo")) for c in cenas[1:-1])
+
+
+def secao_recentes(recentes: list[dict[str, Any]]) -> str:
+    """A memória dos últimos vídeos para o diretor: o tema, o gancho e a receita de cada um,
+    com o pedido de fazer diferente (sem isso, o modelo repete a receita que deu certo)."""
+    if not recentes:
+        return ""
+    linhas = []
+    for r in recentes:
+        cenas = r.get("cenas") or []
+        gancho = cenas[0].get("fala", "") if cenas else ""
+        formato = r.get("formato") or "livre"
+        linhas.append(
+            f'- "{r.get("titulo", "")}" · formato: {formato} · gancho: "{gancho}" · '
+            f"{receita(cenas)}"
+        )
+    return (
+        "\n## Os últimos vídeos desta marca (não repita a receita)\n"
+        + "\n".join(linhas)
+        + "\nFaça este diferente de todos eles: outro formato, outra sequência de tipos, um "
+        "gancho que abre de outro jeito (pergunta, número, cena, provocação), transições e fundos "
+        "em outra ordem e analogias novas. Não repita um tema já tratado.\n"
+    )
+
+
+def secao_fotos(fotos: list[str]) -> str:
+    """As imagens que o diretor pode pedir: as fotos da marca pelo nome, a foto livre e o logo."""
+    da_marca = (
+        "Fotos da marca (o nome exato; são as mais fortes, é o real de quem fala): "
+        + ", ".join(fotos[:40])
+        if fotos
+        else "A marca ainda não tem fotos próprias."
+    )
+    return (
+        f'\n## Imagens (o que "mostrar" aceita)\n{da_marca}\n'
+        '- "logo: <marca>": o logo de uma empresa que existe, na cor dela ("logo: whatsapp", '
+        '"logo: google sheets", "logo: mercado pago"). Só marcas que a fala cita de verdade.\n'
+        '- "busca: <2 ou 3 palavras concretas em inglês>": uma foto livre de uma coisa ou um lugar '
+        '("busca: office building", "busca: mechanic workshop"); nunca uma pessoa. Seja '
+        'específico: "car dashboard", não "car interior" (que traz vagão de trem).\n'
+        '- "site: <endereço>": o print do site de uma ferramenta, numa janela de navegador ("site: '
+        'n8n.io"); até 3 por vídeo, só de sites de verdade que a fala cita.\n'
+        'Até 12 imagens livres por vídeo. A cena "foto" mostra uma imagem grande sozinha; a '
+        '"visual" mostra várias, cada uma na sua palavra.\n'
+    )
+
+
 def montar_prompt(
-    marca: str, pedido: str, manual: str, estilo: Estilo, duracao: int = DURACAO_PADRAO
+    marca: str,
+    pedido: str,
+    manual: str,
+    estilo: Estilo,
+    duracao: int = DURACAO_PADRAO,
+    recentes: list[dict[str, Any]] | None = None,
+    fotos: list[str] | None = None,
+    linha: str = "",
+    entrega: str = "",
+    palavra: str = "",
 ) -> str:
     minimo, maximo, minimo_palavras, total = limites(duracao)
     return PROMPT.format(
@@ -263,6 +387,10 @@ def montar_prompt(
         tom=f"- Tom: {estilo.tom}\n" if estilo.tom else "",
         tipos="\n".join(f"- {formato}" for formato in tipos_do_estilo(estilo).values()),
         manual=manual or "(o site não tem manual; use um tom profissional, claro e direto)",
+        recentes=secao_recentes(recentes or []),
+        formatos=formatos.secao(),
+        entrega=formatos.secao_entrega(linha, entrega, palavra),
+        fotos=secao_fotos(fotos or []),
     )
 
 
@@ -276,7 +404,7 @@ def icones_usados(cenas: list[dict[str, Any]]) -> set[str]:
     for c in cenas:
         if isinstance(c.get("icone"), str):
             nomes.add(c["icone"])
-        for campo in ("nos", "ao_redor"):
+        for campo in ("nos", "ao_redor", "batidas"):
             nomes.update(str(x.get("icone", "")) for x in c.get(campo) or [])
         if isinstance(c.get("centro"), dict):
             nomes.add(str(c["centro"].get("icone", "")))
@@ -344,11 +472,15 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
     cena["composicao"] = composicao if composicao in composicoes else composicoes[0]
     if cena["composicao"] == "gigante" and tipo == "gancho" and len(fala.split()) > 7:
         cena["composicao"] = "centro"  # uma palavra por linha só cabe com fala curta
+    if cena["composicao"] == "cortes" and len(fala.split()) > CORTES_PALAVRAS:
+        cena["composicao"] = "carimbo"  # uma palavra por tela, só com fala curta
     for campo, limite in regra.get("textos", {}).items():
         if valor := _texto(bruta.get(campo), limite):
             cena[campo] = valor
     if "quando" in cena:
         cena["quando"] = _quando(cena["quando"], fala)
+    if tipo == "foto" and not cena.get("foto"):
+        raise RoteiroErro("A cena foto precisa da foto (o nome de uma foto da marca ou a busca).")
     for campo, (minimo, maximo, limite) in regra.get("listas", {}).items():
         itens = _itens(bruta.get(campo), limite, fala)[:maximo]
         if len(itens) < minimo:
@@ -394,11 +526,20 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
                 "icone": "marca" if marca else _icone(centro.get("icone")),
                 "rotulo": _texto(centro.get("rotulo"), limite),
             }
-    if tipo == "caos":
-        nomes = [_icone(x) for x in (bruta.get("icones") or []) if isinstance(x, str)][:9]
-        if len(nomes) < 4:
-            raise RoteiroErro("A cena caos precisa de pelo menos 4 ícones.")
-        cena["icones"] = nomes
+    if "batidas" in regra:
+        minimo, maximo, limite = regra["batidas"]
+        batidas = [
+            {
+                "quando": _quando(b.get("quando"), fala),
+                "mostrar": _texto(b.get("mostrar"), 80),
+                "rotulo": _texto(b.get("rotulo"), limite),
+            }
+            for b in (bruta.get("batidas") or [])
+            if isinstance(b, dict) and str(b.get("mostrar", "")).strip()
+        ][:maximo]
+        if len(batidas) < minimo:
+            raise RoteiroErro("A cena visual precisa de pelo menos uma batida (o que mostrar).")
+        cena["batidas"] = batidas
     if tipo == "numero" and not re.search(r"\d", cena.get("valor", "")):
         raise RoteiroErro("O número da cena não tem número.")
     faltando = [c for c in regra["obrigatorios"] if not cena.get(c)]
@@ -423,8 +564,14 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     if not isinstance(brutas, list) or not minimo <= len(brutas) <= maximo:
         raise RoteiroErro(f"O roteiro precisa de {minimo} a {maximo} cenas.")
     cenas = [_cena(c, estilo.cenas_extras) for c in brutas]
-    if cenas[0]["tipo"] != "gancho" or cenas[-1]["tipo"] != "fecho":
-        raise RoteiroErro("O roteiro precisa começar com um gancho e terminar com um fecho.")
+    for antes, cena in itertools.pairwise(cenas):
+        if antes["tipo"] == cena["tipo"] == "item":
+            # itens seguidos são o mesmo cartão: o mesmo fundo, sem transição
+            cena["fundo"], cena["transicao"] = antes["fundo"], "corte"
+    if cenas[0]["tipo"] not in ABERTURAS or cenas[-1]["tipo"] != "fecho":
+        raise RoteiroErro(
+            f"O roteiro precisa abrir com {', '.join(ABERTURAS)} e terminar com um fecho."
+        )
     palavras = sum(len(c["fala"].split()) for c in cenas)
     if palavras > total + 10:
         raise RoteiroErro(
@@ -432,6 +579,11 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
             f"Corte {palavras - total} palavras ou mais: frases mais curtas e, se precisar, uma "
             "cena a menos."
         )
+    # o fecho é sempre o "comenta" (a entrega é o motivo de comentar)
+    fecho = cenas[-1]
+    palavra = _texto(fecho.get("palavra") or dados.get("palavra"), 16)
+    palavra = palavra or _texto((str(fecho.get("chamada", "")).split() or ["comenta"])[0], 16)
+    fecho.update(composicao="comenta", palavra=palavra)
     titulo = _texto(dados.get("titulo"), 60) or _texto(cenas[0]["fala"], 60)
     return Roteiro(
         titulo,
@@ -439,6 +591,9 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
         cenas,
         _texto(dados.get("objetivo"), 200),
         _texto(dados.get("publico"), 200),
+        formato if (formato := str(dados.get("formato", ""))) in formatos.FORMATOS else "",
+        palavra.upper(),
+        _texto(dados.get("entrega"), 140),
     )
 
 
@@ -457,7 +612,7 @@ def tempos_dos_gatilhos(cena: dict[str, Any], palavras: list[dict[str, Any]]) ->
         return None
 
     saida: dict[str, Any] = {}
-    for campo in ("passos", "itens", "mensagens", "nos", "ao_redor"):
+    for campo in ("passos", "itens", "mensagens", "nos", "ao_redor", "batidas"):
         if campo in cena:
             saida[f"tempos_{campo}"] = [achar(str(x.get("quando", ""))) for x in cena[campo]]
     if cena.get("quando"):
