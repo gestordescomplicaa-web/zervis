@@ -274,6 +274,7 @@ class AcoesMarketing(Pagina):
             "vozes": v.vozes(),
             "paleta": v.paleta(),
             "locutor": v.locutor_padrao(),
+            "preferencias": v.preferencias(),
             "indisponivel": v.disponivel(),
             "instagram": marketing_posts.PADRAO.instagram.conectado,
             "publicavel": bool(marketing_posts.PADRAO.endereco()),
@@ -302,6 +303,14 @@ class AcoesMarketing(Pagina):
         )
         atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")
         return {**self.videos(), "aviso": "Criando o vídeo. Aviso quando estiver pronto."}
+
+    def preferencias_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """As escolhas do cartão Vídeos, guardadas assim que mudam."""
+        try:
+            prefs = videos.PADRAO.guardar_preferencias(dados)
+        except (TypeError, ValueError) as erro:
+            raise PedidoInvalido("Escolha inválida.") from erro
+        return {"preferencias": prefs}
 
     def paleta_video(self, dados: dict[str, Any]) -> dict[str, Any]:
         """A paleta dos vídeos: a da marca ou a de um site (o Zé tira as cores do site)."""

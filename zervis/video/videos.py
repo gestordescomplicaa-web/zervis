@@ -373,6 +373,42 @@ class Videos:
             cores.update(escolha["cores"])
         return {**cores, **paleta.tinta_e_papel(cores)}
 
+    # --- as escolhas do cartão Vídeos (lembradas entre uma visita e outra) ------------------
+
+    def preferencias(self) -> dict[str, Any]:
+        """O que quem usa escolheu por último no cartão Vídeos; vale também para os vídeos
+        agendados e os pedidos pela voz (quando eles não dizem o contrário)."""
+        try:
+            dados = json.loads((self.pasta / "preferencias.json").read_text())
+        except (OSError, ValueError):
+            dados = {}
+        dados = dados if isinstance(dados, dict) else {}
+        duracao = dados.get("duracao")
+        return {
+            "linha": dados["linha"] if dados.get("linha") in formatos.LINHAS else "",
+            "duracao": duracao if duracao in roteiro.DURACOES else roteiro.DURACAO_PADRAO,
+            "modelo": dados["modelo"] if dados.get("modelo") in MODELOS else MODELO,
+            "estilo": estilos.achar(str(dados.get("estilo") or estilos.PADRAO)).id,
+            "voz": dados.get("voz") is not False,
+            "locutor": self.locutor_padrao(),
+        }
+
+    def guardar_preferencias(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Guarda as escolhas que vieram (as outras ficam como estavam), conferidas."""
+        atual = self.preferencias()
+        if "locutor" in dados:
+            self._guardar_locutor(re.sub(r"[^a-z0-9]", "", str(dados["locutor"]).lower())[:40])
+        novas = {
+            "linha": str(dados.get("linha", atual["linha"])),
+            "duracao": int(dados.get("duracao") or atual["duracao"]),
+            "modelo": str(dados.get("modelo", atual["modelo"])),
+            "estilo": str(dados.get("estilo", atual["estilo"])),
+            "voz": dados.get("voz", atual["voz"]) is not False,
+        }
+        self.pasta.mkdir(parents=True, exist_ok=True)
+        (self.pasta / "preferencias.json").write_text(json.dumps(novas))
+        return self.preferencias()
+
     def locutor_padrao(self) -> str:
         try:
             return str(json.loads((self.pasta / "locutor.json").read_text()).get("id", ""))
@@ -449,16 +485,23 @@ class Videos:
         self,
         tema: str = "",
         artigo: str = "",
-        estilo: str = estilos.PADRAO,
-        voz: bool = True,
+        estilo: str | None = None,
+        voz: bool | None = None,
         esperar: bool = False,
-        duracao: int = roteiro.DURACAO_PADRAO,
-        modelo: str = MODELO,
+        duracao: int | None = None,
+        modelo: str | None = None,
         locutor: str | None = None,
-        linha: str = "",
+        linha: str | None = None,
         entrega: str = "",
         palavra: str = "",
     ) -> Video:
+        # o que não veio (o agendado, a voz) sai das escolhas do cartão Vídeos
+        prefs = self.preferencias()
+        estilo = prefs["estilo"] if estilo is None else estilo
+        voz = prefs["voz"] if voz is None else voz
+        duracao = prefs["duracao"] if duracao is None else duracao
+        modelo = prefs["modelo"] if modelo is None else modelo
+        linha = prefs["linha"] if linha is None else linha
         tema, artigo = " ".join(tema.split())[:200], artigo.strip()
         if not tema and not artigo:
             raise VideoErro("Diga o tema do vídeo ou o artigo de origem.")
