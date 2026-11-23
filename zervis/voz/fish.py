@@ -21,6 +21,14 @@ CADASTRO = "https://fish.audio/app/developers"
 MODELO = "s2.1-pro"
 MODELO_GRATIS = "s2.1-pro-free"
 NOMES_MODELOS = {MODELO: "S2.1 Pro", MODELO_GRATIS: "S2.1 Pro Free"}
+# Os modelos que um vídeo pode pedir (o seletor "Qualidade da voz" do cartão Vídeos), com a nota
+# da tela; preços da documentação do Fish em 23/11/2026, por milhão de bytes de texto.
+MODELOS_VOZ = {
+    MODELO: "S2.1 Pro · alta qualidade",
+    "drama-3": "Drama 3 · a mais expressiva",
+    "s2-pro": "S2 Pro",
+    MODELO_GRATIS: "S2.1 Pro Free · grátis até 30/11/2026",
+}
 TAXA = 44100
 IDIOMA = "pt"
 POPULARES = 20  # vozes da biblioteca em português, as mais usadas

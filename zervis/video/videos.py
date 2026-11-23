@@ -56,6 +56,8 @@ PASTA = lugares.DADOS / "marketing" / "videos"
 MODELOS = {"claude-opus-5-5": "Opus 5.5", "claude-sonnet-5-5": "Sonnet 5.5"}
 MODELO = "claude-opus-5-5"
 PENSAMENTO = 3000  # tokens de raciocínio: contar as palavras e variar as cenas cabe aqui
+# os modelos do Fish que um vídeo pode pedir (o seletor "Qualidade da voz")
+MODELOS_VOZ = ("s2.1-pro", "drama-3", "s2-pro", "s2.1-pro-free")
 # a memória do diretor: quantos vídeos recentes ele vê para não repetir a receita
 RECENTES = 5
 # o vídeo agendado sem tema da lista nem artigo novo: o diretor escolhe
@@ -116,6 +118,7 @@ class Video:
     publicado: float = 0.0
     publicando_desde: float = 0.0  # epoch: quando o pedido de publicar saiu
     locutor: str = ""  # "" a voz da página Voz; "cadu"; ou o id de uma voz do Fish (ADR 0113)
+    modelo_voz: str = ""  # o modelo do Fish deste vídeo; "" o da página Voz
     linha: str = ""  # "empresarios" ou "ferramenta"; vazio: o diretor escolhe (ADR 0116)
     entrega: str = ""  # o que quem comentar recebe, se quem pediu disse; vazio: o diretor sugere
     palavra: str = ""  # a palavra para comentar, se quem pediu disse
@@ -140,10 +143,10 @@ def _ouvinte_do_ze() -> narracao.Ouvir | None:
     return lambda wav: deepgram.palavras(chave, wav, "audio/wav")
 
 
-def _sintetizador_do_ze(locutor: str = "") -> narracao.Sintetizar:
+def _sintetizador_do_ze(locutor: str = "", modelo: str = "") -> narracao.Sintetizar:
     from zervis.voz import nuvem
 
-    return narracao.sintetizador(nuvem.Motor(), locutor)
+    return narracao.sintetizador(nuvem.Motor(), locutor, modelo)
 
 
 def _vozes_do_fish() -> list[dict[str, str]]:
@@ -373,6 +376,11 @@ class Videos:
             cores.update(escolha["cores"])
         return {**cores, **paleta.tinta_e_papel(cores)}
 
+    def _sintetizador(self, video: Video) -> narracao.Sintetizar:
+        if video.modelo_voz:
+            return self.sintetizador(video.locutor, video.modelo_voz)
+        return self.sintetizador(video.locutor) if video.locutor else self.sintetizador()
+
     # --- as escolhas do cartão Vídeos (lembradas entre uma visita e outra) ------------------
 
     def preferencias(self) -> dict[str, Any]:
@@ -391,6 +399,7 @@ class Videos:
             "estilo": estilos.achar(str(dados.get("estilo") or estilos.PADRAO)).id,
             "voz": dados.get("voz") is not False,
             "locutor": self.locutor_padrao(),
+            "modelo_voz": dados["modelo_voz"] if dados.get("modelo_voz") in MODELOS_VOZ else "",
         }
 
     def guardar_preferencias(self, dados: dict[str, Any]) -> dict[str, Any]:
@@ -404,6 +413,7 @@ class Videos:
             "modelo": str(dados.get("modelo", atual["modelo"])),
             "estilo": str(dados.get("estilo", atual["estilo"])),
             "voz": dados.get("voz", atual["voz"]) is not False,
+            "modelo_voz": str(dados.get("modelo_voz", atual["modelo_voz"])),
         }
         self.pasta.mkdir(parents=True, exist_ok=True)
         (self.pasta / "preferencias.json").write_text(json.dumps(novas))
@@ -492,6 +502,7 @@ class Videos:
         modelo: str | None = None,
         locutor: str | None = None,
         linha: str | None = None,
+        modelo_voz: str | None = None,
         entrega: str = "",
         palavra: str = "",
     ) -> Video:
@@ -502,6 +513,7 @@ class Videos:
         duracao = prefs["duracao"] if duracao is None else duracao
         modelo = prefs["modelo"] if modelo is None else modelo
         linha = prefs["linha"] if linha is None else linha
+        modelo_voz = prefs["modelo_voz"] if modelo_voz is None else modelo_voz
         tema, artigo = " ".join(tema.split())[:200], artigo.strip()
         if not tema and not artigo:
             raise VideoErro("Diga o tema do vídeo ou o artigo de origem.")
@@ -522,6 +534,7 @@ class Videos:
         video = Video(
             uuid.uuid4().hex[:8], tema, artigo, "", estilos.achar(estilo).id, voz, modelo=modelo,
             duracao_alvo=duracao, locutor=locutor,
+            modelo_voz=modelo_voz if modelo_voz in MODELOS_VOZ else "",
             linha=linha if linha in formatos.LINHAS else "",
             entrega=" ".join(entrega.split())[:140],
             palavra=re.sub(r"[^\wÀ-ÿ]", "", palavra)[:16].upper(),
@@ -633,9 +646,7 @@ class Videos:
         minimos = [MINIMOS[c["tipo"]](c) if c["tipo"] in MINIMOS else 3.0 for c in r.cenas]
         n = narracao.narrar(
             r.falas,
-            (self.sintetizador(video.locutor) if video.locutor else self.sintetizador())
-            if video.voz
-            else None,
+            self._sintetizador(video) if video.voz else None,
             minimos,
             estilo.bpm,
             self.ouvinte() if video.voz else None,
@@ -758,7 +769,7 @@ class Videos:
             for k in (
                 "id", "tema", "artigo", "estilo", "voz", "estado", "etapa", "erro", "titulo",
                 "legenda", "duracao", "criado", "modelo", "duracao_alvo", "permalink", "publicado",
-                "locutor", "linha",
+                "locutor", "linha", "modelo_voz",
             )
         }  # fmt: skip
         dados["palavra"] = video.roteiro.get("palavra", "")

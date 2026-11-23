@@ -21,6 +21,7 @@ from zervis.redes.instagram import InstagramErro
 from zervis.video import estilos as estilos_video
 from zervis.video import roteiro as roteiro_video
 from zervis.video import videos
+from zervis.voz import fish
 
 
 class AcoesMarketing(Pagina):
@@ -275,6 +276,10 @@ class AcoesMarketing(Pagina):
             "paleta": v.paleta(),
             "locutor": v.locutor_padrao(),
             "preferencias": v.preferencias(),
+            "modelos_voz": [
+                {"id": "", "nome": "Igual à página Voz"},
+                *({"id": k, "nome": n} for k, n in fish.MODELOS_VOZ.items()),
+            ],
             "indisponivel": v.disponivel(),
             "instagram": marketing_posts.PADRAO.instagram.conectado,
             "publicavel": bool(marketing_posts.PADRAO.endereco()),
@@ -296,6 +301,7 @@ class AcoesMarketing(Pagina):
                 duracao=int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
                 modelo=str(dados.get("modelo") or videos.MODELO),
                 locutor=str(dados.get("locutor", "")) if "locutor" in dados else None,
+                modelo_voz=str(dados["modelo_voz"]) if "modelo_voz" in dados else None,
                 linha=str(dados.get("linha", "")),
                 entrega=str(dados.get("entrega", "")),
                 palavra=str(dados.get("palavra", "")),
