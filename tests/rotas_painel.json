@@ -191,6 +191,8 @@
     "marketing/metricas/remover",
     "marketing/fotos",
     "marketing/foto/remover",
+    "marketing/instagram/avisos",
+    "marketing/instagram/avisos/remover",
     "marketing/instagram/comentarios",
     "marketing/instagram/direct",
     "marketing/instagram/direct/devolver",

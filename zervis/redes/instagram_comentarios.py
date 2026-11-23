@@ -1,8 +1,9 @@
 """Os comentários do Instagram viram conversa no direct (ADR 0118).
 
 Quem usa quer converter quem comenta (um empresário) numa conversa de diagnóstico e numa reunião;
-não entregar brinde. Então, ligado na página, o Zé confere os comentários novos dos posts a cada
-dois minutos e, para cada um (de qualquer pessoa, com qualquer texto):
+não entregar brinde. Então, ligado na página, o Zé confere os comentários novos dos posts (na
+hora, pelo aviso da Meta, ADR 0122; sem ele, a cada dois minutos) e, para cada um (de qualquer
+pessoa, com qualquer texto):
 
 1. responde em público com uma frase curta, variada ("Te chamei no direct 👊");
 2. manda a abertura no direct (a "resposta privada" da Meta: uma por comentário, em até 7 dias),

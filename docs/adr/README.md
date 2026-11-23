@@ -129,3 +129,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0119](0119-conversa-no-direct.md) | A conversa no direct leva à reunião | Aceito |
 | [0120](0120-convite-dos-videos.md) | O fim dos vídeos convida para a conversa, não para um brinde | Aceito |
 | [0121](0121-fotos-livres-sem-credito.md) | Fotos livres só as que dispensam o crédito | Aceito |
+| [0122](0122-avisos-do-instagram-na-hora.md) | Os avisos do Instagram na hora | Aceito |

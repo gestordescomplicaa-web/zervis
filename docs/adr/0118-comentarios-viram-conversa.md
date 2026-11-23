@@ -2,7 +2,8 @@
 
 - Data: 23/11/2026
 - Status: **Aceito** (pedido de quem usa; teste controlado com uma conta de fora aprovado em
-  23/11/2026).
+  23/11/2026); a resposta na hora, pelos avisos da Meta, veio no
+  [ADR 0122](0122-avisos-do-instagram-na-hora.md).
 - Etapa 1 de 4 do funil do Instagram. Usa a conta dos posts ([ADR 0093](0093-posts-do-instagram.md)).
 
 ## Contexto

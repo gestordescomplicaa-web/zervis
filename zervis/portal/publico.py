@@ -1,10 +1,14 @@
-"""Links públicos temporários: um arquivo que alguém de fora precisa buscar sem entrar no painel.
+"""O que alguém de fora (a Meta) alcança sem entrar no painel: os links públicos temporários e a
+rota dos avisos do Instagram (ADR 0122).
 
 O Instagram não recebe a imagem de um post nem o vídeo de um Reels: recebe um link, e os
 servidores da Meta o buscam (ADR 0093 e 0109). O Zé abre um link com um segredo longo
 (`token_urlsafe(32)`), só para os arquivos daquele post e por poucos minutos, e o fecha assim que
 publica. Nada mais do painel fica aberto: a rota só entrega um arquivo registrado, pelo nome
 exato, dentro do prazo.
+
+Os avisos da Meta chegam em `/instagram/webhook` e quem confere é `redes.instagram_webhook`: o
+desafio só com o token de verificação dele, o aviso só assinado com a chave secreta do app.
 """
 
 import secrets
@@ -16,6 +20,8 @@ from pathlib import Path
 from typing import Any
 
 PREFIXO = "/publico/"
+AVISOS = "/instagram/webhook"  # o mesmo `redes.instagram_webhook.CAMINHO`
+MAXIMO_AVISO = 64 * 1024
 PRAZO_S = 15 * 60.0
 TIPOS = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".mp4": "video/mp4"}
 
@@ -90,3 +96,39 @@ def responder_head(pedido: Any) -> None:
     else:
         pedido.send_header("Content-Length", "0")
     pedido.end_headers()
+
+
+def e_publico(caminho: str) -> bool:
+    return caminho.startswith(PREFIXO) or caminho == AVISOS
+
+
+def responder(pedido: Any, metodo: str) -> None:
+    """O GET de um link público (o arquivo, pelo segredo do link, dentro do prazo, ADR 0093) e o
+    GET e o POST dos avisos do Instagram (ADR 0122). `pedido` é o tratador do painel."""
+    from zervis.redes import instagram_webhook
+
+    caminho, _, consulta = str(pedido.path).partition("?")
+    if caminho != AVISOS:
+        achado = PADRAO.arquivo(caminho)
+        if achado is None:
+            pedido._json(404, {"erro": "não existe"})
+        else:
+            pedido._enviar(200, *achado)
+        return
+    avisos = instagram_webhook.PADRAO
+    if metodo == "GET":
+        desafio = avisos.desafio(consulta)
+        if desafio is None:
+            pedido._json(403, {"erro": "token"})
+        else:
+            pedido._enviar(200, desafio.encode(), "text/plain")
+        return
+    tamanho = int(pedido.headers.get("Content-Length") or 0)
+    if tamanho > MAXIMO_AVISO:
+        pedido._json(413, {"erro": "grande demais"})
+        return
+    corpo = pedido.rfile.read(tamanho)
+    if avisos.receber(corpo, pedido.headers.get("X-Hub-Signature-256", "")):
+        pedido._json(200, {"ok": True})
+    else:
+        pedido._json(403, {"erro": "assinatura"})
