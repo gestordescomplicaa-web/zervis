@@ -191,6 +191,7 @@
     "marketing/metricas/remover",
     "marketing/fotos",
     "marketing/foto/remover",
+    "marketing/instagram/comentarios",
     "tv/procurar",
     "tv/abrir",
     "tv/fechar",

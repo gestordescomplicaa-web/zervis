@@ -16,6 +16,7 @@ from zervis.marca import CORES_PADRAO
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
+from zervis.redes import instagram_comentarios
 from zervis.video import estilos as estilos_video
 from zervis.video import roteiro as roteiro_video
 from zervis.video import videos
@@ -35,6 +36,7 @@ class AcoesMarketing(Pagina):
             "prs": m.prs(),
             "posts": [marketing_posts.PADRAO.para_tela(p) for p in marketing_posts.PADRAO.listar()],
             "videos": self.videos(),
+            "comentarios": self._comentarios(),
             "marca": self._marca(),
             "automaticos": self._automaticos("artigo"),
             "videos_automaticos": self._automaticos("video"),
@@ -55,6 +57,33 @@ class AcoesMarketing(Pagina):
                 item["duracao"] = pedido.get("duracao")
             saida.append(item)
         return saida
+
+    # --- os comentários do Instagram viram conversa no direct (ADR 0118) --------------------
+
+    def _comentarios(self) -> dict[str, Any]:
+        c = instagram_comentarios.PADRAO
+        e = c.estado()
+        return {
+            "ligado": e["ligado"],
+            "conectado": marketing_posts.PADRAO.instagram.conectado,
+            "contatos": len(e["contatos"]),
+            "recentes": [
+                {k: x.get(k) for k in ("autor", "texto", "quando", "publico", "direct", "erro")}
+                for x in c.recentes(8)
+            ],
+        }
+
+    def ligar_comentarios(self, dados: dict[str, Any]) -> dict[str, Any]:
+        ligado = dados.get("ligado") is True
+        if ligado and not marketing_posts.PADRAO.instagram.conectado:
+            raise PedidoInvalido("Conecte o Instagram em Redes sociais.")
+        instagram_comentarios.PADRAO.ligar(ligado)
+        atividade.PADRAO.registrar(
+            "execucao",
+            "Respostas aos comentários do Instagram " + ("ligadas" if ligado else "desligadas"),
+            origem="painel",
+        )
+        return {**self.marketing(), "aviso": "Ligado." if ligado else "Desligado."}
 
     def guardar_site(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:
