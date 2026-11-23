@@ -61,8 +61,8 @@ export function cartaoVideos(r, vs = r.videos) {
       <label>Tema do vídeo<input id="mk-video-tema" placeholder="Ex.: como o WhatsApp perde clientes à noite" autocomplete="off"></label>
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-video-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
       <label>Para quem<select id="mk-video-linha" data-mudar="video-preferencia">${[["", "O Zé escolhe pelo tema"], ["empresarios", "Empresários"], ["ferramenta", "Ferramenta"]].map(([v, n]) => `<option value="${v}" ${v === pr.linha ? "selected" : ""}>${n}</option>`).join("")}</select></label>
-      <label>Entrega<input id="mk-video-entrega" placeholder="O que quem comentar recebe. Ex.: o link e o passo a passo" autocomplete="off"></label>
-      <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: OFICINA" maxlength="16" autocomplete="off"></label>
+      <label>Entrega<input id="mk-video-entrega" placeholder="Opcional. Sem ela: uma conversa no direct sobre o negócio da pessoa" autocomplete="off"></label>
+      <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: O SEU RAMO" maxlength="16" autocomplete="off"></label>
       <label>Duração<select id="mk-video-duracao" data-mudar="video-preferencia">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === pr.duracao ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
       <label>Diretor<select id="mk-video-modelo" data-mudar="video-preferencia">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === pr.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo" data-mudar="video-preferencia">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}" ${e.id === pr.estilo ? "selected" : ""}>${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>

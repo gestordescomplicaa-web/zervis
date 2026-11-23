@@ -279,4 +279,5 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .vis-barra i { width: 18px; height: 18px; border-radius: 50%; }
 .vis-endereco { margin-left: 14px; font-size: 26px; padding: 8px 22px; border-radius: 999px; flex: 1; }
 .item-foto img[src*="capturas"] { object-position: top center; }
+.comenta-palavra.frase { font-size: 112px; text-align: center; max-width: 940px; line-height: 1.02; }
 

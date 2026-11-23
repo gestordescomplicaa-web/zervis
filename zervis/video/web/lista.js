@@ -105,7 +105,10 @@
       const pede = h("div", "comenta-pede", "Comenta");
       const palavra = h("div", "comenta-palavra");
       const marca = h("i", "comenta-marca");
-      palavra.append(marca, h("span", "", `“${String(c.palavra || c.chamada || "").toUpperCase()}”`));
+      // uma palavra vai entre aspas ("“OFICINA”"); uma frase ("o seu ramo") vai solta
+      const pedido = String(c.palavra || c.chamada || "").toUpperCase();
+      palavra.append(marca, h("span", "", /\s/.test(pedido) ? pedido : `“${pedido}”`));
+      if (/\s/.test(pedido)) palavra.classList.add("frase");
       const caixa = h("div", "comenta-caixa");
       const avatar = h("div", "comenta-avatar");
       if (ctx.marca.logo) { const img = h("img"); img.src = ctx.marca.logo; avatar.append(img); }
