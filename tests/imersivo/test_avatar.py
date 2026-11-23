@@ -73,7 +73,14 @@ async def main():
                     while True:
                         msg = json.loads(await asyncio.wait_for(ws.recv(), 20))
                         if msg.get('method') == 'Runtime.exceptionThrown':
-                            errors.append(msg['params'])
+                            # o erro inteiro (arquivo, linha e mensagem): "Uncaught" sozinho
+                            # não diz qual script quebrou (a falha instável de 23/11/2026)
+                            d = msg['params'].get('exceptionDetails', {})
+                            errors.append({
+                                'url': d.get('url', ''), 'linha': d.get('lineNumber'),
+                                'coluna': d.get('columnNumber'),
+                                'erro': (d.get('exception') or {}).get('description', d.get('text')),
+                            })
                         if msg.get('id') == seq:
                             return msg.get('result', {})
 
