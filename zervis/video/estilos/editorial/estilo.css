@@ -11,7 +11,7 @@
 @import url("../zervis/estilo.css");
 
 #palco {
-  --fundo: #f4f5f8; --superficie: #ffffff; --texto: var(--marca-fundo); --suave: #6b6e7a;
+  --fundo: var(--papel, #f4f5f8); --superficie: #ffffff; --texto: var(--marca-fundo); --suave: #6b6e7a;
   --t-titulo: 92px; --t-rotulo: 54px; --t-corpo: 34px; --t-legenda: 76px;
   --sombra: 0 30px 70px rgba(17, 17, 30, .12); --borda: 1px solid rgba(17, 17, 30, .08);
 }

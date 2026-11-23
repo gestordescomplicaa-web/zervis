@@ -215,8 +215,8 @@ Regras:
   "cubo" gira a tela como um cubo (outro lado, outra etapa); "fatias" faz a cena nova descer em
   tiras (revelação forte). Use 4 a 6 tipos no vídeo, pelo menos dois desses de carta, e nunca a
   mesma transição em cenas seguidas; "corte" nos momentos de impacto.
-- fundo: {fundos}. Alterne: cenas seguidas com fundos diferentes, como cartas diferentes do
-  baralho; pelo menos uma "claro" e uma "cor".
+- fundo: {fundos}. **Paleta estável:** a maior parte das cenas no mesmo fundo (o padrão ou
+  "claro"); a tela inteira na cor ("cor", ou a frase "cheia") no máximo uma vez, no momento-chave.
 - **A copy é a mãe da animação.** Escreva a fala primeiro; depois faça cada coisa concreta que
   ela diz aparecer na tela na palavra em que é dita: "prédio" vira a foto de um prédio,
   "WhatsApp" vira o logo do WhatsApp, "planilha" vira o logo do Google Planilhas. A maior parte
@@ -564,6 +564,12 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     if not isinstance(brutas, list) or not minimo <= len(brutas) <= maximo:
         raise RoteiroErro(f"O roteiro precisa de {minimo} a {maximo} cenas.")
     cenas = [_cena(c, estilo.cenas_extras) for c in brutas]
+    # a paleta estável: a tela inteira na cor da marca no máximo uma vez fora do fecho
+    na_cor = [c for c in cenas[:-1] if c["fundo"] == "cor" or c.get("composicao") == "cheia"]
+    for c in na_cor[1:]:
+        c["fundo"] = "claro" if c["fundo"] == "cor" else c["fundo"]
+        if c.get("composicao") == "cheia":
+            c["composicao"] = "centro"
     for antes, cena in itertools.pairwise(cenas):
         if antes["tipo"] == cena["tipo"] == "item":
             # itens seguidos são o mesmo cartão: o mesmo fundo, sem transição
