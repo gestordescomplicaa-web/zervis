@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Legenda do Reels sem lista de fontes:** os vídeos só usam fotos livres que dispensam o
+  crédito (domínio público, CC0), e a legenda não leva mais "Fotos: ..." (ADR 0121).
 - **Qualidade da voz dos vídeos:** o cartão Vídeos escolhe o modelo do Fish do vídeo (S2.1 Pro,
   Drama 3, S2 Pro ou o grátis), independente do da voz do Zé na página Voz.
 - **As escolhas do cartão Vídeos ficam guardadas** (para quem, duração, diretor, estilo, voz e

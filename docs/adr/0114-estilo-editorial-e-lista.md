@@ -1,7 +1,7 @@
 # 0114 — O estilo Editorial e a lista que evolui
 
 - Data: 18/11/2026
-- Status: **Aceito** (pedido de quem usa, a partir de um Reels de referência, 18/11/2026).
+- Status: **Aceito** (pedido de quem usa, a partir de um Reels de referência, 18/11/2026); o crédito (item 6) mudou no [ADR 0121](0121-fotos-livres-sem-credito.md).
 - Segue o formato e o ritmo ([ADR 0113](0113-formato-ritmo-e-voz.md)).
 
 ## Contexto

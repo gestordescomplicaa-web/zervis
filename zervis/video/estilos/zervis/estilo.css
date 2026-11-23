@@ -131,8 +131,6 @@
 .foto-escrita { color: #1b1c22; }
 .foto-janela .foto-moldura { border: 3px solid color-mix(in srgb, var(--marca1) 55%, transparent);
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--marca1) 12%, transparent), 0 40px 120px rgba(0, 0, 0, .5); }
-.foto-credito { color: color-mix(in srgb, var(--texto) 70%, transparent); }
-.composicao-cheia .foto-credito { color: rgba(255, 255, 255, .78); }
 
 /* ritmo */
 .corte-escuro { background: var(--fundo); color: var(--texto); }

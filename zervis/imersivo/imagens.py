@@ -64,6 +64,7 @@ class Achado:
     autor: str
     previa: str  # a miniatura (para o Zé olhar antes de escolher)
     pagina: str
+    atribuicao: bool = True  # a licença exige o crédito (o Commons diz em "AttributionRequired")
 
 
 class _SoHosts(urllib.request.HTTPRedirectHandler):
@@ -245,6 +246,8 @@ def buscar_commons(
                 autor=_sem_html((meta.get("Artist") or {}).get("value"), 60),
                 previa=str(info.get("thumburl") or ""),
                 pagina=str(info.get("descriptionurl") or "")[:240],
+                atribuicao=_sem_html((meta.get("AttributionRequired") or {}).get("value")).lower()
+                != "false",
             )
         )
     return achados

@@ -647,7 +647,7 @@ def test_logos_e_batidas_viram_imagem(tmp_path: Path) -> None:
             {"mostrar": "busca: smartphone unread notification"}]},
         {"tipo": "item", "mostrar": "logo: whatsapp", "icone": "wrench"},
     ]  # fmt: skip
-    assert f.resolver(cenas, tmp_path) == []
+    f.resolver(cenas, tmp_path)
     a, b, c, d, e = cenas[0]["batidas"]
     assert a["imagem_tipo"] == b["imagem_tipo"] == "logo" and a["imagem"].endswith("whatsapp.svg")
     assert pedidos.count("whatsapp") == 1  # o mesmo pedido, uma ida à rede
@@ -751,10 +751,11 @@ def test_video_agendado_cria_na_hora(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert linha == ["Comecei o vídeo agendado: Agenda cheia."]
 
 
-def _achado(id_: str, titulo: str) -> Any:
+def _achado(id_: str, titulo: str, atribuicao: bool = False) -> Any:
     from zervis.imersivo.imagens import Achado
 
-    return Achado(id_, titulo, "", "foto", "CC BY 4.0", "Ana (talk)", "", "")
+    licenca = "CC BY 4.0" if atribuicao else "CC0"
+    return Achado(id_, titulo, "", "foto", licenca, "Ana", "", "", atribuicao)
 
 
 def _fotos(tmp_path: Path) -> tuple[Fotos, list[str]]:
@@ -766,14 +767,15 @@ def _fotos(tmp_path: Path) -> tuple[Fotos, list[str]]:
     def buscar(busca: str) -> list[Any]:
         buscas.append(busca)
         return [_achado("commons:File:Rua.jpg", "Street at night"),
+                _achado("commons:File:Garagem.jpg", "Mechanic workshop garage", atribuicao=True),
                 _achado("commons:File:Oficina.jpg", "Mechanic workshop in Recife")]  # fmt: skip
 
     def baixar(id_: str, pasta: Path) -> dict[str, Any]:
-        assert id_ == "commons:File:Oficina.jpg"  # a que tem as palavras do pedido
+        assert id_ == "commons:File:Oficina.jpg"  # tem as palavras do pedido e dispensa o crédito
         (pasta / "imagens").mkdir(parents=True, exist_ok=True)
         (pasta / "imagens" / "oficina.jpg").write_bytes(b"jpg")
-        return {"arquivo": "imagens/oficina.jpg", "autor": "Ana (talk)", "tipo": "foto",
-                "licenca": "CC BY 4.0", "fonte": "Wikimedia Commons"}  # fmt: skip
+        return {"arquivo": "imagens/oficina.jpg", "autor": "Ana", "tipo": "foto",
+                "licenca": "CC0", "fonte": "Wikimedia Commons"}  # fmt: skip
 
     f = Fotos(da_marca=lambda: ["recepcao.jpg"], pasta_da_marca=lambda: marca, buscar=buscar,
               baixar=baixar)  # fmt: skip
@@ -789,10 +791,11 @@ def test_fotos_da_marca_e_livres(tmp_path: Path) -> None:
         {"tipo": "foto", "foto": "busca: car wash", "icone": "sparkles"},  # passa do limite
         {"tipo": "foto", "foto": "../../etc/passwd", "icone": "sparkles"},  # não é da marca
     ]
-    creditos = f.resolver(cenas, pasta)
-    assert cenas[0]["imagem"].endswith("/video/fotos/recepcao.jpg") and "credito" not in cenas[0]
+    f.resolver(cenas, pasta)
+    assert cenas[0]["imagem"].endswith("/video/fotos/recepcao.jpg")
+    # a "Garagem" tem mais palavras, mas a licença exige o crédito: vem a "Oficina" (CC0)
     assert cenas[1]["imagem"].endswith("/imagens/oficina.jpg")
-    assert creditos == ["Foto: Ana · CC BY 4.0 · Wikimedia Commons"]  # sem o "(talk)"
+    assert not any("credito" in c for c in cenas)
     assert buscas == ["mechanic workshop", "car wash"]
     # sem foto que sirva, a cena vira um ícone do objeto (o vídeo não falha)
     assert cenas[2]["tipo"] == "icone" and cenas[2]["icone"] == "car" and "foto" not in cenas[2]
@@ -811,13 +814,13 @@ def test_foto_no_plano_e_no_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), fotos=["recepcao.jpg"])
     assert "Fotos da marca" in prompt and "recepcao.jpg" in prompt
     assert "ainda não tem fotos" in roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
-    # no vídeo: a foto vira arquivo e o crédito vai para a legenda do Instagram
+    # no vídeo: a foto vira arquivo; a legenda do Instagram não leva lista de fontes
     bruto["cenas"][1]["foto"] = "busca: mechanic workshop"
     v, _ = _videos(tmp_path, json.dumps(bruto), monkeypatch)
     v.fotos, _b = _fotos(tmp_path)
     feito = v.criar(tema="Oficina", esperar=True)
     assert feito.estado == "rascunho"
-    assert feito.legenda.endswith("Fotos: Foto: Ana · CC BY 4.0 · Wikimedia Commons")
+    assert "Fotos:" not in feito.legenda and "Commons" not in feito.legenda
     assert feito.roteiro["cenas"][1]["imagem"].startswith("file://")
 
 
