@@ -1,7 +1,7 @@
 # 0112 — Fotos nos vídeos
 
 - Data: 18/11/2026
-- Status: **Aceito** (pedido de quem usa, 18/11/2026).
+- Status: **Aceito** (pedido de quem usa, 18/11/2026); o crédito (item 4) mudou no [ADR 0121](0121-fotos-livres-sem-credito.md).
 - Segue a edição dos vídeos ([ADR 0110](0110-edicao-dos-videos.md)) e usa a busca de imagens livres
   da Imersão ([ADR 0058](0058-imagens-reais-na-imersao.md)) e as fotos da marca dos posts
   ([ADR 0093](0093-posts-do-instagram.md)).

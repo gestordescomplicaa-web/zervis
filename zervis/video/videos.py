@@ -637,9 +637,8 @@ class Videos:
                 f"Resposta anterior: {resposta[:6000]}\nEscreva de novo, corrigindo isso."
             )
             r = roteiro.interpretar(self.perguntar(corrigir, video.modelo), estilo, alvo)
-        # as fotos viram arquivos na pasta do vídeo (a que não vier vira ícone); crédito na legenda
-        if creditos := self.fotos.resolver(r.cenas, pasta):
-            r.legenda = f"{r.legenda}\n\nFotos: {'; '.join(dict.fromkeys(creditos))}"
+        # as fotos viram arquivos na pasta do vídeo (a que não vier vira ícone)
+        self.fotos.resolver(r.cenas, pasta)
         video.titulo, video.legenda, video.roteiro = r.titulo, r.legenda, r.para_json()
 
         self._etapa(video, "Gravando a voz" if video.voz else "Montando o tempo")

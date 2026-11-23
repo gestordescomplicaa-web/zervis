@@ -1,5 +1,6 @@
 """As fotos dos vídeos (ADR 0112): as da marca, que quem usa envia em Marketing, e as livres, da
-Wikimedia, sempre com o crédito na tela e na legenda do Instagram.
+Wikimedia, só as que a licença dispensa de crédito (domínio público, CC0; ADR 0121): o vídeo e a
+legenda do Instagram ficam sem lista de fontes.
 
 O diretor escolhe pelo nome (as fotos da marca têm nomes que as descrevem) ou pede "busca: <o que
 mostrar, em inglês>". Aqui a escolha vira um arquivo na pasta do vídeo. A busca é só no Commons
@@ -30,6 +31,7 @@ LOGO = "logo:"
 SITE = "site:"
 SITES_POR_VIDEO = 3  # prints de site por vídeo (cada um abre o Chromium)
 POR_VIDEO = 12  # buscas livres por vídeo (cada uma é uma ida à rede; em paralelo)
+RESULTADOS = 20  # por busca: só uns 45% dispensam o crédito, então vêm mais
 SIMPLE_ICONS = "https://cdn.simpleicons.org/"  # os logos das marcas, na cor delas (CC0)
 LOGO_MAX = 64 * 1024
 _PALAVRA = re.compile(r"[a-z0-9]{3,}")
@@ -40,7 +42,7 @@ def _palavras(texto: str) -> set[str]:
 
 
 def _buscar_no_commons(busca: str) -> list[imagens.Achado]:
-    return imagens.buscar_commons(busca, quantos=8)
+    return imagens.buscar_commons(busca, quantos=RESULTADOS)
 
 
 def _nota(achado: imagens.Achado, pedidas: set[str]) -> int:
@@ -49,14 +51,10 @@ def _nota(achado: imagens.Achado, pedidas: set[str]) -> int:
 
 
 def _serve(achado: imagens.Achado, pedidas: set[str]) -> bool:
-    """O título (ou a descrição) tem as palavras do pedido: duas, ou a única que houver."""
+    """Uma foto que dispensa o crédito e cujo título (ou descrição) tem as palavras do pedido:
+    duas, ou a única que houver."""
     iguais = pedidas & _palavras(f"{achado.titulo} {achado.descricao}")
-    return achado.tipo == "foto" and len(iguais) >= min(2, len(pedidas))
-
-
-def _limpo(credito: str) -> str:
-    """Sem o "(talk)" que o Commons põe ao lado do autor."""
-    return re.sub(r"\s*\(\s*(talk|discuss[aã]o|contribs?)\s*\)", "", credito, flags=re.I)
+    return achado.tipo == "foto" and not achado.atribuicao and len(iguais) >= min(2, len(pedidas))
 
 
 def _da_marca() -> list[str]:
@@ -140,26 +138,26 @@ class Fotos:
         except OSError:
             return []
 
-    def achar(self, pedido: str, pasta: Path) -> tuple[Path, str, str] | None:
-        """O arquivo de um pedido ("logo: whatsapp", "busca: office building" ou o nome de uma
-        foto da marca), com o crédito e o tipo ("logo" ou "foto"); None se não houver."""
+    def achar(self, pedido: str, pasta: Path) -> tuple[Path, str] | None:
+        """O arquivo de um pedido ("logo: whatsapp", "busca: office building", "site: ..." ou o
+        nome de uma foto da marca) e o tipo ("logo", "site" ou "foto"); None se não houver."""
         p = pedido.strip()
         if p.lower().startswith(LOGO):
             achado = self._logo(p[len(LOGO) :], pasta)
-            return (achado, "", "logo") if achado else None
+            return (achado, "logo") if achado else None
         if p.lower().startswith(BUSCA):
             livre = self._livre(p[len(BUSCA) :].strip(), pasta)
-            return (*livre, "foto") if livre else None
+            return (livre, "foto") if livre else None
         if p.lower().startswith(SITE):
             site = self._site(p[len(SITE) :], pasta)
-            return (site, "", "site") if site else None
+            return (site, "site") if site else None
         da_marca = self._da_marca_na_pasta(p, pasta)
-        return (*da_marca, "foto") if da_marca else None
+        return (da_marca, "foto") if da_marca else None
 
-    def resolver(self, cenas: list[dict[str, Any]], pasta: Path) -> list[str]:
-        """Troca cada pedido de imagem pelo arquivo (`imagem`, o endereço local, e `imagem_tipo`)
-        e o crédito: a cena de foto, as batidas da cena visual e a imagem do item. Os pedidos
-        saem em paralelo; o que não vier vira ícone. Devolve os créditos, para a legenda."""
+    def resolver(self, cenas: list[dict[str, Any]], pasta: Path) -> None:
+        """Troca cada pedido de imagem pelo arquivo (`imagem`, o endereço local, e `imagem_tipo`):
+        a cena de foto, as batidas da cena visual e a imagem do item. Os pedidos saem em
+        paralelo; o que não vier vira ícone."""
         alvos: list[tuple[dict[str, Any], str, dict[str, Any]]] = []  # (onde, pedido, cena)
         for c in cenas:
             if c.get("tipo") == "foto":
@@ -181,7 +179,6 @@ class Fotos:
             achados = dict(
                 zip(pedidos, grupo.map(lambda p: self.achar(p, pasta), pedidos), strict=True)
             )
-        creditos: list[str] = []
         for onde, pedido, cena in alvos:
             achado = achados.get(_chave(pedido))
             if achado is None:
@@ -191,16 +188,12 @@ class Fotos:
                 else:
                     onde["icone"] = self._icone_de(onde, pedido)
                 continue
-            arquivo, credito, tipo = achado
+            arquivo, tipo = achado
             onde["imagem"], onde["imagem_tipo"] = arquivo.resolve().as_uri(), tipo
             if tipo == "site":  # a barra do navegador mostra o endereço
                 onde["site"] = endereco_do_site(pedido.strip()[len(SITE) :]).removeprefix(
                     "https://"
                 )
-            if credito:
-                onde["credito"] = credito
-                creditos.append(credito)
-        return list(dict.fromkeys(creditos))
 
     def _site(self, texto: str, pasta: Path) -> Path | None:
         url = endereco_do_site(texto)
@@ -229,7 +222,7 @@ class Fotos:
         destino.write_bytes(dados)
         return destino
 
-    def _da_marca_na_pasta(self, nome: str, pasta: Path) -> tuple[Path, str] | None:
+    def _da_marca_na_pasta(self, nome: str, pasta: Path) -> Path | None:
         nome = Path(nome).name  # só o nome: nada de caminho vindo do modelo
         if not nome.endswith(".jpg"):
             nome += ".jpg"
@@ -241,9 +234,9 @@ class Fotos:
             shutil.copyfile(self.pasta_da_marca() / nome, destino)
         except OSError:
             return None
-        return destino, ""
+        return destino
 
-    def _livre(self, busca: str, pasta: Path) -> tuple[Path, str] | None:
+    def _livre(self, busca: str, pasta: Path) -> Path | None:
         if not busca:
             return None
         pedidas = _palavras(busca)
@@ -254,8 +247,7 @@ class Fotos:
             for a in achados:
                 if not _serve(a, pedidas):
                     continue
-                registro = self.baixar(a.id, pasta)
-                return pasta / registro["arquivo"], _limpo(imagens.credito(registro))
+                return pasta / str(self.baixar(a.id, pasta)["arquivo"])
         except (imagens.ImagemErro, OSError, KeyError) as erro:
             log.info("foto livre '%s' não veio: %s", busca, erro)
         return None

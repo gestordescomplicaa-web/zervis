@@ -203,9 +203,6 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .foto-janela .foto-moldura { border-radius: 48px; }
 .foto-selo { left: auto; right: -40px; top: -30px; transform: none; }
 .foto-rotulo-janela { margin-top: 56px; }
-.foto-credito { position: absolute; right: 48px; top: 176px; max-width: 640px; text-align: right; font-size: 22px; line-height: 1.3; }
-.foto-quadro .foto-credito { top: auto; right: 0; bottom: -40px; max-width: none; font-size: 20px; }
-.foto-polaroid .foto-credito { right: 30px; bottom: 112px; color: #8a8b93; }
 
 /* ritmo (ADR 0113): ganchos em cortes e carimbo, fecho chamada ------------------------------ */
 .composicao-cortes .camera { top: 0; height: 100%; padding: 0; }

@@ -48,11 +48,15 @@ class Wikimedia:
             ).encode()
         if p.path == "/w/api.php" and q.get("generator") == "search":
             video = "filetype:video" in q["gsrsearch"]
-            nomes = ["File:Lava.webm"] if video else ["File:Rio.jpg", "File:Logo.png"]
+            nomes = (
+                ["File:Lava.webm"] if video else ["File:Rio.jpg", "File:Logo.png", "File:Mar.jpg"]
+            )
+            cc0 = {"File:Mar.jpg"}  # a que dispensa o crédito
             return json.dumps({"query": {"pages": [
                 {"title": n, "imageinfo": [{"thumburl": "https://upload.wikimedia.org/t/240px-a.jpg",
                  "descriptionurl": "https://commons.wikimedia.org/wiki/" + n,
-                 "extmetadata": {"LicenseShortName": {"value": "CC BY 4.0"},
+                 "extmetadata": {"LicenseShortName": {"value": "CC0" if n in cc0 else "CC BY 4.0"},
+                                 "AttributionRequired": {"value": str(n not in cc0).lower()},
                                  "NonFree": {"value": str(n == "File:Logo.png").lower()}}}]}
                 for n in nomes]}}).encode()  # fmt: skip
         if p.path == "/w/api.php":
@@ -86,7 +90,9 @@ def test_busca_a_wikipedia_primeiro_e_o_commons_sem_o_que_nao_e_livre() -> None:
     wm = Wikimedia()
     achados = im.buscar("Marina Silva", ler=wm)
     ids = [a.id for a in achados]
-    assert ids == ["wiki:pt:Marina Silva", "commons:File:Rio.jpg"]  # sem foto e não livre: fora
+    assert ids == ["wiki:pt:Marina Silva", "commons:File:Rio.jpg", "commons:File:Mar.jpg"]
+    # sem foto e não livre: fora; o Commons diz se a licença exige o crédito
+    assert [a.atribuicao for a in achados[1:]] == [True, False]
     assert (
         achados[0].previa.startswith("https://thumb.wikimedia.org/")
         and "/240px-" in achados[0].previa
