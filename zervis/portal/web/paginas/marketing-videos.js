@@ -67,6 +67,7 @@ export function cartaoVideos(r, vs = r.videos) {
       <label>Diretor<select id="mk-video-modelo" data-mudar="video-preferencia">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === pr.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo" data-mudar="video-preferencia">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}" ${e.id === pr.estilo ? "selected" : ""}>${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
       <label>Voz<select id="mk-video-locutor" data-mudar="video-preferencia">${(vs.vozes || []).map((/** @type {any} */ x) => `<option value="${esc(x.id)}" ${x.id === (pr.locutor || "") ? "selected" : ""}>${esc(x.nome)}${x.detalhe ? ` · ${esc(x.detalhe)}` : ""}</option>`).join("")}</select></label>
+      <label>Qualidade da voz<select id="mk-video-modelo-voz" data-mudar="video-preferencia">${(vs.modelos_voz || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === (pr.modelo_voz || "") ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
       <label class="interruptor"><input type="checkbox" id="mk-video-voz" data-mudar="video-preferencia" ${pr.voz ? "checked" : ""}> Narração</label>
     </div>
     ${paleta(vs)}
@@ -139,6 +140,7 @@ Object.assign(ACOES, {
       duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-duracao")).value),
       modelo: /** @type {HTMLSelectElement} */ ($("mk-video-modelo")).value,
       locutor: /** @type {HTMLSelectElement | null} */ ($("mk-video-locutor"))?.value || "",
+      modelo_voz: /** @type {HTMLSelectElement | null} */ ($("mk-video-modelo-voz"))?.value || "",
       linha: /** @type {HTMLSelectElement} */ ($("mk-video-linha")).value,
       entrega: /** @type {HTMLInputElement} */ ($("mk-video-entrega")).value,
       palavra: /** @type {HTMLInputElement} */ ($("mk-video-palavra")).value,
@@ -222,6 +224,7 @@ Object.assign(MUDAR, {
       modelo: campo("mk-video-modelo")?.value ?? "",
       estilo: campo("mk-video-estilo")?.value ?? "",
       locutor: campo("mk-video-locutor")?.value ?? "",
+      modelo_voz: campo("mk-video-modelo-voz")?.value ?? "",
       voz: /** @type {HTMLInputElement | null} */ ($("mk-video-voz"))?.checked ?? true,
     });
   },

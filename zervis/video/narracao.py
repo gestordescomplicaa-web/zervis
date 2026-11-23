@@ -52,10 +52,12 @@ class Narracao:
 CADU = "cadu"  # a voz local (Piper), sem nuvem
 
 
-def sintetizador(motor: Any, locutor: str = "") -> Sintetizar:
+def sintetizador(motor: Any, locutor: str = "", modelo: str = "") -> Sintetizar:
     """A síntese pelo motor de voz do Zé (`zervis.voz.nuvem.Motor`): PCM 16 bits mono. O locutor
     do vídeo (ADR 0113): vazio é a voz da página Voz; "cadu", a voz local; outro, o id de uma voz
-    do Fish Audio (com a chave e o modelo da página Voz; sem a chave, a voz da página Voz)."""
+    do Fish Audio (com a chave e o modelo da página Voz; sem a chave, a voz da página Voz). O
+    modelo, se vier, é o do Fish para este vídeo (a "Qualidade da voz"), no lugar do da página
+    Voz."""
     from zervis.voz import nuvem
 
     def sintetizar(texto: str) -> tuple[int, bytes]:
@@ -69,6 +71,8 @@ def sintetizador(motor: Any, locutor: str = "") -> Sintetizar:
             return int(taxa), b"".join(iter(lambda: fluxo.read1(65536), b""))
         p = motor.provedores[provedor]
         voz = voz or motor.escolha.voz(provedor)
+        if modelo and provedor == "fish":
+            voz = {**voz, "modelo": modelo}
         caminho, corpo, cabecalhos = p.pedido(
             texto, voz["id"], voz.get("modelo", ""), motor.chaves[provedor] or ""
         )

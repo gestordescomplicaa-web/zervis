@@ -1085,3 +1085,46 @@ def test_escolhas_do_cartao_ficam_guardadas(
     )
     explicito = v.criar(tema="y", esperar=True, duracao=30, linha="empresarios")
     assert (explicito.duracao_alvo, explicito.linha) == (30, "empresarios")
+
+
+def test_qualidade_da_voz_do_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    from zervis.voz import fish
+
+    assert set(fish.MODELOS_VOZ) == set(videos.MODELOS_VOZ)
+    pedidos: list[tuple[str, str]] = []
+
+    class Fish:
+        ENDERECO, TAXA = "https://fish.invalido", 44100
+
+        @staticmethod
+        def pedido(texto: str, voz: str, modelo: str, chave: str) -> Any:
+            pedidos.append((voz, modelo))
+            raise RuntimeError("sem rede no teste")
+
+    motor = SimpleNamespace(
+        ativo="fish", local=None, provedores={"fish": Fish}, chaves={"fish": "k"},
+        escolha=SimpleNamespace(voz=lambda p: {"id": "voz-do-ze", "modelo": "s2.1-pro-free"}),
+    )  # fmt: skip
+    for locutor in ("", "a" * 32):
+        with pytest.raises(RuntimeError):
+            narracao.sintetizador(motor, locutor, "drama-3")("oi")
+    assert pedidos == [("voz-do-ze", "drama-3"), ("a" * 32, "drama-3")]  # o modelo do vídeo vale
+
+    v, _ = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    usados: list[tuple[Any, ...]] = []
+
+    def sintetizador(*args: str) -> Any:
+        usados.append(args)
+        return _fala()
+
+    v.sintetizador = sintetizador
+    v.guardar_preferencias({"modelo_voz": "drama-3"})
+    assert v.preferencias()["modelo_voz"] == "drama-3"
+    feito = v.criar(tema="x", esperar=True)
+    assert feito.modelo_voz == "drama-3" and usados[-1] == ("", "drama-3")
+    v.guardar_preferencias({"modelo_voz": "inventado"})
+    assert v.preferencias()["modelo_voz"] == ""  # o da página Voz
+    assert v.criar(tema="y", esperar=True).modelo_voz == ""
+    assert len(usados[-1]) == 0  # sem modelo do vídeo: o sintetizador de sempre

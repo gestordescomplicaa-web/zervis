@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Qualidade da voz dos vídeos:** o cartão Vídeos escolhe o modelo do Fish do vídeo (S2.1 Pro,
+  Drama 3, S2 Pro ou o grátis), independente do da voz do Zé na página Voz.
 - **As escolhas do cartão Vídeos ficam guardadas** (para quem, duração, diretor, estilo, voz e
   narração), e valem também para os vídeos agendados e os pedidos pela voz; os ajustes da conversa
   no direct se salvam ao sair do campo.
