@@ -44,7 +44,7 @@ export async function metricasSemTravar() {
   /** @param {Error} erro */
   const falhou = (erro) => ({ configurado: true, conta: "", dias: 28, busca: { erro: erro.message }, visitas: { erro: erro.message } });
   const pedido = api("marketing/metricas").catch(falhou);
-  const cedo = await Promise.race([pedido, new Promise((r) => setTimeout(() => r(null), 1500))]);
+  const cedo = await Promise.race([pedido, new Promise((r) => setTimeout(() => r(null), 300))]);
   if (!cedo) pedido.then((m) => { const lugar = $("mk-metricas"); if (lugar) lugar.outerHTML = cartaoMetricas(m); });
   return cedo;
 }

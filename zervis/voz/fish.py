@@ -85,6 +85,11 @@ def vozes(chave: str, endereco: str = ENDERECO) -> list[dict[str, str]]:
     return lista
 
 
+def proprias(chave: str, endereco: str = ENDERECO) -> list[dict[str, str]]:
+    """Só as vozes da pessoa (os vídeos não usam as da biblioteca): uma consulta, não duas."""
+    return [_voz(v, True) for v in _modelos(chave, endereco, {"self": "true", "page_size": 50})]
+
+
 def conta(chave: str, endereco: str = ENDERECO) -> tuple[str, str]:
     """Confere a chave pelo saldo de API; devolve (modelo, nota para a tela)."""
     dados = nuvem.obter(endereco, "/wallet/self/api-credit", _cabecalhos(chave), motivo, TITULO)

@@ -155,7 +155,7 @@ def _vozes_do_fish() -> list[dict[str, str]]:
     from zervis.voz.deepgram import ler_chave
 
     chave = ler_chave(lugares.CONFIG / f"{fish.NOME}.key")
-    return fish.vozes(chave) if chave else []
+    return fish.proprias(chave) if chave else []
 
 
 def efeitos_sonoros(cenas: list[dict[str, Any]]) -> list[tuple[float, str]]:

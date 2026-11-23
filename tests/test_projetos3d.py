@@ -146,8 +146,13 @@ def test_a_lista_traz_os_arquivos_com_as_medidas(projetos: projetos3d.Projetos3D
     (pasta / "gerar.py").write_text("print('oi')\n")
     (pasta / ".venv").mkdir()
     (pasta / ".venv" / "lixo.py").write_text("")
+    for oculto in ("__pycache__/gerar.py", "pecas/.rascunho.py", "pecas/__pycache__/base.py"):
+        (pasta / oculto).parent.mkdir(exist_ok=True)
+        (pasta / oculto).write_text("")
+    (pasta / "pecas" / "base.json").write_text("{}")
     [lido] = projetos.listar()
-    assert [a["nome"] for a in lido["arquivos"]] == ["gerar.py", "modelo.stl"]  # sem AGENTS.md
+    nomes = [a["nome"] for a in lido["arquivos"]]
+    assert nomes == ["gerar.py", "modelo.stl", "pecas/base.json"]  # sem AGENTS.md nem caches
     modelo = lido["arquivos"][1]
     assert modelo["medidas"]["tamanho_mm"] == [20.0, 20.0, 20.0] and modelo["medidas"]["fechada"]
     assert (pasta / ".ze" / "modelo.stl.medidas.json").is_file()  # guardadas: não relê o STL
