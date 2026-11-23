@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Contas ignoradas no Instagram:** no cartão Comentários do Instagram, uma lista de contas
+  (amigos, família) que nunca recebem resposta automática: nem no comentário, nem no direct.
 - **Marketing mais leve:** as prévias dos vídeos só baixam o MP4 quando você dá play (antes,
   cada abertura da página baixava todos os vídeos inteiros); o cartão Comentários do Instagram
   não lista mais quem comentou ou mandou mensagem, só as conversas que o Zé passou para você.

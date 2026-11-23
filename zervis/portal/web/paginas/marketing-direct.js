@@ -14,9 +14,17 @@ export function cartaoComentarios(r) {
     ${!c.conectado ? `<p class="nota">Conecte o Instagram em Redes sociais.</p>` : ""}
     <div class="linha">${c.ligado ? botao("Desligar", "mk-comentarios", `data-ligado="0"`, "discreta") : botao("Ligar", "mk-comentarios", `data-ligado="1"${c.conectado ? "" : " disabled"}`, "principal")}${c.contatos ? `<span class="nota">${c.contatos} ${c.contatos === 1 ? "pessoa recebeu" : "pessoas receberam"} mensagem</span>` : ""}</div>
     <p class="resultado" id="mk-resultado-comentarios"></p>
+    ${ignoradas(c.ignoradas || [])}
     ${avisos(c.avisos || { configurado: false, recebendo: false, endereco: "", verificacao: "", recusados: 0, ultimo: 0 })}
     ${conversa(c.direct || { ligado: false, link: "", como: "", contatos: [] })}`)}</div>`;
 }
+
+/** As contas que nunca recebem resposta automática. @param {string[]} contas */
+const ignoradas = (contas) => `<h3 class="subtitulo">Contas ignoradas</h3>
+    ${sub("Comentários e mensagens dessas contas não recebem resposta automática.")}
+    <div class="campos"><label class="largo">Contas<textarea id="mk-ignoradas" rows="3" placeholder="@usuario, uma por linha">${esc(contas.map((u) => `@${u}`).join("\n"))}</textarea></label></div>
+    <div class="linha">${botao("Salvar", "mk-ignoradas-salvar", "", "principal")}</div>
+    <p class="resultado" id="mk-resultado-ignoradas"></p>`;
 
 /** Os avisos na hora (ADR 0122): o endereço e o token para o painel de apps da Meta e a chave
  * secreta do app. @param {any} a */
@@ -105,6 +113,14 @@ Object.assign(ACOES, {
       redesenhar(r);
       mostrar("mk-resultado-avisos", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-avisos", false, erro.message); }
+  },
+  "mk-ignoradas-salvar": async (/** @type {HTMLButtonElement} */ b) => {
+    const contas = /** @type {HTMLTextAreaElement} */ ($("mk-ignoradas")).value;
+    try {
+      const r = await ocupado(b, () => api("marketing/instagram/ignoradas", { contas }));
+      redesenhar(r);
+      mostrar("mk-resultado-ignoradas", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-ignoradas", false, erro.message); }
   },
   "mk-comentarios": async (/** @type {HTMLButtonElement} */ b) => {
     try {

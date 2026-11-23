@@ -162,3 +162,26 @@ def test_recusa_da_meta_fica_registrada_e_nao_repete(tmp_path: Path) -> None:
     assert r["publico"] and not r["direct"] and r["erro"] == "recusado"
     assert c.ciclo() == 0
     assert c.recentes()[0]["autor"] == "cliente"
+
+
+def test_contas_ignoradas_nao_recebem_nada(tmp_path: Path) -> None:
+    import pytest
+
+    meta = MetaFalsa([
+        _c("c1", "Amigo.Pessoal", "kkkk boa", AGORA + 10),
+        _c("c2", "cliente", "Quero isso", AGORA + 20),
+    ])  # fmt: skip
+    c, avisos = _comentarios(tmp_path, meta)
+    c.ligar(True)
+    texto = "@amigo.pessoal\nhttps://www.instagram.com/Mae_Querida/, @amigo.pessoal"
+    assert c.ignorar(texto) == ["amigo.pessoal", "mae_querida"]
+    with pytest.raises(InstagramErro, match="Conta inválida"):
+        c.ignorar("@nome com espaço é outra conta, @nome!")
+    assert c.estado()["ignoradas"] == ["amigo.pessoal", "mae_querida"]  # o erro não apaga
+    c.relogio["t"] = AGORA + 60  # type: ignore[attr-defined]
+    assert c.ciclo() == 1
+    assert [x for x, _ in meta.enviados] == ["c2/replies", "me/messages"]
+    assert avisos == ["Respondi 1 comentário(s) no Instagram: @cliente."]
+    assert c.estado()["respondidos"]["c1"]["ignorado"]  # visto: não é respondido se sair da lista
+    c.ignorar("")
+    assert c.ciclo() == 0 and len(meta.enviados) == 2

@@ -211,6 +211,7 @@ class Acoes:
             "marketing/fotos": self.fotos_da_marca,
             "marketing/foto/remover": self.remover_foto,
             "marketing/instagram/comentarios": self.ligar_comentarios,
+            "marketing/instagram/ignoradas": self.ignorar_contas,
             "marketing/instagram/direct": self.ajustar_direct,
             "marketing/instagram/direct/devolver": self.devolver_direct,
             "marketing/instagram/avisos": self.guardar_avisos,

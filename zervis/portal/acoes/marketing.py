@@ -94,6 +94,7 @@ class AcoesMarketing(Pagina):
             "ligado": e["ligado"],
             "conectado": marketing_posts.PADRAO.instagram.conectado,
             "contatos": len(e["contatos"]),
+            "ignoradas": e["ignoradas"],
             "recentes": [
                 {k: x.get(k) for k in ("autor", "texto", "quando", "publico", "direct", "erro")}
                 for x in c.recentes(8)
@@ -111,6 +112,14 @@ class AcoesMarketing(Pagina):
             origem="painel",
         )
         return {**self.marketing(), "aviso": "Ligado." if ligado else "Desligado."}
+
+    def ignorar_contas(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """As contas que nunca recebem resposta automática (amigos, família)."""
+        try:
+            contas = instagram_comentarios.PADRAO.ignorar(str(dados.get("contas", ""))[:20000])
+        except InstagramErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {"comentarios": self._comentarios(), "aviso": "Salvo.", "contas": contas}
 
     def guardar_avisos(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Os avisos na hora (ADR 0122): a chave secreta do app da Meta e a assinatura da conta."""

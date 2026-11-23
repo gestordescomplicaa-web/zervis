@@ -14,8 +14,12 @@ recebeu uma abertura nos últimos 3 dias ganha só a resposta pública (ninguém
 mensagens seguidas). O que a pessoa escreve é dado, nunca ordem: vai entre <<< e >>> para o
 modelo, com a regra de ignorar instruções. A conversa que vem depois é a etapa 2 (o atendente).
 
+As contas ignoradas (amigos, família, quem fala com quem usa por outro motivo) não recebem nada:
+nem a resposta pública, nem a abertura, nem a conversa no direct. O comentário delas fica marcado
+como visto, para não ser respondido se a conta sair da lista depois.
+
 Estado em `<dados>/instagram-comentarios.json` (0600): ligado, desde quando, os comentários já
-respondidos (os últimos 2.000) e os contatos (quem recebeu abertura).
+respondidos (os últimos 2.000), os contatos (quem recebeu abertura) e as contas ignoradas.
 """
 
 import asyncio
@@ -51,6 +55,8 @@ JANELA_S = 7 * 86400  # a Meta aceita a resposta privada até 7 dias depois do c
 INTERVALO_S = 120
 DE_NOVO_S = 3 * 86400  # quem já recebeu uma abertura há menos que isto ganha só a pública
 GUARDADOS = 2000
+IGNORADAS_MAX = 500
+_USUARIO = re.compile(r"[a-z0-9._]{1,30}")
 MODELO = "claude-haiku-4-5-20251001"
 LIMITE_ABERTURA = 600
 PUBLICAS = (
@@ -163,6 +169,7 @@ class Comentarios:
             "desde": float(dados.get("desde") or 0),
             "respondidos": dict(dados.get("respondidos") or {}),
             "contatos": dict(dados.get("contatos") or {}),
+            "ignoradas": [str(u) for u in dados.get("ignoradas") or []],
         }
 
     def _gravar(self, estado: dict[str, Any]) -> None:
@@ -179,6 +186,26 @@ class Comentarios:
             e["ligado"] = ligado
             self._gravar(e)
             return e
+
+    def ignorar(self, texto: str) -> list[str]:
+        """Guarda as contas ignoradas: @usuário ou o link do perfil, separados por linha, vírgula
+        ou espaço. Devolve a lista como ficou (sem @, minúscula, sem repetir)."""
+        contas: list[str] = []
+        for parte in re.split(r"[\s,;]+", texto.lower()):
+            usuario = parte.rstrip("/").rsplit("/", 1)[-1].lstrip("@").split("?")[0]
+            if not usuario:
+                continue
+            if not _USUARIO.fullmatch(usuario):
+                raise InstagramErro(f"Conta inválida: {parte}")
+            if usuario not in contas:
+                contas.append(usuario)
+        if len(contas) > IGNORADAS_MAX:
+            raise InstagramErro(f"No máximo {IGNORADAS_MAX} contas.")
+        with self._trava:
+            e = self.estado()
+            e["ignoradas"] = contas
+            self._gravar(e)
+        return contas
 
     def recentes(self, n: int = 20) -> list[dict[str, Any]]:
         """Os últimos respondidos, para a página."""
@@ -271,14 +298,19 @@ class Comentarios:
             except InstagramErro as erro:
                 log.warning("instagram: comentários não lidos: %s", erro)
                 return 0
-            feitos = 0
-            for c in novos:
+            feitos, ignoradas = 0, set(e["ignoradas"])
+            for c in list(novos):
                 autor = c["from"]
                 registro: dict[str, Any] = {
                     "autor": autor.get("username", ""), "autor_id": str(autor.get("id", "")),
                     "texto": _limpo(c.get("text"), 300), "quando": c["quando"],
                     "respondido": self.agora(), "publico": False, "direct": False, "erro": "",
                 }  # fmt: skip
+                if registro["autor"].lower() in ignoradas:
+                    e["respondidos"][c["id"]] = {**registro, "ignorado": True}
+                    self._gravar(e)
+                    novos.remove(c)
+                    continue
                 try:
                     self._enviar(f"{c['id']}/replies", {"message": self.sortear(PUBLICAS)})
                     registro["publico"] = True
