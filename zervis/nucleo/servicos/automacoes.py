@@ -87,6 +87,7 @@ class ServicoAutomacoes:
             self.n._versoes_em = agora
             self.n._versoes_procurando.set()
             threading.Thread(target=self._procurar_versao, name="versoes", daemon=True).start()
+        self._comentarios_do_instagram(agora)
         if agora - self.n._agenda_em >= 30:
             self.n._agenda_em = agora
             # A atualização pelo painel termina depois que este processo (o novo) subiu.
@@ -101,6 +102,19 @@ class ServicoAutomacoes:
                     self.n.eventos.put(e.Aviso(texto))
                 else:
                     self.n.fila.guardar(texto, "agenda", expira)  # some quando a reunião começa
+
+    def _comentarios_do_instagram(self, agora: float) -> None:
+        """Os comentários novos viram resposta e conversa no direct (ADR 0118), a cada dois
+        minutos, numa thread (pela rede, nunca atrasa os lembretes)."""
+        from zervis.redes import instagram_comentarios as ic
+
+        c = ic.PADRAO
+        if agora - c.em < ic.INTERVALO_S or c.ocupado():
+            return
+        c.em = agora
+        if c.avisar is None:
+            c.avisar = lambda texto: self.n._na_linha("aviso", texto)
+        threading.Thread(target=c.ciclo, name="instagram-comentarios", daemon=True).start()
 
     def _executar(self, x: Execucao, momento: datetime) -> None:
         """Marca a tentativa antes do efeito: se o Zé cair no meio, quem sobe sabe."""

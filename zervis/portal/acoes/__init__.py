@@ -208,6 +208,7 @@ class Acoes:
             "marketing/metricas/remover": self.remover_metricas,
             "marketing/fotos": self.fotos_da_marca,
             "marketing/foto/remover": self.remover_foto,
+            "marketing/instagram/comentarios": self.ligar_comentarios,
             "tv/procurar": self.procurar_tv,
             "empresas/grupos": self.grupos_whatsapp,
             "empresas/salvar": self.salvar_empresa,

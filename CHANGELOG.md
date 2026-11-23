@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Comentários do Instagram viram conversa:** ligado em Marketing, todo comentário novo recebe
+  uma resposta e uma mensagem no direct que puxa o diagnóstico do negócio (ADR 0118).
 - **Paleta dos vídeos de um site:** cole um endereço e o Zé tira as cores do site (fundo, texto e
   destaques, exatos) para os vídeos; a tela inteira na cor aparece no máximo uma vez (ADR 0117).
 - **A copy manda na tela:** cada coisa dita vira imagem real na palavra (logos de marcas, fotos
