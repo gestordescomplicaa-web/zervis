@@ -218,8 +218,9 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
                 videos.criar,
                 str(args.get("tema", "")),
                 str(args.get("artigo", "")),
-                duracao=int(args.get("duracao") or roteiro_video.DURACAO_PADRAO),
-                linha=str(args.get("linha", "")),
+                # o que o pedido não diz sai das escolhas do cartão Vídeos
+                duracao=int(args["duracao"]) if args.get("duracao") else None,
+                linha=str(args["linha"]) if args.get("linha") else None,
                 entrega=str(args.get("entrega", "")),
                 palavra=str(args.get("palavra", "")),
             )

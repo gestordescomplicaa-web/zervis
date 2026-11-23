@@ -1,4 +1,4 @@
-import { ACOES } from "../modulos/acoes.js";
+import { ACOES, MUDAR } from "../modulos/acoes.js";
 import { $, api, botao, cartao, esc, item, mostrar, ocupado, sub } from "../painel.js";
 
 // --- Comentários do Instagram (ADR 0118): todo comentário vira conversa no direct ---------------
@@ -26,9 +26,9 @@ export function cartaoComentarios(r) {
 const conversa = (d) => `<h3 class="subtitulo">Conversa no direct <span class="etiqueta ${d.ligado ? "bom" : ""}">${d.ligado ? "Ligada" : "Desligada"}</span></h3>
     ${sub("Quando a pessoa responde, o Zé entende o negócio dela e manda o link para ela marcar a reunião.")}
     <div class="campos">
-      <label class="largo">Link de agendamento<input id="mk-direct-link" value="${esc(d.link)}" placeholder="https://calendar.app.google/..." autocomplete="off"></label>
-      <label class="largo">Como conversar<textarea id="mk-direct-como" rows="7">${esc(d.como)}</textarea></label>
-      <label class="interruptor"><input type="checkbox" id="mk-direct-ligado" ${d.ligado ? "checked" : ""}> Conversar no direct</label>
+      <label class="largo">Link de agendamento<input id="mk-direct-link" data-mudar="direct-ajuste" value="${esc(d.link)}" placeholder="https://calendar.app.google/..." autocomplete="off"></label>
+      <label class="largo">Como conversar<textarea id="mk-direct-como" data-mudar="direct-ajuste" rows="7">${esc(d.como)}</textarea></label>
+      <label class="interruptor"><input type="checkbox" id="mk-direct-ligado" data-mudar="direct-ajuste" ${d.ligado ? "checked" : ""}> Conversar no direct</label>
     </div>
     <div class="linha">${botao("Salvar", "mk-direct-salvar", "", "principal")}</div>
     <p class="resultado" id="mk-resultado-direct"></p>
@@ -43,13 +43,26 @@ function redesenhar(r) {
   $("mk-comentarios")?.replaceWith(/** @type {Element} */ (novo.firstElementChild));
 }
 
+/** Os ajustes da conversa como estão na tela. */
+const ajustes = () => ({
+  ligado: /** @type {HTMLInputElement} */ ($("mk-direct-ligado")).checked,
+  link: /** @type {HTMLInputElement} */ ($("mk-direct-link")).value,
+  como: /** @type {HTMLTextAreaElement} */ ($("mk-direct-como")).value,
+});
+
+/** Cada ajuste fica guardado assim que muda (ao sair do campo), sem depender do Salvar. */
+Object.assign(MUDAR, {
+  "direct-ajuste": async () => {
+    try {
+      await api("marketing/instagram/direct", ajustes());
+      mostrar("mk-resultado-direct", true, "Salvo.");
+    } catch (erro) { mostrar("mk-resultado-direct", false, erro.message); }
+  },
+});
+
 Object.assign(ACOES, {
   "mk-direct-salvar": async (/** @type {HTMLButtonElement} */ b) => {
-    const dados = {
-      ligado: /** @type {HTMLInputElement} */ ($("mk-direct-ligado")).checked,
-      link: /** @type {HTMLInputElement} */ ($("mk-direct-link")).value,
-      como: /** @type {HTMLTextAreaElement} */ ($("mk-direct-como")).value,
-    };
+    const dados = ajustes();
     try {
       const r = await ocupado(b, () => api("marketing/instagram/direct", dados));
       redesenhar(r);

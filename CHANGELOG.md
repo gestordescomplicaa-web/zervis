@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **As escolhas do cartão Vídeos ficam guardadas** (para quem, duração, diretor, estilo, voz e
+  narração), e valem também para os vídeos agendados e os pedidos pela voz; os ajustes da conversa
+  no direct se salvam ao sair do campo.
 - **Comentários do Instagram viram conversa:** ligado em Marketing, todo comentário novo recebe
   uma resposta e uma mensagem no direct que puxa o diagnóstico do negócio (ADR 0118).
 - **Conversa no direct até a reunião:** quando a pessoa responde, o Zé entende o negócio e manda o

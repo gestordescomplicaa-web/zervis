@@ -1042,3 +1042,39 @@ def test_paleta_estavel_no_plano() -> None:
         c["fundo"] = "cor"
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
     assert [c["fundo"] for c in r.cenas[1:4]] == ["cor", "claro", "claro"]
+
+
+def test_escolhas_do_cartao_ficam_guardadas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    v, _ = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    padrao = v.preferencias()
+    assert (padrao["duracao"], padrao["estilo"], padrao["voz"]) == (30, "zervis", True)
+    v.guardar_preferencias({"linha": "empresarios", "duracao": 45, "estilo": "editorial",
+                            "voz": False, "locutor": "cadu"})  # fmt: skip
+    p = v.preferencias()
+    assert (p["linha"], p["duracao"], p["estilo"], p["voz"], p["locutor"]) == (
+        "empresarios",
+        45,
+        "editorial",
+        False,
+        "cadu",
+    )
+    v.guardar_preferencias({"duracao": 60})  # só o que veio muda
+    assert v.preferencias()["estilo"] == "editorial" and v.preferencias()["duracao"] == 60
+    v.guardar_preferencias({"linha": "inventada", "modelo": "nenhum", "estilo": "nao-existe"})
+    p = v.preferencias()
+    assert (p["linha"], p["modelo"], p["estilo"]) == ("", videos.MODELO, "zervis")
+    # um pedido sem as escolhas (o agendado, a voz) usa as do cartão
+    v.guardar_preferencias(
+        {"linha": "ferramenta", "duracao": 45, "estilo": "editorial", "voz": False}
+    )
+    feito = v.criar(tema="x", esperar=True)
+    assert (feito.linha, feito.duracao_alvo, feito.estilo, feito.voz) == (
+        "ferramenta",
+        45,
+        "editorial",
+        False,
+    )
+    explicito = v.criar(tema="y", esperar=True, duracao=30, linha="empresarios")
+    assert (explicito.duracao_alvo, explicito.linha) == (30, "empresarios")

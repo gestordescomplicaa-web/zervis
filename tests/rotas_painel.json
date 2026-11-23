@@ -211,6 +211,7 @@
     "marketing/video/criar",
     "marketing/video/agendar",
     "marketing/video/paleta",
+    "marketing/video/preferencias",
     "marketing/video/refazer",
     "marketing/video/descartar",
     "marketing/video/publicar"
