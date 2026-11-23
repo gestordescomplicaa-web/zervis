@@ -2,6 +2,8 @@
 
 ## Não lançado
 
+- **Paleta dos vídeos de um site:** cole um endereço e o Zé tira as cores do site (fundo, texto e
+  destaques, exatos) para os vídeos; a tela inteira na cor aparece no máximo uma vez (ADR 0117).
 - **A copy manda na tela:** cada coisa dita vira imagem real na palavra (logos de marcas, fotos
   livres ou da marca, prints de site); o Editorial usa as cores da marca, com um sistema de tipo
   e layout; sai o "caos virando ordem" (ADR 0115).

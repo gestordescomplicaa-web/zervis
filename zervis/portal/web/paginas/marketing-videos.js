@@ -35,6 +35,17 @@ const previa = (v, vs) => `<div class="previa-video">
     <p class="resultado" id="mk-resultado-video-previa"></p>
   </div></div>`;
 
+/** A paleta dos vídeos: a da marca ou a tirada de um site, com as amostras. @param {any} vs */
+const paleta = (vs) => {
+  const p = vs.paleta || { origem: "marca" };
+  const amostras = p.origem === "site" ? `<span class="amostras">${["fundo", "texto", "destaque", "destaque2"].map((k) => `<i style="background:${esc(p.cores[k])}" title="${k}"></i>`).join("")}</span>` : "";
+  return `<div class="campos">
+      <label>Paleta<input id="mk-video-paleta" placeholder="Endereço de um site. Ex.: nubank.com.br" value="${esc(p.url || "")}" autocomplete="off"></label>
+    </div>
+    <div class="linha">${botao("Usar cores do site", "mk-video-paleta", "", "discreta")}${p.origem === "site" ? botao("Usar cores da marca", "mk-video-paleta-marca", "", "discreta") : ""}<span class="nota">${p.origem === "site" ? `Cores de ${esc(p.url)}` : "Cores da marca"}</span>${amostras}</div>
+    <p class="resultado" id="mk-resultado-video-paleta"></p>`;
+};
+
 /** O cartão Vídeos da página Marketing. @param {any} r a leitura "marketing" @param {any} vs */
 export function cartaoVideos(r, vs = r.videos) {
   const publicados = (r.artigos || []).filter((/** @type {any} */ a) => a.estado === "Publicado");
@@ -56,6 +67,7 @@ export function cartaoVideos(r, vs = r.videos) {
       <label>Voz<select id="mk-video-locutor">${(vs.vozes || []).map((/** @type {any} */ x) => `<option value="${esc(x.id)}" ${x.id === (vs.locutor || "") ? "selected" : ""}>${esc(x.nome)}${x.detalhe ? ` · ${esc(x.detalhe)}` : ""}</option>`).join("")}</select></label>
       <label class="interruptor"><input type="checkbox" id="mk-video-voz" checked> Narração</label>
     </div>
+    ${paleta(vs)}
     <div class="linha">${botao("Criar vídeo", "mk-video-criar", vs.indisponivel ? "disabled" : "", "principal")}</div>
     <p class="resultado" id="mk-resultado-video"></p>
     ${lista.length ? `<div class="itens">${lista.map((/** @type {any} */ x) => item(esc(x.titulo || x.tema || x.artigo), estado(x),
@@ -135,6 +147,21 @@ Object.assign(ACOES, {
       await redesenhar(ultimaLeitura);
       mostrar("mk-resultado-video", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video", false, erro.message); }
+  },
+  "mk-video-paleta": async (/** @type {HTMLButtonElement} */ b) => {
+    const url = /** @type {HTMLInputElement} */ ($("mk-video-paleta")).value;
+    try {
+      const r = await ocupado(b, () => api("marketing/video/paleta", { url }));
+      await redesenhar(ultimaLeitura);
+      mostrar("mk-resultado-video-paleta", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-video-paleta", false, erro.message); }
+  },
+  "mk-video-paleta-marca": async (/** @type {HTMLButtonElement} */ b) => {
+    try {
+      const r = await ocupado(b, () => api("marketing/video/paleta", { origem: "marca" }));
+      await redesenhar(ultimaLeitura);
+      mostrar("mk-resultado-video-paleta", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-video-paleta", false, erro.message); }
   },
   "mk-video-agendar": async (/** @type {HTMLButtonElement} */ b) => {
     const dados = {

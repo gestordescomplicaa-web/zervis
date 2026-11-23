@@ -213,6 +213,7 @@ class AcoesMarketing(Pagina):
             "modelos": [{"id": k, "nome": n} for k, n in videos.MODELOS.items()],
             "duracoes": sorted(roteiro_video.DURACOES),
             "vozes": v.vozes(),
+            "paleta": v.paleta(),
             "locutor": v.locutor_padrao(),
             "indisponivel": v.disponivel(),
             "instagram": marketing_posts.PADRAO.instagram.conectado,
@@ -242,6 +243,18 @@ class AcoesMarketing(Pagina):
         )
         atividade.PADRAO.registrar("execucao", "Vídeo pedido em Marketing", origem="painel")
         return {**self.videos(), "aviso": "Criando o vídeo. Aviso quando estiver pronto."}
+
+    def paleta_video(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A paleta dos vídeos: a da marca ou a de um site (o Zé tira as cores do site)."""
+        if dados.get("origem") == "marca":
+            self._videos(videos.PADRAO.paleta_da_marca)
+            return {**self.videos(), "aviso": "Usando as cores da marca."}
+        url = str(dados.get("url", ""))
+        self._videos(lambda: videos.PADRAO.paleta_do_site(url))
+        atividade.PADRAO.registrar(
+            "execucao", "Paleta dos vídeos tirada de um site", origem="painel"
+        )
+        return {**self.videos(), "aviso": "Cores do site salvas."}
 
     def agendar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
         cruas = dados.get("temas")

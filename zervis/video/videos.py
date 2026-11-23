@@ -33,10 +33,21 @@ from pathlib import Path
 from typing import Any
 
 from zervis import lugares, marketing
+from zervis.marca import CORES_PADRAO, Marca
 from zervis.portal import publico
 from zervis.redes import instagram_publicar
 from zervis.redes.instagram import Instagram, InstagramErro
-from zervis.video import biblioteca, captura, estilos, formatos, montagem, narracao, roteiro, trilha
+from zervis.video import (
+    biblioteca,
+    captura,
+    estilos,
+    formatos,
+    montagem,
+    narracao,
+    paleta,
+    roteiro,
+    trilha,
+)
 from zervis.video import fotos as fotos_mod
 
 log = logging.getLogger(__name__)
@@ -204,6 +215,7 @@ class Videos:
         procurar: Callable[[Instagram, str, float], str] = instagram_publicar.procurar,
         fotos: fotos_mod.Fotos | None = None,
         vozes_do_fish: Callable[[], list[dict[str, str]]] = _vozes_do_fish,
+        capturar_site: Callable[[str, Path], dict[str, Any]] | None = None,
     ) -> None:
         self.pasta = pasta
         self.site = site or marketing.PADRAO
@@ -219,6 +231,7 @@ class Videos:
         self._procurar = procurar
         self.fotos = fotos or fotos_mod.PADRAO
         self._vozes_do_fish = vozes_do_fish
+        self._capturar_site = capturar_site
         self._vozes_cache: tuple[float, list[dict[str, str]]] = (0.0, [])
         self._trava = threading.RLock()
         self._fila = threading.Lock()  # um vídeo por vez
@@ -322,6 +335,43 @@ class Videos:
             {"id": narracao.CADU, "nome": "Cadu", "detalhe": "local"},
             *suas,
         ]
+
+    # --- a paleta dos vídeos (ADR 0117): a da marca ou a de um site ------------------------
+
+    def paleta(self) -> dict[str, Any]:
+        return paleta.ler(self.pasta / "paleta.json")
+
+    def paleta_do_site(self, url: str) -> dict[str, Any]:
+        """Abre o site, tira as cores e passa a usá-las nos vídeos."""
+        if not url.strip():
+            raise VideoErro("Diga o endereço do site.")
+        pasta = self.pasta / "paleta"
+        try:
+            if self._capturar_site is not None:
+                cores = paleta.do_site(url, pasta, self._capturar_site)
+            else:
+                cores = paleta.do_site(url, pasta)
+        except paleta.PaletaErro as erro:
+            raise VideoErro(str(erro)) from erro
+        finally:
+            shutil.rmtree(pasta, ignore_errors=True)  # o print não fica
+        escolha = {"origem": "site", "url": url.strip()[:200], "cores": cores}
+        self.pasta.mkdir(parents=True, exist_ok=True)
+        (self.pasta / "paleta.json").write_text(json.dumps(escolha))
+        return self.paleta()
+
+    def paleta_da_marca(self) -> dict[str, Any]:
+        self.pasta.mkdir(parents=True, exist_ok=True)
+        (self.pasta / "paleta.json").write_text(json.dumps({"origem": "marca"}))
+        return self.paleta()
+
+    def _cores(self, marca: Marca) -> dict[str, str]:
+        """As cores do vídeo: as da marca ou as do site escolhido, com a tinta e o papel."""
+        escolha = self.paleta()
+        cores = {**CORES_PADRAO, **dict(marca.cores)}
+        if escolha["origem"] == "site":
+            cores.update(escolha["cores"])
+        return {**cores, **paleta.tinta_e_papel(cores)}
 
     def locutor_padrao(self) -> str:
         try:
@@ -566,7 +616,7 @@ class Videos:
             },
             "marca": {
                 "nome": marca.nome, "instagram": marca.instagram,
-                "logo": _logo_como_dado(self.site.logo()), "cores": dict(marca.cores),
+                "logo": _logo_como_dado(self.site.logo()), "cores": self._cores(marca),
             },
             "estilo": {
                 "id": estilo.id,

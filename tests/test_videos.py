@@ -994,3 +994,51 @@ def test_video_guarda_linha_entrega_e_palavra(
     assert "Quem comentar vai receber: o modelo" in v.pedidos[0] and '"AG"' in v.pedidos[0]
     tela = v.para_tela(feito)
     assert tela["linha"] == "empresarios" and tela["palavra"] == "AGENDA"
+
+
+def test_paleta_tirada_de_um_site(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+
+    from PIL import Image, ImageDraw
+
+    from zervis.video import paleta
+
+    # um "site": fundo branco, texto quase preto, um botão roxo e um selo verde
+    imagem = Image.new("RGB", (1280, 800), "#ffffff")
+    d = ImageDraw.Draw(imagem)
+    d.rectangle((100, 100, 900, 160), fill="#150c22")
+    d.rectangle((100, 300, 420, 380), fill="#820ad1")
+    d.rectangle((500, 300, 640, 340), fill="#16a34a")
+    png = io.BytesIO()
+    imagem.save(png, "PNG")
+    cores = paleta.extrair(png.getvalue())
+    assert cores["fundo"] == "#ffffff" and cores["texto"] == "#150c22"
+    assert cores["destaque"] == "#820ad1" and cores["destaque2"] == "#16a34a"
+    assert paleta.tinta_e_papel(cores)["tinta"] == "#150c22"
+
+    def capturar(url: str, pasta: Path) -> dict[str, Any]:
+        assert url == "https://nubank.com.br"
+        (pasta / "c").mkdir(parents=True)
+        (pasta / "c" / "p.png").write_bytes(png.getvalue())
+        return {"arquivo": "c/p.png"}
+
+    v, _ = _videos(tmp_path, json.dumps(ROTEIRO), monkeypatch)
+    v._capturar_site = capturar
+    assert v.paleta() == {"origem": "marca"}
+    escolhida = v.paleta_do_site("nubank.com.br")
+    assert escolhida["origem"] == "site" and escolhida["cores"]["destaque"] == "#820ad1"
+    assert not (tmp_path / "paleta").exists()  # o print do site não fica guardado
+    feito = v.criar(tema="x", esperar=True)
+    dados = json.loads(
+        (tmp_path / feito.id / "dados.js").read_text().removeprefix("window.VIDEO = ").rstrip(";\n")
+    )
+    assert dados["marca"]["cores"]["destaque"] == "#820ad1" and dados["marca"]["cores"]["tinta"]
+    assert v.paleta_da_marca() == {"origem": "marca"}
+
+
+def test_paleta_estavel_no_plano() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    for c in bruto["cenas"][1:4]:
+        c["fundo"] = "cor"
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert [c["fundo"] for c in r.cenas[1:4]] == ["cor", "claro", "claro"]
