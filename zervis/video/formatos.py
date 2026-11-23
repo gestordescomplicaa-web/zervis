@@ -59,33 +59,43 @@ LINHAS: dict[str, str] = {
     "ferramenta": "Sobre uma ferramenta. O gancho promete o que ela faz por quem assiste; mostre "
     'o logo dela ("logo: <ferramenta>") e o site ("site: <endereço>"); de 3 a 5 usos práticos, '
     "um por cena (item com o logo ou o print); para quem serve; preço ou plano grátis só se "
-    "estiver no material. A entrega é o link com um passo a passo.",
+    "estiver no material. A entrega é a conversa: como essa ferramenta se aplicaria no negócio "
+    "de quem comenta (nunca o link nem um tutorial técnico).",
 }
 
 
 def secao_entrega(linha: str = "", entrega: str = "", palavra: str = "") -> str:
-    """A linha do vídeo e a entrega: o motivo de comentar (quem comenta recebe algo de verdade)."""
+    """A linha do vídeo e o convite do fim (ADR 0120): o comentário vira conversa no direct.
+
+    Qualquer comentário já ganha a resposta e a abertura no direct (ADR 0118), então o vídeo não
+    precisa de palavra-chave nem de brinde: pede um comentário sobre o negócio de quem assiste
+    (o que já dá contexto para o diagnóstico) e promete a conversa. Brinde técnico (prompt,
+    código, passo a passo) atrai público técnico; o público é o empresário."""
     linha_txt = LINHAS.get(linha) or (
         "Escolha a linha pelo tema: " + " | ".join(f"{k}: {v}" for k, v in LINHAS.items())
     )
     entrega_txt = (
-        f"Quem comentar vai receber: {entrega}. Use exatamente isso, sem acrescentar nada."
+        f"O que quem comentar recebe: {entrega}. Use exatamente isso, sem acrescentar nada."
         if entrega
-        else "Sugira uma entrega simples e real que o dono da marca consiga mandar no direct (um "
-        "link, um checklist, um modelo, um passo a passo), ligada ao vídeo; nunca invente "
-        "número, preço, bônus ou prazo."
+        else "O que quem comentar recebe é uma conversa no direct: você entende o negócio da "
+        'pessoa e mostra o que daria para automatizar nele ("eu te chamo no direct e te mostro '
+        'como automatizaria a sua empresa"). Nunca prometa brinde técnico (prompt, código, '
+        "checklist de ferramenta, passo a passo): atrai curioso técnico, não empresário. Nunca "
+        "invente número, preço, bônus ou prazo."
     )
     palavra_txt = (
-        f'A palavra é "{palavra}".'
+        f'O que comentar: "{palavra}".'
         if palavra
-        else 'A palavra é uma só, curta e ligada ao assunto ("OFICINA", "NOTION").'
+        else 'O que comentar é sobre o negócio de quem assiste, curto, até 16 letras: "O SEU '
+        'RAMO", "SUA MAIOR DOR", "SUA ÁREA". Qualquer comentário vale; isso só dá o '
+        "contexto da conversa."
     )
     return (
-        "## Linha e entrega (o motivo de comentar)\n"
+        "## Linha e convite (o motivo de comentar)\n"
         f"{linha_txt}\n"
-        'O vídeo termina com o fecho "comenta": quem comentar a palavra recebe a entrega no '
-        f'direct. {entrega_txt} {palavra_txt} Anuncie a entrega cedo, dizendo o que é ("no fim '
-        'eu te dou o passo a passo"), nunca "fica até o fim". A fala do fecho diz a palavra e '
-        'a entrega; a legenda do Instagram repete: "Comenta PALAVRA que eu te mando ENTREGA". '
-        'No JSON, "palavra" e "entrega" no topo.\n'
+        'O vídeo termina com o fecho "comenta". '
+        f"{entrega_txt} {palavra_txt} Anuncie cedo que no fim tem o convite, dizendo o que é "
+        '("no fim eu te digo como ter isso na sua empresa"), nunca "fica até o fim". A fala do '
+        "fecho diz o que comentar e o que a pessoa ganha; a legenda do Instagram repete. No JSON, "
+        '"palavra" (o que comentar) e "entrega" (o que a pessoa ganha) no topo.\n'
     )

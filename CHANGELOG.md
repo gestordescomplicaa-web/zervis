@@ -5,6 +5,8 @@
 - **As escolhas do cartão Vídeos ficam guardadas** (para quem, duração, diretor, estilo, voz e
   narração), e valem também para os vídeos agendados e os pedidos pela voz; os ajustes da conversa
   no direct se salvam ao sair do campo.
+- **O fim dos vídeos convida para a conversa:** "comenta o seu ramo que eu te chamo no direct e te
+  mostro como automatizaria a sua empresa", sem palavra-chave nem brinde técnico (ADR 0120).
 - **Comentários do Instagram viram conversa:** ligado em Marketing, todo comentário novo recebe
   uma resposta e uma mensagem no direct que puxa o diagnóstico do negócio (ADR 0118).
 - **Conversa no direct até a reunião:** quando a pessoa responde, o Zé entende o negócio e manda o

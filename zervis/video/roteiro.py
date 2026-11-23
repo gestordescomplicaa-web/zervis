@@ -564,11 +564,15 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     if not isinstance(brutas, list) or not minimo <= len(brutas) <= maximo:
         raise RoteiroErro(f"O roteiro precisa de {minimo} a {maximo} cenas.")
     cenas = [_cena(c, estilo.cenas_extras) for c in brutas]
+
     # a paleta estável: a tela inteira na cor da marca no máximo uma vez fora do fecho
-    na_cor = [c for c in cenas[:-1] if c["fundo"] == "cor" or c.get("composicao") == "cheia"]
-    for c in na_cor[1:]:
+    # (a frase "cheia" é a tela na cor; a foto "cheia" é a foto, não conta)
+    def na_cor(c: dict[str, Any]) -> bool:
+        return c["fundo"] == "cor" or (c["tipo"] == "frase" and c.get("composicao") == "cheia")
+
+    for c in [c for c in cenas[:-1] if na_cor(c)][1:]:
         c["fundo"] = "claro" if c["fundo"] == "cor" else c["fundo"]
-        if c.get("composicao") == "cheia":
+        if c["tipo"] == "frase" and c.get("composicao") == "cheia":
             c["composicao"] = "centro"
     for antes, cena in itertools.pairwise(cenas):
         if antes["tipo"] == cena["tipo"] == "item":

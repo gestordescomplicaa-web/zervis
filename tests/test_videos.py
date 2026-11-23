@@ -953,10 +953,11 @@ def test_lista_e_estilo_editorial() -> None:
 def test_linha_entrega_e_comenta_no_plano() -> None:
     prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), linha="ferramenta",
                                    entrega="o link e o passo a passo", palavra="N8N")  # fmt: skip
-    assert "## Linha e entrega" in prompt and "Sobre uma ferramenta" in prompt
-    assert "Quem comentar vai receber: o link e o passo a passo" in prompt and '"N8N"' in prompt
+    assert "## Linha e convite" in prompt and "Sobre uma ferramenta" in prompt
+    assert "O que quem comentar recebe: o link e o passo a passo" in prompt and '"N8N"' in prompt
     sem = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
-    assert "Escolha a linha pelo tema" in sem and "Sugira uma entrega" in sem
+    assert "Escolha a linha pelo tema" in sem and "uma conversa no direct" in sem
+    assert "Nunca prometa brinde técnico" in sem and "O SEU" in sem
     bruto = {**json.loads(json.dumps(ROTEIRO)), "palavra": "oficina", "entrega": "o checklist"}
     bruto["cenas"][-1].pop("composicao", None)
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
@@ -989,9 +990,11 @@ def test_video_guarda_linha_entrega_e_palavra(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     v, _ = _videos(tmp_path, json.dumps({**ROTEIRO, "palavra": "AGENDA"}), monkeypatch)
-    feito = v.criar(tema="x", esperar=True, linha="empresarios", entrega="o modelo", palavra="ag!")
-    assert (feito.linha, feito.entrega, feito.palavra) == ("empresarios", "o modelo", "AG")
-    assert "Quem comentar vai receber: o modelo" in v.pedidos[0] and '"AG"' in v.pedidos[0]
+    feito = v.criar(
+        tema="x", esperar=True, linha="empresarios", entrega="o modelo", palavra="o seu ramo!"
+    )
+    assert (feito.linha, feito.entrega, feito.palavra) == ("empresarios", "o modelo", "O SEU RAMO")
+    assert "O que quem comentar recebe: o modelo" in v.pedidos[0] and '"O SEU RAMO"' in v.pedidos[0]
     tela = v.para_tela(feito)
     assert tela["linha"] == "empresarios" and tela["palavra"] == "AGENDA"
 
@@ -1042,6 +1045,10 @@ def test_paleta_estavel_no_plano() -> None:
         c["fundo"] = "cor"
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
     assert [c["fundo"] for c in r.cenas[1:4]] == ["cor", "claro", "claro"]
+    bruto["cenas"][4] = {"tipo": "foto", "fala": "A oficina.", "foto": "busca: garage",
+                         "composicao": "cheia"}  # fmt: skip
+    foto = roteiro.interpretar(json.dumps(bruto), _estilo()).cenas[4]
+    assert foto["composicao"] == "cheia"  # a foto em tela cheia não é a tela na cor
 
 
 def test_escolhas_do_cartao_ficam_guardadas(

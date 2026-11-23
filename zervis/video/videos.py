@@ -524,7 +524,7 @@ class Videos:
             duracao_alvo=duracao, locutor=locutor,
             linha=linha if linha in formatos.LINHAS else "",
             entrega=" ".join(entrega.split())[:140],
-            palavra=re.sub(r"[^\wÀ-ÿ]", "", palavra)[:16].upper(),
+            palavra=" ".join(re.sub(r"[^\wÀ-ÿ ]", "", palavra).split())[:16].upper(),
         )  # fmt: skip
         return self._comecar(self._gravar(video), esperar)
 
