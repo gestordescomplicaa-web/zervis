@@ -661,14 +661,8 @@ class Portal:
                 if caminho == "/voz-app/ws":
                     self._voz_app()
                     return
-                if caminho.startswith(publico.PREFIXO):
-                    # Um arquivo que alguém de fora busca (a Meta, num post): sem entrar, só
-                    # pelo segredo do link, dentro do prazo (ADR 0093).
-                    achado = publico.PADRAO.arquivo(caminho)
-                    if achado is None:
-                        self._json(404, {"erro": "não existe"})
-                    else:
-                        self._enviar(200, *achado)
+                if publico.e_publico(caminho):  # o que a Meta busca ou avisa, sem entrar
+                    publico.responder(self, "GET")
                     return
                 if caminho == "/entrar":
                     if self._entrou():
@@ -723,6 +717,9 @@ class Portal:
                 caminho = self.path.split("?", 1)[0]
                 if caminho == "/sessoes/permissao":
                     self._permissao_da_sessao()
+                    return
+                if caminho == publico.AVISOS:
+                    publico.responder(self, "POST")
                     return
                 if caminho.startswith(f"/{CONECTORES}/"):
                     self._conector("POST")

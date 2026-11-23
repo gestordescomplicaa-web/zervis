@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Comentários respondidos na hora:** com os webhooks da Meta configurados em Marketing, cada
+  comentário e mensagem no direct chega ao Zé no momento em que é feito; a conferência a cada
+  dois minutos vira uma rede de segurança de 30 em 30 (ADR 0122).
 - **Legenda do Reels sem lista de fontes:** os vídeos só usam fotos livres que dispensam o
   crédito (domínio público, CC0), e a legenda não leva mais "Fotos: ..." (ADR 0121).
 - **Qualidade da voz dos vídeos:** o cartão Vídeos escolhe o modelo do Fish do vídeo (S2.1 Pro,

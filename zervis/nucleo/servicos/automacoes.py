@@ -104,17 +104,14 @@ class ServicoAutomacoes:
                     self.n.fila.guardar(texto, "agenda", expira)  # some quando a reunião começa
 
     def _comentarios_do_instagram(self, agora: float) -> None:
-        """Os comentários novos viram resposta e conversa no direct (ADR 0118), a cada dois
-        minutos, numa thread (pela rede, nunca atrasa os lembretes)."""
+        """Os comentários novos viram resposta e conversa no direct (ADR 0118). Na hora, pelo
+        aviso da Meta (ADR 0122); a conferência periódica, numa thread, fica de rede de
+        segurança: a cada dois minutos sem os avisos, a cada 30 com eles."""
         from zervis.redes import instagram_comentarios as ic
-
-        c = ic.PADRAO
-        if agora - c.em < ic.INTERVALO_S or c.ocupado():
-            return
         from zervis.redes import instagram_direct
+        from zervis.redes import instagram_webhook as iw
 
-        c.em = agora
-        d = instagram_direct.PADRAO
+        c, d, w = ic.PADRAO, instagram_direct.PADRAO, iw.PADRAO
         if c.avisar is None:
             c.avisar = d.avisar = lambda texto: self.n._na_linha("aviso", texto)
 
@@ -122,6 +119,12 @@ class ServicoAutomacoes:
             c.ciclo()  # os comentários novos (etapa 1)
             d.ciclo()  # as respostas no direct (etapa 2)
 
+        if w.acordar is None:
+            w.acordar = iw.Despertador(ciclo).acordar
+        intervalo = iw.FOLGA_S if w.confirmado() else ic.INTERVALO_S
+        if agora - c.em < intervalo or c.ocupado():
+            return
+        c.em = agora
         threading.Thread(target=ciclo, name="instagram-comentarios", daemon=True).start()
 
     def _executar(self, x: Execucao, momento: datetime) -> None:

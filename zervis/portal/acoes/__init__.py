@@ -212,6 +212,8 @@ class Acoes:
             "marketing/instagram/comentarios": self.ligar_comentarios,
             "marketing/instagram/direct": self.ajustar_direct,
             "marketing/instagram/direct/devolver": self.devolver_direct,
+            "marketing/instagram/avisos": self.guardar_avisos,
+            "marketing/instagram/avisos/remover": self.remover_avisos,
             "tv/procurar": self.procurar_tv,
             "empresas/grupos": self.grupos_whatsapp,
             "empresas/salvar": self.salvar_empresa,

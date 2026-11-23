@@ -19,8 +19,25 @@ export function cartaoComentarios(r) {
     ${c.recentes.length ? `<div class="itens">${c.recentes.map((/** @type {any} */ x) => item(`@${esc(x.autor)} · ${esc(String(x.texto || "").slice(0, 60))}`, `${hora(x.quando)} · ${resultado(x)}`, "")).join("")}</div>` : ""}
     <div class="linha">${c.ligado ? botao("Desligar", "mk-comentarios", `data-ligado="0"`, "discreta") : botao("Ligar", "mk-comentarios", `data-ligado="1"${c.conectado ? "" : " disabled"}`, "principal")}${c.contatos ? `<span class="nota">${c.contatos} ${c.contatos === 1 ? "pessoa recebeu" : "pessoas receberam"} mensagem</span>` : ""}</div>
     <p class="resultado" id="mk-resultado-comentarios"></p>
+    ${avisos(c.avisos || { configurado: false, recebendo: false, endereco: "", verificacao: "", recusados: 0, ultimo: 0 })}
     ${conversa(c.direct || { ligado: false, link: "", como: "", contatos: [] })}`)}</div>`;
 }
+
+/** Os avisos na hora (ADR 0122): o endereço e o token para o painel de apps da Meta e a chave
+ * secreta do app. @param {any} a */
+const avisos = (a) => {
+  const estado = a.recebendo ? ["bom", "Recebendo"] : a.configurado ? ["", "Aguardando o primeiro aviso"] : ["", "Não configurado"];
+  return `<h3 class="subtitulo">Resposta na hora <span class="etiqueta ${estado[0]}">${estado[1]}</span></h3>
+    ${sub("Recebe cada comentário e mensagem no momento em que é feito, pelos webhooks da Meta.")}
+    ${a.endereco ? `<div class="campos">
+      <label class="largo">URL de retorno<input readonly value="${esc(a.endereco)}"></label>
+      <label class="largo">Token de verificação<input readonly value="${esc(a.verificacao)}"></label>
+      <label class="largo">Chave secreta do app<input id="mk-avisos-segredo" type="password" autocomplete="off" placeholder="${a.configurado ? "Salva" : ""}"></label>
+    </div>
+    <div class="linha">${botao("Salvar", "mk-avisos-salvar", "", "principal")}${a.configurado ? botao("Remover", "mk-avisos-remover", "", "discreta") : ""}${a.recebendo ? `<span class="nota">Último aviso ${hora(a.ultimo)}</span>` : ""}${a.recusados ? `<span class="nota">${a.recusados} aviso(s) recusado(s): confira a chave</span>` : ""}</div>`
+    : `<p class="nota">Ative o acesso de qualquer lugar com endereço fixo.</p>`}
+    <p class="resultado" id="mk-resultado-avisos"></p>`;
+};
 
 /** A conversa no direct (ADR 0119): o link, o como conversar e os contatos. @param {any} d */
 const conversa = (d) => `<h3 class="subtitulo">Conversa no direct <span class="etiqueta ${d.ligado ? "bom" : ""}">${d.ligado ? "Ligada" : "Desligada"}</span></h3>
@@ -72,6 +89,21 @@ Object.assign(ACOES, {
   "mk-direct-devolver": async (/** @type {HTMLButtonElement} */ b) => {
     try { redesenhar(await ocupado(b, () => api("marketing/instagram/direct/devolver", { usuario: b.dataset.usuario }))); }
     catch (erro) { mostrar("mk-resultado-direct", false, erro.message); }
+  },
+  "mk-avisos-salvar": async (/** @type {HTMLButtonElement} */ b) => {
+    const segredo = /** @type {HTMLInputElement} */ ($("mk-avisos-segredo")).value;
+    try {
+      const r = await ocupado(b, () => api("marketing/instagram/avisos", { segredo }));
+      redesenhar(r);
+      mostrar("mk-resultado-avisos", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-avisos", false, erro.message); }
+  },
+  "mk-avisos-remover": async (/** @type {HTMLButtonElement} */ b) => {
+    try {
+      const r = await ocupado(b, () => api("marketing/instagram/avisos/remover", {}));
+      redesenhar(r);
+      mostrar("mk-resultado-avisos", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-avisos", false, erro.message); }
   },
   "mk-comentarios": async (/** @type {HTMLButtonElement} */ b) => {
     try {

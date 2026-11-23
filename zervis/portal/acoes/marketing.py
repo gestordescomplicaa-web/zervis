@@ -16,7 +16,7 @@ from zervis.marca import CORES_PADRAO
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
-from zervis.redes import instagram_comentarios, instagram_direct
+from zervis.redes import instagram_comentarios, instagram_direct, instagram_webhook
 from zervis.redes.instagram import InstagramErro
 from zervis.video import estilos as estilos_video
 from zervis.video import roteiro as roteiro_video
@@ -71,7 +71,17 @@ class AcoesMarketing(Pagina):
             {"usuario": u, **{k: x.get(k) for k in campos}}
             for u, x in sorted(d["contatos"].items())
         ]
+        w = instagram_webhook.PADRAO.estado()
+        base = marketing_posts.endereco_publico()
         return {
+            "avisos": {
+                "configurado": w["configurado"],
+                "recebendo": w["configurado"] and bool(w["ultimo"]),
+                "ultimo": w["ultimo"],
+                "recusados": w["recusados"],
+                "endereco": f"{base}{instagram_webhook.CAMINHO}" if base else "",
+                "verificacao": w["verificacao"],
+            },
             "direct": {
                 "ligado": d["ligado"],
                 "link": d["link"],
@@ -98,6 +108,23 @@ class AcoesMarketing(Pagina):
             origem="painel",
         )
         return {**self.marketing(), "aviso": "Ligado." if ligado else "Desligado."}
+
+    def guardar_avisos(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Os avisos na hora (ADR 0122): a chave secreta do app da Meta e a assinatura da conta."""
+        if not marketing_posts.PADRAO.instagram.conectado:
+            raise PedidoInvalido("Conecte o Instagram em Redes sociais.")
+        try:
+            instagram_webhook.PADRAO.guardar(str(dados.get("segredo", "")))
+        except InstagramErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        atividade.PADRAO.registrar(
+            "execucao", "Avisos do Instagram na hora configurados", origem="painel"
+        )
+        return {**self.marketing(), "aviso": "Salvo."}
+
+    def remover_avisos(self, _dados: dict[str, Any]) -> dict[str, Any]:
+        instagram_webhook.PADRAO.esquecer()
+        return {**self.marketing(), "aviso": "Removido."}
 
     def ajustar_direct(self, dados: dict[str, Any]) -> dict[str, Any]:
         """A conversa no direct (ADR 0119): ligada, o link de agendamento e o como conversar."""
