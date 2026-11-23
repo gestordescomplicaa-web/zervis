@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Projetos 3D e Marketing abrem na hora:** a lista de projetos não varre mais a `.venv` nem
+  os caches de cada projeto (de quase um segundo para milésimos); no Marketing, os PRs abertos e
+  as métricas chegam depois da página, sem segurá-la, e as vozes dos vídeos pedem ao Fish só as
+  suas (uma consulta, não duas).
 - **Comentários respondidos na hora:** com os webhooks da Meta configurados em Marketing, cada
   comentário e mensagem no direct chega ao Zé no momento em que é feito; a conferência a cada
   dois minutos vira uma rede de segurança de 30 em 30 (ADR 0122).

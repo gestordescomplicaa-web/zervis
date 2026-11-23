@@ -60,11 +60,24 @@ const cartaoAutomaticos = (r) => cartao(`Artigos automáticos <span class="etiqu
   <div class="linha">${botao("Agendar", "mk-agendar", "", r.automaticos.length ? "discreta" : "principal")}<a class="acao discreta" href="#automacoes">Automações</a></div>
   <p class="resultado" id="mk-resultado-agenda"></p>`);
 
-/** @param {any[]} prs */
-const cartaoPRs = (prs) => cartao("PRs abertos", prs.length
+/** @param {any[] | null | undefined} prs undefined: ainda chegando; null: o GitHub falhou */
+const corpoPRs = (prs) => prs === undefined ? sub("Carregando…") : prs === null ? sub("Sem conexão com o GitHub.") : prs.length
   ? `<div class="itens">${prs.map((p) => item(`#${esc(String(p.numero))} ${esc(p.titulo)}`, "",
       `<a class="acao discreta" href="${esc(p.endereco)}" target="_blank" rel="noopener">Revisar</a>`)).join("")}</div>`
-  : vazio("Nenhum PR aberto."));
+  : vazio("Nenhum PR aberto.");
+/** @param {any[] | null | undefined} prs */
+const cartaoPRs = (prs) => `<div id="mk-prs">${cartao("PRs abertos", corpoPRs(prs))}</div>`;
+
+/** @type {any[] | null | undefined} a última lista, mostrada enquanto a nova chega */
+let ultimosPRs;
+
+/** O GitHub leva quase um segundo: a página não espera por ele, e o cartão chega depois. */
+async function prsSemTravar() {
+  const pedido = api("marketing/prs").catch(() => null).then((prs) => (ultimosPRs = prs));
+  const cedo = await Promise.race([pedido, new Promise((r) => setTimeout(() => r(undefined), 300))]);
+  if (cedo === undefined) pedido.then((prs) => { const lugar = $("mk-prs"); if (lugar) lugar.outerHTML = cartaoPRs(prs); });
+  return cedo === undefined ? ultimosPRs : cedo;
+}
 
 /** @param {any} r */
 const cartaoBlog = (r) => {
@@ -136,10 +149,10 @@ async function subirFoto(arquivo) {
 }
 
 PAGINAS.marketing = async () => {
-  const [r, fotos, metricas] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => []), metricasSemTravar()]);
+  const [r, fotos, metricas, prs] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => []), metricasSemTravar(), prsSemTravar()]);
   lembrarLeitura(r);
   const corpo = r.site.configurado
-    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(r.prs)}${cartaoBlog(r)}${cartaoMetricas(metricas)}${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}${cartaoInstagram(r)}${cartaoComentarios(r)}${cartaoMarca(r.marca)}${cartaoFotos(fotos)}${cartaoSite(r.site)}`
+    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(prs)}${cartaoBlog(r)}${cartaoMetricas(metricas)}${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}${cartaoInstagram(r)}${cartaoComentarios(r)}${cartaoMarca(r.marca)}${cartaoFotos(fotos)}${cartaoSite(r.site)}`
     : `${cartaoSite(r.site)}${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}${cartaoComentarios(r)}`;
   return `${cabeca("Marketing")}${sub("O site e o blog, sempre por Pull Request: nada vai ao ar sem você.")}${corpo}`;
 };

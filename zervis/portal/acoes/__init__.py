@@ -116,6 +116,7 @@ class Acoes:
             "dispositivos": self.dispositivos,
             "marketing": self.marketing,
             "marketing/metricas": self.metricas,
+            "marketing/prs": self.prs,
             "marketing/videos": self.videos,
             "impressora": self.impressora_3d,
         }

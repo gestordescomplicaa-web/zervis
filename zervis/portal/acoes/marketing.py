@@ -35,7 +35,6 @@ class AcoesMarketing(Pagina):
             "artigos": artigos,
             "categorias": m.por_categoria(artigos),
             "pedidos": m.pedidos(self.n.sessoes),
-            "prs": m.prs(),
             "posts": [marketing_posts.PADRAO.para_tela(p) for p in marketing_posts.PADRAO.listar()],
             "videos": self.videos(),
             "comentarios": self._comentarios(),
@@ -43,6 +42,10 @@ class AcoesMarketing(Pagina):
             "automaticos": self._automaticos("artigo"),
             "videos_automaticos": self._automaticos("video"),
         }
+
+    def prs(self) -> list[dict[str, Any]]:
+        """Lidos à parte do resto da página: a consulta ao GitHub leva quase um segundo."""
+        return marketing.PADRAO.prs()
 
     def _automaticos(self, tipo: str) -> list[dict[str, Any]]:
         saida = []

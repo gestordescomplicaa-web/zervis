@@ -14,6 +14,7 @@ filamento que está na impressora e diz o tempo e o peso; `imprimir` manda, só 
 """
 
 import json
+import os
 import re
 import shutil
 import struct
@@ -271,6 +272,23 @@ def _trabalho(pasta: Path, arquivo: str) -> Path:
     )
 
 
+def _visiveis(pasta: Path) -> list[Path]:
+    """Os arquivos que a página mostra, em ordem. Não entra nas pastas ocultas nem nos caches
+    (`.venv`, `.ze`, `__pycache__`): só a `.venv` de um projeto tem milhares de arquivos."""
+    achados = []
+    for raiz, pastas, nomes in os.walk(pasta):
+        pastas[:] = [p for p in pastas if not p.startswith(".") and p != "__pycache__"]
+        achados += [
+            Path(raiz, n)
+            for n in nomes
+            if not n.startswith(".")
+            and n not in OCULTOS
+            and Path(n).suffix.lower() in MOSTRADOS
+            and os.path.isfile(os.path.join(raiz, n))
+        ]
+    return sorted(achados)
+
+
 class Projetos3D:
     def __init__(self, raiz: Path, acervo: Path, ajustes: Path) -> None:
         self.raiz = raiz.expanduser()
@@ -373,15 +391,8 @@ class Projetos3D:
         except ValueError:
             dados = {}
         arquivos = []
-        for f in sorted(pasta.rglob("*")):
+        for f in _visiveis(pasta):
             relativo = f.relative_to(pasta)
-            if (
-                not f.is_file()
-                or f.name in OCULTOS
-                or f.suffix.lower() not in MOSTRADOS
-                or any(p.startswith(".") or p in ("__pycache__", ".venv") for p in relativo.parts)
-            ):
-                continue
             item: dict[str, Any] = {
                 "nome": str(relativo),
                 "tamanho": f.stat().st_size,

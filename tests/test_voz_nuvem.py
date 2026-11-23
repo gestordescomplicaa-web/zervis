@@ -338,6 +338,13 @@ def test_vozes_do_fish_as_da_pessoa_e_as_mais_usadas_em_portugues(api: tuple[Api
         fish.vozes("chave-errada", endereco)
 
 
+def test_as_vozes_proprias_do_fish_numa_consulta_so(api: tuple[Api, str]) -> None:
+    _, endereco = api
+    assert fish.proprias(CHAVE_FISH, endereco) == [
+        {"id": "a" * 32, "nome": "Minha voz", "detalhe": "sua"}
+    ]
+
+
 def test_saldo_do_fish_decide_o_modelo(api: tuple[Api, str]) -> None:
     estado, endereco = api
     assert fish.conta(CHAVE_FISH, endereco) == ("s2.1-pro", "Saldo de API: US$ 3,20 · S2.1 Pro.")
