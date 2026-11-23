@@ -26,7 +26,7 @@ const publicar = (v, vs) => v.estado === "publicado"
 
 /** @param {any} v @param {any} vs */
 const previa = (v, vs) => `<div class="previa-video">
-  <video controls playsinline preload="metadata" poster="/fluxo/marketing/video?id=${esc(v.id)}&qual=capa" src="/fluxo/marketing/video?id=${esc(v.id)}"></video>
+  <video controls playsinline preload="none" poster="/fluxo/marketing/video?id=${esc(v.id)}&qual=capa" src="/fluxo/marketing/video?id=${esc(v.id)}"></video>
   <div class="previa-video-lado">
     ${v.palavra ? `<p class="nota">Comentário: <strong>${esc(v.palavra)}</strong>${v.entrega ? ` · Entrega: ${esc(v.entrega)}` : ""}</p>` : ""}
     ${v.legenda ? `<pre class="legenda-post">${esc(v.legenda)}</pre>` : ""}

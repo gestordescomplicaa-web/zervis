@@ -6,17 +6,12 @@ import { $, api, botao, cartao, esc, item, mostrar, ocupado, sub } from "../pain
 /** @param {number} quando segundos @returns {string} */
 const hora = (quando) => new Date(quando * 1000).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-/** @param {any} x */
-const resultado = (x) => x.erro ? `Erro · ${esc(x.erro)}`
-  : `${x.publico ? "Respondido" : ""}${x.publico && x.direct ? " · " : ""}${x.direct ? "Direct enviado" : x.publico ? " · Já recebeu direct recentemente" : ""}`;
-
 /** O cartão Comentários do Instagram. @param {any} r a leitura "marketing" */
 export function cartaoComentarios(r) {
   const c = r.comentarios || { ligado: false, conectado: false, recentes: [], contatos: 0 };
   return `<div id="mk-comentarios">${cartao(`Comentários do Instagram <span class="etiqueta ${c.ligado ? "bom" : ""}">${c.ligado ? "Ligado" : "Desligado"}</span>`,
     `${sub("Cada comentário recebe uma resposta e uma mensagem no direct que puxa a conversa sobre o negócio da pessoa.")}
     ${!c.conectado ? `<p class="nota">Conecte o Instagram em Redes sociais.</p>` : ""}
-    ${c.recentes.length ? `<div class="itens">${c.recentes.map((/** @type {any} */ x) => item(`@${esc(x.autor)} · ${esc(String(x.texto || "").slice(0, 60))}`, `${hora(x.quando)} · ${resultado(x)}`, "")).join("")}</div>` : ""}
     <div class="linha">${c.ligado ? botao("Desligar", "mk-comentarios", `data-ligado="0"`, "discreta") : botao("Ligar", "mk-comentarios", `data-ligado="1"${c.conectado ? "" : " disabled"}`, "principal")}${c.contatos ? `<span class="nota">${c.contatos} ${c.contatos === 1 ? "pessoa recebeu" : "pessoas receberam"} mensagem</span>` : ""}</div>
     <p class="resultado" id="mk-resultado-comentarios"></p>
     ${avisos(c.avisos || { configurado: false, recebendo: false, endereco: "", verificacao: "", recusados: 0, ultimo: 0 })}
@@ -49,9 +44,15 @@ const conversa = (d) => `<h3 class="subtitulo">Conversa no direct <span class="e
     </div>
     <div class="linha">${botao("Salvar", "mk-direct-salvar", "", "principal")}</div>
     <p class="resultado" id="mk-resultado-direct"></p>
-    ${d.contatos.length ? `<div class="itens">${d.contatos.map((/** @type {any} */ x) => item(`@${esc(x.usuario)} · ${esc(x.etapa || "")}`,
-      esc(x.pausado ? `Com você: ${x.motivo || ""}` : (x.resumo || `${x.respostas || 0} resposta(s)`)),
-      x.pausado ? botao("Devolver ao Zé", "mk-direct-devolver", `data-usuario="${esc(x.usuario)}"`, "discreta") : "")).join("")}</div>` : ""}`;
+    ${comVoce(d.contatos)}`;
+
+/** Só as conversas que o Zé passou para você: o resto fica no direct, não na tela.
+ * @param {any[]} contatos */
+const comVoce = (contatos) => {
+  const pausados = contatos.filter((x) => x.pausado);
+  return pausados.length ? `<div class="itens">${pausados.map((x) => item(`@${esc(x.usuario)}`, "Com você",
+    botao("Devolver ao Zé", "mk-direct-devolver", `data-usuario="${esc(x.usuario)}"`, "discreta"))).join("")}</div>` : "";
+};
 
 /** Redesenha o cartão com a leitura nova. @param {any} r */
 function redesenhar(r) {

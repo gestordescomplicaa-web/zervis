@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Marketing mais leve:** as prévias dos vídeos só baixam o MP4 quando você dá play (antes,
+  cada abertura da página baixava todos os vídeos inteiros); o cartão Comentários do Instagram
+  não lista mais quem comentou ou mandou mensagem, só as conversas que o Zé passou para você.
 - **Projetos 3D e Marketing abrem na hora:** a lista de projetos não varre mais a `.venv` nem
   os caches de cada projeto (de quase um segundo para milésimos); no Marketing, os PRs abertos e
   as métricas chegam depois da página, sem segurá-la, e as vozes dos vídeos pedem ao Fish só as
