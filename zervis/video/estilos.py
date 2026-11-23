@@ -1,7 +1,8 @@
 """Os estilos dos vídeos (ADR 0106): cada um é uma pasta com o visual e, se quiser, cenas próprias.
 
-    estilo.json   {"nome", "descricao", "fontes": {"titulo", "texto"}, "onda", "trilha": {"bpm",
-                  "energia"}, "tom", "cenas": {"<tipo novo>": "<o formato, para o modelo>"}}
+    estilo.json   {"nome", "descricao", "fontes": {"titulo", "texto", "legenda"}, "onda",
+                  "trilha": {"bpm", "energia"}, "tom",
+                  "cenas": {"<tipo novo>": "<o formato, para o modelo>"}}
     estilo.css    o visual, por cima da estrutura (`web/base.css`); as cores vêm da marca
     cenas.js      (opcional) cenas novas ou trocadas: `Ze.cena(tipo, {montar, render})`
 
@@ -38,6 +39,7 @@ class Estilo:
     descricao: str = ""
     fonte_titulo: str = ""
     fonte_texto: str = ""
+    fonte_legenda: str = ""  # a da legenda, se o estilo quiser outra (regular e itálica)
     onda: bool = True
     bpm: int = 120
     energia: str = "media"
@@ -63,6 +65,8 @@ class Estilo:
         if not familias:
             return ""
         partes = "&".join(f"family={quote_plus(f)}:wght@400;600;700;800" for f in familias)
+        if self.fonte_legenda and self.fonte_legenda not in familias:
+            partes += f"&family={quote_plus(self.fonte_legenda)}:ital@0;1"
         return f"https://fonts.googleapis.com/css2?{partes}&display=block"
 
     def para_tela(self) -> dict[str, Any]:
@@ -101,6 +105,7 @@ def _ler(pasta: Path, proprio: bool) -> Estilo | None:
         descricao=str(dados.get("descricao", ""))[:160],
         fonte_titulo=fonte("titulo"),
         fonte_texto=fonte("texto"),
+        fonte_legenda=fonte("legenda"),
         onda=dados.get("onda") is not False,
         bpm=bpm,
         energia=str(trilha.get("energia")) if trilha.get("energia") in ENERGIAS else "media",

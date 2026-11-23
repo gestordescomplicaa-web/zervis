@@ -2,6 +2,23 @@
 
 ## Não lançado
 
+- **A copy manda na tela:** cada coisa dita vira imagem real na palavra (logos de marcas, fotos
+  livres ou da marca, prints de site); o Editorial usa as cores da marca, com um sistema de tipo
+  e layout; sai o "caos virando ordem" (ADR 0115).
+- **Linhas e entrega:** vídeos para empresários ou sobre uma ferramenta, sempre fechando com
+  "comenta PALAVRA" e a entrega prometida, que o painel mostra (ADR 0116).
+- **Estilo Editorial nos vídeos:** papel, cartões brancos, legenda serifada palavra por palavra,
+  uma lista cujo cartão fica e só troca o conteúdo, com um placar que acende a cada item, e o
+  fecho "comenta". O crédito das fotos livres vai só na legenda (ADR 0114).
+- **Vídeos menos repetitivos:** oito formatos editoriais (POV, mito, erro, lista...), ganchos com
+  técnica, um corte a cada 2 a 4 s, palavras em cortes e carimbo, fecho alternativo, música que
+  muda a cada vídeo e som nas transições. **Voz do vídeo** escolhida no cartão Vídeos (ADR 0113).
+- **Fotos nos vídeos:** as fotos da marca e fotos livres da Wikimedia, em tela cheia, como polaroid
+  ou numa janela com um ícone; o crédito vai na tela e na legenda. Sem foto que sirva, a cena vira
+  um ícone (ADR 0112).
+- **Vídeos automáticos:** o Zé cria os vídeos na agenda (temas seus ou escolhidos pelo site e
+  pelos artigos), avisa no app e publica no Instagram só com a sua aprovação. O diretor vê os
+  últimos vídeos e muda a receita a cada um (ADR 0111).
 - **Edição dos vídeos:** as cenas entram de jeitos diferentes (desfoque, queda, cortina, giro em
   perspectiva), a câmera dá um soco na palavra de destaque em vez de um zoom lento, as transições
   têm causa (íris do ponto em foco, zoom através, chicote, a cor da marca inundando a tela), o logo

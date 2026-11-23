@@ -15,7 +15,8 @@
 // curtas, câmera só com intenção (um soco na palavra de destaque, não um zoom lento eterno) e
 // transições com causa (o chicote, o zoom através do foco, a íris do ponto, a cor que inunda).
 (() => {
-  const Ze = (window.Ze = { cenas: {}, erros: [] });
+  // camadas: o que atravessa as cenas (o placar de uma lista), desenhado a cada quadro por cima
+  const Ze = (window.Ze = { cenas: {}, erros: [], camadas: [] });
   window.addEventListener("error", (e) => Ze.erros.push(String(e.message || e)));
   window.addEventListener("unhandledrejection", (e) => Ze.erros.push(String(e.reason)));
 
@@ -188,6 +189,7 @@
     const f = V.estilo.fontes || {};
     if (f.titulo) r.setProperty("--fonte-titulo", `"${f.titulo}", var(--fonte-reserva)`);
     if (f.texto) r.setProperty("--fonte-texto", `"${f.texto}", var(--fonte-reserva)`);
+    if (f.legenda) r.setProperty("--fonte-legenda", `"${f.legenda}", var(--fonte-reserva)`);
     r.setProperty("--largura", `${V.largura}px`);
     r.setProperty("--altura", `${V.altura}px`);
     document.body.classList.add(`formato-${V.formato}`, `estilo-${V.estilo.id}`);
@@ -366,6 +368,7 @@
     el.style.transformOrigin = "";
     inunda.style.transform = "translateY(100%)";
     palco.classList.toggle("mesa", false);
+    if (antes && antes.c.tipo === "item" && x.c.tipo === "item") return; // o cartão continua
     if (tipo === "corte" || !antes) {
       // corte seco na batida: a cena chega um pouco grande e assenta (o soco do corte)
       if (antes) el.style.transform = `scale(${1.05 - 0.05 * curvas.chega(prog(local, 0, 0.3))})`;
@@ -378,12 +381,14 @@
     sai.style.zIndex = "1";
     el.style.zIndex = "2";
     if (CARTA.has(tipo)) palco.classList.add("mesa");
+    // o lado de cada transição varia por vídeo e por cena (a mesma carta não vira sempre igual)
+    const lado = (((V.semente || 7) * 31 + x.i * 17) >> 1) % 2 ? 1 : -1;
     if (tipo === "carta") {
       // a tela vira carta: encolhe, gira no eixo vertical mostrando o verso (a cena nova) e volta
       const s = 1 - 0.16 * Math.sin(Math.PI * curvas.vaivem(q));
       const f = curvas.vaivem(prog(q, 0.18, 0.64));
       const borda = `${Math.round(64 * cl(Math.sin(Math.PI * q) * 3))}px`;
-      [[sai, -180 * f], [el, 180 * (1 - f)]].forEach(([c, ang]) => {
+      [[sai, -180 * f * lado], [el, 180 * (1 - f) * lado]].forEach(([c, ang]) => {
         c.style.transform = `perspective(2400px) scale(${s.toFixed(4)}) rotateY(${ang.toFixed(2)}deg)`;
         c.style.borderRadius = borda;
         c.classList.add("carta");
@@ -397,7 +402,7 @@
       sai.style.zIndex = "2";
       el.style.zIndex = "1";
       sai.style.transformOrigin = "50% 110%";
-      sai.style.transform = `translate(${(-125 * a).toFixed(2)}%, ${(-6 * a).toFixed(2)}%) rotate(${(-24 * a).toFixed(2)}deg) scale(${(1 - 0.08 * Math.min(1, q * 4)).toFixed(4)})`;
+      sai.style.transform = `translate(${(-125 * a * lado).toFixed(2)}%, ${(-6 * a).toFixed(2)}%) rotate(${(-24 * a * lado).toFixed(2)}deg) scale(${(1 - 0.08 * Math.min(1, q * 4)).toFixed(4)})`;
       sai.style.borderRadius = `${Math.round(64 * Math.min(1, q * 4))}px`;
       el.style.transform = `scale(${(0.88 + 0.12 * b).toFixed(4)})`;
       el.style.borderRadius = borda;
@@ -407,17 +412,18 @@
     } else if (tipo === "cubo") {
       // a tela é a face de um cubo que gira: a nova face vem da direita, presa pela aresta
       const p = curvas.vaivem(q), s = 1 - 0.12 * Math.sin(Math.PI * p);
-      sai.style.transformOrigin = "100% 50%";
-      el.style.transformOrigin = "0% 50%";
-      sai.style.transform = `perspective(2000px) scale(${s.toFixed(4)}) translateX(${(-100 * p).toFixed(3)}%) rotateY(${(-90 * p).toFixed(2)}deg)`;
-      el.style.transform = `perspective(2000px) scale(${s.toFixed(4)}) translateX(${(100 * (1 - p)).toFixed(3)}%) rotateY(${(90 * (1 - p)).toFixed(2)}deg)`;
+      sai.style.transformOrigin = lado > 0 ? "100% 50%" : "0% 50%";
+      el.style.transformOrigin = lado > 0 ? "0% 50%" : "100% 50%";
+      sai.style.transform = `perspective(2000px) scale(${s.toFixed(4)}) translateX(${(-100 * p * lado).toFixed(3)}%) rotateY(${(-90 * p * lado).toFixed(2)}deg)`;
+      el.style.transform = `perspective(2000px) scale(${s.toFixed(4)}) translateX(${(100 * (1 - p) * lado).toFixed(3)}%) rotateY(${(90 * (1 - p) * lado).toFixed(2)}deg)`;
       sai.style.filter = `brightness(${(1 - 0.5 * p).toFixed(3)})`;
       el.style.filter = p < 1 ? `brightness(${(0.5 + 0.5 * p).toFixed(3)})` : "none";
     } else if (tipo === "fatias") {
       // a cena nova desce em tiras, uma logo depois da outra; a que sai recua e escurece
       const n = 6, w = V.largura / n, h = V.altura, pts = ["0px 0px"];
       for (let i = 0; i < n; i++) {
-        const y = (curvas.chega(prog(q, i * 0.07, 0.6)) * h * 1.02).toFixed(1);
+        const ordem = lado > 0 ? i : n - 1 - i; // da esquerda ou da direita
+        const y = (curvas.chega(prog(q, ordem * 0.07, 0.6)) * h * 1.02).toFixed(1);
         pts.push(`${(i * w).toFixed(1)}px ${y}px`, `${((i + 1) * w).toFixed(1)}px ${y}px`, `${((i + 1) * w).toFixed(1)}px 0px`);
       }
       el.style.clipPath = `polygon(${pts.join(", ")})`;
@@ -430,8 +436,8 @@
     } else if (tipo === "deslize") {
       // chicote: as duas passam rápido para o lado, borradas na velocidade, e a nova assenta
       const p = curvas.vaivem(q), v = Math.sin(q * Math.PI);
-      el.style.transform = `translateX(${(1 - p) * 100}%)`;
-      sai.style.transform = `translateX(${-p * 100}%)`;
+      el.style.transform = `translateX(${(1 - p) * 100 * lado}%)`;
+      sai.style.transform = `translateX(${-p * 100 * lado}%)`;
       const borrao = v > 0.05 ? `blur(${(18 * v).toFixed(1)}px)` : "none";
       el.style.filter = borrao;
       sai.style.filter = borrao;
@@ -493,7 +499,12 @@
         atual.el.style.filter = "brightness(0.6)";
       }
     }
-    if (atual) palco.dataset.fundo = atual.el.dataset.fundo;
+    if (atual) {
+      palco.dataset.fundo = atual.el.dataset.fundo;
+      palco.dataset.composicao = atual.c.composicao || "";
+      palco.dataset.tipo = atual.c.tipo;
+    }
+    for (const camada of Ze.camadas) camada(t, atual ? atual.i : -1, V, palco);
     desenharLegenda(t, atual);
     desenharOnda(t, v);
     preto.style.opacity = String(prog(t, V.duracao - 0.35, 0.35));
@@ -511,7 +522,8 @@
     montar();
     const f = V.estilo.fontes || {};
     await Promise.all(
-      [f.titulo && `800 40px "${f.titulo}"`, f.titulo && `700 40px "${f.titulo}"`, f.texto && `400 40px "${f.texto}"`, f.texto && `600 40px "${f.texto}"`]
+      [f.titulo && `800 40px "${f.titulo}"`, f.titulo && `700 40px "${f.titulo}"`, f.texto && `400 40px "${f.texto}"`, f.texto && `600 40px "${f.texto}"`,
+        f.legenda && `400 40px "${f.legenda}"`, f.legenda && `italic 400 40px "${f.legenda}"`]
         .filter(Boolean).map((x) => document.fonts.load(x).catch(() => {})),
     );
     await document.fonts.ready;

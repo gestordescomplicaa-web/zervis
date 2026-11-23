@@ -129,7 +129,7 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .composicao-gigante .fala-grande .palavra.cola { display: inline-block; margin-right: .22em; }
 .composicao-gigante .fala-grande .palavra.cola + .palavra { display: inline-block; }
 .composicao-cheia .fundo-cena .mancha, .composicao-cheia .brilho, .composicao-cheia .fundo-cena::after { display: none; }
-.composicao-cheia .fala-grande { color: var(--fundo); }
+.composicao-cheia .fala-grande { color: #0e0f16; }
 .inunda { position: absolute; inset: -2px; z-index: 6; transform: translateY(100%); pointer-events: none; }
 #legenda span.ativa { border-radius: .2em; padding: 0 .14em; margin: 0 -.06em; }
 .logo3d { width: 300px; height: 300px; perspective: 1100px; }
@@ -173,8 +173,9 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .caos-icone { width: 120px; height: 120px; }
 
 /* cenas como cartas (ADR 0110): o fundo de cada cena e a mesa por trás nas transições ---------- */
-:root { --marca1: var(--destaque); --marca2: var(--destaque2); --texto-escuro: var(--texto); }
-.cena { overflow: hidden; backface-visibility: hidden; }
+:root { --marca1: var(--destaque); --marca2: var(--destaque2); --texto-escuro: var(--texto);
+  --marca-fundo: var(--fundo); --marca-texto: var(--texto); }
+.cena { overflow: hidden; backface-visibility: hidden; color: var(--texto); }
 .cena.carta { box-shadow: 0 40px 120px rgba(0, 0, 0, .55), 0 0 0 2px color-mix(in srgb, var(--marca1) 35%, transparent); }
 #palco.mesa #fundo { filter: brightness(.35) saturate(.8); }
 .fundo-claro { --fundo: #f3f1ec; --superficie: #ffffff; --texto: #13141b; --suave: #5d606c; }
@@ -185,4 +186,97 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .fundo-cor .fundo-cena .mancha, .fundo-cor .fundo-cena::after { display: none; }
 #palco[data-fundo="claro"] #legenda { --texto: #13141b; }
 #palco[data-fundo="cor"] #legenda { --texto: #ffffff; --destaque: #ffffff; }
+
+/* foto (ADR 0112) ----------------------------------------------------------------------------- */
+.cena-foto.composicao-cheia .camera { top: 0; height: 100%; padding: 0; }
+.foto-quadro { position: relative; flex: none; }
+.foto-moldura { overflow: hidden; width: 100%; height: 100%; }
+.foto-moldura img { width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 50% 45%; }
+.foto-cheia { position: absolute; inset: 0; }
+.foto-veu { position: absolute; inset: 0; pointer-events: none; }
+.foto-rotulo-cheia { position: absolute; left: 80px; right: 80px; top: 960px; text-align: left; font-size: 92px; }
+.foto-polaroid { width: 780px; padding: 30px 30px 150px; border-radius: 6px; }
+.foto-polaroid .foto-moldura { height: 860px; border-radius: 2px; }
+.foto-fita { position: absolute; left: 50%; top: -26px; width: 220px; height: 56px; transform: translateX(-50%) rotate(-3deg); }
+.foto-escrita { position: absolute; left: 30px; right: 30px; bottom: 34px; text-align: center; font-family: var(--fonte-titulo); font-size: 64px; font-weight: 800; letter-spacing: -.02em; }
+.foto-janela { width: 840px; height: 840px; }
+.foto-janela .foto-moldura { border-radius: 48px; }
+.foto-selo { left: auto; right: -40px; top: -30px; transform: none; }
+.foto-rotulo-janela { margin-top: 56px; }
+.foto-credito { position: absolute; right: 48px; top: 176px; max-width: 640px; text-align: right; font-size: 22px; line-height: 1.3; }
+.foto-quadro .foto-credito { top: auto; right: 0; bottom: -40px; max-width: none; font-size: 20px; }
+.foto-polaroid .foto-credito { right: 30px; bottom: 112px; color: #8a8b93; }
+
+/* ritmo (ADR 0113): ganchos em cortes e carimbo, fecho chamada ------------------------------ */
+.composicao-cortes .camera { top: 0; height: 100%; padding: 0; }
+.composicao-cortes .fundo-cena .mancha, .composicao-cortes .malha { display: none; }
+.corte-tela { position: absolute; inset: 0; display: grid; place-items: center; padding: 0 60px; }
+.corte-palavra { font-family: var(--fonte-titulo); font-weight: 900; letter-spacing: -.045em; line-height: .9; text-align: center; text-transform: uppercase; }
+.clarao { position: absolute; inset: -40%; background: #fff; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+.cena-fecho.composicao-chamada .camera { gap: 34px; }
+.chamada-logo { width: 150px; height: 150px; border-radius: 36px; overflow: hidden; display: grid; place-items: center; }
+.chamada-logo img { width: 100%; height: 100%; object-fit: contain; }
+.chamada-nome { font-size: 34px; font-weight: 600; }
+.chamada-texto { font-family: var(--fonte-titulo); font-weight: 900; font-size: 128px; line-height: .95; letter-spacing: -.04em; text-align: center; max-width: 940px; }
+.chamada-texto .palavra { display: inline-block; }
+.chamada-seta { width: 120px; height: 120px; }
+.chamada-detalhe { font-size: 38px; font-weight: 700; padding: 14px 34px; border-radius: 999px; }
+
+/* lista (ADR 0114): o cartão do item, o placar e o fecho "comenta" ------------------------- */
+.cena-item .camera { justify-content: flex-start; padding-top: 80px; }
+.item-cartao { width: 900px; border-radius: 36px; padding: 40px 44px 44px; display: grid; gap: 26px; }
+.item-topo { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 600; }
+.item-icone { width: 54px; height: 54px; }
+.item-num { margin-left: auto; font-family: var(--fonte-titulo); font-weight: 800; font-size: 34px; }
+.item-caixa { border-radius: 22px; padding: 26px 30px; display: grid; gap: 10px; }
+.item-caixa-titulo { font-size: 26px; font-weight: 700; }
+.item-detalhe { font-size: 34px; line-height: 1.3; }
+.item-nome { font-family: var(--fonte-titulo); font-weight: 800; font-size: 96px; line-height: 1; letter-spacing: -.035em; }
+.item-traco { height: 8px; width: 120px; border-radius: 4px; transform-origin: 0 50%; }
+.item-valor { display: flex; align-items: center; gap: 14px; font-family: var(--fonte-titulo); font-weight: 800; font-size: 68px; border-radius: 22px; padding: 18px 26px; }
+.item-valor-icone { width: 52px; height: 52px; }
+.placar { position: absolute; left: 70px; right: 70px; top: 1060px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; z-index: 3; opacity: 0; padding: 18px 22px; border-radius: 26px; }
+.placar-selo { width: 74px; height: 74px; border-radius: 20px; display: grid; place-items: center; font-family: var(--fonte-titulo); font-weight: 800; font-size: 26px; }
+.placar-conta { margin-left: auto; font-family: var(--fonte-titulo); font-weight: 800; font-size: 40px; }
+.cena-fecho.composicao-comenta .camera { gap: 30px; }
+.comenta-pede { font-size: 64px; font-weight: 600; }
+.comenta-palavra { position: relative; font-family: var(--fonte-titulo); font-weight: 900; font-size: 170px; letter-spacing: -.04em; line-height: 1; }
+.comenta-palavra span { position: relative; }
+.comenta-marca { position: absolute; left: -.1em; right: -.1em; bottom: .08em; height: .42em; transform-origin: 0 50%; border-radius: .08em; }
+.comenta-caixa { display: flex; align-items: center; gap: 22px; width: 860px; padding: 26px 30px; border-radius: 30px; }
+.comenta-avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; flex: none; }
+.comenta-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.comenta-quem { display: grid; gap: 4px; font-size: 32px; }
+.comenta-quem small { font-size: 26px; }
+.comenta-seguir { margin-left: auto; font-weight: 700; font-size: 32px; padding: 16px 34px; border-radius: 16px; }
+.comenta-detalhe { font-size: 34px; }
+/* a legenda sobre a foto em tela cheia: clara, com sombra (qualquer estilo) */
+#palco[data-tipo="foto"][data-composicao="cheia"] #legenda span.dita { color: #fff !important; text-shadow: 0 3px 24px rgba(0, 0, 0, .75); }
+
+/* a copy manda (ADR 0115): a área de imagem e as batidas --------------------------------- */
+.cena-visual .camera { justify-content: flex-start; padding-top: 40px; }
+.vis-area { position: relative; width: 940px; height: 940px; flex: none; }
+.vis-sequencia .vis-peca { position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto; gap: 28px; }
+.vis-colagem .vis-peca { position: absolute; width: 640px; display: grid; gap: 22px; justify-items: center; opacity: 0; }
+.vis-midia { position: relative; overflow: hidden; border-radius: 44px; display: grid; place-items: center; width: 100%; }
+.vis-sequencia .vis-midia { height: 100%; }
+.vis-colagem .vis-midia { height: 640px; }
+.vis-midia img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vis-logo img { width: 52%; height: 52%; object-fit: contain; }
+.vis-icone .vis-icone { width: 46%; height: 46%; }
+.vis-rotulo { justify-self: center; font-family: var(--fonte-titulo); font-weight: 800; font-size: 54px; letter-spacing: -.02em; padding: 12px 30px; border-radius: 999px; }
+.vis-colagem .vis-rotulo { font-size: 64px; }
+.item-logo { width: 64px; height: 64px; object-fit: contain; }
+.item-foto { height: 200px; border-radius: 24px; overflow: hidden; margin: -10px -14px 0; }
+.item-cartao:has(.item-foto) { gap: 18px; padding-top: 30px; }
+.item-cartao:has(.item-foto) .item-nome { font-size: 80px; }
+.item-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.placar-logo { width: 62%; height: 62%; object-fit: contain; }
+.placar-selo.com-logo:not(.aceso) .placar-logo { filter: grayscale(1); opacity: .35; }
+.vis-site { grid-template-rows: auto 1fr; place-items: stretch; align-content: stretch; }
+.vis-site img { object-fit: cover; object-position: top center; }
+.vis-barra { display: flex; align-items: center; gap: 12px; padding: 18px 24px; }
+.vis-barra i { width: 18px; height: 18px; border-radius: 50%; }
+.vis-endereco { margin-left: 14px; font-size: 26px; padding: 8px 22px; border-radius: 999px; flex: 1; }
+.item-foto img[src*="capturas"] { object-position: top center; }
 
