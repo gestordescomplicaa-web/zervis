@@ -13,7 +13,7 @@
    "marca": {"paleta": "site", "cores": {}, "atual": {"fundo": "#111114", "superficie": "#1b1b20", "texto": "#f4f4f6", "suave": "#a3a3ad", "destaque": "#4f8cff", "destaque2": "#8b5cf6"}, "site": {"fundo": "#111114", "superficie": "#1b1b20", "texto": "#f4f4f6", "suave": "#a3a3ad", "destaque": "#4f8cff", "destaque2": "#8b5cf6"}, "declarada": true, "instagram": true, "publicavel": true},
    "automaticos": [{"id": "j1", "agenda": "cron 0 9 * * 1,4", "proxima": "2026-11-16T09:00:00-03:00", "ativo": true}],
    "videos_automaticos": [{"id": "j2", "agenda": "cron 0 9 * * 1,4", "proxima": "2026-11-19T09:00:00-03:00", "ativo": true, "temas": 3, "duracao": 30}],
-   "comentarios": {"ligado": true, "conectado": true, "contatos": 2, "recentes": [{"autor": "cliente.exemplo", "texto": "Quero isso na minha loja", "quando": 1763500000, "publico": true, "direct": true, "erro": ""}]},
+   "comentarios": {"direct": {"ligado": true, "link": "https://calendar.app.google/exemplo", "como": "Seu objetivo é um só: levar a pessoa a marcar uma conversa.", "contatos": [{"usuario": "cliente.exemplo", "etapa": "link enviado", "resumo": "Oficina, 5 pessoas, perde orçamentos à noite", "motivo": "", "pausado": false, "respostas": 2}, {"usuario": "outro.cliente", "etapa": "com você", "resumo": null, "motivo": "pediu o preço", "pausado": true, "respostas": 1}]}, "ligado": true, "conectado": true, "contatos": 2, "recentes": [{"autor": "cliente.exemplo", "texto": "Quero isso na minha loja", "quando": 1763500000, "publico": true, "direct": true, "erro": ""}]},
    "prs": [{"numero": 3, "titulo": "blog: Exemplo", "endereco": "https://github.com/exemplo/site/pull/3"}]
   },
   "pesquisas": {

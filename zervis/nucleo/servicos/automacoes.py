@@ -111,10 +111,18 @@ class ServicoAutomacoes:
         c = ic.PADRAO
         if agora - c.em < ic.INTERVALO_S or c.ocupado():
             return
+        from zervis.redes import instagram_direct
+
         c.em = agora
+        d = instagram_direct.PADRAO
         if c.avisar is None:
-            c.avisar = lambda texto: self.n._na_linha("aviso", texto)
-        threading.Thread(target=c.ciclo, name="instagram-comentarios", daemon=True).start()
+            c.avisar = d.avisar = lambda texto: self.n._na_linha("aviso", texto)
+
+        def ciclo() -> None:
+            c.ciclo()  # os comentários novos (etapa 1)
+            d.ciclo()  # as respostas no direct (etapa 2)
+
+        threading.Thread(target=ciclo, name="instagram-comentarios", daemon=True).start()
 
     def _executar(self, x: Execucao, momento: datetime) -> None:
         """Marca a tentativa antes do efeito: se o Zé cair no meio, quem sobe sabe."""

@@ -291,7 +291,7 @@ class Comentarios:
                         registro["direct"], registro["abertura"] = True, texto
                         e["contatos"][registro["autor"]] = {
                             "id": registro["autor_id"], "abertura": self.agora(),
-                            "comentario": registro["texto"], "etapa": "abertura",
+                            "comentario": registro["texto"], "etapa": "abertura", "texto": texto,
                         }  # fmt: skip
                 except InstagramErro as erro:
                     registro["erro"] = str(erro)

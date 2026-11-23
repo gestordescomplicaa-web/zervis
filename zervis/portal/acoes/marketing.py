@@ -16,7 +16,8 @@ from zervis.marca import CORES_PADRAO
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
-from zervis.redes import instagram_comentarios
+from zervis.redes import instagram_comentarios, instagram_direct
+from zervis.redes.instagram import InstagramErro
 from zervis.video import estilos as estilos_video
 from zervis.video import roteiro as roteiro_video
 from zervis.video import videos
@@ -63,7 +64,19 @@ class AcoesMarketing(Pagina):
     def _comentarios(self) -> dict[str, Any]:
         c = instagram_comentarios.PADRAO
         e = c.estado()
+        d = instagram_direct.PADRAO.estado()
+        campos = ("etapa", "resumo", "motivo", "pausado", "respostas")
+        contatos = [
+            {"usuario": u, **{k: x.get(k) for k in campos}}
+            for u, x in sorted(d["contatos"].items())
+        ]
         return {
+            "direct": {
+                "ligado": d["ligado"],
+                "link": d["link"],
+                "como": d["como"],
+                "contatos": contatos,
+            },
             "ligado": e["ligado"],
             "conectado": marketing_posts.PADRAO.instagram.conectado,
             "contatos": len(e["contatos"]),
@@ -84,6 +97,23 @@ class AcoesMarketing(Pagina):
             origem="painel",
         )
         return {**self.marketing(), "aviso": "Ligado." if ligado else "Desligado."}
+
+    def ajustar_direct(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A conversa no direct (ADR 0119): ligada, o link de agendamento e o como conversar."""
+        try:
+            instagram_direct.PADRAO.ajustar(
+                dados.get("ligado") is True, str(dados.get("link", "")), str(dados.get("como", ""))
+            )
+        except InstagramErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        atividade.PADRAO.registrar(
+            "execucao", "Conversa no direct do Instagram ajustada", origem="painel"
+        )
+        return {**self.marketing(), "aviso": "Salvo."}
+
+    def devolver_direct(self, dados: dict[str, Any]) -> dict[str, Any]:
+        instagram_direct.PADRAO.devolver(str(dados.get("usuario", "")))
+        return {**self.marketing(), "aviso": "O Zé volta a conversar com esse contato."}
 
     def guardar_site(self, dados: dict[str, Any]) -> dict[str, Any]:
         try:

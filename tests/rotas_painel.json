@@ -192,6 +192,8 @@
     "marketing/fotos",
     "marketing/foto/remover",
     "marketing/instagram/comentarios",
+    "marketing/instagram/direct",
+    "marketing/instagram/direct/devolver",
     "tv/procurar",
     "tv/abrir",
     "tv/fechar",

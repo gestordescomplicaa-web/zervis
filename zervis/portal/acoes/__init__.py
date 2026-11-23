@@ -209,6 +209,8 @@ class Acoes:
             "marketing/fotos": self.fotos_da_marca,
             "marketing/foto/remover": self.remover_foto,
             "marketing/instagram/comentarios": self.ligar_comentarios,
+            "marketing/instagram/direct": self.ajustar_direct,
+            "marketing/instagram/direct/devolver": self.devolver_direct,
             "tv/procurar": self.procurar_tv,
             "empresas/grupos": self.grupos_whatsapp,
             "empresas/salvar": self.salvar_empresa,
