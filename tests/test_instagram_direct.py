@@ -181,3 +181,13 @@ def test_sem_link_a_conversa_passa_quando_a_pessoa_topa(tmp_path: Path) -> None:
     d.ajustar(True, "", "")
     assert "Ainda não há link de agendamento" in d.sistema(d.estado())
     assert idr.separar('"Fechado! [[PASSAR: quer marcar]]"') == ("Fechado!", "quer marcar", "")
+
+
+def test_conta_ignorada_nao_conversa_no_direct(tmp_path: Path) -> None:
+    d, meta, _, _ = _montar(tmp_path, "Me conta mais?")
+    d.ajustar(True, LINK, "")
+    d.comentarios.ignorar("@Cliente")
+    _pessoa(meta, "Tenho uma oficina", AGORA + 120)
+    assert d.ciclo() == 0 and meta.enviados == []
+    d.comentarios.ignorar("")
+    assert d.ciclo() == 1

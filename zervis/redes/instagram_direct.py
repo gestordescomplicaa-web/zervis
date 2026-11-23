@@ -156,7 +156,9 @@ class Direct:
         """Responde quem do funil escreveu no direct desde a última vez; devolve quantos."""
         with self._trava:
             e = self.estado()
-            do_funil = self.comentarios.estado()["contatos"]
+            funil = self.comentarios.estado()
+            ignoradas = set(funil["ignoradas"])
+            do_funil = {u: c for u, c in funil["contatos"].items() if u.lower() not in ignoradas}
             if not e["ligado"] or not do_funil:
                 return 0
             try:
