@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Ícone do Zé no celular:** o Zé Voz e o painel instalado no celular passam a usar o ícone do
+  painel, recortado no formato de cada celular e de uma cor nos ícones temáticos do Android 13+;
+  as notificações também.
 - **Prospecção que fala com quem atende:** no número da loja, a mensagem pede para encaminhar ao
   dono, pelo nome; a saudação automática do WhatsApp Business não conta como resposta nem vira
   lead; "manda a próxima agora" pela voz sai pela fila, dentro do limite do dia (ADR 0130).
