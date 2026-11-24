@@ -28,6 +28,7 @@ from zervis.portal.acoes.memoria import AcoesMemoria
 from zervis.portal.acoes.pagina import Servicos
 from zervis.portal.acoes.pesquisas import AcoesPesquisas
 from zervis.portal.acoes.projetos3d import AcoesProjetos3D
+from zervis.portal.acoes.prospeccao import AcoesProspeccao
 from zervis.portal.acoes.sessoes import AcoesSessoes
 from zervis.portal.acoes.tela_tv import AcoesTelaTV
 from zervis.portal.acoes.voz import AcoesVoz
@@ -63,6 +64,7 @@ class Acoes:
             AcoesProjetos3D,
             AcoesTelaTV,
             AcoesEmpresas,
+            AcoesProspeccao,
             AcoesAbertura,
         ):
             pagina = tipo(
@@ -112,6 +114,7 @@ class Acoes:
             "projetos3d": self.projetos_3d,
             "tv": self.modo_tv,
             "empresas": self.empresas,
+            "prospeccao": self.prospeccao,
             "camera": self.camera,
             "dispositivos": self.dispositivos,
             "marketing": self.marketing,
@@ -221,6 +224,13 @@ class Acoes:
             "empresas/grupos": self.grupos_whatsapp,
             "empresas/salvar": self.salvar_empresa,
             "empresas/remover": self.remover_empresa,
+            "prospeccao/salvar": self.salvar_prospeccao,
+            "prospeccao/apify": self.chave_apify,
+            "prospeccao/buscar": self.buscar_prospeccao,
+            "prospeccao/adicionar": self.adicionar_prospeccao,
+            "prospeccao/aprovar": self.aprovar_prospeccao,
+            "prospeccao/descartar": self.descartar_prospeccao,
+            "prospeccao/marcar": self.marcar_prospeccao,
             "tv/abrir": self.abrir_tv,
             "tv/fechar": self.fechar_tv,
             "whatsapp/desconectar": self.desconectar_whatsapp,

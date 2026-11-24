@@ -16,6 +16,11 @@ saem do núcleo e viram integrações, com "Procurar dispositivos" e "Criar inte
 (quem baixa recebe a versão publicada, sem abas de aparelho que não tem) e 1 (a seção
 Dispositivos) cabem no congelamento. O resto vem depois da 0.5.0.
 
+Fora do congelamento, a pedido de quem usa (24/11/2026): a **Prospecção** (ADR 0127). Etapa 1
+feita: achar a empresa no Maps, o dono pela Receita, a nota, a mensagem e o envio pelo WhatsApp no
+limite do dia. Falta provar com a chave da Apify e o primeiro envio de verdade. Etapa 2: a conversa
+de quem respondeu até a reunião, como no direct do Instagram (ADR 0119).
+
 ## Onde estamos (passagem de 16/10/2026)
 
 Para quem continua o projeto, humano ou IA: comece por aqui; o resto do roteiro é o histórico.

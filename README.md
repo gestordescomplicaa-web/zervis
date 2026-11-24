@@ -67,6 +67,7 @@ Tudo isto é pela voz: no microfone do PC, no navegador ou no celular bloqueado,
 | **Responder e começar conversas** pelo que você dita, sempre com o seu "sim". Em grupo ele só lê. | Em validação |
 | **Lista de prioridade**: "monitora a Ana" e ele avisa qualquer mensagem dela na hora. Quem ele respondeu por você é vigiado até responder. | Em validação |
 | **Atendente automático** à parte, com persona própria, testes antes de publicar e passagem para você. | Em teste |
+| **Prospecção**: o Zé acha empresas da sua cidade no Google Maps, descobre quem decide pelo quadro de sócios da Receita e manda a primeira mensagem ao dono, poucas por dia, com a sua aprovação ou sozinho. | Em validação |
 
 ### Pesquisa e dados de empresas
 | Função | Estado |
@@ -354,6 +355,7 @@ das ferramentas do Zé escuta numa porta. Cada chamada cai num destes níveis:
 | `zervis/habilidades` | 0,8 mil | skills (agentskills.io), diário de aprendizado e revisão em segundo plano |
 | `zervis/sistema` | 0,8 mil | a máquina (Omarchy, outro Linux ou servidor), o catálogo de ações, a política de risco e os vigias do sistema e do n8n |
 | `zervis/redes` | 0,5 mil | Instagram, só leitura |
+| `zervis/prospeccao` | 1,0 mil | prospecção: empresas do Maps (Apify), o dono pela Receita, a nota e o envio no limite do dia |
 | `zervis/dados` | 0,4 mil | SQLite compartilhado entre processos, com migrações |
 | `zervis/avaliacao` | 0,6 mil | a bateria que mede o julgamento do cérebro (`zervis avaliar`) |
 | `zervis/persona` | Markdown | quem o Zé é (`ZE.md`) e a persona da via rápida (`RAPIDO.md`) |
