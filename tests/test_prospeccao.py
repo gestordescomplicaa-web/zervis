@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from zervis.prospeccao import apify, dono
+from zervis.prospeccao import apify, dono, mensagem
 from zervis.prospeccao import funil as f
 
 RECIFE = ZoneInfo("America/Recife")
@@ -117,7 +117,7 @@ def test_do_maps_ao_dono_com_a_nota_e_a_mensagem_que_termina_com_a_saida(tmp_pat
     # O celular da Receita (do dono) antes do fixo do Google (a recepção).
     assert [t["numero"] for t in p["telefones"]] == ["558199887766", "558133334444"]
     assert p["nota"] == f.nota({"dor": 4, "encaixe": 5, "momento": 3, "alcance": 4, "prova": 4})
-    assert p["mensagem"].endswith(f.SAIDA) and "Carlos" in p["mensagem"]
+    assert p["mensagem"].endswith(mensagem.SAIDA) and "Carlos" in p["mensagem"]
     assert 'comece com "Oi, Carlos, tudo bem?"' in modelo.pedidos[0]
     assert enviados == []
     funil.aprovar(p["id"])
@@ -252,11 +252,11 @@ def test_o_que_vem_das_fontes_nao_fecha_o_bloco_de_dados(tmp_path: Path) -> None
 
 def test_mensagem_final_tira_link_aspas_e_corta_no_fim_da_frase() -> None:
     texto = '"Oi, Ana! Veja https://exemplo.com agora. ' + "Frase longa. " * 60 + '"'
-    final = f.mensagem_final(texto)
-    corpo = final.removesuffix(f"\n\n{f.SAIDA}")
+    final = mensagem.final(texto)
+    corpo = final.removesuffix(f"\n\n{mensagem.SAIDA}")
     assert "http" not in final and not corpo.startswith('"')
-    assert len(corpo) <= f.LIMITE_MENSAGEM and corpo.endswith(".")
-    assert f.mensagem_final("") == ""
+    assert len(corpo) <= mensagem.LIMITE_MENSAGEM and corpo.endswith(".")
+    assert mensagem.final("") == ""
 
 
 def test_decisor_e_telefones() -> None:
@@ -416,3 +416,81 @@ def test_recusas_demais_pausam_a_prospeccao(tmp_path: Path) -> None:
     f.salvar_config(replace(funil.config(), ligada=True), funil.config_arquivo)
     funil.ciclo()
     assert funil.config().ligada  # ligada de novo: as recusas de antes não pausam outra vez
+
+
+def test_a_mensagem_diz_o_que_faz_o_convite_as_vagas_e_leva_o_link(tmp_path: Path) -> None:
+    relogio, modelo = Relogio(QUARTA_10H), Modelo()
+    link = "https://calendar.app.google/abc123"
+    funil, _ = _funil(
+        tmp_path, relogio, modelo, convite="um diagnóstico gratuito de 20 minutos",
+        vagas="5 diagnósticos por mês", link=link, link_na_mensagem=True,
+    )  # fmt: skip
+    funil.adicionar_lugares([_lugar()])
+    funil._qualificar_novas(funil.config())
+    pedido = modelo.pedidos[0]
+    assert "um diagnóstico gratuito de 20 minutos" in pedido and "5 diagnósticos por mês" in pedido
+    assert "Não diga que é" in pedido and "pesquisa" in pedido  # nada de pretexto falso
+    assert "Nunca cite reclamação" in pedido
+    assert "link que vem logo abaixo" in pedido and link not in pedido  # o modelo não escreve
+    [p] = funil.todas()
+    corpo, link_, saida = p["mensagem"].split("\n\n")
+    assert (link_, saida) == (link, mensagem.SAIDA) and "http" not in corpo
+
+
+def test_sem_link_na_mensagem_fecha_com_pergunta_e_sem_vagas_sem_urgencia(tmp_path: Path) -> None:
+    relogio, modelo = Relogio(QUARTA_10H), Modelo()
+    funil, _ = _funil(tmp_path, relogio, modelo, link="https://calendar.app.google/abc")
+    funil.adicionar_lugares([_lugar()])
+    funil._qualificar_novas(funil.config())
+    assert "pergunta de sim ou não" in modelo.pedidos[0]
+    assert "não crie urgência" in modelo.pedidos[0]
+    assert "calendar" not in funil.todas()[0]["mensagem"]
+
+
+def test_link_valido_e_mudar_a_estrategia_reescreve_o_que_espera(tmp_path: Path) -> None:
+    arquivo = tmp_path / "c.json"
+    with pytest.raises(f.ProspeccaoErro, match="https"):
+        f.salvar_config(f.Config(link="calendar.app.google/x"), arquivo)
+    with pytest.raises(f.ProspeccaoErro, match="link"):
+        f.salvar_config(f.Config(link_na_mensagem=True), arquivo)
+    relogio = Relogio(QUARTA_10H)
+    funil, _ = _funil(tmp_path, relogio, Modelo())
+    funil.consultar_cnpj = lambda numero: {}
+    funil.adicionar_lugares(
+        [_lugar("p1", "Clínica 1", "558131110000"), _lugar("p2", "Clínica 2", "558132220000")]
+    )
+    funil._qualificar_novas(funil.config())
+    um, _dois = funil.todas()
+    funil.aprovar(um["id"], "Texto que eu escrevi.")  # editada: fica como está
+    assert funil.reescrever() == 1
+    estados = {p["nome"]: (p["status"], p["mensagem"]) for p in funil.todas()}
+    assert estados["Clínica 1"] == ("fila", "Texto que eu escrevi.")
+    assert estados["Clínica 2"] == ("nova", "")
+    funil._qualificar_novas(funil.config())
+    assert next(p for p in funil.todas() if p["nome"] == "Clínica 2")["status"] == "aprovar"
+
+
+def test_salvar_na_pagina_reescreve_e_o_link_vem_do_direct_se_vazio(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from zervis.portal.acoes.pagina import Servicos
+    from zervis.portal.acoes.prospeccao import AcoesProspeccao
+    from zervis.redes import instagram_direct
+
+    relogio = Relogio(QUARTA_10H)
+    funil, _ = _funil(tmp_path, relogio, Modelo())
+    monkeypatch.setattr(f, "_PADRAO", funil)
+    monkeypatch.setattr(
+        instagram_direct.PADRAO, "estado", lambda: {"link": "https://calendar.app.google/ig"}
+    )
+    funil.consultar_cnpj = lambda numero: {}
+    funil.adicionar_lugares([_lugar()])
+    funil._qualificar_novas(funil.config())
+    pagina = AcoesProspeccao(SimpleNamespace(), Servicos({}))
+    tela = pagina.prospeccao()
+    assert tela["config"]["link"] == "https://calendar.app.google/ig"
+    dados = {**tela["config"], "ramos": "dentista", "convite": "um diagnóstico gratuito"}
+    r = pagina.salvar_prospeccao(dados)
+    assert r["aviso"] == "Salvo. 1 mensagem será reescrita."
+    assert funil.todas()[0]["status"] == "nova"
+    assert pagina.salvar_prospeccao(dados)["aviso"] == "Salvo."  # nada mudou: nada reescrito

@@ -20,6 +20,8 @@ class AcoesProspeccao(Pagina):
             por_dia = int(dados.get("por_dia") or funil.POR_DIA)
         except (TypeError, ValueError):
             raise PedidoInvalido("Envios por dia: um número.") from None
+        f = funil.padrao()
+        antes = f.config()
         cfg = funil.Config(
             ligada=dados.get("ligada") is True,
             sozinho=dados.get("sozinho") is True,
@@ -27,15 +29,24 @@ class AcoesProspeccao(Pagina):
             ramos=[r for r in (" ".join(x.split())[:60] for x in linhas[:20]) if r],
             oferta=str(dados.get("oferta") or "").strip()[:1500],
             por_dia=por_dia,
+            convite=" ".join(str(dados.get("convite") or "").split())[:120],
+            link=str(dados.get("link") or "").strip()[:300],
+            link_na_mensagem=dados.get("link_na_mensagem") is True,
+            vagas=" ".join(str(dados.get("vagas") or "").split())[:120],
         )
         try:
-            funil.salvar_config(cfg)
+            funil.salvar_config(cfg, f.config_arquivo)
         except funil.ProspeccaoErro as erro:
             raise PedidoInvalido(str(erro)) from None
+        mudou = any(getattr(antes, c) != getattr(cfg, c) for c in funil.CAMPOS_DA_MENSAGEM)
+        reescritas = f.reescrever() if mudou else 0
         estado = "ligada" if cfg.ligada else "desligada"
         modo = ", envio sozinho" if cfg.sozinho else ""
         atividade.PADRAO.registrar("execucao", f"Prospecção {estado}{modo}", origem="painel")
-        return {**self.prospeccao(), "aviso": "Salvo."}
+        aviso = f"Salvo. {reescritas} mensagens serão reescritas." if reescritas else "Salvo."
+        if reescritas == 1:
+            aviso = "Salvo. 1 mensagem será reescrita."
+        return {**self.prospeccao(), "aviso": aviso}
 
     def chave_apify(self, dados: dict[str, Any]) -> dict[str, Any]:
         """A chave da Apify: conferida na conta antes de guardar; vazio remove."""
