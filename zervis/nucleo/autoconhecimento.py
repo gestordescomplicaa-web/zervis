@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, NamedTuple
 
+from zervis.nucleo import mapa
+
 
 @dataclass(frozen=True)
 class Retrato:
@@ -83,6 +85,26 @@ GRUPOS = {
         "WhatsApp",
         "guarda e busca tudo do WhatsApp, acha os contatos da agenda, vigia a lista de "
         "prioridade e responde o que você dita",
+    ),
+    "projetos3d": (
+        "Projetos 3D",
+        "cria e mostra peças para imprimir, fatia, imprime e acompanha a impressora",
+    ),
+    "tela_tv": ("Modo TV", "mostra páginas e projetos no navegador da TV"),
+    "dispositivos": (
+        "Dispositivos",
+        "diz quais aparelhos da casa estão ligados ao Zé e como estão",
+    ),
+    "camera": ("Câmera", "tira foto, vê os movimentos e conversa pela câmera"),
+    "prospeccao": (
+        "Prospecção",
+        "acha empresas da cidade, quem decide em cada uma e manda a primeira mensagem no limite do "
+        "dia; diz o que está acontecendo, aprova, descarta e marca reuniões",
+    ),
+    "paginas": (
+        "Páginas e eventos",
+        "lê as empresas que você gere, o funil do Instagram e a Atividade, onde fica tudo o que "
+        "o Zé fez",
     ),
 }
 
@@ -214,7 +236,7 @@ def texto(r: Retrato, cap: Capacidades | None = None, hist: Historico | None = N
         partes.append(texto_das_capacidades(cap))
     if hist is not None:
         partes.append(texto_do_historico(hist))
-    return "\n\n".join(partes) + "\n\n" + MAPA
+    return "\n\n".join([*partes, mapa.texto(), MAPA])
 
 
 def _lista(itens: Sequence[str], maximo: int) -> str:
@@ -333,6 +355,8 @@ def resumo(r: Retrato) -> str:
         + " Pesquisa na internet: sim, pelo cérebro completo; para pesquisar, passe a vez."
         + "\nPerguntas sobre você (modelo, voz, modos, configurações): responda com isto, sem "
         "inventar. Para mudar alguma coisa ou para o que não estiver aqui, passe a vez."
+        + "\nAs páginas do painel (Prospecção, Empresas e as outras): o estado delas está com "
+        "o cérebro completo; passe a vez, nunca diga que não conhece uma."
     )
 
 

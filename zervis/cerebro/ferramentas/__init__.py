@@ -2,7 +2,8 @@
 
 Cada grupo de ferramentas mora no seu módulo (sessões, aprendizado, automacoes, sistema, tela,
 manutencao, navegador, conectores, atualizacoes, pesquisa, profunda, modelos, imagens, whatsapp,
-instagram); aqui ficam a montagem, a lista do que passa sem perguntar e os ganchos do ClaudeBrain.
+instagram, prospeccao, paginas); aqui ficam a montagem, a lista do que passa sem perguntar e os
+ganchos do ClaudeBrain.
 
 Leitura (projetos, situação, saída) passa sem perguntar; delegar, responder a um agente, criar
 projeto, abrir frente, mudar status e renomear passam pela aprovação falada do `can_use_tool`.
@@ -32,9 +33,11 @@ from zervis.cerebro.ferramentas import marketing as g_marketing
 from zervis.cerebro.ferramentas import metricas as g_metricas
 from zervis.cerebro.ferramentas import modelos as g_modelos
 from zervis.cerebro.ferramentas import navegador as g_navegador
+from zervis.cerebro.ferramentas import paginas as g_paginas
 from zervis.cerebro.ferramentas import pesquisa as g_pesquisa
 from zervis.cerebro.ferramentas import profunda as g_profunda
 from zervis.cerebro.ferramentas import projetos3d as g_projetos3d
+from zervis.cerebro.ferramentas import prospeccao as g_prospeccao
 from zervis.cerebro.ferramentas import sessoes as g_sessoes
 from zervis.cerebro.ferramentas import sistema as g_sistema
 from zervis.cerebro.ferramentas import sobre as g_sobre
@@ -123,6 +126,10 @@ LEITURA = [
     # isolado na Central (sem ferramentas nem memória): ADR 0088.
     "camera_atender",
     "camera_encerrar",
+    "prospeccao_situacao",  # só lê a Prospecção (ADR 0128); aprovar, enviar e ajustar pedem o sim
+    "empresas_listar",  # só lê o cadastro das empresas
+    "redes_situacao",  # só lê o funil do Instagram
+    "atividade_buscar",  # só lê a Atividade: todo acontecimento do Zé
     "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
     "tela_tv_fechar",
 ]
@@ -151,6 +158,9 @@ DE_FORA = {
     "historico_buscar": "o histórico",
     "historico_ler": "o histórico",
     "sessao_ler": "a resposta de uma sessão de código",
+    "prospeccao_situacao": "as empresas da prospecção",  # nomes, avaliações e respostas
+    "redes_situacao": "os comentários do Instagram",
+    "atividade_buscar": "a Atividade",  # guarda textos enviados e recebidos
 }
 EMBUTIDAS_DE_FORA = {"WebSearch": "a internet", "WebFetch": "uma página da internet"}
 # As livres que mudam alguma coisa (as outras só leem): num turno de fora, pedem a aprovação.
@@ -330,6 +340,8 @@ def por_grupo(
         "camera": g_camera.ferramentas(
             camera_dispositivo, vigia_camera, mostrar_camera, *(conversa_camera or (None, None))
         ),
+        "prospeccao": g_prospeccao.ferramentas(),
+        "paginas": g_paginas.ferramentas(),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

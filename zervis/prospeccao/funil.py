@@ -254,6 +254,26 @@ class Funil:
     def _achar(self, ident: str) -> dict[str, Any] | None:
         return next((p for p in self.todas() if p.get("id") == ident), None)
 
+    def achar(self, quem: str) -> dict[str, Any]:
+        """A empresa pelo id ou pelo nome falado ("a Sorrir", "o Carlos"): no nome da empresa ou
+        do dono. Nenhuma ou mais de uma: ProspeccaoErro, com os nomes para escolher."""
+        quem = " ".join(str(quem or "").split())
+        if not quem:
+            raise ProspeccaoErro("Diga qual empresa.")
+        if (exata := self._achar(quem)) is not None:
+            return exata
+        alvo = dono.sem_acento(quem)
+        achadas = [
+            p for p in self.todas()
+            if alvo in dono.sem_acento(f"{p.get('nome', '')} {p.get('dono', '')}")
+        ]  # fmt: skip
+        if len(achadas) == 1:
+            return achadas[0]
+        if not achadas:
+            raise ProspeccaoErro(f"Nenhuma empresa com {quem!r} na prospecção.")
+        nomes = ", ".join(f"{p['nome']} (id {p['id']})" for p in achadas[:6])
+        raise ProspeccaoErro(f"Mais de uma empresa com {quem!r}: {nomes}.")
+
     def _mudar(
         self, ident: str, campos: dict[str, Any], so_se: tuple[str, ...] = ()
     ) -> dict[str, Any] | None:

@@ -50,6 +50,7 @@ from zervis.cerebro.motores import MotorPlano as MotorPlano
 from zervis.cerebro.motores import _dados_sse as _dados_sse
 from zervis.cerebro.motores import _raciocina as _raciocina
 from zervis.cerebro.motores import pela_assinatura as pela_assinatura
+from zervis.nucleo import mapa
 
 log = logging.getLogger(__name__)
 PASSAR = "[completo]"
@@ -73,6 +74,8 @@ VERBOS_DE_ACAO = {
     *("executa", "execute", "roda", "rode", "instala", "instale", "apaga", "apague"),
     *("acessa", "acesse", "entra", "entre", "verifica", "verifique", "confere", "confira"),
     *("comecei", "terminei", "travei", "conclui", "pausa", "pause", "foca", "foque"),
+    *("veja", "ve", "checa", "cheque", "consulta", "consulte", "lista", "liste"),
+    *("aprova", "aprove", "descarta", "descarte", "liga", "ligue", "desliga", "desligue"),
 }
 ASSUNTOS_DE_FERRAMENTA = {
     *("foco", "frente", "frentes", "projeto", "projetos", "lembrete", "lembretes", "agenda"),
@@ -135,7 +138,8 @@ def precisa_do_completo(pedido: str) -> bool:
     quem = tuple(p[:2]) in QUEM_E and (p[2:3] or [""])[0] not in ("voce", "vc", "tu")
     if (explica or quem) and JANELA_ABERTA in " ".join(palavras(pedido)):
         return True
-    return p[0] in VERBOS_DE_ACAO or any(w in ASSUNTOS_DE_FERRAMENTA for w in p)
+    assuntos = ASSUNTOS_DE_FERRAMENTA | mapa.assuntos()  # as páginas do Zé (ADR 0128)
+    return p[0] in VERBOS_DE_ACAO or any(w in assuntos for w in p)
 
 
 CHAVES = lugares.CONFIG / "chaves"  # uma por motor, 0600 (o painel grava aqui)
