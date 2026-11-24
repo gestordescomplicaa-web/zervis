@@ -11,8 +11,9 @@ FORMATOS: dict[str, str] = {
     'com nome, negócio e cidade ("pensa na Márcia, que tem uma clínica de estética em Goiânia"), '
     "o problema acontecendo no dia a dia dela e quanto custa, na conta feita na tela com números "
     'de exemplo. (2) A solução, de quem fala: "na clínica da Márcia, a gente faria três coisas", '
-    "e as três, concretas, cada uma mostrada funcionando com a ferramenta. (3) O resultado: como "
-    "fica o dia dela depois. (4) A ponte: o mesmo problema em outros negócios, de passagem "
+    'e as três, concretas, num fluxo animado ("conexao" ou "hub", com os logos das '
+    "ferramentas). (3) O resultado: como fica o dia dela depois. (4) A ponte: o mesmo problema "
+    "em outros negócios, de passagem "
     '("loja, oficina, escritório: quem cobra cliente na mão perde igual"). Depois, o convite. '
     "É exemplo: a solução é o que a gente faria, nunca um cliente atendido; com um caso real do "
     'material, "a gente fez".',
@@ -62,15 +63,15 @@ EXEMPLOS = (
 
 # Os processos de uma empresa que a automação e a IA resolvem: o tema do vídeo pode ser qualquer
 # um (a marca atende todos os setores), e o diretor varia entre eles.
-PROCESSOS = (
-    "atendimento e vendas (responder, qualificar, follow-up, orçamento)",
-    "financeiro (cobrança, conciliação do extrato, contas a pagar, fluxo de caixa)",
-    "fiscal e documentos (nota fiscal, contratos, propostas)",
-    "operação e estoque (pedido, reposição, ordem de serviço, agenda da equipe)",
-    "pessoas (admissão, ponto, escala, treinamento)",
-    "gestão (relatórios e indicadores prontos, reuniões, tarefas da equipe)",
-    "pós-venda (pesquisa, recompra, indicação, avaliação no Google)",
-)
+PROCESSOS: dict[str, str] = {
+    "atendimento": "atendimento e vendas (responder, qualificar, follow-up, orçamento)",
+    "financeiro": "financeiro (cobrança, conciliação do extrato, contas a pagar, fluxo de caixa)",
+    "fiscal": "fiscal e documentos (nota fiscal, contratos, propostas)",
+    "operacao": "operação e estoque (pedido, reposição, ordem de serviço, agenda da equipe)",
+    "pessoas": "pessoas (admissão, ponto, escala, treinamento)",
+    "gestao": "gestão (relatórios e indicadores prontos, reuniões, tarefas da equipe)",
+    "posvenda": "pós-venda (pesquisa, recompra, indicação, avaliação no Google)",
+}
 
 
 VALOR = (
@@ -90,8 +91,14 @@ VALOR = (
     "(direto, próximo, com exemplo do dia a dia daqui: WhatsApp, Pix, boleto, nota fiscal, "
     "planilha, a pessoa que faz tudo sozinha), sem jargão.\n"
     "O tema pode ser qualquer processo da empresa, não só atendimento: "
-    + "; ".join(PROCESSOS)
-    + ". Fique no processo do tema; os exemplos acima são só calibragem.\n"
+    + "; ".join(f"{k}: {v}" for k, v in PROCESSOS.items())
+    + '. Fique no processo do tema (o campo "processo" do JSON, a chave dele) e diga o assunto '
+    'em 3 a 6 palavras (o campo "assunto": "proposta comercial atrasada"); os exemplos acima '
+    "são só calibragem.\n"
+    "**O fluxo é animado:** sempre que o vídeo explica como um processo anda (o que acontece "
+    'depois do quê), mostre com "conexao" (as etapas ligadas, os dados correndo de uma para a '
+    'outra) ou "hub", com o logo de cada ferramenta no nó ("logo: whatsapp", "logo: google '
+    'sheets"); foto é para o problema e o dia a dia, nunca para o fluxo.\n'
 )
 
 

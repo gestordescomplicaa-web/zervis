@@ -7,9 +7,7 @@
 4. **Quadros e MP4:** a página do motor no Chromium, em paralelo, e o FFmpeg (`captura`,
    `montagem`). Os quadros são apagados no fim; ficam o MP4, a capa e o roteiro.
 
-Um vídeo por vez (é o que mais pesa no Zé); o seguinte espera na fila. Pronto, o vídeo fica como
-rascunho, com a prévia e o download em Marketing.
-
+Um vídeo por vez (é o que mais pesa no Zé); pronto, ele fica como rascunho em Marketing.
 5. **Publicar** (ADR 0109): só com a aprovação de quem usa (quem chama já a recebeu). O MP4 sai
    por um link público temporário no endereço fixo do Zé (a Meta busca o vídeo), fechado logo
    depois; o Reels leva a legenda que o diretor escreveu e vai também ao feed. Se o Zé parar no
@@ -46,6 +44,7 @@ from zervis.video import (
     narracao,
     paleta,
     roteiro,
+    temas,
     trilha,
 )
 from zervis.video import capa as capa_mod
@@ -570,8 +569,8 @@ class Videos:
                 "## Artigo",
                 self.site.artigo(video.artigo)[:LIMITE_ARTIGO],
             ]
-        else:
-            partes = [f"Tema: {video.tema}"]
+        else:  # o tema livre vê o que já foi feito (a trava de temas, ADR 0125)
+            partes = [f"Tema: {video.tema}", temas.secao(self.pasta) * (video.tema == TEMA_LIVRE)]
         if video.instrucao and video.roteiro:
             anterior = json.dumps(video.roteiro, ensure_ascii=False)
             partes += [f"Versão anterior: {anterior}", f"Ajuste pedido: {video.instrucao}"]
@@ -621,6 +620,7 @@ class Videos:
         resposta = self.perguntar(prompt, video.modelo)
         try:
             r = roteiro.interpretar(resposta, estilo, alvo)
+            temas.conferir(self.pasta, r.processo, r.assunto, video.tema == TEMA_LIVRE)
             if roteiro.miolo(r.cenas) in {roteiro.miolo(x["cenas"]) for x in recentes}:
                 raise roteiro.RoteiroErro(
                     "A sequência de cenas ficou igual à de um vídeo recente. Mude a receita."
@@ -638,9 +638,13 @@ class Videos:
                 f"Resposta anterior: {resposta[:6000]}\nEscreva de novo, corrigindo isso."
             )
             r = roteiro.interpretar(self.perguntar(corrigir, video.modelo), estilo, alvo)
+            temas.conferir(self.pasta, r.processo, r.assunto, video.tema == TEMA_LIVRE)
         # as fotos viram arquivos na pasta do vídeo (a que não vier vira ícone)
         self.fotos.resolver(r.cenas, pasta)
         video.titulo, video.legenda, video.roteiro = r.titulo, r.legenda, r.para_json()
+        temas.anotar(
+            self.pasta, video.id, r.processo, r.assunto or r.titulo, video.tema == TEMA_LIVRE
+        )
 
         self._etapa(video, "Gravando a voz" if video.voz else "Montando o tempo")
         minimos = [MINIMOS[c["tipo"]](c) if c["tipo"] in MINIMOS else 3.0 for c in r.cenas]
@@ -650,6 +654,7 @@ class Videos:
             minimos,
             estilo.bpm,
             self.ouvinte() if video.voz else None,
+            [c.get("pausa") == "longa" for c in r.cenas],
         )
         video.duracao = n.duracao
 

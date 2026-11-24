@@ -201,6 +201,9 @@ class Fotos:
                 alvos.append((b, str(b.get("mostrar", "")), c))
             if c.get("tipo") == "item" and c.get("mostrar"):
                 alvos.append((c, str(c["mostrar"]), c))
+            for n in [*(c.get("nos") or []), *(c.get("ao_redor") or [])]:
+                if n.get("mostrar"):  # o logo da ferramenta no nó do fluxo
+                    alvos.append((n, str(n["mostrar"]), c))
         pedidos = list(dict.fromkeys(_chave(p) for _, p, _ in alvos if p.strip()))
         livres = [p for p in pedidos if p.lower().startswith(BUSCA)][:POR_VIDEO]
         sites = [p for p in pedidos if p.lower().startswith(SITE)][:SITES_POR_VIDEO]
