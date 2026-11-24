@@ -68,6 +68,7 @@ LIVRES = {
     "/manifest.webmanifest",
     "/icones/ze-192.webp",
     "/icones/ze-512.webp",
+    "/icones/ze-mascara-512.webp",
 }
 COOKIE = "ze_acesso"
 

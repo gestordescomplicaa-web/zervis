@@ -93,3 +93,7 @@ Sem a chave, sai (e é publicado) um APK de depuração: funciona, mas cada vers
 desinstalar a anterior. Ao criar a chave, reinstale uma vez; daí em diante as versões entram por cima.
 
 Localmente, com o JDK 21 e o Android SDK: `cd android && gradle testDebugUnitTest assembleDebug`.
+
+O ícone (o do app, o das notificações e os do painel instalado no celular) sai do logo do painel,
+`.github/ze-logo.svg`: quando ele mudar, `uv run python android/icones.py` gera tudo de novo
+(precisa do `rsvg-convert` e do `magick`).

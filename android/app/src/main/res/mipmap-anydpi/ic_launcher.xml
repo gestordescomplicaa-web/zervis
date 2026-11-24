@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O ícone do Zé Voz: o macaco do Zé, o mesmo do painel, no formato adaptável (cada celular
+     recorta no seu formato) e de uma cor nos ícones temáticos. Gerado por android/icones.py. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_fundo" />
+    <foreground android:drawable="@mipmap/ic_launcher_frente" />
+    <monochrome android:drawable="@mipmap/ic_launcher_mono" />
+</adaptive-icon>
