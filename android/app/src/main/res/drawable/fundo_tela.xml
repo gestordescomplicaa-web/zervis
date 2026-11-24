@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O fundo das telas: o escuro do painel com um brilho ciano no alto, à direita. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><solid android:color="@color/fundo" /></shape></item>
+    <item>
+        <shape>
+            <gradient
+                android:type="radial"
+                android:centerX="0.9"
+                android:centerY="0.0"
+                android:gradientRadius="380dp"
+                android:startColor="@color/brilho"
+                android:endColor="#0046D9DE" />
+        </shape>
+    </item>
+</layer-list>

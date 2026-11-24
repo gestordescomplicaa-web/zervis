@@ -75,7 +75,7 @@ final class Atualizacao {
                 for (int n; (n = entrada.read(pedaco)) > 0; ) saida.write(pedaco, 0, n);
                 sessao.fsync(saida);
             }
-            Intent volta = new Intent(contexto, MainActivity.class).setAction(RESULTADO);
+            Intent volta = new Intent(contexto, AjustesActivity.class).setAction(RESULTADO);
             PendingIntent aviso = PendingIntent.getActivity(contexto, 0, volta,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
             sessao.commit(aviso.getIntentSender());

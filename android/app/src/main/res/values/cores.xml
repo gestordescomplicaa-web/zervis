@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- As cores do painel do Zé (zervis/portal/web/painel.css): escuro, vidro e o ciano. -->
+<resources>
+    <color name="fundo">#FF070C11</color>
+    <color name="fundo_2">#FF0B131A</color>
+    <color name="cartao">#FF0F1A21</color>
+    <color name="vidro">#9E14222C</color>
+    <color name="borda">#2E46D9DE</color>
+    <color name="borda_forte">#7346D9DE</color>
+    <color name="brilho">#1A46D9DE</color>
+    <color name="texto">#FFE6F4F5</color>
+    <color name="suave">#FF93AAB0</color>
+    <color name="apagado">#FF5D7178</color>
+    <color name="acento">#FF46D9DE</color>
+    <color name="acento_escuro">#FF0D3B40</color>
+    <color name="sobre_acento">#FF04252A</color>
+    <color name="bom">#FF5FD6A0</color>
+    <color name="alerta">#FFEFBE7C</color>
+    <color name="erro">#FFF0877E</color>
+    <color name="erro_borda">#73F0877E</color>
+    <color name="trilha_desligada">#FF16232A</color>
+    <color name="toque">#3346D9DE</color>
+</resources>

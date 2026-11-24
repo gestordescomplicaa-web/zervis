@@ -4,10 +4,13 @@
 
 Saem o ícone adaptável do Zé Voz (a frente com o macaco e o brilho, o fundo é um degradê em XML,
 e a versão de uma cor para os ícones temáticos do Android 13+), o ícone das notificações (vetor,
-branco) e os ícones do painel instalado no celular (o manifesto). Precisa do `rsvg-convert`
-(librsvg) e do `magick` (ImageMagick); rode de novo só quando o logo mudar.
+branco), os ícones do painel instalado no celular (o manifesto) e o que as telas do app usam: o
+macaco com o brilho (o centro da tela Início), o logo e os ícones de traço, tirados da Lucide que
+o repositório já traz (`zervis/video/icones/lucide.json`). Precisa do `rsvg-convert` (librsvg) e
+do `magick` (ImageMagick); rode de novo quando o logo mudar ou entrar um ícone na lista.
 """
 
+import json
 import re
 import subprocess
 import sys
@@ -18,6 +21,23 @@ RAIZ = Path(__file__).resolve().parent.parent
 LOGO = RAIZ / ".github" / "ze-logo.svg"
 RES = RAIZ / "android" / "app" / "src" / "main" / "res"
 ICONES_PAINEL = RAIZ / "zervis" / "portal" / "web" / "icones"
+LUCIDE = RAIZ / "zervis" / "video" / "icones" / "lucide.json"
+# Os ícones de traço das telas: o nome no app (res/drawable/ic_<nome>.xml) e o da Lucide.
+ICONES_DA_TELA = {
+    "ajustes": "sliders-horizontal",
+    "mic": "mic",
+    "enviar": "send",
+    "voltar": "arrow-left",
+    "alto_falante": "volume-2",
+    "fone": "headphones",
+    "orelha": "ear",
+    "celular": "smartphone",
+    "atualizar": "refresh-cw",
+    "desligar": "power",
+    "conexao": "link",
+    "compartilhar": "share-2",
+    "fechar": "x",
+}
 
 # O macaco no logo (960 x 960): a caixa da tinta, sem o brilho, medida no próprio desenho.
 CENTRO = (480.0, 476.0)
@@ -111,6 +131,77 @@ def _notificacao(caminhos: list[tuple[str, str, str]]) -> str:
     )
 
 
+def _num(valor: str) -> float:
+    return float(valor)
+
+
+def _tracos(desenho: str) -> list[str]:
+    """Cada elemento de um ícone da Lucide (path, line, circle, rect, polyline, polygon) como o
+    `pathData` de um vetor do Android."""
+    caminhos = []
+    for tag, attrs in re.findall(r"<(\w+)([^>]*)/>", desenho):
+        a = dict(re.findall(r'([\w-]+)="([^"]*)"', attrs))
+        if tag == "path":
+            caminhos.append(a["d"])
+        elif tag == "line":
+            caminhos.append(f"M{a['x1']},{a['y1']} L{a['x2']},{a['y2']}")
+        elif tag == "circle":
+            cx, cy, r = _num(a["cx"]), _num(a["cy"]), _num(a["r"])
+            caminhos.append(
+                f"M{cx - r:g},{cy:g} a{r:g},{r:g} 0 1,0 {2 * r:g},0 a{r:g},{r:g} 0 1,0 {-2 * r:g},0"
+            )
+        elif tag == "rect":
+            x, y, w, h = (_num(a[k]) for k in ("x", "y", "width", "height"))
+            r = _num(a.get("rx", "0"))
+            caminhos.append(
+                f"M{x + r:g},{y:g} H{x + w - r:g} a{r:g},{r:g} 0 0,1 {r:g},{r:g} V{y + h - r:g} "
+                f"a{r:g},{r:g} 0 0,1 {-r:g},{r:g} H{x + r:g} a{r:g},{r:g} 0 0,1 {-r:g},{-r:g} "
+                f"V{y + r:g} a{r:g},{r:g} 0 0,1 {r:g},{-r:g} Z"
+            )
+        elif tag in ("polyline", "polygon"):
+            pontos = a["points"].replace(",", " ").split()
+            pares = [f"{pontos[i]},{pontos[i + 1]}" for i in range(0, len(pontos), 2)]
+            caminhos.append("M" + " L".join(pares) + (" Z" if tag == "polygon" else ""))
+        else:
+            sys.exit(f"Elemento da Lucide sem tradução: <{tag}>.")
+    return caminhos
+
+
+def _vetor_de_traco(nome: str, desenho: str) -> str:
+    """Um ícone de traço da Lucide como vetor do Android: branco, a tela pinta com `tint`."""
+    linhas = "".join(
+        "    <path\n"
+        f'        android:pathData="{d}"\n'
+        '        android:strokeColor="#FFFFFFFF"\n'
+        '        android:strokeWidth="2"\n'
+        '        android:strokeLineCap="round"\n'
+        '        android:strokeLineJoin="round" />\n'
+        for d in _tracos(desenho)
+    )
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        f'<!-- Lucide "{nome}" (ISC, THIRD_PARTY.md). Gerado por android/icones.py. -->\n'
+        '<vector xmlns:android="http://schemas.android.com/apk/res/android"\n'
+        '    android:width="24dp"\n'
+        '    android:height="24dp"\n'
+        '    android:viewportWidth="24"\n'
+        '    android:viewportHeight="24">\n'
+        f"{linhas}"
+        "</vector>\n"
+    )
+
+
+def _telas(svg: str, defs: str, brilho: str) -> None:
+    """O que as telas do app usam: o macaco com brilho, o logo e os ícones de traço."""
+    sem_densidade = RES / "drawable-nodpi"
+    _render(_svg(960, _no_meio(960, 800, brilho), defs), 480, sem_densidade / "ze_macaco.webp")
+    _render(svg, 288, sem_densidade / "ze_logo.webp")
+    lucide = json.loads(LUCIDE.read_text())["icones"]
+    for nome, original in ICONES_DA_TELA.items():
+        destino = RES / "drawable" / f"ic_{nome}.xml"
+        destino.write_text(_vetor_de_traco(original, lucide[original]))
+
+
 def main() -> None:
     svg = LOGO.read_text()
     defs, caminhos = _partes(svg)
@@ -142,6 +233,7 @@ def main() -> None:
         512,
         ICONES_PAINEL / "ze-mascara-512.webp",
     )
+    _telas(svg, defs, brilho)
     print("Ícones gerados.")
 
 

@@ -18,3 +18,9 @@ key.txt
 
 # Ferramentas de tipos do painel (o navegador recebe os arquivos originais).
 node_modules/
+
+# O app do Android compilado aqui (a CI compila o de verdade).
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

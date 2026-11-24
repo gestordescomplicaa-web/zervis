@@ -92,6 +92,23 @@ public final class VozService extends Service {
     static volatile String estadoAgora = "";
     static volatile int nivelAgora;
     static volatile boolean pertoAgora; // a escuta de perto vale neste momento (o microfone do celular)
+    // Para o centro da tela Início ({@link Fase}): a conexão, o botão, a fala tocando aqui e o
+    // estado que o Zé manda ({"tipo":"estado"}: ativo, ouvindo, pensando, falando, confirmando).
+    static volatile boolean ligadoAgora;
+    static volatile boolean conectandoAgora;
+    static volatile boolean conectadoAgora;
+    static volatile boolean apertadoAgora;
+    static volatile String quedaAgora = "";
+    static volatile String doZeAgora = "";
+    static volatile long falaAte; // relógio desde o boot (ms)
+    static volatile long esperaAte;
+    static volatile long tentarEm; // a próxima tentativa, depois de cair
+
+    /** A fase da voz agora, para a tela. */
+    static String fase() {
+        return Fase.de(ligadoAgora, conectandoAgora, conectadoAgora, quedaAgora, apertadoAgora,
+                doZeAgora, falaAte, esperaAte, SystemClock.elapsedRealtime());
+    }
 
     private final Handler principal = new Handler(Looper.getMainLooper());
     private final ExecutorService tocar = Executors.newSingleThreadExecutor();
@@ -205,6 +222,7 @@ public final class VozService extends Service {
             return;
         }
         ligado = true;
+        ligadoAgora = true;
         startForeground(AVISO, aviso(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
         acordado = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ze-voz:voz");
         acordado.acquire();
@@ -325,6 +343,8 @@ public final class VozService extends Service {
     private void conectar() {
         if (!ligado) return;
         conectando = true;
+        conectandoAgora = true;
+        quedaAgora = "";
         mostrar("Conectando…");
         String endereco = ajustes.endereco().replaceFirst("^http", "ws");
         Request pedido = new Request.Builder()
@@ -344,6 +364,10 @@ public final class VozService extends Service {
                 quedas = 0;
                 falando = false;
                 conectando = false;
+                doZeAgora = "";
+                apertadoAgora = false;
+                conectadoAgora = true;
+                conectandoAgora = false;
                 principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(modoDaConexao) ? "Ao vivo" : "Diga “Ei Zé” ou toque em Falar"));
                 gravar(s);
                 procurarVersao();
@@ -354,7 +378,10 @@ public final class VozService extends Service {
                 try {
                     JSONObject m = new JSONObject(texto);
                     String tipo = m.optString("tipo");
-                    if ("voz".equals(tipo)) {
+                    if ("estado".equals(tipo)) {
+                        doZeAgora = m.optString("estado");
+                    } else if ("voz".equals(tipo)) {
+                        esperaAte = 0;
                         int taxa = m.optInt("taxa", 22050);
                         tocar.execute(() -> prepararFala(taxa));
                     } else if ("fim".equals(tipo)) {
@@ -370,6 +397,7 @@ public final class VozService extends Service {
                         tocar.execute(() -> {
                             if (falante != null) { falante.pause(); falante.flush(); falante.play(); }
                             tocandoAte = 0;
+                            falaAte = 0;
                         });
                     }
                 } catch (JSONException ignorado) {
@@ -384,6 +412,7 @@ public final class VozService extends Service {
                     if (falante == null) return;
                     long agora = SystemClock.elapsedRealtime();
                     tocandoAte = Math.max(tocandoAte, agora) + pcm.length / 2 * 1000L / taxaFala;
+                    falaAte = tocandoAte + CAUDA_MS;
                     falante.write(pcm, 0, pcm.length);
                 });
             }
@@ -413,6 +442,7 @@ public final class VozService extends Service {
             gravador = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, TAXA,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minimo, QUADRO * 4));
         } catch (SecurityException semPermissao) {
+            quedaAgora = Fase.SEM_MICROFONE;
             principal.post(() -> mostrar("Sem permissão do microfone"));
             return;
         }
@@ -495,6 +525,11 @@ public final class VozService extends Service {
         if (s != ws) return; // uma conexão antiga
         ws = null;
         conectando = false;
+        conectadoAgora = false;
+        conectandoAgora = false;
+        apertadoAgora = false;
+        doZeAgora = "";
+        quedaAgora = assumida ? Fase.EM_USO : Fase.SEM_REDE;
         pararCaptura();
         if (!ligado) return;
         if (assumida) {
@@ -510,6 +545,7 @@ public final class VozService extends Service {
         }
         long espera = ESPERAS_MS[Math.min(quedas, ESPERAS_MS.length - 1)];
         quedas++;
+        tentarEm = SystemClock.elapsedRealtime() + espera;
         principal.post(() -> mostrar("Sem conexão: de novo em " + espera / 1000 + " s"));
         principal.postDelayed(this::conectar, espera);
     }
@@ -523,7 +559,7 @@ public final class VozService extends Service {
             try {
                 long publicada = Atualizacao.publicada();
                 if (publicada <= Atualizacao.instalada(this)) return;
-                Intent abrir = new Intent(this, MainActivity.class).setAction(MainActivity.ATUALIZAR);
+                Intent abrir = new Intent(this, AjustesActivity.class).setAction(AjustesActivity.ATUALIZAR);
                 Notification nova = new Notification.Builder(this, CANAL)
                         .setSmallIcon(R.drawable.ic_ze)
                         .setContentTitle("Atualização do Zé Voz")
@@ -553,6 +589,8 @@ public final class VozService extends Service {
         WebSocket s = ws;
         if (s == null) return;
         falando = !falando;
+        apertadoAgora = falando;
+        if (!falando) esperaAte = SystemClock.elapsedRealtime() + 30_000; // um Zé que não manda o estado
         s.send(falando ? "{\"tipo\":\"apertar\"}" : "{\"tipo\":\"soltar\"}");
         mostrar(falando ? "Ouvindo… toque em Enviar" : "Enviado");
     }
@@ -561,6 +599,13 @@ public final class VozService extends Service {
         ligado = false;
         estadoAgora = "";
         pertoAgora = false;
+        ligadoAgora = false;
+        conectadoAgora = false;
+        conectandoAgora = false;
+        apertadoAgora = false;
+        doZeAgora = "";
+        quedaAgora = "";
+        falaAte = 0;
         principal.removeCallbacksAndMessages(null);
         WebSocket s = ws;
         ws = null;

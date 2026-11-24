@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- A tela inteira, escura como o painel; o conteúdo desvia das barras do sistema
+         (fitsSystemWindows na raiz de cada tela). -->
+    <style name="Tema.Ze" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/fundo</item>
+        <item name="android:colorBackground">@color/fundo</item>
+        <item name="android:colorPrimary">@color/fundo</item>
+        <item name="android:colorPrimaryDark">@color/fundo</item>
+        <item name="android:colorAccent">@color/acento</item>
+        <item name="android:colorControlActivated">@color/acento</item>
+        <item name="android:colorControlNormal">@color/suave</item>
+        <item name="android:colorControlHighlight">@color/toque</item>
+        <item name="android:textColorPrimary">@color/texto</item>
+        <item name="android:textColorSecondary">@color/suave</item>
+        <item name="android:textColorHint">@color/apagado</item>
+        <item name="android:textColorHighlight">@color/borda_forte</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/fundo</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- A foto que o Zé mandou: preto, sem barras. -->
+    <style name="Tema.Ze.Foto" parent="Tema.Ze">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+    </style>
+
+    <style name="Texto">
+        <item name="android:textColor">@color/texto</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="Texto.Suave">
+        <item name="android:textColor">@color/suave</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.1</item>
+    </style>
+
+    <style name="Texto.Pequeno">
+        <item name="android:textColor">@color/suave</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Texto.Rotulo">
+        <item name="android:textColor">@color/suave</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Texto.Titulo">
+        <item name="android:textSize">22sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textFontWeight">600</item>
+    </style>
+
+    <style name="Texto.Secao">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textFontWeight">600</item>
+    </style>
+
+    <style name="Cartao">
+        <item name="android:background">@drawable/cartao</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="CabecalhoDoCartao">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <style name="IconeDoCartao">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:tint">@color/acento</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <!-- Um botão feito de ícone e texto lado a lado, no meio (o Button põe o ícone na borda). -->
+    <style name="Botao">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Botao.Principal">
+        <item name="android:background">@drawable/botao_principal</item>
+        <item name="android:minHeight">56dp</item>
+    </style>
+
+    <style name="Botao.Secundario">
+        <item name="android:background">@drawable/botao_secundario</item>
+    </style>
+
+    <style name="Botao.Perigo">
+        <item name="android:background">@drawable/botao_perigo</item>
+    </style>
+
+    <style name="TextoDoBotao">
+        <item name="android:textSize">15sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/texto</item>
+        <item name="android:duplicateParentState">true</item>
+    </style>
+
+    <style name="TextoDoBotao.Principal">
+        <item name="android:textSize">17sp</item>
+        <item name="android:textFontWeight">600</item>
+        <item name="android:textColor">@color/sobre_acento</item>
+    </style>
+
+    <style name="Segmentado">
+        <item name="android:background">@drawable/segmentado</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:padding">4dp</item>
+    </style>
+
+    <style name="Segmento" parent="android:Widget.Material.Button.Borderless">
+        <item name="android:background">@drawable/segmento</item>
+        <item name="android:textColor">@color/texto_do_segmento</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="NumeroDoPasso">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:background">@drawable/passo</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/acento</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="Campo">
+        <item name="android:background">@drawable/campo</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textColor">@color/texto</item>
+        <item name="android:textColorHint">@color/apagado</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textCursorDrawable">@drawable/cursor</item>
+    </style>
+</resources>

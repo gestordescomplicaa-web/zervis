@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A bolinha de 22 dp no meio de uma área de 28 dp (o Switch mede a trilha pelo dobro dela). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="28dp" android:height="28dp">
+        <shape android:shape="oval"><solid android:color="@android:color/transparent" /></shape>
+    </item>
+    <item android:width="22dp" android:height="22dp" android:gravity="center">
+        <shape android:shape="oval"><solid android:color="@color/bolinha" /></shape>
+    </item>
+</layer-list>
