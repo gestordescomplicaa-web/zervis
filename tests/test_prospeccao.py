@@ -2,6 +2,7 @@
 
 import json
 import urllib.error
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -88,6 +89,7 @@ def _funil(
         perguntar=modelo,
         identidade=lambda: ("Gabriel", "Gestor Descomplica", "automação"),
         chave_apify=lambda: "apify_api_" + "x" * 30,
+        sortear=lambda inicio, fim: inicio,  # sem sorteio: o horário do teste é exato
     )
     funil.buscar_web = lambda consulta: [
         SimpleNamespace(titulo="SORRIR CLINICA - CNPJ 11.222.333/0001-81", trecho="Caruaru", url="")
@@ -352,3 +354,65 @@ def test_buscar_agora_pede_a_chave_e_nao_roda_duas_vezes(tmp_path: Path) -> None
     funil.chave_apify = lambda: ""
     with pytest.raises(f.ProspeccaoErro, match="Apify"):
         funil.buscar_agora()
+
+
+def test_horarios_sorteados_sem_ritmo_de_robo(tmp_path: Path) -> None:
+    relogio = Relogio(datetime(2026, 11, 25, 8, 0, tzinfo=RECIFE).timestamp())
+    funil, enviados = _funil(tmp_path, relogio, Modelo(), sozinho=True, por_dia=2)
+    funil.sortear = lambda inicio, fim: fim  # o maior sorteio: 11h e 3h30 depois
+    funil.consultar_cnpj = lambda numero: {}
+    funil.buscar_web = None
+    funil.adicionar_lugares(
+        [_lugar("p1", "Clínica 1", "558131110000"), _lugar("p2", "Clínica 2", "558132220000")]
+    )
+    funil._qualificar_novas(funil.config())
+    for hora, minuto, quantas in ((9, 30, 0), (10, 59, 0), (11, 0, 1), (14, 0, 1), (14, 30, 2)):
+        relogio.t = datetime(2026, 11, 25, hora, minuto, tzinfo=RECIFE).timestamp()
+        funil._enviar_da_fila(funil.config())
+        assert len(enviados) == quantas, (hora, minuto)
+
+
+def test_queda_no_meio_do_envio_nao_manda_de_novo(tmp_path: Path) -> None:
+    relogio = Relogio(QUARTA_10H)
+    funil, enviados = _funil(tmp_path, relogio, Modelo(), sozinho=True)
+    funil.adicionar_lugares([_lugar()])
+    funil._qualificar_novas(funil.config())
+
+    def caiu(telefone: str, nome: str, texto: str) -> str:
+        enviados.append(telefone)
+        raise SystemError("o Zé caiu depois de mandar")
+
+    funil.enviar = caiu
+    funil.ciclo()
+    [p] = funil.todas()
+    assert p["status"] == "enviando" and p["telefone_enviado"] == "558199887766"
+    relogio.t += 86400
+    funil.ciclo()
+    assert len(enviados) == 1  # a mesma pessoa não recebe de novo
+    assert funil.respondeu("558199887766", "Oi?")["status"] == "respondeu"  # type: ignore[index]
+
+
+def test_recusas_demais_pausam_a_prospeccao(tmp_path: Path) -> None:
+    relogio = Relogio(QUARTA_10H)
+    funil, _ = _funil(tmp_path, relogio, Modelo(), sozinho=True, por_dia=5)
+    avisos: list[str] = []
+    funil.avisar = avisos.append
+    funil.sortear = lambda inicio, fim: 0.0
+    funil.consultar_cnpj = lambda numero: {}
+    funil.buscar_web = None
+    numeros = ["558131110000", "558132220000", "558133330000"]
+    funil.adicionar_lugares([_lugar(f"p{i}", f"Clínica {i}", n) for i, n in enumerate(numeros)])
+    funil._qualificar_novas(funil.config())
+    for _ in numeros:
+        funil._enviar_da_fila(funil.config())
+        relogio.t += 3 * 3600 if relogio.t < QUARTA_10H + 6 * 3600 else 0
+    funil.respondeu(numeros[0], "Não tenho interesse.")
+    funil.ciclo()
+    assert funil.config().ligada  # uma recusa não pausa
+    funil.respondeu(numeros[1], "Por favor, não me mande mais mensagens")
+    funil.ciclo()
+    assert not funil.config().ligada and "Pausada" in funil.para_tela()["erro"]
+    assert avisos and "Revise a mensagem" in avisos[-1]
+    f.salvar_config(replace(funil.config(), ligada=True), funil.config_arquivo)
+    funil.ciclo()
+    assert funil.config().ligada  # ligada de novo: as recusas de antes não pausam outra vez

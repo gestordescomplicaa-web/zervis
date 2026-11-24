@@ -33,7 +33,7 @@ O que foi avaliado:
 ## Decisão
 
 1. **Página Prospecção** (Trabalho, depois de Marketing): cidade, ramos (um por linha), o que
-   quem usa oferece, envios por dia (padrão 2, no máximo 10), "Ligada" e "Enviar sozinho"
+   quem usa oferece, envios por dia (padrão 2, no máximo 5), "Ligada" e "Enviar sozinho"
    (desligados por padrão); a chave da Apify (conferida na conta antes de guardar, em
    `<config>/apify.key`, 0600) e "Adicionar empresa pelo CNPJ".
 2. **O ciclo** (a cada 5 minutos, numa thread do agendador, só ligada):
@@ -47,22 +47,31 @@ O que foi avaliado:
      descartada, com o motivo;
    - **busca mais** no Maps quando há menos de 4 empresas esperando e a última busca tem mais de
      6 horas: 10 empresas de um ramo, em rodízio;
-   - **envia** uma, se for dia útil, das 9h às 17h, abaixo do limite do dia e 2 horas depois da
-     última, pelo mesmo caminho do `whatsapp_enviar` (ADR 0061): Atividade e 24 horas na lista de
+   - **envia** uma, se for dia útil, das 9h às 17h e abaixo do limite do dia, pelo mesmo caminho do `whatsapp_enviar` (ADR 0061): Atividade e 24 horas na lista de
      prioridade. Número fora do WhatsApp: o próximo; WhatsApp desconectado: tenta no próximo
      ciclo; nenhum número no WhatsApp: descartada.
 3. **Sem "Enviar sozinho"**, a mensagem espera em "Aguardando aprovação", editável, com Aprovar e
    Descartar. Ligado, vai direto para a fila de envio. A aprovação de cada envio pela voz (ADR
    0061) não vale aqui: o "Enviar sozinho" é a autorização dada na página, como as automações que
    publicam sozinhas.
-4. **Ninguém recebe duas vezes:** o lugar do Google, o CNPJ e o telefone (DDD e os 8 últimos
+4. **Nada de disparo em massa** (o número é o de quem usa):
+   - no máximo 5 por dia, uma por ciclo, sem segunda mensagem nem "follow-up" automático;
+   - horários sorteados: o primeiro envio do dia num minuto entre 9h e 11h, e de 2h a 3h30 entre
+     um e outro (um ritmo fixo é o que denuncia robô);
+   - cada mensagem diferente (escrita para a empresa, com um fato dela), sem link;
+   - a empresa fica "Envio não confirmado" **antes** do envio: se o Zé cair no meio, ela não
+     volta para a fila e ninguém recebe duas vezes;
+   - **freio:** 2 pessoas pedindo para não receber em 7 dias desligam a prospecção, com aviso
+     para revisar a mensagem e os ramos (insistir faz o WhatsApp marcar o número). Ligada de
+     novo, só as recusas novas contam.
+5. **Ninguém recebe duas vezes:** o lugar do Google, o CNPJ e o telefone (DDD e os 8 últimos
    dígitos, com ou sem o nono) ficam guardados para sempre, em qualquer estado.
-5. **A saída:** toda mensagem termina com "Se não fizer sentido, é só me avisar que não mando mais
+6. **A saída:** toda mensagem termina com "Se não fizer sentido, é só me avisar que não mando mais
    nada." Quem responde que não quer vira "Sem interesse".
-6. **A resposta:** a mensagem de uma empresa contatada vira "Respondeu" na página e aviso de lead
+7. **A resposta:** a mensagem de uma empresa contatada vira "Respondeu" na página e aviso de lead
    (pela lista de prioridade nas primeiras 24 horas; depois, pelo aviso de resposta). "Reunião
    marcada" e "Sem interesse" se marcam na página.
-7. **Segurança:** o que vem do Maps e da Receita vai ao modelo entre `<<<` e `>>>`, como dado; a
+8. **Segurança:** o que vem do Maps e da Receita vai ao modelo entre `<<<` e `>>>`, como dado; a
    mensagem sai sem link; os dados ficam em `<dados>/prospeccao.db`.
 
 Junto, uma correção achada na conferência da fila do WhatsApp: o WaCalls aceita até 1.200

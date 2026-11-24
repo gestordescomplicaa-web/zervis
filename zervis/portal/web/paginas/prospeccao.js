@@ -25,7 +25,7 @@ function quem(p) {
   return [pessoa, esc(p.ramo), numero ? `${telefone(numero.numero)} · ${esc(numero.origem)}` : ""].filter(Boolean).join(" · ");
 }
 
-const CLASSES = { enviada: "", respondeu: "bom", reuniao: "bom", sem_interesse: "alerta", descartada: "", fila: "", nova: "" };
+const CLASSES = { enviando: "alerta", enviada: "", respondeu: "bom", reuniao: "bom", sem_interesse: "alerta", descartada: "", fila: "", nova: "" };
 
 /** @param {any} p */
 function aguardando(p) {
@@ -48,7 +48,7 @@ function empresa(p) {
     p.resposta ? `Resposta: “${esc(p.resposta)}”` : "",
     p.erro ? `Envio adiado: ${esc(p.erro)}` : "",
   ].filter(Boolean).join("<br>");
-  const contatada = ["enviada", "respondeu", "sem_interesse"].includes(p.status);
+  const contatada = ["enviando", "enviada", "respondeu", "sem_interesse"].includes(p.status);
   const botoes = contatada
     ? botao("Reunião marcada", "pr-marcar", `data-id="${esc(p.id)}" data-status="reuniao"`, "discreta") +
       (p.status === "sem_interesse" ? "" : botao("Sem interesse", "pr-marcar", `data-id="${esc(p.id)}" data-status="sem_interesse"`, "discreta"))
@@ -61,13 +61,13 @@ function configuracao() {
   return cartao("Configuração", `
   <div class="campos">
     <label>Cidade<input id="pr-cidade" value="${esc(c.cidade)}" maxlength="80" placeholder="Caruaru, PE" autocomplete="off"></label>
-    <label>Envios por dia<input id="pr-por-dia" type="number" min="1" max="10" value="${esc(c.por_dia)}"></label>
+    <label>Envios por dia<input id="pr-por-dia" type="number" min="1" max="5" value="${esc(c.por_dia)}"></label>
     <label class="largo">Ramos<textarea id="pr-ramos" rows="4" placeholder="Um por linha: clínica odontológica, imobiliária, autopeças">${esc((c.ramos || []).join("\n"))}</textarea></label>
     <label class="largo">O que você oferece<textarea id="pr-oferta" rows="4" maxlength="1500" placeholder="Em poucas linhas: o que você faz e para quem. Vai para a primeira mensagem.">${esc(c.oferta)}</textarea></label>
     <label class="interruptor"><input type="checkbox" id="pr-ligada" ${c.ligada ? "checked" : ""}> Ligada</label>
     <label class="interruptor"><input type="checkbox" id="pr-sozinho" ${c.sozinho ? "checked" : ""}> Enviar sozinho</label>
   </div>
-  ${sub(`${esc(ultimo.horario)}, com duas horas entre um envio e outro. Sem "Enviar sozinho", cada mensagem espera a sua aprovação.`)}
+  ${sub(`${esc(ultimo.horario)}, com pelo menos duas horas entre um envio e outro, em horários variados. Sem "Enviar sozinho", cada mensagem espera a sua aprovação.`)}
   <div class="linha">${botao("Salvar", "pr-salvar", "", "principal")}</div>
   <p class="resultado" id="pr-resultado"></p>`);
 }

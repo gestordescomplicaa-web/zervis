@@ -23,6 +23,7 @@ instruções. Estado em `<dados>/prospeccao.db`; a configuração, em `<config>/
 import asyncio
 import json
 import logging
+import random
 import re
 import threading
 import time
@@ -44,9 +45,13 @@ ARQUIVO = lugares.DADOS / "prospeccao.json"  # o banco é o prospeccao.db, ao la
 CONFIG = lugares.CONFIG / "prospeccao.json"
 PESOS = {"dor": 25, "encaixe": 25, "momento": 20, "alcance": 15, "prova": 15}
 MINIMO = 50  # abaixo disto, a empresa não tem sinal que justifique a mensagem
-POR_DIA, POR_DIA_MAXIMO = 2, 10
+POR_DIA, POR_DIA_MAXIMO = 2, 5  # o número é o de quem usa: nada de volume
 INICIO, FIM = 9, 17  # o horário de envio, em dias úteis, no fuso de quem usa
-ESPACO_S = 2 * 3600  # entre uma mensagem e outra
+ESPACO_S = 2 * 3600  # entre uma mensagem e outra, no mínimo
+VARIACAO_S = 90 * 60  # somada ao espaço, sorteada a cada envio: sem ritmo de robô
+COMECO_S = 2 * 3600  # o primeiro envio do dia sai num minuto sorteado entre 9h e 11h
+FREIO_RECUSAS = 2  # tantas pessoas pedindo para não receber em FREIO_S: a prospecção pausa
+FREIO_S = 7 * 86400
 INTERVALO_S = 300  # o ciclo
 DESCOBRIR_S = 6 * 3600  # entre uma busca no Maps e outra
 RESERVA = 4  # empresas prontas (ou por qualificar) abaixo das quais o Zé busca mais
@@ -66,6 +71,7 @@ ROTULOS = {
     "nova": "Qualificando",
     "aprovar": "Aguardando aprovação",
     "fila": "Na fila de envio",
+    "enviando": "Envio não confirmado",
     "enviada": "Enviada",
     "respondeu": "Respondeu",
     "reuniao": "Reunião marcada",
@@ -74,7 +80,8 @@ ROTULOS = {
 }
 DIAS = ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")
 ESPERANDO = ("nova", "aprovar", "fila")  # contam na reserva
-CONTATADAS = ("enviada", "respondeu", "reuniao", "sem_interesse")
+# "enviando" fica marcado antes do envio: se o Zé cair no meio, a empresa não recebe de novo.
+CONTATADAS = ("enviando", "enviada", "respondeu", "reuniao", "sem_interesse")
 MARCAVEIS = ("reuniao", "sem_interesse", "respondeu")
 SISTEMA = (
     "Você qualifica empresas para uma prospecção B2B pelo WhatsApp e escreve a primeira mensagem "
@@ -216,6 +223,7 @@ class Funil:
         perguntar: Callable[[str, str], str] = _perguntar,
         identidade: Callable[[], tuple[str, str, str]] = _identidade,
         chave_apify: Callable[[], str] = apify.chave,
+        sortear: Callable[[float, float], float] = random.uniform,
     ) -> None:
         self._empresas = Lista(arquivo, "empresas")
         self._meta = Lista(arquivo, "meta")
@@ -226,6 +234,7 @@ class Funil:
         self.perguntar = perguntar
         self.identidade = identidade
         self.chave_apify = chave_apify
+        self.sortear = sortear
         # Ligados pelo núcleo (as automações): sem eles, o funil não busca na web nem envia.
         self.buscar_web: Callable[[str], Iterable[Any]] | None = None
         self.enviar: Callable[[str, str, str], str] | None = None  # telefone, nome, texto
@@ -527,12 +536,46 @@ class Funil:
             momento = momento.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
         return quando
 
+    def _comeco_do_dia(self) -> float:
+        """O primeiro envio de hoje: um minuto sorteado (uma vez por dia) a partir das 9h."""
+        momento = self._local(self.agora())
+        hoje = momento.date().isoformat()
+        meta = self._meta_ler()
+        if meta.get("dia") != hoje:
+            atraso = self.sortear(0, COMECO_S)
+            self._meta_gravar(dia=hoje, atraso=atraso)
+        else:
+            atraso = float(meta.get("atraso", 0))
+        nove = momento.replace(hour=INICIO, minute=0, second=0, microsecond=0)
+        return nove.timestamp() + atraso
+
     def proximo_envio(self, cfg: Config) -> float:
-        """Quando a próxima mensagem pode sair (0: agora); só o limite e o espaço, sem a janela."""
+        """Quanto falta para a próxima mensagem poder sair (0: agora; -1: o limite de hoje
+        chegou). O espaço desde a última é sorteado a cada envio; a janela fica de fora."""
         if len(self.enviadas_hoje()) >= cfg.por_dia:
             return -1.0
-        ultimo = max((float(p.get("enviado") or 0) for p in self.todas()), default=0.0)
-        return max(0.0, ultimo + ESPACO_S - self.agora())
+        ultima = max(self.todas(), key=lambda p: float(p.get("enviado") or 0), default=None)
+        livre = 0.0
+        if ultima is not None and ultima.get("enviado"):
+            livre = float(ultima["enviado"]) + float(ultima.get("espera") or ESPACO_S)
+        if not self.enviadas_hoje():
+            livre = max(livre, self._comeco_do_dia())
+        return max(0.0, livre - self.agora())
+
+    def _freio(self, cfg: Config) -> bool:
+        """Pessoas demais pedindo para não receber: a mensagem ou o público estão errados, e
+        insistir faz o WhatsApp marcar o número. Pausa (desliga) e avisa."""
+        # Depois de uma pausa, só contam as recusas novas: ligar de novo não pausa na hora.
+        desde = max(self.agora() - FREIO_S, float(self._meta_ler().get("freio_em", 0)))
+        recusas = sum(1 for p in self.todas() if float(p.get("recusou") or 0) > desde)
+        if recusas < FREIO_RECUSAS:
+            return False
+        salvar_config(Config(**{**asdict(cfg), "ligada": False}), self.config_arquivo)
+        motivo = f"Pausada: {recusas} pessoas pediram para não receber mensagens nesta semana."
+        self._meta_gravar(erro=motivo, freio_em=self.agora())
+        atividade.PADRAO.registrar("execucao", f"Prospecção {motivo.lower()}")
+        self._avisar(f"Prospecção {motivo.lower()} Revise a mensagem e os ramos antes de ligar.")
+        return True
 
     def _enviar_da_fila(self, cfg: Config) -> None:
         if self.enviar is None or not self.na_janela(self.agora()) or self.proximo_envio(cfg) != 0:
@@ -548,24 +591,27 @@ class Funil:
         for t in p.get("telefones", []):
             if self.conhecido(t["numero"]):
                 continue  # virou conversa de quem usa depois da qualificação: não é prospecção
+            # Gravado antes de enviar: se o Zé cair no meio, ela não volta para a fila.
+            marcada = self._mudar(
+                p["id"],
+                {"status": "enviando", "enviado": self.agora(), "telefone_enviado": t["numero"],
+                 "espera": ESPACO_S + self.sortear(0, VARIACAO_S)},
+                so_se=("fila",),
+            )  # fmt: skip
+            if marcada is None:
+                return  # descartada na página no meio
             try:
                 self.enviar(t["numero"], nome, p["mensagem"])
             except RuntimeError as erro:
+                volta = {"status": "fila", "enviado": 0.0, "telefone_enviado": "", "espera": 0}
                 if "não está no WhatsApp" in str(erro):
+                    self._mudar(p["id"], volta, so_se=("enviando",))
                     continue
-                self._mudar(p["id"], {"erro": str(erro)})  # desconectado: tenta no próximo ciclo
+                # Desconectado: tenta no próximo ciclo.
+                self._mudar(p["id"], {**volta, "erro": str(erro)}, so_se=("enviando",))
                 log.warning("prospecção: envio adiado: %s", erro)
                 return
-            self._mudar(
-                p["id"],
-                {
-                    "status": "enviada",
-                    "enviado": self.agora(),
-                    "telefone_enviado": t["numero"],
-                    "erro": "",
-                },
-                so_se=("fila",),
-            )
+            self._mudar(p["id"], {"status": "enviada", "erro": ""}, so_se=("enviando",))
             self._avisar(f"Prospecção: mensagem enviada para {nome}.")
             return
         self._mudar(p["id"], {"status": "descartada", "motivo": "Sem WhatsApp."}, so_se=("fila",))
@@ -579,7 +625,7 @@ class Funil:
         try:
             self.em = self.agora()
             cfg = self.config()
-            if not cfg.ligada:
+            if not cfg.ligada or self._freio(cfg):
                 return
             self._qualificar_novas(cfg)
             self._descobrir(cfg)
@@ -627,7 +673,10 @@ class Funil:
     def marcar(self, ident: str, status: str) -> dict[str, Any]:
         if status not in MARCAVEIS:
             raise ProspeccaoErro("Estado inválido.")
-        p = self._mudar(ident, {"status": status}, so_se=CONTATADAS)
+        campos: dict[str, Any] = {"status": status}
+        if status == "sem_interesse":
+            campos["recusou"] = self.agora()  # conta no freio
+        p = self._mudar(ident, campos, so_se=CONTATADAS)
         if p is None:
             raise ProspeccaoErro("Só uma empresa já contatada muda assim.")
         atividade.PADRAO.registrar(
@@ -648,10 +697,11 @@ class Funil:
         if alvo is None:
             return None
         campos: dict[str, Any] = {"resposta": _limpo(texto, 300)}
-        if alvo["status"] == "enviada":
+        if alvo["status"] in ("enviando", "enviada"):
             campos["status"] = "respondeu"
         if SEM_INTERESSE.search(texto or "") and alvo["status"] != "reuniao":
             campos["status"] = "sem_interesse"
+            campos["recusou"] = self.agora()  # conta no freio
         return self._mudar(alvo["id"], campos) or alvo
 
     def para_tela(self) -> dict[str, Any]:
