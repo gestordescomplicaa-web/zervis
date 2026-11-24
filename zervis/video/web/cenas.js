@@ -47,6 +47,19 @@
   function falaGrande(classe) {
     return {
       montar(c, el) {
+        // o gancho com foto (ADR 0123): a imagem enche a tela atrás da frase, com um véu escuro
+        let foto = null;
+        if (classe === "gancho" && c.imagem) {
+          foto = h("div", "gancho-foto");
+          const img = h("img");
+          img.src = c.imagem;
+          img.alt = "";
+          foto.append(img, h("div", "gancho-veu"));
+          // na cena inteira (a câmera só tem a altura do texto), entre o fundo e a câmera
+          const cena = el.parentElement || el;
+          cena.classList.add("com-foto");
+          cena.insertBefore(foto, el.parentElement ? el : null);
+        }
         const b = h("div", "brilho");
         const r = c.rotulo ? h("div", "rotulo", c.rotulo) : null;
         const aspas = classe === "frase" && c.composicao !== "cheia" ? h("div", "aspas", "“") : null;
@@ -70,10 +83,15 @@
         if (aspas) el.append(aspas);
         el.append(t);
         const foco = spans.find((s) => s.classList.contains("destaque")) || t;
-        return { b, r, aspas, spans, foco };
+        return { b, r, aspas, spans, foco, foto };
       },
       render(t, d, s, ctx) {
         const c = ctx.cena;
+        if (s.foto) {
+          // a foto chega grande e assenta, como a foto cheia
+          const p = curvas.chega(prog(t, 0, 1.1));
+          s.foto.firstChild.style.transform = `scale(${(1.16 - 0.16 * p).toFixed(4)})`;
+        }
         brilho(s.b, t, 0);
         if (s.r) revela(s.r, t, 0.02, "mascara");
         if (s.aspas) mola(s.aspas, t, 0.0, { de: 0.2 });
@@ -88,6 +106,39 @@
       },
     };
   }
+  // --- a capa do Reels (ADR 0123): uma peça à parte, parada: o tema enorme, o retrato de quem
+  // fala fundido no fundo escuro e o ícone do tema. Nada anima: é fotografada uma vez.
+  Ze.cena("capa", {
+    montar(c, el) {
+      const cena = el.parentElement || el;
+      cena.classList.add("capa-peca", c.imagem ? "com-retrato" : "sem-retrato");
+      if (c.imagem) {
+        const retrato = h("img", "capa-retrato");
+        retrato.src = c.imagem;
+        retrato.alt = "";
+        cena.insertBefore(retrato, el.parentElement ? el : null);
+      }
+      const titulo = h("h1", "capa-titulo");
+      const alvo = (c.destaque || "").toLowerCase().split(/\s+/).filter(Boolean);
+      c.texto.split(/\s+/).forEach((p) => {
+        const limpa = p.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+        const span = h("span", alvo.some((a) => a.replace(/[^\p{L}\p{N}]/gu, "") === limpa) ? "capa-palavra destaque" : "capa-palavra", p);
+        titulo.append(span, document.createTextNode(" "));
+      });
+      const selo = h("div", "capa-selo");
+      const svg = c.icone ? Ze.icone(c.icone, "icone capa-icone") : null;
+      if (svg) selo.append(svg);
+      const assinatura = c.assinatura ? h("div", "capa-assinatura", c.assinatura) : null;
+      el.append(titulo);
+      if (c.icone) el.append(selo);
+      if (assinatura) cena.append(assinatura);
+      return { foco: titulo, svg };
+    },
+    render(t, d, s) {
+      if (s.svg) Ze.desenhar(s.svg, 9, 0, 0.1); // o ícone já inteiro
+    },
+  });
+
   Ze.cena("gancho", falaGrande("gancho"));
   Ze.cena("frase", falaGrande("frase"));
 

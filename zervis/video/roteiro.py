@@ -23,7 +23,7 @@ from zervis.video import biblioteca, formatos
 from zervis.video.estilos import Estilo
 
 FALA_PALAVRAS = 16  # uma frase curta por cena: o corte a cada 2 a 4 segundos (ADR 0113)
-PALAVRAS_POR_SEGUNDO = 2.9  # o ritmo medido da voz do Zé (Fish Audio): 95 palavras em 33 s
+PALAVRAS_POR_SEGUNDO = 2.3  # o ritmo medido da voz (Fish S2.1 Pro, 23/11/2026): 166 em 72 s
 LIMITE_LEGENDA = 2200
 # A duração pedida -> (mínimo, máximo) de cenas.
 DURACOES: dict[int, tuple[int, int]] = {15: (4, 6), 30: (6, 10), 45: (8, 13), 60: (10, 16)}
@@ -31,6 +31,9 @@ DURACAO_PADRAO = 30
 CAMERAS = ("empurra", "afasta", "desliza", "parado")
 TRANSICOES = ("corte", "mascara", "deslize", "zoom", "cor", "carta", "baralho", "cubo", "fatias")
 FUNDOS = ("escuro", "claro", "cor")
+# cenas que enumeram (o "passo 1, 2, 3"): duas no vídeo, no máximo (ADR 0123)
+ENUMERADOS = ("item", "passos", "lista")
+MAXIMO_ENUMERADOS = 2
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
 ABERTURAS = ("gancho", "foto", "icone", "numero", "frase")  # o que pode abrir o vídeo
 CORTES_PALAVRAS = 9  # "cortes": uma palavra por tela só cabe numa fala curta
@@ -39,14 +42,16 @@ CORTES_PALAVRAS = 9  # "cortes": uma palavra por tela só cabe numa fala curta
 # as composições e o que o modelo lê sobre ele.
 TIPOS: dict[str, dict[str, Any]] = {
     "gancho": {
-        "textos": {"rotulo": 28, "destaque": 40},
+        "textos": {"rotulo": 28, "destaque": 40, "foto": 80},
         "composicoes": ("centro", "esquerda", "gigante", "cortes", "carimbo"),
         "formato": '{"tipo": "gancho", "fala": "...", "destaque": "1 a 3 palavras da fala em cor", '
         '"rotulo": "opcional, até 28 (o assunto, em cápsula)", "composicao": '
-        '"centro|esquerda|gigante|cortes|carimbo"} (a fala aparece na tela, animada; não escreva '
-        'outro texto; "gigante" é uma palavra por linha, enorme, para até 7 palavras; "cortes" '
-        "põe cada palavra sozinha na tela inteira, num corte seco a cada palavra, para até 9; "
-        '"carimbo" faz o destaque bater na tela como um carimbo, com tremor)',
+        '"centro|esquerda|gigante|cortes|carimbo", "foto": "opcional: a foto que enche a tela '
+        'atrás da frase (busca: <em inglês> ou uma foto da marca)"} (a fala aparece na tela, '
+        'animada; não escreva outro texto; com "foto", a frase vem clara sobre a imagem: o '
+        'gancho mais forte; "gigante" é uma palavra por linha, enorme, para até 7 palavras; '
+        '"cortes" põe cada palavra sozinha na tela inteira, num corte seco a cada palavra, '
+        'para até 9; "carimbo" faz o destaque bater na tela como um carimbo, com tremor)',
     },
     "frase": {
         "textos": {"destaque": 40},
@@ -186,8 +191,10 @@ escreva a fala do vídeo inteiro e divida em cenas; cada cena tem um papel só (
 provar, convidar) e um jeito de mostrar.
 
 Responda só com JSON, sem texto em volta:
-{{"objetivo": "...", "publico": "...", "formato": "...", "palavra": "...", "entrega": "...",
-"titulo": "...", "legenda": "...",
+{{"objetivo": "...", "publico": "...", "formato": "...", "ganchos": ["...", "...", "...",
+"...", "..."], "palavra": "...", "entrega": "...", "titulo": "...",
+"capa": {{"texto": "...", "destaque": "...", "icone": "...", "foto": "..."}},
+"legenda": "...",
 "cenas": [{{"tipo": "...", "fala": "...", "camera": "...", "transicao": "...", ...}}]}}
 
 O limite mais importante: **a fala inteira tem de {minimo_palavras} a {total} palavras**. Conte
@@ -220,13 +227,26 @@ Regras:
 - **A copy é a mãe da animação.** Escreva a fala primeiro; depois faça cada coisa concreta que
   ela diz aparecer na tela na palavra em que é dita: "prédio" vira a foto de um prédio,
   "WhatsApp" vira o logo do WhatsApp, "planilha" vira o logo do Google Planilhas. A maior parte
-  das cenas é "visual" (as batidas) ou "item" com imagem. Use logos de empresas que existem
-  ("logo: whatsapp", "logo: google calendar", "logo: ifood", "logo: instagram") e fotos
+  das cenas é "visual" (as batidas) ou "foto"; "item" com imagem no máximo duas vezes. Use
+  logos de empresas que existem ("logo: whatsapp", "logo: google calendar", "logo: ifood",
+  "logo: instagram") e fotos
   ("busca: office building"). Ícone desenhado, conexão e hub só quando não houver coisa real para
   mostrar. Cartões de texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
-- Não invente números, casos, clientes nem depoimentos. "numero" só com um dado do material,
-  com a fonte. Uma "conversa" é sempre um exemplo.
+- **Nada de passo a passo.** Não conte em voz alta ("primeiro", "segundo", "passo um", "são
+  três coisas") nem numere na tela: o vídeo é uma história com tensão e virada, não um tutorial.
+  Cenas que enumeram (item, passos, lista) no máximo duas no vídeo.
+- Não invente dado, cliente real nem depoimento. A história de exemplo se apresenta como
+  exemplo ("pensa na", "imagina"), com números de exemplo que a conta deixa claros ("se ela perde
+  três clientes por semana, de cento e cinquenta reais cada..."); nunca diga que aconteceu de
+  verdade nem que é cliente de quem fala. "numero" com dado real só com a fonte do material; com
+  a conta do exemplo, a fonte é "conta de exemplo". Uma "conversa" é sempre um exemplo.
+- capa: a capa do Reels, uma peça à parte do vídeo, sobre o tema (é o que forma o perfil).
+  texto: o tema como título de capa, de 2 a 5 palavras, forte e específico ("Cobrança no
+  automático", "Agenda que se enche sozinha", "Orçamento em 10 minutos"), nunca genérico
+  ("Automação para empresas"); destaque: 1 ou 2 palavras do texto, em cor; icone: o objeto do
+  tema, em inglês ("receipt", "calendar", "wrench"); foto: o nome exato de uma foto da marca em
+  que aparece quem fala (um retrato), ou vazio se não houver.
 - titulo: até 60 caracteres. legenda: a do Instagram, de 300 a 1.000 caracteres, com o gancho, a
   explicação em parágrafos curtos, a chamada, no máximo 3 emojis e até 5 hashtags no fim.
 {tom}
@@ -259,6 +279,11 @@ class Roteiro:
     formato: str = ""
     palavra: str = ""  # a palavra para comentar (ADR 0116)
     entrega: str = ""  # o que quem comenta recebe no direct
+    capa: str = ""  # o texto da capa do Reels (ADR 0123): o tema
+    ganchos: list[str] = field(default_factory=list)  # os candidatos que o diretor escreveu
+    capa_destaque: str = ""
+    capa_icone: str = ""  # o objeto do tema, para o ícone da capa
+    capa_foto: str = ""  # uma foto da marca com quem fala (o retrato)
 
     @property
     def falas(self) -> list[str]:
@@ -272,6 +297,13 @@ class Roteiro:
             "entrega": self.entrega,
             "publico": self.publico,
             "titulo": self.titulo,
+            "capa": {
+                "texto": self.capa,
+                "destaque": self.capa_destaque,
+                "icone": self.capa_icone,
+                "foto": self.capa_foto,
+            },
+            "ganchos": self.ganchos,
             "legenda": self.legenda,
             "cenas": self.cenas,
         }
@@ -578,9 +610,18 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
         if antes["tipo"] == cena["tipo"] == "item":
             # itens seguidos são o mesmo cartão: o mesmo fundo, sem transição
             cena["fundo"], cena["transicao"] = antes["fundo"], "corte"
+    # a abertura mostra a imagem no primeiro instante: um ícone que só entra na terceira palavra
+    # deixa o gancho começar com a tela vazia
+    cenas[0].pop("quando", None)
     if cenas[0]["tipo"] not in ABERTURAS or cenas[-1]["tipo"] != "fecho":
         raise RoteiroErro(
             f"O roteiro precisa abrir com {', '.join(ABERTURAS)} e terminar com um fecho."
+        )
+    enumeradas = sum(c["tipo"] in ENUMERADOS for c in cenas)
+    if enumeradas > MAXIMO_ENUMERADOS:
+        raise RoteiroErro(
+            f"O roteiro virou lista ({enumeradas} cenas de item, passos ou lista; até "
+            f"{MAXIMO_ENUMERADOS}). Conte uma história com virada, não um passo a passo."
         )
     palavras = sum(len(c["fala"].split()) for c in cenas)
     if palavras > total + 10:
@@ -595,6 +636,9 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     palavra = palavra or _texto((str(fecho.get("chamada", "")).split() or ["comenta"])[0], 16)
     fecho.update(composicao="comenta", palavra=palavra)
     titulo = _texto(dados.get("titulo"), 60) or _texto(cenas[0]["fala"], 60)
+    capa = (
+        dados.get("capa") if isinstance(dados.get("capa"), dict) else {"texto": dados.get("capa")}
+    )
     return Roteiro(
         titulo,
         str(dados.get("legenda") or "").strip()[:LIMITE_LEGENDA],
@@ -604,6 +648,11 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
         formato if (formato := str(dados.get("formato", ""))) in formatos.FORMATOS else "",
         palavra.upper(),
         _texto(dados.get("entrega"), 140),
+        _texto(capa.get("texto"), 60),
+        [_texto(g, 120) for g in (dados.get("ganchos") or [])[:8] if isinstance(g, str)],
+        _texto(capa.get("destaque"), 30),
+        _texto(capa.get("icone"), 40),
+        _texto(capa.get("foto"), 80),
     )
 
 

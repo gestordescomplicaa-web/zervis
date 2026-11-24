@@ -3,7 +3,8 @@ Wikimedia, só as que a licença dispensa de crédito (domínio público, CC0; A
 legenda do Instagram ficam sem lista de fontes.
 
 O diretor escolhe pelo nome (as fotos da marca têm nomes que as descrevem) ou pede "busca: <o que
-mostrar, em inglês>". Aqui a escolha vira um arquivo na pasta do vídeo. A busca é só no Commons
+mostrar, em inglês>". Aqui a escolha vira um arquivo na pasta do vídeo. Com a chave de quem usa,
+a busca vai primeiro ao Pixabay (ADR 0124); depois, ou sem ela, ao Commons
 (os nomes dos arquivos descrevem a foto; a Wikipédia em português devolve páginas sem relação para
 uma busca em inglês) e só aceita a foto cujo título tem as palavras do pedido (duas, se o pedido
 tiver duas ou mais). Sem foto que sirva, a cena vira um ícone que se desenha: o vídeo nunca falha
@@ -22,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from zervis.imersivo import capturas, imagens
-from zervis.video import biblioteca
+from zervis.video import biblioteca, pixabay
 
 log = logging.getLogger(__name__)
 
@@ -45,16 +46,46 @@ def _buscar_no_commons(busca: str) -> list[imagens.Achado]:
     return imagens.buscar_commons(busca, quantos=RESULTADOS)
 
 
+def _buscar_no_pixabay(busca: str) -> list[imagens.Achado]:
+    """O Pixabay primeiro, se quem usa pôs a chave (ADR 0124); sem ela, nada."""
+    chave = pixabay.chave()
+    return pixabay.buscar(busca, chave) if chave else []
+
+
 def _nota(achado: imagens.Achado, pedidas: set[str]) -> int:
     """Quantas palavras do pedido o título tem (valem o dobro) e a descrição tem."""
     return 2 * len(pedidas & _palavras(achado.titulo)) + len(pedidas & _palavras(achado.descricao))
 
 
+# Foto de domínio público no Commons é muito foto oficial de governo, de guerra e de arquivo:
+# gente (presidentes, retratos), mortos, armas, e imagens velhas. Nada disso entra num vídeo de
+# marca. O Commons diz pelas categorias; o título e a descrição ajudam.
+_NAO_SERVE = re.compile(
+    r"\b(people|person|persons|portraits?|men|women|man|woman|boys?|girls?|child|children|"
+    r"kids?|families|family|crowds?|faces?|selfies?|humans?|corpses?|deaths?|dead|killed|"
+    r"funerals?|wars?|military|army|soldiers?|weapons?|guns?|police|protests?|presidents?|"
+    r"presidential|politicians?|prime minister|senators?|governors?|kings?|queens?|pope|"
+    r"ministers?|white house|executive office|national archives|nazi|holocaust|"
+    r"[a-z]+ in (?:january|february|march|april|may|june|july|august|september|october|"
+    r"november|december) \d{4}|1[0-9]{3}s?|19[0-8][0-9]s?)\b",
+    re.IGNORECASE,
+)
+
+
+def _tem_gente_ou_historia(achado: imagens.Achado) -> bool:
+    return bool(_NAO_SERVE.search(f"{achado.titulo} | {achado.descricao} | {achado.categorias}"))
+
+
 def _serve(achado: imagens.Achado, pedidas: set[str]) -> bool:
-    """Uma foto que dispensa o crédito e cujo título (ou descrição) tem as palavras do pedido:
-    duas, ou a única que houver."""
+    """Uma foto que dispensa o crédito, sem gente nem cara de arquivo histórico, e cujo título
+    (ou descrição) tem as palavras do pedido: duas, ou a única que houver."""
     iguais = pedidas & _palavras(f"{achado.titulo} {achado.descricao}")
-    return achado.tipo == "foto" and not achado.atribuicao and len(iguais) >= min(2, len(pedidas))
+    return (
+        achado.tipo == "foto"
+        and not achado.atribuicao
+        and not _tem_gente_ou_historia(achado)
+        and len(iguais) >= min(2, len(pedidas))
+    )
 
 
 def _da_marca() -> list[str]:
@@ -123,6 +154,8 @@ class Fotos:
         baixar: Callable[[str, Path], dict[str, Any]] = imagens.baixar,
         logo: Callable[[str], bytes] = _baixar_logo,
         capturar: Callable[[str, Path], dict[str, Any]] | None = None,
+        buscar_pixabay: Callable[[str], list[imagens.Achado]] = _buscar_no_pixabay,
+        baixar_pixabay: Callable[[imagens.Achado, Path], Path] = pixabay.baixar,
     ) -> None:
         self.da_marca = da_marca
         self.pasta_da_marca = pasta_da_marca
@@ -130,6 +163,8 @@ class Fotos:
         self.baixar = baixar
         self.logo = logo
         self.capturar = capturar or _capturar_site
+        self.buscar_pixabay = buscar_pixabay
+        self.baixar_pixabay = baixar_pixabay
 
     def nomes(self) -> list[str]:
         """Os nomes das fotos da marca, para o diretor (vazio se o painel não tiver nenhuma)."""
@@ -160,7 +195,7 @@ class Fotos:
         paralelo; o que não vier vira ícone."""
         alvos: list[tuple[dict[str, Any], str, dict[str, Any]]] = []  # (onde, pedido, cena)
         for c in cenas:
-            if c.get("tipo") == "foto":
+            if c.get("tipo") in ("foto", "gancho") and c.get("foto"):
                 alvos.append((c, str(c.get("foto", "")), c))
             for b in c.get("batidas") or []:
                 alvos.append((b, str(b.get("mostrar", "")), c))
@@ -185,11 +220,13 @@ class Fotos:
                 log.info("sem imagem para '%s': fica um ícone", pedido)
                 if onde is cena and cena.get("tipo") == "foto":
                     self._virar_icone(cena, pedido)
-                else:
+                elif not (onde is cena and cena.get("tipo") == "gancho"):  # o gancho fica só texto
                     onde["icone"] = self._icone_de(onde, pedido)
                 continue
             arquivo, tipo = achado
             onde["imagem"], onde["imagem_tipo"] = arquivo.resolve().as_uri(), tipo
+            if onde is cena and cena.get("tipo") == "gancho":
+                cena["fundo"] = "escuro"  # a frase clara sobre a foto escurecida
             if tipo == "site":  # a barra do navegador mostra o endereço
                 onde["site"] = endereco_do_site(pedido.strip()[len(SITE) :]).removeprefix(
                     "https://"
@@ -222,6 +259,10 @@ class Fotos:
         destino.write_bytes(dados)
         return destino
 
+    def retrato(self, nome: str, pasta: Path) -> Path | None:
+        """Uma foto da marca copiada para a pasta do vídeo (o retrato da capa, ADR 0123)."""
+        return self._da_marca_na_pasta(nome, pasta) if nome.strip() else None
+
     def _da_marca_na_pasta(self, nome: str, pasta: Path) -> Path | None:
         nome = Path(nome).name  # só o nome: nada de caminho vindo do modelo
         if not nome.endswith(".jpg"):
@@ -242,14 +283,18 @@ class Fotos:
         pedidas = _palavras(busca)
         if not pedidas:
             return None
-        try:
-            achados = sorted(self.buscar(busca), key=lambda a: -_nota(a, pedidas))
-            for a in achados:
-                if not _serve(a, pedidas):
-                    continue
-                return pasta / str(self.baixar(a.id, pasta)["arquivo"])
-        except (imagens.ImagemErro, OSError, KeyError) as erro:
-            log.info("foto livre '%s' não veio: %s", busca, erro)
+        # o Pixabay primeiro (fotos de negócio, sem crédito); depois o Commons
+        for fonte, baixar in (
+            (self.buscar_pixabay, self.baixar_pixabay),
+            (self.buscar, lambda a, p: p / str(self.baixar(a.id, p)["arquivo"])),
+        ):
+            try:
+                achados = sorted(fonte(busca), key=lambda a: -_nota(a, pedidas))
+                for a in achados:
+                    if _serve(a, pedidas):
+                        return baixar(a, pasta)
+            except (imagens.ImagemErro, OSError, KeyError) as erro:
+                log.info("foto livre '%s' não veio: %s", busca, erro)
         return None
 
     @staticmethod

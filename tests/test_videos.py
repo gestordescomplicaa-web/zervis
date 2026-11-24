@@ -94,13 +94,13 @@ def test_plano_de_direcao_conferido_e_cortado() -> None:
 
 
 def test_duracao_muda_o_tamanho_do_plano() -> None:
-    assert roteiro.limites(15) == (4, 6, 26, 44) and roteiro.limites(60)[1] == 16
+    assert roteiro.limites(15) == (4, 6, 20, 34) and roteiro.limites(60)[1] == 16
     sete = json.loads(json.dumps(ROTEIRO))
     sete["cenas"].insert(1, dict(sete["cenas"][1]))
     with pytest.raises(roteiro.RoteiroErro, match="4 a 6 cenas"):
         roteiro.interpretar(json.dumps(sete), _estilo(), 15)
     prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), 45)
-    assert "cerca de 45 segundos" in prompt and "78 a 130 palavras" in prompt
+    assert "cerca de 45 segundos" in prompt and "62 a 103 palavras" in prompt
 
 
 def test_alinhamento_casa_as_palavras_e_preenche_as_que_faltam() -> None:
@@ -422,6 +422,45 @@ def test_reels_vai_a_api_com_o_video_e_a_legenda() -> None:
     assert esperas == [instagram_publicar.INTERVALO_VIDEO_S] * 2  # o vídeo leva mais
     publicar = next(d for m, c, d in meta.pedidos if c.endswith("/media_publish"))
     assert publicar["creation_id"] == ["c1"]
+    # com a capa desenhada (ADR 0123): ela vai como cover_url, sem o quadro 0
+    meta = Meta(["FINISHED"])
+    capa = "https://ze.exemplo.com/publico/s/capa.jpg"
+    instagram_publicar.publicar_reels(_ig(meta), url, "Legenda", dormir=esperas.append, capa=capa)
+    criar = next(d for m, c, d in meta.pedidos if d.get("media_type") == ["REELS"])
+    assert criar["cover_url"] == [capa] and "thumb_offset" not in criar
+
+
+def test_capa_e_uma_peca_sobre_o_tema(tmp_path: Path) -> None:
+    from PIL import Image
+
+    from zervis.video import capa
+
+    assert capa.texto_da_capa("Cobrança no automático", "x", "y") == "Cobrança no automático"
+    longo = "Seu cliente mandou mensagem às onze da noite e ninguém respondeu nada"
+    assert capa.texto_da_capa("", "", longo) == "Seu cliente mandou mensagem às"
+    video = {"largura": 1080, "altura": 1920, "cenas": [{"fundo": "claro"}], "icones": {},
+             "estilo": {"onda": True}, "marca": {"nome": "M", "instagram": "marca.ia"}}  # fmt: skip
+    d = capa.dados(video, "Cobrança no automático", "automático", "receipt", "file:///r.jpg")
+    [cena] = d["cenas"]
+    assert cena["tipo"] == "capa" and cena["texto"] == "Cobrança no automático"
+    assert cena["destaque"] == "automático" and cena["imagem"] == "file:///r.jpg"
+    assert cena["icone"] in d["icones"] and cena["assinatura"] == "@marca.ia"
+    assert not d["estilo"]["onda"] and d["cenas"] is not video["cenas"]
+    assert capa.dados(video, "Outra capa", "ausente")["cenas"][0]["destaque"] == ""
+    pedidos: list[tuple[str, list[float]]] = []
+
+    def capturar(
+        url: str, pasta: Path, largura: int, altura: int, tempos: list[float]
+    ) -> list[Path]:
+        pedidos.append((url, tempos))
+        pasta.mkdir(parents=True)
+        Image.new("RGB", (largura // 10, altura // 10), "white").save(pasta / "q.png")
+        return [pasta / "q.png"]
+
+    saida = capa.desenhar(video, "Agenda cheia", tmp_path, capturar=capturar)
+    assert saida.name == "capa.jpg" and Image.open(saida).format == "JPEG"
+    assert pedidos[0][1] == [capa.MOMENTO] and pedidos[0][0].endswith("capa.js")
+    assert not (tmp_path / "capa.js").exists() and not (tmp_path / "capa-quadro").exists()
 
 
 def test_link_publico_entrega_o_mp4_e_responde_head(tmp_path: Path) -> None:
@@ -489,17 +528,18 @@ def _publicaveis(
 
 
 def test_publicar_um_video_pronto(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    chamadas: list[tuple[str, str]] = []
+    chamadas: list[tuple[str, str, str]] = []
 
-    def publicar(ig: Any, url: str, legenda: str) -> str:
-        chamadas.append((url, legenda))
+    def publicar(ig: Any, url: str, legenda: str, capa: str = "") -> str:
+        chamadas.append((url, legenda, capa))
         return "https://www.instagram.com/reel/abc/"
 
     v, site, links = _publicaveis(tmp_path, monkeypatch, publicar)
     feito = v.criar(tema="x", esperar=True)
     publicado = v.publicar(feito.id, esperar=True)
     assert publicado.estado == "publicado" and publicado.permalink.endswith("/reel/abc/")
-    assert chamadas == [("https://ze.exemplo.com/publico/seg/video.mp4", ROTEIRO["legenda"])]
+    base = "https://ze.exemplo.com/publico/seg/"
+    assert chamadas == [(base + "video.mp4", ROTEIRO["legenda"], base + "capa.jpg")]
     assert links.abertos == {} and links.prazos == [videos.LINK_DO_VIDEO_S]  # fechado depois
     assert site.avisos[-1] == f"O vídeo {feito.titulo} foi publicado no Instagram."
     tela = v.para_tela(publicado)
@@ -513,7 +553,7 @@ def test_publicar_exige_instagram_endereco_e_duracao(
 ) -> None:
     from zervis.redes.instagram import InstagramErro
 
-    def recusa(ig: Any, url: str, legenda: str) -> str:
+    def recusa(ig: Any, url: str, legenda: str, capa: str = "") -> str:
         raise InstagramErro("O Instagram não conseguiu buscar o vídeo.")
 
     v, _, links = _publicaveis(tmp_path, monkeypatch, recusa, conectado=False)
@@ -758,6 +798,23 @@ def _achado(id_: str, titulo: str, atribuicao: bool = False) -> Any:
     return Achado(id_, titulo, "", "foto", licenca, "Ana", "", "", atribuicao)
 
 
+def test_foto_com_gente_ou_de_arquivo_nao_serve() -> None:
+    from zervis.imersivo.imagens import Achado
+    from zervis.video import fotos as fotos_mod
+
+    def achado(titulo: str, categorias: str) -> Any:
+        return Achado("c", titulo, "", "foto", "PD", "", "", "", False, categorias)
+
+    pedidas = {"office", "desk"}
+    presidente = achado("Office desk reading", "Men reading|George W. Bush in January 2006")
+    arquivo = achado("Office desk 1945", "Germany photographs taken on 1945-04-20")
+    governo = achado("Office desk", "Executive Office of the President files")
+    mesa = achado("Office desk with laptop", "Desks|Photographs taken on 2019-05-02")
+    assert [fotos_mod._serve(a, pedidas) for a in (presidente, arquivo, governo, mesa)] == [
+        False, False, False, True,
+    ]  # fmt: skip
+
+
 def _fotos(tmp_path: Path) -> tuple[Fotos, list[str]]:
     marca = tmp_path / "marca"
     marca.mkdir()
@@ -844,7 +901,7 @@ def test_formato_gancho_e_ritmo_no_plano() -> None:
 
 
 def test_formato_repetido_volta_ao_diretor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    com_formato = {**ROTEIRO, "formato": "lista"}
+    com_formato = {**ROTEIRO, "formato": "erro"}
     v, _ = _videos(tmp_path, json.dumps(com_formato), monkeypatch)
     v.criar(tema="Um", esperar=True)
     outro = {**com_formato, "cenas": [*ROTEIRO["cenas"][:1], *ROTEIRO["cenas"][2:]]}
@@ -856,8 +913,8 @@ def test_formato_repetido_volta_ao_diretor(tmp_path: Path, monkeypatch: pytest.M
 
     v.perguntar = perguntar
     v.criar(tema="Dois", esperar=True)
-    assert "formato: lista" in v.pedidos[1]
-    assert 'O formato "lista" é o mesmo do último vídeo' in v.pedidos[2]
+    assert "formato: erro" in v.pedidos[1]
+    assert 'O formato "erro" é o mesmo do último vídeo' in v.pedidos[2]
 
 
 def test_efeitos_sonoros_das_acoes() -> None:
@@ -940,13 +997,20 @@ def test_lista_e_estilo_editorial() -> None:
     itens = [{"tipo": "item", "fala": f"Item {n}.", "nome": f"Nome {n}", "detalhe": "Faz algo.",
               "icone": "wrench", "fundo": f, "transicao": "carta"}
              for n, f in ((1, "claro"), (2, "cor"), (3, "escuro"))]  # fmt: skip
-    bruto["cenas"][1:4] = itens
+    meio = bruto["cenas"][2:4]  # antes_depois e conversa
+    bruto["cenas"][1:5] = [*itens, *meio]
+    with pytest.raises(roteiro.RoteiroErro, match="virou lista"):  # 3 itens: passo a passo
+        roteiro.interpretar(json.dumps(bruto), _estilo())
+    bruto["cenas"][1:6] = [*itens[:2], *meio]
     bruto["cenas"][-1].update(composicao="comenta", palavra="oficina")
+    bruto["cenas"][0] = {"tipo": "icone", "fala": "Onze da noite, ninguém responde.",
+                         "icone": "smartphone", "quando": "ninguem"}  # fmt: skip
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
-    um, dois, tres = r.cenas[1:4]
+    assert "quando" not in r.cenas[0]  # a abertura mostra a imagem no primeiro instante
+    um, dois = r.cenas[1:3]
     assert um["transicao"] == "carta" and um["icone"] == "wrench"
     # itens seguidos são o mesmo cartão: o fundo do primeiro, sem transição
-    assert (dois["fundo"], dois["transicao"]) == ("claro", "corte") == (tres["fundo"], "corte")
+    assert (dois["fundo"], dois["transicao"]) == ("claro", "corte")
     assert r.cenas[-1]["composicao"] == "comenta" and r.cenas[-1]["palavra"] == "oficina"
     e = estilos.achar("editorial")
     assert e.nome == "Editorial" and e.fonte_legenda == "Instrument Serif" and e.css
@@ -960,7 +1024,7 @@ def test_linha_entrega_e_comenta_no_plano() -> None:
     assert "O que quem comentar recebe: o link e o passo a passo" in prompt and '"N8N"' in prompt
     sem = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
     assert "Escolha a linha pelo tema" in sem and "uma conversa no direct" in sem
-    assert "Nunca prometa brinde técnico" in sem and "O SEU" in sem
+    assert "Nunca prometa brinde técnico" in sem and "COBRANÇA" in sem
     bruto = {**json.loads(json.dumps(ROTEIRO)), "palavra": "oficina", "entrega": "o checklist"}
     bruto["cenas"][-1].pop("composicao", None)
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
@@ -1131,3 +1195,43 @@ def test_qualidade_da_voz_do_video(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert v.preferencias()["modelo_voz"] == ""  # o da página Voz
     assert v.criar(tema="y", esperar=True).modelo_voz == ""
     assert len(usados[-1]) == 0  # sem modelo do vídeo: o sintetizador de sempre
+
+
+def test_pixabay_primeiro_sem_gente_e_baixado_na_pasta(tmp_path: Path) -> None:
+    from zervis.imersivo.imagens import ImagemErro
+    from zervis.video import pixabay
+
+    chave_arq = tmp_path / "pixabay.key"
+    with pytest.raises(ImagemErro, match="Chave inválida"):
+        pixabay.guardar("nao-e-chave", chave_arq)
+    pixabay.guardar("12345678-0123456789abcdef0123456789a", chave_arq)
+    assert pixabay.chave(chave_arq) and oct(chave_arq.stat().st_mode & 0o777) == "0o600"
+    pixabay.guardar("", chave_arq)
+    assert not chave_arq.exists() and pixabay.chave(chave_arq) == ""
+
+    pedidos: list[str] = []
+    resposta = {"hits": [
+        {"id": 1, "tags": "man, car repair, garage", "largeImageURL": "https://cdn.pixabay.com/1.jpg"},
+        {"id": 2, "tags": "car repair, garage, tools", "largeImageURL": "https://cdn.pixabay.com/2.jpg"},
+    ]}  # fmt: skip
+
+    def ler(url: str, limite: int) -> bytes:
+        pedidos.append(url)
+        return json.dumps(resposta).encode() if "api" in url else b"jpg"
+
+    achados = pixabay.buscar("car repair garage", "chave", ler)
+    assert [a.id for a in achados] == ["pixabay:1", "pixabay:2"] and not achados[0].atribuicao
+    assert "safesearch=true" in pedidos[0] and "image_type=photo" in pedidos[0]
+
+    commons: list[str] = []
+    f = Fotos(
+        da_marca=lambda: [], buscar=lambda b: commons.append(b) or [],  # type: ignore[func-returns-value]
+        buscar_pixabay=lambda b: achados,
+        baixar_pixabay=lambda a, p: pixabay.baixar(a, p, ler),
+    )  # fmt: skip
+    cenas: list[dict[str, Any]] = [
+        {"tipo": "foto", "fala": "x", "foto": "busca: car repair garage"}
+    ]
+    f.resolver(cenas, tmp_path)
+    assert cenas[0]["imagem"].endswith("imagens/pixabay/2.jpg")  # a 1 tem gente: fica de fora
+    assert commons == []  # achou no Pixabay: nem vai ao Commons

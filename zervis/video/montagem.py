@@ -1,8 +1,9 @@
 """O MP4 de um vídeo (ADR 0106): os quadros e a trilha no FFmpeg da máquina.
 
 H.264 (yuv420p) e AAC, com o `moov` no começo (toca enquanto baixa), como o Instagram pede para
-Reels. A capa (um quadro já assentado) vira também o quadro 0: as redes usam o primeiro quadro de
-miniatura. Trocar o quadro 0, e não somar um, mantém a duração e o som no lugar.
+Reels. O quadro `capa` (um já assentado) vira `capa.jpg`, a capa de reserva: a de verdade é
+desenhada à parte (ADR 0123) e vai ao Instagram como `cover_url`, então o vídeo começa no seu
+primeiro quadro.
 """
 
 import shutil
@@ -32,7 +33,7 @@ def montar(quadros: list[Path], trilha: Path, saida: Path, capa: int) -> Path:
     shutil.copyfile(quadros[capa], saida.with_name("capa.jpg"))
     with tempfile.TemporaryDirectory(prefix="ze-montagem-") as tmp:
         for i, q in enumerate(quadros):
-            (Path(tmp) / f"{i:04d}.jpg").symlink_to((quadros[capa] if i == 0 else q).resolve())
+            (Path(tmp) / f"{i:04d}.jpg").symlink_to(q.resolve())
         feito = subprocess.run(  # noqa: S603 (o FFmpeg da máquina, com caminhos montados aqui)
             [
                 binario, "-loglevel", "error", "-y", "-framerate", str(FPS),

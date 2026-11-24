@@ -110,8 +110,10 @@
       const a = typeof ctx.cena.tempo === "number" ? ctx.cena.tempo : 0.15;
       // o disco já está na carta quando ela chega; o ícone se desenha na palavra
       mola(s.disco, t, Math.min(a - 0.05, 0.1), { de: 0.2, d: 0.6 });
-      Ze.desenhar(s.svg, t, a, 0.85);
-      const pousou = a + 0.75;
+      // o traço começa logo (nada de disco vazio esperando a palavra) e fecha na palavra
+      const comeca = Math.min(a, 0.35);
+      Ze.desenhar(s.svg, t, comeca, Math.max(0.85, a - comeca + 0.4));
+      const pousou = Math.max(comeca + 0.75, a + 0.3);
       // o ícone dá um estalo quando termina de ser desenhado; as ondas e as faíscas saem dele
       const estalo = Math.sin(Math.PI * prog(t, pousou, 0.25)) * 0.08;
       s.svg.style.transform = `scale(${1 + estalo})`;

@@ -12,6 +12,7 @@ from zervis import atividade, marketing, marketing_posts, metricas_site
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.jobs import JobErro
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
+from zervis.imersivo.imagens import ImagemErro
 from zervis.marca import CORES_PADRAO
 from zervis.oficina.sessoes import SessaoErro
 from zervis.portal.acoes.pagina import Pagina
@@ -19,8 +20,8 @@ from zervis.portal.servidor import PedidoInvalido
 from zervis.redes import instagram_comentarios, instagram_direct, instagram_webhook
 from zervis.redes.instagram import InstagramErro
 from zervis.video import estilos as estilos_video
+from zervis.video import pixabay, videos
 from zervis.video import roteiro as roteiro_video
-from zervis.video import videos
 from zervis.voz import fish
 
 
@@ -320,6 +321,7 @@ class AcoesMarketing(Pagina):
                 *({"id": k, "nome": n} for k, n in fish.MODELOS_VOZ.items()),
             ],
             "indisponivel": v.disponivel(),
+            "pixabay": bool(pixabay.chave()),
             "instagram": marketing_posts.PADRAO.instagram.conectado,
             "publicavel": bool(marketing_posts.PADRAO.endereco()),
         }
@@ -368,6 +370,17 @@ class AcoesMarketing(Pagina):
             "execucao", "Paleta dos vídeos tirada de um site", origem="painel"
         )
         return {**self.videos(), "aviso": "Cores do site salvas."}
+
+    def chave_pixabay(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """A chave do Pixabay (ADR 0124): conferida numa busca antes de guardar; vazio remove."""
+        chave = str(dados.get("chave", "")).strip()[:80]
+        try:
+            if chave:
+                pixabay.buscar("office", chave)
+            pixabay.guardar(chave)
+        except ImagemErro as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        return {**self.videos(), "aviso": "Chave válida." if chave else "Removida."}
 
     def agendar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
         cruas = dados.get("temas")

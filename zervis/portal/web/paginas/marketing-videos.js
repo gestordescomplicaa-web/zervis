@@ -46,6 +46,13 @@ const paleta = (vs) => {
     <p class="resultado" id="mk-resultado-video-paleta"></p>`;
 };
 
+/** As fotos do Pixabay (ADR 0124): a chave de quem usa. @param {any} vs */
+const fotosLivres = (vs) => `<div class="campos">
+      <label>Fotos do Pixabay <span class="etiqueta ${vs.pixabay ? "bom" : ""}">${vs.pixabay ? "Configurado" : "Não configurado"}</span><input id="mk-video-pixabay" type="password" placeholder="${vs.pixabay ? "Salva" : "Chave de API"}" autocomplete="off"></label>
+    </div>
+    <div class="linha">${botao("Salvar", "mk-video-pixabay", "", "discreta")}${vs.pixabay ? botao("Remover", "mk-video-pixabay-remover", "", "discreta") : ""}<a class="acao discreta" href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Obter chave de API</a></div>
+    <p class="resultado" id="mk-resultado-video-pixabay"></p>`;
+
 /** O cartão Vídeos da página Marketing. @param {any} r a leitura "marketing" @param {any} vs */
 export function cartaoVideos(r, vs = r.videos) {
   // as escolhas guardadas no Zé (lembradas ao voltar à aba); sem elas, os padrões
@@ -62,7 +69,7 @@ export function cartaoVideos(r, vs = r.videos) {
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-video-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
       <label>Para quem<select id="mk-video-linha" data-mudar="video-preferencia">${[["", "O Zé escolhe pelo tema"], ["empresarios", "Empresários"], ["ferramenta", "Ferramenta"]].map(([v, n]) => `<option value="${v}" ${v === pr.linha ? "selected" : ""}>${n}</option>`).join("")}</select></label>
       <label>Entrega<input id="mk-video-entrega" placeholder="Opcional. Sem ela: uma conversa no direct sobre o negócio da pessoa" autocomplete="off"></label>
-      <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: O SEU RAMO" maxlength="16" autocomplete="off"></label>
+      <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: COBRANÇA" maxlength="16" autocomplete="off"></label>
       <label>Duração<select id="mk-video-duracao" data-mudar="video-preferencia">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === pr.duracao ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
       <label>Diretor<select id="mk-video-modelo" data-mudar="video-preferencia">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === pr.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
       <label>Estilo<select id="mk-video-estilo" data-mudar="video-preferencia">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}" ${e.id === pr.estilo ? "selected" : ""}>${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
@@ -71,6 +78,7 @@ export function cartaoVideos(r, vs = r.videos) {
       <label class="interruptor"><input type="checkbox" id="mk-video-voz" data-mudar="video-preferencia" ${pr.voz ? "checked" : ""}> Narração</label>
     </div>
     ${paleta(vs)}
+    ${fotosLivres(vs)}
     <div class="linha">${botao("Criar vídeo", "mk-video-criar", vs.indisponivel ? "disabled" : "", "principal")}</div>
     <p class="resultado" id="mk-resultado-video"></p>
     ${lista.length ? `<div class="itens">${lista.map((/** @type {any} */ x) => item(esc(x.titulo || x.tema || x.artigo), estado(x),
@@ -159,6 +167,21 @@ Object.assign(ACOES, {
       await redesenhar(ultimaLeitura);
       mostrar("mk-resultado-video-paleta", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video-paleta", false, erro.message); }
+  },
+  "mk-video-pixabay": async (/** @type {HTMLButtonElement} */ b) => {
+    const chave = /** @type {HTMLInputElement} */ ($("mk-video-pixabay")).value;
+    try {
+      const r = await ocupado(b, () => api("marketing/video/pixabay", { chave }));
+      await redesenhar(ultimaLeitura);
+      mostrar("mk-resultado-video-pixabay", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-video-pixabay", false, erro.message); }
+  },
+  "mk-video-pixabay-remover": async (/** @type {HTMLButtonElement} */ b) => {
+    try {
+      const r = await ocupado(b, () => api("marketing/video/pixabay", { chave: "" }));
+      await redesenhar(ultimaLeitura);
+      mostrar("mk-resultado-video-pixabay", true, r.aviso);
+    } catch (erro) { mostrar("mk-resultado-video-pixabay", false, erro.message); }
   },
   "mk-video-paleta-marca": async (/** @type {HTMLButtonElement} */ b) => {
     try {
