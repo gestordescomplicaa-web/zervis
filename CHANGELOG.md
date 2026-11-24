@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Vídeos sem tema repetido:** cada vídeo guarda o processo e o assunto; nos vídeos em que o Zé
+  escolhe o tema, ele não repete o processo dos dois últimos nem um assunto já feito (ADR 0125).
+- **Fala que se entende ouvindo:** frases completas, conectivos entre as partes, pausas longas no
+  gancho, na conta e na virada; a solução é mostrada como fluxo animado, com o logo de cada
+  ferramenta; a duração bate com a pedida (ADR 0125).
 - **Capa do Reels sobre o tema:** uma peça à parte do vídeo, com o título do tema enorme, o ícone
   e o seu retrato fundido no fundo da marca; vai ao Instagram como capa (ADR 0123).
 - **Roteiros que resolvem:** gancho com imagem e frase de impacto, a história de uma empresa com

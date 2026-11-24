@@ -30,6 +30,7 @@ TAXA = 48000
 FPS = 30
 INICIO_S = 0.5  # a primeira fala entra na segunda batida
 PAUSA_S = 0.35  # o respiro mínimo entre duas falas
+PAUSA_LONGA_S = 0.8  # a mais, depois do gancho, da conta ou da virada (roteiro.PAUSA_LONGA_S)
 CAUDA_S = 1.8  # o fecho segura depois da última fala
 LIMIAR = 0.015  # abaixo disto, nas pontas, é silêncio
 SEGUNDOS_POR_PALAVRA = 0.36  # sem voz: o ritmo de quem lê a legenda
@@ -176,15 +177,18 @@ def narrar(
     minimos: list[float] | None = None,
     bpm: int = 120,
     ouvir: Ouvir | None = None,
+    longas: list[bool] | None = None,
 ) -> Narracao:
     """A voz no lugar e a linha do tempo. `minimos`: o tempo mínimo de cada cena (uma lista de
-    quatro passos precisa de tempo na tela, mesmo com a fala curta)."""
+    quatro passos precisa de tempo na tela, mesmo com a fala curta). `longas`: as falas depois
+    das quais a voz respira mais (o gancho, a conta, a virada)."""
     batida = 60 / bpm
     minimos = minimos or [0.0] * len(falas)
+    longas = longas or [False] * len(falas)
     pedacos: list[tuple[float, np.ndarray]] = []
     marcas: list[dict[str, Any]] = []
     t = INICIO_S
-    for texto, minimo in zip(falas, minimos, strict=True):
+    for texto, minimo, longa in zip(falas, minimos, longas, strict=True):
         if sintetizar is not None:
             taxa, pcm = sintetizar(texto)
             x = para_48k(pcm, taxa)
@@ -206,7 +210,7 @@ def narrar(
         marcas.append(
             {"texto": texto, "inicio": round(inicio, 3), "dur": round(dur, 3), "palavras": palavras}
         )
-        t = inicio + max(dur + PAUSA_S, minimo)
+        t = inicio + max(dur + PAUSA_S + (PAUSA_LONGA_S if longa else 0.0), minimo)
     duracao = (
         math.ceil((max(t - PAUSA_S, marcas[-1]["inicio"] + marcas[-1]["dur"]) + CAUDA_S) / batida)
         * batida

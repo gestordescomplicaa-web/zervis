@@ -167,6 +167,8 @@ body { font-family: var(--fonte-texto); color: var(--texto); -webkit-font-smooth
 .no.grande .no-disco { width: 260px; height: 260px; }
 .no.grande .no-icone { width: 140px; height: 140px; }
 .no.marca .no-disco img { width: 70%; height: 70%; object-fit: contain; }
+.no.com-logo .no-disco { background: #fff; }
+.no-logo { width: 58%; height: 58%; object-fit: contain; transition: none; }
 .no-rotulo { font-family: var(--fonte-titulo); font-size: 44px; font-weight: 750; white-space: nowrap; letter-spacing: -.01em; }
 .caos { position: relative; width: 900px; height: 820px; }
 .caos-item { position: absolute; width: 220px; height: 220px; border-radius: 52px; display: grid; place-items: center; }

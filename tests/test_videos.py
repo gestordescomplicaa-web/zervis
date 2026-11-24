@@ -94,13 +94,13 @@ def test_plano_de_direcao_conferido_e_cortado() -> None:
 
 
 def test_duracao_muda_o_tamanho_do_plano() -> None:
-    assert roteiro.limites(15) == (4, 6, 20, 34) and roteiro.limites(60)[1] == 16
+    assert roteiro.limites(15) == (4, 6, 15, 25) and roteiro.limites(60)[1] == 16
     sete = json.loads(json.dumps(ROTEIRO))
     sete["cenas"].insert(1, dict(sete["cenas"][1]))
     with pytest.raises(roteiro.RoteiroErro, match="4 a 6 cenas"):
         roteiro.interpretar(json.dumps(sete), _estilo(), 15)
     prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo(), 45)
-    assert "cerca de 45 segundos" in prompt and "62 a 103 palavras" in prompt
+    assert "cerca de 45 segundos" in prompt and "51 a 85 palavras" in prompt
 
 
 def test_alinhamento_casa_as_palavras_e_preenche_as_que_faltam() -> None:
@@ -163,8 +163,8 @@ def test_cena_de_um_estilo_entra_so_com_texto(tmp_path: Path) -> None:
                               "autor": {"nome": "objeto"}, "Ruim": "x"})  # fmt: skip
     r = roteiro.interpretar(json.dumps(bruto), estilo)
     assert r.cenas[1] == {
-        "tipo": "citacao", "fala": "Uma frase.", "camera": "empurra", "transicao": "zoom",
-        "fundo": "escuro",
+        "tipo": "citacao", "fala": "Uma frase.", "pausa": "", "camera": "empurra",
+        "transicao": "zoom", "fundo": "escuro",
         "texto": "y" * 199 + "…",
     }  # fmt: skip
     assert "citacao" in roteiro.montar_prompt("Marca", "Tema: x", "", estilo)
@@ -1235,3 +1235,52 @@ def test_pixabay_primeiro_sem_gente_e_baixado_na_pasta(tmp_path: Path) -> None:
     f.resolver(cenas, tmp_path)
     assert cenas[0]["imagem"].endswith("imagens/pixabay/2.jpg")  # a 1 tem gente: fica de fora
     assert commons == []  # achou no Pixabay: nem vai ao Commons
+
+
+def test_fala_para_o_ouvido_fecha_a_frase_e_respira() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto["cenas"][0].update(fala="A proposta chegou e o cliente já tinha fechado", pausa="longa")
+    bruto["cenas"][1]["pausa"] = "curtissima"
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert r.cenas[0]["fala"].endswith("fechado.")  # gravada sozinha: a frase fecha
+    assert (r.cenas[0]["pausa"], r.cenas[1]["pausa"]) == ("longa", "")
+    prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
+    assert "## A fala (alguém fala, alguém escuta)" in prompt and "Nunca corte uma" in prompt
+    # a pausa longa empurra a fala seguinte
+    curtas = narracao.narrar(["Um.", "Dois."], None, bpm=120)
+    longas = narracao.narrar(["Um.", "Dois."], None, bpm=120, longas=[True, False])
+    assert longas.falas[1]["inicio"] > curtas.falas[1]["inicio"]
+
+
+def test_trava_de_temas_no_tema_livre(tmp_path: Path) -> None:
+    from zervis.video import temas
+
+    assert temas.secao(tmp_path) == ""
+    temas.anotar(tmp_path, "v1", "financeiro", "cobrança de boleto vencido", True)
+    temas.anotar(tmp_path, "v2", "atendimento", "proposta comercial atrasada", False)
+    secao = temas.secao(tmp_path)
+    assert "proposta comercial atrasada (atendimento)" in secao
+    assert "financeiro" not in secao.split("processos:")[1]  # os dois últimos ficam de fora
+    with pytest.raises(roteiro.RoteiroErro, match="processo"):
+        temas.conferir(tmp_path, "financeiro", "conciliação do extrato", True)
+    with pytest.raises(roteiro.RoteiroErro, match="já virou vídeo"):
+        temas.conferir(tmp_path, "operacao", "Cobrança do boleto vencido", True)
+    temas.conferir(tmp_path, "operacao", "estoque no caderno", True)  # novo: passa
+    temas.conferir(tmp_path, "financeiro", "cobrança de boleto vencido", False)  # pedido: passa
+    temas.anotar(tmp_path, "v1", "financeiro", "cobrança", True)  # o mesmo vídeo não duplica
+    assert [x["video"] for x in temas.historico(tmp_path)] == ["v1", "v2"]
+
+
+def test_caso_mostra_a_solucao_em_fluxo_com_logo() -> None:
+    bruto = json.loads(json.dumps(ROTEIRO))
+    bruto.update(formato="caso", processo="financeiro", assunto="cobrança")
+    with pytest.raises(roteiro.RoteiroErro, match="fluxo animado"):
+        roteiro.interpretar(json.dumps(bruto), _estilo())
+    bruto["cenas"][2] = {"tipo": "conexao", "fala": "O pedido cai na planilha e sai pronto.",
+                         "nos": [{"icone": "logo: WhatsApp", "rotulo": "Pedido"},
+                                 {"icone": "table", "rotulo": "Planilha"}]}  # fmt: skip
+    r = roteiro.interpretar(json.dumps(bruto), _estilo())
+    assert (r.processo, r.assunto) == ("financeiro", "cobrança")
+    no_logo, no_icone = r.cenas[2]["nos"]
+    assert no_logo["mostrar"] == "logo: WhatsApp" and no_logo["icone"]  # o ícone de reserva
+    assert "mostrar" not in no_icone

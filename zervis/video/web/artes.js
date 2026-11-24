@@ -68,10 +68,16 @@
   }
 
   /** Um nó: o círculo aceso com o ícone dentro e o rótulo embaixo. */
-  function no(icone, rotulo, grande = false) {
-    const caixa = h("div", `no${grande ? " grande" : ""}`);
+  function no(icone, rotulo, grande = false, imagem = "") {
+    const caixa = h("div", `no${grande ? " grande" : ""}${imagem ? " com-logo" : ""}`);
     const disco = h("div", "no-disco");
-    const svg = Ze.icone(icone, "icone no-icone");
+    // o logo da ferramenta, quando o roteiro pede (ADR 0123); senão, o ícone que se desenha
+    let svg;
+    if (imagem) {
+      svg = h("img", "no-logo");
+      svg.src = imagem;
+      svg.alt = "";
+    } else svg = Ze.icone(icone, "icone no-icone");
     disco.append(svg);
     caixa.append(disco);
     const r = rotulo ? h("div", "no-rotulo", rotulo) : null;
@@ -141,7 +147,7 @@
         return [x, y];
       });
       const nos = c.nos.map((x, i) => {
-        const nn = no(x.icone, x.rotulo);
+        const nn = no(x.icone, x.rotulo, false, x.imagem);
         nn.caixa.style.left = `${pos[i][0]}px`;
         nn.caixa.style.top = `${pos[i][1]}px`;
         rede.append(nn.caixa);
@@ -215,7 +221,7 @@
       aneis.forEach((a) => { a.style.left = `${LARGURA / 2}px`; a.style.top = `${ALTURA / 2}px`; rede.append(a); });
       rede.append(centro.caixa);
       const sats = c.ao_redor.map((x) => {
-        const nn = no(x.icone, x.rotulo);
+        const nn = no(x.icone, x.rotulo, false, x.imagem);
         const linha = document.createElementNS(NS, "line");
         linha.setAttribute("pathLength", "1");
         linha.setAttribute("class", "ligacao");
