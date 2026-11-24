@@ -201,6 +201,7 @@ class Acoes:
             "marketing/post/descartar": self.descartar_post,
             "marketing/video/criar": self.criar_video,
             "marketing/video/agendar": self.agendar_video,
+            "marketing/post/agendar": self.agendar_post,
             "marketing/video/paleta": self.paleta_video,
             "marketing/video/pixabay": self.chave_pixabay,
             "marketing/video/preferencias": self.preferencias_video,

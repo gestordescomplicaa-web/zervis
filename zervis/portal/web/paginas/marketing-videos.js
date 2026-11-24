@@ -89,6 +89,7 @@ export function cartaoVideos(r, vs = r.videos) {
 
 const AGENDAS = [
   ["cron 0 9 * * 1,4", "Segunda e quinta, 9h"],
+  ["cron 0 9 * * 1,3,5", "Segunda, quarta e sexta, 9h"],
   ["cron 0 9 * * 1", "Toda segunda, 9h"],
   ["cron 0 10 * * 2,5", "Terça e sexta, 10h"],
   ["cron 0 9 * * 1-5", "Todo dia útil, 9h"],
@@ -101,13 +102,14 @@ export function cartaoVideosAutomaticos(r) {
   const jobs = r.videos_automaticos || [];
   const ativo = jobs.some((/** @type {any} */ j) => j.ativo);
   return `<div id="mk-videos-auto">${cartao(`Vídeos automáticos <span class="etiqueta ${ativo ? "bom" : ""}">${ativo ? "Ativo" : "Desligado"}</span>`,
-    `${sub("O Zé cria os vídeos na agenda e avisa no app. Publicar no Instagram continua com a sua aprovação.")}
+    `${sub("O Zé cria os vídeos na agenda; publica com a sua aprovação ou sozinho, se marcado.")}
     ${jobs.length ? `<div class="itens">${jobs.map((/** @type {any} */ j) => item(esc(nomeAgenda(j.agenda)),
-      `${j.ativo ? `Próximo: ${esc(String(j.proxima).slice(0, 16).replace("T", " "))}` : "Pausado"} · ${j.temas ? `${j.temas} ${j.temas === 1 ? "tema" : "temas"}` : "Tema pelo site"} · ${esc(String(j.duracao || 30))} s`, "")).join("")}</div>` : ""}
+      `${j.ativo ? `Próximo: ${esc(String(j.proxima).slice(0, 16).replace("T", " "))}` : "Pausado"} · ${j.temas ? `${j.temas} ${j.temas === 1 ? "tema" : "temas"}` : "Tema pelo site"} · ${esc(String(j.duracao || 30))} s${j.publicar ? " · Publica sozinho" : ""}`, "")).join("")}</div>` : ""}
     <div class="campos">
       <label>Quando<select id="mk-video-agenda">${AGENDAS.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select></label>
       <label>Duração<select id="mk-video-agenda-duracao">${((r.videos && r.videos.duracoes) || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === 30 ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
       <label class="largo">Temas<textarea id="mk-video-temas" rows="4" placeholder="Um por linha. Opcional: sem temas, o Zé escolhe pelo site e pelos artigos."></textarea></label>
+      <label class="interruptor"><input type="checkbox" id="mk-video-sozinho"> Publicar sozinho</label>
     </div>
     <div class="linha">${botao("Agendar", "mk-video-agendar", r.videos && r.videos.indisponivel ? "disabled" : "", jobs.length ? "discreta" : "principal")}<a class="acao discreta" href="#automacoes">Automações</a></div>
     <p class="resultado" id="mk-resultado-video-agenda"></p>`)}</div>`;
@@ -195,6 +197,7 @@ Object.assign(ACOES, {
       quando: /** @type {HTMLSelectElement} */ ($("mk-video-agenda")).value,
       duracao: Number(/** @type {HTMLSelectElement} */ ($("mk-video-agenda-duracao")).value),
       temas: /** @type {HTMLTextAreaElement} */ ($("mk-video-temas")).value,
+      publicar: /** @type {HTMLInputElement} */ ($("mk-video-sozinho")).checked,
     };
     try {
       const r = await ocupado(b, () => api("marketing/video/agendar", dados));

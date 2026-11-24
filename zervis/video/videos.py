@@ -456,14 +456,15 @@ class Videos:
         return TEMA_LIVRE, ""
 
     @staticmethod
-    def pedido_agendado(temas: list[str] | str, duracao: int) -> str:
-        """O texto da automação de vídeos: até 10 temas curtos e a duração, em JSON."""
+    def pedido_agendado(temas: list[str] | str, duracao: int, publicar: bool = False) -> str:
+        """O texto da automação: até 10 temas curtos, a duração e se publica sozinho (JSON)."""
         if isinstance(temas, str):
             temas = temas.splitlines()
         limpos = [" ".join(str(t).split())[:80] for t in temas if str(t).strip()][:10]
         if duracao not in roteiro.DURACOES:
             raise VideoErro("Duração inválida.")
-        texto = json.dumps({"temas": limpos, "duracao": duracao}, ensure_ascii=False)
+        pedido = {"temas": limpos, "duracao": duracao, "publicar": publicar}
+        texto = json.dumps(pedido, ensure_ascii=False)
         if len(texto) > 600:
             raise VideoErro("Temas longos demais. Use frases curtas.")
         return texto

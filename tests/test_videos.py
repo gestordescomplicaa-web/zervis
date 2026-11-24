@@ -737,7 +737,9 @@ def test_tema_do_video_agendado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
 def test_pedido_da_agenda_de_videos() -> None:
     texto = videos.Videos.pedido_agendado("Agenda cheia\n\n  Recepção  \n", 45)
-    assert json.loads(texto) == {"temas": ["Agenda cheia", "Recepção"], "duracao": 45}
+    assert json.loads(texto) == {"temas": ["Agenda cheia", "Recepção"], "duracao": 45,
+                                 "publicar": False}  # fmt: skip
+    assert json.loads(videos.Videos.pedido_agendado([], 30, True))["publicar"] is True
     assert len(json.loads(videos.Videos.pedido_agendado(["x"] * 30, 30))["temas"]) == 10
     with pytest.raises(videos.VideoErro):
         videos.Videos.pedido_agendado([], 31)
@@ -748,6 +750,8 @@ def test_pedido_da_agenda_de_videos() -> None:
     fala = descrever("mcp__jarvis__marketing_video_agendar", {"quando": "cron 0 9 * * 1"})
     assert fala.startswith("Vou agendar vídeos (cron 0 9 * * 1) com o tema escolhido pelo site")
     assert fala.endswith("; publicar fica com você.")
+    sozinho = descrever("mcp__jarvis__marketing_video_agendar", {"quando": "x", "publicar": True})
+    assert sozinho.endswith("vai ao ar sozinho, assim que ficar pronto, sem te perguntar.")
 
 
 def test_video_agendado_cria_na_hora(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -783,7 +787,7 @@ def test_video_agendado_cria_na_hora(tmp_path: Path, monkeypatch: pytest.MonkeyP
     n.jobs.criar("Vídeo da marca", "2099-01-02 09:00", "video", texto, agora)
     ServicoAutomacoes(n)._agendador(datetime(2099, 1, 2, 9, 0, 30, tzinfo=fuso.local()).timestamp())
     assert feito.wait(2)
-    assert pedidos == [{"tema": "Agenda cheia", "artigo": "", "duracao": 45}]
+    assert pedidos == [{"tema": "Agenda cheia", "artigo": "", "duracao": 45, "esperar": False}]
     for _ in range(50):
         if n.jobs.listar()[0].ultimo_status == "ok":
             break
@@ -1301,3 +1305,47 @@ def test_visual_sem_nenhuma_imagem_vira_frase(tmp_path: Path) -> None:
     assert cenas[1]["tipo"] == "visual" and cenas[1]["batidas"][0]["imagem"]
     prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
     assert '{"tipo": "icone"' not in prompt and "o sistema da empresa" in prompt
+
+
+def test_video_agendado_publica_sozinho_quando_pedido(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from datetime import datetime
+    from queue import Queue
+    from types import SimpleNamespace
+
+    from zervis import fuso
+    from zervis.automacoes.jobs import Jobs
+    from zervis.nucleo.servicos.automacoes import ServicoAutomacoes
+
+    publicados: list[str] = []
+
+    class VideosFalsos:
+        def proximo_tema(self, temas: list[str]) -> tuple[str, str]:
+            return "Cobrança", ""
+
+        def criar(self, **kw: Any) -> Any:
+            assert kw["esperar"] is True  # publicar sozinho espera o vídeo ficar pronto
+            return SimpleNamespace(
+                id="v1", tema="Cobrança", titulo="Boleto vencido", estado="rascunho"
+            )
+
+        def publicar(self, id_: str, esperar: bool = False) -> Any:
+            publicados.append(id_)
+            return SimpleNamespace(estado="publicado", erro="")
+
+    monkeypatch.setattr(videos, "PADRAO", VideosFalsos())
+    linha: list[str] = []
+    guardados: list[str] = []
+    n: Any = SimpleNamespace(jobs=Jobs(tmp_path / "jobs.json"), _rodando=set(), eventos=Queue())
+    n._na_linha = lambda tipo, texto: linha.append(texto)
+    n.fila = SimpleNamespace(guardar=lambda texto, tipo: guardados.append(texto))
+    agora = datetime(2099, 1, 2, 8, 0, tzinfo=fuso.local())
+    texto = videos.Videos.pedido_agendado([], 60, True)
+    job = n.jobs.criar("Vídeo da marca", "2099-01-02 09:00", "video", texto, agora)
+    x = SimpleNamespace(id="x", job=job.id, texto=texto, nome="Vídeo da marca")
+    n.jobs.concluir = lambda *a, **k: None
+    ServicoAutomacoes(n)._pedir_video(x)  # type: ignore[arg-type]
+    assert publicados == ["v1"]
+    assert linha[-1] == "Publiquei o Reels Boleto vencido no Instagram, como a automação pede."
+    assert guardados == [linha[-1]]

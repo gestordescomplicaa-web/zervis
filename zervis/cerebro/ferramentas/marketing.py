@@ -252,20 +252,26 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
     @tool(
         "marketing_agendar",
         "Agenda artigos do blog sozinhos: em cada vez, uma sessão escreve um artigo (sem tema, "
-        "ela escolhe pelo manual do site), o PR abre sozinho e publicar espera o 'aprovado' do "
-        "usuário. quando: 'cron 0 9 * * 1,4' (segunda e quinta às 9h), 'a cada 3d'... Para "
-        "listar ou remover, use as ferramentas de automações.",
+        "ela escolhe pelo manual do site) e o PR abre sozinho. Publicar espera o 'aprovado' do "
+        "usuário, a não ser que ele peça para publicar sozinho (publicar: true): aí o Zé publica "
+        "assim que o PR abre. quando: 'cron 0 9 * * 1,4' (segunda e quinta às 9h), 'a cada "
+        "3d'... Para listar ou remover, use as ferramentas de automações.",
         {
             "type": "object",
             "properties": {
                 "quando": {"type": "string"},
                 "tema": {"type": "string", "description": "Opcional: o mesmo tema sempre"},
+                "publicar": {
+                    "type": "boolean",
+                    "description": "Só se o usuário pediu para publicar sem aprovar cada um",
+                },
             },
             "required": ["quando"],
         },
     )
     async def agendar(args: dict[str, Any]) -> dict[str, Any]:
-        texto = json.dumps({"tema": str(args.get("tema", ""))}, ensure_ascii=False)
+        pedido = {"tema": str(args.get("tema", "")), "publicar": args.get("publicar") is True}
+        texto = json.dumps(pedido, ensure_ascii=False)
         try:
             job = jobs.criar(
                 "Artigo do blog", str(args["quando"]), "artigo", texto, datetime.now(FUSO)
@@ -277,7 +283,9 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
     @tool(
         "marketing_video_agendar",
         "Agenda vídeos da marca sozinhos (ADR 0111): em cada vez, o Zé cria um vídeo e avisa no "
-        "app; publicar no Instagram espera a aprovação do usuário (marketing_video_publicar). "
+        "app; publicar no Instagram espera a aprovação do usuário (marketing_video_publicar), a "
+        "não ser que ele peça para publicar sozinho (publicar: true): aí o Reels sai assim que "
+        "o vídeo fica pronto. "
         "quando: 'cron 0 9 * * 1,4' (segunda e quinta às 9h), 'a cada 3d'... temas: opcional, "
         "um por vez na ordem, os já feitos são pulados; sem temas, o Zé escolhe pelo site e "
         "pelos artigos, sem repetir os últimos vídeos.",
@@ -287,6 +295,10 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
                 "quando": {"type": "string"},
                 "temas": {"type": "array", "items": {"type": "string"}},
                 "duracao": {"type": "integer", "enum": sorted(roteiro_video.DURACOES)},
+                "publicar": {
+                    "type": "boolean",
+                    "description": "Só se o usuário pediu para publicar sem aprovar cada um",
+                },
             },
             "required": ["quando"],
         },
@@ -296,6 +308,7 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
             texto = videos_mod.Videos.pedido_agendado(
                 list(args.get("temas") or []),
                 int(args.get("duracao") or roteiro_video.DURACAO_PADRAO),
+                args.get("publicar") is True,
             )
             job = jobs.criar(
                 "Vídeo da marca", str(args["quando"]), "video", texto, datetime.now(FUSO)
@@ -304,4 +317,36 @@ def ferramentas(sessoes: Sessoes | None, jobs: Jobs | None = None) -> list[SdkMc
             return _erro(erro)
         return _texto({"criada": job.resumo(), "id": job.id, "proxima": job.proxima})
 
-    return [*ferramentas_, agendar, agendar_video]
+    @tool(
+        "marketing_post_agendar",
+        "Agenda carrosséis do Instagram sozinhos (ADR 0126): em cada vez, o Zé cria um post "
+        "(o próximo tema da lista; sem lista, o artigo novo do blog ou um assunto da linha "
+        "editorial) e avisa para revisar; com publicar: true (só se o usuário pediu), publica "
+        "assim que fica pronto. quando: 'cron 0 9 * * 2,4' (terça e quinta às 9h), 'a cada "
+        "3d'...",
+        {
+            "type": "object",
+            "properties": {
+                "quando": {"type": "string"},
+                "temas": {"type": "array", "items": {"type": "string"}},
+                "publicar": {
+                    "type": "boolean",
+                    "description": "Só se o usuário pediu para publicar sem aprovar cada um",
+                },
+            },
+            "required": ["quando"],
+        },
+    )
+    async def agendar_post(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            texto = marketing_posts.Posts.pedido_agendado(
+                list(args.get("temas") or []), args.get("publicar") is True
+            )
+            job = jobs.criar(
+                "Carrossel do Instagram", str(args["quando"]), "post", texto, datetime.now(FUSO)
+            )
+        except (JobErro, marketing_posts.PostErro, ValueError) as erro:
+            return _erro(erro)
+        return _texto({"criada": job.resumo(), "id": job.id, "proxima": job.proxima})
+
+    return [*ferramentas_, agendar, agendar_video, agendar_post]

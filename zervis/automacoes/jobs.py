@@ -37,7 +37,7 @@ from zervis.dados.documentos import Documentos, lista_json
 
 # ligacao: o Zé liga com um recado (ADR 0067); artigo: pede um artigo do blog (ADR 0092);
 # video: cria um vídeo da marca para aprovar (ADR 0111)
-TIPOS = ("lembrete", "pergunta", "ligacao", "artigo", "video")
+TIPOS = ("lembrete", "pergunta", "ligacao", "artigo", "video", "post")
 STATUS = ("nunca", "ok", "erro", "bloqueado")
 LIMITE_TEXTO = 600
 ESTADOS = ("pendente", "rodando", "concluida", "falhou", "interrompida")

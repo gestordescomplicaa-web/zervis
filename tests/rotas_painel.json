@@ -214,6 +214,7 @@
     "empresas/remover",
     "marketing/video/criar",
     "marketing/video/agendar",
+    "marketing/post/agendar",
     "marketing/video/paleta",
     "marketing/video/pixabay",
     "marketing/video/preferencias",

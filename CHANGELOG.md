@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Publicar sozinho:** as automações de Reels, de artigos e a nova de carrosséis têm a opção
+  "Publicar sozinho": pronto, vai ao ar sem esperar a aprovação; cada publicação fica na
+  Atividade e vira aviso. Nova agenda "Segunda, quarta e sexta". A trava de temas também
+  considera os vídeos feitos antes dela (ADR 0126).
 - **Vídeos sem tema repetido:** cada vídeo guarda o processo e o assunto; nos vídeos em que o Zé
   escolhe o tema, ele não repete o processo dos dois últimos nem um assunto já feito (ADR 0125).
 - **Fala que se entende ouvindo:** frases completas, conectivos entre as partes, pausas longas no

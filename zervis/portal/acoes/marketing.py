@@ -42,6 +42,7 @@ class AcoesMarketing(Pagina):
             "marca": self._marca(),
             "automaticos": self._automaticos("artigo"),
             "videos_automaticos": self._automaticos("video"),
+            "posts_automaticos": self._automaticos("post"),
         }
 
     def prs(self) -> list[dict[str, Any]]:
@@ -54,12 +55,14 @@ class AcoesMarketing(Pagina):
             if j.tipo != tipo:
                 continue
             item = {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
+            try:
+                pedido = json.loads(j.texto)
+            except ValueError:
+                pedido = {}
+            pedido = pedido if isinstance(pedido, dict) else {}
+            item["publicar"] = pedido.get("publicar") is True  # publica sozinho (ADR 0126)
+            item["temas"] = len(pedido.get("temas") or [])
             if tipo == "video":
-                try:
-                    pedido = json.loads(j.texto)
-                except ValueError:
-                    pedido = {}
-                item["temas"] = len(pedido.get("temas") or [])
                 item["duracao"] = pedido.get("duracao")
             saida.append(item)
         return saida
@@ -190,7 +193,7 @@ class AcoesMarketing(Pagina):
         return {**self.marketing(), "aviso": r.texto}
 
     def agendar_marketing(self, dados: dict[str, Any]) -> dict[str, Any]:
-        texto = json.dumps({"tema": ""})
+        texto = json.dumps({"tema": "", "publicar": dados.get("publicar") is True})
         try:
             self.n.jobs.criar(
                 "Artigo do blog", str(dados.get("quando", "")), "artigo", texto, datetime.now(FUSO)
@@ -387,7 +390,9 @@ class AcoesMarketing(Pagina):
         temas: list[str] | str = cruas if isinstance(cruas, (list, str)) else ""
         texto = self._videos(
             lambda: videos.Videos.pedido_agendado(
-                temas, int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO)
+                temas,
+                int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
+                dados.get("publicar") is True,
             )
         )
         try:
@@ -397,6 +402,21 @@ class AcoesMarketing(Pagina):
         except JobErro as erro:
             raise PedidoInvalido(str(erro)) from erro
         atividade.PADRAO.registrar("execucao", "Vídeos automáticos agendados", origem="painel")
+        return {**self.marketing(), "aviso": "Agendado."}
+
+    def agendar_post(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Os carrosséis automáticos (ADR 0126): o tema da vez e, se marcado, publicar sozinho."""
+        cruas = dados.get("temas")
+        temas: list[str] | str = cruas if isinstance(cruas, (list, str)) else ""
+        try:
+            texto = marketing_posts.Posts.pedido_agendado(temas, dados.get("publicar") is True)
+            self.n.jobs.criar(
+                "Carrossel do Instagram", str(dados.get("quando", "")), "post", texto,
+                datetime.now(FUSO),
+            )  # fmt: skip
+        except (JobErro, marketing_posts.PostErro) as erro:
+            raise PedidoInvalido(str(erro)) from erro
+        atividade.PADRAO.registrar("execucao", "Carrosséis automáticos agendados", origem="painel")
         return {**self.marketing(), "aviso": "Agendado."}
 
     def refazer_video(self, dados: dict[str, Any]) -> dict[str, Any]:
