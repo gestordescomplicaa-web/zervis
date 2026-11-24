@@ -48,10 +48,12 @@ final class Ligacao {
         String nome = m.optString("nome", "Um contato");
         Notification.Builder b = new Notification.Builder(c, CANAL)
                 .setSmallIcon(R.drawable.ic_ze)
+                .setColor(c.getColor(R.color.acento))
                 .setCategory(Notification.CATEGORY_CALL)
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setPublicVersion(new Notification.Builder(c, CANAL)
                         .setSmallIcon(R.drawable.ic_ze)
+                        .setColor(c.getColor(R.color.acento))
                         .setContentTitle("Ligação no WhatsApp")
                         .build());
         if ("em_curso".equals(estado)) {

@@ -140,7 +140,7 @@ public final class VozService extends Service {
         @Override
         public void onAudioDevicesRemoved(AudioDeviceInfo[] saidos) { escolherSaida(); }
     };
-    private String estado = "Conectando…";
+    private String estado = "";
 
     static boolean ehBotao(int tecla) {
         return tecla == KeyEvent.KEYCODE_HEADSETHOOK
@@ -345,7 +345,7 @@ public final class VozService extends Service {
         conectando = true;
         conectandoAgora = true;
         quedaAgora = "";
-        mostrar("Conectando…");
+        mostrar(getString(R.string.aviso_conectando));
         String endereco = ajustes.endereco().replaceFirst("^http", "ws");
         Request pedido = new Request.Builder()
                 .url(endereco + "/voz-app/ws")
@@ -368,7 +368,7 @@ public final class VozService extends Service {
                 apertadoAgora = false;
                 conectadoAgora = true;
                 conectandoAgora = false;
-                principal.post(() -> mostrar(Ajustes.AO_VIVO.equals(modoDaConexao) ? "Ao vivo" : "Diga “Ei Zé” ou toque em Falar"));
+                principal.post(() -> mostrar(getString(Ajustes.AO_VIVO.equals(modoDaConexao) ? R.string.aviso_ao_vivo : R.string.aviso_chamado)));
                 gravar(s);
                 procurarVersao();
             }
@@ -443,7 +443,7 @@ public final class VozService extends Service {
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minimo, QUADRO * 4));
         } catch (SecurityException semPermissao) {
             quedaAgora = Fase.SEM_MICROFONE;
-            principal.post(() -> mostrar("Sem permissão do microfone"));
+            principal.post(() -> mostrar(getString(R.string.aviso_sem_microfone)));
             return;
         }
         AudioRecord este = gravador;
@@ -535,18 +535,18 @@ public final class VozService extends Service {
         if (assumida) {
             // Outro aparelho conectou a voz (o Zé ouve um por vez): reconectar sozinho derrubaria o
             // outro, e os dois ficariam se derrubando. "Falar" retoma.
-            principal.post(() -> mostrar("Voz em uso em outro aparelho"));
+            principal.post(() -> mostrar(getString(R.string.aviso_em_uso)));
             return;
         }
         if (recusado) {
             ajustes.esquecer();
-            principal.post(() -> { mostrar("Pareie de novo no painel do Zé"); desligar(); });
+            principal.post(() -> { mostrar(getString(R.string.aviso_parear)); desligar(); });
             return;
         }
         long espera = ESPERAS_MS[Math.min(quedas, ESPERAS_MS.length - 1)];
         quedas++;
         tentarEm = SystemClock.elapsedRealtime() + espera;
-        principal.post(() -> mostrar("Sem conexão: de novo em " + espera / 1000 + " s"));
+        principal.post(() -> mostrar(getString(R.string.aviso_sem_rede, (int) (espera / 1000))));
         principal.postDelayed(this::conectar, espera);
     }
 
@@ -562,8 +562,9 @@ public final class VozService extends Service {
                 Intent abrir = new Intent(this, AjustesActivity.class).setAction(AjustesActivity.ATUALIZAR);
                 Notification nova = new Notification.Builder(this, CANAL)
                         .setSmallIcon(R.drawable.ic_ze)
-                        .setContentTitle("Atualização do Zé Voz")
-                        .setContentText("Versão 0.1." + publicada + " disponível. Toque para atualizar.")
+                        .setColor(getColor(R.color.acento))
+                        .setContentTitle(getString(R.string.aviso_versao_titulo))
+                        .setContentText(getString(R.string.aviso_versao_texto, (int) publicada))
                         .setAutoCancel(true)
                         .setContentIntent(PendingIntent.getActivity(this, 4, abrir, PendingIntent.FLAG_IMMUTABLE))
                         .build();
@@ -592,7 +593,7 @@ public final class VozService extends Service {
         apertadoAgora = falando;
         if (!falando) esperaAte = SystemClock.elapsedRealtime() + 30_000; // um Zé que não manda o estado
         s.send(falando ? "{\"tipo\":\"apertar\"}" : "{\"tipo\":\"soltar\"}");
-        mostrar(falando ? "Ouvindo… toque em Enviar" : "Enviado");
+        mostrar(getString(falando ? R.string.aviso_apertado : R.string.aviso_enviado));
     }
 
     private void desligar() {
@@ -629,16 +630,18 @@ public final class VozService extends Service {
 
     private Notification aviso() {
         boolean aoVivo = Ajustes.AO_VIVO.equals(ajustes.modo());
+        boolean conectado = ws != null && !conectando;
         return new Notification.Builder(this, CANAL)
                 .setSmallIcon(R.drawable.ic_ze)
-                .setContentTitle("Zé conectado")
-                .setContentText(estado)
+                .setColor(getColor(R.color.acento))
+                .setContentTitle(getString(conectado ? R.string.aviso_conectado : R.string.nome))
+                .setContentText(estado.isEmpty() ? getString(R.string.aviso_conectando) : estado)
                 .setOngoing(true)
                 .setCategory(Notification.CATEGORY_CALL)
                 .setContentIntent(PendingIntent.getActivity(this, 5, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE))
-                .addAction(new Notification.Action.Builder(null, ws == null && !conectando ? "Retomar" : falando ? "Enviar" : "Falar", acao(FALAR, 1)).build())
-                .addAction(new Notification.Action.Builder(null, aoVivo ? "Usar “Ei Zé”" : "Ao vivo", acao(MODO, 2)).build())
-                .addAction(new Notification.Action.Builder(null, "Desconectar", acao(DESLIGAR, 3)).build())
+                .addAction(new Notification.Action.Builder(null, getString(ws == null && !conectando ? R.string.aviso_retomar : falando ? R.string.aviso_enviar : R.string.aviso_falar), acao(FALAR, 1)).build())
+                .addAction(new Notification.Action.Builder(null, getString(aoVivo ? R.string.aviso_usar_chamado : R.string.aviso_usar_ao_vivo), acao(MODO, 2)).build())
+                .addAction(new Notification.Action.Builder(null, getString(R.string.aviso_desconectar), acao(DESLIGAR, 3)).build())
                 .build();
     }
 

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A foto que o Zé mandou, inteira: fechar no alto, o título e "Compartilhar" embaixo. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/raiz"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <ImageView
+        android:id="@+id/foto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/indisponivel"
+        style="@style/Texto.Suave"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/imagem_indisponivel"
+        android:visibility="gone" />
+
+    <!-- As barras do sistema viram o recuo deste quadro; o de 16 dp fica no de dentro. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/fechar"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/botao_icone"
+                android:contentDescription="@string/fechar"
+                android:src="@drawable/ic_fechar"
+                android:tint="@color/texto" />
+
+            <TextView
+                android:id="@+id/titulo"
+                style="@style/Texto.Secao"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:shadowColor="#CC000000"
+                android:shadowRadius="6"
+                android:singleLine="true" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <LinearLayout
+            android:id="@+id/compartilhar"
+            style="@style/Botao.Secundario"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_compartilhar"
+                android:tint="@color/texto" />
+
+            <TextView
+                style="@style/TextoDoBotao"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/compartilhar" />
+        </LinearLayout>
+    </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

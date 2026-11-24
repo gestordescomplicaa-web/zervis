@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Notificações e foto do Zé Voz:** as notificações ganham a cor do Zé e textos curtos ("Sem
+  conexão. Nova tentativa em 5 s."); a foto da câmera abre em tela cheia com "Fechar" e
+  "Compartilhar" no mesmo visual das telas (ADR 0131).
 - **Zé Voz com cara de produto:** o app ganha as cores do painel e três telas: Parear (os passos
   e o erro embaixo do campo), Início (o Zé no centro mostrando se está ouvindo, pensando ou
   falando, o modo de ouvir e o botão que muda com o estado) e Ajustes (escuta de perto com o

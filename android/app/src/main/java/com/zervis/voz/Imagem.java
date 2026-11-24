@@ -91,6 +91,7 @@ final class Imagem {
         if (naGaleria != null) abrir.putExtra(GALERIA, naGaleria.toString());
         Notification.Builder n = new Notification.Builder(c, CANAL)
                 .setSmallIcon(R.drawable.ic_ze)
+                .setColor(c.getColor(R.color.acento))
                 .setContentTitle(titulo)
                 .setContentText(texto.isEmpty() ? "Toque para ver." : texto)
                 .setLargeIcon(previa)
@@ -102,6 +103,7 @@ final class Imagem {
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setPublicVersion(new Notification.Builder(c, CANAL)
                         .setSmallIcon(R.drawable.ic_ze)
+                        .setColor(c.getColor(R.color.acento))
                         .setContentTitle("Imagem do Zé")
                         .build())
                 .setContentIntent(PendingIntent.getActivity(c, 0, abrir, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));

@@ -40,4 +40,6 @@ que quem instala vê.
 
 - O app passa a ter duas telas de verdade; "Fechar" sai (o voltar do Android fecha) e
   "Desconectar" mora nos Ajustes. Desconectado, o Início mostra "Conectar".
-- Notificações e a foto em tela cheia seguem no visual antigo até o PR seguinte.
+- As notificações levam o macaco na cor do Zé e textos curtos e factuais ("Sem conexão. Nova
+  tentativa em 5 s."); a foto em tela cheia tem "Fechar" no alto, o título e "Compartilhar"
+  embaixo, desviando das barras do sistema.
