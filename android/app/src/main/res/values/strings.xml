@@ -99,4 +99,28 @@
     <string name="conexao">Conexão</string>
     <string name="desconectar">Desconectar</string>
     <string name="sem_microfone">Permissão de microfone necessária.</string>
+
+    <string name="imagem_do_ze">Imagem do Zé</string>
+    <string name="imagem_indisponivel">Imagem indisponível.</string>
+    <string name="fechar">Fechar</string>
+    <string name="compartilhar">Compartilhar</string>
+
+    <string name="aviso_conectado">Zé conectado</string>
+    <string name="aviso_conectando">Conectando…</string>
+    <string name="aviso_chamado">Diga “Ei Zé” ou toque em Falar.</string>
+    <string name="aviso_ao_vivo">Ao vivo: cada frase é um pedido.</string>
+    <string name="aviso_apertado">Ouvindo. Toque em Enviar.</string>
+    <string name="aviso_enviado">Enviado.</string>
+    <string name="aviso_sem_rede">Sem conexão. Nova tentativa em %1$d s.</string>
+    <string name="aviso_em_uso">Voz em uso em outro aparelho.</string>
+    <string name="aviso_parear">Pareie de novo no painel do Zé.</string>
+    <string name="aviso_sem_microfone">Permissão de microfone necessária.</string>
+    <string name="aviso_falar">Falar</string>
+    <string name="aviso_enviar">Enviar</string>
+    <string name="aviso_retomar">Retomar</string>
+    <string name="aviso_usar_chamado">Usar “Ei Zé”</string>
+    <string name="aviso_usar_ao_vivo">Ao vivo</string>
+    <string name="aviso_desconectar">Desconectar</string>
+    <string name="aviso_versao_titulo">Atualização do Zé Voz</string>
+    <string name="aviso_versao_texto">Versão 0.1.%1$d disponível. Toque para atualizar.</string>
 </resources>
