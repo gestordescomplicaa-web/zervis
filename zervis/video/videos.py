@@ -48,6 +48,7 @@ from zervis.video import (
     roteiro,
     trilha,
 )
+from zervis.video import capa as capa_mod
 from zervis.video import fotos as fotos_mod
 
 log = logging.getLogger(__name__)
@@ -710,6 +711,15 @@ class Videos:
         capa = round(min(2.4, max(1.2, fim_gancho - 0.5)) * captura.FPS)
         self.montar(quadros, pasta / "trilha.wav", pasta / "video.mp4", capa)
         (pasta / "trilha.wav").unlink(missing_ok=True)
+        self._etapa(video, "Desenhando a capa")
+        texto = capa_mod.texto_da_capa(r.capa, r.titulo, r.cenas[0]["fala"])
+        retrato = self.fotos.retrato(r.capa_foto, pasta)
+        try:  # sem a capa desenhada, fica a de reserva (um quadro do gancho)
+            capa_mod.desenhar(
+                dados, texto, pasta, r.capa_destaque, r.capa_icone, retrato, self.capturar
+            )
+        except (captura.CapturaErro, OSError, ValueError):
+            log.warning("vídeo %s: capa não desenhada; fica a de reserva", video.id, exc_info=True)
 
     # --- publicar (ADR 0109) ---------------------------------------------------------------
 
@@ -738,11 +748,14 @@ class Videos:
         return video
 
     def _enviar(self, video: Video) -> None:
-        mp4 = self.arquivo(video.id)
-        segredo = self.links.abrir([mp4], LINK_DO_VIDEO_S)
+        mp4, capa = self.arquivo(video.id), self._dir(video.id) / "capa.jpg"
+        segredo = self.links.abrir([mp4, capa] if capa.is_file() else [mp4], LINK_DO_VIDEO_S)
         try:
-            url = f"{self.endereco()}{publico.PREFIXO}{segredo}/{mp4.name}"
-            video.permalink = self._publicar_reels(self.instagram, url, video.legenda)
+            url = f"{self.endereco()}{publico.PREFIXO}{segredo}/"
+            video.permalink = self._publicar_reels(
+                self.instagram, url + mp4.name, video.legenda,
+                capa=url + capa.name if capa.is_file() else "",
+            )  # fmt: skip
             video.estado, video.publicado, video.erro = "publicado", time.time(), ""
             texto = f"O vídeo {video.titulo or video.tema} foi publicado no Instagram."
         except InstagramErro as erro:

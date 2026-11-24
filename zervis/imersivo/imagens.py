@@ -65,6 +65,7 @@ class Achado:
     previa: str  # a miniatura (para o Zé olhar antes de escolher)
     pagina: str
     atribuicao: bool = True  # a licença exige o crédito (o Commons diz em "AttributionRequired")
+    categorias: str = ""  # as categorias do Commons, separadas por "|"
 
 
 class _SoHosts(urllib.request.HTTPRedirectHandler):
@@ -248,6 +249,7 @@ def buscar_commons(
                 pagina=str(info.get("descriptionurl") or "")[:240],
                 atribuicao=_sem_html((meta.get("AttributionRequired") or {}).get("value")).lower()
                 != "false",
+                categorias=_sem_html((meta.get("Categories") or {}).get("value"), 1500),
             )
         )
     return achados

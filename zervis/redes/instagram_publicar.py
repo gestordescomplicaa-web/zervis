@@ -108,16 +108,20 @@ def publicar_reels(
     legenda: str,
     dormir: Callable[[float], None] = time.sleep,
     prazo_s: float = ESPERA_VIDEO_S,
+    capa: str = "",
 ) -> str:
     """Publica um Reels (o link público do MP4) com a legenda e devolve o link (ADR 0109). A capa
-    é o primeiro quadro do vídeo (o Zé já põe a capa nele); o Reels também vai ao feed."""
+    é a imagem desenhada para isso (o link público dela, ADR 0123); sem ela, o primeiro quadro.
+    O Reels também vai ao feed."""
     base, conta, token = ig._token()
-    principal = _chamar(
-        ig, base, f"{conta}/media",
-        {"media_type": "REELS", "video_url": video, "caption": legenda, "share_to_feed": "true",
-         "thumb_offset": "0"},
-        token, True,
-    )  # fmt: skip
+    pedido = {
+        "media_type": "REELS",
+        "video_url": video,
+        "caption": legenda,
+        "share_to_feed": "true",
+    }
+    pedido.update({"cover_url": capa} if capa else {"thumb_offset": "0"})
+    principal = _chamar(ig, base, f"{conta}/media", pedido, token, True)
     return _quando_pronto(
         ig, base, conta, token, principal, dormir, prazo_s, INTERVALO_VIDEO_S, "o vídeo"
     )

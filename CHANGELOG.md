@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- **Capa do Reels sobre o tema:** uma peça à parte do vídeo, com o título do tema enorme, o ícone
+  e o seu retrato fundido no fundo da marca; vai ao Instagram como capa (ADR 0123).
+- **Roteiros que resolvem:** gancho com imagem e frase de impacto, a história de uma empresa com
+  a conta na tela e a solução de quem fala ("a gente faria"), a ponte para outros negócios e o
+  convite pela palavra do problema ("comenta COBRANÇA"); temas de qualquer processo da empresa;
+  sem passo a passo; a duração bate com a pedida (ADR 0123).
+- **Fotos do Pixabay nos vídeos:** com a chave no cartão Vídeos, as fotos vêm primeiro do Pixabay
+  (sem crédito); sem ela, segue o Commons. Fotos com gente ou de arquivo ficam de fora (ADR 0124).
 - **Contas ignoradas no Instagram:** no cartão Comentários do Instagram, uma lista de contas
   (amigos, família) que nunca recebem resposta automática: nem no comentário, nem no direct.
 - **Marketing mais leve:** as prévias dos vídeos só baixam o MP4 quando você dá play (antes,
