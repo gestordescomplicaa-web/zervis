@@ -47,7 +47,7 @@ function empresa(p) {
     enviado,
     p.resposta ? `Resposta: “${esc(p.resposta)}”` : "",
     p.erro ? `Envio adiado: ${esc(p.erro)}` : "",
-  ].filter(Boolean).join("<br>");
+  ].filter(Boolean).join("<br>") + (p.mensagem && p.status !== "descartada" ? `<details class="detalhes"><summary>Mensagem</summary><p class="quebra">${esc(p.mensagem)}</p></details>` : "");
   const contatada = ["enviando", "enviada", "respondeu", "sem_interesse"].includes(p.status);
   const botoes = contatada
     ? botao("Reunião marcada", "pr-marcar", `data-id="${esc(p.id)}" data-status="reuniao"`, "discreta") +
@@ -63,13 +63,27 @@ function configuracao() {
     <label>Cidade<input id="pr-cidade" value="${esc(c.cidade)}" maxlength="80" placeholder="Caruaru, PE" autocomplete="off"></label>
     <label>Envios por dia<input id="pr-por-dia" type="number" min="1" max="5" value="${esc(c.por_dia)}"></label>
     <label class="largo">Ramos<textarea id="pr-ramos" rows="4" placeholder="Um por linha: clínica odontológica, imobiliária, autopeças">${esc((c.ramos || []).join("\n"))}</textarea></label>
-    <label class="largo">O que você oferece<textarea id="pr-oferta" rows="4" maxlength="1500" placeholder="Em poucas linhas: o que você faz e para quem. Vai para a primeira mensagem.">${esc(c.oferta)}</textarea></label>
     <label class="interruptor"><input type="checkbox" id="pr-ligada" ${c.ligada ? "checked" : ""}> Ligada</label>
     <label class="interruptor"><input type="checkbox" id="pr-sozinho" ${c.sozinho ? "checked" : ""}> Enviar sozinho</label>
   </div>
   ${sub(`${esc(ultimo.horario)}, com pelo menos duas horas entre um envio e outro, em horários variados. Sem "Enviar sozinho", cada mensagem espera a sua aprovação.`)}
   <div class="linha">${botao("Salvar", "pr-salvar", "", "principal")}</div>
   <p class="resultado" id="pr-resultado"></p>`);
+}
+
+function mensagem() {
+  const c = ultimo.config;
+  return cartao("Mensagem", `
+  <div class="campos">
+    <label class="largo">O que você oferece<textarea id="pr-oferta" rows="4" maxlength="1500" placeholder="Em poucas linhas: o que você faz e para quem.">${esc(c.oferta)}</textarea></label>
+    <label>Convite<input id="pr-convite" value="${esc(c.convite)}" maxlength="120" placeholder="um diagnóstico gratuito de 20 minutos" autocomplete="off"></label>
+    <label>Vagas<input id="pr-vagas" value="${esc(c.vagas)}" maxlength="120" placeholder="Opcional: 5 diagnósticos por mês" autocomplete="off"></label>
+    <label class="largo">Link de agendamento<input id="pr-link" value="${esc(c.link)}" maxlength="300" placeholder="https://calendar.app.google/..." autocomplete="off"></label>
+    <label class="interruptor"><input type="checkbox" id="pr-link-na-mensagem" ${c.link_na_mensagem ? "checked" : ""}> Link na primeira mensagem</label>
+  </div>
+  ${sub("Quem você é e o que faz, por que a empresa foi escolhida, o convite e o horário. Ao salvar, as mensagens que ainda não saíram são reescritas.")}
+  <div class="linha">${botao("Salvar", "pr-salvar", 'data-resultado="pr-resultado-mensagem"', "principal")}</div>
+  <p class="resultado" id="pr-resultado-mensagem"></p>`);
 }
 
 function fontes() {
@@ -102,7 +116,7 @@ function corpo() {
     ? cartao(`Aguardando aprovação <span class="etiqueta">${r.aguardando.length}</span>`, r.aguardando.map(aguardando).join(""))
     : "";
   const lista = r.empresas.length ? r.empresas.map(empresa).join("") : vazio("Nenhuma empresa ainda.");
-  return `${cartao("", item(`Prospecção ${estado}`, resumo))}${fila}${cartao("Empresas", `<div class="lista">${lista}</div>`)}${configuracao()}${fontes()}`;
+  return `${cartao("", item(`Prospecção ${estado}`, resumo))}${fila}${cartao("Empresas", `<div class="lista">${lista}</div>`)}${configuracao()}${mensagem()}${fontes()}`;
 }
 
 PAGINAS.prospeccao = async () => {
@@ -127,9 +141,13 @@ Object.assign(ACOES, {
     por_dia: Number(/** @type {HTMLInputElement} */ ($("pr-por-dia")).value),
     ramos: /** @type {HTMLTextAreaElement} */ ($("pr-ramos")).value,
     oferta: /** @type {HTMLTextAreaElement} */ ($("pr-oferta")).value,
+    convite: /** @type {HTMLInputElement} */ ($("pr-convite")).value,
+    vagas: /** @type {HTMLInputElement} */ ($("pr-vagas")).value,
+    link: /** @type {HTMLInputElement} */ ($("pr-link")).value,
+    link_na_mensagem: /** @type {HTMLInputElement} */ ($("pr-link-na-mensagem")).checked,
     ligada: /** @type {HTMLInputElement} */ ($("pr-ligada")).checked,
     sozinho: /** @type {HTMLInputElement} */ ($("pr-sozinho")).checked,
-  }, b, "pr-resultado"),
+  }, b, b.dataset.resultado || "pr-resultado"),
   "pr-apify": (/** @type {HTMLButtonElement} */ b) => enviar("prospeccao/apify", { chave: /** @type {HTMLInputElement} */ ($("pr-apify")).value }, b, "pr-resultado-apify"),
   "pr-apify-remover": (/** @type {HTMLButtonElement} */ b) => confirmar(b, "Remover a chave?", () => enviar("prospeccao/apify", { chave: "" }, b, "pr-resultado-apify")),
   "pr-adicionar": (/** @type {HTMLButtonElement} */ b) => enviar("prospeccao/adicionar", { cnpj: /** @type {HTMLInputElement} */ ($("pr-cnpj")).value }, b, "pr-resultado-cnpj"),

@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Mensagem da prospecção com convite e agenda:** diz o que você faz, por que a empresa foi
+  escolhida e convida para o diagnóstico, com o link de agendamento e as vagas, se houver; mudar a
+  estratégia reescreve as mensagens que ainda não saíram (ADR 0129).
 - **O Zé conhece todas as suas páginas:** pela voz, ele diz o que está acontecendo na Prospecção
   (envios, aprovações, respostas) e age nela, lista as Empresas, conta o funil do Instagram e
   busca qualquer acontecimento na Atividade; página nova sem lugar no mapa não passa (ADR 0128).

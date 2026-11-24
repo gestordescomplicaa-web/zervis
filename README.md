@@ -355,7 +355,7 @@ das ferramentas do Zé escuta numa porta. Cada chamada cai num destes níveis:
 | `zervis/habilidades` | 0,8 mil | skills (agentskills.io), diário de aprendizado e revisão em segundo plano |
 | `zervis/sistema` | 0,8 mil | a máquina (Omarchy, outro Linux ou servidor), o catálogo de ações, a política de risco e os vigias do sistema e do n8n |
 | `zervis/redes` | 0,5 mil | Instagram, só leitura |
-| `zervis/prospeccao` | 1,0 mil | prospecção: empresas do Maps (Apify), o dono pela Receita, a nota e o envio no limite do dia |
+| `zervis/prospeccao` | 1,2 mil | prospecção: empresas do Maps (Apify), o dono pela Receita, a nota e o envio no limite do dia |
 | `zervis/dados` | 0,4 mil | SQLite compartilhado entre processos, com migrações |
 | `zervis/avaliacao` | 0,6 mil | a bateria que mede o julgamento do cérebro (`zervis avaliar`) |
 | `zervis/persona` | Markdown | quem o Zé é (`ZE.md`) e a persona da via rápida (`RAPIDO.md`) |
