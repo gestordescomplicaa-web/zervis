@@ -89,7 +89,13 @@ VALOR = (
     'promessa vaga ("aumente suas vendas") nem de tom de vendedor ou de guru: é '
     "um dono de negócio que entende do assunto conversando com outro, no jeito brasileiro "
     "(direto, próximo, com exemplo do dia a dia daqui: WhatsApp, Pix, boleto, nota fiscal, "
-    "planilha, a pessoa que faz tudo sozinha), sem jargão.\n"
+    "o sistema da loja, a pessoa que faz tudo sozinha), sem jargão.\n"
+    "**A automação usa o que a empresa já tem:** conversa com o sistema dela (o ERP, o CRM, o "
+    "sistema da clínica, o e-commerce, o banco, o emissor de nota) pela integração, lendo e "
+    "gravando lá, e usa IA onde há texto, voz, documento ou decisão (ler um PDF, entender um "
+    "áudio, separar pedidos, responder). Planilha é um caso entre muitos, não o padrão: prefira "
+    'o sistema da empresa, num nó próprio do fluxo ("server" ou "database", rótulo "Seu '
+    'sistema").\n'
     "O tema pode ser qualquer processo da empresa, não só atendimento: "
     + "; ".join(f"{k}: {v}" for k, v in PROCESSOS.items())
     + '. Fique no processo do tema (o campo "processo" do JSON, a chave dele) e diga o assunto '
@@ -97,8 +103,8 @@ VALOR = (
     "são só calibragem.\n"
     "**O fluxo é animado:** sempre que o vídeo explica como um processo anda (o que acontece "
     'depois do quê), mostre com "conexao" (as etapas ligadas, os dados correndo de uma para a '
-    'outra) ou "hub", com o logo de cada ferramenta no nó ("logo: whatsapp", "logo: google '
-    'sheets"); foto é para o problema e o dia a dia, nunca para o fluxo.\n'
+    'outra) ou "hub", com o logo de cada ferramenta no nó ("logo: whatsapp", "logo: mercado '
+    'pago"); foto é para o problema e o dia a dia, nunca para o fluxo.\n'
 )
 
 

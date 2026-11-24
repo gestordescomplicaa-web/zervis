@@ -40,7 +40,7 @@ ENUMERADOS = ("item", "passos", "lista")
 MAXIMO_ENUMERADOS = 2
 FLUXOS = ("conexao", "hub")  # a solução do "caso" é mostrada andando (ADR 0123)
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
-ABERTURAS = ("gancho", "foto", "icone", "numero", "frase")  # o que pode abrir o vídeo
+ABERTURAS = ("gancho", "foto", "numero", "frase")  # o que pode abrir o vídeo
 CORTES_PALAVRAS = 9  # "cortes": uma palavra por tela só cabe numa fala curta
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
@@ -237,12 +237,12 @@ Regras:
   "claro"); a tela inteira na cor ("cor", ou a frase "cheia") no máximo uma vez, no momento-chave.
 - **A copy é a mãe da animação.** Escreva a fala primeiro; depois faça cada coisa concreta que
   ela diz aparecer na tela na palavra em que é dita: "prédio" vira a foto de um prédio,
-  "WhatsApp" vira o logo do WhatsApp, "planilha" vira o logo do Google Planilhas. A maior parte
+  "WhatsApp" vira o logo do WhatsApp, "Pix" vira o logo do Pix. A maior parte
   das cenas é "visual" (as batidas) ou "foto"; "item" com imagem no máximo duas vezes. Use
   logos de empresas que existem ("logo: whatsapp", "logo: google calendar", "logo: ifood",
-  "logo: instagram") e fotos
-  ("busca: office building"). Ícone desenhado, conexão e hub só quando não houver coisa real para
-  mostrar. Cartões de texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
+  "logo: instagram") e fotos ("busca: office building"). Nada de ícone gigante sozinho na
+  tela: o conceito vira a coisa real em foto; o fluxo vira "conexao" ou "hub". Cartões de
+  texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
 - **Nada de passo a passo.** Não conte em voz alta ("primeiro", "segundo", "passo um", "são
   três coisas") nem numere na tela: o vídeo é uma história com tensão e virada, não um tutorial.
@@ -364,7 +364,8 @@ def limites(duracao: int) -> tuple[int, int, int, int]:
 def tipos_do_estilo(estilo: Estilo) -> dict[str, str]:
     """O formato de cada tipo de cena para o modelo: os embutidos e os que o estilo acrescenta."""
     extras = {t: f if t in f else f"{t}: {f}" for t, f in estilo.cenas_extras.items()}
-    return {**{t: d["formato"] for t, d in TIPOS.items()}, **extras}
+    # o ícone gigante sozinho na tela saiu do cardápio (ADR 0125): a coisa real, em foto
+    return {**{t: d["formato"] for t, d in TIPOS.items() if t != "icone"}, **extras}
 
 
 def receita(cenas: list[dict[str, Any]]) -> str:
@@ -414,7 +415,7 @@ def secao_fotos(fotos: list[str]) -> str:
     return (
         f'\n## Imagens (o que "mostrar" aceita)\n{da_marca}\n'
         '- "logo: <marca>": o logo de uma empresa que existe, na cor dela ("logo: whatsapp", '
-        '"logo: google sheets", "logo: mercado pago"). Só marcas que a fala cita de verdade.\n'
+        '"logo: ifood", "logo: mercado pago"). Só marcas que a fala cita de verdade.\n'
         '- "busca: <2 ou 3 palavras concretas em inglês>": uma foto livre de uma coisa ou um lugar '
         '("busca: office building", "busca: mechanic workshop"); nunca uma pessoa. Seja '
         'específico: "car dashboard", não "car interior" (que traz vagão de trem).\n'
@@ -463,6 +464,20 @@ def montar_prompt(
 def _icone(nome: Any) -> str:
     """O ícone da biblioteca para o objeto pedido (nunca um desenho do modelo)."""
     return biblioteca.achar(str(nome or "").strip()[:60])
+
+
+def _sem_icone(bruta: Any, abertura: bool) -> Any:
+    """O ícone gigante sozinho na tela vira a coisa real em foto (ADR 0125): na abertura, a foto
+    cheia; no meio, uma batida da cena visual. Sem foto que sirva, vira a frase na tela."""
+    if not isinstance(bruta, dict) or bruta.get("tipo") != "icone":
+        return bruta
+    objeto = _texto(bruta.get("icone"), 40) or _texto(bruta.get("rotulo"), 40) or "idea"
+    base_ = {k: bruta[k] for k in ("fala", "pausa", "camera", "transicao", "fundo") if k in bruta}
+    if abertura:
+        return {**base_, "tipo": "foto", "composicao": "cheia", "foto": f"busca: {objeto}"}
+    batida = {"quando": bruta.get("quando", ""), "mostrar": f"busca: {objeto}",
+              "rotulo": bruta.get("rotulo", "")}  # fmt: skip
+    return {**base_, "tipo": "visual", "composicao": "sequencia", "batidas": [batida]}
 
 
 def _no(x: dict[str, Any], limite: int, fala: str) -> dict[str, Any]:
@@ -641,7 +656,7 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     brutas = dados.get("cenas") if isinstance(dados, dict) else None
     if not isinstance(brutas, list) or not minimo <= len(brutas) <= maximo:
         raise RoteiroErro(f"O roteiro precisa de {minimo} a {maximo} cenas.")
-    cenas = [_cena(c, estilo.cenas_extras) for c in brutas]
+    cenas = [_cena(_sem_icone(c, i == 0), estilo.cenas_extras) for i, c in enumerate(brutas)]
 
     # a paleta estável: a tela inteira na cor da marca no máximo uma vez fora do fecho
     # (a frase "cheia" é a tela na cor; a foto "cheia" é a foto, não conta)

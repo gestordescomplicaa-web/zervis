@@ -30,7 +30,15 @@ cenas). E o fluxo da solução aparecia em fotos, quando a animação o explica 
    virada.
 4. **O fluxo é animado:** a solução do "caso" é obrigatoriamente uma cena "conexao" ou "hub",
    e o nó do fluxo aceita o logo da ferramenta ("logo: whatsapp"), com o ícone de reserva.
-5. **A duração** desconta as pausas longas: 2,0 palavras por segundo (o medido em seis vídeos,
+5. **Nada de ícone gigante sozinho na tela:** a cena "icone" saiu do cardápio do diretor; se
+   vier, vira a coisa real em foto (a foto cheia, na abertura; uma batida da cena visual, no
+   meio). Sem foto que sirva (a cena de foto ou a visual sem nenhuma imagem), vira a fala na
+   tela, em tipografia. Os ícones pequenos dos nós do fluxo continuam.
+6. **A automação usa o que a empresa já tem:** os exemplos do diretor trocam a planilha pelo
+   sistema da empresa (ERP, CRM, o sistema da clínica, o e-commerce, o banco, o emissor de
+   nota), pela integração, com um nó próprio no fluxo ("Seu sistema"); a IA entra onde há texto,
+   voz, documento ou decisão.
+7. **A duração** desconta as pausas longas: 2,0 palavras por segundo (o medido em seis vídeos,
    com os respiros) sobre o tempo menos 2,4 s.
 
 ## Consequências

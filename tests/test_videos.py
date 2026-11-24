@@ -651,7 +651,8 @@ def test_cenas_de_arte_no_plano() -> None:
     bruto["cenas"].insert(-1, dict(ROTEIRO["cenas"][1]))  # o mínimo de cenas do ritmo
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
     icone, visual, hub = r.cenas[1:4]
-    assert icone["icone"] == "pizza"
+    # o ícone gigante sozinho virou a coisa real em foto, numa batida (ADR 0125)
+    assert icone["tipo"] == "visual" and icone["batidas"][0]["mostrar"] == "busca: pizza"
     assert visual["composicao"] == "colagem"
     assert [b["mostrar"] for b in visual["batidas"]] == ["logo: whatsapp", "busca: pizza oven"]
     assert visual["batidas"][0]["quando"] == "whatsapp" and visual["batidas"][0]["rotulo"]
@@ -854,9 +855,9 @@ def test_fotos_da_marca_e_livres(tmp_path: Path) -> None:
     assert cenas[1]["imagem"].endswith("/imagens/oficina.jpg")
     assert not any("credito" in c for c in cenas)
     assert buscas == ["mechanic workshop", "car wash"]
-    # sem foto que sirva, a cena vira um ícone do objeto (o vídeo não falha)
-    assert cenas[2]["tipo"] == "icone" and cenas[2]["icone"] == "car" and "foto" not in cenas[2]
-    assert cenas[3]["tipo"] == "icone" and cenas[3]["composicao"] == "heroi"
+    # sem foto que sirva, a cena vira a fala na tela (nunca o ícone gigante; o vídeo não falha)
+    assert cenas[2]["tipo"] == "frase" and "foto" not in cenas[2] and "icone" not in cenas[2]
+    assert cenas[3]["tipo"] == "frase" and cenas[3]["composicao"] == "centro"
 
 
 def test_foto_no_plano_e_no_video(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1007,6 +1008,8 @@ def test_lista_e_estilo_editorial() -> None:
                          "icone": "smartphone", "quando": "ninguem"}  # fmt: skip
     r = roteiro.interpretar(json.dumps(bruto), _estilo())
     assert "quando" not in r.cenas[0]  # a abertura mostra a imagem no primeiro instante
+    # o ícone na abertura virou a foto cheia do objeto
+    assert (r.cenas[0]["tipo"], r.cenas[0]["foto"]) == ("foto", "busca: smartphone")
     um, dois = r.cenas[1:3]
     assert um["transicao"] == "carta" and um["icone"] == "wrench"
     # itens seguidos são o mesmo cartão: o fundo do primeiro, sem transição
@@ -1284,3 +1287,17 @@ def test_caso_mostra_a_solucao_em_fluxo_com_logo() -> None:
     no_logo, no_icone = r.cenas[2]["nos"]
     assert no_logo["mostrar"] == "logo: WhatsApp" and no_logo["icone"]  # o ícone de reserva
     assert "mostrar" not in no_icone
+
+
+def test_visual_sem_nenhuma_imagem_vira_frase(tmp_path: Path) -> None:
+    f = Fotos(da_marca=lambda: [], buscar=lambda b: [], buscar_pixabay=lambda b: [])
+    cenas: list[dict[str, Any]] = [
+        {"tipo": "visual", "fala": "x", "batidas": [{"mostrar": "busca: nada aqui"}]},
+        {"tipo": "visual", "fala": "y", "batidas": [{"mostrar": "logo: whatsapp"}]},
+    ]
+    f.logo = lambda slug: b'<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>'
+    f.resolver(cenas, tmp_path)
+    assert cenas[0]["tipo"] == "frase" and "batidas" not in cenas[0]
+    assert cenas[1]["tipo"] == "visual" and cenas[1]["batidas"][0]["imagem"]
+    prompt = roteiro.montar_prompt("Marca", "Tema: x", "", _estilo())
+    assert '{"tipo": "icone"' not in prompt and "o sistema da empresa" in prompt
