@@ -53,6 +53,10 @@ CORPO_MAXIMO = 2 * 1024 * 1024
 VISTOS = 2000  # a fila do WaCalls reenvia o que não foi confirmado: os ids recentes deduplicam
 CLIENTE = "zervis-atendente"  # quem atende as chamadas no WaCalls
 _CAPTURA = re.compile(r"/api/interno/whatsapp/captura/[0-9a-f]{1,64}")
+# O que o WaCalls aceita por mensagem (`agendaMessageMaxText`). Texto maior vai em partes: o
+# limite era 1900 no Zé, e o WaCalls recusava o envio inteiro (caso de 18/11/2026, uma
+# apresentação do Zé ditada para um contato).
+TEXTO_MAXIMO = 1200
 
 
 # Por que o WhatsApp recusou o pareamento (o evento do canal do QR da whatsmeow).
@@ -65,6 +69,7 @@ RECUSAS = {
     "ambiguous WhatsApp recipient": "Mais de uma conta para esse número.",
     "recipient lookup failed": "O WhatsApp não confirmou o número. Tente de novo.",
     "message was not acknowledged": "O WhatsApp não confirmou o envio.",
+    f"text must contain 1 to {TEXTO_MAXIMO} characters": "Mensagem vazia ou longa demais.",
 }
 
 
@@ -106,6 +111,19 @@ class Recebida:
 
 _PRIVADO = re.compile(r"\d{5,20}(?::\d+)?@(?:s\.whatsapp\.net|lid)")  # número ou LID
 _GRUPO = re.compile(r"\d{5,30}(?:-\d{5,20})?@g\.us")
+
+
+def partes(texto: str, limite: int = TEXTO_MAXIMO) -> list[str]:
+    """O texto em mensagens de até `limite` caracteres, quebrando em parágrafo, linha ou espaço."""
+    texto = texto.strip()
+    saida: list[str] = []
+    while len(texto) > limite:
+        corte = max(texto.rfind(sep, 0, limite) for sep in ("\n\n", "\n", " "))
+        if corte <= 0:
+            corte = limite
+        saida.append(texto[:corte].strip())
+        texto = texto[corte:].strip()
+    return [*saida, texto] if texto else saida
 
 
 def privado(chat: str) -> bool:
@@ -668,19 +686,23 @@ class WhatsApp:
         if not sessoes:
             raise WhatsAppErro("WhatsApp não conectado.")
         sid = str(sessoes[0]["id"])
-        r = self._api(
-            "POST",
-            f"/api/sessions/{sid}/messages",
-            {
-                "kind": "atendimento_reply",
-                **destino,
-                "text": texto,
-                "idempotency_key": chave,
-            },
-            espera=30.0,
-        )
-        if not r.get("acknowledged"):
-            raise WhatsAppErro("Mensagem não enviada.")
+        pedacos = partes(texto) or [texto]  # vazio: o WaCalls recusa, com o motivo
+        r: Any = {}
+        for i, pedaco in enumerate(pedacos):
+            r = self._api(
+                "POST",
+                f"/api/sessions/{sid}/messages",
+                {
+                    "kind": "atendimento_reply",
+                    **destino,
+                    "text": pedaco,
+                    # Cada parte com a sua chave: a mesma faria o WaCalls achar que é repetição.
+                    "idempotency_key": chave if len(pedacos) == 1 else f"{chave}-{i + 1}",
+                },
+                espera=30.0,
+            )
+            if not r.get("acknowledged"):
+                raise WhatsAppErro("Mensagem não enviada.")
         return f"{sid}:{r.get('message_id', '')}"
 
     def baixar_audio(self, evento: str) -> tuple[bytes, str]:
