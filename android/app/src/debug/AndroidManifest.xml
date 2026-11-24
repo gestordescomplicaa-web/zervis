@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Só na versão de depuração: o emulador fala com um Zé de teste no próprio computador
+     (http://10.0.2.2), sem HTTPS. A versão publicada continua só com HTTPS. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:networkSecurityConfig="@xml/rede_de_teste" />
+</manifest>

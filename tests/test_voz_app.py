@@ -319,6 +319,29 @@ def test_foto_da_camera_com_o_app_fora_espera_e_vai_ao_conectar(tmp_path: Path) 
     assert conexao.enviadas[-1]["id"] == m1["id"]
 
 
+def test_o_estado_do_ze_vai_ao_app_so_quando_muda() -> None:
+    """O centro da tela Início do app mostra o Zé ouvindo, pensando, falando (como o ícone do
+    painel): o laço manda o estado a cada volta, a conexão só o que mudou."""
+    from zervis.nucleo import ciclo
+
+    conexao = ConexaoQueFecha([])
+    n: Any = SimpleNamespace(
+        _fonte=VozNavegador(conexao, do_app=True),  # type: ignore[arg-type]
+        maquina=SimpleNamespace(estado=e.Estado.ATIVO),
+    )
+    for estado in (e.Estado.ATIVO, e.Estado.ATIVO, e.Estado.OUVINDO, e.Estado.PENSANDO):
+        n.maquina.estado = estado
+        ciclo._estado_na_voz(n)
+    assert [m["estado"] for m in conexao.enviadas] == ["ativo", "ouvindo", "pensando"]
+    assert {m["tipo"] for m in conexao.enviadas} == {"estado"}
+    nova = ConexaoQueFecha([])  # reconectou: a conexão nova recebe o estado logo
+    n._fonte = VozNavegador(nova, do_app=True)  # type: ignore[arg-type]
+    ciclo._estado_na_voz(n)
+    assert nova.enviadas == [{"tipo": "estado", "estado": "pensando"}]
+    n._fonte = None  # sem voz remota (o microfone do PC): nada a mandar
+    ciclo._estado_na_voz(n)
+
+
 def test_fila_do_celular_para_na_primeira_falha_e_esquece_a_foto_que_sumiu(
     tmp_path: Path,
 ) -> None:

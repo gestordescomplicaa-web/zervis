@@ -17,10 +17,13 @@ Feito para uso pessoal, fora da Play Store: instala-se o `.apk` direto no celula
    não abrir o app, abra o Zé Voz e digite o endereço e o código que o painel mostra.
 4. Permita o microfone e as notificações. Pronto: bloqueie a tela.
 
-Depois, para ligar de novo, toque no ícone do Zé Voz. A tela que abre (também ao tocar na
-notificação) mostra o estado da voz e os ajustes: o modo de ouvir, a escuta de perto, a saída sem
-fone, o microfone do aparelho Bluetooth conectado e a atualização do app. Fechá-la não desliga a
-voz; "Desconectar" desliga.
+Depois, para ligar de novo, toque no ícone do Zé Voz. O **Início** (também ao tocar na
+notificação) mostra o Zé no centro com o estado em volta, como o ícone do painel: respira pronto,
+ondas ouvindo, arco pensando, pulso falando, âmbar esperando o "sim", apagado sem conexão (ADR
+0131). Embaixo, por onde a fala sai, o modo de ouvir ("Ei Zé" ou "Ao vivo") e o botão, que muda
+com o estado: Falar, Enviar, Conectar, Retomar. Os **Ajustes** (o ícone no alto) têm a escuta de
+perto, o áudio, a versão com a atualização e "Desconectar". Fechar as telas não desliga a voz;
+"Desconectar" desliga.
 
 ## Atualizar
 Uma vez por dia, ao conectar, o app procura versão nova (o `versao.json` publicado junto do APK) e
@@ -94,6 +97,11 @@ desinstalar a anterior. Ao criar a chave, reinstale uma vez; daí em diante as v
 
 Localmente, com o JDK 21 e o Android SDK: `cd android && gradle testDebugUnitTest assembleDebug`.
 
-O ícone (o do app, o das notificações e os do painel instalado no celular) sai do logo do painel,
-`.github/ze-logo.svg`: quando ele mudar, `uv run python android/icones.py` gera tudo de novo
-(precisa do `rsvg-convert` e do `magick`).
+O ícone (o do app, o das notificações e os do painel instalado no celular), o macaco do Início e
+os ícones de traço das telas (da Lucide do repositório) saem de `uv run python android/icones.py`
+(precisa do `rsvg-convert` e do `magick`); rode de novo quando o logo mudar ou entrar um ícone.
+
+Para ver as telas sem o celular, num emulador (o Android SDK com uma imagem de sistema): a versão
+de depuração aceita um Zé de teste em `http://10.0.2.2:<porta>` (o computador, visto do
+emulador), sem HTTPS; a publicada não. Pareie pelo link
+`zervis-voz://parear?e=http://10.0.2.2:<porta>&c=<código>` (`adb shell am start -d '…'`).

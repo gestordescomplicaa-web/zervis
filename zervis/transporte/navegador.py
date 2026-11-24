@@ -70,6 +70,8 @@ class VozNavegador:
         # modo de ligação, já tira o eco, e o filtro do Zé (feito para ele entender pedidos)
         # alterava a voz de uma conversa entre pessoas.
         self.sem_eco = False
+        # O último estado do Zé mandado por esta conexão (a tela do app de voz o mostra).
+        self._estado = ""
 
     @property
     def conectada(self) -> bool:
@@ -112,6 +114,15 @@ class VozNavegador:
     def controle(self, **dados: object) -> None:
         with contextlib.suppress(FechouErro):
             self.conexao.texto(json.dumps(dados))
+
+    def estado(self, valor: str) -> None:
+        """O estado do Zé (ativo, ouvindo, pensando, falando, confirmando, inativo) para a tela
+        de quem fala: o app de voz mostra no centro do Início, como o ícone do painel. Vai só
+        quando muda; cada conexão é um objeto novo, então a primeira vai logo."""
+        if valor == self._estado:
+            return
+        self._estado = valor
+        self.controle(tipo="estado", estado=valor)
 
     def imagem(
         self,

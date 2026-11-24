@@ -137,3 +137,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0128](0128-ze-conhece-todas-as-paginas.md) | O Zé conhece todas as suas páginas e os seus eventos | Aceito |
 | [0129](0129-mensagem-da-prospeccao.md) | A mensagem da prospecção: o que faz, por que ela, o convite e o horário | Aceito |
 | [0130](0130-quem-atende-e-os-avisos.md) | Quem atende o número, a resposta automática e os avisos do que trabalha sozinho | Aceito |
+| [0131](0131-app-de-voz-com-cara-de-produto.md) | O app de voz com cara de produto: Início, Parear e Ajustes | Aceito |

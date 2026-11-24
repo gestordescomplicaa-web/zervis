@@ -48,6 +48,7 @@ from zervis.nucleo.efeitos import JANELA_PERMISSAO_S as JANELA_PERMISSAO_S
 from zervis.portal import tunel
 from zervis.rosto import hud
 from zervis.sistema import maquina as maquina_atual
+from zervis.transporte.navegador import VozNavegador
 
 # O mesmo nome de antes: o registro do serviço continua igual.
 log = logging.getLogger("zervis.nucleo.laco")
@@ -180,6 +181,7 @@ def rodar(n: "Nucleo") -> None:
             if humor == "green" and n.manutencao.ligado:
                 humor = "amber"  # o anel diz que os pedidos vão para a sessão de código
             n.anel.mostrar(n.maquina.anel, humor, agora)
+            _estado_na_voz(n)
             if agora >= proximo_status:
                 n._gravar_status(agora)
                 n._atualizar_painel(agora)
@@ -206,6 +208,13 @@ def rodar(n: "Nucleo") -> None:
                 continue
     finally:
         n.desligar()
+
+
+def _estado_na_voz(n: "Nucleo") -> None:
+    """O estado do Zé vai à voz conectada (o app de voz mostra ouvindo, pensando, falando); a
+    conexão só manda quando muda."""
+    if isinstance(fonte := n._fonte, VozNavegador):
+        fonte.estado(n.maquina.estado.value)
 
 
 def _vigiar_fontes(n: "Nucleo") -> None:

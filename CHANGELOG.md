@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Zé Voz com cara de produto:** o app ganha as cores do painel e três telas: Parear (os passos
+  e o erro embaixo do campo), Início (o Zé no centro mostrando se está ouvindo, pensando ou
+  falando, o modo de ouvir e o botão que muda com o estado) e Ajustes (escuta de perto com o
+  nível do microfone, áudio, atualização e desconectar). O Zé passa a mandar o estado pelo canal
+  de voz (ADR 0131).
 - **Ícone do Zé no celular:** o Zé Voz e o painel instalado no celular passam a usar o ícone do
   painel, recortado no formato de cada celular e de uma cor nos ícones temáticos do Android 13+;
   as notificações também.

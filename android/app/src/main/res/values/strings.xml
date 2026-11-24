@@ -1,4 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Os textos das telas, em linguagem de produto (CLAUDE.md): curtos e factuais. -->
 <resources>
     <string name="nome">Zé Voz</string>
+    <string name="ajustes">Ajustes</string>
+    <string name="voltar">Voltar</string>
+
+    <string name="parear_titulo">Parear com o Zé</string>
+    <string name="parear_descricao">Conecte este celular ao seu Zé para falar com ele pelo fone, com a tela bloqueada.</string>
+    <string name="parear_passo_1">No painel do Zé, abra Voz › App de voz › Parear celular.</string>
+    <string name="parear_passo_2">Aponte a câmera do celular para o QR.</string>
+    <string name="parear_passo_3">Permita o microfone e as notificações.</string>
+    <string name="parear_ou">ou digite o código</string>
+    <string name="endereco">Endereço do Zé</string>
+    <string name="endereco_exemplo">ze.seudominio.com.br</string>
+    <string name="codigo">Código</string>
+    <string name="codigo_exemplo">ABC123</string>
+    <string name="parear">Parear</string>
+    <string name="pareando">Pareando…</string>
+    <string name="pareado">Pareado.</string>
+    <string name="parear_de_novo">O Zé não reconhece mais este celular. Pareie de novo.</string>
+    <string name="sem_conexao_com_o_ze">Sem conexão com o Zé.</string>
+    <string name="preencha">Preencha o endereço e o código.</string>
+
+    <string name="modo_chamado">Ei Zé</string>
+    <string name="modo_ao_vivo">Ao vivo</string>
+    <string name="falar">Falar</string>
+    <string name="enviar">Enviar</string>
+    <string name="conectar">Conectar</string>
+    <string name="retomar">Retomar</string>
+    <string name="tentar_agora">Tentar agora</string>
+
+    <string name="chip_conectado">Conectado</string>
+    <string name="chip_conectando">Conectando</string>
+    <string name="chip_desconectado">Desconectado</string>
+    <string name="chip_em_uso">Em outro aparelho</string>
+    <string name="chip_sem_rede">Sem conexão</string>
+
+    <string name="fase_desconectado">Desconectado</string>
+    <string name="fase_conectando">Conectando</string>
+    <string name="fase_pronto">Pronto</string>
+    <string name="fase_ouvindo">Ouvindo</string>
+    <string name="fase_pensando">Pensando</string>
+    <string name="fase_falando">Falando</string>
+    <string name="fase_confirmando">Esperando o seu sim</string>
+    <string name="fase_inativo">Inativo</string>
+    <string name="fase_em_uso">Em outro aparelho</string>
+    <string name="fase_sem_rede">Sem conexão</string>
+    <string name="fase_sem_microfone">Sem microfone</string>
+
+    <string name="dica_desconectado">Toque em Conectar para falar com o Zé.</string>
+    <string name="dica_conectando">Ligando ao Zé.</string>
+    <string name="dica_chamado">Diga “Ei Zé” ou toque em Falar.</string>
+    <string name="dica_ao_vivo">Ao vivo: cada frase é um pedido.</string>
+    <string name="dica_apertado">Fale e toque em Enviar.</string>
+    <string name="dica_ouvindo">Pode falar.</string>
+    <string name="dica_pensando">Preparando a resposta.</string>
+    <string name="dica_falando">Diga “Ei Zé” para interromper.</string>
+    <string name="dica_confirmando">Responda sim ou não.</string>
+    <string name="dica_inativo">O Zé está inativo no computador.</string>
+    <string name="dica_em_uso">A voz está no navegador ou em outro celular.</string>
+    <string name="dica_sem_rede">Nova tentativa em %1$d s.</string>
+    <string name="dica_sem_microfone">Permita o microfone nas configurações do Android.</string>
+
+    <string name="saida_alto_falante">Alto-falante</string>
+    <string name="saida_orelha">Fone da orelha</string>
+    <string name="saida_fio">Fone com fio</string>
+    <string name="microfone_do_celular">Microfone do celular</string>
+    <string name="microfone_do_fone">Microfone do fone</string>
+    <string name="microfone_de">Microfone de %1$s</string>
+
+    <string name="perto">Escuta de perto</string>
+    <string name="perto_descricao">Ouve só quem fala junto do microfone, como numa ligação. Ignora conversas e ruídos ao redor.</string>
+    <string name="perto_com_fone">Com fone conectado, não se aplica.</string>
+    <string name="nivel">Nível do microfone</string>
+    <string name="leitura">%1$d · mínimo %2$d</string>
+    <string name="minimo">Mínimo para ouvir</string>
+    <string name="minimo_dica">Fale a um palmo do celular e deixe o mínimo abaixo do seu nível.</string>
+    <string name="audio">Áudio</string>
+    <string name="saida_da_voz">Saída da voz</string>
+    <string name="microfone">Microfone</string>
+    <string name="do_celular">Do celular</string>
+    <string name="de_aparelho">De %1$s</string>
+    <string name="nota_aparelho">Vale para %1$s. A fala sai sempre por ele.</string>
+    <string name="nota_caixa">%1$s: a fala sai por ele; o microfone é o do celular.</string>
+    <string name="nota_fio">Fone com fio: a fala e o microfone vão por ele.</string>
+    <string name="app">App</string>
+    <string name="versao">Versão %1$s</string>
+    <string name="procurar_atualizacao">Procurar atualização</string>
+    <string name="procurando">Procurando…</string>
+    <string name="atualizar_para">Atualizar para a %1$s</string>
+    <string name="baixando">Baixando…</string>
+    <string name="versao_nova">Versão nova disponível.</string>
+    <string name="versao_mais_recente">Versão mais recente.</string>
+    <string name="permitir_instalar">Permita instalar apps do Zé Voz e toque em Atualizar de novo.</string>
+    <string name="atualizado">Zé Voz atualizado.</string>
+    <string name="nao_atualizou">Não atualizou.</string>
+    <string name="nao_atualizou_motivo">Não atualizou: %1$s</string>
+    <string name="conexao">Conexão</string>
+    <string name="desconectar">Desconectar</string>
+    <string name="sem_microfone">Permissão de microfone necessária.</string>
 </resources>
