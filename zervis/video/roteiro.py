@@ -23,7 +23,11 @@ from zervis.video import biblioteca, formatos
 from zervis.video.estilos import Estilo
 
 FALA_PALAVRAS = 16  # uma frase curta por cena: o corte a cada 2 a 4 segundos (ADR 0113)
-PALAVRAS_POR_SEGUNDO = 2.3  # o ritmo medido da voz (Fish S2.1 Pro, 23/11/2026): 166 em 72 s
+# o ritmo medido, com os respiros entre as cenas (Fish S2.1 Pro e Drama 3, 23/11/2026: de 1,95
+# a 2,12 em seis vídeos); as pausas longas saem do tempo antes da conta
+PALAVRAS_POR_SEGUNDO = 2.0
+LONGAS = 3  # pausas longas no vídeo, no máximo
+PAUSA_LONGA_S = 0.8  # o mesmo de narracao.PAUSA_LONGA_S
 LIMITE_LEGENDA = 2200
 # A duração pedida -> (mínimo, máximo) de cenas.
 DURACOES: dict[int, tuple[int, int]] = {15: (4, 6), 30: (6, 10), 45: (8, 13), 60: (10, 16)}
@@ -34,8 +38,9 @@ FUNDOS = ("escuro", "claro", "cor")
 # cenas que enumeram (o "passo 1, 2, 3"): duas no vídeo, no máximo (ADR 0123)
 ENUMERADOS = ("item", "passos", "lista")
 MAXIMO_ENUMERADOS = 2
+FLUXOS = ("conexao", "hub")  # a solução do "caso" é mostrada andando (ADR 0123)
 DE_TEXTO = ("gancho", "frase")  # a fala é a tipografia; sem legenda embaixo
-ABERTURAS = ("gancho", "foto", "icone", "numero", "frase")  # o que pode abrir o vídeo
+ABERTURAS = ("gancho", "foto", "numero", "frase")  # o que pode abrir o vídeo
 CORTES_PALAVRAS = 9  # "cortes": uma palavra por tela só cabe numa fala curta
 
 # Cada tipo: os campos de texto (com o limite), as listas (mínimo, máximo, limite de cada item),
@@ -140,7 +145,8 @@ TIPOS: dict[str, dict[str, Any]] = {
     "conexao": {
         "nos": (2, 4, 16),
         "composicoes": ("fluxo",),
-        "formato": '{"tipo": "conexao", "fala": "...", "nos": [{"icone": "<objeto>", '
+        "formato": '{"tipo": "conexao", "fala": "...", "nos": [{"icone": "<objeto> ou '
+        'logo: <ferramenta>", '
         '"rotulo": "1 ou 2 palavras", "quando": "palavra da fala"}]} (2 a 4: um fluxo ou uma '
         "integração; linhas ligam os nós e dados correm por elas)",
     },
@@ -149,8 +155,9 @@ TIPOS: dict[str, dict[str, Any]] = {
         "campo_nos": "ao_redor",
         "composicoes": ("orbita",),
         "formato": '{"tipo": "hub", "fala": "...", "centro": {"icone": "<objeto> ou marca", '
-        '"rotulo": "opcional"}, "ao_redor": [{"icone": "<objeto>", "rotulo": "opcional, 1 '
-        'palavra", "quando": "palavra da fala"}]} (3 a 6 em volta de um centro: tudo ligado a '
+        '"rotulo": "opcional"}, "ao_redor": [{"icone": "<objeto> ou logo: <ferramenta>", '
+        '"rotulo": "opcional, 1 palavra", "quando": "palavra da fala"}]} (3 a 6 em volta de '
+        "um centro: tudo ligado a "
         'uma coisa só; a marca no centro com "marca")',
     },
     # --- a copy manda (ADR 0115): cada coisa dita vira imagem real, na palavra ---
@@ -195,7 +202,9 @@ Responda só com JSON, sem texto em volta:
 "...", "..."], "palavra": "...", "entrega": "...", "titulo": "...",
 "capa": {{"texto": "...", "destaque": "...", "icone": "...", "foto": "..."}},
 "legenda": "...",
-"cenas": [{{"tipo": "...", "fala": "...", "camera": "...", "transicao": "...", ...}}]}}
+"processo": "...", "assunto": "...",
+"cenas": [{{"tipo": "...", "fala": "...", "pausa": "", "camera": "...", "transicao": "...",
+...}}]}}
 
 O limite mais importante: **a fala inteira tem de {minimo_palavras} a {total} palavras**. Conte
 antes de responder; passou, corte. Um bom Reels diz pouco e mostra muito.
@@ -205,8 +214,10 @@ Regras:
   "fecho".
 - **Ritmo de edição:** um corte a cada 2 a 4 segundos. Uma ideia por cena; quando a ideia é
   grande, quebre em duas cenas seguidas com um "corte" entre elas. Vídeo lento parece pronto.
-- fala: português do Brasil falado, uma frase curta, até {fala} palavras. Sem siglas
-  difíceis de falar e sem emojis. Números como se fala ("treze de novembro").
+- fala: português do Brasil falado, uma frase curta e completa, até {fala} palavras. Sem
+  siglas difíceis de falar e sem emojis. Números como se fala ("treze de novembro").
+- pausa: "longa" na cena depois da qual quem escuta precisa de um segundo para absorver (o
+  gancho, a conta, a virada); vazio nas outras. No máximo três "longa" no vídeo.
 - **A tela não repete a fala.** Em "gancho" e "frase" a própria fala aparece animada; não escreva
   outro texto. Nas outras cenas, a legenda já mostra a fala: a tela mostra só a ideia, em poucas
   palavras (títulos e itens curtos, diferentes da fala).
@@ -226,12 +237,12 @@ Regras:
   "claro"); a tela inteira na cor ("cor", ou a frase "cheia") no máximo uma vez, no momento-chave.
 - **A copy é a mãe da animação.** Escreva a fala primeiro; depois faça cada coisa concreta que
   ela diz aparecer na tela na palavra em que é dita: "prédio" vira a foto de um prédio,
-  "WhatsApp" vira o logo do WhatsApp, "planilha" vira o logo do Google Planilhas. A maior parte
+  "WhatsApp" vira o logo do WhatsApp, "Pix" vira o logo do Pix. A maior parte
   das cenas é "visual" (as batidas) ou "foto"; "item" com imagem no máximo duas vezes. Use
   logos de empresas que existem ("logo: whatsapp", "logo: google calendar", "logo: ifood",
-  "logo: instagram") e fotos
-  ("busca: office building"). Ícone desenhado, conexão e hub só quando não houver coisa real para
-  mostrar. Cartões de texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
+  "logo: instagram") e fotos ("busca: office building"). Nada de ícone gigante sozinho na
+  tela: o conceito vira a coisa real em foto; o fluxo vira "conexao" ou "hub". Cartões de
+  texto (passos, lista, antes_depois, conversa) no máximo um no vídeo.
 - Varie os tipos e as composições. No máximo um "frase" seguido de outro tipo de texto.
 - **Nada de passo a passo.** Não conte em voz alta ("primeiro", "segundo", "passo um", "são
   três coisas") nem numere na tela: o vídeo é uma história com tensão e virada, não um tutorial.
@@ -250,6 +261,25 @@ Regras:
 - titulo: até 60 caracteres. legenda: a do Instagram, de 300 a 1.000 caracteres, com o gancho, a
   explicação em parágrafos curtos, a chamada, no máximo 3 emojis e até 5 hashtags no fim.
 {tom}
+## A fala (alguém fala, alguém escuta)
+O vídeo é narrado: uma pessoa fala e outra escuta, muitas vezes sem olhar a tela. Escreva para o
+ouvido, não para a legenda.
+- Leia todas as falas em sequência, como um texto só, antes de responder: tem de soar como
+  alguém contando uma história a outra pessoa, com começo, meio e fim, sem pular um passo. Quem
+  só escuta entende tudo.
+- Cada fala é gravada sozinha, então é uma frase completa, com sujeito e verbo. Nunca corte uma
+  frase entre duas cenas.
+- Ligue as cenas com o conectivo falado: "só que", "aí", "e o pior", "agora faz a conta", "sabe
+  o que a gente faria?", "o resultado?", "e não é só", "por isso". A passagem de uma parte para
+  a outra (do problema para a conta, da conta para a solução, da solução para a ponte) é dita,
+  não só mostrada.
+- Diga quem faz o quê: o nome e o que a pessoa é ("a Renata, dona de uma agência de viagens");
+  com duas pessoas na história (a dona e o cliente), nada de "ele" ou "ela" solto: "o cliente".
+- Português falado, natural, nada de telegrama: com artigos e preposições ("ela monta a
+  proposta no Word", não "proposta na mão, no Word"). Sem dois-pontos, barras, parênteses,
+  siglas nem listas na fala; números como se falam ("dois mil reais", "dez minutos").
+- A pontuação é a respiração da voz: vírgula para a pausa curta, ponto no fim da ideia, ponto
+  de interrogação na pergunta que puxa a próxima cena; reticências só no suspense, uma vez.
 {formatos}
 {entrega}
 Tipos de cena:
@@ -284,6 +314,8 @@ class Roteiro:
     capa_destaque: str = ""
     capa_icone: str = ""  # o objeto do tema, para o ícone da capa
     capa_foto: str = ""  # uma foto da marca com quem fala (o retrato)
+    processo: str = ""  # a chave em formatos.PROCESSOS (a trava de temas, ADR 0125)
+    assunto: str = ""  # o assunto em poucas palavras
 
     @property
     def falas(self) -> list[str]:
@@ -297,6 +329,8 @@ class Roteiro:
             "entrega": self.entrega,
             "publico": self.publico,
             "titulo": self.titulo,
+            "processo": self.processo,
+            "assunto": self.assunto,
             "capa": {
                 "texto": self.capa,
                 "destaque": self.capa_destaque,
@@ -323,14 +357,15 @@ def _texto(valor: Any, limite: int) -> str:
 def limites(duracao: int) -> tuple[int, int, int, int]:
     """(mínimo e máximo de cenas, mínimo e máximo de palavras da fala) para a duração."""
     minimo, maximo = DURACOES.get(duracao, DURACOES[DURACAO_PADRAO])
-    total = round(duracao * PALAVRAS_POR_SEGUNDO)
+    total = round((duracao - LONGAS * PAUSA_LONGA_S) * PALAVRAS_POR_SEGUNDO)
     return minimo, maximo, round(total * 0.6), total
 
 
 def tipos_do_estilo(estilo: Estilo) -> dict[str, str]:
     """O formato de cada tipo de cena para o modelo: os embutidos e os que o estilo acrescenta."""
     extras = {t: f if t in f else f"{t}: {f}" for t, f in estilo.cenas_extras.items()}
-    return {**{t: d["formato"] for t, d in TIPOS.items()}, **extras}
+    # o ícone gigante sozinho na tela saiu do cardápio (ADR 0125): a coisa real, em foto
+    return {**{t: d["formato"] for t, d in TIPOS.items() if t != "icone"}, **extras}
 
 
 def receita(cenas: list[dict[str, Any]]) -> str:
@@ -380,7 +415,7 @@ def secao_fotos(fotos: list[str]) -> str:
     return (
         f'\n## Imagens (o que "mostrar" aceita)\n{da_marca}\n'
         '- "logo: <marca>": o logo de uma empresa que existe, na cor dela ("logo: whatsapp", '
-        '"logo: google sheets", "logo: mercado pago"). Só marcas que a fala cita de verdade.\n'
+        '"logo: ifood", "logo: mercado pago"). Só marcas que a fala cita de verdade.\n'
         '- "busca: <2 ou 3 palavras concretas em inglês>": uma foto livre de uma coisa ou um lugar '
         '("busca: office building", "busca: mechanic workshop"); nunca uma pessoa. Seja '
         'específico: "car dashboard", não "car interior" (que traz vagão de trem).\n'
@@ -431,6 +466,35 @@ def _icone(nome: Any) -> str:
     return biblioteca.achar(str(nome or "").strip()[:60])
 
 
+def _sem_icone(bruta: Any, abertura: bool) -> Any:
+    """O ícone gigante sozinho na tela vira a coisa real em foto (ADR 0125): na abertura, a foto
+    cheia; no meio, uma batida da cena visual. Sem foto que sirva, vira a frase na tela."""
+    if not isinstance(bruta, dict) or bruta.get("tipo") != "icone":
+        return bruta
+    objeto = _texto(bruta.get("icone"), 40) or _texto(bruta.get("rotulo"), 40) or "idea"
+    base_ = {k: bruta[k] for k in ("fala", "pausa", "camera", "transicao", "fundo") if k in bruta}
+    if abertura:
+        return {**base_, "tipo": "foto", "composicao": "cheia", "foto": f"busca: {objeto}"}
+    batida = {"quando": bruta.get("quando", ""), "mostrar": f"busca: {objeto}",
+              "rotulo": bruta.get("rotulo", "")}  # fmt: skip
+    return {**base_, "tipo": "visual", "composicao": "sequencia", "batidas": [batida]}
+
+
+def _no(x: dict[str, Any], limite: int, fala: str) -> dict[str, Any]:
+    """Um nó do fluxo: o ícone do objeto ou o logo da ferramenta ("logo: whatsapp"; o ícone
+    fica de reserva, se o logo não vier)."""
+    pedido = str(x.get("icone") or "").strip()
+    logo = pedido.lower().startswith("logo:")
+    no = {
+        "icone": _icone(pedido[5:] if logo else pedido),
+        "rotulo": _texto(x.get("rotulo"), limite),
+        "quando": _quando(x.get("quando"), fala),
+    }
+    if logo:
+        no["mostrar"] = _texto(pedido, 60)
+    return no
+
+
 def icones_usados(cenas: list[dict[str, Any]]) -> set[str]:
     nomes: set[str] = set()
     for c in cenas:
@@ -477,9 +541,12 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
         raise RoteiroErro(f"Uma fala ficou longa demais (até {FALA_PALAVRAS} palavras).")
     camera = str(bruta.get("camera", ""))
     transicao = str(bruta.get("transicao", ""))
+    if fala[-1] not in ".!?…":
+        fala += "."  # gravada sozinha, a frase fecha (sem o ponto, a voz fica no ar)
     comum = {
         "tipo": tipo,
         "fala": fala,
+        "pausa": "longa" if bruta.get("pausa") == "longa" else "",
         "camera": camera if camera in CAMERAS else "empurra",
         "transicao": transicao if transicao in TRANSICOES else "zoom",
         "fundo": str(bruta.get("fundo")) if bruta.get("fundo") in FUNDOS else "escuro",
@@ -537,15 +604,9 @@ def _cena(bruta: Any, extras: dict[str, str]) -> dict[str, Any]:
     if "nos" in regra:
         minimo, maximo, limite = regra["nos"]
         campo = regra.get("campo_nos", "nos")
-        nos = [
-            {
-                "icone": _icone(x.get("icone")),
-                "rotulo": _texto(x.get("rotulo"), limite),
-                "quando": _quando(x.get("quando"), fala),
-            }
-            for x in (bruta.get(campo) or [])
-            if isinstance(x, dict)
-        ][:maximo]
+        nos = [_no(x, limite, fala) for x in (bruta.get(campo) or []) if isinstance(x, dict)][
+            :maximo
+        ]
         if len(nos) < minimo:
             raise RoteiroErro(f"A cena {tipo} precisa de pelo menos {minimo} nós.")
         cena[campo] = nos
@@ -595,7 +656,7 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     brutas = dados.get("cenas") if isinstance(dados, dict) else None
     if not isinstance(brutas, list) or not minimo <= len(brutas) <= maximo:
         raise RoteiroErro(f"O roteiro precisa de {minimo} a {maximo} cenas.")
-    cenas = [_cena(c, estilo.cenas_extras) for c in brutas]
+    cenas = [_cena(_sem_icone(c, i == 0), estilo.cenas_extras) for i, c in enumerate(brutas)]
 
     # a paleta estável: a tela inteira na cor da marca no máximo uma vez fora do fecho
     # (a frase "cheia" é a tela na cor; a foto "cheia" é a foto, não conta)
@@ -616,6 +677,11 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
     if cenas[0]["tipo"] not in ABERTURAS or cenas[-1]["tipo"] != "fecho":
         raise RoteiroErro(
             f"O roteiro precisa abrir com {', '.join(ABERTURAS)} e terminar com um fecho."
+        )
+    if dados.get("formato") == "caso" and not any(c["tipo"] in FLUXOS for c in cenas):
+        raise RoteiroErro(
+            'No formato "caso", a solução é um fluxo animado: use uma cena "conexao" ou "hub", '
+            "com os logos das ferramentas."
         )
     enumeradas = sum(c["tipo"] in ENUMERADOS for c in cenas)
     if enumeradas > MAXIMO_ENUMERADOS:
@@ -653,6 +719,8 @@ def interpretar(resposta: str, estilo: Estilo, duracao: int = DURACAO_PADRAO) ->
         _texto(capa.get("destaque"), 30),
         _texto(capa.get("icone"), 40),
         _texto(capa.get("foto"), 80),
+        processo if (processo := str(dados.get("processo", ""))) in formatos.PROCESSOS else "",
+        _texto(dados.get("assunto"), 80),
     )
 
 

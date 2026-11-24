@@ -201,6 +201,9 @@ class Fotos:
                 alvos.append((b, str(b.get("mostrar", "")), c))
             if c.get("tipo") == "item" and c.get("mostrar"):
                 alvos.append((c, str(c["mostrar"]), c))
+            for n in [*(c.get("nos") or []), *(c.get("ao_redor") or [])]:
+                if n.get("mostrar"):  # o logo da ferramenta no nó do fluxo
+                    alvos.append((n, str(n["mostrar"]), c))
         pedidos = list(dict.fromkeys(_chave(p) for _, p, _ in alvos if p.strip()))
         livres = [p for p in pedidos if p.lower().startswith(BUSCA)][:POR_VIDEO]
         sites = [p for p in pedidos if p.lower().startswith(SITE)][:SITES_POR_VIDEO]
@@ -217,9 +220,9 @@ class Fotos:
         for onde, pedido, cena in alvos:
             achado = achados.get(_chave(pedido))
             if achado is None:
-                log.info("sem imagem para '%s': fica um ícone", pedido)
+                log.info("sem imagem para '%s'", pedido)
                 if onde is cena and cena.get("tipo") == "foto":
-                    self._virar_icone(cena, pedido)
+                    _virar_frase(cena)
                 elif not (onde is cena and cena.get("tipo") == "gancho"):  # o gancho fica só texto
                     onde["icone"] = self._icone_de(onde, pedido)
                 continue
@@ -231,6 +234,11 @@ class Fotos:
                 onde["site"] = endereco_do_site(pedido.strip()[len(SITE) :]).removeprefix(
                     "https://"
                 )
+        for c in cenas:  # a cena visual sem nenhuma imagem também vira a frase (sem ícone gigante)
+            if c.get("tipo") == "visual" and not any(
+                b.get("imagem") for b in c.get("batidas") or []
+            ):
+                _virar_frase(c)
 
     def _site(self, texto: str, pasta: Path) -> Path | None:
         url = endereco_do_site(texto)
@@ -323,11 +331,13 @@ class Fotos:
                 return achado
         return biblioteca.achar(" ".join(palavras)) if palavras else biblioteca.RESERVA
 
-    def _virar_icone(self, cena: dict[str, Any], pedido: str) -> None:
-        objeto = self._objeto(pedido)
-        icone = cena.get("icone") if cena.get("icone") not in (None, "", "sparkles") else None
-        cena.update(tipo="icone", composicao="heroi", icone=icone or self._icone_do_objeto(objeto))
-        cena.pop("foto", None)
+
+def _virar_frase(cena: dict[str, Any]) -> None:
+    """A cena de foto sem foto que sirva vira a fala na tela, em tipografia (ADR 0125): nunca o
+    ícone gigante sozinho."""
+    for k in ("foto", "batidas", "icone", "rotulo", "quando", "tempo"):
+        cena.pop(k, None)
+    cena.update(tipo="frase", composicao="centro")
 
 
 PADRAO = Fotos()
