@@ -72,7 +72,7 @@ def _comentarios(
         perguntar=perguntar
         or (lambda pedido, sistema: "Oi! Que bom que comentou. Qual é o seu negócio?"),
         marca=lambda: ("Gestor Descomplica", "automação com IA"),
-        avisar=avisos.append,
+        avisar=lambda texto, urgente: avisos.append(texto),
         agora=lambda: relogio["t"],
         sortear=lambda opcoes: opcoes[0],
     )

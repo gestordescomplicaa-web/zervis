@@ -4,6 +4,8 @@
 - Status: **Em validação** (testes com falsos; falta a primeira busca com a chave da Apify e o
   primeiro envio de verdade).
 - Etapa 1 de 2. A 2, a conversa que leva a quem respondeu até a reunião, vem num ADR próprio.
+- Ajustado pelos ADR [0129](0129-mensagem-da-prospeccao.md) (a mensagem) e
+  [0130](0130-quem-atende-e-os-avisos.md) (quem atende o número, a resposta automática).
 
 ## Contexto
 

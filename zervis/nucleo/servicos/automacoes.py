@@ -58,6 +58,7 @@ class ContextoAutomacoes(Protocol):
     caixa: Any
 
     def _na_linha(self, tipo: str, texto: str) -> None: ...
+    def notificar(self, texto: str, urgente: bool = False, origem: str = "") -> None: ...
     def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str: ...
     def iniciar_whatsapp(self, telefone: str, nome: str, texto: str) -> str: ...
     async def _rodar_pergunta(self, x: Execucao) -> None: ...
@@ -117,8 +118,10 @@ class ServicoAutomacoes:
         from zervis.redes import instagram_webhook as iw
 
         c, d, w = ic.PADRAO, instagram_direct.PADRAO, iw.PADRAO
-        if c.avisar is None:
-            c.avisar = d.avisar = lambda texto: self.n._na_linha("aviso", texto)
+        if c.avisar is None:  # pela central de avisos (ADR 0130), com a prioridade
+            c.avisar = d.avisar = lambda texto, urgente: self.n.notificar(
+                texto, urgente, "instagram"
+            )
 
         def ciclo() -> None:
             c.ciclo()  # os comentários novos (etapa 1)
@@ -146,7 +149,7 @@ class ServicoAutomacoes:
         if f.enviar is None:
             caixa = getattr(self.n, "caixa", None)
             f.enviar = self.n.iniciar_whatsapp  # registra na Atividade e espera a resposta
-            f.avisar = lambda texto: self.n._na_linha("aviso", texto)
+            f.avisar = lambda texto, urgente: self.n.notificar(texto, urgente, "prospeccao")
             f.buscar_web = lambda consulta: self.n.buscador.buscar(consulta, 8)
             if caixa is not None:  # quem já conversa com quem usa (cliente, amigo) fica de fora
                 f.conhecido = lambda telefone: bool(caixa.candidatos(telefone[-8:]))

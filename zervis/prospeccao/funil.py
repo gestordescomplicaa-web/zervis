@@ -46,6 +46,7 @@ PESOS = {"dor": 25, "encaixe": 25, "momento": 20, "alcance": 15, "prova": 15}
 MINIMO = 50  # abaixo disto, a empresa não tem sinal que justifique a mensagem
 POR_DIA, POR_DIA_MAXIMO = 2, 5  # o número é o de quem usa: nada de volume
 INICIO, FIM = 9, 17  # o horário de envio, em dias úteis, no fuso de quem usa
+HORARIO = f"Dias úteis, das {INICIO}h às {FIM}h"
 ESPACO_S = 2 * 3600  # entre uma mensagem e outra, no mínimo
 VARIACAO_S = 90 * 60  # somada ao espaço, sorteada a cada envio: sem ritmo de robô
 COMECO_S = 2 * 3600  # o primeiro envio do dia sai num minuto sorteado entre 9h e 11h
@@ -183,7 +184,7 @@ class Funil:
         # Ligados pelo núcleo (as automações): sem eles, o funil não busca na web nem envia.
         self.buscar_web: Callable[[str], Iterable[Any]] | None = None
         self.enviar: Callable[[str, str, str], str] | None = None  # telefone, nome, texto
-        self.avisar: Callable[[str], None] | None = None
+        self.avisar: Callable[[str, bool], None] | None = None
         self.conhecido: Callable[[str], bool] = lambda _telefone: False
         self._trava = threading.Lock()
         self.em = 0.0  # o último ciclo
@@ -240,9 +241,10 @@ class Funil:
         with self._meta.transacao():
             self._meta.gravar([{**self._meta_ler(), **campos}])
 
-    def _avisar(self, texto: str) -> None:
+    def _avisar(self, texto: str, urgente: bool = False) -> None:
+        """Na tela e pela central de avisos (ADR 0130); urgente: precisa de quem usa."""
         if self.avisar is not None:
-            self.avisar(texto)
+            self.avisar(texto, urgente)
 
     def ocupado(self) -> bool:
         return self._trava.locked()
@@ -348,7 +350,9 @@ class Funil:
             "porte": cad.get("porte", ""),
             "atividade_na_receita": cad.get("atividade", ""),
             "quem_decide": f"{p['dono']} ({p['cargo']})" if p.get("dono") else "desconhecido",
-            "tem_celular": any(dono.celular(t["numero"]) for t in p.get("telefones", [])),
+            "celular_da_receita": any(
+                mensagem.para_quem(t) == "dono" for t in p.get("telefones", [])
+            ),
         }
         texto = json.dumps(
             {k: v for k, v in dados.items() if v not in ("", None, [])}, ensure_ascii=False
@@ -379,12 +383,12 @@ class Funil:
             self._empresas.gravar(itens)
         return n
 
-    def _avaliar(self, p: dict[str, Any], cfg: Config) -> dict[str, Any]:
+    def _avaliar(self, p: dict[str, Any], cfg: Config, primeiro: dict[str, str]) -> dict[str, Any]:
         remetente, marca, sobre = self.identidade()
         link = self.link(cfg) if cfg.link_na_mensagem else ""
         pedido = mensagem.pedido(
-            self._dados_ao_modelo(p), dono.primeiro_nome(p.get("dono", "")), remetente, marca,
-            cfg.oferta or sobre, cfg.cidade, cfg.convite, cfg.vagas, link,
+            self._dados_ao_modelo(p), remetente, marca, cfg.oferta or sobre, cfg.cidade,
+            cfg.convite, cfg.vagas, link,
         )  # fmt: skip
         resposta = mensagem.json_do_modelo(self.perguntar(pedido, mensagem.SISTEMA))
         notas = {}
@@ -395,11 +399,13 @@ class Funil:
                 notas[k] = 0
         if not p.get("dono"):
             notas["alcance"] = min(notas["alcance"], 2)  # sem o dono, a mensagem cai na recepção
+        escrita = {"corpo": mensagem.corpo(str(resposta.get("mensagem", ""))), "agenda": link}
         return {
             "notas": notas,
             "nota": nota(notas),
             "sinal": _limpo(resposta.get("sinal"), 240),
-            "mensagem": mensagem.final(str(resposta.get("mensagem", "")), link),
+            **escrita,
+            "mensagem": mensagem.texto_para({**p, **escrita}, primeiro),  # o que vai aparecer
         }
 
     def _qualificar(self, p: dict[str, Any], cfg: Config) -> str:
@@ -415,7 +421,7 @@ class Funil:
         if situacao and situacao != "ativa":
             return self._descartar(p["id"], "CNPJ não está ativo.", campos)
         try:
-            avaliacao = self._avaliar(p, cfg)
+            avaliacao = self._avaliar(p, cfg, telefones[0])
         except Exception:
             log.warning("prospecção: qualificação falhou", exc_info=True)
             tentativas = int(p.get("tentativas", 0)) + 1
@@ -440,7 +446,7 @@ class Funil:
         resultados = [self._qualificar(p, cfg) for p in novas]
         if (n := resultados.count("aprovar")) and not cfg.sozinho:
             plural = "empresa aguardando" if n == 1 else "empresas aguardando"
-            self._avisar(f"Prospecção: {n} {plural} aprovação.")
+            self._avisar(f"Prospecção: {n} {plural} aprovação.", urgente=True)
 
     # --- buscar mais ----------------------------------------------------------------------------
 
@@ -463,7 +469,7 @@ class Funil:
             achados = self.buscar_lugares(ramo, cfg.cidade, POR_BUSCA, chave)
         except apify.ApifyErro as erro:
             self._meta_gravar(erro=str(erro))
-            self._avisar(f"Prospecção: {erro}")
+            self._avisar(f"Prospecção: {erro}", urgente=True)
             return 0
         novas = self.adicionar_lugares(achados)
         self._meta_gravar(erro="")
@@ -558,18 +564,24 @@ class Funil:
         motivo = f"Pausada: {recusas} pessoas pediram para não receber mensagens nesta semana."
         self._meta_gravar(erro=motivo, freio_em=self.agora())
         atividade.PADRAO.registrar("execucao", f"Prospecção {motivo.lower()}")
-        self._avisar(f"Prospecção {motivo.lower()} Revise a mensagem e os ramos antes de ligar.")
+        aviso = f"Prospecção {motivo.lower()} Revise a mensagem e os ramos antes de ligar."
+        self._avisar(aviso, urgente=True)
         return True
 
-    def _enviar_da_fila(self, cfg: Config) -> None:
-        if self.enviar is None or not self.na_janela(self.agora()) or self.proximo_envio(cfg) != 0:
-            return
+    def _enviar_da_fila(self, cfg: Config, adiantar: bool = False) -> dict[str, Any] | None:
+        """Envia a primeira da fila, se for a hora. `adiantar`: sem esperar o horário sorteado
+        (o pedido de quem usa); o limite do dia e o horário de envio continuam valendo."""
+        if self.enviar is None or not self.na_janela(self.agora()):
+            return None
+        falta = self.proximo_envio(cfg)  # -1: o limite de hoje chegou
+        if falta < 0 or (falta > 0 and not adiantar):
+            return None
         fila = sorted(
             (p for p in self.todas() if p.get("status") == "fila"),
             key=lambda p: (-int(p.get("nota", 0)), float(p.get("criado", 0))),
         )
         if not fila:
-            return
+            return None
         p = fila[0]
         nome = f"{p['dono']} ({p['nome']})" if p.get("dono") else p["nome"]
         for t in p.get("telefones", []):
@@ -583,9 +595,10 @@ class Funil:
                 so_se=("fila",),
             )  # fmt: skip
             if marcada is None:
-                return  # descartada na página no meio
+                return None  # descartada na página no meio
+            texto = mensagem.texto_para(p, t)  # a saudação de quem atende este número
             try:
-                self.enviar(t["numero"], nome, p["mensagem"])
+                self.enviar(t["numero"], nome, texto)
             except RuntimeError as erro:
                 volta = {"status": "fila", "enviado": 0.0, "telefone_enviado": "", "espera": 0}
                 if "não está no WhatsApp" in str(erro):
@@ -594,11 +607,38 @@ class Funil:
                 # Desconectado: tenta no próximo ciclo.
                 self._mudar(p["id"], {**volta, "erro": str(erro)}, so_se=("enviando",))
                 log.warning("prospecção: envio adiado: %s", erro)
-                return
-            self._mudar(p["id"], {"status": "enviada", "erro": ""}, so_se=("enviando",))
+                if adiantar:
+                    raise ProspeccaoErro(str(erro)) from None
+                return None
+            feito = {"status": "enviada", "erro": "", "mensagem": texto}
+            self._mudar(p["id"], feito, so_se=("enviando",))
             self._avisar(f"Prospecção: mensagem enviada para {nome}.")
-            return
+            return {**p, **feito}
         self._mudar(p["id"], {"status": "descartada", "motivo": "Sem WhatsApp."}, so_se=("fila",))
+        return None
+
+    def enviar_agora(self) -> str:
+        """O "adianta uma" de quem usa: a próxima da fila sai já, pelo mesmo caminho (conta no
+        limite do dia, fica marcada e ninguém recebe duas vezes). Nunca um envio por fora."""
+        cfg = self.config()
+        if not cfg.ligada or self.enviar is None:
+            raise ProspeccaoErro("Prospecção desligada.")
+        if not self.na_janela(self.agora()):
+            raise ProspeccaoErro(f"Fora do horário de envio ({HORARIO}).")
+        if self.proximo_envio(cfg) < 0:
+            raise ProspeccaoErro(f"O limite de hoje ({cfg.por_dia}) já foi enviado.")
+        if not any(p.get("status") == "fila" for p in self.todas()):
+            raise ProspeccaoErro("Nenhuma mensagem na fila de envio.")
+        if not self._trava.acquire(timeout=30):
+            raise ProspeccaoErro("Buscando empresas agora; tente em alguns minutos.")
+        try:
+            p = self._enviar_da_fila(cfg, adiantar=True)
+        finally:
+            self._trava.release()
+        if p is None:
+            raise ProspeccaoErro("Nenhum número da empresa está no WhatsApp; ela foi descartada.")
+        quem = f"{p['dono']} ({p['nome']})" if p.get("dono") else p["nome"]
+        return f"Mensagem enviada para {quem}."
 
     # --- o ciclo --------------------------------------------------------------------------------
 
@@ -681,6 +721,13 @@ class Funil:
         )  # fmt: skip
         if alvo is None:
             return None
+        depois = self.agora() - float(alvo.get("enviado") or 0)
+        emenda = self.agora() - float(alvo.get("automatica_em") or 0) < mensagem.EMENDA_S
+        if emenda or mensagem.automatica(texto, depois):
+            # O WhatsApp Business da loja respondeu sozinho: nem "Respondeu" nem aviso de lead.
+            antes = str(alvo.get("automatica", "")) if emenda else ""
+            auto = {"automatica": _limpo(f"{antes} {texto}", 300), "automatica_em": self.agora()}
+            return {**(self._mudar(alvo["id"], auto) or alvo), "so_automatica": True}
         campos: dict[str, Any] = {"resposta": _limpo(texto, 300)}
         if alvo["status"] in ("enviando", "enviada"):
             campos["status"] = "respondeu"
@@ -723,7 +770,7 @@ class Funil:
             "obter_chave": apify.CONSOLE,
             "hoje": {"enviadas": len(self.enviadas_hoje()), "limite": cfg.por_dia},
             "proximo": proximo,
-            "horario": f"Dias úteis, das {INICIO}h às {FIM}h",
+            "horario": HORARIO,
             "contagem": contagem,
             "aguardando": [resumo(p) for p in todas if p["status"] == "aprovar"],
             "empresas": [resumo(p) for p in todas if p["status"] != "aprovar"][:NA_TELA],

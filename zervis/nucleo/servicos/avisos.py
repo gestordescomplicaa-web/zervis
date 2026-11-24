@@ -2,13 +2,16 @@
 
 import asyncio
 import contextlib
+import hashlib
 import logging
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
 from zervis import usuario
+from zervis.atendimento import whatsapp
 from zervis.automacoes.agenda import FUSO
 from zervis.avisos import central
 from zervis.avisos import modo as modo_fala
@@ -174,6 +177,34 @@ class ServicoAvisos:
         if modo_fala.falar(modo_fala.efetivo(self.n), tipo):
             escutar = self.n.modo_fala == "live" and self.n.chamado == "voz"
             self.n.eventos.put(e.Aviso(texto, escutar=escutar, sequencial=bool(id_)))
+
+    def notificar(self, texto: str, urgente: bool = False, origem: str = "") -> None:
+        """O aviso do que trabalha sozinho (Prospecção, Instagram; ADR 0130), pela mesma central
+        das sessões: na tela sempre; falado pelo modo de fala, com prioridade, esperando na fila
+        durável se o Zé estiver ocupado. O urgente (alguém espera você) vai também ao seu
+        WhatsApp, o número autorizado a falar com o Zé (ADR 0102)."""
+        tipo: modo_fala.Tipo = "urgente" if urgente else "notificacao"
+        self.n._meta[texto] = {"prioridade": PRIORIDADES[tipo], "origem": origem or "jarvis"}
+        self.n._na_linha("aviso", texto)
+        if modo_fala.falar(modo_fala.efetivo(self.n), tipo):
+            self.n.eventos.put(e.Aviso(texto))
+        if urgente:
+            threading.Thread(
+                target=self._ao_seu_whatsapp, args=(texto,), name="aviso-whatsapp", daemon=True
+            ).start()
+
+    def _ao_seu_whatsapp(self, texto: str) -> None:
+        ligada, numeros = whatsapp.conversa()
+        central_ = getattr(self.n, "central", None)
+        if not (ligada and numeros and central_ is not None and central_.whatsapp_ativo):
+            return
+        # O mesmo aviso na mesma hora vai uma vez só (a chave de idempotência do WaCalls).
+        hora = int(time.time() // 3600)
+        chave = hashlib.sha256(f"aviso:{texto}:{hora}".encode()).hexdigest()[:24]
+        try:
+            central_.enviar(texto, chave, telefone=numeros[0])
+        except Exception:  # o aviso já está na tela e na fila: o WhatsApp é a mais
+            log.warning("aviso: não foi ao WhatsApp", exc_info=True)
 
     def _guardar(self, texto: str) -> None:
         """O aviso espera na fila com o que se sabe dele (prioridade, sessão, manchete)."""

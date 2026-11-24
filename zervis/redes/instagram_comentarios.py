@@ -131,7 +131,7 @@ class Comentarios:
         arquivo: Path = ARQUIVO,
         perguntar: Callable[[str, str], str] = _perguntar_ao_modelo,
         marca: Callable[[], tuple[str, str]] | None = None,
-        avisar: Callable[[str], None] | None = None,
+        avisar: Callable[[str, bool], None] | None = None,
         agora: Callable[[], float] = time.time,
         sortear: Callable[[tuple[str, ...]], str] = random.choice,
     ) -> None:
@@ -335,7 +335,7 @@ class Comentarios:
             if feitos and self.avisar is not None:
                 nomes = ", ".join(f"@{c['from'].get('username')}" for c in novos[:3])
                 mais = f" e mais {feitos - 3}" if feitos > 3 else ""
-                self.avisar(f"Respondi {feitos} comentário(s) no Instagram: {nomes}{mais}.")
+                self.avisar(f"Respondi {feitos} comentário(s) no Instagram: {nomes}{mais}.", False)
             return feitos
 
 

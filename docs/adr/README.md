@@ -133,3 +133,7 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0123](0123-capa-e-ganchos.md) | A capa sobre o tema e o roteiro que resolve | Aceito |
 | [0124](0124-fotos-do-pixabay.md) | As fotos do Pixabay nos vídeos | Aceito |
 | [0125](0125-trava-de-temas.md) | A trava de temas e a fala para o ouvido | Aceito |
+| [0127](0127-prospeccao.md) | Prospecção: o Zé acha a empresa, o dono e escreve a ele | Em validação |
+| [0128](0128-ze-conhece-todas-as-paginas.md) | O Zé conhece todas as suas páginas e os seus eventos | Aceito |
+| [0129](0129-mensagem-da-prospeccao.md) | A mensagem da prospecção: o que faz, por que ela, o convite e o horário | Aceito |
+| [0130](0130-quem-atende-e-os-avisos.md) | Quem atende o número, a resposta automática e os avisos do que trabalha sozinho | Aceito |
