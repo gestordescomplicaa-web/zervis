@@ -11,6 +11,8 @@ O que o Zé é e não deixa de ser: `docs/essencia.md` (nenhuma mudança pode co
 - Licença AGPL-3.0-or-later (ADR 0013): código GPL-3/AGPL-3 (Piper, Barehands) pode ser
   combinado; todo código de terceiros entra com aviso de autoria em `THIRD_PARTY.md`.
 - `make check` passa antes de todo commit.
+- O Zé conhece todas as suas partes (ADR 0128): página nova no painel entra em `zervis/nucleo/mapa.py`
+  com uma ferramenta que o Zé use para ler o estado dela, no mesmo PR. `tests/test_mapa.py` vigia.
 
 ## Maturidade e comunicação clara (regra do projeto)
 

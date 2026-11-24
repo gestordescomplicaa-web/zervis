@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **O Zé conhece todas as suas páginas:** pela voz, ele diz o que está acontecendo na Prospecção
+  (envios, aprovações, respostas) e age nela, lista as Empresas, conta o funil do Instagram e
+  busca qualquer acontecimento na Atividade; página nova sem lugar no mapa não passa (ADR 0128).
+- **Prospecção sem cara de disparo:** horários sorteados, até 5 por dia, nada é reenviado se o Zé
+  cair no meio e duas recusas na semana pausam a prospecção (ADR 0127).
 - **Prospecção:** a página nova acha empresas da cidade no Google Maps (Apify), identifica quem
   decide pelo quadro de sócios da Receita e envia a primeira mensagem ao dono pelo WhatsApp, no
   máximo algumas por dia, em dias úteis, com aprovação ou sozinho; a resposta vira aviso (ADR 0127).
