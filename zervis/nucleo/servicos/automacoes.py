@@ -54,8 +54,12 @@ class ContextoAutomacoes(Protocol):
     _versoes_em: Any
     _versoes_procurando: threading.Event
 
+    buscador: Any
+    caixa: Any
+
     def _na_linha(self, tipo: str, texto: str) -> None: ...
     def fazer_ligacao(self, telefone: str, nome: str, recado: str) -> str: ...
+    def iniciar_whatsapp(self, telefone: str, nome: str, texto: str) -> str: ...
     async def _rodar_pergunta(self, x: Execucao) -> None: ...
 
 
@@ -88,6 +92,7 @@ class ServicoAutomacoes:
             self.n._versoes_procurando.set()
             threading.Thread(target=self._procurar_versao, name="versoes", daemon=True).start()
         self._comentarios_do_instagram(agora)
+        self._prospeccao(agora)
         if agora - self.n._agenda_em >= 30:
             self.n._agenda_em = agora
             # A atualização pelo painel termina depois que este processo (o novo) subiu.
@@ -126,6 +131,26 @@ class ServicoAutomacoes:
             return
         c.em = agora
         threading.Thread(target=ciclo, name="instagram-comentarios", daemon=True).start()
+
+    def _prospeccao(self, agora: float) -> None:
+        """O funil da prospecção (ADR 0127), numa thread: busca, qualifica e envia (no limite
+        do dia). Desligado na página, nada roda."""
+        from zervis.prospeccao import funil
+
+        f = funil.padrao()
+        if agora - f.em < funil.INTERVALO_S or f.ocupado():
+            return
+        f.em = agora
+        if not funil.ler_config().ligada:
+            return
+        if f.enviar is None:
+            caixa = getattr(self.n, "caixa", None)
+            f.enviar = self.n.iniciar_whatsapp  # registra na Atividade e espera a resposta
+            f.avisar = lambda texto: self.n._na_linha("aviso", texto)
+            f.buscar_web = lambda consulta: self.n.buscador.buscar(consulta, 8)
+            if caixa is not None:  # quem já conversa com quem usa (cliente, amigo) fica de fora
+                f.conhecido = lambda telefone: bool(caixa.candidatos(telefone[-8:]))
+        threading.Thread(target=f.ciclo, name="prospeccao", daemon=True).start()
 
     def _executar(self, x: Execucao, momento: datetime) -> None:
         """Marca a tentativa antes do efeito: se o Zé cair no meio, quem sobe sabe."""

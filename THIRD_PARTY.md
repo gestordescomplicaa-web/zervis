@@ -41,6 +41,7 @@ arquivo copiado leva um cabeçalho citando a origem.
 | `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp` (ícone do app de voz), cópia de `zervis/portal/web/icones/ze-192.webp` | Criado no Blender para o Zé | AGPL-3.0-or-later, como o Zé | gdautomacao.ia |
 | `zervis/marca_icones.json` (63 ícones dos posts do Instagram, só o desenho de cada um; licença em `zervis/marca_icones.LICENSE`) | Lucide, `lucide-static` 0.460.0 (lucide.dev) | ISC | Lucide Contributors (partes de Feather, MIT, Cole Bemis) |
 | `zervis/video/icones/lucide.json` (os 1.539 ícones e as etiquetas da Lucide, só o desenho de traço; licença em `zervis/video/icones/LICENSE`) | Lucide, `lucide-static` 0.460.0 (lucide.dev) | ISC | Lucide Contributors (partes de Feather, MIT, Cole Bemis) |
+| `zervis/prospeccao/funil.py` (o método da nota: dor, encaixe, momento, alcance e prova, com os pesos e as travas; reescrito, nenhum código copiado) | first-customer-finder (github.com/Kappaemme-git/codex-first-customer-finder-skill), `references/research-framework.md` | MIT | Francesco Mistero |
 
 Os modelos de som acima (Silero, openWakeWord, Smart Turn e a voz Cadu) também ficam, idênticos e
 conferidos pelo SHA-256, na release `modelos-1` de `gestordescomplicaa-web/zervis-modelos`, com os

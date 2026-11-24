@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Prospecção:** a página nova acha empresas da cidade no Google Maps (Apify), identifica quem
+  decide pelo quadro de sócios da Receita e envia a primeira mensagem ao dono pelo WhatsApp, no
+  máximo algumas por dia, em dias úteis, com aprovação ou sozinho; a resposta vira aviso (ADR 0127).
+- **WhatsApp sem recusa por tamanho:** mensagens com mais de 1.200 caracteres vão em partes, em vez
+  de serem recusadas inteiras (ADR 0127).
 - **Vídeos sem tema repetido:** cada vídeo guarda o processo e o assunto; nos vídeos em que o Zé
   escolhe o tema, ele não repete o processo dos dois últimos nem um assunto já feito (ADR 0125).
 - **Fala que se entende ouvindo:** frases completas, conectivos entre as partes, pausas longas no

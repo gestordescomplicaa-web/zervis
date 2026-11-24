@@ -472,6 +472,32 @@ def test_envio_a_numero_tenta_com_e_sem_o_nono_digito(
     assert pedidos[0]["phones"] == ["5511987654321", "551187654321"]
 
 
+def test_texto_longo_vai_em_partes_que_o_wacalls_aceita(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Caso de 18/11/2026: uma apresentação de 1.500 caracteres foi recusada inteira ("text must
+    contain 1 to 1200 characters"), e o Zé dizia só "O WhatsApp recusou o pedido"."""
+    wa, _ = _pronto(tmp_path, monkeypatch)
+    pedidos: list[Any] = []
+    monkeypatch.setattr(wa, "sessoes", lambda: [{"id": "s1", "paired": True, "state": "open"}])
+
+    def api(metodo: str, caminho: str, corpo: Any = None, espera: float = 5.0) -> Any:
+        pedidos.append(corpo)
+        return {"acknowledged": True, "message_id": f"m{len(pedidos)}"}
+
+    monkeypatch.setattr(wa, "_api", api)
+    texto = ("Conheça o Zé. " * 60).strip() + "\n\n" + ("O que ele faz. " * 40).strip()
+    assert len(texto) > w.TEXTO_MAXIMO
+    assert wa.enviar("5511987654321", texto, "chave123") == "s1:m2"
+    assert all(len(p["text"]) <= w.TEXTO_MAXIMO for p in pedidos) and len(pedidos) == 2
+    assert [p["idempotency_key"] for p in pedidos] == ["chave123-1", "chave123-2"]
+    assert " ".join(p["text"] for p in pedidos).split() == texto.split()  # nada se perde
+    pedidos.clear()
+    wa.enviar("5511987654321", "oi", "chave123")
+    assert [p["idempotency_key"] for p in pedidos] == ["chave123"]  # curto: a chave de sempre
+    assert w.RECUSAS["text must contain 1 to 1200 characters"] == "Mensagem vazia ou longa demais."
+
+
 def test_o_nome_salvo_na_agenda_vem_antes_do_push_name() -> None:
     """Caso de 05/11/2026: o Zé mostrava só o número de quem está salvo na agenda do celular."""
     lote = _lote(

@@ -34,6 +34,7 @@
     "marketing/prs",
     "impressora",
     "empresas",
+    "prospeccao",
     "marketing/videos"
   ],
   "escritas": [
@@ -212,6 +213,13 @@
     "empresas/grupos",
     "empresas/salvar",
     "empresas/remover",
+    "prospeccao/salvar",
+    "prospeccao/apify",
+    "prospeccao/buscar",
+    "prospeccao/adicionar",
+    "prospeccao/aprovar",
+    "prospeccao/descartar",
+    "prospeccao/marcar",
     "marketing/video/criar",
     "marketing/video/agendar",
     "marketing/video/paleta",

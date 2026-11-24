@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 # painel.
 PEDIDO_VALIDO_S = 600.0  # um pedido mais velho que isto (o WhatsApp entregou atrasado) não roda
 PEDIDO_MAXIMO = 4000
-PARTE_MAXIMA = 1900  # a Central aceita até 2000 caracteres por mensagem
+PARTE_MAXIMA = whatsapp.TEXTO_MAXIMO  # o que o WaCalls aceita por mensagem
 SO_TEXTO = "Por enquanto, só mensagens de texto e áudio."
 AUDIO_SEM_CHAVE = "Reconhecimento de fala não configurado. Envie em texto."
 AUDIO_FALHOU = "Áudio não reconhecido. Envie de novo ou em texto."
@@ -215,6 +215,21 @@ class ServicoAtendimento:
             self._lead_qualificado(nome or v.nome, lido, telefone, chat, motivo)
         return True
 
+    def _resposta_da_prospeccao(self, telefone: str, texto: str) -> dict[str, Any] | None:
+        """Era uma empresa que a prospecção contatou (ADR 0127)? Marca a resposta na página."""
+        from zervis.prospeccao import funil
+
+        if not telefone:
+            return None
+        try:
+            p = funil.padrao().respondeu(telefone, texto)
+        except Exception:  # a página da prospecção não pode calar o aviso de uma mensagem
+            log.warning("prospecção: resposta não marcada", exc_info=True)
+            return None
+        if p is not None:
+            atividade.PADRAO.registrar("execucao", f"Prospecção: {p['nome']} respondeu")
+        return p
+
     def _continuar_lead(self, chat: str, texto: str) -> bool:
         """O contato já espera resposta: a mensagem nova junta-se à pendência, sem julgar."""
         if self.n.leads.continuar(chat, texto) is None:
@@ -265,7 +280,14 @@ class ServicoAtendimento:
                 )  # fmt: skip
             if evento.get("repassado") or grupo:
                 return  # o antigo e o grupo vão só para o arquivo: nada de aviso
+            prospectada = self._resposta_da_prospeccao(telefone, texto)
             if self._de_quem_vigio(nome, texto, telefone, chat, midia):
+                return
+            if prospectada is not None:  # depois das 24 horas da lista: o aviso vem daqui
+                lido = caixa_mod.descrever({"texto": texto, "midia": midia})
+                self._lead_qualificado(
+                    nome or prospectada["nome"], lido, telefone, chat, "resposta"
+                )
                 return
             leads = getattr(self.n, "leads", None)
             if leads is not None and leads.dispensada_ha_pouco(chat):
@@ -753,16 +775,7 @@ NAO_ATENDEU = {
 
 
 def _partes(texto: str, limite: int = PARTE_MAXIMA) -> list[str]:
-    """O texto em mensagens de até `limite` caracteres, quebrando em parágrafo, linha ou espaço."""
-    texto = texto.strip()
-    partes: list[str] = []
-    while len(texto) > limite:
-        corte = max(texto.rfind(sep, 0, limite) for sep in ("\n\n", "\n", " "))
-        if corte <= 0:
-            corte = limite
-        partes.append(texto[:corte].strip())
-        texto = texto[corte:].strip()
-    return [*partes, texto] if texto else partes
+    return whatsapp.partes(texto, limite)
 
 
 def _numero_dito(telefone: str) -> str:
