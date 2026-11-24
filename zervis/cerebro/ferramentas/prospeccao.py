@@ -170,6 +170,17 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
         )
 
     @tool(
+        "prospeccao_enviar_agora",
+        'Adianta um envio ("manda a próxima agora"): a primeira da fila sai já, sem esperar o '
+        "horário sorteado, dentro do limite do dia e do horário de envio. Para adiantar a "
+        "prospecção use esta, nunca o whatsapp_enviar: por fora, a empresa não fica marcada e "
+        "não conta no limite.",
+        {"type": "object", "properties": {}},
+    )
+    async def prospeccao_enviar_agora(_args: dict[str, Any]) -> dict[str, Any]:
+        return await _fazer(funil.padrao().enviar_agora, "")
+
+    @tool(
         "prospeccao_buscar",
         "Busca empresas novas no Google Maps agora (um ramo da lista, pela Apify, que cobra por "
         "empresa) e já as qualifica. Leva alguns minutos; o resultado aparece na situação.",
@@ -223,6 +234,7 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
         prospeccao_aprovar,
         prospeccao_descartar,
         prospeccao_marcar,
+        prospeccao_enviar_agora,
         prospeccao_buscar,
         prospeccao_ajustar,
     ]

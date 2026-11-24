@@ -97,7 +97,7 @@ class Direct:
         comentarios: ic.Comentarios | None = None,
         arquivo: Path = ARQUIVO,
         perguntar: Callable[[str, str], str] = _perguntar_ao_modelo,
-        avisar: Callable[[str], None] | None = None,
+        avisar: Callable[[str, bool], None] | None = None,
         agora: Callable[[], float] = time.time,
     ) -> None:
         self.comentarios = comentarios or ic.PADRAO
@@ -233,7 +233,9 @@ class Direct:
             c.update(
                 pausado=True, motivo="a conversa passou do limite de respostas", etapa="com você"
             )
-            self._avisar(f"@{usuario} continua conversando no direct; a conversa é sua agora.")
+            self._avisar(
+                f"@{usuario} continua conversando no direct; a conversa é sua agora.", True
+            )
             return False
         historico = "\n".join(
             f"{'Você' if m['from'].get('username') == eu else 'Pessoa'}: "
@@ -259,15 +261,16 @@ class Direct:
             c["resumo"] = resumo
         if passar:
             c.update(pausado=True, motivo=passar, etapa="com você")
-            self._avisar(f"@{usuario} quer falar com você no direct: {passar}.")
+            self._avisar(f"@{usuario} quer falar com você no direct: {passar}.", True)
         elif c["etapa"] == "link enviado" and not c.get("avisado_link"):
             c["avisado_link"] = True
             self._avisar(f"@{usuario} recebeu o link da reunião. {resumo}".strip())
         return True
 
-    def _avisar(self, texto: str) -> None:
+    def _avisar(self, texto: str, urgente: bool = False) -> None:
+        """Pela central de avisos (ADR 0130); urgente: a pessoa espera quem usa."""
         if self.avisar is not None:
-            self.avisar(texto)
+            self.avisar(texto, urgente)
 
 
 PADRAO = Direct()

@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **Prospecção que fala com quem atende:** no número da loja, a mensagem pede para encaminhar ao
+  dono, pelo nome; a saudação automática do WhatsApp Business não conta como resposta nem vira
+  lead; "manda a próxima agora" pela voz sai pela fila, dentro do limite do dia (ADR 0130).
+- **Avisos da Prospecção e do Instagram:** vão à central de avisos, com prioridade; os urgentes
+  (prospecção pausada, Apify sem crédito, alguém querendo falar com você no direct) chegam também
+  ao seu WhatsApp (ADR 0130).
 - **Mensagem da prospecção com convite e agenda:** diz o que você faz, por que a empresa foi
   escolhida e convida para o diagnóstico, com o link de agendamento e as vagas, se houver; mudar a
   estratégia reescreve as mensagens que ainda não saíram (ADR 0129).

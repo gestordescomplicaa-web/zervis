@@ -133,8 +133,15 @@ def primeiro_nome(nome: str) -> str:
 
 def _com_pais(digitos: str) -> str:
     if len(digitos) in (10, 11):
-        return f"55{digitos}"
-    return digitos if digitos.startswith("55") and len(digitos) in (12, 13) else ""
+        numero = f"55{digitos}"
+    elif digitos.startswith("55") and len(digitos) in (12, 13):
+        numero = digitos
+    else:
+        return ""
+    local = numero[4:]
+    # "(81) 0000-0001" no cadastro (visto em 24/11/2026): preenchimento, não telefone. O
+    # número de assinante no Brasil começa de 2 a 9.
+    return "" if local[0] in "01" or len(set(local)) == 1 else numero
 
 
 def celular(telefone: str) -> bool:

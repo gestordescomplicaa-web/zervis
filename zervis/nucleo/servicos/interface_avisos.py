@@ -32,6 +32,9 @@ class InterfaceAvisos(InterfaceServico):
     ) -> None:
         servico(self, ServicoAvisos)._aviso_da_oficina(texto, tipo, id_, titulo, detalhe)
 
+    def notificar(self, texto: str, urgente: bool = False, origem: str = "") -> None:
+        servico(self, ServicoAvisos).notificar(texto, urgente, origem)
+
     def _guardar(self, texto: str) -> None:
         servico(self, ServicoAvisos)._guardar(texto)
 

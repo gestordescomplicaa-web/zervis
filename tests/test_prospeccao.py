@@ -117,8 +117,11 @@ def test_do_maps_ao_dono_com_a_nota_e_a_mensagem_que_termina_com_a_saida(tmp_pat
     # O celular da Receita (do dono) antes do fixo do Google (a recepção).
     assert [t["numero"] for t in p["telefones"]] == ["558199887766", "558133334444"]
     assert p["nota"] == f.nota({"dor": 4, "encaixe": 5, "momento": 3, "alcance": 4, "prova": 4})
-    assert p["mensagem"].endswith(mensagem.SAIDA) and "Carlos" in p["mensagem"]
-    assert 'comece com "Oi, Carlos, tudo bem?"' in modelo.pedidos[0]
+    assert p["mensagem"].endswith(mensagem.SAIDA)
+    # O celular da Receita é do dono: a saudação (do código) é a ele, e o cumprimento que o
+    # modelo escreveu não se repete.
+    assert p["mensagem"].startswith("Oi, Carlos, tudo bem? Aqui é Gabriel. Vi a Sorrir.")
+    assert "sem cumprimento" in modelo.pedidos[0]
     assert enviados == []
     funil.aprovar(p["id"])
     funil.ciclo()
@@ -395,8 +398,8 @@ def test_queda_no_meio_do_envio_nao_manda_de_novo(tmp_path: Path) -> None:
 def test_recusas_demais_pausam_a_prospeccao(tmp_path: Path) -> None:
     relogio = Relogio(QUARTA_10H)
     funil, _ = _funil(tmp_path, relogio, Modelo(), sozinho=True, por_dia=5)
-    avisos: list[str] = []
-    funil.avisar = avisos.append
+    avisos: list[tuple[str, bool]] = []
+    funil.avisar = lambda texto, urgente: avisos.append((texto, urgente))
     funil.sortear = lambda inicio, fim: 0.0
     funil.consultar_cnpj = lambda numero: {}
     funil.buscar_web = None
@@ -412,7 +415,7 @@ def test_recusas_demais_pausam_a_prospeccao(tmp_path: Path) -> None:
     funil.respondeu(numeros[1], "Por favor, não me mande mais mensagens")
     funil.ciclo()
     assert not funil.config().ligada and "Pausada" in funil.para_tela()["erro"]
-    assert avisos and "Revise a mensagem" in avisos[-1]
+    assert avisos and "Revise a mensagem" in avisos[-1][0] and avisos[-1][1]  # urgente
     f.salvar_config(replace(funil.config(), ligada=True), funil.config_arquivo)
     funil.ciclo()
     assert funil.config().ligada  # ligada de novo: as recusas de antes não pausam outra vez
@@ -494,3 +497,103 @@ def test_salvar_na_pagina_reescreve_e_o_link_vem_do_direct_se_vazio(
     assert r["aviso"] == "Salvo. 1 mensagem será reescrita."
     assert funil.todas()[0]["status"] == "nova"
     assert pagina.salvar_prospeccao(dados)["aviso"] == "Salvo."  # nada mudou: nada reescrito
+
+
+# --- ADR 0130: quem atende o número, a resposta automática e o "adianta uma" -------------------
+
+
+def test_no_numero_da_loja_a_mensagem_pede_para_encaminhar_ao_dono(tmp_path: Path) -> None:
+    relogio = Relogio(QUARTA_10H)
+    funil, enviados = _funil(tmp_path, relogio, Modelo(), sozinho=True)
+    funil.adicionar_lugares([_lugar(nome="JM Pneus | Bridgestone | Alinhamento")])
+    funil.consultar_cnpj = lambda numero: {**CADASTRO, "nome_fantasia": "JM PNEUS"}
+    funil.buscar_web = lambda consulta: [
+        SimpleNamespace(titulo="JM PNEUS - CNPJ 11.222.333/0001-81", trecho="Caruaru", url="")
+    ]
+    fora: list[str] = []
+
+    def enviar(telefone: str, nome: str, texto: str) -> str:
+        if telefone == "558199887766":  # o celular da Receita não tem WhatsApp
+            fora.append(texto)
+            raise RuntimeError("Este número não está no WhatsApp.")
+        enviados.append((telefone, nome, texto))
+        return "Enviado."
+
+    funil.enviar = enviar
+    funil._qualificar_novas(funil.config())
+    [p] = funil.todas()
+    assert p["mensagem"].startswith("Oi, Carlos, tudo bem?")  # o primeiro número é o do dono
+    funil._enviar_da_fila(funil.config())
+    assert fora and fora[0].startswith("Oi, Carlos, tudo bem?")
+    [(numero, _, texto)] = enviados
+    assert numero == "558133334444"  # caiu no número do Google: quem lê é a loja
+    assert texto.startswith(
+        "Oi, tudo bem? Esta mensagem é para Carlos Lima, da JM Pneus. Se puder encaminhar, "
+        "agradeço! Aqui é Gabriel."
+    )
+    assert texto.endswith(mensagem.SAIDA) and texto.count("Carlos") == 1
+    assert funil.todas()[0]["mensagem"] == texto  # a página mostra o que saiu
+    assert mensagem.saudacao("loja", "", "Bahia") == (
+        "Oi, tudo bem? Esta mensagem é para quem responde pela Bahia. Se puder encaminhar, "
+        "agradeço!"
+    )
+
+
+def test_a_saudacao_automatica_da_loja_nao_e_resposta(tmp_path: Path) -> None:
+    """Caso de 24/11/2026: a Dau e a Cavalcante "responderam" em um minuto com a saudação do
+    WhatsApp Business; viraram "Respondeu" e aviso de lead."""
+    relogio = Relogio(QUARTA_10H)
+    funil, _ = _funil(tmp_path, relogio, Modelo(), sozinho=True)
+    funil.consultar_cnpj = lambda numero: {}
+    funil.buscar_web = None
+    funil.adicionar_lugares([_lugar(telefone="558198190151")])
+    funil._qualificar_novas(funil.config())
+    funil._enviar_da_fila(funil.config())
+    relogio.t += 20
+    bem_vindo = "*Bem-vindo(a) a DAU AUTOPEÇAS | CARUARU* Como podemos lhe atender? 🚘"
+    auto = funil.respondeu("558198190151", bem_vindo)
+    assert auto is not None and auto["so_automatica"]
+    relogio.t += 5
+    menu = funil.respondeu("558198190151", "Informe o modelo, ano e motor do seu carro.")
+    assert menu is not None and menu["so_automatica"]  # a segunda parte da mesma saudação
+    [p] = funil.todas()
+    assert p["status"] == "enviada" and not p.get("resposta") and "Bem-vindo" in p["automatica"]
+    relogio.t += 3600
+    gente = funil.respondeu("558198190151", "Boa tarde, como posso ajudar?")
+    assert gente is not None and not gente.get("so_automatica")  # uma hora depois: uma pessoa
+    assert funil.todas()[0]["status"] == "respondeu"
+    for texto in (
+        "Olá! Nosso horário de atendimento é das 8h às 18h.",
+        "Obrigado pelo contato! Em breve um atendente vai falar com você.",
+        "Digite 1 para peças, 2 para serviços.",
+    ):
+        assert mensagem.automatica(texto, 3600), texto
+    assert mensagem.automatica("Em que posso ajudar?", 30)
+    assert not mensagem.automatica("Pode falar, sou o Williams. Como funciona?", 30)
+
+
+def test_adianta_uma_pela_voz_conta_no_limite_e_respeita_o_horario(tmp_path: Path) -> None:
+    relogio = Relogio(QUARTA_10H)
+    funil, enviados = _funil(tmp_path, relogio, Modelo(), sozinho=True, por_dia=2)
+    funil.consultar_cnpj = lambda numero: {}
+    funil.buscar_web = None
+    funil.adicionar_lugares(
+        [_lugar(f"p{i}", f"Clínica {i}", f"5581{i}1110000") for i in range(1, 4)]
+    )
+    funil._qualificar_novas(funil.config())
+    funil._enviar_da_fila(funil.config())
+    funil._enviar_da_fila(funil.config())
+    assert len(enviados) == 1 and funil.proximo_envio(funil.config()) > 0  # a próxima espera
+    assert funil.enviar_agora().startswith("Mensagem enviada para Clínica ")
+    assert len(enviados) == 2 and len(funil.enviadas_hoje()) == 2
+    with pytest.raises(f.ProspeccaoErro, match="limite de hoje"):
+        funil.enviar_agora()
+    relogio.t = datetime(2026, 11, 26, 18, 30, tzinfo=RECIFE).timestamp()
+    with pytest.raises(f.ProspeccaoErro, match="Fora do horário"):
+        funil.enviar_agora()
+
+
+def test_telefone_de_preenchimento_da_receita_nao_entra() -> None:
+    assert dono.telefones({"telefone": "8100000001"}, "") == []
+    assert dono.telefones({"telefone": "8199999999"}, "") == []
+    assert [t["numero"] for t in dono.telefones({"telefone": "8137213419"}, "")] == ["558137213419"]

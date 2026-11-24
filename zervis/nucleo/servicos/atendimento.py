@@ -227,7 +227,9 @@ class ServicoAtendimento:
             log.warning("prospecção: resposta não marcada", exc_info=True)
             return None
         if p is not None:
-            atividade.PADRAO.registrar("execucao", f"Prospecção: {p['nome']} respondeu")
+            auto = p.get("so_automatica")
+            titulo = f"resposta automática de {p['nome']}" if auto else f"{p['nome']} respondeu"
+            atividade.PADRAO.registrar("execucao", f"Prospecção: {titulo}")
         return p
 
     def _continuar_lead(self, chat: str, texto: str) -> bool:
@@ -281,6 +283,8 @@ class ServicoAtendimento:
             if evento.get("repassado") or grupo:
                 return  # o antigo e o grupo vão só para o arquivo: nada de aviso
             prospectada = self._resposta_da_prospeccao(telefone, texto)
+            if prospectada is not None and prospectada.get("so_automatica"):
+                return  # a saudação automática do WhatsApp Business da loja (ADR 0130)
             if self._de_quem_vigio(nome, texto, telefone, chat, midia):
                 return
             if prospectada is not None:  # depois das 24 horas da lista: o aviso vem daqui

@@ -95,7 +95,11 @@ def _montar(tmp_path: Path, resposta: str) -> tuple[idr.Direct, MetaFalsa, list[
         return resposta
 
     d = idr.Direct(
-        comentarios, tmp_path / "direct.json", perguntar, avisos.append, lambda: relogio["t"]
+        comentarios,
+        tmp_path / "direct.json",
+        perguntar,
+        lambda texto, urgente: avisos.append(texto),
+        lambda: relogio["t"],
     )
     d.relogio = relogio  # type: ignore[attr-defined]
     return d, meta, pedidos, avisos
