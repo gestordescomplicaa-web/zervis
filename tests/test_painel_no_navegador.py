@@ -1440,7 +1440,8 @@ def test_entrar_com_a_aba_bloqueada_mostra_o_botao_abrir_login(tmp_path: Path) -
     ) as (depuracao, endereco):
         link, texto = asyncio.run(conferir(depuracao, endereco))
     # Com o estilo de botão (cantos arredondados): um link solto teria 0px.
-    assert link == "https://login.exemplo.com/a?s=1|10px"
+    endereco_login, canto = link.split("|")
+    assert endereco_login == "https://login.exemplo.com/a?s=1" and canto != "0px"
     assert "Abrir login" in texto and "bloqueou a nova aba" in texto
 
 

@@ -14,6 +14,22 @@ TIPOS = {
     ".svg": "image/svg+xml",
     ".webp": "image/webp",
     ".webmanifest": "application/manifest+json",
+    ".woff2": "font/woff2",
+}
+
+
+# O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).
+LIVRES = {
+    "/painel.css",
+    "/oauth-retorno.js",
+    "/ze.webp",
+    "/manifest.webmanifest",
+    "/icones/ze-192.webp",
+    "/icones/ze-512.webp",
+    "/icones/ze-mascara-512.webp",
+    "/icones/lucide.svg",
+    "/fontes/geist.woff2",
+    "/fontes/geist-mono.woff2",
 }
 
 

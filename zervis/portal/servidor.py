@@ -60,16 +60,6 @@ MAXIMO_CORPO = 64 * 1024
 ESPERA_SAIDA_S = 10.0
 PAUSA_TROCANDO_S = 0.3
 
-# O que a tela "Entrar" usa, antes de entrar (o manifesto deixa instalar o ícone já ali).
-LIVRES = {
-    "/painel.css",
-    "/oauth-retorno.js",
-    "/ze.webp",
-    "/manifest.webmanifest",
-    "/icones/ze-192.webp",
-    "/icones/ze-512.webp",
-    "/icones/ze-mascara-512.webp",
-}
 COOKIE = "ze_acesso"
 
 Leitura = Callable[[], Any]
@@ -671,7 +661,7 @@ class Portal:
                     else:
                         self._tela_entrar()
                     return
-                if not self._entrou() and caminho not in LIVRES:
+                if not self._entrou() and caminho not in arquivos_web.LIVRES:
                     if caminho.startswith("/api/"):
                         self._json(401, {"erro": "entrar"})
                     else:

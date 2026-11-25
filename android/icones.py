@@ -38,6 +38,55 @@ ICONES_DA_TELA = {
     "compartilhar": "share-2",
     "fechar": "x",
 }
+# Os ícones do painel (zervis/portal/web/icones/lucide.svg): o símbolo de cada um, pelo nome.
+ICONES_DO_PAINEL = [
+    "house",
+    "message-square",
+    "scan-face",
+    "target",
+    "terminal",
+    "repeat",
+    "message-circle",
+    "building-2",
+    "box",
+    "monitor-smartphone",
+    "megaphone",
+    "trending-up",
+    "search",
+    "brain",
+    "puzzle",
+    "plug",
+    "activity",
+    "wrench",
+    "user",
+    "cpu",
+    "audio-lines",
+    "download",
+    "settings",
+    "panel-left-close",
+    "panel-left-open",
+    "bell",
+    "mic",
+    "x",
+    "chevron-right",
+    "check",
+    "plus",
+    "play",
+    "sliders-horizontal",
+    "headphones",
+    "file-text",
+    "video",
+    "send",
+    "clock",
+    "circle-check",
+    "globe",
+    "image",
+    "palette",
+    "key-round",
+    "smartphone",
+    "shield",
+    "rocket",
+]
 
 # O macaco no logo (960 x 960): a caixa da tinta, sem o brilho, medida no próprio desenho.
 CENTRO = (480.0, 476.0)
@@ -197,6 +246,14 @@ def _telas(svg: str, defs: str, brilho: str) -> None:
     _render(_svg(960, _no_meio(960, 800, brilho), defs), 480, sem_densidade / "ze_macaco.webp")
     _render(svg, 288, sem_densidade / "ze_logo.webp")
     lucide = json.loads(LUCIDE.read_text())["icones"]
+    simbolos = "".join(
+        f'<symbol id="{nome}" viewBox="0 0 24 24">{lucide[nome]}</symbol>'
+        for nome in ICONES_DO_PAINEL
+    )
+    (ICONES_PAINEL / "lucide.svg").write_text(
+        "<!-- Lucide (ISC, THIRD_PARTY.md): ícones do painel; gerado por android/icones.py -->\n"
+        f'<svg xmlns="http://www.w3.org/2000/svg">{simbolos}</svg>\n'
+    )
     for nome, original in ICONES_DA_TELA.items():
         destino = RES / "drawable" / f"ic_{nome}.xml"
         destino.write_text(_vetor_de_traco(original, lucide[original]))

@@ -6,69 +6,72 @@
 <meta name="ze-token" content="__TOKEN__">
 <meta name="ze-ajustes" content="__AJUSTES__">
 <title>Zé</title>
+<link rel="preload" href="/fontes/geist.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/painel.css">
 <link rel="icon" type="image/webp" href="/ze.webp">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#070c11">
+<meta name="theme-color" content="#070b0f">
 <script type="module" src="/modulos/principal.js"></script>
 </head>
 <body>
 <div class="app">
-  <aside class="lateral">
+  <aside class="lateral" aria-label="Menu">
     <header class="marca">
-      <button type="button" class="botao-menu" data-acao="menu" aria-label="Menu" aria-expanded="false"><i></i></button>
-      <span class="icone-ze" data-estado="inativo"><img class="anel" src="/ze.webp" alt="" width="40" height="40"></span>
+      <img class="logo" src="/ze.webp" alt="" width="34" height="34">
       <strong>Zérvis</strong>
     </header>
     <nav aria-label="Seções">
       <a href="#inicio" data-secao="inicio"><i>◉</i>Início</a>
       <a href="#conversa" data-secao="conversa"><i>❝</i>Conversa</a>
       <a href="#imersao" data-secao="imersao"><i>◐</i>Imersão <span class="ponto" id="ponto-imersao" hidden></span></a>
-      <div class="grupo" data-grupo="trabalho">
-        <button type="button" class="grupo-titulo" data-acao="grupo" aria-expanded="true">Trabalho<i class="seta" aria-hidden="true">▾</i></button>
-        <div class="grupo-itens">
-          <a href="#foco" data-secao="foco"><i>◇</i>Foco</a>
-          <a href="#sessoes" data-secao="sessoes"><i>▤</i>Sessões <span class="ponto" id="ponto-sessoes" hidden></span></a>
-          <a href="#automacoes" data-secao="automacoes"><i>↻</i>Automações</a>
-          <a href="#atendimento" data-secao="atendimento"><i>☏</i>Redes sociais</a>
-          <a href="#empresas" data-secao="empresas"><i>▣</i>Empresas</a>
-          <a href="#projetos3d" data-secao="projetos3d"><i>⬡</i>Projetos 3D</a>
-          <a href="#dispositivos" data-secao="dispositivos"><i>◉</i>Dispositivos</a>
-          <a href="#marketing" data-secao="marketing"><i>✎</i>Marketing</a>
-          <a href="#prospeccao" data-secao="prospeccao"><i>➚</i>Prospecção</a>
-          <a href="#pesquisas" data-secao="pesquisas"><i>⌕</i>Pesquisas</a>
-        </div>
-      </div>
-      <div class="grupo" data-grupo="ze">
-        <button type="button" class="grupo-titulo" data-acao="grupo" aria-expanded="true">O Zé<i class="seta" aria-hidden="true">▾</i></button>
-        <div class="grupo-itens">
-          <a href="#memoria" data-secao="memoria"><i>❖</i>Memória</a>
-          <a href="#skills" data-secao="skills"><i>✦</i>Skills</a>
-          <a href="#conectores" data-secao="conectores"><i>⇄</i>Conectores</a>
-          <a href="#atividade" data-secao="atividade"><i>≋</i>Atividade</a>
-          <a href="#melhorias" data-secao="melhorias"><i>⟲</i>Autodesenvolvimento</a>
-        </div>
-      </div>
-      <div class="grupo" data-grupo="ajustes">
-        <button type="button" class="grupo-titulo" data-acao="grupo" aria-expanded="true">Ajustes<i class="seta" aria-hidden="true">▾</i></button>
-        <div class="grupo-itens">
-          <a href="#perfil" data-secao="perfil"><i>◌</i>Perfil</a>
-          <a href="#modelos" data-secao="modelos"><i>◎</i>Modelos</a>
-          <a href="#voz" data-secao="voz"><i>♪</i>Voz</a>
-          <a href="#atualizacoes" data-secao="atualizacoes"><i>⇡</i>Atualizações <span class="ponto" id="ponto-atualizacoes" hidden></span></a>
-        </div>
-      </div>
+      <div class="area-menu">Trabalho</div>
+      <a href="#sessoes" data-secao="sessoes"><i>▤</i>Sessões <span class="ponto" id="ponto-sessoes" hidden></span></a>
+      <a href="#foco" data-secao="foco"><i>◇</i>Foco</a>
+      <a href="#automacoes" data-secao="automacoes"><i>↻</i>Automações</a>
+      <a href="#pesquisas" data-secao="pesquisas"><i>⌕</i>Pesquisas</a>
+      <a href="#projetos3d" data-secao="projetos3d"><i>⬡</i>Projetos 3D</a>
+      <div class="area-menu">Negócio</div>
+      <a href="#prospeccao" data-secao="prospeccao"><i>➚</i>Prospecção</a>
+      <a href="#empresas" data-secao="empresas"><i>▣</i>Empresas</a>
+      <a href="#atendimento" data-secao="atendimento"><i>☏</i>Redes sociais</a>
+      <a href="#marketing" data-secao="marketing"><i>✎</i>Marketing</a>
+      <div class="area-menu">Casa</div>
+      <a href="#dispositivos" data-secao="dispositivos"><i>◉</i>Dispositivos</a>
+      <div class="area-menu">O Zé</div>
+      <a href="#memoria" data-secao="memoria"><i>❖</i>Memória</a>
+      <a href="#skills" data-secao="skills"><i>✦</i>Skills</a>
+      <a href="#conectores" data-secao="conectores"><i>⇄</i>Conectores</a>
+      <a href="#atividade" data-secao="atividade"><i>≋</i>Atividade</a>
+      <a href="#melhorias" data-secao="melhorias"><i>⟲</i>Autodesenvolvimento</a>
+      <div class="area-menu">Ajustes</div>
+      <a href="#perfil" data-secao="perfil"><i>◌</i>Perfil</a>
+      <a href="#modelos" data-secao="modelos"><i>◎</i>Modelos</a>
+      <a href="#voz" data-secao="voz"><i>♪</i>Voz</a>
+      <a href="#atualizacoes" data-secao="atualizacoes"><i>⇡</i>Atualizações <span class="ponto" id="ponto-atualizacoes" hidden></span></a>
     </nav>
-    <footer class="barra-voz" aria-label="Voz">
-      <div class="modo-fala" id="modo-fala"></div>
-      <div class="botoes-voz">
-        <div class="voz-remota" id="voz-remota" hidden></div>
-        <button type="button" class="acao" id="falar" data-falar aria-pressed="false" title="Segure para falar, ou toque para começar e de novo para enviar. Atalho: espaço.">Falar</button>
-      </div>
+    <footer class="rodape-menu">
+      <button type="button" class="recolher" data-acao="recolher-menu" aria-label="Recolher o menu" aria-expanded="true">
+        <svg class="i" aria-hidden="true"><use href="/icones/lucide.svg#panel-left-close"/></svg><span class="rotulo">Recolher menu</span>
+      </button>
     </footer>
   </aside>
   <div class="veu" data-acao="menu" aria-hidden="true"></div>
-  <main id="conteudo" tabindex="-1" aria-live="polite"></main>
+  <div class="area">
+    <header class="topo">
+      <button type="button" class="botao-menu" data-acao="menu" aria-label="Menu" aria-expanded="false"><svg class="i" aria-hidden="true"><use href="/icones/lucide.svg#panel-left-open"/></svg></button>
+      <div class="trilha" id="trilha"></div>
+      <div class="topo-direita">
+        <div class="estado-ze">
+          <span class="icone-ze" data-estado="inativo"><img class="anel" src="/ze.webp" alt="" width="40" height="40"></span>
+          <span class="estado-texto" id="estado-ze" role="status"></span>
+          <div class="modo-fala" id="modo-fala"></div>
+        </div>
+        <div class="voz-remota" id="voz-remota" hidden></div>
+        <button type="button" class="acao principal falar" id="falar" data-falar aria-pressed="false" title="Segure para falar, ou toque para começar e de novo para enviar. Atalho: espaço."><svg class="i" aria-hidden="true"><use href="/icones/lucide.svg#mic"/></svg><span class="rotulo-falar">Falar</span></button>
+      </div>
+    </header>
+    <main id="conteudo" tabindex="-1" aria-live="polite"></main>
+  </div>
   <section id="imersao" class="imersao" hidden aria-label="Imersão">
     <div class="barra-imersao">
       <strong>Imersão</strong>
