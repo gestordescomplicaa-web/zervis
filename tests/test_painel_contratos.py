@@ -51,10 +51,12 @@ ABRIR_DETALHES = (
     "document.querySelectorAll('#conteudo details').forEach((d) => { d.open = true; });"
     " document.querySelectorAll('#conteudo [role=tabpanel]').forEach((p) => { p.hidden = false; });"
 )
+# O tempo relativo no nome ("41 d", "3 h") muda com o dia, não com o botão: vira "# d".
+# Lição de 25/11/2026: "Projeto 1 41 d" virou "42 d" e o teste quebrou na master sem mudança.
 LISTAR = f"""(() => {{
   {ABRIR_DETALHES}
   const nome = (b) => (b.getAttribute('aria-label') || b.innerText || b.value || b.title || '')
-    .trim().replace(/\\s+/g, ' ');
+    .trim().replace(/\\s+/g, ' ').replace(/\\b\\d+ (min|h|d)\\b/g, '# $1');
   const vistos = {{}};
   return {BOTOES}.map((b) => {{
     const n = nome(b) || '(sem nome)';

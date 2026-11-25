@@ -520,12 +520,12 @@
  },
  "sessoes": {
   "Nova sessão": [],
-  "P Projeto 1 41 d trabalhando…": [
+  "P Projeto 1 # d trabalhando…": [
    "sessao/arquivos(id,pasta)",
    "terminal/abrir(colunas,id,linhas)",
    "ze/melhorias()"
   ],
-  "P Projeto 2 42 d Exemplo": [
+  "P Projeto 2 # d Exemplo": [
    "sessao/arquivos(id,pasta)",
    "terminal/abrir(colunas,id,linhas)",
    "ze/melhorias()"
