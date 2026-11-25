@@ -5,12 +5,15 @@ import os
 from pathlib import Path
 from typing import Any
 
-from zervis import atividade
+from zervis import atividade, usuario
 from zervis.avisos import mensagens
 from zervis.cerebro import rapido
+from zervis.nucleo import precisa as lista_precisa
 from zervis.portal.acoes.apoio import _latencia_de_hoje, linhas_do_registro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
+
+RECENTES = 12  # os avisos de hoje no sino
 
 log = logging.getLogger(__name__)
 
@@ -42,12 +45,14 @@ class AcoesInicio(Pagina):
         "espera",
         "foco",
         "jobs",
+        "leads",
         "linha",
         "manutencao",
         "maquina",
         "mensagens",
         "modo_escuta",
         "modo_fala",
+        "pendencias",
         "provedor",
         "sessoes",
         "tem_janela",
@@ -201,6 +206,7 @@ class AcoesInicio(Pagina):
             return 0.0
 
     def inicio(self) -> dict[str, Any]:
+        from zervis.abertura.panorama import saudacao
         from zervis.memoria.linha import agora
 
         hoje = self.n.consumo.retrato()
@@ -216,8 +222,14 @@ class AcoesInicio(Pagina):
             (j for j in self.n.jobs.listar() if j.ativo and j.proxima), key=lambda j: j.proxima
         )[:3]
         atual = self.n.foco.atual()
+        fontes = self._fontes()
+        nome = usuario.ler().nome.split(" ")[0]
         return {
             "ze": self.n.maquina.estado.value,
+            "saudacao": f"{saudacao(agora())}{f', {nome}' if nome else ''}.",
+            "chamado": self.n.chamado,
+            "precisa": [i.para_tela() for i in lista_precisa.montar(fontes)],
+            "agora": lista_precisa.agora(fontes),
             "foco": {"titulo": atual.titulo, "passo": atual.proximo_passo} if atual else None,
             "sessoes": {
                 "total": len(sessoes),
@@ -229,6 +241,32 @@ class AcoesInicio(Pagina):
                 "tokens_mil": round(lido / 1000),
                 "voz_s": round(min(totais) / 1000, 1) if totais else None,
             },
+        }
+
+    def _fontes(self) -> lista_precisa.Fontes:
+        return lista_precisa.Fontes(
+            self.n.leads, self.n.sessoes, self.n.jobs, self.n.manutencao, self.n.pendencias,
+            self.n.versoes, getattr(self.n, "aprovacoes_pendentes", None),
+        )  # fmt: skip
+
+    def precisa(self) -> dict[str, Any]:
+        """O sino do painel: o que precisa de quem usa e os avisos do Zé de hoje (ADR 0133)."""
+        from zervis.memoria.linha import agora
+
+        hoje = agora()
+        inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)
+        avisos = [
+            {
+                "quando": max(ev.quando, ev.registrado).isoformat(timespec="seconds"),
+                "texto": ev.texto,
+            }
+            for ev in self.n.linha.entre(inicio, hoje, {"aviso", "lembrete", "manutencao"})
+            if max(ev.quando, ev.registrado) <= hoje
+        ]
+        avisos.sort(key=lambda a: a["quando"], reverse=True)
+        return {
+            "itens": [i.para_tela() for i in lista_precisa.montar(self._fontes())],
+            "recentes": avisos[:RECENTES],
         }
 
     def automacoes(self) -> list[dict[str, Any]]:

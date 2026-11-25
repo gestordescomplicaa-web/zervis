@@ -26,7 +26,8 @@ class Pagina(NamedTuple):
 PAGINAS: dict[str, Pagina] = {
     "inicio": Pagina(
         "Início",
-        "o resumo do dia: avisos, sessões e o que está em andamento",
+        "o resumo do dia: o que precisa de quem usa (aprovações, leads, sessões paradas, "
+        "revisões), o que o Zé está fazendo agora e os números de hoje",
         ("ze_sobre", "atividade_buscar"),
     ),
     "conversa": Pagina(

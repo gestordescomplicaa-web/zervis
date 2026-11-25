@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Início pela voz e central de avisos:** o anel do Zé, pedidos de exemplo, "Precisa de você"
+  (aprovações, leads, sessões paradas, prospecção, vídeos e posts para revisar, melhorias e
+  versão nova, cada um com o botão que resolve) e "O Zé agora". O sino no topo conta o que
+  espera você e guarda os avisos de hoje; o aviso do Zé entra na tela com o anel e Fechar. O Zé
+  responde "o que precisa de mim?" pela voz (ADR 0133).
 - **Painel com a identidade nova:** menu por áreas com ícones, que recolhe para só os ícones; a
   barra do topo com o Zé (o estado e o modo de fala), Conectar voz e Falar em toda página; a fonte
   Geist e um visual escuro sólido, sem vidro; avisos entrando pela direita (ADR 0132).

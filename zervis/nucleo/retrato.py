@@ -17,6 +17,7 @@ from zervis.cerebro import (
 )
 from zervis.memoria import aimemory
 from zervis.nucleo import autoconhecimento
+from zervis.nucleo import precisa as lista_precisa
 from zervis.nucleo.apoio import AJUSTES_DA_TELA as AJUSTES_DA_TELA
 from zervis.nucleo.apoio import AVISO_RECENTE_S as AVISO_RECENTE_S
 from zervis.nucleo.apoio import BATERIAS_S as BATERIAS_S
@@ -263,3 +264,18 @@ def _fala_por(n: "Nucleo") -> str:
     nome = n.motor_voz.escolha.voz(ativo).get("nome", "")
     titulo = n.motor_voz.titulo(ativo)
     return f"{titulo} ({nome}), com o Cadu de reserva" if nome else titulo
+
+
+def fontes_do_precisa(n: "Nucleo") -> lista_precisa.Fontes:
+    return lista_precisa.Fontes(
+        n.leads, n.sessoes, n.jobs, n.manutencao, n.pendencias, n.versoes, n.aprovacoes_pendentes
+    )
+
+
+def precisa(n: "Nucleo") -> str:
+    """O "Precisa de você" para o `ze_sobre`: o que responder a "o que precisa de mim?"."""
+    try:
+        return lista_precisa.texto(lista_precisa.montar(fontes_do_precisa(n)))
+    except Exception:  # o retrato não cai por ela
+        log.debug("precisa de você falhou", exc_info=True)
+        return ""
