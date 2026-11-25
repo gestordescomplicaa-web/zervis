@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from zervis import atividade, usuario
+from zervis import atividade, usuario, visuais
 from zervis.avisos import mensagens
 from zervis.cerebro import rapido
 from zervis.memoria import anexos
@@ -134,6 +134,9 @@ class AcoesInicio(Pagina):
                         "texto": ev.texto,
                     }
                 )
+        for v in visuais.PADRAO.do_dia(hoje.date()):  # o que o Zé montou (ADR 0138)
+            quando = v.criado.isoformat(timespec="seconds")
+            itens.append({"quando": quando, "tipo": "visual", "visual": v.para_tela()})
         itens.sort(key=lambda i: i["quando"])  # estável: o pedido antes da resposta
         andamento = getattr(self.n, "conversa_em_andamento", None)
         if andamento is not None and (atual := andamento()) is not None:

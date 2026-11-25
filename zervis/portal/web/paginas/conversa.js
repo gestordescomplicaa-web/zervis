@@ -1,6 +1,7 @@
 import { $, api, esc, toast, valorCampo } from "../painel.js";
 import { anexosNaFala, botaoAnexar, caixaAnexos, devolverPendentes, ligarAnexos, subirAnexo, tirarPendentes } from "../modulos/anexos-chat.js";
 import { icone } from "../modulos/casca.js";
+import { visualNaFala } from "../modulos/visuais-chat.js";
 import { compartilhado, carregadas } from "../modulos/estado.js";
 
 // O chat com o Zé, que o Início mostra (ADR 0136; antes, a página Conversa): o fio de hoje (o que
@@ -117,14 +118,39 @@ function montarFio() {
   fioVisto = marca;
   const rolagem = $("rolagem-chat") || fio;
   const embaixo = rolagem.scrollHeight - rolagem.scrollTop - rolagem.clientHeight < 80;
-  const balao = (i) => i.tipo === "aviso"
+  const balao = (i) => i.tipo === "visual" ? `<div class="fala ze visual-fala">${ANEL}${visualNaFala(i.visual)}</div>`
+    : i.tipo === "aviso"
     ? `<div class="fala aviso"><span>Aviso · ${horaFio(i.quando)}</span><p>${esc(i.texto)}</p></div>`
     : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}">${i.tipo === "ze" ? ANEL : ""}${anexosNaFala(i.anexos)}${i.texto ? `<p>${esc(i.texto)}</p>` : ""}<span>${i.origem === "whatsapp" ? "WhatsApp · " : ""}${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
   const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}">${anexosNaFala(m.anexos)}${m.texto ? `<p>${esc(m.texto)}</p>` : ""}<span>${m.erro ? "Não enviado" : horaFio(m.quando)}</span></div>`);
-  const tudo = [...itens.map(balao), ...minhas, ...(esperandoResposta ? [digitando] : [])];
-  fio.innerHTML = tudo.join("");
+  const vezes = new Map();
+  const chave = (/** @type {string} */ k) => { vezes.set(k, (vezes.get(k) || 0) + 1); return `${k}#${vezes.get(k)}`; };
+  const tudo = [...itens.map((i) => [chave(`${i.tipo}|${i.quando}|${i.visual?.id || ""}`), balao(i)]), ...enviadas.map((m, n) => [`minha|${m.em}`, minhas[n]]), ...(esperandoResposta ? [["digitando", digitando]] : [])];
+  aplicar(fio, tudo);
   fio.closest(".pagina-inicio")?.classList.toggle("vazia", !tudo.length);
   if (embaixo || !fio.dataset.lido) { rolagem.scrollTop = rolagem.scrollHeight; fio.dataset.lido = "1"; }
+}
+
+/** O desenho de cada fala no fio. @type {WeakMap<Element, string>} */
+const desenhos = new WeakMap();
+/** Muda só as falas que mudaram, sem mover as outras: um visual redesenhado ou movido recarrega
+ * a moldura e a apresentação recomeça (ADR 0138). @param {HTMLElement} fio @param {string[][]} partes */
+function aplicar(fio, partes) {
+  const querem = new Set(partes.map(([k]) => k));
+  for (const no of [...fio.children]) if (!querem.has(/** @type {HTMLElement} */ (no).dataset.chave || "")) no.remove();
+  const atuais = new Map([...fio.children].map((no) => [/** @type {HTMLElement} */ (no).dataset.chave, no]));
+  partes.forEach(([k, html], posicao) => {
+    let no = atuais.get(k);
+    if (!no || desenhos.get(no) !== html) {
+      const molde = document.createElement("template");
+      molde.innerHTML = html.trim();
+      const novo = /** @type {HTMLElement} */ (molde.content.firstElementChild);
+      novo.dataset.chave = k; desenhos.set(novo, html);
+      if (no) no.replaceWith(novo);
+      no = novo;
+    }
+    if (fio.children[posicao] !== no) fio.insertBefore(no, fio.children[posicao] || null);
+  });
 }
 
 async function desenharFio() {

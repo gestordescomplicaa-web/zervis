@@ -144,3 +144,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0135](0135-ajustes-num-lugar-so.md) | Os Ajustes num lugar só, com busca | Aceito |
 | [0136](0136-inicio-e-a-conversa.md) | O Início é a conversa com o Zé | Aceito |
 | [0137](0137-anexos-no-chat.md) | Imagem e arquivo no chat, lidos só pelo que foi anexado | Aceito |
+| [0138](0138-visuais-no-chat.md) | Visuais no chat: apresentações, diagramas e painéis animados, com parâmetros | Aceito |

@@ -29,6 +29,7 @@ import websockets
 from zervis.oficina.progresso import Progresso
 from zervis.portal.acoes import Acoes
 from zervis.portal.servidor import WEB, Envio, Escrita, Leitura, PedidoInvalido, Portal
+from zervis.visuais import Visuais
 
 RESPOSTAS = Path(__file__).with_name("painel_respostas.json")
 CHROMIUM = next(
@@ -252,6 +253,7 @@ def _painel(
     saida_terminal: Escrita | None = None,
     leituras_vivas: dict[str, Leitura] | None = None,
     envios: dict[str, Envio] | None = None,
+    visuais: Visuais | None = None,
 ) -> Iterator[tuple[str, str]]:
     """O painel com as respostas de exemplo e um Chromium apontado para ele."""
     respostas = json.loads(RESPOSTAS.read_text())
@@ -279,6 +281,7 @@ def _painel(
         entrada_terminal=entrada_terminal,
         saida_terminal=saida_terminal,
         envios=envios,
+        fluxos={"visual": visuais.fluxo} if visuais is not None else None,
     )
     portal.iniciar()
     processo, depuracao = _chromium(tmp_path / "chromium")
@@ -2364,3 +2367,86 @@ def test_menu_recolhido_deixa_a_pagina_no_meio_e_a_tela_cheia_inteira(tmp_path: 
 
     with _painel(tmp_path) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+SIMULADOR = """<div class="zk-pagina"><div class="zk-controles">
+<label class="zk-controle">Por dia <output data-mostra="dia"></output>
+<input type="range" min="1" max="20" value="5" data-param="dia"></label>
+<div class="zk-alternar" data-param="taxa">
+<button data-valor="0.1" aria-pressed="true">Baixa</button>
+<button data-valor="0.3">Alta</button></div></div>
+<b class="zk-numero" id="mes" data-calc="dia * 22 * taxa" data-formato="{v} respostas">0</b>
+<b class="zk-numero" id="conta" data-contar="248">0</b></div>"""
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_visual_no_chat_isolado_sem_recarregar_e_com_parametros(tmp_path: Path) -> None:
+    """25/11/2026: o Zé monta visuais no chat (ADR 0138). A moldura abre o visual isolado
+    (sandbox, sem rede); uma mensagem nova não recarrega a moldura (a apresentação recomeçaria);
+    tela cheia e baixar; e o kit roda sob a regra de verdade: o deslizante e a escolha mudam a
+    conta na hora, e o número conta até o fim."""
+    loja = Visuais(tmp_path / "visuais")
+    v = loja.criar("Simulador", SIMULADOR, "painel")
+    quando = v.criado.isoformat(timespec="seconds")
+    itens: list[dict[str, Any]] = [
+        {"quando": quando, "tipo": "voce", "texto": "Monta um simulador"},
+        {"quando": quando, "tipo": "visual", "visual": v.para_tela()},
+    ]
+
+    def conversa() -> dict[str, Any]:
+        return {"itens": copy.deepcopy(itens), "esperando": [], "aprovacoes": []}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#inicio")
+            await _esperar(nav, "!!document.querySelector('.visual iframe')")
+            moldura = await nav.avaliar(
+                "(() => { const f = document.querySelector('.visual iframe'); window.__moldura = f;"
+                " return [f.getAttribute('src'), f.getAttribute('sandbox')]; })()"
+            )
+            assert moldura == [f"/fluxo/visual?id={v.id}", "allow-scripts"]
+            regra = await nav.avaliar(
+                f"fetch('/fluxo/visual?id={v.id}')"
+                ".then((r) => r.headers.get('content-security-policy'))"
+            )
+            assert "sandbox allow-scripts" in regra and "default-src 'none'" in regra
+            itens.append({"quando": quando + "~", "tipo": "ze", "texto": "Pronto."})
+            await _esperar(nav, "document.querySelectorAll('.fala.ze p').length === 1")
+            assert await nav.avaliar(
+                "document.querySelector('.visual iframe') === window.__moldura"
+            )
+            await nav.avaliar("document.querySelector('[data-visual-acao=cheio]').click()")
+            await _esperar(nav, "!!document.querySelector('.visual-tela iframe')")
+            await nav.avaliar(
+                "document.querySelector('.visual-tela [data-visual-acao=menu]').click()"
+            )
+            assert await nav.avaliar("document.querySelectorAll('.menu-baixar button').length") == 3
+            await nav.avaliar(
+                "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))"
+            )
+            assert not await nav.avaliar("!!document.querySelector('.visual-tela')")
+            assert not nav.erros, nav.erros
+            # A própria página do visual: o kit sob a regra de segurança de verdade.
+            await nav.avaliar(
+                f"location.href = {json.dumps(endereco + '/fluxo/visual?id=' + v.id)}"
+            )
+            await _esperar(nav, "document.getElementById('mes')?.textContent === '11 respostas'")
+            await nav.avaliar(
+                "(() => { const r = document.querySelector('[data-param=dia]'); r.value = '10';"
+                " r.dispatchEvent(new Event('input')); document.querySelectorAll('.zk-alternar"
+                " button')[1].click(); })()"
+            )
+            assert await nav.avaliar("document.getElementById('mes').textContent") == (
+                "66 respostas"
+            )
+            assert await nav.avaliar("document.querySelector('[data-mostra=dia]').textContent") == (
+                "10"
+            )
+            await _esperar(nav, "document.getElementById('conta').textContent === '248'")
+            # O atalho dos testes importa o painel em toda página; a do visual, isolada, recusa.
+            erros = [e for e in nav.erros if "/modulos/" not in e]
+            assert not erros, erros
+
+    with _painel(tmp_path, leituras_vivas={"conversa": conversa}, visuais=loja) as (dep, end):
+        asyncio.run(conferir(dep, end))

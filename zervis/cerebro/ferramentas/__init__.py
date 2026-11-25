@@ -19,6 +19,7 @@ from typing import Any
 from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_server
 
 from zervis import atividade, metricas_site
+from zervis import visuais as visuais_do_chat
 from zervis.automacoes.jobs import Jobs
 from zervis.cerebro.ferramentas import anexos as g_anexos
 from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
@@ -44,6 +45,7 @@ from zervis.cerebro.ferramentas import sistema as g_sistema
 from zervis.cerebro.ferramentas import sobre as g_sobre
 from zervis.cerebro.ferramentas import tela as g_tela
 from zervis.cerebro.ferramentas import tela_tv as g_tela_tv
+from zervis.cerebro.ferramentas import visuais as g_visuais
 from zervis.cerebro.ferramentas import whatsapp as g_whatsapp
 from zervis.cerebro.ferramentas.comum import _mudanca, _skill_nova
 from zervis.habilidades import revisao
@@ -135,6 +137,7 @@ LEITURA = [
     "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
     "tela_tv_fechar",
     "anexo_ler",  # só lê o que quem usa anexou no chat (ADR 0137)
+    "visual_criar",  # só grava um visual, que roda isolado, sem rede nem o painel (ADR 0138)
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -347,6 +350,7 @@ def por_grupo(
         "prospeccao": g_prospeccao.ferramentas(),
         "paginas": g_paginas.ferramentas(),
         "anexos": g_anexos.ferramentas(anexos_do_chat.PADRAO),
+        "visuais": g_visuais.ferramentas(visuais_do_chat.PADRAO),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

@@ -4,6 +4,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from zervis import visuais
 from zervis.automacoes.jobs import JobErro
 from zervis.cerebro.mcp_externo import McpInvalido
 from zervis.habilidades.skills import SkillErro
@@ -322,7 +323,11 @@ class Acoes:
         }
 
     def fluxos(self) -> dict[str, Fluxo]:
-        return {"camera/ao-vivo": self.ao_vivo_camera, "marketing/video": self.arquivo_video}
+        return {
+            "camera/ao-vivo": self.ao_vivo_camera,
+            "marketing/video": self.arquivo_video,
+            "visual": visuais.PADRAO.fluxo,  # os visuais do chat (ADR 0138)
+        }
 
     def envios(self) -> dict[str, Any]:
         return {
