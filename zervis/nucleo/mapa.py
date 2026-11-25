@@ -6,7 +6,8 @@ Zé visto de fora: toda página é uma parte dele, e ele precisa saber o que é 
 dela, pela voz.
 
 Regra (vigiada por `tests/test_mapa.py`): toda seção do menu do painel (`index.html`) tem uma
-linha aqui, com pelo menos uma ferramenta que exista. Página nova sem linha não passa no
+linha aqui, com pelo menos uma ferramenta que exista; a página que se abre por dentro de outra
+(`dentro`, como a Voz em Ajustes) também. Página nova sem linha não passa no
 `make check`. O texto vai para o `ze_sobre`, que o cérebro consulta sobre qualquer parte do Zé.
 """
 
@@ -21,6 +22,8 @@ class Pagina(NamedTuple):
     # ferramentas: a via rápida não sabe o estado das páginas (caso de 24/11/2026, "disparo de
     # prospecção" ficou na via rápida, que disse não conhecer a aba).
     assuntos: tuple[str, ...] = ()
+    # A página de onde ela se abre, quando não está no menu (a Voz se abre em Ajustes, ADR 0135).
+    dentro: str = ""
 
 
 PAGINAS: dict[str, Pagina] = {
@@ -167,24 +170,37 @@ PAGINAS: dict[str, Pagina] = {
         ("ze_sobre", "modo_manutencao"),
         ("autodesenvolvimento", "manutencao", "melhoria", "melhorias"),
     ),
+    "ajustes": Pagina(
+        "Ajustes",
+        "tudo o que se configura no Zé, por assunto e com busca: perfil, modelos, voz, conectores, "
+        "redes sociais, marketing, prospecção e atualizações",
+        ("ze_sobre",),
+        ("ajuste", "ajustes", "configuracao", "configuracoes"),
+    ),
     "perfil": Pagina(
-        "Perfil", "o nome, o jeito de quem usa, o fuso e a abertura do dia", ("ze_sobre",)
+        "Perfil",
+        "o nome, o jeito de quem usa, o fuso e a abertura do dia",
+        ("ze_sobre",),
+        dentro="ajustes",
     ),
     "modelos": Pagina(
         "Modelos",
         "o cérebro, as respostas rápidas, as contas e o reconhecimento de fala",
         ("ze_sobre",),
+        dentro="ajustes",
     ),
     "voz": Pagina(
         "Voz",
         "a voz do Zé, o modo de fala, a ativação, os avisos e o acesso pelo celular",
         ("ze_sobre",),
+        dentro="ajustes",
     ),
     "atualizacoes": Pagina(
         "Atualizações",
         "as versões novas do Zé e de onde vêm",
         ("atualizacoes_ver",),
         ("atualizacao", "atualizacoes", "versao"),
+        dentro="ajustes",
     ),
 }
 
@@ -203,6 +219,8 @@ def texto() -> str:
         "atividade_buscar. Nunca diga que não conhece uma página.",
     ]
     linhas += [
-        f"- **{p.titulo}** ({', '.join(p.consultar)}): {p.o_que_e}." for p in PAGINAS.values()
+        f"- **{p.titulo}**{f' (em {PAGINAS[p.dentro].titulo})' if p.dentro else ''} "
+        f"({', '.join(p.consultar)}): {p.o_que_e}."
+        for p in PAGINAS.values()
     ]
     return "\n".join(linhas)

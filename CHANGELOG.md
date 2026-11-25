@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Ajustes num lugar só:** um item Ajustes no rodapé do menu abre a página com todos os assuntos
+  (Voz, Modelos, Perfil, Conectores, Redes sociais, Marketing, Prospecção, Atualizações) e uma
+  busca; cada ajuste leva ao cartão certo da página dele (ADR 0135).
 - **Marketing em abas:** Visão geral (o que espera o seu sim e as métricas), Blog, Vídeos,
   Instagram e Ajustes. Os ajustes saíram dos cartões de trabalho e ficam por assunto (Site e
   blog, Vídeos, Instagram, Marca, Chaves e contas); os cartões de criar mostram o pedido pela voz

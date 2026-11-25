@@ -60,6 +60,7 @@ vista no PR.
    o "precisa de você". **O "Precisa de você", o Início pela voz e o sino: ADR 0133.**
 5. As páginas em lotes, das mais usadas às menos usadas; os Ajustes num lugar só, com busca.
    **O Marketing em abas, com os ajustes separados por assunto: ADR 0134.**
+   **Os Ajustes num lugar só, com busca: ADR 0135.**
 6. Tirar o interruptor.
 
 A Imersão fica fora de todos eles.
