@@ -211,8 +211,11 @@ def quem_responde(r: Retrato) -> str:
     return f"Quem responde é o cérebro completo: {r.cerebro}."
 
 
-def texto(r: Retrato, cap: Capacidades | None = None, hist: Historico | None = None) -> str:
-    """O retrato inteiro, em Markdown curto (a ferramenta `ze_sobre` e a nota "Quem sou")."""
+def texto(
+    r: Retrato, cap: Capacidades | None = None, hist: Historico | None = None, precisa: str = ""
+) -> str:
+    """O retrato inteiro, em Markdown curto (a ferramenta `ze_sobre` e a nota "Quem sou").
+    `precisa`: o que espera o usuário agora (`zervis/nucleo/precisa.py`), só na ferramenta."""
     linhas = [
         "## Agora",
         f"- **Quem responde:** {quem_responde(r)}",
@@ -231,7 +234,7 @@ def texto(r: Retrato, cap: Capacidades | None = None, hist: Historico | None = N
         *([f"- **Versão do Zé:** {r.versao}"] if r.versao else []),
         *(f"- {x}" for x in r.extras),
     ]
-    partes = ["\n".join(linhas)]
+    partes = ["\n".join(linhas), *([precisa] if precisa else [])]
     if cap is not None:
         partes.append(texto_das_capacidades(cap))
     if hist is not None:

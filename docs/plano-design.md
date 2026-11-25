@@ -57,7 +57,7 @@ vista no PR.
 3. A barra do Zé (o anel com o estado e o que ele está fazendo, falar de qualquer página) e o menu
    por áreas (Conversa, Trabalho, Negócio, Casa, O Zé).
 4. A Conversa como linha do tempo, com cartões que se resolvem nela (aprovar, publicar, ouvir), e
-   o "precisa de você".
+   o "precisa de você". **O "Precisa de você", o Início pela voz e o sino: ADR 0133.**
 5. As páginas em lotes, das mais usadas às menos usadas; os Ajustes num lugar só, com busca.
 6. Tirar o interruptor.
 

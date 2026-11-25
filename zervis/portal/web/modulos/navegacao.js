@@ -1,7 +1,7 @@
 import { ESTADO_HOLO, desligarImersao, imersao, imersaoLigada, ligarImersao, palcoAqui, pedirAbertura, telaHolograma } from "./imersao.js";
 
 import { desenharModoFala, desenharVozRemota } from "./voz.js";
-import { $, ESTADOS, NO_PC, PAGINAS, api, cabeca, cachePaginas, conteudo, encher, esc, fecharTerminalTela, gravacoes, relogioSessoes, toast } from "../painel.js";
+import { $, ESTADOS, NO_PC, PAGINAS, api, cabeca, cachePaginas, conteudo, encher, esc, fecharTerminalTela, gravacoes, relogioSessoes } from "../painel.js";
 import { compartilhado, carregadas } from "./estado.js";
 
 // --- navegação e batimento ---
@@ -203,7 +203,7 @@ export async function batimento() {
     inicioZe = e.inicio; semResposta = 0; faixaFora(false);
     // O que o Zé não falou (Silencioso) aparece em qualquer página
     const tela = e.tela?.[0] ?? null;
-    if (telaDita !== undefined && tela !== telaDita && location.hash !== "#conversa") toast(e.tela[1], Math.min(15000, 5000 + 80 * e.tela[1].length)); // tempo de ler
+    if (telaDita !== undefined && tela !== telaDita && location.hash !== "#conversa") import("./avisos.js").then((m) => m.avisoDoZe(e.tela[1], Math.min(15000, 5000 + 80 * e.tela[1].length))); // tempo de ler
     telaDita = tela;
     if (telaVista !== null && e.tela_ts > telaVista && imersaoLigada() && location.hash !== "#imersao") location.hash = "#imersao";
     telaVista = e.tela_ts;

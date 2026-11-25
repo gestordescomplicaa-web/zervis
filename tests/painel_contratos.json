@@ -29,6 +29,7 @@
   "NormalAvisos e resultados",
   "✓LiveConversa em tempo real",
   "Conectar voz",
+  "Avisos",
   "Falar"
  ],
  "atendimento": {
@@ -183,7 +184,26 @@
    "projetos3d/impressora(codigo,ip,serie)"
   ]
  },
- "inicio": {},
+ "inicio": {
+  "Aprovar": [
+   "conversa/aprovacao(aprovar,id)"
+  ],
+  "Como está a prospecção?": [
+   "conversa/escrever(texto)"
+  ],
+  "Negar": [
+   "conversa/aprovacao(aprovar,id)"
+  ],
+  "O que as sessões estão fazendo?": [
+   "conversa/escrever(texto)"
+  ],
+  "O que precisa de mim?": [
+   "conversa/escrever(texto)"
+  ],
+  "Resuma o meu dia": [
+   "conversa/escrever(texto)"
+  ]
+ },
  "marketing": {
   "Abrir sessão": [
    "sessao/arquivos(id,pasta)",

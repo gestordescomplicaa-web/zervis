@@ -4,7 +4,7 @@ import { ESTADOS } from "../painel.js";
 
 const SPRITE = "/icones/lucide.svg";
 /** @type {Record<string, string>} */
-const ICONES = {
+export const ICONES = {
   inicio: "house", conversa: "message-square", imersao: "scan-face", sessoes: "terminal", foco: "target",
   automacoes: "repeat", pesquisas: "search", projetos3d: "box", prospeccao: "trending-up", empresas: "building-2",
   atendimento: "message-circle", marketing: "megaphone", dispositivos: "monitor-smartphone", memoria: "brain",
@@ -76,6 +76,8 @@ function seguirEstado() {
   const escrever = () => {
     const estado = ESTADOS[/** @type {keyof typeof ESTADOS} */ (anel.dataset.estado || "inativo")] || "inativo";
     texto.textContent = estado.charAt(0).toUpperCase() + estado.slice(1);
+    // O anel grande do Início acompanha o do topo.
+    for (const outro of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(".icone-ze[data-espelho]"))) outro.dataset.estado = anel.dataset.estado || "inativo";
   };
   new MutationObserver(escrever).observe(anel, { attributes: true, attributeFilter: ["data-estado"] });
   escrever();

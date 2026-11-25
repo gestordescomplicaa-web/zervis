@@ -585,7 +585,137 @@
     "respostas": 0,
     "tokens_mil": 0,
     "voz_s": null
-   }
+   },
+   "saudacao": "Boa tarde.",
+   "chamado": "voz",
+   "precisa": [
+    {
+     "id": "aprovacao:a1",
+     "secao": "conversa",
+     "area": "WhatsApp",
+     "titulo": "Aprovação pendente",
+     "detalhe": "Enviar o orçamento para Carlos Lima",
+     "quando": 1795622160,
+     "nivel": "alerta",
+     "acao": "Aprovar",
+     "link": "#conversa",
+     "aprovacao": "a1"
+    },
+    {
+     "id": "lead:l1",
+     "secao": "atendimento",
+     "area": "WhatsApp",
+     "titulo": "Responder Ana Ribeiro",
+     "detalhe": "“Vocês fazem orçamento para sábado?”",
+     "quando": 1795622280,
+     "nivel": "alerta",
+     "acao": "Responder",
+     "link": "#atendimento",
+     "aprovacao": ""
+    },
+    {
+     "id": "prospeccao:p1",
+     "secao": "prospeccao",
+     "area": "Prospecção",
+     "titulo": "Aprovar a mensagem para Imobiliária Centro",
+     "detalhe": "Nota 78",
+     "quando": 1795618800,
+     "nivel": "info",
+     "acao": "Revisar",
+     "link": "#prospeccao",
+     "aprovacao": ""
+    },
+    {
+     "id": "video:v1",
+     "secao": "marketing",
+     "area": "Marketing",
+     "titulo": "Revisar o vídeo",
+     "detalhe": "3 sinais de que a clínica perde pacientes",
+     "quando": 1795608000,
+     "nivel": "info",
+     "acao": "Assistir",
+     "link": "#marketing",
+     "aprovacao": ""
+    }
+   ],
+   "agora": [
+    {
+     "secao": "sessoes",
+     "titulo": "Sessão Exemplo",
+     "detalhe": "Escrevendo os testes",
+     "vivo": true
+    },
+    {
+     "secao": "marketing",
+     "titulo": "Criando o vídeo: Agenda cheia",
+     "detalhe": "Cena 3 de 5",
+     "vivo": true
+    },
+    {
+     "secao": "prospeccao",
+     "titulo": "Próxima mensagem da prospecção",
+     "detalhe": "1 de 2 hoje",
+     "hora": "Hoje, 14:20"
+    }
+   ]
+  },
+  "precisa": {
+   "itens": [
+    {
+     "id": "aprovacao:a1",
+     "secao": "conversa",
+     "area": "WhatsApp",
+     "titulo": "Aprovação pendente",
+     "detalhe": "Enviar o orçamento para Carlos Lima",
+     "quando": 1795622160,
+     "nivel": "alerta",
+     "acao": "Aprovar",
+     "link": "#conversa",
+     "aprovacao": "a1"
+    },
+    {
+     "id": "lead:l1",
+     "secao": "atendimento",
+     "area": "WhatsApp",
+     "titulo": "Responder Ana Ribeiro",
+     "detalhe": "“Vocês fazem orçamento para sábado?”",
+     "quando": 1795622280,
+     "nivel": "alerta",
+     "acao": "Responder",
+     "link": "#atendimento",
+     "aprovacao": ""
+    },
+    {
+     "id": "prospeccao:p1",
+     "secao": "prospeccao",
+     "area": "Prospecção",
+     "titulo": "Aprovar a mensagem para Imobiliária Centro",
+     "detalhe": "Nota 78",
+     "quando": 1795618800,
+     "nivel": "info",
+     "acao": "Revisar",
+     "link": "#prospeccao",
+     "aprovacao": ""
+    },
+    {
+     "id": "video:v1",
+     "secao": "marketing",
+     "area": "Marketing",
+     "titulo": "Revisar o vídeo",
+     "detalhe": "3 sinais de que a clínica perde pacientes",
+     "quando": 1795608000,
+     "nivel": "info",
+     "acao": "Assistir",
+     "link": "#marketing",
+     "aprovacao": ""
+    }
+   ],
+   "recentes": [
+    {
+     "quando": "2026-11-25T13:40:00-03:00",
+     "texto": "O vídeo da semana está pronto para revisar."
+    }
+   ]
   },
   "memoria": {
    "usuario": [],

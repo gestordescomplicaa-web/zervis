@@ -8,3 +8,4 @@ import "./casca.js";
 import { iniciarNavegacao } from "./navegacao.js";
 
 iniciarNavegacao();
+import("./avisos.js"); // o sino e a central de avisos, logo depois da abertura
