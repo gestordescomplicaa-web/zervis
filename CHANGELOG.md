@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Visuais no chat:** o Zé monta apresentações, diagramas, gráficos e painéis animados, com
+  controles que mudam os números na hora, e o chat mostra cada um num cartão que abre em tela
+  cheia e se baixa em HTML, PNG ou PDF. Rodam isolados, sem rede e sem acesso ao painel
+  (ADR 0138).
 - **Enquadramento no PC:** com o menu recolhido (ou aberto), a coluna das páginas fica no meio da
   área, sem sobrar tudo à direita. As páginas de tela cheia (Sessões, Autodesenvolvimento) ocupam
   a altura inteira, com o texto no tamanho certo: a barra de uso da Memória passou a se chamar

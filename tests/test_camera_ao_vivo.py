@@ -241,7 +241,8 @@ def test_o_painel_de_verdade_registra_a_transmissao(tmp_path: Path) -> None:
 
     acoes = Acoes(SimpleNamespace(camera=camera.Camera(tmp_path / "nada.json")), tmp_path, tmp_path)
     fluxos = acoes.fluxos()
-    assert set(fluxos) == {"camera/ao-vivo", "marketing/video"}  # o vídeo da Marketing (ADR 0106)
+    # o vídeo da Marketing (ADR 0106) e os visuais do chat (ADR 0138)
+    assert set(fluxos) == {"camera/ao-vivo", "marketing/video", "visual"}
     with pytest.raises(PedidoInvalido, match="Vídeo"):
         fluxos["marketing/video"]({"id": "../x"})
     with pytest.raises(PedidoInvalido, match="não configurada"):

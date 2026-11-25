@@ -68,8 +68,9 @@ Voz = Callable[[websocket.Conexao, int], None]  # o canal de voz do navegador (b
 VozApp = Callable[[websocket.Conexao, int, str, dict[str, Any]], None]
 Escrita = Callable[[dict[str, Any]], Any]
 Envio = Callable[[bytes, dict[str, str]], Any]  # corpo cru (um arquivo) e os parâmetros da URL
-# Uma transmissão (o vídeo ao vivo da câmera, ADR 0101): da consulta, o tipo e as partes.
-Fluxo = Callable[[dict[str, str]], tuple[str, Iterator[bytes]]]
+# Uma transmissão (o vídeo ao vivo da câmera, ADR 0101): da consulta, o tipo, as partes e, se
+# quiser, a regra da página (os visuais do chat, isolados e sem rede, ADR 0138).
+Fluxo = Callable[[dict[str, str]], tuple[str, Iterator[bytes]] | tuple[str, Iterator[bytes], str]]
 PREFIXO_FLUXO = "/fluxo/"
 # A ponte dos conectores (`oficina.ponte`): método, conector, cabeçalhos e corpo; volta o status,
 # os cabeçalhos e o corpo da resposta.
@@ -439,7 +440,7 @@ class Portal:
                     return
                 consulta = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items() if v}
                 try:
-                    tipo, partes = fluxo(consulta)
+                    tipo, partes, *regra = fluxo(consulta)
                 except (PedidoInvalido, ValueError) as erro:
                     self._json(400, {"erro": str(erro)})
                     return
@@ -451,7 +452,9 @@ class Portal:
                     self.send_header("Content-Type", tipo)
                     self.send_header("Cache-Control", "no-store")
                     self.send_header("X-Content-Type-Options", "nosniff")
-                    self.send_header("Content-Security-Policy", "frame-ancestors 'self'")
+                    self.send_header(
+                        "Content-Security-Policy", *(regra or ["frame-ancestors 'self'"])
+                    )
                     self.end_headers()
                     for pedaco in partes:
                         self.wfile.write(pedaco)

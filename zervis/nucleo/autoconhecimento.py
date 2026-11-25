@@ -107,6 +107,11 @@ GRUPOS = {
         "o Zé fez",
     ),
     "anexos": ("Anexos", "lê as imagens, os PDFs e os textos que você anexa no chat"),
+    "visuais": (
+        "Visuais",
+        "monta apresentações, diagramas, gráficos e painéis animados no chat, com parâmetros "
+        "que você muda, para ver em tela cheia e baixar",
+    ),
 }
 
 
