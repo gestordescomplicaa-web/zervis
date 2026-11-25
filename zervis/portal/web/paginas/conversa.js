@@ -1,4 +1,5 @@
 import { $, api, esc, toast, valorCampo } from "../painel.js";
+import { anexosNaFala, botaoAnexar, caixaAnexos, devolverPendentes, ligarAnexos, subirAnexo, tirarPendentes } from "../modulos/anexos-chat.js";
 import { icone } from "../modulos/casca.js";
 import { compartilhado, carregadas } from "../modulos/estado.js";
 
@@ -20,10 +21,13 @@ import { compartilhado, carregadas } from "../modulos/estado.js";
 export const chat = () => `<div class="aprovacoes" id="aprovacoes" hidden></div><p class="esperando" id="esperando" hidden></p>
   <div class="fio" id="fio" aria-live="polite"></div>`;
 
-/** O campo de escrever, com o microfone e o enviar. */
+/** O campo de escrever: os anexos, o texto, o anexar, o microfone e o enviar. */
 export const campoEscrever = () => `<form class="escrever" id="escrever">
+    ${caixaAnexos()}
     <textarea id="escrever-texto" rows="1" placeholder="Escreva para o Zé" autocomplete="off" aria-label="Mensagem"></textarea>
     <div class="botoes-escrever">
+      ${botaoAnexar()}
+      <span class="espaco"></span>
       <button type="button" class="redondo" data-falar aria-pressed="false" aria-label="Falar" title="Segure para falar">${icone("mic")}</button>
       <button type="submit" class="redondo principal" aria-label="Enviar">${icone("send")}</button>
     </div>
@@ -36,7 +40,7 @@ let fioTimer = null;
 /** As mensagens escritas aqui que o Zé ainda não mostrou de volta (o envio leva um instante).
  * Um comando local ou o "sim" de uma confirmação não viram troca no histórico: com o Zé parado
  * de novo, a mensagem fica como entregue, sem o "digitando".
- * @type {{texto: string, quando: string, em: number, erro: boolean, entregue: boolean}[]} */
+ * @type {{texto: string, quando: string, em: number, erro: boolean, entregue: boolean, anexos: import("../modulos/anexos-chat.js").Anexo[]}[]} */
 let enviadas = [];
 let ultimoFio = { itens: [], esperando: [], consumo: null, aprovacoes: [] };
 let aprovacoesVistas = "";
@@ -115,8 +119,8 @@ function montarFio() {
   const embaixo = rolagem.scrollHeight - rolagem.scrollTop - rolagem.clientHeight < 80;
   const balao = (i) => i.tipo === "aviso"
     ? `<div class="fala aviso"><span>Aviso · ${horaFio(i.quando)}</span><p>${esc(i.texto)}</p></div>`
-    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}">${i.tipo === "ze" ? ANEL : ""}<p>${esc(i.texto)}</p><span>${i.origem === "whatsapp" ? "WhatsApp · " : ""}${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
-  const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}"><p>${esc(m.texto)}</p><span>${m.erro ? "Não enviado" : horaFio(m.quando)}</span></div>`);
+    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}">${i.tipo === "ze" ? ANEL : ""}${anexosNaFala(i.anexos)}${i.texto ? `<p>${esc(i.texto)}</p>` : ""}<span>${i.origem === "whatsapp" ? "WhatsApp · " : ""}${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
+  const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}">${anexosNaFala(m.anexos)}${m.texto ? `<p>${esc(m.texto)}</p>` : ""}<span>${m.erro ? "Não enviado" : horaFio(m.quando)}</span></div>`);
   const tudo = [...itens.map(balao), ...minhas, ...(esperandoResposta ? [digitando] : [])];
   fio.innerHTML = tudo.join("");
   fio.closest(".pagina-inicio")?.classList.toggle("vazia", !tudo.length);
@@ -149,20 +153,28 @@ export async function prepararConversa(vez) {
   const campo = /** @type {HTMLTextAreaElement} */ (valorCampo("escrever-texto"));
   const enviar = async (ev, pronto = "") => {
     ev?.preventDefault();
-    const texto = (pronto || campo.value).trim();
+    const indo = pronto ? [] : tirarPendentes();
+    // Só o anexo: o mesmo texto que o servidor põe, para o balão daqui achar o de lá.
+    const texto = (pronto || campo.value).trim() || (indo.length === 1 ? "Veja o anexo." : indo.length ? "Veja os anexos." : "");
     if (!texto) return;
     // Na hora, como num chat: o balão sai, o campo limpa e o Zé "digita".
-    const msg = { texto: texto.replace(/\s+/g, " "), quando: agoraIso(), em: Date.now(), erro: false, entregue: false };
+    const anexos = indo.map(({ arquivo, url }) => ({ nome: arquivo.name, tipo: arquivo.type, tamanho: arquivo.size, miniatura: url }));
+    const msg = { texto: texto.replace(/\s+/g, " "), quando: agoraIso(), em: Date.now(), erro: false, entregue: false, anexos };
     enviadas.push(msg);
     campo.value = ""; campo.style.height = "";
     fioVisto = ""; montarFio();
     const rolagem = $("rolagem-chat"); if (rolagem) rolagem.scrollTop = rolagem.scrollHeight;
     vigiarFio(vez);
     let r;
-    try { r = await api("conversa/escrever", { texto }); } catch (erro) { r = { aviso: erro.message }; }
+    try {
+      const nomes = [];
+      for (const { arquivo } of indo) nomes.push(await subirAnexo(arquivo));
+      r = await api("conversa/escrever", nomes.length ? { texto, anexos: nomes } : { texto });
+    } catch (erro) { r = { aviso: erro.message }; }
     if (r.aviso !== "Enviado.") {
       msg.erro = true; toast(r.aviso);
       if (!campo.value) campo.value = texto; // não se perde o que foi escrito
+      devolverPendentes(indo); // nem o que foi anexado
     }
     fioVisto = ""; await desenharFio().catch(() => montarFio());
   };
@@ -176,6 +188,7 @@ export async function prepararConversa(vez) {
     try { toast((await api("conversa/aprovacao", { id, aprovar: botao.dataset.aprovar === "1" })).aviso); } catch (erro) { toast(erro.message); }
     aprovacoesVistas = ""; await desenharFio().catch(() => {});
   });
+  ligarAnexos(campo);
   campo.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) enviar(ev); });
   campo.addEventListener("input", () => { campo.style.height = ""; campo.style.height = Math.min(campo.scrollHeight, 160) + "px"; });
   if (matchMedia("(pointer: fine)").matches) campo.focus();
@@ -222,7 +235,8 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .escrever:focus-within { border-color: #33454f; }
 .escrever textarea { resize: none; min-height: 28px; max-height: 200px; padding: 6px 0 0; border: 0; border-radius: 0; background: none; font: inherit; font-size: 15px; color: var(--texto); outline: none; }
 .escrever textarea:focus { outline: none; }
-.botoes-escrever { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.botoes-escrever { display: flex; align-items: center; gap: 6px; }
+.botoes-escrever .espaco { flex: 1; }
 .redondo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--borda-forte); background: none; color: var(--suave); cursor: pointer; transition: color .15s, background .15s, border-color .15s; }
 .redondo:hover { color: var(--texto); background: var(--realce); }
 .redondo[aria-pressed="true"] { color: var(--sobre-acento); background: var(--acento); border-color: var(--acento); }

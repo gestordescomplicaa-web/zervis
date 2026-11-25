@@ -79,6 +79,7 @@ VERBOS_DE_ACAO = {
 }
 ASSUNTOS_DE_FERRAMENTA = {
     *("foco", "frente", "frentes", "projeto", "projetos", "lembrete", "lembretes", "agenda"),
+    *("anexo", "anexos"),  # o pedido com [anexos: ...]: só o cérebro lê arquivo (ADR 0137)
     *(
         "sessao",
         "sessoes",

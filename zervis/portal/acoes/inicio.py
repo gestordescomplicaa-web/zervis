@@ -8,6 +8,7 @@ from typing import Any
 from zervis import atividade, usuario
 from zervis.avisos import mensagens
 from zervis.cerebro import rapido
+from zervis.memoria import anexos
 from zervis.nucleo import precisa as lista_precisa
 from zervis.portal.acoes.apoio import _latencia_de_hoje, linhas_do_registro
 from zervis.portal.acoes.pagina import Pagina
@@ -18,12 +19,19 @@ RECENTES = 12  # os avisos de hoje no sino
 log = logging.getLogger(__name__)
 
 
-def _item(atual: dict[str, str], tipo: str) -> dict[str, str]:
-    return {
-        "quando": atual["quando"],
-        "tipo": tipo,
-        "texto": atual["pessoa"] if tipo == "voce" else atual["ze"],
-    }
+def _item(atual: dict[str, str], tipo: str) -> dict[str, Any]:
+    if tipo == "voce":
+        return _pedido(atual["quando"], atual["pessoa"])
+    return {"quando": atual["quando"], "tipo": tipo, "texto": atual["ze"]}
+
+
+def _pedido(quando: str, pessoa: str) -> dict[str, Any]:
+    """O que a pessoa escreveu e, se anexou, cada anexo com o nome e a miniatura (ADR 0137)."""
+    texto, nomes = anexos.separar(pessoa)
+    pedido: dict[str, Any] = {"quando": quando, "tipo": "voce", "texto": texto}
+    if nomes:
+        pedido["anexos"] = [anexos.PADRAO.info(n) for n in nomes]
+    return pedido
 
 
 class AcoesInicio(Pagina):
@@ -105,7 +113,7 @@ class AcoesInicio(Pagina):
         itens: list[dict[str, Any]] = []
         for t in self.n.conversas.do_dia(hoje.date()):
             quando = t.em.isoformat(timespec="seconds")
-            pedido: dict[str, Any] = {"quando": quando, "tipo": "voce", "texto": t.pessoa}
+            pedido = _pedido(quando, t.pessoa)
             if origem := getattr(t, "origem", ""):
                 pedido["origem"] = origem  # "whatsapp": a Conversa marca (ADR 0104)
             itens.append(pedido)
@@ -162,8 +170,20 @@ class AcoesInicio(Pagina):
         }
 
     def escrever(self, dados: dict[str, Any]) -> dict[str, Any]:
-        """Um pedido escrito no painel: o mesmo caminho da fala."""
-        return {"aviso": self.n.escrever(str(dados.get("texto", "")))}
+        """Um pedido escrito no painel: o mesmo caminho da fala; com anexos, os nomes guardados."""
+        texto, nomes = str(dados.get("texto", "")), dados.get("anexos")
+        if not nomes:
+            return {"aviso": self.n.escrever(texto)}
+        if not isinstance(nomes, list) or len(nomes) > anexos.MAX_POR_PEDIDO:
+            raise PedidoInvalido(f"No máximo {anexos.MAX_POR_PEDIDO} anexos por mensagem.")
+        return {"aviso": self.n.escrever(texto, [str(n) for n in nomes])}
+
+    def anexar_conversa(self, corpo: bytes, consulta: dict[str, str]) -> dict[str, Any]:
+        """Um anexo do chat (ADR 0137): guarda e volta o nome que vai no pedido."""
+        try:
+            return {"anexo": anexos.PADRAO.guardar(consulta.get("nome", ""), corpo)}
+        except anexos.AnexoErro as erro:
+            raise PedidoInvalido(str(erro)) from None
 
     def decidir_aprovacao(self, dados: dict[str, Any]) -> dict[str, Any]:
         """Aprovar ou negar uma ação pedida pelo WhatsApp (ADR 0104): só aqui, com login."""

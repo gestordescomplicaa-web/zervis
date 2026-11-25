@@ -106,6 +106,7 @@ GRUPOS = {
         "lê as empresas que você gere, o funil do Instagram e a Atividade, onde fica tudo o que "
         "o Zé fez",
     ),
+    "anexos": ("Anexos", "lê as imagens, os PDFs e os textos que você anexa no chat"),
 }
 
 

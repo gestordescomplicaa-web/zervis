@@ -231,6 +231,7 @@
     "marketing/video/publicar"
   ],
   "envios": [
+    "conversa/anexo",
     "sessao/anexo",
     "abertura/musica",
     "projetos3d/imagem",
