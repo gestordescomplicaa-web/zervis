@@ -40,7 +40,7 @@ export const compartilhado = {
 
 /** As funções das páginas e dos módulos sob demanda que outros arquivos chamam: entram aqui quando
  * eles carregam (o fim de cada um). O núcleo do painel abre leve e chama por aqui.
- * @type {Partial<typeof import("../paginas/conversa.js") & typeof import("../paginas/melhorias.js")
+ * @type {Partial<typeof import("../paginas/conversa.js") & typeof import("../paginas/inicio.js") & typeof import("../paginas/melhorias.js")
  *   & typeof import("../paginas/sessoes.js") & typeof import("./arquivos-sessao.js")
  *   & typeof import("./conectores-sessao.js")
  *   & typeof import("./modelos.js")

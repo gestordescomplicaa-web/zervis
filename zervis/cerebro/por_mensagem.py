@@ -1,7 +1,7 @@
 """Pedidos escritos fora do painel, num cérebro próprio: a conversa com o Zé pelo WhatsApp
 (ADR 0102).
 
-A aba Conversa passa pela máquina de voz, que recusa pedidos com o Zé inativo (tela bloqueada,
+O chat do Início passa pela máquina de voz, que recusa pedidos com o Zé inativo (tela bloqueada,
 você fora). Pelo WhatsApp você está justamente fora, então estes pedidos têm o próprio cérebro:
 o mesmo provedor, a mesma persona e as mesmas ferramentas, numa sessão separada, sem voz.
 

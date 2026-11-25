@@ -29,14 +29,11 @@ class Pagina(NamedTuple):
 PAGINAS: dict[str, Pagina] = {
     "inicio": Pagina(
         "Início",
-        "o resumo do dia: o que precisa de quem usa (aprovações, leads, sessões paradas, "
-        "revisões), o que o Zé está fazendo agora e os números de hoje",
-        ("ze_sobre", "atividade_buscar"),
-    ),
-    "conversa": Pagina(
-        "Conversa",
-        "o fio de hoje com o Zé: o que foi falado ou escrito, as respostas e os avisos",
-        ("historico_buscar",),
+        "a conversa com o Zé (ADR 0136): o chat de hoje, falado ou escrito, com as respostas, os "
+        "avisos e as aprovações pedidas pelo WhatsApp, e as sugestões quando o dia começa; ao "
+        "lado, o que precisa de quem usa (leads, sessões paradas, revisões), o que o Zé está "
+        "fazendo agora, o foco e os números de hoje",
+        ("ze_sobre", "atividade_buscar", "historico_buscar"),
     ),
     "imersao": Pagina(
         "Imersão",

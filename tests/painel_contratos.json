@@ -1,7 +1,6 @@
 {
  "(casca)": [
   "inicio",
-  "conversa",
   "imersao",
   "sessoes",
   "foco",
@@ -184,9 +183,6 @@
    "perfil(fuso,nome,sobre)"
   ]
  },
- "conversa": {
-  "Enviar": []
- },
  "dispositivos": {
   "Abrir": [],
   "Adicionar dispositivo": []
@@ -240,6 +236,8 @@
   "Como está a prospecção?": [
    "conversa/escrever(texto)"
   ],
+  "Enviar": [],
+  "Falar": [],
   "Negar": [
    "conversa/aprovacao(aprovar,id)"
   ],

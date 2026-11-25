@@ -142,3 +142,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0133](0133-inicio-precisa-de-voce-e-avisos.md) | O Início pela voz, o "Precisa de você" e a central de avisos | Aceito |
 | [0134](0134-marketing-em-abas.md) | O Marketing em abas: o trabalho de cada canal e os ajustes separados | Aceito |
 | [0135](0135-ajustes-num-lugar-so.md) | Os Ajustes num lugar só, com busca | Aceito |
+| [0136](0136-inicio-e-a-conversa.md) | O Início é a conversa com o Zé | Aceito |
