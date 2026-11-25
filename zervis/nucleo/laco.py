@@ -745,7 +745,7 @@ class Nucleo(
         }
 
     def escrever(self, texto: str) -> str:
-        """Um pedido escrito no painel (Conversa) vira um Digitado, como no Teclado do Núcleo."""
+        """Um pedido escrito no chat do Início vira um Digitado, como no Teclado do Núcleo."""
         texto = " ".join(texto.split())[:LIMITE_ESCRITO]
         if not texto:
             return "Mensagem vazia."

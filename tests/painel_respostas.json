@@ -463,19 +463,15 @@
    ]
   },
   "conversa": {
-   "itens": [
+   "itens": [],
+   "esperando": [],
+   "aprovacoes": [
     {
+     "id": "a1",
      "quando": "2026-10-15T09:00:00-03:00",
-     "tipo": "voce",
-     "texto": "Exemplo"
-    },
-    {
-     "quando": "2026-10-15T09:00:00-03:00",
-     "tipo": "ze",
-     "texto": "Exemplo"
+     "descricao": "Exemplo"
     }
-   ],
-   "esperando": []
+   ]
   },
   "escuta": {
    "deepgram": {
@@ -598,7 +594,7 @@
      "quando": 1795622160,
      "nivel": "alerta",
      "acao": "Aprovar",
-     "link": "#conversa",
+     "link": "#inicio",
      "aprovacao": "a1"
     },
     {
@@ -670,7 +666,7 @@
      "quando": 1795622160,
      "nivel": "alerta",
      "acao": "Aprovar",
-     "link": "#conversa",
+     "link": "#inicio",
      "aprovacao": "a1"
     },
     {

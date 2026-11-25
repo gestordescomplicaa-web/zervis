@@ -99,6 +99,7 @@ def _aprovacoes(n: Fontes) -> list[Item]:
             _epoch(a["quando"]),
             "alerta",
             "Aprovar",
+            link="#inicio",  # a aprovação aparece no chat do Início (ADR 0136)
             aprovacao=str(a["id"]),
         )
         for a in (pendentes() if pendentes is not None else [])

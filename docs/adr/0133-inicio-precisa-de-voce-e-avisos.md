@@ -2,7 +2,7 @@
 
 - Data: 25/11/2026
 - Status: **Aceito** (protótipo aprovado; segundo passo de `docs/plano-design.md`).
-- Segue o ADR 0132 (a casca nova).
+- Segue o ADR 0132 (a casca nova). O Início virou a conversa com o Zé no ADR 0136.
 
 ## Contexto
 

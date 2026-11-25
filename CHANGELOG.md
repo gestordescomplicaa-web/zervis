@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **O Início é a conversa com o Zé:** o chat abre no Início, com a saudação, o campo de escrever
+  (microfone e enviar) e sugestões quando o dia começa; ao lado, o que precisa de você, o que o
+  Zé está fazendo, o foco e os números de hoje. A Conversa sai do menu, e o endereço antigo leva
+  ao Início (ADR 0136).
 - **Ajustes mais limpos:** cada assunto é um cartão com o ícone, o título, uma linha de descrição e
   a lista dos ajustes; os cartões se encaixam em colunas, sem buracos. A busca mostra só os
   ajustes com o nome buscado e acha o assunto também pelo que não cabe na descrição ("n8n",

@@ -38,7 +38,7 @@ o usuário ──voz/texto──▶ Conversa ──▶ Zé (cérebro: via rápid
 
 | Conceito | Código | Dados (`~/.local/share/zervis/`) | Painel |
 |---|---|---|---|
-| Conversa | `zervis/memoria/conversas.py` | `conversas/` | Início (e Conversa, na fatia 2) |
+| Conversa | `zervis/memoria/conversas.py` | `conversas/` | Início (o chat, ADR 0136) |
 | Voz | `zervis/voz/`, `zervis/cerebro/rapido.py` | — | Voz |
 | Foco | `zervis/foco/` | `foco/` | Foco |
 | Sessão e Tarefa | `zervis/oficina/sessoes.py` | `sessoes/` | Sessões |
@@ -57,6 +57,6 @@ o usuário ──voz/texto──▶ Conversa ──▶ Zé (cérebro: via rápid
    uma tarefa já atualiza o próximo passo (em 09/10 isso só acontecia com o Orca).
 4. **Sugestões de aprendizado** (`pendencias.json`) são propostas de **Memória** ou de
    **Skill**: aparecem nessas seções para aprovar, não num lugar à parte.
-5. **O painel em três grupos:** *Agora* (Início, Foco, Conversa), *Trabalho* (Sessões,
+5. **O painel em três grupos:** *Agora* (Início, que é a conversa, e Foco), *Trabalho* (Sessões,
    Automações) e *O Zé* (Memória, Skills, Conectores, Cérebro e chaves, Voz); Imersão e
    Configurações à parte.

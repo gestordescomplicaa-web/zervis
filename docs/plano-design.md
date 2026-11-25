@@ -61,6 +61,7 @@ vista no PR.
 5. As páginas em lotes, das mais usadas às menos usadas; os Ajustes num lugar só, com busca.
    **O Marketing em abas, com os ajustes separados por assunto: ADR 0134.**
    **Os Ajustes num lugar só, com busca: ADR 0135.**
+   **O Início é a conversa com o Zé (o chat e, ao lado, o resumo): ADR 0136.**
 6. Tirar o interruptor.
 
 A Imersão fica fora de todos eles.

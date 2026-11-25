@@ -8,8 +8,8 @@ import { compartilhado, carregadas } from "./estado.js";
 
 // Páginas pouco usadas carregam sob demanda: o painel abre leve (docs/plano-painel.md).
 /** @type {Record<string, string>} */
-const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/melhorias.js","conectores":"/paginas/conectores.js","conversa":"/paginas/conversa.js","skills":"/paginas/skills.js","memoria":"/paginas/memoria.js","atendimento":"/paginas/atendimento.js","sessoes":"/paginas/sessoes.js","inicio":"/paginas/inicio.js","foco":"/paginas/foco.js","automacoes":"/paginas/automacoes.js","modelos":"/paginas/modelos.js","perfil":"/paginas/perfil.js","configurar":"/paginas/configurar.js","voz":"/paginas/voz.js","atualizacoes":"/paginas/atualizacoes.js","pesquisas":"/paginas/pesquisas.js","projetos3d":"/paginas/projetos3d.js","camera":"/paginas/camera.js","dispositivos":"/paginas/dispositivos.js","impressora":"/paginas/impressora.js","tv":"/paginas/tv.js","marketing":"/paginas/marketing.js","empresas":"/paginas/empresas.js","prospeccao":"/paginas/prospeccao.js","ajustes":"/paginas/ajustes.js"};
-const CHEIAS = ["sessoes", "melhorias", "conversa"]; // páginas sem margem, que ocupam a tela
+const SOB_DEMANDA = {"atividade":"/paginas/atividade.js","melhorias":"/paginas/melhorias.js","conectores":"/paginas/conectores.js","skills":"/paginas/skills.js","memoria":"/paginas/memoria.js","atendimento":"/paginas/atendimento.js","sessoes":"/paginas/sessoes.js","inicio":"/paginas/inicio.js","foco":"/paginas/foco.js","automacoes":"/paginas/automacoes.js","modelos":"/paginas/modelos.js","perfil":"/paginas/perfil.js","configurar":"/paginas/configurar.js","voz":"/paginas/voz.js","atualizacoes":"/paginas/atualizacoes.js","pesquisas":"/paginas/pesquisas.js","projetos3d":"/paginas/projetos3d.js","camera":"/paginas/camera.js","dispositivos":"/paginas/dispositivos.js","impressora":"/paginas/impressora.js","tv":"/paginas/tv.js","marketing":"/paginas/marketing.js","empresas":"/paginas/empresas.js","prospeccao":"/paginas/prospeccao.js","ajustes":"/paginas/ajustes.js"};
+const CHEIAS = ["sessoes", "melhorias", "inicio"]; // páginas sem margem, que ocupam a tela
 /** @type {Record<string, string[]>} */
 const DEPENDENCIAS = {
  sessoes: ['/vendor/xterm/xterm.js', '/vendor/xterm/addon-fit.js'],
@@ -73,6 +73,8 @@ function editando() {
 
 export async function abrir() {
   const vez = ++compartilhado.navegacao;
+  // A Conversa virou o Início (ADR 0136): o endereço antigo leva a ele.
+  if (location.hash === "#conversa") history.replaceState(null, "", "#inicio");
   const nome = (location.hash || "#inicio").slice(1);
   const secao = PAGINAS[nome] || SOB_DEMANDA[nome] || nome === "imersao" ? nome : "inicio";
   const noMenu = NO_MENU[secao] || secao;
@@ -108,7 +110,7 @@ export async function abrir() {
     if (html !== guardada && !(guardada !== undefined && editando())) mostrarPagina(secao, html);
     if (secao === "sessoes") await carregadas.prepararSessoes(vez);
     if (secao === "melhorias") await carregadas.prepararMelhorias(vez);
-    if (secao === "conversa") await carregadas.prepararConversa(vez);
+    if (secao === "inicio") { await carregadas.prepararConversa(vez); carregadas.vigiarLado(vez); }
   } catch (erro) {
     if (vez !== compartilhado.navegacao) return;
     conteudo.innerHTML = `<div class="secao">${cabeca("Não foi possível abrir a página")}<p class="aviso">${esc(erro.message)}</p></div>`;
@@ -203,7 +205,7 @@ export async function batimento() {
     inicioZe = e.inicio; semResposta = 0; faixaFora(false);
     // O que o Zé não falou (Silencioso) aparece em qualquer página
     const tela = e.tela?.[0] ?? null;
-    if (telaDita !== undefined && tela !== telaDita && location.hash !== "#conversa") import("./avisos.js").then((m) => m.avisoDoZe(e.tela[1], Math.min(15000, 5000 + 80 * e.tela[1].length))); // tempo de ler
+    if (telaDita !== undefined && tela !== telaDita && !["", "#inicio"].includes(location.hash)) import("./avisos.js").then((m) => m.avisoDoZe(e.tela[1], Math.min(15000, 5000 + 80 * e.tela[1].length))); // tempo de ler
     telaDita = tela;
     if (telaVista !== null && e.tela_ts > telaVista && imersaoLigada() && location.hash !== "#imersao") location.hash = "#imersao";
     telaVista = e.tela_ts;

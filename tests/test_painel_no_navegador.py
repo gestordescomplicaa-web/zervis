@@ -312,7 +312,7 @@ def test_todas_as_paginas_abrem_sem_erro(tmp_path: Path) -> None:
 def test_clicar_rapido_no_menu_mostra_a_ultima_pagina(tmp_path: Path) -> None:
     # Caso real de 15/10/2026: a página anterior voltava depois e quebrava a nova
     # ("Cannot set properties of null").
-    ordem = ["sessoes", "conversa", "memoria", "melhorias", "skills", "conversa", "sessoes"]
+    ordem = ["sessoes", "inicio", "memoria", "melhorias", "skills", "inicio", "sessoes"]
     with _painel(tmp_path, atraso_s=0.2) as (depuracao, endereco):
         erros, texto = asyncio.run(_clicar_rapido(depuracao, endereco, ordem))
     assert not erros, erros
@@ -1720,7 +1720,7 @@ def test_conversa_funciona_como_chat(tmp_path: Path) -> None:
     async def conferir(depuracao: str, endereco: str) -> None:
         async with websockets.connect(depuracao, max_size=None) as ws:
             nav = _Navegador(ws)
-            await _carregar(nav, endereco + "#conversa")
+            await _carregar(nav, endereco + "#inicio")
             await _esperar(nav, "!!document.getElementById('escrever-texto')")
             campo = "document.getElementById('escrever-texto')"
             await nav.avaliar(f"{campo}.value = 'Oi Zé, tudo bem?'")
@@ -1788,7 +1788,7 @@ def test_conversa_mostra_o_gasto_de_cada_resposta_e_do_dia(tmp_path: Path) -> No
     async def conferir(depuracao: str, endereco: str) -> None:
         async with websockets.connect(depuracao, max_size=None) as ws:
             nav = _Navegador(ws)
-            await _carregar(nav, endereco + "#conversa")
+            await _carregar(nav, endereco + "#inicio")
             await _esperar(nav, "!!document.querySelector('.fala.ze .gasto')")
             linha = await nav.avaliar("document.querySelector('.gasto summary').textContent")
             # O novo separado do cache (03/11/2026): o total somado parecia 50 vezes o gasto real.
@@ -2136,6 +2136,65 @@ def test_renomear_a_sessao_no_cabecalho(tmp_path: Path) -> None:
     }
     with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
         asyncio.run(conferir(depuracao, url))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_inicio_e_o_chat_com_sugestoes_e_o_resumo_ao_lado(tmp_path: Path) -> None:
+    """25/11/2026: a Conversa e o Início viram uma tela só (ADR 0136). Quem chega vê as boas-vindas,
+    o campo e as sugestões; uma sugestão vai ao Zé como se fosse escrita e a tela vira o chat. Ao
+    lado, o que precisa de você sem as aprovações, que se resolvem no próprio chat. O endereço
+    antigo (#conversa) leva ao Início, e o menu não tem mais a Conversa."""
+    hora = "2026-11-25T15:00:00-03:00"
+    enviados: list[str] = []
+
+    def conversa() -> dict[str, Any]:
+        itens = [{"quando": hora, "tipo": "voce", "texto": t} for t in enviados]
+        return {"itens": itens, "esperando": [], "aprovacoes": []}
+
+    def escrever(dados: dict[str, Any]) -> dict[str, Any]:
+        enviados.append(dados["texto"])
+        return {"aviso": "Enviado."}
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await nav.comando(
+                "Emulation.setDeviceMetricsOverride",
+                {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False},
+            )
+            await _carregar(nav, endereco + "#conversa")
+            await _esperar(nav, "!!document.querySelector('.pagina-inicio.vazia .pedido')")
+            assert await nav.avaliar("location.hash") == "#inicio"
+            assert not await nav.avaliar("!!document.querySelector('nav a[data-secao=conversa]')")
+            visivel = "((s) => !!document.querySelector(s)?.offsetParent)"
+            assert await nav.avaliar(f"[{visivel}('.boas-vindas h1'), {visivel}('#escrever')]") == [
+                True,
+                True,
+            ]
+            lado = await nav.avaliar(
+                "[...document.querySelectorAll('#lado-inicio .item-lado strong')]"
+                ".map((e) => e.textContent)"
+            )
+            assert "Responder Ana Ribeiro" in lado and "Aprovação pendente" not in lado
+            await nav.avaliar("document.querySelector('.pedido').click()")
+            await _esperar(nav, "!document.querySelector('.pagina-inicio.vazia')")
+            for _ in range(30):  # o pedido sai logo depois do balão
+                if enviados:
+                    break
+                await asyncio.sleep(0.1)
+            assert enviados == ["O que precisa de mim?"]
+            await _esperar(
+                nav,
+                "document.querySelector('.fala.voce p')?.textContent === 'O que precisa de mim?'",
+            )
+            assert not await nav.avaliar(f"{visivel}('.boas-vindas h1')")
+            assert await nav.avaliar(f"{visivel}('#escrever')")
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path, extras={"conversa/escrever": escrever}, leituras_vivas={"conversa": conversa}
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
 
 
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
