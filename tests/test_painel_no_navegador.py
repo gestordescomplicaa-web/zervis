@@ -2325,3 +2325,42 @@ def test_chat_anexa_imagem_e_arquivo_e_envia_com_o_pedido(tmp_path: Path) -> Non
         tmp_path, extras={"conversa/escrever": escrever}, envios={"conversa/anexo": subir}
     ) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_menu_recolhido_deixa_a_pagina_no_meio_e_a_tela_cheia_inteira(tmp_path: Path) -> None:
+    """25/11/2026: no PC, com o menu recolhido, a coluna das páginas ficava à esquerda e sobrava
+    tudo à direita; e a regra .cheio (a barra de uso da Memória) pegava o main das páginas de tela
+    cheia: a lista das Sessões parava na altura do conteúdo, com texto de 12 px."""
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await nav.comando(
+                "Emulation.setDeviceMetricsOverride",
+                {"width": 1920, "height": 900, "deviceScaleFactor": 1, "mobile": False},
+            )
+            await _carregar(nav, endereco + "#ajustes")
+            await nav.avaliar("document.body.classList.add('menu-recolhido')")
+            await _esperar(nav, "!!document.querySelector('.secao .assunto')")
+            await asyncio.sleep(0.5)  # a coluna do menu anima ao recolher
+            desvio = await nav.avaliar(
+                "(() => { const m = document.querySelector('main'), s = document.querySelector("
+                "'.secao').getBoundingClientRect(), r = m.getBoundingClientRect();"
+                " return Math.abs((s.left + s.right) / 2 - (r.left + m.clientWidth / 2)); })()"
+            )
+            assert desvio < 2, desvio
+            await nav.avaliar('(async () => { location.hash = "#sessoes"; await abrir(); })()')
+            await _esperar(nav, "!!document.querySelector('.sessoes-lista')")
+            await asyncio.sleep(0.5)  # a página entra deslizando 6 px
+            medidas = await nav.avaliar(
+                "[innerHeight - document.querySelector('.sessoes-lista')"
+                ".getBoundingClientRect().bottom, getComputedStyle(document.querySelector('main'))"
+                ".fontSize, document.querySelector('main').getBoundingClientRect().left"
+                " - document.querySelector('.area').getBoundingClientRect().left]"
+            )
+            assert medidas == [0, "14px", 0], medidas
+            assert not nav.erros, nav.erros
+
+    with _painel(tmp_path) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
