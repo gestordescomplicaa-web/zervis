@@ -9,11 +9,15 @@ export const ICONES = {
   automacoes: "repeat", pesquisas: "search", projetos3d: "box", prospeccao: "trending-up", empresas: "building-2",
   atendimento: "message-circle", marketing: "megaphone", dispositivos: "monitor-smartphone", memoria: "brain",
   skills: "puzzle", conectores: "plug", atividade: "activity", melhorias: "wrench", perfil: "user",
-  modelos: "cpu", voz: "audio-lines", atualizacoes: "download",
+  modelos: "cpu", voz: "audio-lines", atualizacoes: "download", ajustes: "settings",
 };
-// Páginas abertas por dentro de outra (o aparelho em Dispositivos) e as que não estão no menu.
+// Páginas abertas por dentro de outra (o aparelho em Dispositivos, a Voz em Ajustes) e as que não
+// estão no menu.
 /** @type {Record<string, [string, string]>} */
-const DENTRO = { camera: ["dispositivos", "Câmera"], impressora: ["dispositivos", "Impressora"], tv: ["dispositivos", "TV"] };
+const DENTRO = {
+  camera: ["dispositivos", "Câmera"], impressora: ["dispositivos", "Impressora"], tv: ["dispositivos", "TV"],
+  perfil: ["ajustes", "Perfil"], modelos: ["ajustes", "Modelos"], voz: ["ajustes", "Voz"], atualizacoes: ["ajustes", "Atualizações"],
+};
 /** @type {Record<string, string>} */
 const FORA_DO_MENU = { configurar: "Configuração inicial" };
 const RECOLHIDO = "ze.menu-recolhido";

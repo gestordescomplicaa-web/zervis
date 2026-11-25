@@ -41,9 +41,10 @@ def _ferramentas_existentes() -> set[str]:
 
 def test_toda_pagina_do_menu_esta_no_mapa_com_ferramenta_que_existe() -> None:
     secoes = _secoes_do_menu()
-    assert secoes and set(secoes) == set(mapa.PAGINAS), (
+    no_menu = {nome for nome, p in mapa.PAGINAS.items() if not p.dentro}
+    assert secoes and set(secoes) == no_menu, (
         "Página do painel sem linha em zervis/nucleo/mapa.py (ou linha de página que saiu): "
-        f"{sorted(set(secoes) ^ set(mapa.PAGINAS))}"
+        f"{sorted(set(secoes) ^ no_menu)}"
     )
     existentes = _ferramentas_existentes()
     for secao, pagina in mapa.PAGINAS.items():
@@ -163,3 +164,15 @@ def test_pergunta_sobre_uma_pagina_vai_ao_cerebro_que_tem_as_ferramentas() -> No
             assert pagina.assuntos, f"{secao}: sem palavras que levem o pedido ao cérebro completo"
     resumo = autoconhecimento.resumo(autoconhecimento.Retrato(cerebro="Claude"))
     assert "Prospecção" in resumo and "nunca diga que não conhece" in resumo
+
+
+def test_pagina_de_dentro_abre_de_uma_pagina_do_menu_e_existe() -> None:
+    """A Voz saiu do menu para a página Ajustes (ADR 0135): segue no mapa, abre de lá e existe."""
+    secoes = set(_secoes_do_menu())
+    navegacao = (MENU.parent / "modulos" / "navegacao.js").read_text()
+    dentro = {nome: p.dentro for nome, p in mapa.PAGINAS.items() if p.dentro}
+    assert dentro, "nenhuma página por dentro de outra"
+    for nome, pai in dentro.items():
+        assert pai in secoes, f"{nome}: {pai} não está no menu"
+        assert f'"{nome}":"/paginas/{nome}.js"' in navegacao, f"{nome}: a página não existe"
+    assert "**Voz** (em Ajustes)" in mapa.texto()

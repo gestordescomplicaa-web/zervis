@@ -18,10 +18,7 @@
   "conectores",
   "atividade",
   "melhorias",
-  "perfil",
-  "modelos",
-  "voz",
-  "atualizacoes",
+  "ajustes",
   "Recolher o menu",
   "Menu",
   "Live ▾",
@@ -32,6 +29,58 @@
   "Avisos",
   "Falar"
  ],
+ "ajustes": {
+  "Abertura do dia": [],
+  "Acesso pelo celular": [],
+  "Agente": [],
+  "App de voz": [],
+  "Atendimento": [],
+  "Ativação": [],
+  "Atualizações As versões novas do Zé e de onde vêm.": [],
+  "Avisos": [],
+  "Avisos pelo WhatsApp": [],
+  "Canal": [],
+  "Chaves e contas": [
+   "marketing/fotos()"
+  ],
+  "Conectores As integrações com outros sistemas: n8n, o navegador e outros.": [],
+  "Configuração": [],
+  "Contas": [],
+  "Cérebro": [],
+  "Escuta": [],
+  "Espera": [],
+  "Fontes": [],
+  "Instagram": [],
+  "Instagram (2)": [
+   "marketing/fotos()"
+  ],
+  "Marca": [
+   "marketing/fotos()"
+  ],
+  "Marketing O site e o blog, os vídeos, o Instagram, a marca e as chaves.": [
+   "marketing/fotos()"
+  ],
+  "Mensagem": [],
+  "Modelos O cérebro, as respostas rápidas, as contas dos agentes e o reconhecimento de fala.": [],
+  "Modo de fala": [],
+  "Nome e fuso": [],
+  "Perfil O seu nome, o seu jeito, o fuso e a abertura do dia.": [],
+  "Prospecção A cidade, os ramos, a oferta, a mensagem e as fontes.": [],
+  "Reconhecimento de fala": [],
+  "Redes sociais O WhatsApp e o Instagram ligados ao Zé, o atendimento e o agente.": [],
+  "Respostas rápidas": [],
+  "Sessões de código": [],
+  "Site e blog": [
+   "marketing/fotos()"
+  ],
+  "Versão": [],
+  "Voz A voz do Zé, o modo de fala, a escuta, a ativação, os avisos e o acesso pelo celular.": [],
+  "Voz do Zé": [],
+  "Vídeos": [
+   "marketing/fotos()"
+  ],
+  "WhatsApp": []
+ },
  "atendimento": {
   "Abrir sessão": [
    "atendente/salvar(conhecimento,empresa,nome,passar,persona)",

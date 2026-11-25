@@ -147,6 +147,7 @@ const cartaoAprovar = (r) => {
 const semSite = () => cartao("Site", `${sub("Configure o repositório do site para escrever artigos e mudar o site.")}<div class="linha">${botao("Configurar", "mk-aba", 'data-aba="ajustes"', "principal")}</div>`);
 
 PAGINAS.marketing = async () => {
+  try { aba = localStorage.getItem(LEMBRAR) || aba; } catch { /* fica a de agora */ } // a página Ajustes pode ter escolhido
   const [r, fotos, metricas, prs] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => []), metricasSemTravar(), prsSemTravar()]);
   lembrarLeitura(r);
   const site = r.site.configurado;

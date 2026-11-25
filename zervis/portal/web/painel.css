@@ -44,17 +44,18 @@ body.menu-recolhido { --lat: 68px; }
 .marca .logo { width: 34px; height: 34px; border-radius: 9px; flex: none; }
 .marca strong { display: block; font-size: 16px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
 nav { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 1px; }
-nav a, .recolher { position: relative; height: 34px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 10px; border-radius: 8px;
+nav a, .recolher { position: relative; height: 32px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 10px; border-radius: 8px;
   color: #aebdc2; text-decoration: none; white-space: nowrap; font: inherit; border: 0; background: none; cursor: pointer; transition: background .15s, color .15s; }
 nav a > i { font-style: normal; width: 18px; visibility: hidden; } /* até o ícone de traço entrar (modulos/casca.js) */
 nav a:hover, .recolher:hover { background: var(--realce); color: var(--texto); }
 nav a[aria-current="page"] { background: var(--vidro-forte); color: var(--texto); }
 nav a[aria-current="page"] svg { color: var(--acento); }
-.area-menu { padding: 14px 10px 5px; font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--apagado); white-space: nowrap; }
+.area-menu { padding: 12px 10px 4px; font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--apagado); white-space: nowrap; }
 nav .rotulo, .recolher .rotulo, .area-menu, .marca strong { transition: opacity .2s; }
 .ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--acento); margin-left: auto; flex: none; animation: piscar 2.4s ease-in-out infinite; }
 @keyframes piscar { 50% { opacity: .45; } }
-.rodape-menu { flex: none; padding: 10px; border-top: 1px solid var(--borda); }
+.rodape-menu { flex: none; display: grid; gap: 1px; padding: 10px; border-top: 1px solid var(--borda); }
+.rodape-menu nav { flex: none; padding: 0; overflow: visible; }
 .recolher { width: 100%; color: var(--suave); }
 body.menu-recolhido :is(nav .rotulo, .recolher .rotulo, .marca strong) { opacity: 0; pointer-events: none; }
 body.menu-recolhido .area-menu { height: 1px; padding: 0; margin: 12px 10px; font-size: 0; background: var(--borda); }
@@ -327,7 +328,7 @@ details.detalhes p { margin: 8px 0 0; }
   body.menu-recolhido :is(nav .rotulo, .recolher .rotulo, .marca strong) { opacity: 1; pointer-events: auto; }
   body.menu-recolhido .area-menu { height: auto; padding: 16px 10px 6px; margin: 0; font-size: 11px; background: none; }
   body.menu-recolhido nav a .ponto { position: static; margin-left: auto; box-shadow: none; }
-  .rodape-menu { display: none; }
+  .rodape-menu .recolher { display: none; }
   nav a { height: 42px; }
   .topo { height: 58px; padding: 0 12px; padding-top: env(safe-area-inset-top); gap: 6px; }
   .botao-menu { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--borda-forte); border-radius: 10px; background: var(--vidro); color: var(--texto); cursor: pointer; }

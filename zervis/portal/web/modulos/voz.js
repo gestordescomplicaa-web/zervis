@@ -205,7 +205,7 @@ async function conectarVoz(religando) {
 const GRUPOS = "ze.grupos-fechados";
 function lerFechados() { try { return new Set(JSON.parse(localStorage.getItem(GRUPOS) || "[]")); } catch { return new Set(); } }
 lerFechados().forEach((g) => /** @type {HTMLElement} */ (document.querySelector(`.grupo[data-grupo="${g}"] .grupo-titulo`))?.setAttribute("aria-expanded", "false"));
-/** @type {HTMLElement} */ (document.querySelector("nav")).addEventListener("click", (ev) => { if (/** @type {HTMLAnchorElement} */ (/** @type {HTMLElement} */ (ev.target).closest("a"))) document.body.classList.remove("menu-aberto"); });
+/** @type {HTMLElement} */ (document.querySelector(".lateral")).addEventListener("click", (ev) => { if (/** @type {HTMLAnchorElement} */ (/** @type {HTMLElement} */ (ev.target).closest("a"))) document.body.classList.remove("menu-aberto"); });
 export function alternarGrupo(b) {
   const aberto = b.getAttribute("aria-expanded") === "true", fechados = lerFechados(), g = /** @type {HTMLElement} */ (b.closest(".grupo")).dataset.grupo;
   b.setAttribute("aria-expanded", String(!aberto));
