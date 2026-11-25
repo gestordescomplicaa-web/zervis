@@ -458,7 +458,7 @@ class Nucleo(
             self.tela,
             self.manutencao,
             sobre=lambda: autoconhecimento.texto(
-                self.retrato(), self.capacidades(), self.historico()
+                self.retrato(), self.capacidades(), self.historico(), retrato.precisa(self)
             ),
             pesquisar=guardando(
                 lambda pedido: pesquisa.pesquisar(

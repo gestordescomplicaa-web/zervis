@@ -139,3 +139,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0130](0130-quem-atende-e-os-avisos.md) | Quem atende o número, a resposta automática e os avisos do que trabalha sozinho | Aceito |
 | [0131](0131-app-de-voz-com-cara-de-produto.md) | O app de voz com cara de produto: Início, Parear e Ajustes | Aceito |
 | [0132](0132-a-identidade-do-painel.md) | A identidade do painel: casca nova, voz no topo, menu por áreas | Aceito |
+| [0133](0133-inicio-precisa-de-voce-e-avisos.md) | O Início pela voz, o "Precisa de você" e a central de avisos | Aceito |

@@ -95,6 +95,7 @@ class Acoes:
             "abertura": self.abertura,
             "contas": self.contas,
             "inicio": self.inicio,
+            "precisa": self.precisa,
             "cerebro": self.cerebro,
             "escuta": self.escuta,
             "sintese": self.sintese,

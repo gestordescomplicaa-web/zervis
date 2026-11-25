@@ -318,6 +318,10 @@ export const ACOES = {
   "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
   "recolher-menu": alternarRecolhido,
+  avisos: () => import("./avisos.js").then((m) => m.alternarAvisos()),
+  "avisos-fechar": () => import("./avisos.js").then((m) => m.fecharAvisos()),
+  "aviso-fechar": () => import("./avisos.js").then((m) => m.fecharAviso()),
+  "aprovacao-decidir": (b) => import("./avisos.js").then((m) => m.decidirAprovacao(b)),
   menu: () => {
     const aberto = document.body.classList.toggle("menu-aberto");
     /** @type {HTMLElement} */ (document.querySelector(".botao-menu")).setAttribute("aria-expanded", String(aberto));

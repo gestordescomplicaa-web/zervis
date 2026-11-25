@@ -18,7 +18,9 @@ def ferramentas(sobre: Callable[[], str] | None) -> list[SdkMcpTool[Any]]:
         "respostas rápidas, a voz, a escuta, o Live, o modo de fala, o acesso pelo celular, as "
         "contas e a versão), o que sabe fazer (as ferramentas por área, as skills, os conectores, "
         "as sessões, as automações e a memória), o que fez nos últimos dias (pedidos, ações, "
-        "falhas, o mais executado) e onde mudar cada coisa. Use sempre que o usuário perguntar "
+        "falhas, o mais executado), o que espera o usuário agora (aprovações, leads, sessões "
+        "paradas, revisões: o 'Precisa de você' do Início) e onde mudar cada coisa. Use sempre "
+        "que o usuário perguntar o que precisa dele, ou "
         "sobre você mesmo, o que você faz ou como usar ou configurar o Zé; responda com o que vier "
         "aqui, nunca de memória.",
         {"type": "object", "properties": {}},
