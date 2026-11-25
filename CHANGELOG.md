@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Ajustes mais limpos:** cada assunto é um cartão com o ícone, o título, uma linha de descrição e
+  a lista dos ajustes; os cartões se encaixam em colunas, sem buracos. A busca mostra só os
+  ajustes com o nome buscado e acha o assunto também pelo que não cabe na descrição ("n8n",
+  "Deepgram", "assinatura"). O mapa de contratos ignora o tempo relativo nos nomes ("41 d").
 - **Ajustes num lugar só:** um item Ajustes no rodapé do menu abre a página com todos os assuntos
   (Voz, Modelos, Perfil, Conectores, Redes sociais, Marketing, Prospecção, Atualizações) e uma
   busca; cada ajuste leva ao cartão certo da página dele (ADR 0135).

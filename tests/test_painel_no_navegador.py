@@ -2136,3 +2136,54 @@ def test_renomear_a_sessao_no_cabecalho(tmp_path: Path) -> None:
     }
     with _painel(tmp_path, extras=extras, estado=lambda: copy.deepcopy(estado)) as (depuracao, url):
         asyncio.run(conferir(depuracao, url))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_ajustes_em_listas_e_a_busca_acha_pelo_que_saiu_da_descricao(tmp_path: Path) -> None:
+    """25/11/2026: os cartões de Ajustes ficaram estranhos (etiquetas soltas, descrições de três
+    linhas). Cada ajuste vira um item de lista; a descrição encurta, e o que saiu dela (n8n,
+    Deepgram, fuso) continua achando o assunto pela busca."""
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#ajustes")
+            await _esperar(nav, "!!document.getElementById('ajustes-busca')")
+            assert await nav.avaliar(
+                "[...document.querySelectorAll('.assunto .ajuste')]"
+                ".every((b) => b.parentElement.tagName === 'LI')"
+            )
+
+            async def buscar(texto: str) -> list[list[str]]:
+                await nav.avaliar(
+                    "(() => { const c = document.getElementById('ajustes-busca');"
+                    f" c.value = {texto!r};"
+                    " c.dispatchEvent(new Event('input', { bubbles: true })); })()"
+                )
+                achados: list[list[str]] = await nav.avaliar(
+                    "[...document.querySelectorAll('.assunto:not([hidden])')].map((a) =>"
+                    " [a.querySelector('strong').textContent,"
+                    " ...[...a.querySelectorAll('li:not([hidden])')].map((l) => l.textContent)])"
+                )
+                return achados
+
+            assert await buscar("deepgram") == [
+                [
+                    "Modelos",
+                    "Cérebro",
+                    "Respostas rápidas",
+                    "Contas",
+                    "Sessões de código",
+                    "Reconhecimento de fala",
+                ]
+            ]
+            assert [a[0] for a in await buscar("n8n")] == ["Conectores"]
+            assert await buscar("abertura") == [["Perfil", "Abertura do dia"]]
+            assert await buscar("horario") == [["Perfil", "Nome e fuso", "Abertura do dia"]]
+            assert await buscar("escuta") == [["Voz", "Escuta"]]
+            assert await buscar("xyz") == []
+            assert await nav.avaliar("!document.getElementById('ajustes-nada').hidden")
+            assert not nav.erros, nav.erros
+
+    with _painel(tmp_path) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))

@@ -29,3 +29,11 @@ de fala" ou "a chave do Pixabay" era preciso saber em que página ele morava.
 
 - Página nova de ajustes entra na lista `ASSUNTOS` de `paginas/ajustes.js` (e no mapa, com
   `dentro="ajustes"`, se sair do menu).
+
+## Ajuste de 25/11/2026: os cartões
+
+Os ajustes eram etiquetas soltas, e as descrições repetiam a lista em três linhas. Agora cada
+cartão tem o ícone, o título, uma linha de descrição (o que é) e a lista dos ajustes, em colunas
+que se encaixam. Cada assunto em `ASSUNTOS` leva também as palavras da busca (o que não cabe na
+descrição: "n8n", "Deepgram", "assinatura"). Na busca, um nome de ajuste mostra só os ajustes que
+batem; sem nenhum, o assunto inteiro.

@@ -36,14 +36,14 @@
   "App de voz": [],
   "Atendimento": [],
   "Ativação": [],
-  "Atualizações As versões novas do Zé e de onde vêm.": [],
+  "Atualizações Versões novas do Zé.": [],
   "Avisos": [],
   "Avisos pelo WhatsApp": [],
   "Canal": [],
   "Chaves e contas": [
    "marketing/fotos()"
   ],
-  "Conectores As integrações com outros sistemas: n8n, o navegador e outros.": [],
+  "Conectores Integrações com outros sistemas.": [],
   "Configuração": [],
   "Contas": [],
   "Cérebro": [],
@@ -57,24 +57,24 @@
   "Marca": [
    "marketing/fotos()"
   ],
-  "Marketing O site e o blog, os vídeos, o Instagram, a marca e as chaves.": [
+  "Marketing Site, vídeos, marca e chaves.": [
    "marketing/fotos()"
   ],
   "Mensagem": [],
-  "Modelos O cérebro, as respostas rápidas, as contas dos agentes e o reconhecimento de fala.": [],
+  "Modelos Os modelos de IA e as contas.": [],
   "Modo de fala": [],
   "Nome e fuso": [],
-  "Perfil O seu nome, o seu jeito, o fuso e a abertura do dia.": [],
-  "Prospecção A cidade, os ramos, a oferta, a mensagem e as fontes.": [],
+  "Perfil Quem você é e como o dia começa.": [],
+  "Prospecção Onde procurar clientes e o que dizer.": [],
   "Reconhecimento de fala": [],
-  "Redes sociais O WhatsApp e o Instagram ligados ao Zé, o atendimento e o agente.": [],
+  "Redes sociais WhatsApp, Instagram e o atendimento.": [],
   "Respostas rápidas": [],
   "Sessões de código": [],
   "Site e blog": [
    "marketing/fotos()"
   ],
   "Versão": [],
-  "Voz A voz do Zé, o modo de fala, a escuta, a ativação, os avisos e o acesso pelo celular.": [],
+  "Voz Como o Zé fala, ouve e avisa.": [],
   "Voz do Zé": [],
   "Vídeos": [
    "marketing/fotos()"
@@ -520,12 +520,12 @@
  },
  "sessoes": {
   "Nova sessão": [],
-  "P Projeto 1 41 d trabalhando…": [
+  "P Projeto 1 # d trabalhando…": [
    "sessao/arquivos(id,pasta)",
    "terminal/abrir(colunas,id,linhas)",
    "ze/melhorias()"
   ],
-  "P Projeto 2 42 d Exemplo": [
+  "P Projeto 2 # d Exemplo": [
    "sessao/arquivos(id,pasta)",
    "terminal/abrir(colunas,id,linhas)",
    "ze/melhorias()"
