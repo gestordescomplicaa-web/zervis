@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Enquadramento no PC:** com o menu recolhido (ou aberto), a coluna das páginas fica no meio da
+  área, sem sobrar tudo à direita. As páginas de tela cheia (Sessões, Autodesenvolvimento) ocupam
+  a altura inteira, com o texto no tamanho certo: a barra de uso da Memória passou a se chamar
+  `.ocupacao` e não pega mais o conteúdo dessas páginas.
 - **Imagem e arquivo no chat:** o "+" do campo (ou colar, ou arrastar) anexa imagens, PDF e texto,
   até 5 por mensagem e 20 MB cada; o chat mostra a miniatura ou o nome. O Zé lê só o que foi
   anexado (a ferramenta nova `anexo_ler`): vê a imagem e lê o texto do PDF. Os anexos ficam 30

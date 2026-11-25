@@ -72,8 +72,6 @@ Object.assign(ACOES, {
 });
 
 document.head.appendChild(Object.assign(document.createElement("style"), { textContent: `
-/* O conteúdo inteiro abaixo do topo (a regra .cheio de outras páginas não vale aqui). */
-main.cheio:has(> .pagina-inicio) { flex: 1 1 auto; display: flex; margin: 0; color: var(--texto); font-size: 14px; }
 .pagina-inicio { flex: 1 1 auto; align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) 320px; height: 100%; min-height: 0; min-width: 0; color: var(--texto); font-size: 14px; animation: entrar-pagina .32s var(--saida); }
 .coluna-chat { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
 .rolagem-chat { overflow-y: auto; min-height: 0; padding: 28px clamp(16px, 4vw, 48px) 12px; }

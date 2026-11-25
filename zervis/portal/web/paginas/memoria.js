@@ -12,7 +12,7 @@ PAGINAS.memoria = async () => {
       + (vencidas[alvo]?.includes(t) ? ' <span class="etiqueta">Vencida</span>' : "");
     const bloco = (titulo, alvo, entradas) => {
       const cheio = Math.min(100, Math.round((100 * entradas.join(" § ").length) / m.limites[alvo]));
-      const barra = `<span class="cheio" title="Quanto do espaço desta memória já foi usado"><span class="barra"><span data-cheio="${cheio}"></span></span>${cheio}% cheio</span>`;
+      const barra = `<span class="ocupacao" title="Quanto do espaço desta memória já foi usado"><span class="barra"><span data-cheio="${cheio}"></span></span>${cheio}% cheio</span>`;
       return cartao(`${titulo} ${barra}`,
         `<div class="itens">${entradas.map((t) => item("", esc(t) + etiquetas(alvo, t), xis("memoria-remover", `data-alvo="${alvo}" data-texto="${esc(t)}"`, "Remover"))).join("") || vazio("Vazia.")}</div>
          <div class="add"><input data-nova="${alvo}" placeholder="Algo para o Zé lembrar sempre" autocomplete="off">${botao("Adicionar", "memoria-adicionar", `data-alvo="${alvo}"`)}</div>`);
