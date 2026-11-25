@@ -53,10 +53,33 @@ const fotosLivres = (vs) => `<div class="campos">
     <div class="linha">${botao("Salvar", "mk-video-pixabay", "", "discreta")}${vs.pixabay ? botao("Remover", "mk-video-pixabay-remover", "", "discreta") : ""}<a class="acao discreta" href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Obter chave de API</a></div>
     <p class="resultado" id="mk-resultado-video-pixabay"></p>`;
 
+/** As escolhas guardadas no Zé (lembradas ao voltar à aba); sem elas, os padrões. @param {any} vs */
+const preferencias = (vs) => vs.preferencias || { linha: "", duracao: 30, modelo: "", estilo: "", voz: true, locutor: vs.locutor || "" };
+
+/** Um pedido que também se faz pela voz. @param {string} frase */
+export const pelaVoz = (frase) => `<p class="pela-voz"><svg class="i" aria-hidden="true"><use href="/icones/lucide.svg#mic"/></svg>Pela voz: “${esc(frase)}”</p>`;
+
+/** Os ajustes dos vídeos (aba Ajustes): o padrão de cada vídeo novo e a paleta. @param {any} vs */
+export function ajustesVideos(vs) {
+  const pr = preferencias(vs);
+  return `<div id="mk-videos-ajustes">${cartao("Vídeos", `${sub("O padrão de cada vídeo novo. Vale na hora em que você escolhe.")}
+    <div class="campos">
+      <label>Para quem<select id="mk-video-linha" data-mudar="video-preferencia">${[["", "O Zé escolhe pelo tema"], ["empresarios", "Empresários"], ["ferramenta", "Ferramenta"]].map(([v, n]) => `<option value="${v}" ${v === pr.linha ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label>Duração<select id="mk-video-duracao" data-mudar="video-preferencia">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === pr.duracao ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
+      <label>Diretor<select id="mk-video-modelo" data-mudar="video-preferencia">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === pr.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
+      <label>Estilo<select id="mk-video-estilo" data-mudar="video-preferencia">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}" ${e.id === pr.estilo ? "selected" : ""}>${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
+      <label>Voz<select id="mk-video-locutor" data-mudar="video-preferencia">${(vs.vozes || []).map((/** @type {any} */ x) => `<option value="${esc(x.id)}" ${x.id === (pr.locutor || "") ? "selected" : ""}>${esc(x.nome)}${x.detalhe ? ` · ${esc(x.detalhe)}` : ""}</option>`).join("")}</select></label>
+      <label>Qualidade da voz<select id="mk-video-modelo-voz" data-mudar="video-preferencia">${(vs.modelos_voz || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === (pr.modelo_voz || "") ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
+      <label class="interruptor"><input type="checkbox" id="mk-video-voz" data-mudar="video-preferencia" ${pr.voz ? "checked" : ""}> Narração</label>
+    </div>
+    ${paleta(vs)}`)}</div>`;
+}
+
+/** A chave do Pixabay (aba Ajustes, Chaves e contas). @param {any} vs */
+export const chavePixabay = (vs) => `<div id="mk-pixabay">${fotosLivres(vs)}</div>`;
+
 /** O cartão Vídeos da página Marketing. @param {any} r a leitura "marketing" @param {any} vs */
 export function cartaoVideos(r, vs = r.videos) {
-  // as escolhas guardadas no Zé (lembradas ao voltar à aba); sem elas, os padrões
-  const pr = vs.preferencias || { linha: "", duracao: 30, modelo: "", estilo: "", voz: true, locutor: vs.locutor || "" };
   const publicados = (r.artigos || []).filter((/** @type {any} */ a) => a.estado === "Publicado");
   const lista = vs.lista;
   const v = lista.find((/** @type {any} */ x) => x.id === aberto && x.pronto);
@@ -67,18 +90,10 @@ export function cartaoVideos(r, vs = r.videos) {
     <div class="campos">
       <label>Tema do vídeo<input id="mk-video-tema" placeholder="Ex.: como o WhatsApp perde clientes à noite" autocomplete="off"></label>
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-video-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
-      <label>Para quem<select id="mk-video-linha" data-mudar="video-preferencia">${[["", "O Zé escolhe pelo tema"], ["empresarios", "Empresários"], ["ferramenta", "Ferramenta"]].map(([v, n]) => `<option value="${v}" ${v === pr.linha ? "selected" : ""}>${n}</option>`).join("")}</select></label>
       <label>Entrega<input id="mk-video-entrega" placeholder="Opcional. Sem ela: uma conversa no direct sobre o negócio da pessoa" autocomplete="off"></label>
       <label>Palavra<input id="mk-video-palavra" placeholder="Ex.: COBRANÇA" maxlength="16" autocomplete="off"></label>
-      <label>Duração<select id="mk-video-duracao" data-mudar="video-preferencia">${(vs.duracoes || [30]).map((/** @type {number} */ d) => `<option value="${d}" ${d === pr.duracao ? "selected" : ""}>${d} s</option>`).join("")}</select></label>
-      <label>Diretor<select id="mk-video-modelo" data-mudar="video-preferencia">${(vs.modelos || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === pr.modelo ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
-      <label>Estilo<select id="mk-video-estilo" data-mudar="video-preferencia">${vs.estilos.map((/** @type {any} */ e) => `<option value="${esc(e.id)}" title="${esc(e.descricao)}" ${e.id === pr.estilo ? "selected" : ""}>${esc(e.nome)}${e.proprio ? " (seu)" : ""}</option>`).join("")}</select></label>
-      <label>Voz<select id="mk-video-locutor" data-mudar="video-preferencia">${(vs.vozes || []).map((/** @type {any} */ x) => `<option value="${esc(x.id)}" ${x.id === (pr.locutor || "") ? "selected" : ""}>${esc(x.nome)}${x.detalhe ? ` · ${esc(x.detalhe)}` : ""}</option>`).join("")}</select></label>
-      <label>Qualidade da voz<select id="mk-video-modelo-voz" data-mudar="video-preferencia">${(vs.modelos_voz || []).map((/** @type {any} */ m) => `<option value="${esc(m.id)}" ${m.id === (pr.modelo_voz || "") ? "selected" : ""}>${esc(m.nome)}</option>`).join("")}</select></label>
-      <label class="interruptor"><input type="checkbox" id="mk-video-voz" data-mudar="video-preferencia" ${pr.voz ? "checked" : ""}> Narração</label>
     </div>
-    ${paleta(vs)}
-    ${fotosLivres(vs)}
+    ${pelaVoz("Zé, cria um vídeo sobre atendimento fora do horário")}
     <div class="linha">${botao("Criar vídeo", "mk-video-criar", vs.indisponivel ? "disabled" : "", "principal")}</div>
     <p class="resultado" id="mk-resultado-video"></p>
     ${lista.length ? `<div class="itens">${lista.map((/** @type {any} */ x) => item(esc(x.titulo || x.tema || x.artigo), estado(x),
@@ -113,15 +128,21 @@ export function cartaoVideosAutomaticos(r) {
     <p class="resultado" id="mk-resultado-video-agenda"></p>`)}</div>`;
 }
 
-/** Redesenha só este cartão (sem recarregar a página, que lê o site e os PRs). @param {any} r */
-async function redesenhar(r) {
+/** Redesenha só este cartão (sem recarregar a página, que lê o site e os PRs); com `tudo`, também
+ * os ajustes e a chave (a paleta ou a chave mudou). @param {any} r @param {boolean} [tudo] */
+async function redesenhar(r, tudo = false) {
   const lugar = $("mk-videos");
   if (!lugar) return;
   const vs = await api("marketing/videos");
-  const novo = document.createElement("div");
-  novo.innerHTML = cartaoVideos(r, vs);
+  /** @param {string} id @param {string} html */
+  const trocar = (id, html) => {
+    const novo = document.createElement("div");
+    novo.innerHTML = html;
+    $(id)?.replaceWith(/** @type {Element} */ (novo.firstElementChild));
+  };
   const tema = /** @type {HTMLInputElement | null} */ ($("mk-video-tema"))?.value || "";
-  lugar.replaceWith(/** @type {Element} */ (novo.firstElementChild));
+  trocar("mk-videos", cartaoVideos(r, vs));
+  if (tudo) { trocar("mk-videos-ajustes", ajustesVideos(vs)); trocar("mk-pixabay", chavePixabay(vs)); }
   const campo = /** @type {HTMLInputElement | null} */ ($("mk-video-tema"));
   if (campo) campo.value = tema;
 }
@@ -164,7 +185,7 @@ Object.assign(ACOES, {
     const url = /** @type {HTMLInputElement} */ ($("mk-video-paleta")).value;
     try {
       const r = await ocupado(b, () => api("marketing/video/paleta", { url }));
-      await redesenhar(ultimaLeitura);
+      await redesenhar(ultimaLeitura, true);
       mostrar("mk-resultado-video-paleta", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video-paleta", false, erro.message); }
   },
@@ -172,21 +193,21 @@ Object.assign(ACOES, {
     const chave = /** @type {HTMLInputElement} */ ($("mk-video-pixabay")).value;
     try {
       const r = await ocupado(b, () => api("marketing/video/pixabay", { chave }));
-      await redesenhar(ultimaLeitura);
+      await redesenhar(ultimaLeitura, true);
       mostrar("mk-resultado-video-pixabay", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video-pixabay", false, erro.message); }
   },
   "mk-video-pixabay-remover": async (/** @type {HTMLButtonElement} */ b) => {
     try {
       const r = await ocupado(b, () => api("marketing/video/pixabay", { chave: "" }));
-      await redesenhar(ultimaLeitura);
+      await redesenhar(ultimaLeitura, true);
       mostrar("mk-resultado-video-pixabay", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video-pixabay", false, erro.message); }
   },
   "mk-video-paleta-marca": async (/** @type {HTMLButtonElement} */ b) => {
     try {
       const r = await ocupado(b, () => api("marketing/video/paleta", { origem: "marca" }));
-      await redesenhar(ultimaLeitura);
+      await redesenhar(ultimaLeitura, true);
       mostrar("mk-resultado-video-paleta", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-video-paleta", false, erro.message); }
   },

@@ -59,6 +59,7 @@ vista no PR.
 4. A Conversa como linha do tempo, com cartões que se resolvem nela (aprovar, publicar, ouvir), e
    o "precisa de você". **O "Precisa de você", o Início pela voz e o sino: ADR 0133.**
 5. As páginas em lotes, das mais usadas às menos usadas; os Ajustes num lugar só, com busca.
+   **O Marketing em abas, com os ajustes separados por assunto: ADR 0134.**
 6. Tirar o interruptor.
 
 A Imersão fica fora de todos eles.
