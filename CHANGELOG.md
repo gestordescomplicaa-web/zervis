@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Marketing em abas:** Visão geral (o que espera o seu sim e as métricas), Blog, Vídeos,
+  Instagram e Ajustes. Os ajustes saíram dos cartões de trabalho e ficam por assunto (Site e
+  blog, Vídeos, Instagram, Marca, Chaves e contas); os cartões de criar mostram o pedido pela voz
+  (ADR 0134).
 - **Início pela voz e central de avisos:** o anel do Zé, pedidos de exemplo, "Precisa de você"
   (aprovações, leads, sessões paradas, prospecção, vídeos e posts para revisar, melhorias e
   versão nova, cada um com o botão que resolve) e "O Zé agora". O sino no topo conta o que

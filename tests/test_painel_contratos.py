@@ -46,8 +46,10 @@ BOTOES = (
     " #conteudo [role=button]')].filter((b) => b.offsetParent !== null"
     " && !b.closest('#terminal-fechado'))"
 )
+# Os detalhes abertos e todas as abas à vista: cada botão conta, em qualquer aba (ADR 0134).
 ABRIR_DETALHES = (
     "document.querySelectorAll('#conteudo details').forEach((d) => { d.open = true; });"
+    " document.querySelectorAll('#conteudo [role=tabpanel]').forEach((p) => { p.hidden = false; });"
 )
 LISTAR = f"""(() => {{
   {ABRIR_DETALHES}

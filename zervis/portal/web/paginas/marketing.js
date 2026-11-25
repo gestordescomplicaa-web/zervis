@@ -1,23 +1,16 @@
 import { ACOES } from "../modulos/acoes.js";
 import { abrir } from "../modulos/navegacao.js";
 import { carregadas } from "../modulos/estado.js";
-import { PAGINAS, TOKEN, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, sub, vazio, xis } from "../painel.js";
+import { PAGINAS, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, sub, vazio } from "../painel.js";
+import { abaAjustes } from "./marketing-ajustes.js";
 import { cartaoMetricas, metricasSemTravar } from "./marketing-metricas.js";
 import { cartaoComentarios } from "./marketing-direct.js";
-import { cartaoVideos, cartaoVideosAutomaticos, lembrarLeitura } from "./marketing-videos.js";
+import { cartaoVideos, cartaoVideosAutomaticos, lembrarLeitura, pelaVoz } from "./marketing-videos.js";
 
 // A página Marketing (ADR 0091): o site e o blog de quem usa. Cada pedido vira uma sessão numa
-// cópia isolada; o Zé abre o PR e a pessoa publica no merge.
+// cópia isolada; o Zé abre o PR e a pessoa publica no merge. Em abas (ADR 0134): o trabalho de
+// cada canal numa, os ajustes de todos em outra.
 
-/** @param {any} s */
-const cartaoSite = (s) => cartao(`Site <span class="etiqueta ${s.configurado && s.blog ? "bom" : s.configurado ? "alerta" : ""}">${esc(s.estado)}</span>`,
-  `${sub("O repositório do site no GitHub. Os pedidos partem da branch base e voltam como PR.")}
-  <div class="campos">
-    <label>Pasta do site<input id="mk-pasta" class="mono" value="${esc(s.pasta)}" placeholder="~/projetos/meu-site" spellcheck="false"></label>
-    <label>Branch base<input id="mk-base" class="mono" value="${esc(s.base)}" placeholder="main" spellcheck="false"></label>
-  </div>
-  <div class="linha">${botao("Salvar", "mk-salvar", "", "principal")}</div>
-  <p class="resultado" id="mk-resultado-site"></p>`);
 
 /** @param {any} r */
 const cartaoPedir = (r) => cartao("Novo pedido",
@@ -25,6 +18,7 @@ const cartaoPedir = (r) => cartao("Novo pedido",
   <div class="campos">
     <label>Tema do artigo ou mudança no site<input id="mk-texto" placeholder="Opcional para artigo" autocomplete="off"></label>
   </div>
+  ${pelaVoz("Zé, escreve um artigo sobre agendamento pelo WhatsApp")}
   <div class="linha">${botao("Escrever artigo", "mk-pedir", 'data-tipo="artigo"', r.site.blog ? "principal" : "")}${botao("Mudar o site", "mk-pedir", 'data-tipo="site"', "discreta")}</div>
   <p class="resultado" id="mk-resultado-pedido"></p>`);
 
@@ -92,7 +86,6 @@ const cartaoBlog = (r) => {
 // --- Instagram (ADR 0093): o Zé cria o carrossel, você vê e aprova; nada sai sozinho ---
 
 const ESTADOS_POST = { criando: "Criando", rascunho: "Para revisar", publicando: "Publicando", publicado: "Publicado", erro: "Erro" };
-const CORES = [["fundo", "Fundo"], ["texto", "Texto"], ["destaque", "Destaque"], ["destaque2", "Destaque 2"]];
 /** @type {any} */
 let postAberto = null;
 
@@ -108,6 +101,7 @@ const cartaoInstagram = (r) => {
       <label>Tema do post<input id="mk-post-tema" placeholder="Ex.: atendimento fora do horário" autocomplete="off"></label>
       ${publicados.length ? `<label>Ou a partir de um artigo<select id="mk-post-artigo"><option value="">—</option>${publicados.map((/** @type {any} */ a) => `<option value="${esc(a.slug)}">${esc(a.titulo)}</option>`).join("")}</select></label>` : ""}
     </div>
+    ${pelaVoz("Zé, cria um post sobre atendimento fora do horário")}
     <div class="linha">${botao("Criar post", "mk-post-criar", "", "principal")}</div>
     <p class="resultado" id="mk-resultado-post"></p>
     ${r.posts.length ? `<div class="itens">${r.posts.map((/** @type {any} */ p) => item(esc(p.tema || p.artigo), `${ESTADOS_POST[p.estado] || esc(p.estado)}${p.erro ? ` · ${esc(p.erro)}` : ""}`,
@@ -124,43 +118,54 @@ const previa = (p) => `<div class="previa-post">
   <div class="linha">${botao("Publicar no Instagram", "mk-post-publicar", `data-id="${esc(p.id)}"`, "principal")}${botao("Refazer", "mk-post-refazer", `data-id="${esc(p.id)}"`)}${botao("Descartar", "mk-post-descartar", `data-id="${esc(p.id)}"`, "discreta")}</div>` : ""}
   <p class="resultado" id="mk-resultado-previa"></p></div>`;
 
-/** @param {any} m */
-const cartaoMarca = (m) => cartao(`Marca <span class="etiqueta">${m.paleta === "propria" ? "Paleta própria" : "Cores do site"}</span>`,
-  `${sub(m.declarada ? "As cores dos posts. Por padrão, as que o site declara." : "O site não declara uma marca; vale a paleta padrão até você escolher a sua.")}
-  <div class="segmentos" role="group" aria-label="Paleta">${botao("Cores do site", "mk-paleta", `data-paleta="site" aria-pressed="${m.paleta === "site"}"`)}${botao("Paleta própria", "mk-paleta", `data-paleta="propria" aria-pressed="${m.paleta === "propria"}"`)}</div>
-  <div class="campos cores-marca">${CORES.map(([chave, nome]) => `<label>${nome}<input type="color" data-cor="${chave}" value="${esc(m.atual[chave] || m.site[chave])}" ${m.paleta === "site" ? "disabled" : ""}></label>`).join("")}</div>
-  <div class="linha">${botao("Salvar", "mk-paleta-salvar", "", "principal")}</div>
-  <p class="resultado" id="mk-resultado-marca"></p>`);
 
-/** @param {any[]} fotos */
-const cartaoFotos = (fotos) => cartao(`Fotos da marca <span class="etiqueta">${fotos.length} ${fotos.length === 1 ? "foto" : "fotos"}</span>`,
-  `${sub("Fotos suas e do seu trabalho. O nome do arquivo descreve a foto: é por ele que o Zé escolhe a capa do post.")}
-  ${fotos.length ? `<div class="fotos-marca">${fotos.map((f) => `<figure><img src="${f.miniatura}" alt="${esc(f.nome)}"><figcaption>${esc(f.nome)}</figcaption>${xis("mk-foto-remover", `data-nome="${esc(f.nome)}"`, "Remover")}</figure>`).join("")}</div>` : ""}
-  <input type="file" id="mk-fotos" accept="image/*" multiple hidden>
-  <div class="linha">${botao("Enviar fotos", "mk-fotos-escolher", "", fotos.length ? "discreta" : "principal")}</div>
-  <p class="resultado" id="mk-resultado-fotos"></p>`);
 
-/** @param {File} arquivo */
-async function subirFoto(arquivo) {
-  const r = await fetch(`/api/marketing/foto?nome=${encodeURIComponent(arquivo.name)}`,
-    { method: "POST", headers: { "X-Ze-Token": TOKEN, "Content-Type": "application/octet-stream" }, body: arquivo });
-  const dados = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(`${arquivo.name}: ${dados.erro || "falha"}`);
-}
+
+const ABAS = [["visao", "Visão geral"], ["blog", "Blog"], ["videos", "Vídeos"], ["instagram", "Instagram"], ["ajustes", "Ajustes"]];
+const LEMBRAR = "ze.marketing-aba";
+let aba = "visao";
+try { aba = localStorage.getItem(LEMBRAR) || aba; } catch { /* sem armazenamento: começa na Visão geral */ }
+
+const abas = () => `<div class="abas" role="tablist" aria-label="Marketing">${ABAS.map(([id, nome]) =>
+  `<button type="button" role="tab" class="aba" id="mk-tab-${id}" data-acao="mk-aba" data-aba="${id}" aria-selected="${id === aba}" aria-controls="mk-aba-${id}">${nome}</button>`).join("")}</div>`;
+/** @param {string} id @param {string} corpo */
+const painel = (id, corpo) => `<div class="painel-aba" role="tabpanel" id="mk-aba-${id}" aria-labelledby="mk-tab-${id}"${id === aba ? "" : " hidden"}>${corpo}</div>`;
+
+/** O que espera o seu sim, de todos os canais, cada um levando à sua aba. @param {any} r */
+const cartaoAprovar = (r) => {
+  const itens = [
+    ...(r.pedidos || []).filter((/** @type {any} */ p) => p.pr && !p.publicando).map((/** @type {any} */ p) => ["blog", p.nome, "Blog · PR aberto"]),
+    ...((r.videos && r.videos.lista) || []).filter((/** @type {any} */ v) => v.estado === "rascunho" && v.pronto).map((/** @type {any} */ v) => ["videos", v.titulo || v.tema, "Vídeo · Pronto para publicar"]),
+    ...(r.posts || []).filter((/** @type {any} */ p) => p.estado === "rascunho").map((/** @type {any} */ p) => ["instagram", p.tema || p.artigo, "Post · Para revisar"]),
+  ];
+  return cartao(`Para aprovar${itens.length ? ` <span class="etiqueta alerta">${itens.length}</span>` : ""}`, itens.length
+    ? `<div class="itens">${itens.map(([alvo, titulo, detalhe]) => item(esc(titulo), detalhe, botao("Abrir", "mk-aba", `data-aba="${alvo}"`, "discreta"))).join("")}</div>`
+    : vazio("Nada esperando aprovação."));
+};
+
+/** No lugar do trabalho que depende do site, enquanto ele não está configurado. */
+const semSite = () => cartao("Site", `${sub("Configure o repositório do site para escrever artigos e mudar o site.")}<div class="linha">${botao("Configurar", "mk-aba", 'data-aba="ajustes"', "principal")}</div>`);
 
 PAGINAS.marketing = async () => {
   const [r, fotos, metricas, prs] = await Promise.all([api("marketing"), api("marketing/fotos", {}).catch(() => []), metricasSemTravar(), prsSemTravar()]);
   lembrarLeitura(r);
-  const corpo = r.site.configurado
-    ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(prs)}${cartaoBlog(r)}${cartaoMetricas(metricas)}${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}${cartaoInstagram(r)}${cartaoComentarios(r)}${cartaoMarca(r.marca)}${cartaoFotos(fotos)}${cartaoSite(r.site)}`
-    : `${cartaoSite(r.site)}${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}${cartaoComentarios(r)}`;
-  return `${cabeca("Marketing")}${sub("O site e o blog, sempre por Pull Request: nada vai ao ar sem você.")}${corpo}`;
+  const site = r.site.configurado;
+  return `${cabeca("Marketing")}${sub("O site, o blog, os vídeos e o Instagram, com o seu sim antes de publicar.")}${abas()}
+    ${painel("visao", `${cartaoAprovar(r)}${site ? cartaoMetricas(metricas) : semSite()}`)}
+    ${painel("blog", site ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(prs)}${cartaoBlog(r)}` : semSite())}
+    ${painel("videos", `${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}`)}
+    ${painel("instagram", `${site ? cartaoInstagram(r) : ""}${cartaoComentarios(r)}`)}
+    ${painel("ajustes", abaAjustes(r, fotos))}`;
 };
 
 Object.assign(ACOES, {
-  "mk-salvar": async (/** @type {HTMLButtonElement} */ b) => {
-    const dados = { pasta: /** @type {HTMLInputElement} */ ($("mk-pasta")).value, base: /** @type {HTMLInputElement} */ ($("mk-base")).value };
-    try { await ocupado(b, () => api("marketing/site", dados)); await abrir(); } catch (erro) { mostrar("mk-resultado-site", false, erro.message); }
+  "mk-aba": (/** @type {HTMLButtonElement} */ b) => {
+    aba = b.dataset.aba || "visao";
+    try { localStorage.setItem(LEMBRAR, aba); } catch { /* vale só agora */ }
+    for (const t of document.querySelectorAll(".abas [role=tab]")) t.setAttribute("aria-selected", String(/** @type {HTMLElement} */ (t).dataset.aba === aba));
+    for (const x of document.querySelectorAll(".painel-aba")) /** @type {HTMLElement} */ (x).hidden = x.id !== `mk-aba-${aba}`;
+    if (!b.closest(".abas")) $("conteudo").scrollTo({ top: 0, behavior: "smooth" });
+    document.querySelector(`#mk-tab-${aba}`)?.scrollIntoView({ inline: "nearest", block: "nearest" });
   },
   "mk-pedir": async (/** @type {HTMLButtonElement} */ b) => {
     const dados = { tipo: b.dataset.tipo, texto: /** @type {HTMLInputElement} */ ($("mk-texto")).value };
@@ -203,31 +208,6 @@ Object.assign(ACOES, {
   },
   "mk-post-descartar": async (/** @type {HTMLButtonElement} */ b) => {
     try { await ocupado(b, () => api("marketing/post/descartar", { id: b.dataset.id })); postAberto = null; await abrir(); } catch (erro) { mostrar("mk-resultado-previa", false, erro.message); }
-  },
-  "mk-paleta": (/** @type {HTMLButtonElement} */ b) => {
-    document.querySelectorAll('[data-acao="mk-paleta"]').forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    document.querySelectorAll(".cores-marca input").forEach((x) => { /** @type {HTMLInputElement} */ (x).disabled = b.dataset.paleta === "site"; });
-  },
-  "mk-paleta-salvar": async (/** @type {HTMLButtonElement} */ b) => {
-    const paleta = /** @type {HTMLElement} */ (document.querySelector('[data-acao="mk-paleta"][aria-pressed="true"]')).dataset.paleta;
-    /** @type {Record<string, string>} */ const cores = {};
-    document.querySelectorAll(".cores-marca input").forEach((x) => { const c = /** @type {HTMLInputElement} */ (x); cores[c.dataset.cor || ""] = c.value; });
-    try { await ocupado(b, () => api("marketing/paleta", { paleta, cores })); await abrir(); } catch (erro) { mostrar("mk-resultado-marca", false, erro.message); }
-  },
-  "mk-fotos-escolher": () => {
-    const campo = /** @type {HTMLInputElement} */ ($("mk-fotos"));
-    campo.onchange = async () => {
-      const lista = Array.from(campo.files || []);
-      for (const arquivo of lista) {
-        if (arquivo.size > 20 * 1024 * 1024) { mostrar("mk-resultado-fotos", false, `${arquivo.name}: maior que 20 MB.`); continue; }
-        try { await subirFoto(arquivo); } catch (erro) { mostrar("mk-resultado-fotos", false, erro.message); return; }
-      }
-      await abrir();
-    };
-    campo.click();
-  },
-  "mk-foto-remover": async (/** @type {HTMLButtonElement} */ b) => {
-    try { await api("marketing/foto/remover", { nome: b.dataset.nome }); await abrir(); } catch (erro) { mostrar("mk-resultado-fotos", false, erro.message); }
   },
   "mk-sessao": async (/** @type {HTMLButtonElement} */ b) => {
     location.hash = "#sessoes";

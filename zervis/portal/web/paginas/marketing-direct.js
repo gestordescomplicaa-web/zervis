@@ -14,9 +14,20 @@ export function cartaoComentarios(r) {
     ${!c.conectado ? `<p class="nota">Conecte o Instagram em Redes sociais.</p>` : ""}
     <div class="linha">${c.ligado ? botao("Desligar", "mk-comentarios", `data-ligado="0"`, "discreta") : botao("Ligar", "mk-comentarios", `data-ligado="1"${c.conectado ? "" : " disabled"}`, "principal")}${c.contatos ? `<span class="nota">${c.contatos} ${c.contatos === 1 ? "pessoa recebeu" : "pessoas receberam"} mensagem</span>` : ""}</div>
     <p class="resultado" id="mk-resultado-comentarios"></p>
-    ${ignoradas(c.ignoradas || [])}
-    ${avisos(c.avisos || { configurado: false, recebendo: false, endereco: "", verificacao: "", recusados: 0, ultimo: 0 })}
+    ${comVoce((c.direct || { contatos: [] }).contatos || [])}`)}</div>`;
+}
+
+/** Os ajustes do Instagram (aba Ajustes): as contas ignoradas e a conversa no direct. @param {any} r */
+export function ajustesInstagram(r) {
+  const c = r.comentarios || {};
+  return `<div id="mk-comentarios-ajustes">${cartao("Instagram", `${ignoradas(c.ignoradas || [])}
     ${conversa(c.direct || { ligado: false, link: "", como: "", contatos: [] })}`)}</div>`;
+}
+
+/** A resposta na hora (aba Ajustes, Chaves e contas): os webhooks da Meta. @param {any} r */
+export function chaveAvisos(r) {
+  const c = r.comentarios || {};
+  return `<div id="mk-avisos-chave">${avisos(c.avisos || { configurado: false, recebendo: false, endereco: "", verificacao: "", recusados: 0, ultimo: 0 })}</div>`;
 }
 
 /** As contas que nunca recebem resposta automática. @param {string[]} contas */
@@ -51,8 +62,7 @@ const conversa = (d) => `<h3 class="subtitulo">Conversa no direct <span class="e
       <label class="interruptor"><input type="checkbox" id="mk-direct-ligado" data-mudar="direct-ajuste" ${d.ligado ? "checked" : ""}> Conversar no direct</label>
     </div>
     <div class="linha">${botao("Salvar", "mk-direct-salvar", "", "principal")}</div>
-    <p class="resultado" id="mk-resultado-direct"></p>
-    ${comVoce(d.contatos)}`;
+    <p class="resultado" id="mk-resultado-direct"></p>`;
 
 /** Só as conversas que o Zé passou para você: o resto fica no direct, não na tela.
  * @param {any[]} contatos */
@@ -62,11 +72,13 @@ const comVoce = (contatos) => {
     botao("Devolver ao Zé", "mk-direct-devolver", `data-usuario="${esc(x.usuario)}"`, "discreta"))).join("")}</div>` : "";
 };
 
-/** Redesenha o cartão com a leitura nova. @param {any} r */
+/** Redesenha o cartão, os ajustes e a chave com a leitura nova. @param {any} r */
 function redesenhar(r) {
-  const novo = document.createElement("div");
-  novo.innerHTML = cartaoComentarios(r);
-  $("mk-comentarios")?.replaceWith(/** @type {Element} */ (novo.firstElementChild));
+  for (const [id, html] of [["mk-comentarios", cartaoComentarios(r)], ["mk-comentarios-ajustes", ajustesInstagram(r)], ["mk-avisos-chave", chaveAvisos(r)]]) {
+    const novo = document.createElement("div");
+    novo.innerHTML = html;
+    $(id)?.replaceWith(/** @type {Element} */ (novo.firstElementChild));
+  }
 }
 
 /** Os ajustes da conversa como estão na tela. */

@@ -205,6 +205,9 @@
   ]
  },
  "marketing": {
+  "Abrir": [],
+  "Abrir (2)": [],
+  "Abrir (3)": [],
   "Abrir sessão": [
    "sessao/arquivos(id,pasta)",
    "terminal/abrir(colunas,id,linhas)",
@@ -217,7 +220,10 @@
   "Agendar (2)": [
    "marketing/video/agendar(duracao,quando,temas)"
   ],
+  "Ajustes": [],
   "Assistir": [],
+  "Blog": [],
+  "Chaves e contas": [],
   "Cores do site": [],
   "Criar post": [
    "marketing/fotos()",
@@ -238,6 +244,9 @@
    "marketing/fotos()",
    "marketing/pedir(texto,tipo)"
   ],
+  "Instagram": [],
+  "Instagram (2)": [],
+  "Marca": [],
   "Mudar o site": [
    "marketing/fotos()",
    "marketing/pedir(texto,tipo)"
@@ -253,7 +262,8 @@
   ],
   "Remover chave": [],
   "Salvar": [
-   "marketing/video/pixabay(chave)"
+   "marketing/fotos()",
+   "marketing/site(base,pasta)"
   ],
   "Salvar (2)": [
    "marketing/instagram/ignoradas(contas)"
@@ -266,9 +276,9 @@
    "marketing/paleta(cores,paleta)"
   ],
   "Salvar (5)": [
-   "marketing/fotos()",
-   "marketing/site(base,pasta)"
+   "marketing/video/pixabay(chave)"
   ],
+  "Site e blog": [],
   "Usar cores da marca": [
    "marketing/video/paleta(origem)"
   ],
@@ -278,7 +288,10 @@
   "Ver": [
    "marketing/fotos()",
    "marketing/post(id)"
-  ]
+  ],
+  "Visão geral": [],
+  "Vídeos": [],
+  "Vídeos (2)": []
  },
  "melhorias": {
   "Anexar arquivo": [],
