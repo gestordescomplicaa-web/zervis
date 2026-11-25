@@ -24,3 +24,9 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+
+# A skill de design: referências e rodadas de decisão ficam fora; o resumo de cada tela entra.
+.impeccable/mocks/
+.impeccable/questions/
+.impeccable/review/
+.impeccable/build/

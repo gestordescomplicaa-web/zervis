@@ -1,0 +1,553 @@
+{
+ "(casca)": [
+  "inicio",
+  "conversa",
+  "imersao",
+  "sessoes",
+  "foco",
+  "automacoes",
+  "pesquisas",
+  "projetos3d",
+  "prospeccao",
+  "empresas",
+  "atendimento",
+  "marketing",
+  "dispositivos",
+  "memoria",
+  "skills",
+  "conectores",
+  "atividade",
+  "melhorias",
+  "perfil",
+  "modelos",
+  "voz",
+  "atualizacoes",
+  "Recolher o menu",
+  "Menu",
+  "Live ▾",
+  "SilenciosoSem voz",
+  "NormalAvisos e resultados",
+  "✓LiveConversa em tempo real",
+  "Conectar voz",
+  "Falar"
+ ],
+ "atendimento": {
+  "Abrir sessão": [
+   "atendente/salvar(conhecimento,empresa,nome,passar,persona)",
+   "atendente/sessao()"
+  ],
+  "Apagar memória": [],
+  "Desconectar": [],
+  "Desconectar (2)": [],
+  "Devolver": [
+   "atendente/devolver(telefone)"
+  ],
+  "Enviar": [],
+  "Exemplo ▾": [],
+  "Limpar": [],
+  "Local": [
+   "atendente/salvar(voz)"
+  ],
+  "Números de teste": [],
+  "Publicar": [
+   "atendente/publicar()",
+   "atendente/salvar(conhecimento,empresa,nome,passar,persona)"
+  ],
+  "Salvar": [
+   "whatsapp/conversa(ligar,numero)"
+  ],
+  "Salvar (2)": [
+   "atendente/chave(chave,motor)"
+  ],
+  "Salvar (3)": [
+   "atendente/chave(chave,motor)"
+  ],
+  "Salvar números": [
+   "atendente/salvar(numeros_teste)"
+  ],
+  "Salvar rascunho": [
+   "atendente/salvar(conhecimento,empresa,nome,passar,persona)"
+  ],
+  "Todos": [],
+  "Voz do Zé": [
+   "atendente/salvar(voz)"
+  ]
+ },
+ "atividade": {
+  "Execuções": [],
+  "Execuções e sinais": [],
+  "Pedidos": [],
+  "Problemas": [
+   "atividade/registro(nivel)"
+  ],
+  "Registro técnico": [
+   "atividade/registro(nivel)"
+  ],
+  "Tudo": []
+ },
+ "atualizacoes": {
+  "Atualizar agora": [],
+  "Desenvolvimento Tudo o que entra no código, assim que entra.": [],
+  "Procurar agora": [
+   "atualizacoes/procurar()"
+  ],
+  "Versões publicadas Mais seguro: só o que foi lançado como versão.": [
+   "atualizacoes/canal(canal)"
+  ]
+ },
+ "automacoes": {},
+ "camera": {
+  "Procurar na rede": [
+   "camera/procurar()"
+  ],
+  "Salvar": [
+   "camera/salvar(enviar,girar,intervalo_s,ip,ligado,senha,usuario)"
+  ],
+  "Tirar foto agora": [
+   "camera/foto()"
+  ]
+ },
+ "conectores": {
+  "Adicionar": [],
+  "Editar": [],
+  "Editar (2)": [],
+  "Entrar": [
+   "conector/entrar(nome,retorno)"
+  ],
+  "Ferramentas": [
+   "conector/testar(nome)"
+  ],
+  "Ferramentas (2)": [
+   "conector/testar(nome)"
+  ],
+  "Guardar": [
+   "conector/segredo(nome,valor,variavel)"
+  ],
+  "Guardar (2)": [
+   "conector/cliente(client_id,client_secret,nome)"
+  ],
+  "Remover": [],
+  "Remover (2)": []
+ },
+ "configurar": {
+  "Continuar": [
+   "perfil(fuso,nome,sobre)"
+  ]
+ },
+ "conversa": {
+  "Enviar": []
+ },
+ "dispositivos": {
+  "Abrir": [],
+  "Adicionar dispositivo": []
+ },
+ "empresas": {
+  "Adicionar empresa": [
+   "empresas/grupos()"
+  ],
+  "Editar": [
+   "empresas/grupos()"
+  ],
+  "Remover": []
+ },
+ "foco": {
+  "Concluir": [
+   "foco/acao(acao,id)"
+  ],
+  "Concluir (2)": [
+   "foco/acao(acao,id)"
+  ],
+  "Descartar": [],
+  "Descartar (2)": [],
+  "Focar": [
+   "foco/acao(acao,id)"
+  ],
+  "Pausar": [
+   "foco/acao(acao,id)"
+  ],
+  "Virar frente": [
+   "foco/acao(acao,id)"
+  ],
+  "Virar frente (2)": [
+   "foco/acao(acao,id)"
+  ],
+  "✓ Feito": [
+   "foco/acao(acao,id)"
+  ]
+ },
+ "impressora": {
+  "Procurar na rede": [
+   "projetos3d/impressora/procurar()"
+  ],
+  "Salvar": [
+   "projetos3d/impressora(codigo,ip,serie)"
+  ]
+ },
+ "inicio": {},
+ "marketing": {
+  "Abrir sessão": [
+   "sessao/arquivos(id,pasta)",
+   "terminal/abrir(colunas,id,linhas)",
+   "ze/melhorias()"
+  ],
+  "Agendar": [
+   "marketing/agendar(quando)",
+   "marketing/fotos()"
+  ],
+  "Agendar (2)": [
+   "marketing/video/agendar(duracao,quando,temas)"
+  ],
+  "Assistir": [],
+  "Cores do site": [],
+  "Criar post": [
+   "marketing/fotos()",
+   "marketing/post/criar(artigo,tema)"
+  ],
+  "Criar vídeo": [
+   "marketing/video/criar(artigo,duracao,entrega,estilo,linha,locutor,modelo,modelo_voz,palavra,tema,voz)"
+  ],
+  "Descartar": [],
+  "Desligar": [
+   "marketing/instagram/comentarios(ligado)"
+  ],
+  "Devolver ao Zé": [
+   "marketing/instagram/direct/devolver(usuario)"
+  ],
+  "Enviar fotos": [],
+  "Escrever artigo": [
+   "marketing/fotos()",
+   "marketing/pedir(texto,tipo)"
+  ],
+  "Mudar o site": [
+   "marketing/fotos()",
+   "marketing/pedir(texto,tipo)"
+  ],
+  "Paleta própria": [],
+  "Publicar": [
+   "marketing/fotos()",
+   "marketing/publicar(sessao)"
+  ],
+  "Remover": [
+   "marketing/foto/remover(nome)",
+   "marketing/fotos()"
+  ],
+  "Remover chave": [],
+  "Salvar": [
+   "marketing/video/pixabay(chave)"
+  ],
+  "Salvar (2)": [
+   "marketing/instagram/ignoradas(contas)"
+  ],
+  "Salvar (3)": [
+   "marketing/instagram/direct(como,ligado,link)"
+  ],
+  "Salvar (4)": [
+   "marketing/fotos()",
+   "marketing/paleta(cores,paleta)"
+  ],
+  "Salvar (5)": [
+   "marketing/fotos()",
+   "marketing/site(base,pasta)"
+  ],
+  "Usar cores da marca": [
+   "marketing/video/paleta(origem)"
+  ],
+  "Usar cores do site": [
+   "marketing/video/paleta(url)"
+  ],
+  "Ver": [
+   "marketing/fotos()",
+   "marketing/post(id)"
+  ]
+ },
+ "melhorias": {
+  "Anexar arquivo": [],
+  "Aprovar e aplicar": [
+   "ze/aplicar(revisei)",
+   "ze/melhorias()"
+  ],
+  "Arquivos": [],
+  "Atualizar": [
+   "sessao/arquivos(id,pasta)"
+  ],
+  "Conectores": [
+   "sessao/conectores(id)"
+  ],
+  "Conteúdo": [
+   "sessao/arquivos(id,pasta)"
+  ],
+  "Descartar": [],
+  "Diagnosticar": [
+   "ze/diagnosticar()"
+  ],
+  "Excluir": [],
+  "Exemplo · Principal ▾": [],
+  "Nome": [
+   "sessao/arquivos(id,pasta)"
+  ],
+  "Novo arquivo": [],
+  "Padrão da conta ▾": [],
+  "README.md": [
+   "sessao/ver(caminho,id)"
+  ],
+  "Recolher tudo": [
+   "sessao/arquivos(id,pasta)"
+  ],
+  "Renomear": [],
+  "Sair da manutenção": [
+   "ze/manutencao(ligar)"
+  ],
+  "Ver mudanças": [
+   "ze/melhorias()"
+  ],
+  "Último diagnóstico": [
+   "ze/diagnostico()"
+  ],
+  "› docs": [
+   "sessao/arquivos(id,pasta)"
+  ]
+ },
+ "memoria": {
+  "Adicionar": [
+   "memoria/mudar(acao,alvo,texto)"
+  ],
+  "Adicionar (2)": [
+   "memoria/mudar(acao,alvo,texto)"
+  ],
+  "Aprovar": [
+   "sugestao/decidir(aprovar,id)"
+  ],
+  "Aprovar (2)": [
+   "sugestao/decidir(aprovar,id)"
+  ],
+  "Descartar": [
+   "sugestao/decidir(aprovar,id)"
+  ],
+  "Descartar (2)": [
+   "sugestao/decidir(aprovar,id)"
+  ],
+  "Remover": []
+ },
+ "modelos": {
+  "Adicionar": [
+   "conta/adicionar(agente,nome)"
+  ],
+  "Adicionar (2)": [
+   "conta/adicionar(agente,nome)"
+  ],
+  "Adicionar DeepSeek": [
+   "conta/adicionar(agente,chave,provedor)"
+  ],
+  "Automático": [],
+  "Codex": [],
+  "Exemplo": [
+   "cerebro/escolher(agente)"
+  ],
+  "Exemplo (2)": [
+   "cerebro/escolher(agente)"
+  ],
+  "Remover": [],
+  "Remover conta": [],
+  "Remover conta (2)": [],
+  "Salvar": [
+   "acesso/chave(chave)"
+  ],
+  "Salvar (2)": [
+   "cerebro(endereco,ligada,modelo,motor,quando)"
+  ],
+  "Salvar (3)": [
+   "escuta/chave(chave)"
+  ],
+  "Sempre": [
+   "cerebro(endereco,ligada,modelo,motor,quando)"
+  ],
+  "Só no Live": [
+   "cerebro(endereco,ligada,modelo,motor,quando)"
+  ],
+  "Testar": [
+   "testar(endereco,modelo,motor,quando)"
+  ],
+  "Testar conexão": [
+   "acesso/testar()"
+  ],
+  "Testar conexão (2)": [
+   "escuta/testar(chave)"
+  ],
+  "Trocar login": [
+   "conta/entrar(id)",
+   "conta/login/ler(espera)"
+  ],
+  "Trocar login (2)": [
+   "conta/entrar(id)"
+  ],
+  "Trocar login (3)": [
+   "conta/entrar(id)"
+  ]
+ },
+ "perfil": {
+  "Enviar música": [],
+  "Salvar": [
+   "perfil(fuso,nome,sobre)"
+  ],
+  "Salvar (2)": [
+   "abertura(cidade,ligada)"
+  ]
+ },
+ "pesquisas": {
+  "Abrir": [
+   "pesquisas/ler(id)"
+  ],
+  "Abrir (2)": [
+   "pesquisas/ler(id)"
+  ],
+  "Buscar": []
+ },
+ "prospeccao": {
+  "Adicionar": [
+   "prospeccao/adicionar(cnpj)"
+  ],
+  "Aprovar": [
+   "prospeccao/aprovar(id,texto)"
+  ],
+  "Buscar empresas": [
+   "prospeccao/buscar()"
+  ],
+  "Descartar": [],
+  "Remover": [],
+  "Reunião marcada": [
+   "prospeccao/marcar(id,status)"
+  ],
+  "Reunião marcada (2)": [
+   "prospeccao/marcar(id,status)"
+  ],
+  "Salvar": [
+   "prospeccao/salvar(cidade,convite,ligada,link,link_na_mensagem,oferta,por_dia,ramos,sozinho,vagas)"
+  ],
+  "Salvar (2)": [
+   "prospeccao/salvar(cidade,convite,ligada,link,link_na_mensagem,oferta,por_dia,ramos,sozinho,vagas)"
+  ],
+  "Salvar (3)": [
+   "prospeccao/apify(chave)"
+  ],
+  "Sem interesse": [
+   "prospeccao/marcar(id,status)"
+  ],
+  "Sem interesse (2)": [
+   "prospeccao/marcar(id,status)"
+  ]
+ },
+ "sessoes": {
+  "Nova sessão": [],
+  "P Projeto 1 41 d trabalhando…": [
+   "sessao/arquivos(id,pasta)",
+   "terminal/abrir(colunas,id,linhas)",
+   "ze/melhorias()"
+  ],
+  "P Projeto 2 42 d Exemplo": [
+   "sessao/arquivos(id,pasta)",
+   "terminal/abrir(colunas,id,linhas)",
+   "ze/melhorias()"
+  ]
+ },
+ "skills": {
+  "Editar": [
+   "skill/ver(nome)"
+  ],
+  "Editar (2)": [
+   "skill/ver(nome)"
+  ],
+  "Excluir": [],
+  "Excluir (2)": [],
+  "Instalar": [
+   "skill/instalar-sugerida(nome)"
+  ],
+  "Nova skill": []
+ },
+ "tv": {
+  "Abrir na TV": [
+   "tv/abrir()"
+  ],
+  "Fechar": [
+   "tv/fechar()"
+  ],
+  "Procurar na rede": [
+   "tv/procurar()"
+  ],
+  "Salvar": [
+   "tv(ip_tv,ligado)"
+  ]
+ },
+ "voz": {
+  "Cadu Local e grátis. Funciona sem internet.": [
+   "sintese/escolher(motor)"
+  ],
+  "Com a janela aberta Só com a janela do Zé aberta.": [
+   "escuta/modo(modo)"
+  ],
+  "Copiar endereço": [],
+  "Desativar": [
+   "tunel/desativar()"
+  ],
+  "Desconectar": [
+   "acesso/desconectar(id)"
+  ],
+  "Desconectar (2)": [
+   "acesso/desconectar(id)"
+  ],
+  "Desligar": [
+   "mensagens/whatsapp(ligar)"
+  ],
+  "Desligar (2)": [],
+  "ElevenLabs Cole a chave para usar.": [],
+  "Fish Audio Voz natural, na nuvem. Tem modelo grátis.": [
+   "sintese/escolher(motor)"
+  ],
+  "Live Com a voz conectada, conversa como numa ligação: dá para cortar o Zé falando. Anuncia os resultados e responde na hora.": [
+   "fala/modo(modo)"
+  ],
+  "Longa Para pensar enquanto fala.": [
+   "voz/espera(modo)"
+  ],
+  "Normal Fala avisos, urgências e um resumo do resultado de cada sessão.": [
+   "fala/modo(modo)"
+  ],
+  "Normal Para a maioria das conversas.": [
+   "voz/espera(modo)"
+  ],
+  "Parear celular": [
+   "voz-app/codigo()"
+  ],
+  "Remover": [],
+  "Remover (2)": [],
+  "Rápida Para pedidos curtos.": [
+   "voz/espera(modo)"
+  ],
+  "Salvar": [
+   "sintese/chave(chave,provedor)"
+  ],
+  "Salvar e ligar": [
+   "tunel/fixar(colado,endereco)"
+  ],
+  "Salvar senha": [
+   "acesso/senha(senha)"
+  ],
+  "Sempre Enquanto o Zé estiver em execução.": [
+   "escuta/modo(modo)"
+  ],
+  "Silencioso Não fala nem ouve. Tudo pela tela.": [
+   "fala/modo(modo)"
+  ],
+  "Só o botão Ouve só com o botão apertado. A voz conectada continua ao vivo.": [
+   "voz/chamado(modo)"
+  ],
+  "Usar e ouvir": [
+   "sintese/escolher(motor,voz)"
+  ],
+  "Usar e ouvir (2)": [
+   "sintese/escolher(motor,voz)"
+  ],
+  "“Ei Zé” O chamado falado ou o botão.": [
+   "voz/chamado(modo)"
+  ]
+ }
+}
