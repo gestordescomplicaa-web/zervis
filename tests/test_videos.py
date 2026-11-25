@@ -854,7 +854,8 @@ def test_fotos_da_marca_e_livres(tmp_path: Path) -> None:
     # a "Garagem" tem mais palavras, mas a licença exige o crédito: vem a "Oficina" (CC0)
     assert cenas[1]["imagem"].endswith("/imagens/oficina.jpg")
     assert not any("credito" in c for c in cenas)
-    assert buscas == ["mechanic workshop", "car wash"]
+    # As buscas correm em paralelo (fotos.py, ThreadPoolExecutor): a ordem varia de uma vez à outra.
+    assert sorted(buscas) == ["car wash", "mechanic workshop"]
     # sem foto que sirva, a cena vira a fala na tela (nunca o ícone gigante; o vídeo não falha)
     assert cenas[2]["tipo"] == "frase" and "foto" not in cenas[2] and "icone" not in cenas[2]
     assert cenas[3]["tipo"] == "frase" and cenas[3]["composicao"] == "centro"
