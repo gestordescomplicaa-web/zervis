@@ -57,7 +57,7 @@ from zervis.memoria.conversas import Conversas
 from zervis.memoria.curta import Memoria
 from zervis.memoria.dias import Dias
 from zervis.memoria.linha import LinhaDoTempo
-from zervis.nucleo import autoconhecimento, ciclo, efeitos, oficina3d, ouvir, retrato
+from zervis.nucleo import autoconhecimento, ciclo, efeitos, escrito, oficina3d, ouvir, retrato
 from zervis.nucleo import estados as e
 from zervis.nucleo.apoio import AJUSTES_DA_TELA as AJUSTES_DA_TELA
 from zervis.nucleo.apoio import AVISO_RECENTE_S as AVISO_RECENTE_S
@@ -744,19 +744,9 @@ class Nucleo(
             "ze": turno["jarvis"],
         }
 
-    def escrever(self, texto: str) -> str:
-        """Um pedido escrito no chat do Início vira um Digitado, como no Teclado do Núcleo."""
-        texto = " ".join(texto.split())[:LIMITE_ESCRITO]
-        if not texto:
-            return "Mensagem vazia."
-        estado = self.maquina.estado
-        if estado is e.Estado.INATIVO:
-            return "O Zé está inativo."
-        if estado is not e.Estado.CONFIRMANDO and not e.pedido_valido(texto):
-            return "Não entendi o que foi escrito."
-        log.info("painel: pedido escrito (%d caracteres)", len(texto))
-        self.eventos.put(e.Digitado(texto))
-        return "Enviado."
+    def escrever(self, texto: str, nomes: list[str] | None = None) -> str:
+        """Um pedido escrito no chat do Início, com os anexos (`nucleo/escrito.py`)."""
+        return escrito.pedir(self, texto, nomes or [])
 
     def _ler_teclado(self) -> None:
         """Um pedido escrito no Teclado do Núcleo vira um Digitado, como uma fala autorizada."""

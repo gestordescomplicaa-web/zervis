@@ -230,6 +230,7 @@
   ]
  },
  "inicio": {
+  "Anexar imagem ou arquivo": [],
   "Aprovar": [
    "conversa/aprovacao(aprovar,id)"
   ],

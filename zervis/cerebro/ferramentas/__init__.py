@@ -20,6 +20,7 @@ from claude_agent_sdk import McpSdkServerConfig, SdkMcpTool, create_sdk_mcp_serv
 
 from zervis import atividade, metricas_site
 from zervis.automacoes.jobs import Jobs
+from zervis.cerebro.ferramentas import anexos as g_anexos
 from zervis.cerebro.ferramentas import aprendizado as g_aprendizado
 from zervis.cerebro.ferramentas import atualizacoes as g_atualizacoes
 from zervis.cerebro.ferramentas import automacoes as g_automacoes
@@ -49,6 +50,7 @@ from zervis.habilidades import revisao
 from zervis.habilidades.diario import Diario
 from zervis.habilidades.skills import SkillErro, Skills
 from zervis.impressora3d import Impressora3D
+from zervis.memoria import anexos as anexos_do_chat
 from zervis.memoria.curta import Memoria, MemoriaErro
 from zervis.oficina.manutencao import Manutencao
 from zervis.oficina.sessoes import Sessoes
@@ -132,6 +134,7 @@ LEITURA = [
     "atividade_buscar",  # só lê a Atividade: todo acontecimento do Zé
     "tela_tv_mostrar",  # o Modo TV (ADR 0084): o navegador da TV de quem usa; fechar volta atrás
     "tela_tv_fechar",
+    "anexo_ler",  # só lê o que quem usa anexou no chat (ADR 0137)
 ]
 LIVRES = [f"mcp__{SERVIDOR}__{nome}" for nome in LEITURA]
 
@@ -161,6 +164,7 @@ DE_FORA = {
     "prospeccao_situacao": "as empresas da prospecção",  # nomes, avaliações e respostas
     "redes_situacao": "os comentários do Instagram",
     "atividade_buscar": "a Atividade",  # guarda textos enviados e recebidos
+    "anexo_ler": "um anexo do chat",  # pode ser o documento de outra pessoa (ADR 0137)
 }
 EMBUTIDAS_DE_FORA = {"WebSearch": "a internet", "WebFetch": "uma página da internet"}
 # As livres que mudam alguma coisa (as outras só leem): num turno de fora, pedem a aprovação.
@@ -342,6 +346,7 @@ def por_grupo(
         ),
         "prospeccao": g_prospeccao.ferramentas(),
         "paginas": g_paginas.ferramentas(),
+        "anexos": g_anexos.ferramentas(anexos_do_chat.PADRAO),
     }
     return {nome: [auditada(f) for f in fs] for nome, fs in grupos.items() if fs}
 

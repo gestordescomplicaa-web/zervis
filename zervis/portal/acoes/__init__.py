@@ -327,6 +327,7 @@ class Acoes:
     def envios(self) -> dict[str, Any]:
         return {
             "sessao/anexo": self.anexar,
+            "conversa/anexo": self.anexar_conversa,
             "abertura/musica": self.enviar_musica,
             "projetos3d/imagem": self.criar_projeto_3d_com_imagem,
             "marketing/foto": self.enviar_foto,

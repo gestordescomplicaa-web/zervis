@@ -28,7 +28,7 @@ import websockets
 
 from zervis.oficina.progresso import Progresso
 from zervis.portal.acoes import Acoes
-from zervis.portal.servidor import WEB, Escrita, Leitura, PedidoInvalido, Portal
+from zervis.portal.servidor import WEB, Envio, Escrita, Leitura, PedidoInvalido, Portal
 
 RESPOSTAS = Path(__file__).with_name("painel_respostas.json")
 CHROMIUM = next(
@@ -251,6 +251,7 @@ def _painel(
     entrada_terminal: Escrita | None = None,
     saida_terminal: Escrita | None = None,
     leituras_vivas: dict[str, Leitura] | None = None,
+    envios: dict[str, Envio] | None = None,
 ) -> Iterator[tuple[str, str]]:
     """O painel com as respostas de exemplo e um Chromium apontado para ele."""
     respostas = json.loads(RESPOSTAS.read_text())
@@ -277,6 +278,7 @@ def _painel(
         porta=0,
         entrada_terminal=entrada_terminal,
         saida_terminal=saida_terminal,
+        envios=envios,
     )
     portal.iniciar()
     processo, depuracao = _chromium(tmp_path / "chromium")
@@ -2245,4 +2247,81 @@ def test_ajustes_em_listas_e_a_busca_acha_pelo_que_saiu_da_descricao(tmp_path: P
             assert not nav.erros, nav.erros
 
     with _painel(tmp_path) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_chat_anexa_imagem_e_arquivo_e_envia_com_o_pedido(tmp_path: Path) -> None:
+    """25/11/2026: o chat do Início sem imagem nem arquivo ficava pela metade (ADR 0137). O "+"
+    junta os anexos ao campo (miniatura ou nome e tamanho, com o botão de tirar); o tipo fora da
+    lista não entra; ao enviar, cada um sobe e o pedido leva os nomes guardados."""
+    subidos: list[tuple[str, int]] = []
+    escritos: list[dict[str, Any]] = []
+
+    def subir(corpo: bytes, consulta: dict[str, str]) -> dict[str, Any]:
+        subidos.append((consulta["nome"], len(corpo)))
+        return {"anexo": f"20261125-151000-a1b2c3-{consulta['nome']}"}
+
+    def escrever(dados: dict[str, Any]) -> dict[str, Any]:
+        escritos.append(dados)
+        return {"aviso": "Enviado."}
+
+    anexar = """(async (lista) => {
+      const dt = new DataTransfer();
+      for (const [nome, tipo] of lista) {
+        let corpo = new Uint8Array([37, 80, 68, 70, 45, 49]);
+        if (tipo.startsWith('image/')) {
+          const c = Object.assign(document.createElement('canvas'), { width: 8, height: 8 });
+          corpo = await new Promise((r) => c.toBlob(r, tipo));
+        }
+        dt.items.add(new File([corpo], nome, { type: tipo }));
+      }
+      const i = document.getElementById('anexar-arquivo');
+      i.files = dt.files; i.dispatchEvent(new Event('change'));
+    })"""
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#inicio")
+            await _esperar(nav, "!!document.getElementById('anexar')")
+            await nav.avaliar(f"{anexar}([['virus.exe', 'application/x-msdownload']])")
+            await asyncio.sleep(0.2)
+            assert await nav.avaliar("document.getElementById('anexos-escrever').hidden")
+            await nav.avaliar(f"{anexar}([['fachada.png', 'image/png']])")
+            await _esperar(nav, "!!document.querySelector('.anexo-chip.imagem img')")
+            await nav.avaliar("document.querySelector('[data-tirar]').click()")
+            await _esperar(nav, "document.getElementById('anexos-escrever').hidden")
+            await nav.avaliar(
+                f"{anexar}([['fachada.png', 'image/png'], ['proposta.pdf', 'application/pdf']])"
+            )
+            await _esperar(nav, "document.querySelectorAll('.anexo-chip').length === 2")
+            assert "proposta.pdf" in await nav.avaliar(
+                "document.querySelector('.anexo-chip:not(.imagem)').innerText"
+            )
+            await nav.avaliar(
+                "document.getElementById('escrever-texto').value = 'Monte um post';"
+                " document.getElementById('escrever').requestSubmit()"
+            )
+            await _esperar(nav, "!!document.querySelector('.fala.voce .anexos-fala .miniatura')")
+            assert await nav.avaliar("document.getElementById('anexos-escrever').hidden")
+            for _ in range(30):
+                if escritos:
+                    break
+                await asyncio.sleep(0.1)
+            assert [n for n, _ in subidos] == ["fachada.png", "proposta.pdf"]
+            assert escritos == [
+                {
+                    "texto": "Monte um post",
+                    "anexos": [
+                        "20261125-151000-a1b2c3-fachada.png",
+                        "20261125-151000-a1b2c3-proposta.pdf",
+                    ],
+                }
+            ]
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path, extras={"conversa/escrever": escrever}, envios={"conversa/anexo": subir}
+    ) as (depuracao, endereco):
         asyncio.run(conferir(depuracao, endereco))

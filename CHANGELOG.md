@@ -2,6 +2,10 @@
 
 ## Não lançado
 
+- **Imagem e arquivo no chat:** o "+" do campo (ou colar, ou arrastar) anexa imagens, PDF e texto,
+  até 5 por mensagem e 20 MB cada; o chat mostra a miniatura ou o nome. O Zé lê só o que foi
+  anexado (a ferramenta nova `anexo_ler`): vê a imagem e lê o texto do PDF. Os anexos ficam 30
+  dias na pasta de dados do Zé (ADR 0137).
 - **O Início é a conversa com o Zé:** o chat abre no Início, com a saudação, o campo de escrever
   (microfone e enviar) e sugestões quando o dia começa; ao lado, o que precisa de você, o que o
   Zé está fazendo, o foco e os números de hoje. A Conversa sai do menu, e o endereço antigo leva
