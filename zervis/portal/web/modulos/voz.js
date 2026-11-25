@@ -20,7 +20,7 @@ export function desenharModoFala(valor) {
   if (valor === modoFala) return;
   modoFala = valor;
   const itens = MODOS_FALA.map((m) => ({ valor: m.valor, nome: m.nome, detalhe: m.curto }));
-  $("modo-fala").innerHTML = escolha("modo-fala", `Fala: ${nomeModo(valor)}`, [{ itens }], valor, "Modo de fala (Alt+M)");
+  $("modo-fala").innerHTML = escolha("modo-fala", nomeModo(valor), [{ itens }], valor, "Modo de fala (Alt+M)");
   $("modo-fala").dataset.modo = valor;
 }
 
@@ -39,7 +39,7 @@ export function desenharVozRemota() {
   const on = !!salaVoz;
   // O botão liga o microfone e o alto-falante deste aparelho ao Zé; o modo (Fala: Live, Normal)
   // é outra escolha. Chamava-se "Ao vivo" e confundia com o modo Live (27/10/2026).
-  const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz deste aparelho" : "Conectar o microfone e o alto-falante deste aparelho ao Zé"}" ${vozConectando ? "disabled" : ""}>${vozConectando ? "Conectando…" : on ? "Voz conectada" : "Conectar voz"}</button>`;
+  const html = `<button type="button" class="acao" data-acao="voz-remota" aria-pressed="${on}" title="${on ? "Desconectar a voz deste aparelho" : "Conectar o microfone e o alto-falante deste aparelho ao Zé"}" ${vozConectando ? "disabled" : ""}><svg class="i" aria-hidden="true"><use href="/icones/lucide.svg#headphones"/></svg><span class="rotulo-voz">${vozConectando ? "Conectando…" : on ? "Voz conectada" : "Conectar voz"}</span></button>`;
   for (const caixa of [$("voz-remota"), $("voz-holo")]) {
     if (!caixa) continue;
     caixa.hidden = false;
@@ -220,7 +220,8 @@ let falando = false, travado = false, apertouEm = 0;
 function marcarFalar() {
   /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll("[data-falar]")).forEach((b) => {
     b.setAttribute("aria-pressed", String(falando));
-    b.textContent = !falando ? "Falar" : travado ? "Enviar" : "Ouvindo…";
+    // O botão do topo tem ícone: muda só o texto dele.
+    (b.querySelector(".rotulo-falar") || b).textContent = !falando ? "Falar" : travado ? "Enviar" : "Ouvindo…";
   });
 }
 

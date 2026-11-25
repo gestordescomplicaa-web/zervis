@@ -4,6 +4,7 @@ import "../painel.js";
 import "./voz.js";
 import "./imersao.js";
 import "./acoes.js";
+import "./casca.js";
 import { iniciarNavegacao } from "./navegacao.js";
 
 iniciarNavegacao();

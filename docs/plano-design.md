@@ -50,8 +50,10 @@ vista no PR.
 
 ## Depois, quando quem usa disser "agora o design"
 
-1. A referência visual da identidade Zérvis, em imagens do Chromium, para aprovar.
-2. Um interruptor "Visual novo / Visual atual" nos Ajustes, para voltar ao atual a qualquer hora.
+1. A referência visual da identidade Zérvis, em imagens do Chromium, para aprovar. **Feito em
+   25/11/2026:** o protótipo foi aprovado (ADR 0132).
+2. ~~Um interruptor "Visual novo / Visual atual"~~: trocado pela volta por PR (dois visuais em
+   paralelo dobrariam o código e a chance de erro).
 3. A barra do Zé (o anel com o estado e o que ele está fazendo, falar de qualquer página) e o menu
    por áreas (Conversa, Trabalho, Negócio, Casa, O Zé).
 4. A Conversa como linha do tempo, com cartões que se resolvem nela (aprovar, publicar, ouvir), e

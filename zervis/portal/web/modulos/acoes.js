@@ -1,3 +1,4 @@
+import { alternarRecolhido } from "./casca.js";
 import { desligarImersao, ligarImersao, moldura } from "./imersao.js";
 import { abrir, atualizacao, desenharAtualizacao } from "./navegacao.js";
 import { MODOS_FALA, alternarGrupo, ligarVoz, modoFala, mudarModoFala } from "./voz.js";
@@ -316,6 +317,7 @@ export const ACOES = {
   "tunel-rapido": (b) => confirmar(b, "Voltar ao endereço automático?", async () => { const r = await api("tunel/rapido", {}); toast(r.aviso); await recarregar(); }),
   "remoto-copiar": async (b) => { await navigator.clipboard.writeText(b.dataset.endereco); toast("Endereço copiado."); },
   grupo: alternarGrupo,
+  "recolher-menu": alternarRecolhido,
   menu: () => {
     const aberto = document.body.classList.toggle("menu-aberto");
     /** @type {HTMLElement} */ (document.querySelector(".botao-menu")).setAttribute("aria-expanded", String(aberto));

@@ -2,6 +2,9 @@
 
 ## Não lançado
 
+- **Painel com a identidade nova:** menu por áreas com ícones, que recolhe para só os ícones; a
+  barra do topo com o Zé (o estado e o modo de fala), Conectar voz e Falar em toda página; a fonte
+  Geist e um visual escuro sólido, sem vidro; avisos entrando pela direita (ADR 0132).
 - **Notificações e foto do Zé Voz:** as notificações ganham a cor do Zé e textos curtos ("Sem
   conexão. Nova tentativa em 5 s."); a foto da câmera abre em tela cheia com "Fechar" e
   "Compartilhar" no mesmo visual das telas (ADR 0131).

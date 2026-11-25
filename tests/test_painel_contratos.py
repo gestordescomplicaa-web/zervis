@@ -62,7 +62,7 @@ LISTAR = f"""(() => {{
 }})()"""
 # A casca: o menu e os controles de voz de toda página (o redesenho os muda de lugar).
 CASCA = """(() => [...document.querySelectorAll(
-    'nav a[data-secao], .lateral button, .lateral select')]
+    'nav a[data-secao], .lateral button, .lateral select, .topo button')]
   .map((e) => (e.getAttribute('aria-label') || e.dataset.secao || e.innerText || '').trim()
   .replace(/\\s+/g, ' ')).filter(Boolean))()"""
 

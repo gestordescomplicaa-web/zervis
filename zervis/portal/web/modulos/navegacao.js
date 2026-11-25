@@ -41,7 +41,10 @@ function carregarEstilo(caminho) {
 const carregarModulo = (caminho) => import(caminho).catch(() => { throw new Error("Página indisponível."); });
 /** @param {string} nome */
 export async function carregarPagina(nome) {
- if (["sessoes", "melhorias"].includes(nome)) await carregarEstilo("/vendor/xterm/xterm.css");
+ if (["sessoes", "melhorias"].includes(nome)) {
+  await carregarEstilo("/vendor/xterm/xterm.css");
+  await carregarEstilo("/sessoes.css");
+ }
  // A biblioteca do terminal (xterm) é um script comum; as páginas, módulos.
  for (const caminho of DEPENDENCIAS[nome] || []) await carregarScript(caminho);
  await carregarModulo(SOB_DEMANDA[nome]);
