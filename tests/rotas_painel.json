@@ -228,7 +228,9 @@
     "marketing/video/preferencias",
     "marketing/video/refazer",
     "marketing/video/descartar",
-    "marketing/video/publicar"
+    "marketing/video/publicar",
+    "conversa/anteriores",
+    "avisos/marcar"
   ],
   "envios": [
     "conversa/anexo",

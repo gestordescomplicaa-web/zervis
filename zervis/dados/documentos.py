@@ -77,6 +77,15 @@ class Documentos:
             ).fetchall()
         return [dict(json.loads(linha[0])) for linha in linhas]
 
+    def distintos(self, colecao: str, campo: str) -> list[str]:
+        """Os valores diferentes de um campo, sem ler os registros (os dias da conversa)."""
+        with self.banco.conexao() as db:
+            linhas = db.execute(
+                "SELECT DISTINCT json_extract(dados,?) FROM registros WHERE colecao=?",
+                ("$." + campo, colecao),
+            ).fetchall()
+        return sorted(str(linha[0]) for linha in linhas if linha[0] is not None)
+
     def remover(self, colecao: str, chave: str | None = None) -> None:
         with self.banco.conexao() as db:
             if chave is None:

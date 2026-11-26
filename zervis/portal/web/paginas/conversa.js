@@ -3,6 +3,9 @@ import { anexosNaFala, botaoAnexar, caixaAnexos, devolverPendentes, ligarAnexos,
 import { icone } from "../modulos/casca.js";
 import { visualNaFala } from "../modulos/visuais-chat.js";
 import { compartilhado, carregadas } from "../modulos/estado.js";
+import { dataCompleta, diaDe, rotuloDia } from "../modulos/datas.js";
+import { aplicarDias } from "../modulos/fio-chat.js";
+import { consumoDoDia, gastoDaResposta } from "../modulos/gasto-chat.js";
 
 // O chat com o Zé, que o Início mostra (ADR 0136; antes, a página Conversa): o fio de hoje (o que
 // a pessoa falou ou escreveu, as respostas e os avisos) e o campo para escrever. É onde fica o que
@@ -17,6 +20,11 @@ import { compartilhado, carregadas } from "../modulos/estado.js";
 //
 // A conversa pelo WhatsApp é a mesma (ADR 0104): os pedidos de lá vêm marcados, e o que eles
 // pedirem com efeito espera aqui, em "Aprovação pendente", porque só o painel exige login.
+//
+// O fio guarda tudo (ADR 0139): o servidor relê só o de hoje; rolando para cima, o chat busca o
+// que veio antes, dia a dia, até a primeira conversa. Cada dia abre com a data ("Hoje", "Ontem",
+// "Segunda-feira, 23 de novembro"), presa no topo enquanto ele passa; a hora de cada fala mostra
+// a data completa ao parar o mouse.
 
 /** O chat do Início: os avisos de aprovação, o fio e o campo de escrever (ADR 0136). */
 export const chat = () => `<div class="aprovacoes" id="aprovacoes" hidden></div><p class="esperando" id="esperando" hidden></p>
@@ -43,44 +51,19 @@ let fioTimer = null;
  * de novo, a mensagem fica como entregue, sem o "digitando".
  * @type {{texto: string, quando: string, em: number, erro: boolean, entregue: boolean, anexos: import("../modulos/anexos-chat.js").Anexo[]}[]} */
 let enviadas = [];
-let ultimoFio = { itens: [], esperando: [], consumo: null, aprovacoes: [] };
+let ultimoFio = { dia: "", itens: [], esperando: [], consumo: null, aprovacoes: [] };
+/** O que veio antes da leitura de hoje: buscado rolando para cima, ou o que saiu dela (virou o dia).
+ * @type {any[]} */
+let antigos = [];
+let maisAntigos = true;
+let buscandoAntigos = false;
 let aprovacoesVistas = "";
 const horaFio = (q) => q.slice(11, 16);
+/** O hoje do Zé (o fuso dele, não o do aparelho); sem ele, o do aparelho. */
+const hojeFio = () => ultimoFio.dia || diaDe();
 const agoraIso = () => { const d = new Date(), z = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`; };
 const ANEL = '<img class="anel-fala" src="/ze.webp" alt="" width="26" height="26">';
 const digitando = `<div class="fala ze digitando" aria-label="O Zé está respondendo">${ANEL}<p><i></i><i></i><i></i></p></div>`;
-
-const ROTULOS_DO_GASTO = { rapida: "Respostas rápidas", completo: "Cérebro", pesquisa: "Pesquisa na internet" };
-/** 840, "14,2 mil", "1,3 mi". */
-const tokens = (n) => n < 1000 ? String(n) : n < 1e6 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: n < 1e4 ? 1 : 0 })} mil` : `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
-const lidos = (p) => (p.entrada || 0) + (p.cache_lido || 0) + (p.cache_criado || 0);
-const somaPartes = (partes) => partes.reduce((t, p) => ({ lidos: t.lidos + lidos(p), cache: t.cache + (p.cache_lido || 0), saida: t.saida + (p.saida || 0) }), { lidos: 0, cache: 0, saida: 0 });
-// O que pesa de verdade é o novo: o lido do cache custa uma fração e não esgota a conta igual.
-const resumo = (t) => `${tokens(t.lidos - t.cache)} novos + ${tokens(t.cache)} do cache · ${tokens(t.saida)} gerados`;
-
-/** A linha do gasto de uma resposta e, ao abrir, cada parte. */
-function gastoDaResposta(g) {
-  if (!g?.partes?.length) return "";
-  const t = somaPartes(g.partes);
-  const partes = g.partes.map((p) => `<li><b>${esc(ROTULOS_DO_GASTO[p.rotulo] || p.rotulo)}</b>${p.modelo ? ` · ${esc(p.modelo)}` : ""}<br>${tokens(lidos(p))} lidos (${tokens(p.cache_lido || 0)} em cache${p.cache_criado ? `, ${tokens(p.cache_criado)} gravados no cache` : ""}) · ${tokens(p.saida || 0)} gerados</li>`).join("");
-  const ferramentas = g.ferramentas?.length ? `<li><b>Ferramentas</b><br>${esc(g.ferramentas.join(", "))}</li>` : "";
-  return `<details class="gasto"><summary>${resumo(t)}</summary><ul>${partes}${ferramentas}</ul></details>`;
-}
-
-/** O dia: as respostas com gasto, as resolvidas sem modelo e o segundo plano. */
-function consumoDoDia(itens, consumo) {
-  const gastos = itens.filter((i) => i.gasto?.partes?.length).map((i) => somaPartes(i.gasto.partes));
-  const t = gastos.reduce((a, g) => ({ lidos: a.lidos + g.lidos, cache: a.cache + g.cache, saida: a.saida + g.saida }), { lidos: 0, cache: 0, saida: 0 });
-  const partes = [];
-  if (gastos.length) {
-    const novos = t.lidos - t.cache + t.saida;
-    partes.push(`Hoje: ${gastos.length} ${gastos.length === 1 ? "resposta" : "respostas"} · ${resumo(t)} · média de ${tokens(Math.round(novos / gastos.length))} novos por resposta`);
-  }
-  if (consumo?.locais) partes.push(`${consumo.locais} sem modelo`);
-  const f = consumo?.fundo;
-  if (f && consumo.fundo_vezes) partes.push(`segundo plano: ${tokens(lidos(f) + (f.saida || 0))} tokens em ${consumo.fundo_vezes} ${consumo.fundo_vezes === 1 ? "tarefa" : "tarefas"}`);
-  return partes.join(" · ");
-}
 
 /** As ações pedidas pelo WhatsApp que esperam o "sim" daqui. */
 function montarAprovacoes() {
@@ -112,51 +95,80 @@ function montarFio() {
   for (const m of enviadas) if (!m.erro && !pensando && Date.now() - m.em > 4000) m.entregue = true;
   const respondendo = itens.some((i) => i.pendente && i.tipo === "ze");
   const esperandoResposta = enviadas.some((m) => !m.erro && !m.entregue) || (pensando && !respondendo) || (itens.at(-1)?.pendente && !respondendo);
-  const marca = JSON.stringify([itens.length, itens.at(-1), enviadas, esperandoResposta]);
+  const marca = JSON.stringify([antigos.length, ultimoFio.dia, itens.length, itens.at(-1), enviadas, esperandoResposta]);
   const abertos = new Set([...fio.querySelectorAll("details.gasto[open]")].map((d) => /** @type {HTMLElement} */ (d).dataset.quando));
   if (marca === fioVisto) return;
   fioVisto = marca;
   const rolagem = $("rolagem-chat") || fio;
   const embaixo = rolagem.scrollHeight - rolagem.scrollTop - rolagem.clientHeight < 80;
+  const hora = (/** @type {string} */ q, /** @type {string} */ antes = "") => `<span title="${dataCompleta(q)}">${antes}${horaFio(q)}</span>`;
   const balao = (i) => i.tipo === "visual" ? `<div class="fala ze visual-fala">${ANEL}${visualNaFala(i.visual)}</div>`
     : i.tipo === "aviso"
-    ? `<div class="fala aviso"><span>Aviso · ${horaFio(i.quando)}</span><p>${esc(i.texto)}</p></div>`
-    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}">${i.tipo === "ze" ? ANEL : ""}${anexosNaFala(i.anexos)}${i.texto ? `<p>${esc(i.texto)}</p>` : ""}<span>${i.origem === "whatsapp" ? "WhatsApp · " : ""}${horaFio(i.quando)}</span>${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
-  const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}">${anexosNaFala(m.anexos)}${m.texto ? `<p>${esc(m.texto)}</p>` : ""}<span>${m.erro ? "Não enviado" : horaFio(m.quando)}</span></div>`);
+    ? `<div class="fala aviso">${hora(i.quando, "Aviso · ")}<p>${esc(i.texto)}</p></div>`
+    : `<div class="fala ${i.tipo}${i.pendente ? " pendente" : ""}">${i.tipo === "ze" ? ANEL : ""}${anexosNaFala(i.anexos)}${i.texto ? `<p>${esc(i.texto)}</p>` : ""}${hora(i.quando, i.origem === "whatsapp" ? "WhatsApp · " : "")}${i.tipo === "ze" ? gastoDaResposta(i.gasto).replace("<details", `<details data-quando="${esc(i.quando)}"${abertos.has(i.quando) ? " open" : ""}`) : ""}</div>`;
+  const minhas = enviadas.map((m) => `<div class="fala voce${m.erro ? " erro" : m.entregue ? "" : " enviando"}">${anexosNaFala(m.anexos)}${m.texto ? `<p>${esc(m.texto)}</p>` : ""}${m.erro ? "<span>Não enviado</span>" : hora(m.quando)}</div>`);
   const vezes = new Map();
   const chave = (/** @type {string} */ k) => { vezes.set(k, (vezes.get(k) || 0) + 1); return `${k}#${vezes.get(k)}`; };
-  const tudo = [...itens.map((i) => [chave(`${i.tipo}|${i.quando}|${i.visual?.id || ""}`), balao(i)]), ...enviadas.map((m, n) => [`minha|${m.em}`, minhas[n]]), ...(esperandoResposta ? [["digitando", digitando]] : [])];
-  aplicar(fio, tudo);
+  const hoje = hojeFio();
+  /** @type {[string, string, string][]} a chave, o desenho e o dia */
+  const tudo = [
+    ...[...antigos, ...itens].map((i) => /** @type {[string, string, string]} */ ([chave(`${i.tipo}|${i.quando}|${i.visual?.id || ""}`), balao(i), i.quando.slice(0, 10)])),
+    ...enviadas.map((m, n) => /** @type {[string, string, string]} */ ([`minha|${m.em}`, minhas[n], m.quando.slice(0, 10)])),
+    ...(esperandoResposta ? [/** @type {[string, string, string]} */ (["digitando", digitando, hoje])] : []),
+  ];
+  /** @type {[string, string, string[][]][]} cada dia: a data, o rótulo e as falas */
+  const dias = [];
+  for (const [k, html, dia] of tudo) {
+    if (dias.at(-1)?.[0] !== dia) dias.push([dia, rotuloDia(dia, hoje), []]);
+    dias.at(-1)?.[2].push([k, html]);
+  }
+  aplicarDias(fio, dias);
   fio.closest(".pagina-inicio")?.classList.toggle("vazia", !tudo.length);
   if (embaixo || !fio.dataset.lido) { rolagem.scrollTop = rolagem.scrollHeight; fio.dataset.lido = "1"; }
 }
 
-/** O desenho de cada fala no fio. @type {WeakMap<Element, string>} */
-const desenhos = new WeakMap();
-/** Muda só as falas que mudaram, sem mover as outras: um visual redesenhado ou movido recarrega
- * a moldura e a apresentação recomeça (ADR 0138). @param {HTMLElement} fio @param {string[][]} partes */
-function aplicar(fio, partes) {
-  const querem = new Set(partes.map(([k]) => k));
-  for (const no of [...fio.children]) if (!querem.has(/** @type {HTMLElement} */ (no).dataset.chave || "")) no.remove();
-  const atuais = new Map([...fio.children].map((no) => [/** @type {HTMLElement} */ (no).dataset.chave, no]));
-  partes.forEach(([k, html], posicao) => {
-    let no = atuais.get(k);
-    if (!no || desenhos.get(no) !== html) {
-      const molde = document.createElement("template");
-      molde.innerHTML = html.trim();
-      const novo = /** @type {HTMLElement} */ (molde.content.firstElementChild);
-      novo.dataset.chave = k; desenhos.set(novo, html);
-      if (no) no.replaceWith(novo);
-      no = novo;
-    }
-    if (fio.children[posicao] !== no) fio.insertBefore(no, fio.children[posicao] || null);
-  });
-}
-
 async function desenharFio() {
   if (!$("fio")) return;
-  ultimoFio = await api("conversa");
+  const novo = await api("conversa");
+  // O que saiu da leitura de hoje (virou o dia, ou o fio passou do limite) continua na tela.
+  const primeiro = novo.itens[0]?.quando;
+  const saiu = ultimoFio.itens.filter((i) => !i.pendente && (!primeiro || i.quando < primeiro || novo.dia !== ultimoFio.dia));
+  if (ultimoFio.dia && saiu.length) antigos.push(...saiu);
+  ultimoFio = novo;
   montarFio();
+}
+
+/** Rolando para cima: o que veio antes do primeiro da tela, uma página por vez (ADR 0139). */
+async function buscarAntigos() {
+  const fio = $("fio"), rolagem = $("rolagem-chat");
+  if (buscandoAntigos || !maisAntigos || !fio || !rolagem) return;
+  const primeiro = [...antigos, ...ultimoFio.itens].find((i) => !i.pendente);
+  buscandoAntigos = true;
+  try {
+    const r = await api("conversa/anteriores", { antes: primeiro?.quando || `${hojeFio()}T00:00:00` });
+    if (!$("fio")) return;
+    maisAntigos = !!r.mais;
+    if (!r.itens.length) return;
+    const vazia = !!fio.closest(".pagina-inicio.vazia");
+    const doFim = rolagem.scrollHeight - rolagem.scrollTop;
+    antigos = [...r.itens, ...antigos];
+    fioVisto = ""; montarFio();
+    // O que já estava na tela fica onde estava; saindo das boas-vindas, o mais recente embaixo.
+    rolagem.scrollTop = vazia ? rolagem.scrollHeight : rolagem.scrollHeight - doFim;
+  } catch { /* tenta de novo na próxima rolagem */ } finally { buscandoAntigos = false; }
+}
+
+/** Perto do topo, ou rolando para cima onde não há o que rolar (as boas-vindas, um fio curto). */
+function ligarRolagem() {
+  const rolagem = $("rolagem-chat");
+  const coluna = /** @type {HTMLElement | null} */ (rolagem?.closest(".coluna-chat")), pagina = /** @type {HTMLElement | null} */ (rolagem?.closest(".pagina-inicio"));
+  if (!rolagem || !coluna || !pagina) return;
+  const noTopo = () => rolagem.scrollTop <= 0 && pagina.scrollTop <= 0;
+  rolagem.addEventListener("scroll", () => { if (rolagem.scrollTop < 300) buscarAntigos(); }, { passive: true });
+  coluna.addEventListener("wheel", (ev) => { if (ev.deltaY < 0 && noTopo()) buscarAntigos(); }, { passive: true });
+  let y = 0;
+  coluna.addEventListener("touchstart", (ev) => { y = ev.touches[0].clientY; }, { passive: true });
+  coluna.addEventListener("touchmove", (ev) => { if (ev.touches[0].clientY - y > 40 && noTopo()) buscarAntigos(); }, { passive: true });
 }
 
 /** Lê o fio de novo: rápido enquanto o Zé responde, devagar parado. */
@@ -172,10 +184,12 @@ function vigiarFio(vez) {
 
 /** @param {number} vez */
 export async function prepararConversa(vez) {
-  fioVisto = ""; aprovacoesVistas = "";
+  fioVisto = ""; aprovacoesVistas = ""; antigos = []; maisAntigos = true;
+  ultimoFio = { dia: "", itens: [], esperando: [], consumo: null, aprovacoes: [] };
   await desenharFio();
   if (vez !== compartilhado.navegacao) return;
   vigiarFio(vez);
+  ligarRolagem();
   const campo = /** @type {HTMLTextAreaElement} */ (valorCampo("escrever-texto"));
   const enviar = async (ev, pronto = "") => {
     ev?.preventDefault();
@@ -221,13 +235,6 @@ export async function prepararConversa(vez) {
 }
 
 document.head.appendChild(Object.assign(document.createElement("style"), { textContent: `
-.gasto { font-size: 11.5px; color: var(--suave); padding: 0 4px; font-variant-numeric: tabular-nums; }
-.gasto summary { cursor: pointer; list-style: none; width: fit-content; }
-.gasto summary::-webkit-details-marker { display: none; }
-.gasto summary::after { content: " ▾"; opacity: .7; }
-.gasto[open] summary::after { content: " ▴"; }
-.gasto ul { margin: 6px 0 2px; padding: 8px 10px; list-style: none; display: grid; gap: 6px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo-2); }
-.gasto b { color: var(--texto); font-weight: 600; }
 .esperando { margin: 0; padding: 6px 10px; border-radius: 10px; font-size: 13.5px; color: var(--alerta); border: 1px solid rgb(239 190 124 / .4); }
 .aprovacoes { display: grid; gap: 8px; }
 .aprovacao { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(239 190 124 / .45); background: var(--fundo-2); }
@@ -235,7 +242,6 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .aprovacao span { font-size: 11.5px; color: var(--suave); }
 .aprovacao p { margin: 2px 0 0; overflow-wrap: anywhere; }
 .aprovacao .botoes { display: flex; gap: 8px; }
-.fio { display: flex; flex-direction: column; gap: 18px; }
 .fala { max-width: 82%; display: grid; gap: 3px; }
 .fala p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 .fala > span { font-size: 11.5px; color: var(--apagado); padding: 0 4px; }

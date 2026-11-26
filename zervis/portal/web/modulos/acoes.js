@@ -320,6 +320,7 @@ export const ACOES = {
   "recolher-menu": alternarRecolhido,
   avisos: () => import("./avisos.js").then((m) => m.alternarAvisos()),
   "avisos-fechar": () => import("./avisos.js").then((m) => m.fecharAvisos()),
+  "avisos-todas-lidas": () => import("./avisos.js").then((m) => m.marcarTodasLidas()),
   "aviso-fechar": () => import("./avisos.js").then((m) => m.fecharAviso()),
   "aprovacao-decidir": (b) => import("./avisos.js").then((m) => m.decidirAprovacao(b)),
   menu: () => {
