@@ -149,3 +149,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0139](0139-historico-datas-e-sino-com-lidas.md) | O histórico inteiro no Início, a data no chat e o sino com lidas | Aceito |
 | [0140](0140-prospeccao-so-a-primeira-mensagem.md) | Prospecção: só a primeira mensagem, e as empresas por ramo numa linha cada | Aceito |
 | [0141](0141-automacoes-mandam-no-que-roda-sozinho.md) | As Automações mandam no que roda sozinho, e cada uma se edita | Aceito |
+| [0142](0142-dispensar-no-sino-e-links-fora.md) | Dispensar no sino, e o link para fora abre no navegador de quem usa | Aceito |

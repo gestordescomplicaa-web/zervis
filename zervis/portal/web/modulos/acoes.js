@@ -323,6 +323,7 @@ export const ACOES = {
   "avisos-todas-lidas": () => import("./avisos.js").then((m) => m.marcarTodasLidas()),
   "aviso-fechar": () => import("./avisos.js").then((m) => m.fecharAviso()),
   "aprovacao-decidir": (b) => import("./avisos.js").then((m) => m.decidirAprovacao(b)),
+  "aviso-dispensar": (b) => import("./avisos.js").then((m) => m.dispensarAviso(b)),
   menu: () => {
     const aberto = document.body.classList.toggle("menu-aberto");
     /** @type {HTMLElement} */ (document.querySelector(".botao-menu")).setAttribute("aria-expanded", String(aberto));
@@ -385,6 +386,23 @@ document.addEventListener("click", async (ev) => {
     if (r) { r.className = "resultado erro"; r.textContent = erro.message; }
     toast(erro.message);
   }
+});
+
+// Um link para fora (o WhatsApp, o Maps, uma chave de API). No PC, o painel é uma janela do Zé
+// (`--app`, com o perfil dele): o link abre no navegador de quem usa, numa guia nova, pelo Zé.
+// Fora do PC (a VPS, o celular), numa guia nova do próprio navegador; nunca no lugar do painel,
+// que na janela do Zé não tem como voltar (ADR 0142).
+const NO_PC = ["127.0.0.1", "localhost", "[::1]"].includes(location.hostname);
+document.addEventListener("click", (ev) => {
+  const a = /** @type {HTMLAnchorElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest?.("a[href]"));
+  if (!a || ev.defaultPrevented || ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || a.hasAttribute("download")) return;
+  let url;
+  try { url = new URL(a.href, location.href); } catch { return; }
+  if (!/^https?:$/.test(url.protocol) || url.origin === location.origin) return;
+  ev.preventDefault();
+  const guia = () => window.open(url.href, "_blank", "noopener");
+  if (NO_PC) api("link/abrir", { url: url.href }).catch(guia);
+  else guia();
 });
 
 document.addEventListener("change", async (ev) => {

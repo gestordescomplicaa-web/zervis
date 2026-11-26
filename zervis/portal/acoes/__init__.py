@@ -146,6 +146,8 @@ class Acoes:
             "conversa/aprovacao": self.decidir_aprovacao,
             "conversa/anteriores": self.conversa_anteriores,
             "avisos/marcar": self.marcar_avisos,
+            "avisos/dispensar": self.dispensar_aviso,
+            "link/abrir": self.abrir_link,
             "ze/diagnostico": self.diagnostico,
             "ze/diagnostico/recomecar": self.recomecar_diagnostico,
             "ze/sessao": self.sessao_de_melhorias,

@@ -5,6 +5,9 @@ conta só o que ainda não foi visto) e **lido** quando a pessoa clica nele (o p
 muda quando o item muda: um lead que manda outra mensagem ou mais uma sugestão de memória voltam
 a ser novidade.
 
+O botão Dispensar de um item do "Precisa de você" o **dispensa** (ADR 0142): ele sai da lista
+até mudar (a chave nova volta a aparecer).
+
 Fica em SQLite, no Zé: o computador e o celular veem o mesmo. Uma marca vale por 30 dias; os
 avisos que já existiam na primeira vez contam como lidos, para o sino não começar cheio.
 """
@@ -18,7 +21,12 @@ from pathlib import Path
 from zervis import lugares
 from zervis.dados.documentos import Documentos
 
-COMO = ("visto", "lido")
+COMO = ("visto", "lido", "dispensado")
+_FEITOS = {
+    "visto": {"visto"},
+    "lido": {"visto", "lido"},
+    "dispensado": {"visto", "lido", "dispensado"},
+}
 GUARDA_S = 30 * 24 * 3600
 CHAVE = re.compile(r"^[0-9a-f]{16}$")
 
@@ -57,7 +65,7 @@ class Lidos:
         if como not in COMO:
             raise ValueError(como)
         agora = time.time()
-        feitos = {"visto", "lido"} if como == "lido" else {"visto"}
+        feitos = _FEITOS[como]
         validas = [c for c in dict.fromkeys(chaves) if CHAVE.match(c)]
         antes = self.estado(validas)
         with self.dados.banco.transacao():

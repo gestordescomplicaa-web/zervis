@@ -2,6 +2,11 @@
 
 ## Não lançado
 
+- **Dispensar no sino:** cada item do "Precisa de você" ganha o ×, menos a aprovação do WhatsApp.
+  No lead, é o "já vi" (para de lembrar, também no celular); os outros saem da lista até mudar.
+- **"Responder" não tira mais o painel do lugar:** no PC, o link para fora abre numa guia nova do
+  seu navegador (o WhatsApp no WhatsApp Web), não na janela do Zé, que não tem como voltar. Fora
+  do PC, numa guia nova (ADR 0142).
 - **As Automações mandam no que roda sozinho:** cada automação abre em "Editar", com o nome,
   quando (dias da semana e hora, uma vez, ou um intervalo) e o que ela faz (os temas, a duração,
   o texto, "Publicar sozinho"). Pela voz, `automacao_editar` muda o que for pedido. A agenda
