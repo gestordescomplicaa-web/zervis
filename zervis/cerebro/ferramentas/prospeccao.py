@@ -1,11 +1,13 @@
 """A Prospecção pela voz (ADR 0127 e 0128): o que está acontecendo e o que fazer com cada empresa.
 
-Ler (`prospeccao_situacao`) passa sem perguntar; aprovar, descartar, marcar, buscar e ajustar
-mudam o que sai pelo WhatsApp de quem usa, então passam pela aprovação falada. Nomes,
+Ler (`prospeccao_situacao`) passa sem perguntar; aprovar, descartar, adiantar, buscar e ajustar
+mudam o que sai pelo WhatsApp de quem usa, então passam pela aprovação falada. A Prospecção cuida
+da primeira mensagem (ADR 0140): a conversa depois dela quem usa faz no WhatsApp. Nomes,
 avaliações e respostas das empresas são texto de terceiros: a leitura conta como "de fora".
 """
 
 import asyncio
+import re
 from datetime import datetime
 from typing import Any
 
@@ -13,7 +15,7 @@ from claude_agent_sdk import SdkMcpTool, tool
 
 from zervis import fuso
 from zervis.cerebro.ferramentas.comum import _texto
-from zervis.prospeccao import funil
+from zervis.prospeccao import funil, por_ramo
 
 EMPRESA = {"type": "string", "description": "O nome da empresa ou do dono, ou o id"}
 
@@ -54,6 +56,21 @@ def _empresa(p: dict[str, Any], inteira: bool = False) -> dict[str, Any]:
     return {k: v for k, v in resumo.items() if v not in ("", None, [], {})}
 
 
+def _motivo(texto: str) -> str:
+    """O motivo sem a nota ("Nota 38: pouco sinal." vira "Pouco sinal"), para contar junto."""
+    curto = re.sub(r"^Nota \d+:\s*", "", str(texto or "")).strip().rstrip(".")
+    return curto[:1].upper() + curto[1:] if curto else "Sem motivo"
+
+
+def descartadas(todas: list[dict[str, Any]]) -> dict[str, int]:
+    contagem: dict[str, int] = {}
+    for p in todas:
+        if p.get("status") == "descartada":
+            m = _motivo(p.get("motivo", ""))
+            contagem[m] = contagem.get(m, 0) + 1
+    return dict(sorted(contagem.items(), key=lambda x: -x[1]))
+
+
 def situacao(f: funil.Funil, empresa: str = "") -> dict[str, Any]:
     if empresa:
         return {"empresa": _empresa(f.achar(empresa), inteira=True)}
@@ -83,7 +100,12 @@ def situacao(f: funil.Funil, empresa: str = "") -> dict[str, Any]:
             for p in todas
             if p["status"] == "aprovar"
         ][:8],
-        "recentes": [_empresa(p) for p in todas if p["status"] != "aprovar"][:10],
+        "recentes": [
+            {**_empresa(p), "ramo": por_ramo.ramo_de(p, cfg["ramos"])}
+            for p in todas
+            if p["status"] not in ("aprovar", "descartada")
+        ][:10],
+        "descartadas": descartadas(todas),
         "google_maps": "configurado" if tela["apify"] else "sem a chave da Apify",
     }
 
@@ -93,8 +115,9 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
         "prospeccao_situacao",
         "A Prospecção do Zé (a página Prospecção): se está ligada, quantas mensagens saíram hoje "
         "e quando sai a próxima, se há busca ou envio acontecendo agora, as empresas esperando "
-        "aprovação (com a mensagem), as contatadas, quem respondeu e as descartadas, com o "
-        "motivo. Com `empresa`, tudo de uma: quem decide, telefones, nota, mensagem e resposta. "
+        "aprovação (com a mensagem), as contatadas por ramo, quem respondeu e quantas foram "
+        "descartadas por motivo. Com `empresa`, tudo de uma (também uma descartada): quem decide, "
+        "telefones, nota, mensagem e resposta. "
         'Use para "está havendo disparo?", "como está a prospecção?", "quem respondeu?". Só lê.',
         {"type": "object", "properties": {"empresa": EMPRESA}},
     )
@@ -145,28 +168,6 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
         f = funil.padrao()
         return await _fazer(
             lambda: f.descartar(f.achar(str(args.get("empresa", "")))["id"]), "{nome} descartada."
-        )
-
-    @tool(
-        "prospeccao_marcar",
-        'Marca uma empresa já contatada: "reuniao" (reunião marcada), "sem_interesse" ou '
-        '"respondeu". "Sem interesse" conta no freio que pausa a prospecção.',
-        {
-            "type": "object",
-            "properties": {
-                "empresa": EMPRESA,
-                "situacao": {"type": "string", "enum": list(funil.MARCAVEIS)},
-            },
-            "required": ["empresa", "situacao"],
-        },
-    )
-    async def prospeccao_marcar(args: dict[str, Any]) -> dict[str, Any]:
-        f = funil.padrao()
-        situacao_ = str(args.get("situacao", ""))
-        rotulo = funil.ROTULOS.get(situacao_, situacao_)
-        return await _fazer(
-            lambda: f.marcar(f.achar(str(args.get("empresa", "")))["id"], situacao_),
-            f"{{nome}}: {rotulo}.",
         )
 
     @tool(
@@ -233,7 +234,6 @@ def ferramentas() -> list[SdkMcpTool[Any]]:
         prospeccao_situacao,
         prospeccao_aprovar,
         prospeccao_descartar,
-        prospeccao_marcar,
         prospeccao_enviar_agora,
         prospeccao_buscar,
         prospeccao_ajustar,

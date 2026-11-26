@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from zervis.prospeccao import apify, dono, mensagem
+from zervis.prospeccao import apify, dono, mensagem, por_ramo
 from zervis.prospeccao import funil as f
 
 RECIFE = ZoneInfo("America/Recife")
@@ -236,10 +236,8 @@ def test_resposta_vira_respondeu_e_quem_nao_quer_vira_sem_interesse(tmp_path: Pa
     assert p is not None and p["status"] == "respondeu" and p["resposta"].startswith("Oi!")
     p = funil.respondeu("558199887766", "Não tenho interesse, obrigado.")
     assert p is not None and p["status"] == "sem_interesse"
-    funil.marcar(p["id"], "reuniao")
-    assert funil.todas()[0]["status"] == "reuniao"
-    with pytest.raises(f.ProspeccaoErro):
-        funil.marcar(p["id"], "fila")
+    # A Prospecção cuida da primeira mensagem (ADR 0140): ninguém marca "Reunião marcada".
+    assert not hasattr(funil, "marcar")
 
 
 def test_o_que_vem_das_fontes_nao_fecha_o_bloco_de_dados(tmp_path: Path) -> None:
@@ -597,3 +595,75 @@ def test_telefone_de_preenchimento_da_receita_nao_entra() -> None:
     assert dono.telefones({"telefone": "8100000001"}, "") == []
     assert dono.telefones({"telefone": "8199999999"}, "") == []
     assert [t["numero"] for t in dono.telefones({"telefone": "8137213419"}, "")] == ["558137213419"]
+
+
+def test_a_pagina_agrupa_por_ramo_sem_as_descartadas_e_numa_linha_cada(tmp_path: Path) -> None:
+    """Caso de 25/11/2026: 14 das 19 empresas na tela eram descartadas, cada uma com a mensagem
+    inteira. A página mostra por ramo, só nome, número e estado; as descartadas, na contagem."""
+    relogio = Relogio(QUARTA_10H)
+    funil, _ = _funil(tmp_path, relogio, Modelo(), ramos=["autopeças", "clínica odontológica"])
+    loja = replace(_lugar("m1", "Auto Peças Silva", "558137210000"), categoria="Loja de baterias")
+    funil.adicionar_lugares([loja], "autopeças")
+    with funil._empresas.transacao():
+        itens = funil._empresas.ler()
+        antigas = [  # de antes de guardar o ramo da busca: só a categoria do Maps
+            funil._nova("Sorrir", "maps", lugar={"categoria": "Clínica odontológica"}),
+            funil._nova("Pneus Já", "maps", lugar={"categoria": "Comércio de pneu"}),
+            funil._nova("Padaria Sol", "cnpj", status="fila"),
+            funil._nova("Recusada", "maps", status="descartada", motivo="Nota 38: pouco sinal."),
+            funil._nova("Espera", "maps", status="aprovar", ramo="autopeças"),
+        ]
+        antigas[0].update(
+            status="respondeu", resposta="Pode falar", telefone_enviado="558199990000"
+        )
+        funil._empresas.gravar(itens + antigas)
+    tela = funil.para_tela()
+    ramos = {g["ramo"]: [p["nome"] for p in g["empresas"]] for g in tela["grupos"]}
+    assert ramos == {
+        "Autopeças": ["Auto Peças Silva"],  # o ramo da busca, não a categoria
+        "Clínica odontológica": ["Sorrir"],  # antiga: o ramo cabe na categoria
+        "Outros": ["Pneus Já"],
+        "Adicionadas pelo CNPJ": ["Padaria Sol"],
+    }
+    assert list(ramos) == ["Autopeças", "Clínica odontológica", "Outros", "Adicionadas pelo CNPJ"]
+    assert tela["descartadas"] == 1 and [p["nome"] for p in tela["aguardando"]] == ["Espera"]
+    sorrir = tela["grupos"][1]["empresas"][0]
+    assert sorrir == {
+        "id": sorrir["id"], "nome": "Sorrir", "status": "respondeu", "rotulo": "Respondeu",
+        "telefone": "558199990000", "resposta": "Pode falar", "erro": "",
+    }  # fmt: skip
+    assert tela["grupos"][1]["contagem"] == {"respondeu": 1}
+    assert tela["grupos"][0]["empresas"][0]["telefone"] == "558137210000"  # o do Maps, antes
+    # Com um ramo só na Configuração, as antigas são dele: foi o único a buscar.
+    f.salvar_config(replace(funil.config(), ramos=["autopeças"]), funil.config_arquivo)
+    um = {g["ramo"]: g["total"] for g in funil.para_tela()["grupos"]}
+    assert um == {"Autopeças": 3, "Adicionadas pelo CNPJ": 1}
+
+
+def test_cada_ramo_mostra_as_mais_recentes_e_conta_o_resto(tmp_path: Path) -> None:
+    relogio = Relogio(QUARTA_10H)
+    funil, _ = _funil(tmp_path, relogio, Modelo())
+    for n in range(por_ramo.NA_TELA + 5):
+        relogio.t += 1
+        funil.adicionar_lugares([_lugar(f"m{n}", f"Clínica {n}", f"5581300000{n:02d}")], "dentista")
+    [g] = funil.para_tela()["grupos"]
+    assert g["total"] == por_ramo.NA_TELA + 5 and len(g["empresas"]) == por_ramo.NA_TELA
+    assert g["empresas"][0]["nome"] == f"Clínica {por_ramo.NA_TELA + 4}"  # a mais recente primeiro
+
+
+def test_pela_voz_as_descartadas_viram_contagem_por_motivo(tmp_path: Path) -> None:
+    from zervis.cerebro.ferramentas import prospeccao as voz
+
+    funil, _ = _funil(tmp_path, Relogio(QUARTA_10H), Modelo())
+    motivos = ["Nota 38: pouco sinal.", "Nota 45: pouco sinal.", "Sem WhatsApp.", "Sem telefone."]
+    with funil._empresas.transacao():
+        itens = [
+            funil._nova(f"D{n}", "maps", status="descartada", motivo=m)
+            for n, m in enumerate(motivos)
+        ]
+        itens.append(funil._nova("Enviada", "maps", status="enviada", ramo="dentista"))
+        funil._empresas.gravar(itens)
+    dados = voz.situacao(funil)
+    assert dados["descartadas"] == {"Pouco sinal": 2, "Sem WhatsApp": 1, "Sem telefone": 1}
+    assert [(p["empresa"], p["ramo"]) for p in dados["recentes"]] == [("Enviada", "Dentista")]
+    assert voz.situacao(funil, "D2")["empresa"]["por_que"] == "Sem WhatsApp."  # uma, pelo nome

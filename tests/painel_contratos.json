@@ -494,13 +494,8 @@
    "prospeccao/buscar()"
   ],
   "Descartar": [],
+  "Descartar (2)": [],
   "Remover": [],
-  "Reunião marcada": [
-   "prospeccao/marcar(id,status)"
-  ],
-  "Reunião marcada (2)": [
-   "prospeccao/marcar(id,status)"
-  ],
   "Salvar": [
    "prospeccao/salvar(cidade,convite,ligada,link,link_na_mensagem,oferta,por_dia,ramos,sozinho,vagas)"
   ],
@@ -509,12 +504,6 @@
   ],
   "Salvar (3)": [
    "prospeccao/apify(chave)"
-  ],
-  "Sem interesse": [
-   "prospeccao/marcar(id,status)"
-  ],
-  "Sem interesse (2)": [
-   "prospeccao/marcar(id,status)"
   ]
  },
  "sessoes": {
