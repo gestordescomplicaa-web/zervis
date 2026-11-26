@@ -18,7 +18,7 @@ import subprocess
 import threading
 import time
 import urllib.request
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -884,6 +884,17 @@ async def _esperar(nav: _Navegador, condicao: str) -> None:
             return
         await asyncio.sleep(0.1)
     raise AssertionError(f"O painel não chegou ao estado esperado: {condicao}")
+
+
+async def _esperar_pedido(pedidos: list[Any], condicao: Callable[[], bool]) -> None:
+    """Espera o pedido chegar ao Zé falso. A tela que muda antes da resposta (o sino marca a
+    lida na hora e manda o pedido em seguida) não garante que ele já chegou: na CI de 26/11/2026,
+    a lista foi conferida antes do "Marcar todas como lidas" chegar."""
+    for _ in range(70):
+        if condicao():
+            return
+        await asyncio.sleep(0.1)
+    raise AssertionError(f"O pedido esperado não chegou: {pedidos}")
 
 
 async def _ver_atualizacao(depuracao: str, endereco: str, resultado: str) -> None:
@@ -1862,10 +1873,11 @@ def test_o_sino_conta_so_o_novo_e_o_ponto_some_no_clique(tmp_path: Path) -> None
                 "document.querySelector('#avisos li[data-chave=e1b2c3d4e5f60718]').click()"
             )
             await _esperar(nav, f"{nao_lidas} === 2")
-            assert ("lido", ["e1b2c3d4e5f60718"]) in pedidos
+            await _esperar_pedido(pedidos, lambda: ("lido", ["e1b2c3d4e5f60718"]) in pedidos)
             await nav.avaliar("document.querySelector('[data-acao=avisos-todas-lidas]').click()")
             await _esperar(nav, f"{nao_lidas} === 0")
-            assert pedidos[-1] == ("lido", ["a1b2c3d4e5f60718", "b1b2c3d4e5f60718"]), pedidos
+            todas = ("lido", ["a1b2c3d4e5f60718", "b1b2c3d4e5f60718"])
+            await _esperar_pedido(pedidos, lambda: pedidos[-1] == todas)
             assert await nav.avaliar(
                 "document.querySelector('[data-acao=avisos-todas-lidas]').hidden"
             )
