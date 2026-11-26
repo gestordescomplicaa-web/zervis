@@ -289,6 +289,30 @@ main a.acao:hover { text-decoration: none; }
 .liga input:focus-visible + span { outline: 2px solid var(--acento); outline-offset: 2px; }
 .liga input:disabled + span { opacity: .5; }
 details.detalhes summary { cursor: pointer; color: var(--suave); font-size: 13px; }
+/* Prospecção (ADR 0140): as empresas por ramo, recolhidas, numa linha cada */
+.pr-grupo + .pr-grupo { border-top: 1px solid var(--borda); }
+.pr-grupo summary { display: flex; align-items: center; gap: 12px; padding: 12px 2px; cursor: pointer; list-style: none; }
+.pr-grupo summary::-webkit-details-marker { display: none; }
+.pr-grupo summary .seta-escolha { transform: rotate(-45deg); }
+.pr-grupo[open] summary .seta-escolha { transform: translateY(-2px) rotate(45deg); }
+.pr-grupo summary strong { font-weight: 500; }
+.pr-grupo summary small { margin-left: auto; color: var(--suave); font-size: 13px; text-align: right; }
+.pr-grupo .lista { padding-bottom: 14px; }
+.pr-linha { display: grid; grid-template-columns: minmax(0, 1fr) 136px 168px 92px; align-items: center; gap: 4px 16px; padding: 10px 14px; }
+.pr-linha .etiqueta { justify-self: start; }
+.pr-linha .botoes { justify-self: end; }
+.pr-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.pr-numero { color: var(--suave); font-family: var(--mono); font-size: 13px; }
+.pr-linha .botoes .acao { padding: 2px 10px; }
+.pr-extra { grid-column: 1 / -1; color: var(--suave); overflow-wrap: anywhere; }
+.pr-resto, .pr-descartadas { margin: 0; font-size: 13px; }
+.pr-resto { padding: 0 2px 14px; }
+.pr-descartadas { padding-top: 12px; border-top: 1px solid var(--borda); }
+@media (max-width: 720px) {
+  .pr-linha { grid-template-columns: minmax(0, 1fr) auto; }
+  .pr-linha .etiqueta, .pr-linha .botoes { justify-self: end; }
+  .pr-numero { grid-row: 2; }
+}
 details.detalhes p { margin: 8px 0 0; }
 .numeros { display: flex; gap: 28px; flex-wrap: wrap; }
 .numeros div { display: grid; }

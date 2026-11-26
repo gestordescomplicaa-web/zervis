@@ -33,7 +33,7 @@ Quem usa: "o Zérvis é o sistema; ele tem que entender tudo e todos os eventos 
 3. **As páginas que não tinham voz ganham ferramentas:**
    - Prospecção: `prospeccao_situacao` (o que está acontecendo agora, hoje, o próximo envio, quem
      espera aprovação, quem respondeu; ou tudo de uma empresa), e `prospeccao_aprovar`,
-     `prospeccao_descartar`, `prospeccao_marcar`, `prospeccao_buscar` e `prospeccao_ajustar`
+     `prospeccao_descartar`, `prospeccao_marcar` (saiu no ADR 0140), `prospeccao_buscar` e `prospeccao_ajustar`
      (ligar, enviar sozinho, envios por dia, cidade e ramos). A empresa é achada pelo nome dela
      ou do dono.
    - Empresas: `empresas_listar`.

@@ -5,7 +5,8 @@
   primeiro envio de verdade).
 - Etapa 1 de 2. A 2, a conversa que leva a quem respondeu até a reunião, vem num ADR próprio.
 - Ajustado pelos ADR [0129](0129-mensagem-da-prospeccao.md) (a mensagem) e
-  [0130](0130-quem-atende-e-os-avisos.md) (quem atende o número, a resposta automática).
+  [0130](0130-quem-atende-e-os-avisos.md) (quem atende o número, a resposta automática) e
+  [0140](0140-prospeccao-so-a-primeira-mensagem.md) (só a primeira mensagem; a página por ramo).
 
 ## Contexto
 
@@ -72,7 +73,8 @@ O que foi avaliado:
    nada." Quem responde que não quer vira "Sem interesse".
 7. **A resposta:** a mensagem de uma empresa contatada vira "Respondeu" na página e aviso de lead
    (pela lista de prioridade nas primeiras 24 horas; depois, pelo aviso de resposta). "Reunião
-   marcada" e "Sem interesse" se marcam na página.
+   marcada" e "Sem interesse" se marcam na página (saíram no ADR 0140: a conversa depois da
+   primeira mensagem é de quem usa).
 8. **Segurança:** o que vem do Maps e da Receita vai ao modelo entre `<<<` e `>>>`, como dado; a
    mensagem sai sem link; os dados ficam em `<dados>/prospeccao.db`.
 

@@ -59,7 +59,6 @@ POR_BUSCA = 10  # empresas por busca no Maps: cada uma custa na Apify
 QUALIFICAR_POR_CICLO = 3
 TENTATIVAS = 3  # o modelo falhou tantas vezes: descartada
 LIMITE_EDITADA = 900
-NA_TELA = 80
 SEM_INTERESSE = re.compile(
     r"\b(n[aã]o|sem)\s+(tenho\s+|temos\s+|h[aá]\s+)?interesse|\bn[aã]o\s+quero|\bpar[ae]\s+de\b"
     r"|\bn[aã]o\s+(me\s+)?(mande|envie|chame|mandem|liguem?)|\bremov|\bdescadastr|\bbloque",
@@ -72,7 +71,7 @@ ROTULOS = {
     "enviando": "Envio não confirmado",
     "enviada": "Enviada",
     "respondeu": "Respondeu",
-    "reuniao": "Reunião marcada",
+    "reuniao": "Reunião marcada",  # só em dados de antes de 25/11/2026: ninguém marca mais
     "sem_interesse": "Sem interesse",
     "descartada": "Descartada",
 }
@@ -80,7 +79,6 @@ DIAS = ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")
 ESPERANDO = ("nova", "aprovar", "fila")  # contam na reserva
 # "enviando" fica marcado antes do envio: se o Zé cair no meio, a empresa não recebe de novo.
 CONTATADAS = ("enviando", "enviada", "respondeu", "reuniao", "sem_interesse")
-MARCAVEIS = ("reuniao", "sem_interesse", "respondeu")
 
 
 class ProspeccaoErro(ValueError):
@@ -278,15 +276,16 @@ class Funil:
             "atualizado": agora, **campos,
         }  # fmt: skip
 
-    def adicionar_lugares(self, achados: Iterable[apify.Lugar]) -> int:
-        """As empresas do Maps que ainda não vimos; devolve quantas entraram."""
+    def adicionar_lugares(self, achados: Iterable[apify.Lugar], ramo: str = "") -> int:
+        """As empresas do Maps que ainda não vimos; devolve quantas entraram. `ramo` é o da
+        Configuração que buscou: a página agrupa por ele (a categoria do Maps vem picada)."""
         novas = 0
         with self._empresas.transacao():
             itens = self._empresas.ler()
             for x in achados:
                 if self._repetida(itens, x.id, "", x.telefone):
                     continue
-                itens.append(self._nova(x.nome, "maps", lugar=x.para_dados()))
+                itens.append(self._nova(x.nome, "maps", lugar=x.para_dados(), ramo=ramo))
                 novas += 1
             self._empresas.gravar(itens)
         return novas
@@ -471,7 +470,7 @@ class Funil:
             self._meta_gravar(erro=str(erro))
             self._avisar(f"Prospecção: {erro}", urgente=True)
             return 0
-        novas = self.adicionar_lugares(achados)
+        novas = self.adicionar_lugares(achados, ramo)
         self._meta_gravar(erro="")
         atividade.PADRAO.registrar("execucao", f"Prospecção: {novas} empresa(s) novas ({ramo})")
         return novas
@@ -695,20 +694,6 @@ class Funil:
             raise ProspeccaoErro("Empresa não pode mais ser descartada.")
         return p
 
-    def marcar(self, ident: str, status: str) -> dict[str, Any]:
-        if status not in MARCAVEIS:
-            raise ProspeccaoErro("Estado inválido.")
-        campos: dict[str, Any] = {"status": status}
-        if status == "sem_interesse":
-            campos["recusou"] = self.agora()  # conta no freio
-        p = self._mudar(ident, campos, so_se=CONTATADAS)
-        if p is None:
-            raise ProspeccaoErro("Só uma empresa já contatada muda assim.")
-        atividade.PADRAO.registrar(
-            "execucao", f"Prospecção: {p['nome']} · {ROTULOS[status]}", origem="painel"
-        )
-        return p
-
     def respondeu(self, telefone: str, texto: str) -> dict[str, Any] | None:
         """Uma mensagem chegou: era de uma empresa contatada? Marca a resposta e devolve ela."""
         chave = dono.chave_do_telefone(telefone)
@@ -737,6 +722,8 @@ class Funil:
         return self._mudar(alvo["id"], campos) or alvo
 
     def para_tela(self) -> dict[str, Any]:
+        from zervis.prospeccao import por_ramo  # usa os ROTULOS daqui
+
         cfg = self.config()
         todas = sorted(self.todas(), key=lambda p: -float(p.get("atualizado", 0)))
         contagem = {s: 0 for s in ROTULOS}
@@ -773,7 +760,8 @@ class Funil:
             "horario": HORARIO,
             "contagem": contagem,
             "aguardando": [resumo(p) for p in todas if p["status"] == "aprovar"],
-            "empresas": [resumo(p) for p in todas if p["status"] != "aprovar"][:NA_TELA],
+            "grupos": por_ramo.grupos(cfg.ramos, todas),
+            "descartadas": contagem["descartada"],
             "erro": str(meta.get("erro", "")),
             "ocupado": self.ocupado(),
         }

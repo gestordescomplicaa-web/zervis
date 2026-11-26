@@ -234,7 +234,6 @@ class Acoes:
             "prospeccao/adicionar": self.adicionar_prospeccao,
             "prospeccao/aprovar": self.aprovar_prospeccao,
             "prospeccao/descartar": self.descartar_prospeccao,
-            "prospeccao/marcar": self.marcar_prospeccao,
             "tv/abrir": self.abrir_tv,
             "tv/fechar": self.fechar_tv,
             "whatsapp/desconectar": self.desconectar_whatsapp,
