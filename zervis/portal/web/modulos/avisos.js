@@ -4,7 +4,8 @@
 //
 // Como nas notificações de um app (ADR 0139): o número conta só o que é novo, e abrir o sino o
 // zera (visto); cada item fica com o ponto até ser clicado (lido). O que precisa de você continua
-// na lista até ser resolvido. O Zé guarda as marcas: o computador e o celular veem o mesmo.
+// na lista até ser resolvido ou dispensado no × (ADR 0142: o lead recebe o "já vi"; os outros
+// saem até mudar). O Zé guarda as marcas: o computador e o celular veem o mesmo.
 import { $, api, esc, toast } from "../painel.js";
 import { ICONES, icone } from "./casca.js";
 import { dataCompleta, dataDoEpoch, diaDe, rotuloDia } from "./datas.js";
@@ -33,7 +34,9 @@ export function linhaPrecisa(i) {
     : `<a class="acao" href="${esc(i.link)}"${fora ? ' target="_blank" rel="noopener"' : ' data-acao="avisos-fechar"'}>${esc(i.acao)}</a>`;
   const marca = i.chave ? ` ${i.lido ? "lida" : "nao-lida"}" data-chave="${esc(i.chave)}` : "";
   const quando = i.quando ? `<span class="hora" title="${dataDoEpoch(i.quando)}">${ha(i.quando)}</span>` : "";
-  return `<div class="linha-item precisa${marca}" data-nivel="${esc(i.nivel)}"><span class="icone-area">${icone(ICONES[i.secao] || "bell")}</span><div class="texto"><strong>${esc(i.titulo)}</strong><small>${esc(i.area)}${i.detalhe ? ` · ${esc(i.detalhe)}` : ""}</small></div>${quando}<div class="botoes">${botoes}</div></div>`;
+  // A aprovação se resolve aprovando ou negando; o resto se dispensa no ×.
+  const dispensar = i.chave && !i.aprovacao ? `<button type="button" class="x dispensar" data-acao="aviso-dispensar" data-chave="${esc(i.chave)}" aria-label="Dispensar" title="Dispensar">×</button>` : "";
+  return `<div class="linha-item precisa${marca}" data-nivel="${esc(i.nivel)}"><span class="icone-area">${icone(ICONES[i.secao] || "bell")}</span><div class="texto"><strong>${esc(i.titulo)}</strong><small>${esc(i.area)}${i.detalhe ? ` · ${esc(i.detalhe)}` : ""}</small></div>${quando}<div class="botoes">${botoes}</div>${dispensar}</div>`;
 }
 
 /** Os avisos do Zé da semana, por dia, com a hora. @param {AvisoDoZe[]} avisos */
@@ -100,10 +103,11 @@ export function alternarAvisos() {
     painel = Object.assign(document.createElement("aside"), { id: "avisos", className: "avisos" });
     painel.setAttribute("aria-label", "Avisos");
     painel.innerHTML = `<header><h2>Avisos</h2><button type="button" class="acao discreta" data-acao="avisos-todas-lidas" hidden>Marcar todas como lidas</button><button type="button" class="x" data-acao="avisos-fechar" aria-label="Fechar">×</button></header><div class="avisos-corpo" id="avisos-corpo"></div>`;
-    // Clicar num item (no botão dele ou em qualquer parte) o marca como lido.
+    // Clicar num item (no botão dele ou em qualquer parte) o marca como lido; o × o dispensa.
     painel.addEventListener("click", (ev) => {
-      const item = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest(".nao-lida[data-chave]"));
-      if (!item) return;
+      const alvo = /** @type {HTMLElement} */ (ev.target);
+      const item = /** @type {HTMLElement | null} */ (alvo.closest(".nao-lida[data-chave]"));
+      if (!item || alvo.closest(".dispensar")) return;
       item.classList.replace("nao-lida", "lida");
       marcar([item.dataset.chave || ""], "lido");
     });
@@ -121,6 +125,21 @@ export function alternarAvisos() {
 export function marcarTodasLidas() {
   const chaves = [...ultimo.itens, ...ultimo.avisos].filter((x) => x.chave && !x.lido).map((x) => /** @type {string} */ (x.chave));
   marcar(chaves, "lido");
+  desenhar();
+}
+
+/** O × de um item do "Precisa de você": sai da lista na hora; o Zé guarda (ADR 0142). @param {HTMLButtonElement} b */
+export async function dispensarAviso(b) {
+  const marca = b.dataset.chave || "";
+  b.closest(".linha-item")?.remove();
+  const item = ultimo.itens.find((x) => x.chave === marca);
+  if (item?.novo) ultimo.novos = Math.max(0, ultimo.novos - 1);
+  ultimo.itens = ultimo.itens.filter((x) => x.chave !== marca);
+  contar();
+  if (!ultimo.itens.length) desenhar();
+  try { ultimo = await api("avisos/dispensar", { chave: marca }); }
+  catch (erro) { toast(/** @type {Error} */ (erro).message); }
+  contar();
   desenhar();
 }
 
@@ -192,6 +211,7 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .avisos .linha-item.precisa { flex-wrap: wrap; }
 .avisos .linha-item.precisa .texto { flex-basis: calc(100% - 100px); }
 .avisos .linha-item.precisa .botoes { margin-left: 44px; }
+.avisos .linha-item.precisa .dispensar { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; font-size: 16px; }
 @media (max-width: 720px) {
   .linha-item.precisa { flex-wrap: wrap; }
   .linha-item.precisa .texto { flex-basis: calc(100% - 100px); }

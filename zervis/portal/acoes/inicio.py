@@ -63,6 +63,7 @@ class AcoesInicio(Pagina):
         "conversa_em_andamento",
         "conversas",
         "decidir_aprovacao",
+        "dispensar_lead",
         "escrever",
         "espera",
         "foco",
@@ -344,7 +345,7 @@ class AcoesInicio(Pagina):
         itens = []
         for i in lista_precisa.montar(self._fontes()):
             item = i.para_tela()
-            item["chave"] = lidos.chave(i.id, i.titulo, i.detalhe)
+            item["chave"] = lista_precisa.chave(i)
             itens.append(item)
         marcas = lidos.PADRAO.estado(x["chave"] for x in [*itens, *avisos])
         for x in [*itens, *avisos]:
@@ -360,10 +361,36 @@ class AcoesInicio(Pagina):
         """O sino abriu (`visto`) ou a pessoa clicou num item (`lido`), ou em "Marcar todas como
         lidas" (ADR 0139)."""
         chaves, como = dados.get("chaves"), str(dados.get("como", ""))
-        if not isinstance(chaves, list) or len(chaves) > 500 or como not in lidos.COMO:
+        if not isinstance(chaves, list) or len(chaves) > 500 or como not in ("visto", "lido"):
             raise PedidoInvalido("Pedido inválido.")
         lidos.PADRAO.marcar((str(c) for c in chaves), como)
         return {}
+
+    def dispensar_aviso(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O botão Dispensar de um item do "Precisa de você" (ADR 0142). O lead do WhatsApp
+        recebe o "já vi" (para de lembrar, também no celular); os outros saem da lista até
+        mudar. A aprovação do WhatsApp não se dispensa: aprovar ou negar."""
+        marca = str(dados.get("chave", ""))
+        alvo = next(
+            (i for i in lista_precisa.montar(self._fontes()) if lista_precisa.chave(i) == marca),
+            None,
+        )
+        if alvo is not None:
+            if alvo.aprovacao:
+                raise PedidoInvalido("Aprove ou negue.")
+            if alvo.id.startswith("lead:"):
+                self.n.dispensar_lead(alvo.id.removeprefix("lead:"))
+            lidos.PADRAO.marcar([marca], "dispensado")
+        return self.precisa()
+
+    def abrir_link(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """Um link para fora, clicado no painel do PC, abre no navegador de quem usa (ADR 0142)."""
+        from zervis.sistema import navegador_padrao
+
+        try:
+            return {"aberto": navegador_padrao.abrir(str(dados.get("url", "")))}
+        except navegador_padrao.LinkErro as erro:
+            raise PedidoInvalido(str(erro)) from None
 
     def automacoes(self) -> list[dict[str, Any]]:
         """Cada automação com a agenda dita como gente e o que dá para mudar nela (ADR 0141)."""

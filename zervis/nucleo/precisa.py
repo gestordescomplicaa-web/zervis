@@ -13,6 +13,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, NamedTuple
 
+from zervis.avisos import lidos
+
 log = logging.getLogger(__name__)
 
 NIVEIS = ("critico", "alerta", "info")
@@ -289,6 +291,22 @@ FONTES: tuple[Callable[[Fontes], list[Item]], ...] = (
 )
 
 
+def chave(i: Item) -> str:
+    """A marca do item no sino: muda quando o que ele diz muda (ADR 0139)."""
+    return lidos.chave(i.id, i.titulo, i.detalhe)
+
+
+def _sem_dispensados(itens: list[Item]) -> list[Item]:
+    """O que quem usa tirou com Dispensar sai da lista, no sino, no Início e na voz, até mudar (ADR
+    0142). Sem o banco das marcas, a lista vem inteira."""
+    try:
+        marcas = lidos.PADRAO.estado(chave(i) for i in itens)
+    except Exception:
+        log.debug("precisa: as marcas do sino não foram lidas", exc_info=True)
+        return itens
+    return [i for i in itens if "dispensado" not in marcas.get(chave(i), set())]
+
+
 def montar(n: Fontes) -> list[Item]:
     itens: list[Item] = []
     for fonte in FONTES:
@@ -296,6 +314,7 @@ def montar(n: Fontes) -> list[Item]:
             itens += fonte(n)
         except Exception:
             log.debug("precisa: %s não foi lida", fonte.__name__, exc_info=True)
+    itens = _sem_dispensados(itens)
     return sorted(itens, key=lambda i: (NIVEIS.index(i.nivel), i.quando or float("inf")))
 
 

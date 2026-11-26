@@ -1890,6 +1890,67 @@ def test_o_sino_conta_so_o_novo_e_o_ponto_some_no_clique(tmp_path: Path) -> None
 
 
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_o_x_dispensa_e_o_whatsapp_abre_fora_da_janela_do_ze(tmp_path: Path) -> None:
+    """Caso de 25/11/2026 (ADR 0142): o lead ficava no sino sem como tirar, e "Responder" abria o
+    WhatsApp no lugar do painel, na janela do Zé, sem como voltar."""
+    respostas = json.loads(RESPOSTAS.read_text())["leituras"]
+    zap = "https://wa.me/5581999990000"
+    sino = copy.deepcopy(respostas["precisa"])
+    for x in sino["itens"]:
+        if x["id"] == "lead:l1":
+            x["link"] = zap
+    inicio_ = copy.deepcopy(respostas["inicio"])
+    for x in inicio_["precisa"]:
+        if x["id"] == "lead:l1":
+            x["link"] = zap
+    dispensados: list[str] = []
+    abertos: list[str] = []
+
+    def dispensar(dados: dict[str, Any]) -> dict[str, Any]:
+        dispensados.append(dados["chave"])
+        sino["itens"] = [x for x in sino["itens"] if x["chave"] != dados["chave"]]
+        return copy.deepcopy(sino)
+
+    def abrir_link(dados: dict[str, Any]) -> dict[str, Any]:
+        abertos.append(dados["url"])
+        return {"aberto": dados["url"]}
+
+    lead = "#avisos .precisa[data-chave=b1b2c3d4e5f60718]"
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#inicio")
+            await _esperar(nav, "!!document.querySelector('.lado-inicio .item-lado')")
+            await nav.avaliar(
+                f"[...document.querySelectorAll('.lado-inicio a.item-lado')]"
+                f".find((a) => a.href === '{zap}').click()"
+            )
+            await _esperar_pedido(abertos, lambda: abertos == [zap])
+            assert await nav.avaliar("location.hash") == "#inicio"  # o painel não saiu do lugar
+            await nav.avaliar("document.getElementById('sino').click()")
+            await _esperar(nav, f"!!document.querySelector('{lead}')")
+            # A aprovação se resolve aprovando ou negando: sem Dispensar.
+            aprovacao = "#avisos .precisa[data-chave=a1b2c3d4e5f60718]"
+            assert not await nav.avaliar(f"!!document.querySelector('{aprovacao} .dispensar')")
+            await nav.avaliar(f"document.querySelector('{lead} a.acao').click()")
+            await _esperar_pedido(abertos, lambda: len(abertos) == 2)
+            assert await nav.avaliar("location.hash") == "#inicio"
+            await nav.avaliar(f"document.querySelector('{lead} .dispensar').click()")
+            await _esperar(nav, f"!document.querySelector('{lead}')")
+            await _esperar_pedido(dispensados, lambda: dispensados == ["b1b2c3d4e5f60718"])
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path,
+        extras={"avisos/dispensar": dispensar, "link/abrir": abrir_link},
+        leituras_vivas={"precisa": lambda: copy.deepcopy(sino)},
+        trocas={"inicio": inicio_},
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
 def test_conversa_mostra_o_gasto_de_cada_resposta_e_do_dia(tmp_path: Path) -> None:
     """Pedido de 27/10/2026: ver na Conversa como o Zé gasta os tokens a cada mensagem."""
     hora = "2026-10-27T21:00:00-03:00"
