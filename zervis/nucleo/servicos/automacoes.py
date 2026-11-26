@@ -5,6 +5,7 @@ import json
 import logging
 import queue
 import threading
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Protocol
 
@@ -180,6 +181,12 @@ class ServicoAutomacoes:
             threading.Thread(
                 target=self._pedir_video, args=(x,), name="video-agendado", daemon=True
             ).start()
+        elif x.tipo == "post":
+            log.info("automação %s: carrossel", x.job)
+            self.n._rodando.add(x.id)
+            threading.Thread(
+                target=self._pedir_post, args=(x,), name="post-agendado", daemon=True
+            ).start()
         elif x.tipo == "ligacao":
             log.info("automação %s: ligação agendada", x.job)
             self.n._rodando.add(x.id)
@@ -224,11 +231,15 @@ class ServicoAutomacoes:
 
     def _pedir_artigo(self, x: Execucao) -> None:
         """O artigo agendado (ADR 0092): a sessão escreve, o PR abre sozinho quando ela termina
-        e publicar espera o "aprovado" de quem usa."""
+        e publicar espera o "aprovado" de quem usa; com "publicar sozinho" ligado ao agendar
+        (ADR 0126), o Zé publica assim que o PR abre."""
         status, erro = "ok", ""
         try:
-            tema = str(json.loads(x.texto).get("tema", ""))
-            s = marketing.PADRAO.pedir(self.n.sessoes, "artigo", tema, motor_conectado())
+            pedido = json.loads(x.texto)
+            tema, sozinho = str(pedido.get("tema", "")), pedido.get("publicar") is True
+            s = marketing.PADRAO.pedir(
+                self.n.sessoes, "artigo", tema, motor_conectado(), sozinho=sozinho
+            )
             self.n._na_linha("aviso", f"Comecei o artigo do blog: {s.nome}.")
         except (ValueError, AttributeError, marketing.MarketingErro, SessaoErro) as falha:
             status, erro = "erro", str(falha)[:200]
@@ -241,7 +252,8 @@ class ServicoAutomacoes:
 
     def _pedir_video(self, x: Execucao) -> None:
         """O vídeo agendado (ADR 0111): o Zé cria e avisa no app quando estiver pronto; publicar
-        no Instagram espera a aprovação de quem usa."""
+        no Instagram espera a aprovação de quem usa, ou, com "publicar sozinho" ligado ao agendar
+        (ADR 0126), sai assim que o vídeo fica pronto."""
         from zervis.video import roteiro as roteiro_video  # só quem agenda vídeo carrega
         from zervis.video import videos
 
@@ -252,8 +264,12 @@ class ServicoAutomacoes:
             v = videos.PADRAO
             tema, artigo = v.proximo_tema(temas)
             duracao = int(pedido.get("duracao") or roteiro_video.DURACAO_PADRAO)
-            feito = v.criar(tema=tema, artigo=artigo, duracao=duracao)
-            self.n._na_linha("aviso", f"Comecei o vídeo agendado: {feito.tema or feito.artigo}.")
+            sozinho = pedido.get("publicar") is True
+            self.n._na_linha("aviso", f"Comecei o vídeo agendado: {tema or artigo}.")
+            feito = v.criar(tema=tema, artigo=artigo, duracao=duracao, esperar=sozinho)
+            if sozinho:
+                self._publicar_sozinho("o Reels", feito.titulo or feito.tema, feito.estado,
+                                       lambda: v.publicar(feito.id, esperar=True))  # fmt: skip
         except (ValueError, AttributeError, TypeError, videos.VideoErro) as falha:
             status, erro = "erro", str(falha)[:200]
             texto = f"Não comecei o vídeo agendado: {erro}"
@@ -262,6 +278,58 @@ class ServicoAutomacoes:
         finally:
             self.n.jobs.concluir(x.id, status, datetime.now(FUSO), erro)
             self.n._rodando.discard(x.id)
+
+    def _pedir_post(self, x: Execucao) -> None:
+        """O carrossel agendado (ADR 0126): o Zé cria o post da vez (o tema da lista, o artigo
+        novo ou um assunto da linha editorial) e, com "publicar sozinho", publica ao ficar
+        pronto; sem, avisa para revisar."""
+        from zervis import marketing_posts
+
+        status, erro = "ok", ""
+        try:
+            pedido = json.loads(x.texto)
+            temas = [str(t) for t in pedido.get("temas") or [] if str(t).strip()]
+            p = marketing_posts.PADRAO
+            tema, artigo = p.proximo_tema(temas)
+            sozinho = pedido.get("publicar") is True
+            self.n._na_linha("aviso", "Comecei o carrossel agendado.")
+            feito = p.criar(tema=tema, artigo=artigo, esperar=sozinho)
+            if sozinho:
+                self._publicar_sozinho("o carrossel", feito.tema or feito.artigo, feito.estado,
+                                       lambda: p.publicar(feito.id, esperar=True))  # fmt: skip
+        except (ValueError, AttributeError, TypeError, marketing_posts.PostErro) as falha:
+            status, erro = "erro", str(falha)[:200]
+            texto = f"Não comecei o carrossel agendado: {erro}"
+            self.n._na_linha("aviso", texto)
+            self.n.fila.guardar(texto, "automacao")
+        finally:
+            self.n.jobs.concluir(x.id, status, datetime.now(FUSO), erro)
+            self.n._rodando.discard(x.id)
+
+    def _publicar_sozinho(
+        self, o_que: str, titulo: str, estado: str, publicar: Callable[[], Any]
+    ) -> None:
+        """A automação com "publicar sozinho" (ADR 0126): quem usa aprovou ao agendar; cada
+        publicação fica na Atividade e vira aviso. Pronto com erro, não publica."""
+        if estado != "rascunho":
+            return  # a criação falhou: o aviso do erro já saiu
+        try:
+            feito = publicar()
+        except Exception as falha:  # Instagram fora, sem endereço fixo: o rascunho fica
+            texto = f"Não publiquei {o_que} {titulo}: {falha}"
+            atividade.PADRAO.registrar("falha", texto[:200], origem="automacoes")
+        else:
+            ok = getattr(feito, "estado", "") == "publicado"
+            texto = (
+                f"Publiquei {o_que} {titulo} no Instagram, como a automação pede."
+                if ok
+                else f"Não publiquei {o_que} {titulo}: {getattr(feito, 'erro', '') or 'falhou'}"
+            )
+            atividade.PADRAO.registrar(
+                "execucao" if ok else "falha", texto[:200], origem="automacoes"
+            )
+        self.n._na_linha("aviso", texto)
+        self.n.fila.guardar(texto, "automacao")
 
     def _procurar_versao(self) -> None:
         """A procura diária de atualização (pela rede, numa thread): na tela e, se o modo de

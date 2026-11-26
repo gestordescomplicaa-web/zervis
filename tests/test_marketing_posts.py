@@ -535,3 +535,12 @@ def test_as_fotos_da_marca(tmp_path: Path) -> None:
     assert posts.fotos() == [nome]
     with pytest.raises(PostErro):
         posts.remover_foto("../post.json")
+
+
+def test_carrossel_agendado_tema_da_vez_e_publicar_sozinho(tmp_path: Path) -> None:
+    posts, _, _ = _posts(tmp_path)
+    texto = Posts.pedido_agendado("Cobrança\n\n Estoque ", True)
+    assert json.loads(texto) == {"temas": ["Cobrança", "Estoque"], "publicar": True}
+    assert posts.proximo_tema(["Cobrança", "Estoque"]) == ("Cobrança", "")
+    posts.criar(tema="Cobrança", esperar=True)
+    assert posts.proximo_tema(["cobrança", "Estoque"]) == ("Estoque", "")

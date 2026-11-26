@@ -64,6 +64,14 @@ def carimbo(agora: datetime | None = None) -> str:
     return f"[{DIAS[agora.weekday()]}, {agora:%d/%m/%Y, %H:%M}]"
 
 
+def _quem_publica(entrada: dict[str, Any]) -> str:
+    """Publicar sozinho é a aprovação dada uma vez (ADR 0126): a frase diz isso com todas as
+    letras."""
+    if entrada.get("publicar") is True:
+        return "e cada um vai ao ar sozinho, assim que ficar pronto, sem te perguntar."
+    return "publicar fica com você."
+
+
 def descrever(nome: str, entrada: dict[str, Any]) -> str:
     """O que vai ser feito, numa frase falável, para o usuário aprovar ou negar."""
     if nome == "WebSearch":
@@ -116,10 +124,17 @@ def descrever(nome: str, entrada: dict[str, Any]) -> str:
     if nome == "mcp__jarvis__marketing_video_criar":
         assunto = entrada.get("tema") or f"o artigo {entrada.get('artigo', '')}"
         return f"Vou criar um vídeo de {entrada.get('duracao') or 30} segundos sobre {assunto}."
-    if nome == "mcp__jarvis__marketing_video_agendar":
+    if nome in ("mcp__jarvis__marketing_video_agendar", "mcp__jarvis__marketing_post_agendar"):
+        o_que = "vídeos" if nome.endswith("video_agendar") else "carrosséis"
         temas = [str(t) for t in entrada.get("temas") or []]
         sobre = f"sobre {', '.join(temas[:3])}" if temas else "com o tema escolhido pelo site"
-        return f"Vou agendar vídeos ({entrada.get('quando', '')}) {sobre}; publicar fica com você."
+        return (
+            f"Vou agendar {o_que} ({entrada.get('quando', '')}) {sobre}; {_quem_publica(entrada)}"
+        )
+    if nome == "mcp__jarvis__marketing_agendar":
+        return (
+            f"Vou agendar artigos do blog ({entrada.get('quando', '')}); {_quem_publica(entrada)}"
+        )
     if nome == "mcp__jarvis__marketing_video_publicar":
         return (
             f"Vou publicar no Instagram o vídeo {_titulo_do_video(str(entrada.get('video', '')))}."

@@ -48,6 +48,8 @@ LIMITE_ARTIGO = 9000
 MODELO = "claude-sonnet-5-5"
 NAVEGADORES = ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable")
 ESTADOS = ("criando", "rascunho", "publicando", "publicado", "erro")
+# o carrossel agendado sem tema da lista nem artigo novo: o diretor escolhe
+TEMA_LIVRE = "Um assunto da linha editorial do site que os últimos posts ainda não trataram"
 ANDAMENTO = ("criando", "publicando")  # feitos por uma linha de execução do Zé
 # Um post "publicando" sem dono só é conferido no Instagram depois disto: a Meta pode levar uns
 # segundos para listar um post cujo pedido de publicar saiu logo antes de o Zé parar.
@@ -474,6 +476,37 @@ class Posts:
         if nome not in self.fotos():
             raise PostErro("Foto não encontrada.")
         return (self.pasta_fotos / nome).read_bytes()
+
+    # --- o agendado (ADR 0126): o tema da vez e, se quem usa ligou, publicar sozinho ---------
+
+    @staticmethod
+    def pedido_agendado(temas: list[str] | str, publicar: bool = False) -> str:
+        """O texto da automação de carrosséis: até 10 temas curtos e se publica sozinho."""
+        if isinstance(temas, str):
+            temas = temas.splitlines()
+        limpos = [" ".join(str(t).split())[:80] for t in temas if str(t).strip()][:10]
+        texto = json.dumps({"temas": limpos, "publicar": publicar}, ensure_ascii=False)
+        if len(texto) > 600:
+            raise PostErro("Temas longos demais. Use frases curtas.")
+        return texto
+
+    def proximo_tema(self, temas: list[str]) -> tuple[str, str]:
+        """O primeiro tema da lista que ainda não virou post; sem ele, o artigo publicado mais
+        novo que ainda não virou post; sem ele, o diretor escolhe longe dos últimos posts."""
+        feitos = self.listar()
+        usados = {" ".join(p.tema.lower().split()) for p in feitos if p.tema}
+        for tema in temas:
+            if (limpo := " ".join(str(tema).split())[:200]) and limpo.lower() not in usados:
+                return limpo, ""
+        de_artigo = {p.artigo for p in feitos if p.artigo}
+        try:
+            for a in self.site.artigos():
+                if a.get("estado") == "Publicado" and a.get("slug") not in de_artigo:
+                    return "", str(a["slug"])
+        except (marketing.MarketingErro, OSError, ValueError):
+            pass  # um site fora do ar não impede o post
+        recentes = "; ".join(p.tema for p in feitos[:12] if p.tema)
+        return TEMA_LIVRE + (f" (os últimos foram: {recentes})" if recentes else ""), ""
 
     # --- criar ----------------------------------------------------------------------------
 

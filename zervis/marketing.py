@@ -423,8 +423,9 @@ class Marketing:
 
     # --- os pedidos -----------------------------------------------------------------------
 
-    def pedir(self, sessoes: Any, tipo: str, texto: str, motor: str) -> Any:
-        """Uma sessão numa cópia isolada a partir da base, já com a tarefa."""
+    def pedir(self, sessoes: Any, tipo: str, texto: str, motor: str, sozinho: bool = False) -> Any:
+        """Uma sessão numa cópia isolada a partir da base, já com a tarefa. `sozinho`: a
+        automação que publica sem esperar o "aprovado" (quem usa ligou ao agendar)."""
         if tipo not in NOMES:
             raise MarketingErro("Pedido desconhecido.")
         texto = " ".join(texto.split())
@@ -443,6 +444,8 @@ class Marketing:
         proposta._git(copia, "reset", "--hard", "--quiet", ponta)
         s = sessoes._mudar(s.id, base=ponta)
         (sessoes.pasta / s.id / LIVRES_DA_SESSAO).write_text(json.dumps(livres(blog)))
+        if sozinho:
+            self._mudar_estado(lambda d: d["sozinho"].append(s.id))
         if tipo == "artigo" and blog is not None:
             tema = texto or "escolha você, pelo foco editorial e pela distribuição do manual"
             validar = (
@@ -490,6 +493,7 @@ class Marketing:
             "publicar": list(dados.get("publicar") or []),
             "prs": dict(dados.get("prs") or {}),
             "ramos": dict(dados.get("ramos") or {}),
+            "sozinho": list(dados.get("sozinho") or []),
         }
 
     def _mudar_estado(self, mudar: Callable[[dict[str, Any]], None]) -> None:
@@ -702,6 +706,10 @@ class Marketing:
         r = self.abrir_pr(sessoes, ref)
         if not r.ok:
             return f"O pedido de marketing terminou, mas não abri o PR: {r.texto}"
+        if ref in estado["sozinho"]:  # a automação publica sozinha: o "aprovado" já foi dado
+            self._mudar_estado(lambda d: d["sozinho"].remove(ref))
+            p = self.publicar(sessoes, ref)
+            return f"{r.texto} {p.texto if p.ok else f'Não publiquei: {p.texto}'}"
         return f"{r.texto} Para publicar, aprove em Marketing ou diga aprovado."
 
     # --- o deploy ---------------------------------------------------------------------------
