@@ -54,7 +54,11 @@ GRUPOS = {
     "sessoes": ("Sessões de código", "abre, acompanha e conduz sessões com os agentes"),
     "tela": ("Tela", "vê e mexe na própria tela e abre ou fecha a janela"),
     "sistema": ("Sistema", "consulta o estado da máquina e roda as ações do sistema"),
-    "automacoes": ("Automações", "agenda lembretes e perguntas e muda as automações"),
+    "automacoes": (
+        "Automações",
+        "agenda lembretes, perguntas, ligações, artigos, vídeos e carrosséis, que podem publicar "
+        "sozinhos, e muda qualquer automação: os dias, a hora, os temas",
+    ),
     "aprendizado": ("Aprendizado", "guarda memória, busca no histórico e cria ou corrige skills"),
     "manutencao": (
         "Manutenção",

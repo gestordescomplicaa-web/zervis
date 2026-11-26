@@ -60,6 +60,7 @@ ROTULOS = {
     "historico_buscar": "Procurando no histórico",
     "sistema_executar": "Mexendo no computador",
     "automacao_lembrete": "Agendando o lembrete",
+    "automacao_editar": "Mudando a automação",
     "ze_sobre": "Olhando a minha configuração",
     "memoria": "Guardando na memória",
     "marketing_situacao": "Olhando o site e o blog",
@@ -77,6 +78,7 @@ ROTULOS = {
     "marketing_video_criar": "Criando o vídeo",
     "marketing_video_publicar": "Publicando o Reels",
     "marketing_video_agendar": "Agendando os vídeos",
+    "marketing_post_agendar": "Agendando os carrosséis",
 }
 
 

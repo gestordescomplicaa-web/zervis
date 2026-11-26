@@ -47,16 +47,40 @@ def parecidos(a: str, b: str) -> bool:
 
 
 def historico(pasta: Path) -> list[dict[str, Any]]:
-    """Do mais novo para o mais velho."""
+    """Do mais novo para o mais velho: o histórico gravado e, depois dele, os vídeos da pasta
+    feitos antes da trava existir (pelo título, sem o processo)."""
     try:
         dados = json.loads((pasta / ARQUIVO).read_text())
     except (OSError, ValueError):
-        return []
-    return [x for x in dados if isinstance(x, dict)] if isinstance(dados, list) else []
+        dados = []
+    itens = [x for x in dados if isinstance(x, dict)] if isinstance(dados, list) else []
+    return itens + _antigos(pasta, {str(x.get("video")) for x in itens})
+
+
+def _antigos(pasta: Path, conhecidos: set[str]) -> list[dict[str, Any]]:
+    antigos = []
+    for arquivo in pasta.glob("*/video.json") if pasta.is_dir() else []:
+        try:
+            v = json.loads(arquivo.read_text())
+        except (OSError, ValueError):
+            continue
+        r = v.get("roteiro") if isinstance(v, dict) else None
+        if not isinstance(r, dict) or str(v.get("id")) in conhecidos or not r.get("cenas"):
+            continue
+        assunto = str(r.get("assunto") or r.get("titulo") or v.get("tema") or "")
+        if assunto:
+            antigos.append({"video": str(v.get("id")), "processo": str(r.get("processo") or ""),
+                            "assunto": assunto, "livre": False,
+                            "quando": float(v.get("criado") or 0)})  # fmt: skip
+    return sorted(antigos, key=lambda x: -x["quando"])
 
 
 def anotar(pasta: Path, video: str, processo: str, assunto: str, livre: bool) -> None:
-    itens = [x for x in historico(pasta) if x.get("video") != video]
+    try:
+        gravados = json.loads((pasta / ARQUIVO).read_text())
+    except (OSError, ValueError):
+        gravados = []
+    itens = [x for x in gravados if isinstance(x, dict) and x.get("video") != video]
     itens.insert(
         0,
         {"video": video, "processo": processo, "assunto": assunto, "livre": livre,

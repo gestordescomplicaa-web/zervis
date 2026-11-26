@@ -1,10 +1,13 @@
-"""Ferramentas das automações: lembretes e perguntas agendadas."""
+"""Ferramentas das automações: lembretes e perguntas agendadas, e listar, mudar e editar qualquer
+automação (as de marketing, a ligação). As Automações mandam em tudo o que roda sozinho (ADR
+0141): o que quem usa pedir para agendar vira automação, pela ferramenta do tipo."""
 
 from datetime import datetime
 from typing import Any
 
 from claude_agent_sdk import SdkMcpTool, tool
 
+from zervis.automacoes import parametros
 from zervis.automacoes.agenda import FUSO
 from zervis.automacoes.jobs import JobErro, Jobs
 from zervis.cerebro.ferramentas.comum import _erro, _texto
@@ -57,14 +60,73 @@ def ferramentas(jobs: Jobs | None) -> list[SdkMcpTool[Any]]:
     async def automacao_pergunta(args: dict[str, Any]) -> dict[str, Any]:
         return _criar("pergunta", args)
 
-    @tool("automacoes_listar", "Lista as automações (lembretes e perguntas agendadas).", {})
+    @tool(
+        "automacoes_listar",
+        "Lista todas as automações (lembretes, perguntas, ligações, artigos, vídeos e "
+        "carrosséis): quando rodam, a próxima vez e o que cada uma faz (os temas, a duração, se "
+        "publica sozinha).",
+        {},
+    )
     async def automacoes_listar(_: dict[str, Any]) -> dict[str, Any]:
-        lista = (
-            [{"id": j.id, "resumo": j.resumo(), "status": j.ultimo_status} for j in jobs.listar()]
-            if jobs
-            else []
-        )
+        lista = [
+            {
+                "id": j.id,
+                "resumo": j.resumo(),
+                "quando": parametros.frase(j.agenda),
+                "status": j.ultimo_status,
+                **parametros.ler(j.tipo, j.texto),
+            }
+            for j in (jobs.listar() if jobs else [])
+        ]
         return _texto(lista or "Nenhuma automação.")
+
+    @tool(
+        "automacao_editar",
+        "Muda uma automação que já existe (id de automacoes_listar): o nome, quando roda e o que "
+        "ela faz. Só o que o usuário pediu; o resto fica. Lembrete e pergunta: texto. Artigo: "
+        "tema. Vídeo: temas e duração. Carrossel: temas. Artigo, vídeo e carrossel: publicar "
+        "(true: vai ao ar sozinho, sem aprovar cada um; só se o usuário pediu). " + quando_doc,
+        {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "nome": {"type": "string"},
+                "quando": {"type": "string"},
+                "texto": {"type": "string"},
+                "tema": {"type": "string"},
+                "temas": {"type": "array", "items": {"type": "string"}},
+                "duracao": {"type": "integer"},
+                "publicar": {"type": "boolean"},
+            },
+            "required": ["id"],
+        },
+    )
+    async def automacao_editar(args: dict[str, Any]) -> dict[str, Any]:
+        if jobs is None:
+            return _erro(ValueError("automações indisponíveis"))
+        job = next((j for j in jobs.listar() if j.id == str(args.get("id", ""))), None)
+        if job is None:
+            return _erro(JobErro(f"automação {args.get('id', '')} não encontrada"))
+        campos = ("texto", "tema", "temas", "duracao", "publicar")
+        novos = {k: args[k] for k in campos if k in args}
+        try:
+            texto = parametros.montar(job.tipo, job.texto, novos) if novos else None
+            feito = jobs.editar(
+                job.id,
+                datetime.now(FUSO),
+                nome=args.get("nome"),
+                agenda=args.get("quando"),
+                texto=texto,
+            )
+        except (JobErro, parametros.ParametroErro) as erro:
+            return _erro(erro)
+        return _texto(
+            {
+                "editada": feito.resumo(),
+                "quando": parametros.frase(feito.agenda),
+                **parametros.ler(feito.tipo, feito.texto),
+            }
+        )
 
     @tool(
         "automacao_mudar",
@@ -92,4 +154,10 @@ def ferramentas(jobs: Jobs | None) -> list[SdkMcpTool[Any]]:
             return _erro(erro)
         return _texto({args["acao"]: job.resumo()})
 
-    return [automacao_lembrete, automacao_pergunta, automacoes_listar, automacao_mudar]
+    return [
+        automacao_lembrete,
+        automacao_pergunta,
+        automacoes_listar,
+        automacao_mudar,
+        automacao_editar,
+    ]

@@ -144,7 +144,16 @@
    "atualizacoes/canal(canal)"
   ]
  },
- "automacoes": {},
+ "automacoes": {
+  "Editar": [],
+  "Editar (2)": [],
+  "Editar (3)": [],
+  "Editar (4)": [],
+  "Remover": [],
+  "Remover (2)": [],
+  "Remover (3)": [],
+  "Remover (4)": []
+ },
  "camera": {
   "Procurar na rede": [
    "camera/procurar()"
@@ -260,13 +269,6 @@
    "sessao/arquivos(id,pasta)",
    "terminal/abrir(colunas,id,linhas)",
    "ze/melhorias()"
-  ],
-  "Agendar": [
-   "marketing/agendar(quando)",
-   "marketing/fotos()"
-  ],
-  "Agendar (2)": [
-   "marketing/video/agendar(duracao,quando,temas)"
   ],
   "Ajustes": [],
   "Assistir": [],

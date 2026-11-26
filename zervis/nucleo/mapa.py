@@ -56,7 +56,8 @@ PAGINAS: dict[str, Pagina] = {
     ),
     "automacoes": Pagina(
         "Automações",
-        "lembretes, perguntas agendadas, artigos, vídeos e ligações que o Zé roda sozinho",
+        "lembretes, perguntas agendadas, artigos, vídeos, carrosséis e ligações que o Zé roda "
+        "sozinho; cada uma se edita (quando, os temas, publicar sozinho)",
         ("automacoes_listar",),
         ("automacao", "automacoes", "lembrete", "lembretes", "agendado", "agendada"),
     ),

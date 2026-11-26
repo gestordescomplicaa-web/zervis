@@ -133,6 +133,7 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0123](0123-capa-e-ganchos.md) | A capa sobre o tema e o roteiro que resolve | Aceito |
 | [0124](0124-fotos-do-pixabay.md) | As fotos do Pixabay nos vídeos | Aceito |
 | [0125](0125-trava-de-temas.md) | A trava de temas e a fala para o ouvido | Aceito |
+| [0126](0126-publicar-sozinho.md) | As automações de marketing que publicam sozinhas | Aceito |
 | [0127](0127-prospeccao.md) | Prospecção: o Zé acha a empresa, o dono e escreve a ele | Em validação |
 | [0128](0128-ze-conhece-todas-as-paginas.md) | O Zé conhece todas as suas páginas e os seus eventos | Aceito |
 | [0129](0129-mensagem-da-prospeccao.md) | A mensagem da prospecção: o que faz, por que ela, o convite e o horário | Aceito |
@@ -147,3 +148,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0138](0138-visuais-no-chat.md) | Visuais no chat: apresentações, diagramas e painéis animados, com parâmetros | Aceito |
 | [0139](0139-historico-datas-e-sino-com-lidas.md) | O histórico inteiro no Início, a data no chat e o sino com lidas | Aceito |
 | [0140](0140-prospeccao-so-a-primeira-mensagem.md) | Prospecção: só a primeira mensagem, e as empresas por ramo numa linha cada | Aceito |
+| [0141](0141-automacoes-mandam-no-que-roda-sozinho.md) | As Automações mandam no que roda sozinho, e cada uma se edita | Aceito |

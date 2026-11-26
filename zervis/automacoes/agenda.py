@@ -1,7 +1,7 @@
 """Quando uma automação roda: os quatro formatos do Hermes (docs/02-investigacao-hermes.md, 3).
 
 - relativo, uma vez:  "em 2m", "em 1h30m", "em 45s"
-- intervalo:          "a cada 30m", "a cada 2h"
+- intervalo:          "a cada 30m", "a cada 2h", "a cada 3d"
 - cron de 5 campos:   "cron 0 9 * * 1-5"  (minuto hora dia mês dia-da-semana; 0 = domingo)
 - data e hora, uma vez: "2026-10-07 08:00" ou "2026-10-07T08:00" (no fuso de quem usa)
 
@@ -15,7 +15,8 @@ from datetime import datetime, timedelta
 from zervis import fuso
 
 FUSO = fuso.local()
-DURACAO = re.compile(r"(?:(\d+)h)?\s*(?:(\d+)m(?:in)?)?\s*(?:(\d+)s)?")
+# Os dias: as ferramentas de marketing sempre sugeriram "a cada 3d", e o "d" não era aceito.
+DURACAO = re.compile(r"(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m(?:in)?)?\s*(?:(\d+)s)?")
 LIMITES = [(0, 59), (0, 23), (1, 31), (1, 12), (0, 6)]
 
 
@@ -27,8 +28,8 @@ def _duracao(texto: str) -> timedelta:
     achado = DURACAO.fullmatch(texto.replace(" ", ""))
     if not achado or not any(achado.groups()):
         raise AgendaInvalida(f"duração inválida: {texto}")
-    h, m, s = (int(g or 0) for g in achado.groups())
-    duracao = timedelta(hours=h, minutes=m, seconds=s)
+    d, h, m, s = (int(g or 0) for g in achado.groups())
+    duracao = timedelta(days=d, hours=h, minutes=m, seconds=s)
     if duracao < timedelta(seconds=10):
         raise AgendaInvalida("duração curta demais")
     return duracao

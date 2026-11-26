@@ -361,7 +361,7 @@ def test_a_automacao_de_artigo_pede_o_artigo_na_hora(
     jobs.criar("Artigo do blog", "cron 0 9 * * 1,4", "artigo", json.dumps({"tema": ""}), agora)
     pedidos: list[tuple[str, str]] = []
 
-    def pedir(_sessoes: Any, tipo: str, texto: str, _motor: str) -> Any:
+    def pedir(_sessoes: Any, tipo: str, texto: str, _motor: str, sozinho: bool = False) -> Any:
         pedidos.append((tipo, texto))
         return SimpleNamespace(nome="Blog · próximo artigo")
 
@@ -395,3 +395,20 @@ def test_renomear_depois_do_pr_nao_muda_a_branch(mundo: dict[str, Any]) -> None:
     assert _git(mundo["origem"], "branch", "--list", "site/*").split() == [
         f"site/botao-maior-{s.id}"
     ]
+
+
+def test_artigo_agendado_que_publica_sozinho(mundo: dict[str, Any]) -> None:
+    """Com "publicar sozinho" na automação (ADR 0126), o "aprovado" já foi dado: o PR abre e o
+    Zé publica em seguida, sem esperar quem usa."""
+    m: Marketing = mundo["m"]
+    m.guardar(str(mundo["site"]), "main")
+    sessoes = mundo["sessoes"]
+    s = _parada(sessoes, m.pedir(sessoes, "artigo", "", "claude", sozinho=True).id)
+    texto = _artigo("Um artigo novo", "ia", "2026-11-20", True) + "\n[[AUTOR: conte um caso]]\n"
+    _commit(Path(s.worktree), {"posts/novo.md": texto}, "blog: Um artigo novo")
+    aviso = m.ao_terminar(sessoes, s.id)
+    assert "Abri o PR 3" in aviso and "Preparando a publicação" in aviso
+    assert m.pedidos(sessoes)[0]["publicando"]
+    _parada(sessoes, s.id)
+    assert "Enviei à main" in m.ao_terminar(sessoes, s.id)
+    assert "rascunho: false" in _git(mundo["origem"], "show", "main:posts/novo.md")

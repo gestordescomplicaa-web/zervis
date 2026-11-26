@@ -13,8 +13,6 @@
    "pedidos": [{"id": "a1b2c3d4", "nome": "Blog · Exemplo", "estado": "parada", "pr": "https://github.com/exemplo/site/pull/3", "publicando": false}],
    "posts": [{"id": "b1c2d3e4", "tema": "Exemplo", "artigo": "", "estado": "rascunho", "erro": "", "legenda": "Exemplo", "chamada": "Exemplo", "permalink": "", "criado": 1794600000, "slides": 5}],
    "marca": {"paleta": "site", "cores": {}, "atual": {"fundo": "#111114", "superficie": "#1b1b20", "texto": "#f4f4f6", "suave": "#a3a3ad", "destaque": "#4f8cff", "destaque2": "#8b5cf6"}, "site": {"fundo": "#111114", "superficie": "#1b1b20", "texto": "#f4f4f6", "suave": "#a3a3ad", "destaque": "#4f8cff", "destaque2": "#8b5cf6"}, "declarada": true, "instagram": true, "publicavel": true},
-   "automaticos": [{"id": "j1", "agenda": "cron 0 9 * * 1,4", "proxima": "2026-11-16T09:00:00-03:00", "ativo": true}],
-   "videos_automaticos": [{"id": "j2", "agenda": "cron 0 9 * * 1,4", "proxima": "2026-11-19T09:00:00-03:00", "ativo": true, "temas": 3, "duracao": 30}],
    "comentarios": {"direct": {"ligado": true, "link": "https://calendar.app.google/exemplo", "como": "Seu objetivo é um só: levar a pessoa a marcar uma conversa.", "contatos": [{"usuario": "cliente.exemplo", "etapa": "link enviado", "resumo": "Oficina, 5 pessoas, perde orçamentos à noite", "motivo": "", "pausado": false, "respostas": 2}, {"usuario": "outro.cliente", "etapa": "com você", "resumo": null, "motivo": "pediu o preço", "pausado": true, "respostas": 1}]}, "ligado": true, "conectado": true, "contatos": 2, "recentes": [{"autor": "cliente.exemplo", "texto": "Quero isso na minha loja", "quando": 1763500000, "publico": true, "direct": true, "erro": ""}]}
   },
   "pesquisas": {
@@ -167,7 +165,7 @@
     "pedido": 176
    }
   },
-  "automacoes": [],
+  "automacoes": [{"id": "a1", "nome": "Reels da semana", "tipo": "video", "tipo_nome": "Vídeo", "agenda": "cron 0 9 * * 1,3,5", "agenda_frase": "Segunda, quarta e sexta, 9h", "quando": {"modo": "semana", "dias": [1, 3, 5], "hora": "09:00"}, "proxima": "2026-11-27T09:00:00-03:00", "ativo": true, "ultimo_status": "ok", "parametros": {"temas": ["Atendimento no WhatsApp", "Agenda <b>cheia</b>"], "duracao": 30, "publicar": true}, "duracoes": [15, 30, 45, 60]}, {"id": "a2", "nome": "Artigo do blog", "tipo": "artigo", "tipo_nome": "Artigo do blog", "agenda": "cron 0 9 * * 2", "agenda_frase": "Toda terça, 9h", "quando": {"modo": "semana", "dias": [2], "hora": "09:00"}, "proxima": "2026-12-01T09:00:00-03:00", "ativo": true, "ultimo_status": "nunca", "parametros": {"tema": "", "publicar": false}}, {"id": "a3", "nome": "Previsão do tempo", "tipo": "pergunta", "tipo_nome": "Pergunta ao Zé", "agenda": "a cada 1d", "agenda_frase": "Todo dia", "quando": {"modo": "intervalo", "quantos": 1, "unidade": "d"}, "proxima": "2026-11-26T08:00:00-03:00", "ativo": false, "ultimo_status": "ok", "parametros": {"texto": "Diga a previsão do tempo de hoje."}}, {"id": "a4", "nome": "Ligar para a <i>contabilidade</i>", "tipo": "ligacao", "tipo_nome": "Ligação", "agenda": "2026-11-28 10:00", "agenda_frase": "Uma vez", "quando": {"modo": "uma_vez"}, "proxima": "2026-11-28T10:00:00-03:00", "ativo": true, "ultimo_status": "nunca", "parametros": {}}],
   "cerebro": {
    "via": {
     "ligada": false,
