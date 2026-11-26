@@ -502,3 +502,14 @@ blockquote.trecho { margin: 8px 0 0; padding: 8px 12px; border-left: 2px solid v
 .fotos-marca img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
 .fotos-marca figcaption { font-size: 12px; color: var(--suave); overflow-wrap: anywhere; }
 .fotos-marca .x { position: absolute; top: 4px; right: 4px; }
+/* Automações (ADR 0141): cada uma abre em "Editar", com quando e o que ela faz */
+.automacao.aberta { border-radius: 10px; background: rgb(255 255 255 / .02); border: 1px solid var(--borda-forte); }
+.automacao.aberta > .linha-item { border-color: transparent; background: transparent; }
+.ae-form { display: grid; gap: 14px; padding: 4px 14px 14px; border-top: 1px solid var(--borda); padding-top: 14px; }
+.ae-form .campos { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.ae-form .campos > :is(.largo, .interruptor) { grid-column: 1 / -1; }
+.ae-quando { display: grid; gap: 10px; }
+.ae-rotulo { color: var(--suave); font-size: 13px; }
+.ae-quando .linha { align-items: flex-end; }
+.ae-curto { flex: 0 1 160px !important; }
+.ae-form .resultado:empty { display: none; }

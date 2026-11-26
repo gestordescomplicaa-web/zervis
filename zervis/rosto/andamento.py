@@ -60,6 +60,7 @@ ROTULOS = {
     "historico_buscar": "Procurando no histórico",
     "sistema_executar": "Mexendo no computador",
     "automacao_lembrete": "Agendando o lembrete",
+    "automacao_editar": "Mudando a automação",
     "ze_sobre": "Olhando a minha configuração",
     "memoria": "Guardando na memória",
     "marketing_situacao": "Olhando o site e o blog",

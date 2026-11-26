@@ -145,6 +145,36 @@ class Jobs:
                     return j
             raise JobErro(f"automação {id_} não encontrada")
 
+    def editar(
+        self,
+        id_: str,
+        agora: datetime,
+        *,
+        nome: str | None = None,
+        agenda: str | None = None,
+        texto: str | None = None,
+    ) -> Job:
+        """Muda o nome, a agenda ou o pedido, pelo painel ou pela voz (ADR 0141). A agenda nova
+        recalcula a próxima vez; pausada, continua pausada."""
+        mudancas: dict[str, object] = {}
+        if nome is not None:
+            if not (limpo := " ".join(nome.split())[:60]):
+                raise JobErro("Dê um nome à automação.")
+            mudancas["nome"] = limpo
+        if texto is not None:
+            texto = " ".join(texto.split())
+            if not texto or len(texto) > LIMITE_TEXTO:
+                raise JobErro("texto vazio ou longo demais")
+            mudancas["texto"] = texto
+        if agenda is not None:
+            try:
+                a = interpretar(agenda)
+                mudancas["proxima"] = a.primeira(agora).isoformat()
+            except ValueError as erro:
+                raise JobErro(str(erro)) from None
+            mudancas["agenda"] = a.texto
+        return self._mudar(id_, **mudancas)
+
     def pausar(self, id_: str) -> Job:
         return self._mudar(id_, ativo=False)
 

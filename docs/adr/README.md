@@ -147,3 +147,4 @@ Os ADRs ficam como foram escritos, com a data. Os mais antigos chamam o Zé de J
 | [0137](0137-anexos-no-chat.md) | Imagem e arquivo no chat, lidos só pelo que foi anexado | Aceito |
 | [0138](0138-visuais-no-chat.md) | Visuais no chat: apresentações, diagramas e painéis animados, com parâmetros | Aceito |
 | [0139](0139-historico-datas-e-sino-com-lidas.md) | O histórico inteiro no Início, a data no chat e o sino com lidas | Aceito |
+| [0141](0141-automacoes-mandam-no-que-roda-sozinho.md) | As Automações mandam no que roda sozinho, e cada uma se edita | Aceito |

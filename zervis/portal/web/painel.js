@@ -16,7 +16,6 @@ export const conteudo = document.getElementById("conteudo");
 export const ESTADOS = { inativo: "inativo", ativo: "pronto", ouvindo: "ouvindo", pensando: "pensando", falando: "falando", confirmando: "esperando o seu sim" };
 const ESTADO_SESSAO = { parada: "pronta", trabalhando: "trabalhando", erro: "erro" };
 export const estadoSessao = (s) => (s.limite ? "sem créditos" : ESTADO_SESSAO[s.estado] || s.estado);
-export const TIPO_AUTOMACAO = { lembrete: "Lembrete", pergunta: "Pergunta ao Zé" };
 export const NOME_MOTOR = { contas: "Automático", codex: "Codex", plano: "Claude", openai: "OpenAI API", anthropic: "Anthropic", openrouter: "OpenRouter", ponte: "Ponte", omniroute: "OmniRoute" };
 
 /** @param {unknown} t @returns {string} */

@@ -2,6 +2,12 @@
 
 ## Não lançado
 
+- **As Automações mandam no que roda sozinho:** cada automação abre em "Editar", com o nome,
+  quando (dias da semana e hora, uma vez, ou um intervalo) e o que ela faz (os temas, a duração,
+  o texto, "Publicar sozinho"). Pela voz, `automacao_editar` muda o que for pedido. A agenda
+  aparece como gente diz ("Segunda, quarta e sexta, 9h"). Os cartões de agendar saem do
+  Marketing; agendar Reels, artigos e carrosséis que publicam sozinhos passa a funcionar pela voz
+  (o "publicar sozinho" do #251), e "a cada 3d" passa a valer (ADR 0141).
 - **O histórico inteiro no Início:** rolando o chat para cima, vêm as conversas dos dias
   anteriores, até a primeira; antes, o chat mostrava só o dia de hoje e esvaziava à meia-noite.
   Cada dia abre com a data ("Hoje", "Ontem", "Segunda-feira, 23 de novembro"), presa no topo

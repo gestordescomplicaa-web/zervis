@@ -366,15 +366,25 @@ class AcoesInicio(Pagina):
         return {}
 
     def automacoes(self) -> list[dict[str, Any]]:
+        """Cada automação com a agenda dita como gente e o que dá para mudar nela (ADR 0141)."""
+        from zervis.automacoes import parametros
+        from zervis.video import roteiro
+
+        duracoes = {"duracoes": sorted(roteiro.DURACOES)}
         return [
             {
                 "id": j.id,
                 "nome": j.nome,
                 "tipo": j.tipo,
+                "tipo_nome": parametros.NOMES.get(j.tipo, j.tipo),
                 "agenda": j.agenda,
+                "agenda_frase": parametros.frase(j.agenda),
+                "quando": parametros.partes(j.agenda),
                 "proxima": j.proxima,
                 "ativo": j.ativo,
                 "ultimo_status": j.ultimo_status,
+                "parametros": parametros.ler(j.tipo, j.texto),
+                **(duracoes if j.tipo == "video" else {}),
             }
             for j in self.n.jobs.listar()
         ]
@@ -414,6 +424,32 @@ class AcoesInicio(Pagina):
             self.painel._chamar(lambda: self.n.jobs.retomar(id_, agora()))
         else:
             self.painel._chamar(lambda: self.n.jobs.pausar(id_))
+        return self.painel.automacoes()
+
+    def editar_automacao(self, dados: dict[str, Any]) -> list[dict[str, Any]]:
+        """O nome, quando e os parâmetros do tipo (ADR 0141). Só muda o que veio."""
+        from zervis.automacoes import parametros
+        from zervis.memoria.linha import agora
+
+        id_ = str(dados.get("id", ""))
+        job = next((j for j in self.n.jobs.listar() if j.id == id_), None)
+        if job is None:
+            raise PedidoInvalido("Automação não encontrada.")
+        quando, novos = dados.get("quando"), dados.get("parametros")
+        try:
+            agenda = parametros.montar_agenda(quando) if isinstance(quando, dict) else None
+            texto = None
+            if isinstance(novos, dict) and parametros.ler(job.tipo, job.texto):
+                texto = parametros.montar(job.tipo, job.texto, novos)
+        except parametros.ParametroErro as erro:
+            raise PedidoInvalido(str(erro)) from None
+        nome = dados.get("nome")
+        feito = self.painel._chamar(
+            lambda: self.n.jobs.editar(
+                id_, agora(), nome=None if nome is None else str(nome), agenda=agenda, texto=texto
+            )
+        )
+        atividade.PADRAO.registrar("execucao", f"Automação editada: {feito.nome}", origem="painel")
         return self.painel.automacoes()
 
     def remover_automacao(self, dados: dict[str, Any]) -> list[dict[str, Any]]:

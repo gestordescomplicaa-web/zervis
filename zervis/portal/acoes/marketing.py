@@ -3,14 +3,10 @@ os PRs abertos. Pedir e abrir PR passam pelo mesmo caminho da voz."""
 
 import base64
 import io
-import json
 from collections.abc import Iterator
-from datetime import datetime
 from typing import Any
 
 from zervis import atividade, marketing, marketing_posts, metricas_site
-from zervis.automacoes.agenda import FUSO
-from zervis.automacoes.jobs import JobErro
 from zervis.cerebro.ferramentas.sessoes import motor_conectado
 from zervis.imersivo.imagens import ImagemErro
 from zervis.marca import CORES_PADRAO
@@ -40,32 +36,11 @@ class AcoesMarketing(Pagina):
             "videos": self.videos(),
             "comentarios": self._comentarios(),
             "marca": self._marca(),
-            "automaticos": self._automaticos("artigo"),
-            "videos_automaticos": self._automaticos("video"),
-            "posts_automaticos": self._automaticos("post"),
         }
 
     def prs(self) -> list[dict[str, Any]]:
         """Lidos à parte do resto da página: a consulta ao GitHub leva quase um segundo."""
         return marketing.PADRAO.prs()
-
-    def _automaticos(self, tipo: str) -> list[dict[str, Any]]:
-        saida = []
-        for j in self.n.jobs.listar():
-            if j.tipo != tipo:
-                continue
-            item = {"id": j.id, "agenda": j.agenda, "proxima": j.proxima, "ativo": j.ativo}
-            try:
-                pedido = json.loads(j.texto)
-            except ValueError:
-                pedido = {}
-            pedido = pedido if isinstance(pedido, dict) else {}
-            item["publicar"] = pedido.get("publicar") is True  # publica sozinho (ADR 0126)
-            item["temas"] = len(pedido.get("temas") or [])
-            if tipo == "video":
-                item["duracao"] = pedido.get("duracao")
-            saida.append(item)
-        return saida
 
     # --- os comentários do Instagram viram conversa no direct (ADR 0118) --------------------
 
@@ -191,16 +166,6 @@ class AcoesMarketing(Pagina):
         if not r.ok:
             raise PedidoInvalido(r.texto)
         return {**self.marketing(), "aviso": r.texto}
-
-    def agendar_marketing(self, dados: dict[str, Any]) -> dict[str, Any]:
-        texto = json.dumps({"tema": "", "publicar": dados.get("publicar") is True})
-        try:
-            self.n.jobs.criar(
-                "Artigo do blog", str(dados.get("quando", "")), "artigo", texto, datetime.now(FUSO)
-            )
-        except JobErro as erro:
-            raise PedidoInvalido(str(erro)) from erro
-        return {**self.marketing(), "aviso": "Agendado."}
 
     # --- o Instagram: a marca e os posts (ADR 0093) ---------------------------------------
 
@@ -384,40 +349,6 @@ class AcoesMarketing(Pagina):
         except ImagemErro as erro:
             raise PedidoInvalido(str(erro)) from erro
         return {**self.videos(), "aviso": "Chave válida." if chave else "Removida."}
-
-    def agendar_video(self, dados: dict[str, Any]) -> dict[str, Any]:
-        cruas = dados.get("temas")
-        temas: list[str] | str = cruas if isinstance(cruas, (list, str)) else ""
-        texto = self._videos(
-            lambda: videos.Videos.pedido_agendado(
-                temas,
-                int(dados.get("duracao") or roteiro_video.DURACAO_PADRAO),
-                dados.get("publicar") is True,
-            )
-        )
-        try:
-            self.n.jobs.criar(
-                "Vídeo da marca", str(dados.get("quando", "")), "video", texto, datetime.now(FUSO)
-            )
-        except JobErro as erro:
-            raise PedidoInvalido(str(erro)) from erro
-        atividade.PADRAO.registrar("execucao", "Vídeos automáticos agendados", origem="painel")
-        return {**self.marketing(), "aviso": "Agendado."}
-
-    def agendar_post(self, dados: dict[str, Any]) -> dict[str, Any]:
-        """Os carrosséis automáticos (ADR 0126): o tema da vez e, se marcado, publicar sozinho."""
-        cruas = dados.get("temas")
-        temas: list[str] | str = cruas if isinstance(cruas, (list, str)) else ""
-        try:
-            texto = marketing_posts.Posts.pedido_agendado(temas, dados.get("publicar") is True)
-            self.n.jobs.criar(
-                "Carrossel do Instagram", str(dados.get("quando", "")), "post", texto,
-                datetime.now(FUSO),
-            )  # fmt: skip
-        except (JobErro, marketing_posts.PostErro) as erro:
-            raise PedidoInvalido(str(erro)) from erro
-        atividade.PADRAO.registrar("execucao", "Carrosséis automáticos agendados", origem="painel")
-        return {**self.marketing(), "aviso": "Agendado."}
 
     def refazer_video(self, dados: dict[str, Any]) -> dict[str, Any]:
         id_, instrucao = str(dados.get("id", "")), str(dados.get("instrucao", ""))

@@ -5,7 +5,7 @@ import { PAGINAS, $, api, botao, cabeca, cartao, esc, item, mostrar, ocupado, su
 import { abaAjustes } from "./marketing-ajustes.js";
 import { cartaoMetricas, metricasSemTravar } from "./marketing-metricas.js";
 import { cartaoComentarios } from "./marketing-direct.js";
-import { cartaoVideos, cartaoVideosAutomaticos, lembrarLeitura, pelaVoz } from "./marketing-videos.js";
+import { cartaoVideos, lembrarLeitura, pelaVoz } from "./marketing-videos.js";
 
 // A página Marketing (ADR 0091): o site e o blog de quem usa. Cada pedido vira uma sessão numa
 // cópia isolada; o Zé abre o PR e a pessoa publica no merge. Em abas (ADR 0134): o trabalho de
@@ -39,42 +39,6 @@ const cartaoPedidos = (pedidos) => cartao("Pedidos", pedidos.length
   ? `<div class="itens">${pedidos.map((p) => item(esc(p.nome), estadoPedido(p), acoesPedido(p))).join("")}</div>
      <p class="resultado" id="mk-resultado-pr"></p>`
   : vazio("Nenhum pedido em andamento."));
-
-const AGENDAS = [
-  ["cron 0 9 * * 1,4", "Segunda e quinta, 9h"],
-  ["cron 0 9 * * 1,3,5", "Segunda, quarta e sexta, 9h"],
-  ["cron 0 9 * * 1", "Toda segunda, 9h"],
-  ["cron 0 9 * * 1-5", "Todo dia útil, 9h"],
-];
-
-/** As automações agendadas, com o próximo horário e se publicam sozinhas. @param {any[]} jobs */
-export const listaAutomaticos = (jobs) => jobs.length ? `<div class="itens">${jobs.map((j) => item(esc((AGENDAS.find(([v]) => v === j.agenda) || [j.agenda, j.agenda])[1]),
-  `${j.ativo ? `Próximo: ${esc(String(j.proxima).slice(0, 16).replace("T", " "))}` : "Pausado"}${j.publicar ? " · Publica sozinho" : ""}`, "")).join("")}</div>` : "";
-
-/** Os carrosséis automáticos (ADR 0126). @param {any} r */
-const cartaoPostsAutomaticos = (r) => {
-  const jobs = r.posts_automaticos || [];
-  const ativo = jobs.some((/** @type {any} */ j) => j.ativo);
-  return cartao(`Carrosséis automáticos <span class="etiqueta ${ativo ? "bom" : ""}">${ativo ? "Ativo" : "Desligado"}</span>`,
-    `${sub("O Zé cria o carrossel na agenda; publica com a sua aprovação ou sozinho, se marcado.")}
-    ${listaAutomaticos(jobs)}
-    <div class="campos">
-      <label>Quando<select id="mk-post-agenda">${AGENDAS.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select></label>
-      <label class="largo">Temas<textarea id="mk-post-temas" rows="3" placeholder="Um por linha. Opcional: sem temas, o Zé escolhe pelo site e pelos artigos."></textarea></label>
-      <label class="interruptor"><input type="checkbox" id="mk-post-sozinho"> Publicar sozinho</label>
-    </div>
-    <div class="linha">${botao("Agendar", "mk-post-agendar", "", jobs.length ? "discreta" : "principal")}<a class="acao discreta" href="#automacoes">Automações</a></div>
-    <p class="resultado" id="mk-resultado-post-agenda"></p>`);
-};
-
-/** @param {any} r */
-const cartaoAutomaticos = (r) => cartao(`Artigos automáticos <span class="etiqueta ${r.automaticos.some((/** @type {any} */ j) => j.ativo) ? "bom" : ""}">${r.automaticos.some((/** @type {any} */ j) => j.ativo) ? "Ativo" : "Desligado"}</span>`,
-  `${sub("O Zé escreve o artigo e abre o PR; publica com a sua aprovação ou sozinho, se marcado.")}
-  ${listaAutomaticos(r.automaticos)}
-  <div class="campos"><label>Quando<select id="mk-agenda">${AGENDAS.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select></label>
-    <label class="interruptor"><input type="checkbox" id="mk-agenda-sozinho"> Publicar sozinho</label></div>
-  <div class="linha">${botao("Agendar", "mk-agendar", "", r.automaticos.length ? "discreta" : "principal")}<a class="acao discreta" href="#automacoes">Automações</a></div>
-  <p class="resultado" id="mk-resultado-agenda"></p>`);
 
 /** @param {any[] | null | undefined} prs undefined: ainda chegando; null: o GitHub falhou */
 const corpoPRs = (prs) => prs === undefined ? sub("Carregando…") : prs === null ? sub("Sem conexão com o GitHub.") : prs.length
@@ -175,8 +139,8 @@ PAGINAS.marketing = async () => {
   const site = r.site.configurado;
   return `${cabeca("Marketing")}${sub("O site, o blog, os vídeos e o Instagram, com o seu sim antes de publicar.")}${abas()}
     ${painel("visao", `${cartaoAprovar(r)}${site ? cartaoMetricas(metricas) : semSite()}`)}
-    ${painel("blog", site ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${r.site.blog ? cartaoAutomaticos(r) : ""}${cartaoPRs(prs)}${cartaoBlog(r)}` : semSite())}
-    ${painel("videos", `${cartaoVideos(r)}${cartaoVideosAutomaticos(r)}`)}
+    ${painel("blog", site ? `${cartaoPedir(r)}${cartaoPedidos(r.pedidos)}${cartaoPRs(prs)}${cartaoBlog(r)}` : semSite())}
+    ${painel("videos", cartaoVideos(r))}
     ${painel("instagram", `${site ? cartaoInstagram(r) : ""}${cartaoComentarios(r)}`)}
     ${painel("ajustes", abaAjustes(r, fotos))}`;
 };
@@ -207,19 +171,6 @@ Object.assign(ACOES, {
       await abrir();
       mostrar("mk-resultado-pr", true, r.aviso);
     } catch (erro) { mostrar("mk-resultado-pr", false, erro.message); }
-  },
-  "mk-agendar": async (/** @type {HTMLButtonElement} */ b) => {
-    const quando = /** @type {HTMLSelectElement} */ ($("mk-agenda")).value;
-    const publicar = /** @type {HTMLInputElement} */ ($("mk-agenda-sozinho")).checked;
-    try { await ocupado(b, () => api("marketing/agendar", { quando, publicar })); await abrir(); } catch (erro) { mostrar("mk-resultado-agenda", false, erro.message); }
-  },
-  "mk-post-agendar": async (/** @type {HTMLButtonElement} */ b) => {
-    const dados = {
-      quando: /** @type {HTMLSelectElement} */ ($("mk-post-agenda")).value,
-      temas: /** @type {HTMLTextAreaElement} */ ($("mk-post-temas")).value,
-      publicar: /** @type {HTMLInputElement} */ ($("mk-post-sozinho")).checked,
-    };
-    try { await ocupado(b, () => api("marketing/post/agendar", dados)); await abrir(); } catch (erro) { mostrar("mk-resultado-post-agenda", false, erro.message); }
   },
   "mk-post-criar": async (/** @type {HTMLButtonElement} */ b) => {
     const artigo = /** @type {HTMLSelectElement | null} */ ($("mk-post-artigo"));

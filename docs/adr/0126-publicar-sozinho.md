@@ -5,6 +5,8 @@
 - Muda o "publicar espera a aprovação" dos ADRs [0092](0092-blog-automatico.md) (artigos),
   [0109](0109-publicar-reels.md) e [0111](0111-videos-na-semana.md) (Reels) para as automações
   em que quem usa liga "Publicar sozinho". Cria o carrossel agendado.
+- Ajustado pelo [ADR 0141](0141-automacoes-mandam-no-que-roda-sozinho.md): a opção fica em
+  cada automação, na página Automações; os cartões de agendar saíram do Marketing.
 
 ## Contexto
 
