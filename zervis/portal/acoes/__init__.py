@@ -144,6 +144,8 @@ class Acoes:
             "ze/manutencao": self.manutencao,
             "conversa/escrever": self.escrever,
             "conversa/aprovacao": self.decidir_aprovacao,
+            "conversa/anteriores": self.conversa_anteriores,
+            "avisos/marcar": self.marcar_avisos,
             "ze/diagnostico": self.diagnostico,
             "ze/diagnostico/recomecar": self.recomecar_diagnostico,
             "ze/sessao": self.sessao_de_melhorias,

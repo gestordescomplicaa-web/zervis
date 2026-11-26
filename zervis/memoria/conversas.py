@@ -134,7 +134,7 @@ class Conversas:
         ]
 
     def dias(self) -> list[date]:
-        return sorted({date.fromisoformat(d["dia"]) for d in self._dados.listar("conversas")})
+        return [date.fromisoformat(d) for d in self._dados.distintos("conversas", "dia")]
 
     def buscar(self, texto: str, limite: int = 50) -> list[Turno]:
         return [_turno(d) for d in self._dados.buscar(texto, "conversas", limite)]

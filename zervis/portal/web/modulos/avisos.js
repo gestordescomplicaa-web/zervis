@@ -1,49 +1,97 @@
 // A central de avisos (ADR 0133): o sino no topo conta o que precisa de você; o painel ao lado
-// lista esses itens e os avisos de hoje; o aviso do Zé entra na tela com o anel e Fechar.
+// lista esses itens e os avisos do Zé da semana; o aviso do Zé entra na tela com o anel e Fechar.
 // Carregado logo depois da abertura (modulos/principal.js), fora do orçamento dela.
+//
+// Como nas notificações de um app (ADR 0139): o número conta só o que é novo, e abrir o sino o
+// zera (visto); cada item fica com o ponto até ser clicado (lido). O que precisa de você continua
+// na lista até ser resolvido. O Zé guarda as marcas: o computador e o celular veem o mesmo.
 import { $, api, esc, toast } from "../painel.js";
 import { ICONES, icone } from "./casca.js";
+import { dataCompleta, dataDoEpoch, diaDe, rotuloDia } from "./datas.js";
 
-/** @typedef {{ id: string, secao: string, area: string, titulo: string, detalhe: string, quando: number, nivel: string, acao: string, link: string, aprovacao: string }} ItemPrecisa */
-/** @type {{ itens: ItemPrecisa[], recentes: { quando: string, texto: string }[] }} */
-let ultimo = { itens: [], recentes: [] };
+/** @typedef {{ id: string, secao: string, area: string, titulo: string, detalhe: string, quando: number, nivel: string, acao: string, link: string, aprovacao: string, chave?: string, novo?: boolean, lido?: boolean }} ItemPrecisa */
+/** @typedef {{ quando: string, texto: string, chave: string, novo: boolean, lido: boolean }} AvisoDoZe */
+/** @type {{ itens: ItemPrecisa[], avisos: AvisoDoZe[], novos: number }} */
+let ultimo = { itens: [], avisos: [], novos: 0 };
 let prazo = 0;
 
-/** Há quanto tempo: "agora", "5 min", "2 h", "3 d". @param {number} s epoch, em segundos */
+/** Há quanto tempo: "agora", "5 min", "2 h", "ontem", "24/11". @param {number} s epoch, em segundos */
 export function ha(s) {
   const m = Math.max(0, Math.round((Date.now() / 1000 - s) / 60));
-  return m < 1 ? "agora" : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`;
+  if (m < 1) return "agora";
+  if (m < 60) return `${m} min`;
+  const d = new Date(s * 1000);
+  if (m < 1440 && diaDe(d) === diaDe()) return `${Math.round(m / 60)} h`;
+  return rotuloDia(diaDe(d)) === "Ontem" ? "ontem" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-/** Uma linha do "Precisa de você", no Início e no sino. @param {ItemPrecisa} i */
+/** Uma linha do "Precisa de você", no Início e no sino (no sino, com o ponto até o clique). @param {ItemPrecisa} i */
 export function linhaPrecisa(i) {
   const fora = /^https?:/.test(i.link), id = esc(i.aprovacao);
   const botoes = i.aprovacao
     ? `<button type="button" class="acao" data-acao="aprovacao-decidir" data-id="${id}" data-aprovar="0">Negar</button><button type="button" class="acao principal" data-acao="aprovacao-decidir" data-id="${id}" data-aprovar="1">Aprovar</button>`
     : `<a class="acao" href="${esc(i.link)}"${fora ? ' target="_blank" rel="noopener"' : ' data-acao="avisos-fechar"'}>${esc(i.acao)}</a>`;
-  return `<div class="linha-item precisa" data-nivel="${esc(i.nivel)}"><span class="icone-area">${icone(ICONES[i.secao] || "bell")}</span><div class="texto"><strong>${esc(i.titulo)}</strong><small>${esc(i.area)}${i.detalhe ? ` · ${esc(i.detalhe)}` : ""}</small></div>${i.quando ? `<span class="hora">${ha(i.quando)}</span>` : ""}<div class="botoes">${botoes}</div></div>`;
+  const marca = i.chave ? ` ${i.lido ? "lida" : "nao-lida"}" data-chave="${esc(i.chave)}` : "";
+  const quando = i.quando ? `<span class="hora" title="${dataDoEpoch(i.quando)}">${ha(i.quando)}</span>` : "";
+  return `<div class="linha-item precisa${marca}" data-nivel="${esc(i.nivel)}"><span class="icone-area">${icone(ICONES[i.secao] || "bell")}</span><div class="texto"><strong>${esc(i.titulo)}</strong><small>${esc(i.area)}${i.detalhe ? ` · ${esc(i.detalhe)}` : ""}</small></div>${quando}<div class="botoes">${botoes}</div></div>`;
 }
 
-/** @param {string} iso */
-const hora = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+/** Os avisos do Zé da semana, por dia, com a hora. @param {AvisoDoZe[]} avisos */
+function avisosPorDia(avisos) {
+  /** @type {Map<string, AvisoDoZe[]>} */
+  const dias = new Map();
+  for (const a of avisos) dias.set(a.quando.slice(0, 10), [...(dias.get(a.quando.slice(0, 10)) || []), a]);
+  return [...dias].map(([dia, lista]) => `<p class="dia-avisos">${rotuloDia(dia)}</p><ol class="recentes">${lista.map((a) =>
+    `<li class="${a.lido ? "lida" : "nao-lida"}" data-chave="${esc(a.chave)}"><time title="${dataCompleta(a.quando)}">${a.quando.slice(11, 16)}</time><p>${esc(a.texto)}</p></li>`).join("")}</ol>`).join("");
+}
 
 function desenhar() {
   const corpo = $("avisos-corpo");
   if (!corpo) return;
-  const { itens, recentes } = ultimo;
+  const { itens, avisos } = ultimo;
+  const naoLidas = [...itens, ...avisos].some((x) => x.chave && !x.lido);
+  const todas = /** @type {HTMLButtonElement | null} */ (document.querySelector("#avisos [data-acao=avisos-todas-lidas]"));
+  if (todas) todas.hidden = !naoLidas;
   corpo.innerHTML = `<h3 class="subtitulo">Precisa de você</h3>
     ${itens.length ? `<div class="itens">${itens.map(linhaPrecisa).join("")}</div>` : `<p class="vazio">Nada pendente.</p>`}
-    <h3 class="subtitulo">Avisos de hoje</h3>
-    ${recentes.length ? `<ol class="recentes">${recentes.map((a) => `<li><time>${hora(a.quando)}</time><p>${esc(a.texto)}</p></li>`).join("")}</ol>` : `<p class="vazio">Nenhum aviso hoje.</p>`}`;
+    <h3 class="subtitulo">Avisos</h3>
+    ${avisos.length ? avisosPorDia(avisos) : `<p class="vazio">Nenhum aviso nos últimos 7 dias.</p>`}`;
+}
+
+/** O número do sino: só o que ainda não foi visto. */
+function contar() {
+  const n = ultimo.novos, contador = $("contador-avisos");
+  if (contador) { contador.hidden = !n; contador.textContent = n > 9 ? "9+" : String(n); }
+  $("sino")?.setAttribute("title", n ? `Avisos · ${n} ${n === 1 ? "novo" : "novos"}` : "Avisos");
+}
+
+/** Guarda no Zé o que foi visto ou lido; a tela muda na hora. @param {string[]} chaves @param {"visto" | "lido"} como */
+function marcar(chaves, como) {
+  const quais = new Set(chaves);
+  for (const x of [...ultimo.itens, ...ultimo.avisos]) {
+    if (!x.chave || !quais.has(x.chave)) continue;
+    if (x.novo) { x.novo = false; ultimo.novos = Math.max(0, ultimo.novos - 1); }
+    if (como === "lido") x.lido = true;
+  }
+  contar();
+  if (chaves.length) api("avisos/marcar", { chaves, como }).catch(() => {});
+}
+
+/** Aberto, o que aparece já foi visto. */
+function verAbertos() {
+  if (!$("avisos")?.classList.contains("aberto")) return;
+  const novas = [...ultimo.itens, ...ultimo.avisos].filter((x) => x.chave && x.novo).map((x) => /** @type {string} */ (x.chave));
+  if (novas.length) marcar(novas, "visto");
 }
 
 /** Lê a lista de novo: o contador do sino e, se aberto, o painel. */
 export async function atualizarAvisos() {
   try { ultimo = await api("precisa"); } catch { return; }
-  const n = ultimo.itens.length, contador = $("contador-avisos");
-  if (contador) { contador.hidden = !n; contador.textContent = n > 9 ? "9+" : String(n); }
-  $("sino")?.setAttribute("title", n ? `Avisos · ${n} ${n === 1 ? "pendente" : "pendentes"}` : "Avisos");
+  ultimo.avisos ||= [];
+  ultimo.novos ??= 0;
+  contar();
   desenhar();
+  verAbertos();
 }
 
 export function alternarAvisos() {
@@ -51,7 +99,14 @@ export function alternarAvisos() {
   if (!painel) {
     painel = Object.assign(document.createElement("aside"), { id: "avisos", className: "avisos" });
     painel.setAttribute("aria-label", "Avisos");
-    painel.innerHTML = `<header><h2>Avisos</h2><button type="button" class="x" data-acao="avisos-fechar" aria-label="Fechar">×</button></header><div class="avisos-corpo" id="avisos-corpo"></div>`;
+    painel.innerHTML = `<header><h2>Avisos</h2><button type="button" class="acao discreta" data-acao="avisos-todas-lidas" hidden>Marcar todas como lidas</button><button type="button" class="x" data-acao="avisos-fechar" aria-label="Fechar">×</button></header><div class="avisos-corpo" id="avisos-corpo"></div>`;
+    // Clicar num item (no botão dele ou em qualquer parte) o marca como lido.
+    painel.addEventListener("click", (ev) => {
+      const item = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest(".nao-lida[data-chave]"));
+      if (!item) return;
+      item.classList.replace("nao-lida", "lida");
+      marcar([item.dataset.chave || ""], "lido");
+    });
     document.body.append(painel);
     desenhar();
     painel.getBoundingClientRect(); // entra deslizando já na primeira vez
@@ -59,7 +114,14 @@ export function alternarAvisos() {
   const abrir = !painel.classList.contains("aberto");
   painel.classList.toggle("aberto", abrir);
   $("sino")?.setAttribute("aria-expanded", String(abrir));
-  if (abrir) atualizarAvisos();
+  if (abrir) { verAbertos(); atualizarAvisos(); }
+}
+
+/** "Marcar todas como lidas". */
+export function marcarTodasLidas() {
+  const chaves = [...ultimo.itens, ...ultimo.avisos].filter((x) => x.chave && !x.lido).map((x) => /** @type {string} */ (x.chave));
+  marcar(chaves, "lido");
+  desenhar();
 }
 
 export function fecharAvisos() {
@@ -102,10 +164,23 @@ document.head.appendChild(Object.assign(document.createElement("style"), { textC
 .avisos-corpo { flex: 1; overflow-y: auto; padding: 0 16px 24px; display: grid; gap: 10px; align-content: start; }
 .avisos .subtitulo { margin: 10px 4px 0; font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--apagado); }
 .recentes { list-style: none; margin: 0; padding: 0; display: grid; }
-.recentes li { display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 9px 4px; border-top: 1px solid var(--borda); font-size: 13.5px; }
+.recentes li { position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 8px; padding: 9px 4px; border-top: 1px solid var(--borda); font-size: 13.5px; }
 .recentes li:first-child { border-top: 0; }
 .recentes time { color: var(--apagado); font: 12px/1.7 var(--mono); }
 .recentes p { margin: 0; color: var(--suave); }
+.avisos header { gap: 4px; }
+.avisos header .acao.discreta { font-size: 12.5px; padding: 4px 10px; }
+.avisos .dia-avisos { margin: 6px 4px -2px; font-size: 12px; color: var(--apagado); }
+/* Não lido: o ponto e o realce até o clique; lido: apagado (ADR 0139). */
+.avisos .linha-item.precisa { position: relative; }
+.avisos .linha-item.nao-lida { background: color-mix(in srgb, var(--acento) 5%, transparent); border-color: color-mix(in srgb, var(--acento) 22%, transparent); cursor: pointer; }
+.avisos .nao-lida::before { content: ""; position: absolute; left: -9px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--acento); }
+.avisos .linha-item.lida .texto strong { font-weight: 500; color: var(--suave); }
+.avisos .linha-item.lida .icone-area { opacity: .6; }
+.recentes li.nao-lida { cursor: pointer; background: color-mix(in srgb, var(--acento) 5%, transparent); }
+.recentes li.nao-lida::before { top: 16px; margin-top: 0; }
+.recentes li.nao-lida p { color: var(--texto); }
+.recentes li.lida p { color: var(--apagado); }
 .linha-item.precisa, .linha-item.agora { flex-wrap: nowrap; gap: 12px; }
 .icone-area { width: 32px; height: 32px; flex: none; border-radius: 9px; display: grid; place-items: center; color: var(--suave); background: var(--realce); }
 .icone-area svg { width: 16px; height: 16px; }

@@ -2,11 +2,12 @@
 
 import logging
 import os
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from zervis import atividade, usuario, visuais
-from zervis.avisos import mensagens
+from zervis.avisos import lidos, mensagens
 from zervis.cerebro import rapido
 from zervis.memoria import anexos
 from zervis.nucleo import precisa as lista_precisa
@@ -14,7 +15,11 @@ from zervis.portal.acoes.apoio import _latencia_de_hoje, linhas_do_registro
 from zervis.portal.acoes.pagina import Pagina
 from zervis.portal.servidor import PedidoInvalido
 
-RECENTES = 12  # os avisos de hoje no sino
+NO_FIO = 200  # o fio de hoje que o chat relê; o resto vem rolando para cima
+POR_PAGINA = 80  # o que o chat busca de uma vez, rolando para cima (ADR 0139)
+AVISOS_DIAS = 7  # os avisos do Zé no sino: uma semana
+AVISOS_MAXIMO = 60
+TIPOS_AVISO = {"aviso", "lembrete", "manutencao"}
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +37,15 @@ def _pedido(quando: str, pessoa: str) -> dict[str, Any]:
     if nomes:
         pedido["anexos"] = [anexos.PADRAO.info(n) for n in nomes]
     return pedido
+
+
+def _ultimos(itens: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
+    """Os `n` últimos, sem separar o pedido da resposta (os dois têm a mesma hora): o chat busca
+    o que veio antes pela hora do primeiro, e um par cortado ao meio sumiria."""
+    corte = max(0, len(itens) - n)
+    while 0 < corte < len(itens) and itens[corte]["quando"] == itens[corte - 1]["quando"]:
+        corte -= 1
+    return itens[corte:]
 
 
 class AcoesInicio(Pagina):
@@ -105,13 +119,17 @@ class AcoesInicio(Pagina):
             "inicio": os.getpid(),  # muda a cada reinício: o painel recarrega sozinho
         }
 
-    def conversa(self) -> dict[str, Any]:
-        """O fio de hoje com o Zé: o que a pessoa disse ou escreveu, as respostas e os avisos."""
+    def _do_dia(self, dia: date, antes: datetime | None = None) -> list[dict[str, Any]]:
+        """O fio de um dia: o que a pessoa disse ou escreveu, as respostas, os avisos e os visuais;
+        com `antes`, só o que veio antes desse momento."""
         from zervis.memoria.linha import agora
 
-        hoje = agora()
+        agora_ = agora()
+        cedo = (lambda m: m < antes) if antes is not None else (lambda m: True)
         itens: list[dict[str, Any]] = []
-        for t in self.n.conversas.do_dia(hoje.date()):
+        for t in self.n.conversas.do_dia(dia):
+            if not cedo(t.em):
+                continue
             quando = t.em.isoformat(timespec="seconds")
             pedido = _pedido(quando, t.pessoa)
             if origem := getattr(t, "origem", ""):
@@ -122,11 +140,12 @@ class AcoesInicio(Pagina):
                 if gasto := getattr(t, "gasto", None):
                     resposta["gasto"] = gasto
                 itens.append(resposta)
-        inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)
-        for ev in self.n.linha.entre(inicio, hoje, {"aviso", "lembrete", "manutencao"}):
+        inicio = datetime(dia.year, dia.month, dia.day, tzinfo=agora_.tzinfo)
+        fim = min(inicio + timedelta(days=1), agora_ + timedelta(seconds=1))
+        for ev in self.n.linha.entre(inicio, fim, TIPOS_AVISO):
             # Um lembrete é gravado ao ser criado, com a hora em que vai tocar.
             momento = max(ev.quando, ev.registrado)
-            if momento <= hoje:
+            if momento <= agora_ and cedo(momento):
                 itens.append(
                     {
                         "quando": momento.isoformat(timespec="seconds"),
@@ -134,10 +153,19 @@ class AcoesInicio(Pagina):
                         "texto": ev.texto,
                     }
                 )
-        for v in visuais.PADRAO.do_dia(hoje.date()):  # o que o Zé montou (ADR 0138)
-            quando = v.criado.isoformat(timespec="seconds")
-            itens.append({"quando": quando, "tipo": "visual", "visual": v.para_tela()})
+        for v in visuais.PADRAO.do_dia(dia):  # o que o Zé montou (ADR 0138)
+            if cedo(v.criado):
+                quando = v.criado.isoformat(timespec="seconds")
+                itens.append({"quando": quando, "tipo": "visual", "visual": v.para_tela()})
         itens.sort(key=lambda i: i["quando"])  # estável: o pedido antes da resposta
+        return itens
+
+    def conversa(self) -> dict[str, Any]:
+        """O fio de hoje com o Zé; o dos dias anteriores vem pela `conversa_anteriores`."""
+        from zervis.memoria.linha import agora
+
+        hoje = agora()
+        itens = self._do_dia(hoje.date())
         andamento = getattr(self.n, "conversa_em_andamento", None)
         if andamento is not None and (atual := andamento()) is not None:
             # A troca em curso ainda não está no histórico: vai no fim, marcada, com o que o Zé
@@ -149,11 +177,30 @@ class AcoesInicio(Pagina):
         esperando = [a.titulo or a.texto for a in fila.validos()] if fila is not None else []
         pendentes = getattr(self.n, "aprovacoes_pendentes", None)  # sem a Central nos testes
         return {
-            "itens": itens[-200:],
+            "dia": hoje.date().isoformat(),  # o "Hoje" do chat é o dia do Zé, não o do aparelho
+            "itens": _ultimos(itens, NO_FIO),
             "esperando": esperando,
             "consumo": self._consumo_de_hoje(),
             "aprovacoes": pendentes() if pendentes is not None else [],
         }
+
+    def conversa_anteriores(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O que veio antes de `antes` (o chat rolando para cima, ADR 0139): uma página, dia a dia,
+        sem separar um pedido da resposta. `mais` diz se ainda há o que buscar."""
+        from zervis.memoria.linha import agora
+
+        try:
+            antes = datetime.fromisoformat(str(dados.get("antes", "")))
+        except ValueError:
+            raise PedidoInvalido("Data inválida.") from None
+        if antes.tzinfo is None:
+            antes = antes.replace(tzinfo=agora().tzinfo)
+        dias = [d for d in self.n.conversas.dias() if d <= antes.date()]
+        itens: list[dict[str, Any]] = []
+        while dias and len(itens) < POR_PAGINA:
+            itens = self._do_dia(dias.pop(), antes) + itens
+        pagina = _ultimos(itens, POR_PAGINA)
+        return {"itens": pagina, "mais": bool(dias) or len(pagina) < len(itens)}
 
     def _consumo_de_hoje(self) -> dict[str, Any]:
         """O dia inteiro: as mensagens, o que saiu sem modelo e o que o Zé gastou sozinho, em
@@ -273,24 +320,50 @@ class AcoesInicio(Pagina):
         )  # fmt: skip
 
     def precisa(self) -> dict[str, Any]:
-        """O sino do painel: o que precisa de quem usa e os avisos do Zé de hoje (ADR 0133)."""
+        """O sino do painel (ADR 0133): o que precisa de quem usa e os avisos do Zé da semana,
+        cada um com a chave e se já foi visto (o número do sino) e lido (o ponto, ADR 0139)."""
         from zervis.memoria.linha import agora
 
         hoje = agora()
         inicio = hoje.replace(hour=0, minute=0, second=0, microsecond=0)
-        avisos = [
-            {
-                "quando": max(ev.quando, ev.registrado).isoformat(timespec="seconds"),
-                "texto": ev.texto,
-            }
-            for ev in self.n.linha.entre(inicio, hoje, {"aviso", "lembrete", "manutencao"})
-            if max(ev.quando, ev.registrado) <= hoje
-        ]
+        avisos, comecou = [], lidos.PADRAO.inicio()
+        for ev in self.n.linha.entre(inicio - timedelta(days=AVISOS_DIAS - 1), hoje, TIPOS_AVISO):
+            momento = max(ev.quando, ev.registrado)
+            if momento <= hoje:
+                quando = momento.isoformat(timespec="seconds")
+                avisos.append(
+                    {
+                        "quando": quando,
+                        "texto": ev.texto,
+                        "chave": lidos.chave("aviso", quando, ev.texto),
+                        "antigo": momento.timestamp() < comecou,
+                    }
+                )
         avisos.sort(key=lambda a: a["quando"], reverse=True)
+        avisos = avisos[:AVISOS_MAXIMO]
+        itens = []
+        for i in lista_precisa.montar(self._fontes()):
+            item = i.para_tela()
+            item["chave"] = lidos.chave(i.id, i.titulo, i.detalhe)
+            itens.append(item)
+        marcas = lidos.PADRAO.estado(x["chave"] for x in [*itens, *avisos])
+        for x in [*itens, *avisos]:
+            feito = {"visto", "lido"} if x.pop("antigo", False) else marcas.get(x["chave"], set())
+            x["novo"], x["lido"] = "visto" not in feito, "lido" in feito
         return {
-            "itens": [i.para_tela() for i in lista_precisa.montar(self._fontes())],
-            "recentes": avisos[:RECENTES],
+            "itens": itens,
+            "avisos": avisos,
+            "novos": sum(x["novo"] for x in [*itens, *avisos]),
         }
+
+    def marcar_avisos(self, dados: dict[str, Any]) -> dict[str, Any]:
+        """O sino abriu (`visto`) ou a pessoa clicou num item (`lido`), ou em "Marcar todas como
+        lidas" (ADR 0139)."""
+        chaves, como = dados.get("chaves"), str(dados.get("como", ""))
+        if not isinstance(chaves, list) or len(chaves) > 500 or como not in lidos.COMO:
+            raise PedidoInvalido("Pedido inválido.")
+        lidos.PADRAO.marcar((str(c) for c in chaves), como)
+        return {}
 
     def automacoes(self) -> list[dict[str, Any]]:
         return [

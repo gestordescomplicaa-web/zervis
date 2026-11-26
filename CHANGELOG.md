@@ -2,6 +2,14 @@
 
 ## Não lançado
 
+- **O histórico inteiro no Início:** rolando o chat para cima, vêm as conversas dos dias
+  anteriores, até a primeira; antes, o chat mostrava só o dia de hoje e esvaziava à meia-noite.
+  Cada dia abre com a data ("Hoje", "Ontem", "Segunda-feira, 23 de novembro"), presa no topo
+  enquanto ele passa, e a hora de cada fala mostra a data completa ao parar o mouse (ADR 0139).
+- **O sino com visto e lido:** o número conta só o que é novo e zera ao abrir o sino; cada item
+  fica com um ponto até ser clicado, e "Marcar todas como lidas" tira todos. Os avisos do Zé da
+  última semana ficam no sino, por dia. As marcas ficam no Zé: o computador e o celular veem o
+  mesmo (ADR 0139).
 - **Visuais no chat:** o Zé monta apresentações, diagramas, gráficos e painéis animados, com
   controles que mudam os números na hora, e o chat mostra cada um num cartão que abre em tela
   cheia e se baixa em HTML, PNG ou PDF. Rodam isolados, sem rede e sem acesso ao painel

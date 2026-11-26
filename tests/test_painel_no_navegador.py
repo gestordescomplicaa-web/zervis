@@ -1763,6 +1763,121 @@ def test_conversa_funciona_como_chat(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_o_chat_mostra_o_dia_e_busca_o_que_veio_antes_rolando(tmp_path: Path) -> None:
+    """Pedido de 25/11/2026 (ADR 0139): o chat guardava só o dia e não dizia quando foi o quê.
+    Cada dia abre com a data, a hora mostra a data completa e, rolando para cima, vem o anterior."""
+    pedidos: list[dict[str, Any]] = []
+
+    def conversa() -> dict[str, Any]:
+        def par(quando: str, pessoa: str, ze: str) -> list[dict[str, Any]]:
+            return [
+                {"quando": quando, "tipo": "voce", "texto": pessoa},
+                {"quando": quando, "tipo": "ze", "texto": ze},
+            ]
+
+        itens = par("2026-11-24T21:50:00-03:00", "Suspende o PC", "Pronto.")
+        itens += par("2026-11-25T11:51:00-03:00", "Tá por aí?", "Tô aqui.")
+        return {"dia": "2026-11-25", "itens": itens, "esperando": []}
+
+    def anteriores(dados: dict[str, Any]) -> dict[str, Any]:
+        pedidos.append(dados)
+        quando = "2026-11-23T09:00:00-03:00"
+        return {
+            "itens": [
+                {"quando": quando, "tipo": "voce", "texto": "Bom dia"},
+                {"quando": quando, "tipo": "ze", "texto": "Bom dia!"},
+            ],
+            "mais": False,
+        }
+
+    dias = "[...document.querySelectorAll('.dia-fio')].map((d) => d.textContent)"
+    rolar = (
+        "document.querySelector('.coluna-chat')"
+        ".dispatchEvent(new WheelEvent('wheel', {deltaY: -120, bubbles: true}))"
+    )
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#inicio")
+            await _esperar(nav, f"{dias}.length === 2")
+            assert await nav.avaliar(dias) == ["Ontem", "Hoje"]
+            hora = await nav.avaliar("document.querySelector('.fala.voce > span').title")
+            assert hora == "24/11/2026 às 21:50", hora
+            await nav.avaliar(rolar)
+            await _esperar(nav, f"{dias}.length === 3")
+            assert await nav.avaliar(dias) == ["Segunda-feira, 23 de novembro", "Ontem", "Hoje"]
+            assert pedidos == [{"antes": "2026-11-24T21:50:00-03:00"}]
+            await nav.avaliar(rolar)  # era o começo: não busca de novo
+            await asyncio.sleep(0.5)
+            assert len(pedidos) == 1
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path,
+        extras={"conversa/anteriores": anteriores},
+        leituras_vivas={"conversa": conversa},
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
+def test_o_sino_conta_so_o_novo_e_o_ponto_some_no_clique(tmp_path: Path) -> None:
+    """Pedido de 25/11/2026 (ADR 0139): o número do sino nunca baixava. Abrir zera o número
+    (visto), clicar tira o ponto (lido), e "Marcar todas como lidas" tira todos."""
+    base = json.loads(RESPOSTAS.read_text())["leituras"]["precisa"]
+    marcas: dict[str, set[str]] = {}
+    pedidos: list[tuple[str, list[str]]] = []
+
+    def precisa() -> dict[str, Any]:  # o Zé de verdade devolve as marcas guardadas
+        sino: dict[str, Any] = copy.deepcopy(base)
+        for x in [*sino["itens"], *sino["avisos"]]:
+            feito = marcas.get(x["chave"], set())
+            x["novo"] = x["novo"] and "visto" not in feito
+            x["lido"] = x["lido"] or "lido" in feito
+        sino["novos"] = sum(x["novo"] for x in [*sino["itens"], *sino["avisos"]])
+        return sino
+
+    def marcar(dados: dict[str, Any]) -> dict[str, Any]:
+        pedidos.append((dados["como"], sorted(dados["chaves"])))
+        for c in dados["chaves"]:
+            marcas.setdefault(c, set()).update(
+                {"visto", "lido"} if dados["como"] == "lido" else {"visto"}
+            )
+        return {}
+
+    contador = "document.getElementById('contador-avisos')"
+    nao_lidas = "document.querySelectorAll('#avisos .nao-lida').length"
+
+    async def conferir(depuracao: str, endereco: str) -> None:
+        async with websockets.connect(depuracao, max_size=None) as ws:
+            nav = _Navegador(ws)
+            await _carregar(nav, endereco + "#inicio")
+            await _esperar(nav, f"!{contador}.hidden && {contador}.textContent === '2'")
+            await nav.avaliar("document.getElementById('sino').click()")
+            await _esperar(nav, f"{contador}.hidden && {nao_lidas} === 3")
+            assert pedidos[0] == ("visto", ["a1b2c3d4e5f60718", "e1b2c3d4e5f60718"]), pedidos
+            assert await nav.avaliar("document.querySelectorAll('#avisos .dia-avisos').length") == 2
+            await nav.avaliar(
+                "document.querySelector('#avisos li[data-chave=e1b2c3d4e5f60718]').click()"
+            )
+            await _esperar(nav, f"{nao_lidas} === 2")
+            assert ("lido", ["e1b2c3d4e5f60718"]) in pedidos
+            await nav.avaliar("document.querySelector('[data-acao=avisos-todas-lidas]').click()")
+            await _esperar(nav, f"{nao_lidas} === 0")
+            assert pedidos[-1] == ("lido", ["a1b2c3d4e5f60718", "b1b2c3d4e5f60718"]), pedidos
+            assert await nav.avaliar(
+                "document.querySelector('[data-acao=avisos-todas-lidas]').hidden"
+            )
+            assert not nav.erros, nav.erros
+
+    with _painel(
+        tmp_path, extras={"avisos/marcar": marcar}, leituras_vivas={"precisa": precisa}
+    ) as (depuracao, endereco):
+        asyncio.run(conferir(depuracao, endereco))
+
+
+@pytest.mark.skipif(CHROMIUM is None, reason="sem Chromium na máquina")
 def test_conversa_mostra_o_gasto_de_cada_resposta_e_do_dia(tmp_path: Path) -> None:
     """Pedido de 27/10/2026: ver na Conversa como o Zé gasta os tokens a cada mensagem."""
     hora = "2026-10-27T21:00:00-03:00"

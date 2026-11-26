@@ -62,6 +62,7 @@ vista no PR.
    **O Marketing em abas, com os ajustes separados por assunto: ADR 0134.**
    **Os Ajustes num lugar só, com busca: ADR 0135.**
    **O Início é a conversa com o Zé (o chat e, ao lado, o resumo): ADR 0136.**
+   **O histórico inteiro no chat, a data de cada dia e o sino com visto e lido: ADR 0139.**
 6. Tirar o interruptor.
 
 A Imersão fica fora de todos eles.
