@@ -103,7 +103,7 @@ GRUPOS = {
     "prospeccao": (
         "Prospecção",
         "acha empresas da cidade, quem decide em cada uma e manda a primeira mensagem no limite do "
-        "dia; diz o que está acontecendo, aprova, descarta, adianta um envio e marca reuniões",
+        "dia; diz o que está acontecendo, aprova, descarta e adianta um envio",
     ),
     "paginas": (
         "Páginas e eventos",

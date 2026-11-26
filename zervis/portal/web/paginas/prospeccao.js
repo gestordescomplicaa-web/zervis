@@ -3,6 +3,8 @@ import { PAGINAS, $, api, botao, cabeca, cartao, confirmar, esc, item, mostrar, 
 
 // A prospecção (ADR 0127): o Zé encontra empresas da cidade no Google Maps, identifica quem decide
 // pelo quadro de sócios da Receita e envia a primeira mensagem pelo WhatsApp, poucas por dia.
+// A página cuida dessa primeira mensagem (ADR 0140): as empresas, por ramo, numa linha cada (nome,
+// número e estado); as descartadas, só na contagem. A conversa depois quem usa faz no WhatsApp.
 // Nome, avaliações e respostas vêm de terceiros: tudo passa por esc(), e link só https.
 
 /** @type {any} */
@@ -25,7 +27,9 @@ function quem(p) {
   return [pessoa, esc(p.ramo), numero ? `${telefone(numero.numero)} · ${esc(numero.origem)}` : ""].filter(Boolean).join(" · ");
 }
 
-const CLASSES = { enviando: "alerta", enviada: "", respondeu: "bom", reuniao: "bom", sem_interesse: "alerta", descartada: "", fila: "", nova: "" };
+const CLASSES = { enviando: "alerta", respondeu: "bom", reuniao: "bom", sem_interesse: "alerta" };
+const CONTATADAS = ["enviando", "enviada", "respondeu", "reuniao", "sem_interesse"];
+const plural = (/** @type {number} */ n, /** @type {string} */ um, /** @type {string} */ varios) => `${n} ${n === 1 ? um : varios}`;
 
 /** @param {any} p */
 function aguardando(p) {
@@ -37,23 +41,44 @@ function aguardando(p) {
   </div>`;
 }
 
-/** @param {any} p */
+/** @param {any} p uma linha: o nome, o número e o estado */
 function empresa(p) {
-  const etiqueta = `<span class="etiqueta ${CLASSES[p.status] ?? ""}">${esc(p.rotulo)}</span>`;
-  const enviado = p.enviado ? `Enviada em ${new Date(p.enviado * 1000).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : "";
-  const linhas = [
-    quem(p),
-    p.status === "descartada" ? esc(p.motivo) : esc(p.sinal),
-    enviado,
-    p.resposta ? `Resposta: “${esc(p.resposta)}”` : "",
-    p.erro ? `Envio adiado: ${esc(p.erro)}` : "",
-  ].filter(Boolean).join("<br>") + (p.mensagem && p.status !== "descartada" ? `<details class="detalhes"><summary>Mensagem</summary><p class="quebra">${esc(p.mensagem)}</p></details>` : "");
-  const contatada = ["enviando", "enviada", "respondeu", "sem_interesse"].includes(p.status);
-  const botoes = contatada
-    ? botao("Reunião marcada", "pr-marcar", `data-id="${esc(p.id)}" data-status="reuniao"`, "discreta") +
-      (p.status === "sem_interesse" ? "" : botao("Sem interesse", "pr-marcar", `data-id="${esc(p.id)}" data-status="sem_interesse"`, "discreta"))
-    : p.status === "fila" ? botao("Descartar", "pr-descartar", `data-id="${esc(p.id)}"`, "discreta") : "";
-  return item(`${esc(p.nome)} ${etiqueta}${p.nota ? ` <span class="etiqueta">Nota ${esc(p.nota)}</span>` : ""}`, linhas, botoes, p.status === "descartada");
+  const extra = [p.resposta ? `“${esc(p.resposta)}”` : "", p.erro ? `Envio adiado: ${esc(p.erro)}` : ""].filter(Boolean).join(" · ");
+  const descartar = p.status === "fila" ? `<div class="botoes">${botao("Descartar", "pr-descartar", `data-id="${esc(p.id)}"`, "discreta")}</div>` : "";
+  return `<div class="linha-item pr-linha">
+    <strong class="pr-nome">${esc(p.nome)}</strong>
+    <span class="pr-numero">${p.telefone ? telefone(p.telefone) : "Sem número"}</span>
+    <span class="etiqueta ${CLASSES[p.status] ?? ""}">${esc(p.rotulo)}</span>${descartar}
+    ${extra ? `<small class="pr-extra">${extra}</small>` : ""}
+  </div>`;
+}
+
+/** @param {any} g o ramo: o total, a contagem por estado e as mais recentes @param {Map<string, boolean>} abertos */
+function grupo(g, abertos) {
+  const c = g.contagem || {};
+  const contatadas = CONTATADAS.reduce((n, s) => n + (c[s] || 0), 0);
+  const resumo = [
+    contatadas ? plural(contatadas, "contatada", "contatadas") : "",
+    c.respondeu ? plural(c.respondeu, "respondeu", "responderam") : "",
+    c.fila ? `${c.fila} na fila` : "",
+    c.nova ? `${c.nova} qualificando` : "",
+  ].filter(Boolean).join(" · ");
+  // Fechado por padrão; abre o ramo com resposta nova ou o único. O que a pessoa abriu ou fechou fica.
+  const aberto = abertos.get(g.ramo) ?? (Boolean(c.respondeu) || ultimo.grupos.length === 1);
+  const resto = g.total - g.empresas.length;
+  return `<details class="pr-grupo" data-ramo="${esc(g.ramo)}" ${aberto ? "open" : ""}>
+    <summary><span class="seta-escolha"></span><strong>${esc(g.ramo)}</strong><small>${resumo}</small></summary>
+    <div class="lista">${g.empresas.map(empresa).join("")}</div>
+    ${resto > 0 ? `<p class="vazio pr-resto">${resto === 1 ? "Outra empresa, mais antiga." : `Outras ${resto} empresas, mais antigas.`}</p>` : ""}
+  </details>`;
+}
+
+/** @param {Map<string, boolean>} abertos */
+function empresas(abertos) {
+  const r = ultimo;
+  const lista = r.grupos.length ? r.grupos.map((/** @type {any} */ g) => grupo(g, abertos)).join("") : vazio("Nenhuma empresa ainda.");
+  const descartadas = r.descartadas ? `<p class="vazio pr-descartadas">${plural(r.descartadas, "descartada", "descartadas")}</p>` : "";
+  return cartao("Empresas", `${lista}${descartadas}`);
 }
 
 function configuracao() {
@@ -100,10 +125,14 @@ function fontes() {
 
 function desenhar() {
   const lugar = $("prospeccao");
-  if (lugar) lugar.innerHTML = corpo();
+  if (!lugar) return;
+  /** @type {Map<string, boolean>} */
+  const abertos = new Map();
+  lugar.querySelectorAll("details.pr-grupo").forEach((d) => abertos.set(/** @type {HTMLElement} */ (d).dataset.ramo || "", /** @type {HTMLDetailsElement} */ (d).open));
+  lugar.innerHTML = corpo(abertos);
 }
 
-function corpo() {
+function corpo(abertos = new Map()) {
   const r = ultimo;
   const estado = r.config.ligada ? `<span class="etiqueta bom">Ligada</span>` : `<span class="etiqueta">Desligada</span>`;
   const resumo = [
@@ -115,8 +144,7 @@ function corpo() {
   const fila = r.aguardando.length
     ? cartao(`Aguardando aprovação <span class="etiqueta">${r.aguardando.length}</span>`, r.aguardando.map(aguardando).join(""))
     : "";
-  const lista = r.empresas.length ? r.empresas.map(empresa).join("") : vazio("Nenhuma empresa ainda.");
-  return `${cartao("", item(`Prospecção ${estado}`, resumo))}${fila}${cartao("Empresas", `<div class="lista">${lista}</div>`)}${configuracao()}${mensagem()}${fontes()}`;
+  return `${cartao("", item(`Prospecção ${estado}`, resumo))}${fila}${empresas(abertos)}${configuracao()}${mensagem()}${fontes()}`;
 }
 
 PAGINAS.prospeccao = async () => {
@@ -158,5 +186,4 @@ Object.assign(ACOES, {
     return enviar("prospeccao/aprovar", { id, texto }, b, "");
   },
   "pr-descartar": (/** @type {HTMLButtonElement} */ b) => confirmar(b, "Descartar esta empresa?", () => enviar("prospeccao/descartar", { id: b.dataset.id }, b, "")),
-  "pr-marcar": (/** @type {HTMLButtonElement} */ b) => enviar("prospeccao/marcar", { id: b.dataset.id, status: b.dataset.status }, b, ""),
 });

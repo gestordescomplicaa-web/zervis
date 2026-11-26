@@ -1,5 +1,6 @@
-"""A página Prospecção (ADR 0127): a configuração do funil, a chave da Apify, as mensagens que
-esperam aprovação e as empresas contatadas."""
+"""A página Prospecção (ADR 0127 e 0140): a configuração do funil, a chave da Apify, as
+mensagens que esperam aprovação e as empresas por ramo. Ela cuida da primeira mensagem; a conversa
+depois dela quem usa faz no WhatsApp."""
 
 from typing import Any
 
@@ -81,7 +82,3 @@ class AcoesProspeccao(Pagina):
     def descartar_prospeccao(self, dados: dict[str, Any]) -> dict[str, Any]:
         ident = str(dados.get("id") or "")
         return self._fazer(lambda: funil.padrao().descartar(ident))
-
-    def marcar_prospeccao(self, dados: dict[str, Any]) -> dict[str, Any]:
-        ident, status = str(dados.get("id") or ""), str(dados.get("status") or "")
-        return self._fazer(lambda: funil.padrao().marcar(ident, status))

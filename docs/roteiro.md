@@ -18,8 +18,9 @@ Dispositivos) cabem no congelamento. O resto vem depois da 0.5.0.
 
 Fora do congelamento, a pedido de quem usa (24/11/2026): a **Prospecção** (ADR 0127). Etapa 1
 feita: achar a empresa no Maps, o dono pela Receita, a nota, a mensagem e o envio pelo WhatsApp no
-limite do dia. Falta provar com a chave da Apify e o primeiro envio de verdade. Etapa 2: a conversa
-de quem respondeu até a reunião, como no direct do Instagram (ADR 0119).
+limite do dia. Falta provar com a chave da Apify e o primeiro envio de verdade. Ela cuida só da
+primeira mensagem (ADR 0140): por enquanto, a conversa depois é de quem usa. Etapa 2, depois: a
+conversa de quem respondeu até a reunião, como no direct do Instagram (ADR 0119).
 
 ## Onde estamos (passagem de 16/10/2026)
 

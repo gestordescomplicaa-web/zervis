@@ -8,6 +8,11 @@
   aparece como gente diz ("Segunda, quarta e sexta, 9h"). Os cartões de agendar saem do
   Marketing; agendar Reels, artigos e carrosséis que publicam sozinhos passa a funcionar pela voz
   (o "publicar sozinho" do #251), e "a cada 3d" passa a valer (ADR 0141).
+- **Prospecção mais enxuta:** as empresas aparecem por ramo (o da Configuração que as buscou),
+  recolhidas e com a contagem no título, numa linha cada: nome, número e estado. As descartadas
+  saem da lista e ficam só na contagem (continuam guardadas para ninguém receber duas vezes).
+  Saem "Reunião marcada" e "Sem interesse" da página e da voz: a Prospecção cuida da primeira
+  mensagem, e a conversa depois é de quem usa (ADR 0140).
 - **O histórico inteiro no Início:** rolando o chat para cima, vêm as conversas dos dias
   anteriores, até a primeira; antes, o chat mostrava só o dia de hoje e esvaziava à meia-noite.
   Cada dia abre com a data ("Hoje", "Ontem", "Segunda-feira, 23 de novembro"), presa no topo
