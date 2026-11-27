@@ -140,8 +140,7 @@ git checkout "$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)"   # a ve
 docker compose up -d --build
 ```
 
-A imagem entra na versão seguinte à 0.5.1: até ela ser publicada, pule o `git checkout` e fique
-na `master`.
+A imagem está disponível a partir da versão `v0.5.2`.
 
 A primeira subida baixa os modelos de som para o volume e leva alguns minutos;
 `docker compose ps` mostra `healthy` quando o painel responde. Então:
