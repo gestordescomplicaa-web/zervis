@@ -1,6 +1,6 @@
 # Mudanças
 
-## Não lançado
+## 0.5.2 (27/11/2026)
 
 - **Dispensar no sino:** cada item do "Precisa de você" ganha o ×, menos a aprovação do WhatsApp.
   No lead, é o "já vi" (para de lembrar, também no celular); os outros saem da lista até mudar.

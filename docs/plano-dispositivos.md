@@ -92,11 +92,11 @@ O que mais vale nesses PRs é a coluna da direita. Ela serve para qualquer apare
 
 ## A versão pública e a estável
 
-O que vale hoje (13/11/2026):
+O que vale hoje (27/11/2026):
 
 - O repositório é **público**: o que entra na `master` qualquer um vê.
 - **Quem atualiza** (`zervis atualizar`, ou "Atualizar" no painel) vai para a última **versão
-  publicada** (hoje a `v0.5.1`). Só o modo de desenvolvimento segue a `master`.
+  publicada** (hoje a `v0.5.2`). Só o modo de desenvolvimento segue a `master`.
 - **Quem instala do zero** segue o README (`git clone`) e recebe a **`master`**, não a versão
   publicada. É isso que faz o que acabou de ser mesclado chegar a quem baixa.
 
